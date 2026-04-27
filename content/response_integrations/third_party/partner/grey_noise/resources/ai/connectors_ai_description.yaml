@@ -2,11 +2,12 @@ Generate Alert from GreyNoise GNQL:
   ai_description: >-
     ### General Description
 
-    This connector integrates with GreyNoise to automatically fetch threat intelligence
-    data based on GNQL (GreyNoise Query Language) queries. It identifies malicious,
-    suspicious, benign, or unknown IP addresses and generates corresponding security
-    alerts within Google SecOps SOAR, enabling proactive threat monitoring and automated
-    incident response.
+    The "Generate Alert from GreyNoise GNQL" connector enables automated ingestion
+    of threat intelligence from GreyNoise into Google SecOps SOAR. By executing custom
+    GNQL (GreyNoise Query Language) queries, the connector identifies malicious, suspicious,
+    benign, or unknown IP addresses and automatically generates security alerts/cases
+    for each match. This allows security teams to proactively monitor for noise and
+    threats observed globally.
 
 
     ### Parameters Description
@@ -15,42 +16,39 @@ Generate Alert from GreyNoise GNQL:
 
     | :--- | :--- | :--- | :--- |
 
-    | GN API Key | Password | Yes | The API key used to authenticate with the GreyNoise
-    service. |
+    | GN API Key | String | Yes | Your GreyNoise API key. |
 
-    | Max Results | Integer | No | The maximum number of results to fetch in a single
-    execution. |
-
-    | Query | String | Yes | The GNQL query string used to filter the data to be fetched.
+    | Max Results | Integer | No | The maximum number of results to fetch per run.
     |
 
+    | Query | String | Yes | The GNQL query to execute (e.g., `last_seen:1d`). |
+
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product in the generated alert. |
+    product. |
 
     | EventClassId | String | Yes | The field name used to determine the event name
     (sub-type). |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    Python process running the script. |
+    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
+    Python process. |
 
 
     ### Flow Description
 
-    1. The connector initializes and retrieves configuration parameters, including
-    the API key and the GNQL query.
+    1. The connector initializes and reads the provided configuration parameters and
+    existing event IDs for deduplication.
 
-    2. It reads existing event IDs from the system to perform deduplication and prevent
-    redundant alert creation.
+    2. It connects to the GreyNoise API using the provided API key.
 
-    3. It connects to the GreyNoise API and executes the specified GNQL query to retrieve
-    relevant IP intelligence data.
+    3. It executes the configured GNQL query to fetch relevant IP intelligence data.
 
-    4. For each retrieved event, the connector maps the data to a standard SOAR AlertInfo
-    object, including severity, timestamps, and environment details.
+    4. The connector iterates through the retrieved events, checking for timeouts
+    and duplicates.
 
-    5. It filters out duplicate events and checks for system overflow limits.
+    5. Each valid event is converted into a SOAR `AlertInfo` object, mapping GreyNoise
+    data to the case format.
 
-    6. Valid alerts are ingested into Google SecOps SOAR as new cases.
+    6. The connector saves the updated list of event IDs to prevent future duplicates.
 
-    7. Finally, the connector updates the stored event IDs to ensure future runs only
-    process new data.
+    7. Finally, it returns the generated alerts to the Google SecOps SOAR platform
+    for further investigation.

@@ -1,6 +1,6 @@
 Add Comment To Model Breach:
   action_product_categories:
-    add_alert_comment: true
+    add_alert_comment: false
     add_ioc_to_allowlist: false
     add_ioc_to_blocklist: false
     contain_host: false
@@ -14,8 +14,10 @@ Add Comment To Model Breach:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action appends a note to the activity timeline of an alert (model breach)
-      in the external Darktrace system. This aligns with the 'Add Alert Comment' category.
+      The action adds a comment to an external system (Darktrace model breach). It
+      does not match the definition of 'Add Alert Comment' (which refers to the SecOps
+      platform's alert timeline) or any other specific category like 'Update Ticket'
+      or 'Update Alert'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -80,19 +82,19 @@ Add Comment To Model Breach:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a comment to a model breach in the Darktrace platform.
+      Adds a comment to a specific model breach in the Darktrace platform via a POST
+      request.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a POST request to an external API (Darktrace) to add a comment
-      to a model breach. It does not fetch data, update entities, or modify internal
-      SOAR data. It does not create case comments within the SOAR platform.
+      to a model breach. It does not fetch data, update internal entities, or modify
+      SOAR case data.
   categories:
     enrichment: false
     reasoning: >-
-      The action does not fetch data (not enrichment). It mutates external data (adds
-      a comment). It does not fit the criteria for enrichment as it does not retrieve
-      data.
+      The action is not an enrichment action as it does not fetch data. It is a mutation
+      action on an external system.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -109,8 +111,8 @@ Add Comment To Model Breach:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `target_entities`. It uses a specific `Model
-      Breach ID` provided as a parameter.
+      The action does not operate on SOAR entities. It uses a specific Model Breach
+      ID provided as a parameter.
 Enrich Entities:
   action_product_categories:
     add_alert_comment: false
@@ -127,9 +129,10 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves reputation, prevalence, and contextual metadata for indicators
-      (IOCs) and assets (devices/endpoints) from Darktrace. This aligns with both
-      'Enrich IOC' and 'Enrich Asset' categories.
+      The action retrieves reputation, device metadata, and threat intelligence (connection
+      data) for indicators (IP, URL) and assets (Hostname, MacAddress). This matches
+      the expected outcomes for 'Enrich IOC' and 'Enrich Asset'. It does not perform
+      any containment, ticketing, or alert modification actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -144,33 +147,34 @@ Enrich Entities:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "Enriches entities (IP, Hostname, MacAddress, URL) using information\
-    \ from Darktrace. This action retrieves device and endpoint details from Darktrace\
-    \ and optionally fetches connection data for internal endpoints. It updates the\
-    \ entity's profile with enrichment data, generates insights, and attaches data\
-    \ tables to the case for further analysis.\n\n### Flow Description\n1. **Parameter\
-    \ Extraction**: The action extracts configuration parameters (API Root, Token,\
-    \ SSL verification) and action-specific parameters (Fetch Connection Data, Max\
-    \ Hours Backwards, Create Endpoint Insight).\n2. **Entity Filtering**: It iterates\
-    \ through the target entities, filtering for supported types: ADDRESS, HOSTNAME,\
-    \ MACADDRESS, and URL.\n3. **Data Retrieval**: For each entity, it queries the\
-    \ Darktrace API to retrieve device or endpoint details based on the entity type.\n\
-    4. **Optional Connection Data**: If 'Fetch Connection Data' is enabled, it retrieves\
-    \ additional connection history for the identified device.\n5. **Enrichment &\
-    \ Reporting**: \n   - Updates the entity's additional properties with the retrieved\
-    \ data.\n   - Marks the entity as enriched.\n   - Adds a data table containing\
-    \ device/endpoint details to the case.\n   - Optionally creates an entity insight\
-    \ if 'Create Endpoint Insight' is enabled.\n   - Adds a data table for connection\
-    \ data if retrieved.\n   - Updates the entities in the case and returns a JSON\
-    \ result summary.\n\n### Parameters\n| Parameter | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| Fetch Connection Data | boolean | No | If\
-    \ enabled, the action fetches connection data related to the internal endpoints\
-    \ from Darktrace. |\n| Max Hours Backwards | string | No | Specifies the time\
-    \ range (in hours) for fetching connection data. Default is 24. |\n| Create Endpoint\
-    \ Insight | boolean | No | If enabled, creates an insight containing information\
-    \ about the internal endpoints. |\n\n### Additional Notes\n- The action automatically\
-    \ handles domain extraction from URL entities.\n- If no entities are successfully\
-    \ enriched, the action returns a failure status."
+  ai_description: "### General Description\nThis action enriches entities (IP, Hostname,\
+    \ MacAddress, URL) by retrieving device and endpoint details from the Darktrace\
+    \ platform. It provides contextual information such as device type, OS, and associated\
+    \ network data, which helps analysts understand the nature of the entity involved\
+    \ in an alert. The action can also optionally fetch connection history for internal\
+    \ endpoints to provide deeper visibility into network behavior.\n\n### Flow Description\n\
+    1. **Parameter Extraction**: The action retrieves configuration parameters (API\
+    \ Root, Token, SSL verification) and action-specific settings (Fetch Connection\
+    \ Data, Max Hours Backwards, Create Endpoint Insight).\n2. **Entity Filtering**:\
+    \ It iterates through the target entities, filtering for supported types: `ADDRESS`,\
+    \ `HOSTNAME`, `MACADDRESS`, and `URL`.\n3. **Data Retrieval**: For each entity,\
+    \ it queries the Darktrace API to retrieve device or endpoint details based on\
+    \ the entity type.\n4. **Optional Connection Data**: If 'Fetch Connection Data'\
+    \ is enabled, it retrieves additional connection history for the identified device.\n\
+    5. **Enrichment & Reporting**: \n   - Updates the entity's additional properties\
+    \ with the retrieved data.\n   - Marks the entity as enriched.\n   - Adds a data\
+    \ table containing device/endpoint details to the case.\n   - Optionally creates\
+    \ an entity insight if 'Create Endpoint Insight' is enabled.\n   - Adds a data\
+    \ table for connection data if retrieved.\n   - Updates the entities in the case\
+    \ and returns a JSON result summary.\n\n### Parameters\n| Parameter | Type | Mandatory\
+    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Fetch Connection Data | boolean\
+    \ | No | If enabled, the action fetches connection data related to the internal\
+    \ endpoints from Darktrace. |\n| Max Hours Backwards | integer | No | Specifies\
+    \ the time range (in hours) for fetching connection data. Default is 24. |\n|\
+    \ Create Endpoint Insight | boolean | No | If enabled, creates an insight containing\
+    \ information about the internal endpoints. |\n\n### Additional Notes\n- The action\
+    \ automatically handles domain extraction from URL entities.\n- If no entities\
+    \ are successfully enriched, the action returns a failure status."
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -181,22 +185,22 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties, adds entity insights, and adds data tables
-      to the case.
+      Updates entity additional properties, adds data tables to the case, and creates
+      entity insights.
     reasoning: >-
       The action fetches data from the Darktrace API (fetches_data=true). It does
-      not perform any write operations to external systems (can_mutate_external_data=false).
-      It performs internal mutations by updating entity properties, adding insights,
-      and adding data tables to the case (can_mutate_internal_data=true). It specifically
-      uses SDK methods to update entities and create insights.
+      not perform any write/mutation operations on external systems (can_mutate_external_data=false).
+      It performs internal mutations by updating entity properties, adding data tables,
+      and creating insights within the SOAR platform (can_mutate_internal_data=true,
+      can_update_entities=true, can_create_insight=true).
   categories:
     enrichment: true
     reasoning: >-
-      The action is designed to fetch contextual information about entities from an
-      external source (Darktrace) and enrich the entity profile within the SOAR platform.
-      It does not mutate external systems and only performs allowed internal mutations
-      (updating entities, creating insights). Therefore, it qualifies as an enrichment
-      action.
+      The action is designed to fetch supplemental context (device/endpoint details)
+      for entities and update the SOAR platform with this information. It does not
+      mutate external systems and only performs allowed internal mutations (updating
+      entities, creating insights, adding data tables). Therefore, it qualifies as
+      an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -217,8 +221,9 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them based
-      on the `SUPPORTED_ENTITY_TYPES` list (ADDRESS, HOSTNAME, MACADDRESS, URL).
+      The code explicitly filters `siemplify.target_entities` to include only `ADDRESS`,
+      `HOSTNAME`, `MACADDRESS`, and `URL` types. It does not apply any other filters
+      (e.g., by time, identifier, or properties).
 Execute Custom Search:
   action_product_categories:
     add_alert_comment: false
@@ -235,9 +240,8 @@ Execute Custom Search:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a custom search query and returns the results. This directly
-      matches the 'Search Events' category, which is defined as returning a collection
-      of historical logs or telemetry data matching specific search parameters.
+      The action executes a custom search query to retrieve historical logs or telemetry
+      data from Darktrace, which directly matches the 'Search Events' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -313,17 +317,15 @@ Execute Custom Search:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the Darktrace API to retrieve search results
-      based on a user-provided query. It does not modify any external systems (no
-      POST/PUT/DELETE operations that change state). It does not modify internal Google
-      SecOps data (no entity updates, insights, or case comments). It only outputs
-      the retrieved data to the action result.
+      The action performs a GET request to retrieve search results from the Darktrace
+      API. It does not modify any external systems, nor does it modify internal case
+      data, entities, or alert data. It is a read-only operation.
   categories:
     enrichment: true
     reasoning: >-
-      The action is designed to fetch contextual data (search results) from an external
-      system (Darktrace). It does not mutate external systems, nor does it modify
-      internal Google SecOps data. Therefore, it qualifies as an enrichment action.
+      The action fetches historical data/telemetry from an external source (Darktrace)
+      and does not mutate any external or internal systems. It meets the criteria
+      for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -340,9 +342,8 @@ Execute Custom Search:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `target_entities`. It operates based
-      on the alert's time context and user-provided query parameters, not on specific
-      entity objects.
+      The action does not iterate over or process any entities. It operates independently
+      of the entity model.
 List Endpoint Events:
   action_product_categories:
     add_alert_comment: false
@@ -359,10 +360,10 @@ List Endpoint Events:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves event logs for specific endpoints (IPs, Hostnames, MACs)
-      from Darktrace. This provides context about the asset's behavior, matching 'Enrich
-      Asset' and 'Enrich IOC'. It also returns a collection of historical logs, matching
-      'Search Events'.
+      The action retrieves historical event data (connections, breaches) for endpoints,
+      which provides context for security investigations. This matches 'Enrich IOC'
+      (for IP/Mac) and 'Enrich Asset' (for Hostname/Device). It also matches 'Search
+      Events' as it returns historical telemetry.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -440,17 +441,16 @@ List Endpoint Events:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs GET requests to the Darktrace API to retrieve event data
-      for specific endpoints. It does not perform any POST/PUT/DELETE operations on
-      external systems, nor does it modify internal Google SecOps data (e.g., it does
-      not update entities, create insights, or modify case data). It only outputs
-      data to the action result.
+      The action retrieves historical event data from the Darktrace API for specified
+      entities. It performs GET requests to fetch this data. It does not modify any
+      external systems or internal case data (it only adds result tables and JSON
+      to the action output).
   categories:
     enrichment: true
     reasoning: >-
-      The action is designed to fetch supplemental context (events) for entities.
-      It does not mutate external systems or modify internal Google SecOps data (it
-      only outputs results). Therefore, it qualifies as an enrichment action.
+      The action fetches data from an external source (Darktrace) to provide context
+      for entities. It does not mutate external or internal data. It fits the definition
+      of an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -471,8 +471,7 @@ List Endpoint Events:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them based on
-      whether their type is in the `SUPPORTED_ENTITY_TYPES` list (ADDRESS, HOSTNAME,
-      MACADDRESS).
+      `SUPPORTED_ENTITY_TYPES` (ADDRESS, HOSTNAME, MACADDRESS).
 List Similar Devices:
   action_product_categories:
     add_alert_comment: false
@@ -489,14 +488,13 @@ List Similar Devices:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata about devices (similar devices) from
-      Darktrace, which aligns with 'Enrich Asset'. It also performs a search for the
-      device within the product to get its ID, which aligns with 'Search Asset'. It
-      does not modify external systems or alert data.
+      The action retrieves contextual metadata (similar devices) for a resource (endpoint).
+      This matches the 'Enrich Asset' category. It does not match 'Enrich IOC' as
+      it is about device relationships, not IOC reputation.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: true
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
@@ -555,24 +553,25 @@ List Similar Devices:
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Adds entity tables and result JSON to the case.
     reasoning: >-
-      The action performs GET requests to the Darktrace API to search for devices
-      and retrieve similar device information. It does not perform any POST/PUT/DELETE
-      operations on external systems (no external mutation). It adds result tables
-      and JSON to the SOAR action output, which is standard for enrichment actions
-      and does not constitute internal data mutation (modifying existing case data).
+      The action fetches data from the Darktrace API (fetches_data=true). It does
+      not modify external systems (can_mutate_external_data=false). It adds data to
+      the SOAR case (entity tables and JSON results), which constitutes internal mutation
+      (can_mutate_internal_data=true). It does not update entities, create insights,
+      or modify alert data.
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches contextual data (similar devices) from an external system
-      (Darktrace) to enrich the investigation. It does not mutate external systems,
-      nor does it modify existing internal SOAR data (like alert status or case fields).
-      It meets all criteria for an enrichment action.
+      The action fetches data (similar devices) to provide context to an analyst.
+      It does not mutate external systems. It performs internal mutations (adding
+      tables/JSON), which is allowed for enrichment actions. Therefore, it is an enrichment
+      action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -592,9 +591,8 @@ List Similar Devices:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code explicitly filters `siemplify.target_entities` using `SUPPORTED_ENTITY_TYPES`,
-      which includes `ADDRESS`, `HOSTNAME`, and `MACADDRESS`. It iterates over these
-      entities to perform lookups.
+      The code iterates over `siemplify.target_entities` and filters by `SUPPORTED_ENTITY_TYPES`
+      (`ADDRESS`, `HOSTNAME`, `MACADDRESS`).
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -611,8 +609,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping) and does not perform any of the defined
-      functional operations like enriching IOCs, updating tickets, or containing hosts.
+      The action is a connectivity test ('Ping') and does not perform any of the defined
+      operational tasks like enriching data, updating alerts, or modifying external
+      systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -662,6 +661,12 @@ Ping:
 
     | Verify SSL | boolean | No | Whether to verify the SSL certificate of the API
     root. |
+
+
+    ### Additional Notes
+
+    This action is a connectivity test (Ping) and does not perform any data enrichment
+    or system mutation. It is intended for verifying integration configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -673,14 +678,16 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the Darktrace status endpoint to verify
-      connectivity. It does not mutate external or internal data, nor does it update
-      entities or create insights.
+      The action performs a GET request to the Darktrace `/status` endpoint to verify
+      connectivity. It does not modify external systems, update entities, or create
+      insights. It fetches the status of the service, but this is for connectivity
+      verification, not contextual data enrichment.
   categories:
     enrichment: false
     reasoning: >-
       The action is a 'Ping' action, which is explicitly excluded from being an enrichment
-      action per the instructions.
+      action per the instructions. It does not fetch contextual data for entities
+      or alerts.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -697,7 +704,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities.
+      The action does not use any entities. It operates globally to test connectivity.
 Update Model Breach Status:
   action_product_categories:
     add_alert_comment: false
@@ -714,9 +721,10 @@ Update Model Breach Status:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the status of a model breach in Darktrace. This aligns with
-      the 'Update Alert' category as it changes the status of an alert-like object
-      (model breach).
+      The action updates the status of a model breach in the external Darktrace platform.
+      It does not match any of the provided categories (Enrich IOC, Update Alert,
+      etc.) as it is specific to Darktrace model breaches and does not modify SecOps
+      platform alerts or tickets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -727,7 +735,7 @@ Update Model Breach Status:
     send_message: false
     submit_file: false
     uncontain_host: false
-    update_alert: true
+    update_alert: false
     update_email: false
     update_identity: false
     update_ticket: false
@@ -790,15 +798,14 @@ Update Model Breach Status:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (GET) to verify the current status of the model breach
-      and performs a mutation (POST) to update the status in the external Darktrace
-      system. It does not modify internal SecOps data, entities, or insights.
+      The action fetches data (GET) to check the current status of a model breach
+      and then performs a POST request to update the status in the external Darktrace
+      system. It does not modify internal SecOps data or entities.
   categories:
     enrichment: false
     reasoning: >-
-      The action performs a mutation on an external system (Darktrace), which violates
-      the 'External State Preservation' rule for enrichment actions. Therefore, it
-      is not an enrichment action.
+      The action performs a state change (mutation) on an external system (Darktrace),
+      which violates the 'Read-Only' constraint for enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -815,6 +822,5 @@ Update Model Breach Status:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `target_entities`. It relies on
-      the 'Model Breach ID' parameter provided by the user to identify the target
-      object in Darktrace.
+      The action does not operate on entities. The `SimulationDataJson` is empty,
+      and the code does not reference `target_entities`.

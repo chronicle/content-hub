@@ -1,27 +1,12 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 SymantecICDX query Connector:
   ai_description: >-
     ### General Description
 
     The Symantec ICDX Query Connector enables the ingestion of security events from
-    a Symantec Integrated Cyber Defense Exchange (ICDX) server into Google SecOps.
-    It allows users to define custom search queries to filter specific events, ensuring
-    that only relevant security data is ingested. The connector maintains state to
-    prevent duplicate event ingestion and supports proxy configurations for secure
-    network communication.
+    the Symantec Integrated Cyber Defense Exchange (ICDX) server into Google SecOps
+    SOAR. By executing custom search queries against the ICDX API, the connector retrieves
+    relevant security events, transforms them into standardized SOAR cases, and facilitates
+    automated incident response workflows.
 
 
     ### Parameters Description
@@ -36,8 +21,8 @@ SymantecICDX query Connector:
     | EventClassId | String | No | The field name used to determine the event name
     (sub-type). |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    python process running the script. |
+    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
+    python process. |
 
     | Api Root | String | Yes | The base URL of the Symantec ICDX API. |
 
@@ -49,10 +34,10 @@ SymantecICDX query Connector:
     | Search Query | String | Yes | The query string used to search for events in
     ICDX. |
 
-    | Events Limit | Integer | Yes | The maximum number of events to pull in one cycle.
+    | Events Limit | Integer | Yes | Maximum number of events to pull in one cycle.
     |
 
-    | Max Days Backwards | Integer | Yes | The maximum number of days to fetch events
+    | Max Days Backwards | Integer | Yes | Maximum number of days to fetch events
     since. |
 
     | Proxy Server Address | String | No | The address of the proxy server to use.
@@ -65,22 +50,22 @@ SymantecICDX query Connector:
 
     ### Flow Description
 
-    1. The connector initializes by connecting to the Symantec ICDX API using the
-    provided credentials and proxy settings.
+    1. **Authentication & Initialization**: The connector initializes a connection
+    to the Symantec ICDX API using the provided API Root and Token.
 
-    2. It determines the start time for the query based on the last execution timestamp
-    or the configured `Max Days Backwards` limit.
+    2. **Timestamp Calculation**: It determines the start time for the query based
+    on the last successful execution timestamp, constrained by the `Max Days Backwards`
+    parameter.
 
-    3. It executes the configured `Search Query` against the Symantec ICDX API to
-    retrieve events.
+    3. **Event Retrieval**: It executes the configured `Search Query` against the
+    ICDX API to fetch events, handling pagination if necessary.
 
-    4. The connector filters out previously processed events using a local `ids.json`
-    file to ensure deduplication.
+    4. **Deduplication**: Retrieved events are compared against a local `ids.json`
+    file to filter out previously processed alerts.
 
-    5. For each new event, it maps the data to a Google SecOps `CaseInfo` object,
-    including relevant fields like device product and event time.
+    5. **Case Creation**: Valid events are mapped to SOAR `CaseInfo` objects, including
+    relevant metadata like start time, end time, and environment.
 
-    6. It checks for overflow conditions to prevent system overload.
-
-    7. Finally, it saves the updated timestamp and processed event IDs to maintain
-    state for the next execution cycle.
+    6. **Overflow Check & Ingestion**: The connector checks for overflow conditions
+    for each case. If no overflow is detected, the case is ingested into the SOAR
+    platform, and the local state (timestamp and processed IDs) is updated.

@@ -2,11 +2,11 @@
   ai_description: >-
     ### General Description
 
-    This connector integrates with the `api.vatcomply.com` service to fetch currency
-    exchange rates. It processes these rates and creates alerts within Google SecOps,
-    allowing users to monitor financial data or exchange rate fluctuations as security
-    events. The connector supports flexible configuration for filtering, alert creation,
-    and proxy settings.
+    This connector integrates with the `api.vatcomply.com` service to fetch daily
+    currency exchange rates. It transforms these rates into alerts within Google SecOps,
+    allowing security teams to monitor financial data or use it for context enrichment.
+    The connector supports configurable alert creation, filtering, and environment
+    mapping.
 
 
     ### Parameters Description
@@ -18,20 +18,20 @@
     | DeviceProductField | String | Yes | Source field name for the Product Field.
     |
 
-    | EventClassId | String | Yes | Source field name for the Event Field. |
+    | EventClassId | String | Yes | Source field name for the Event Class ID. |
 
     | Environment Field Name | String | No | Field name where the environment name
     is stored. |
 
     | Environment Regex Pattern | String | No | Regex pattern to manipulate the environment
-    field value. |
+    field. |
 
-    | PythonProcessTimeout | String | Yes | Timeout limit (in seconds) for the script.
+    | PythonProcessTimeout | Integer | Yes | Timeout limit (seconds) for the script.
     |
 
     | API Root | String | Yes | API Root URL for the service. |
 
-    | Password Field | Password | No | API password (for showcase). |
+    | Password Field | String | No | API password (for showcase). |
 
     | Currencies To Fetch | String | No | Comma-separated list of currencies to fetch.
     |
@@ -39,15 +39,15 @@
     | Create Alert Per Exchange Rate | Boolean | No | If enabled, creates a separate
     alert per exchange rate. |
 
-    | Alert Severity | String | No | Severity level for created alerts. |
+    | Alert Severity | String | No | Severity level (Critical, High, Medium, Low,
+    Informational). |
 
-    | Add Attachment | Boolean | No | If enabled, attaches JSON data to the alert.
+    | Add Attachment | Boolean | No | If enabled, adds a JSON object to the alert.
     |
 
     | Max Days Backwards | Integer | Yes | Number of days to fetch alerts from. |
 
-    | Max Alerts To Fetch | String | Yes | Maximum number of alerts to process per
-    iteration. |
+    | Max Alerts To Fetch | String | Yes | Max alerts to process per iteration. |
 
     | Use dynamic list as blocklist | Boolean | Yes | If enabled, uses the dynamic
     list as a blocklist. |
@@ -61,22 +61,25 @@
 
     | Proxy Username | String | No | Proxy username. |
 
-    | Proxy Password | Password | No | Proxy password. |
+    | Proxy Password | String | No | Proxy password. |
 
 
     ### Flow Description
 
-    1. Initializes the API client using the provided API Root and authentication parameters.
+    1. **Initialization**: The connector initializes the API client using the provided
+    `API Root` and authentication settings.
 
-    2. Reads existing alert IDs from the SOAR context to prevent duplicate processing.
+    2. **Data Fetching**: It determines the date range based on `Max Days Backwards`
+    and the last successful execution time, then queries `api.vatcomply.com` for exchange
+    rates for the configured currencies.
 
-    3. Fetches exchange rate data from `api.vatcomply.com` for the configured currencies.
+    3. **Alert Creation**: Retrieved rates are mapped into `AlertInfo` objects. Depending
+    on the configuration, it creates either a combined alert or individual alerts
+    per exchange rate, optionally attaching the raw JSON data.
 
-    4. Transforms the fetched data into `AlertInfo` objects, optionally creating separate
-    alerts for each currency or a combined alert.
+    4. **Filtering**: The connector filters out already processed alerts using the
+    stored context and applies whitelist/blocklist logic to the events.
 
-    5. Filters alerts based on the whitelist/blocklist configuration and checks for
-    overflow.
-
-    6. Stores the processed alert IDs in the SOAR context and updates the last success
-    time.
+    5. **Ingestion & State Management**: Validated alerts are ingested into Google
+    SecOps. Finally, the connector updates its context with the processed alert IDs
+    and the last success timestamp to ensure subsequent runs only fetch new data.

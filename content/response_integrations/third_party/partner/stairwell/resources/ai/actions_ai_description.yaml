@@ -14,9 +14,9 @@ Enrich Hash:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence (reputation, prevalence, etc.) for
-      a file hash, which matches the 'Enrich IOC' category. It does not perform any
-      other actions like ticketing, blocking, or host containment.
+      The action retrieves threat intelligence for file hashes, which matches the
+      'Enrich IOC' category. It does not perform containment, ticketing, or other
+      actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -35,6 +35,14 @@ Enrich Hash:
     \ Stairwell platform. This action retrieves comprehensive threat intelligence,\
     \ including file metadata, prevalence, and malicious probability scores, to assist\
     \ analysts in evaluating the risk associated with specific file hashes.\n\n###\
+    \ Parameters Description\n| Parameter | Type | Mandatory | Description |\n| :---\
+    \ | :--- | :--- | :--- |\n| API Root | String | Yes | The base URL for the Stairwell\
+    \ API. |\n| API Key | String | Yes | The API key used for authentication with\
+    \ the Stairwell service. |\n| Organization ID | String | No | The Organization\
+    \ ID to include in the API request headers. |\n| User ID | String | No | The User\
+    \ ID to include in the API request headers. |\n\n### Additional Notes\n- This\
+    \ action is strictly for enrichment and does not perform any modifications on\
+    \ external systems. \n- It only processes entities of type `FILEHASH`.\n\n###\
     \ Flow Description\n1. **Initialization**: Extracts configuration parameters (API\
     \ Root, API Key, Organization ID, and User ID) required for authentication and\
     \ API communication.\n2. **Filtering**: Identifies and filters target entities\
@@ -45,15 +53,7 @@ Enrich Hash:
     \    - Evaluates the file's suspicious status based on the retrieved verdict and\
     \ malicious probability.\n5. **Reporting**: \n    - If the file is deemed suspicious,\
     \ it generates an entity insight.\n    - Adds a data table containing the enrichment\
-    \ results to the case.\n    - Updates the entities within the SOAR platform.\n\
-    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| API Root | String | Yes | The base URL for the\
-    \ Stairwell API. |\n| API Key | String | Yes | The API key used for authentication\
-    \ with the Stairwell service. |\n| Organization ID | String | No | The Organization\
-    \ ID to include in the API request headers. |\n| User ID | String | No | The User\
-    \ ID to include in the API request headers. |\n\n### Additional Notes\n- This\
-    \ action is strictly for enrichment and does not perform any modifications on\
-    \ external systems. \n- It only processes entities of type `FILEHASH`."
+    \ results to the case.\n    - Updates the entities within the SOAR platform."
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -64,18 +64,19 @@ Enrich Hash:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity properties, sets suspicious status, adds entity insights, and
-      adds data tables to the case.
+      Updates entity additional properties, sets is_enriched and is_suspicious flags,
+      adds entity insights, and adds data tables to the case.
     reasoning: >-
-      The action fetches threat intelligence data from the Stairwell API (GET). It
-      updates internal entity properties, sets the suspicious flag, and creates insights
-      within the SOAR platform. It does not modify external systems.
+      The action fetches threat intelligence from the Stairwell API (fetches_data=true).
+      It does not modify external systems (can_mutate_external_data=false). It updates
+      internal SOAR entities with enrichment data, sets suspicious status, and creates
+      insights (can_mutate_internal_data=true, can_update_entities=true, can_create_insight=true).
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data (Enrichment) and does not mutate external systems. It
-      performs allowed internal mutations (updating entities, creating insights).
-      It is not a Ping or download action.
+      The action fetches data from an external source (Stairwell) to enrich entities.
+      It does not mutate external systems. It performs allowed internal mutations
+      (updating entities, creating insights). Therefore, it is an enrichment action.
   entity_usage:
     entity_types:
     - FILEHASH
@@ -93,7 +94,7 @@ Enrich Hash:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code filters `siemplify.target_entities` specifically for `FILEHASH` entities.
+      The code iterates over `siemplify.target_entities` and filters for `EntityTypes.FILEHASH`.
 Enrich Hostname:
   action_product_categories:
     add_alert_comment: false
@@ -106,13 +107,13 @@ Enrich Hostname:
     download_file: false
     enable_identity: false
     enrich_asset: true
-    enrich_ioc: false
+    enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata for a hostname (asset) from Stairwell.
-      This matches the 'Enrich Asset' category. It does not perform IOC enrichment
-      (IP/Hash), nor does it perform containment or ticketing actions.
+      The action retrieves contextual metadata and reputation for a hostname, which
+      aligns with 'Enrich Asset' and 'Enrich IOC' (as hostnames are indicators). It
+      does not perform any containment or blocking actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -159,19 +160,19 @@ Enrich Hostname:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity properties, adds insights, and adds data tables to the case.
+      Updates entity additional properties, marks entities as enriched, sets suspicious
+      status, creates entity insights, and adds data tables to the case.
     reasoning: >-
-      The action fetches host data from the Stairwell API (fetches_data=true). It
-      does not modify external systems (can_mutate_external_data=false). It performs
-      internal mutations by updating entity properties, adding insights, and adding
-      data tables to the case (can_mutate_internal_data=true).
+      The action fetches host data from the Stairwell API. It updates the entity's
+      `additional_properties`, marks it as enriched, sets the suspicious status, creates
+      an entity insight if suspicious, and adds a data table to the results. It does
+      not mutate external systems.
   categories:
     enrichment: true
     reasoning: >-
       The action fetches data from an external source (Stairwell) to enrich entities.
       It does not mutate external systems. It performs allowed internal mutations
-      (updating entities, creating insights). Therefore, it is classified as an enrichment
-      action.
+      (updating entities, creating insights). Therefore, it is an enrichment action.
   entity_usage:
     entity_types:
     - HOSTNAME
@@ -189,8 +190,7 @@ Enrich Hostname:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters specifically
-      for `EntityTypes.HOSTNAME`.
+      The code iterates over `siemplify.target_entities` and filters for `EntityTypes.HOSTNAME`.
 Enrich IP:
   action_product_categories:
     add_alert_comment: false
@@ -207,9 +207,9 @@ Enrich IP:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence (reputation, verdict) for an IP address
-      from Stairwell. This matches the 'Enrich IOC' category. It does not perform
-      any other actions like blocking, ticketing, or alert management.
+      The action retrieves threat intelligence (verdicts, opinions) for IP addresses,
+      which matches the 'Enrich IOC' category. It does not perform containment, ticketing,
+      or other actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -256,13 +256,13 @@ Enrich IP:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties, marks entities as enriched/suspicious,
-      adds entity insights, and adds data tables to the case.
+      Updates entity properties, sets suspicious status, adds entity insights, and
+      adds data tables to the case wall.
     reasoning: >-
-      The action fetches IP reputation data from the Stairwell API (fetches_data=true).
+      The action fetches threat intelligence data from the Stairwell API (fetches_data=true).
       It does not modify external systems (can_mutate_external_data=false). It updates
-      internal SOAR entities with enrichment data and creates insights for suspicious
-      entities (can_mutate_internal_data=true, can_update_entities=true, can_create_insight=true).
+      internal SOAR entities with enrichment data, adds insights, and adds data tables
+      (can_mutate_internal_data=true, can_update_entities=true, can_create_insight=true).
   categories:
     enrichment: true
     reasoning: >-
@@ -286,9 +286,7 @@ Enrich IP:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering by
-      entity_type.
+      The code iterates over `siemplify.target_entities` and filters for `EntityTypes.ADDRESS`.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -306,7 +304,7 @@ Ping:
     get_alert_information: false
     reasoning: >-
       The action is a connectivity test (Ping) and does not perform any of the defined
-      product category operations like enrichment, containment, or ticket management.
+      functional operations such as enrichment, containment, or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -367,17 +365,18 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to verify connectivity to the Stairwell API.
-      It does not modify any external or internal data, nor does it update entities,
-      create insights, or modify alert data.
+      The action performs a connectivity test (Ping) by making a GET request to an
+      external API. It does not fetch contextual data on alerts or entities, nor does
+      it mutate any external or internal data. It does not update entities, create
+      insights, or modify alert data.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a 'Ping' action, which is explicitly excluded from being an enrichment
-      action per the provided instructions.
+      The action is a 'Ping' action. According to the provided instructions, 'Actions
+      named Ping must not be categorized as enrichment actions.'
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -394,5 +393,5 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities from the SOAR platform; it uses a hardcoded
-      dummy hostname to test connectivity.
+      The action does not iterate over or process `target_entities`. It uses a hardcoded
+      dummy hostname for the connectivity test.

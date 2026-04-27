@@ -2,10 +2,10 @@ Vorlon Connector:
   ai_description: >-
     ### General Description
 
-    The Vorlon Connector enables the ingestion of security alerts from the Vorlon
-    platform into Google SecOps. It facilitates automated monitoring by periodically
-    querying the Vorlon API for new alerts, mapping them to standardized case formats,
-    and creating incidents within the SOAR environment.
+    The Vorlon Connector integrates Google SecOps with the Vorlon platform to ingest
+    security alerts. It enables automated monitoring of service connections and secrets
+    management events, allowing security teams to centralize incident response by
+    converting Vorlon alerts into actionable cases within Google SecOps.
 
 
     ### Parameters Description
@@ -17,10 +17,11 @@ Vorlon Connector:
     | API Root | String | Yes | The base URL for the Vorlon API (e.g., https://<domain_name>.vorlon.io).
     |
 
-    | Client ID | String | Yes | The Client ID used for authentication. |
+    | Client ID | String | Yes | The Client ID used for authentication with the Vorlon
+    API. |
 
-    | Client Secret | Password | Yes | The Client Secret used for authentication.
-    |
+    | Client Secret | String | Yes | The Client Secret used for authentication with
+    the Vorlon API. |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
     product. |
@@ -28,35 +29,39 @@ Vorlon Connector:
     | EventClassId | String | Yes | The field name used to determine the event name
     (sub-type). |
 
-    | Max Days Backwards | String | No | The number of days to look back when fetching
-    incidents (default is 1). |
+    | Max Days Backwards | Integer | No | The number of days to look back when fetching
+    incidents for the first time. |
 
-    | Max Incidents per Fetch | String | Yes | The maximum number of incidents to
-    retrieve in a single fetch. |
+    | Max Incidents per Fetch | Integer | Yes | The maximum number of incidents to
+    retrieve in a single fetch operation. |
 
     | Open Alerts Only | Boolean | No | If enabled, fetches only alerts with an "open"
-    status; otherwise, fetches all statuses. |
+    status; otherwise, includes "dismissed" and "resolved" alerts. |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    Python process. |
+    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
+    Python process running the connector script. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The connector authenticates with the Vorlon API using the
-    provided Client ID and Client Secret to obtain an access token.
+    1. **Initialization**: The connector initializes parameters and establishes a
+    connection to the Vorlon API using the provided credentials.
 
-    2. **Initialization**: It retrieves configuration parameters and determines the
-    time range for fetching alerts based on the last successful execution timestamp
-    or the `Max Days Backwards` setting.
+    2. **Time Window Calculation**: It determines the start time for fetching alerts
+    based on the last saved timestamp or the configured "Max Days Backwards" setting.
 
-    3. **Data Fetching**: It queries the Vorlon `/rest/v1/alerts` endpoint, applying
-    filters for status (if configured) and time range.
+    3. **Alert Retrieval**: It queries the Vorlon API (`/rest/v1/alerts`) for alerts,
+    applying filters for status (open/all) and time range.
 
-    4. **Case Creation**: For each retrieved alert, the connector creates a corresponding
-    event and maps it into a `CaseInfo` object, including details like start/end times,
-    severity, and service information.
+    4. **Data Processing**: For each retrieved alert, the connector maps the data
+    into a standardized event format, including details like service IDs, secret types,
+    and severity.
 
-    5. **Ingestion**: The mapped cases are returned to the SOAR platform for processing,
-    and the latest timestamp is saved to ensure subsequent fetches start from the
-    correct point.
+    5. **Case Creation**: It creates a case in Google SecOps for each processed event,
+    populating it with relevant alert metadata.
+
+    6. **State Management**: The connector saves the timestamp of the latest processed
+    alert to ensure that subsequent executions only fetch new or updated incidents.
+
+    7. **Result Return**: Finally, it returns the collected cases to the Google SecOps
+    platform for further investigation and response.

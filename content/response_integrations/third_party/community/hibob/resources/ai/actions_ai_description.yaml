@@ -14,9 +14,9 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (user details) for a user entity and
-      updates the entity within the platform. This matches the 'Enrich Asset' category.
-      It does not perform IOC enrichment, alert updates, or external system mutations.
+      The action retrieves contextual metadata (department, role, status) for a user
+      entity from an HR system. This aligns with the 'Enrich Asset' category. It does
+      not enrich IOCs, update alerts, or perform containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -91,18 +91,21 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional_properties and sets the is_enriched flag to true.
+      Updates the entity's `additional_properties` and `is_enriched` flag within the
+      SecOps platform.
     reasoning: >-
-      The action fetches user details from the Hibob API (fetches_data=true). It updates
-      the entity's `additional_properties` and `is_enriched` flag within the SOAR
-      platform (can_mutate_internal_data=true, can_update_entities=true). It does
-      not perform any write operations on the external Hibob system.
+      The action fetches user profile data from the Hibob API (fetches_data=true).
+      It does not perform any write operations on the external Hibob system (can_mutate_external_data=false).
+      It updates the entity's `additional_properties` and `is_enriched` flag within
+      the SecOps platform (can_mutate_internal_data=true, can_update_entities=true).
+      It does not create insights, modify alert data, or create case comments.
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data from an external source (Hibob) and updates internal
-      entity properties without modifying external state. This meets the criteria
-      for an enrichment action.
+      The action is an enrichment action because it fetches data from an external
+      source (Hibob) to provide context on entities. It does not mutate external systems.
+      It performs allowed internal mutations (updating entities). It is not a Ping
+      or download action.
   entity_usage:
     entity_types:
     - USERUNIQNAME
@@ -120,8 +123,8 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and explicitly filters for
-      `EntityTypes.USER` using an if-statement.
+      The action iterates over `siemplify.target_entities` and filters specifically
+      for entities of type `USER` (mapped to `USERUNIQNAME` in the configuration).
 Get User Image:
   action_product_categories:
     add_alert_comment: false
@@ -133,14 +136,14 @@ Get User Image:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: true
+    enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (profile image) for a user from an
-      external HR system. This aligns with the 'Enrich Asset' category, as it provides
-      additional context about a user resource.
+      The action retrieves a user's profile image from an external HR system. It does
+      not match the expected outcomes for enriching IOCs, assets (in the context of
+      updating entity profiles), or any other listed categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -208,14 +211,16 @@ Get User Image:
     reasoning: >-
       The action performs GET requests to the Hibob API to retrieve user details and
       images. It does not perform any POST/PUT/DELETE operations on external systems
-      (can_mutate_external_data=false). It does not update entities, create insights,
-      or add comments to the case (can_mutate_internal_data=false).
+      (can_mutate_external_data=false). It returns the result to the SOAR platform
+      using `add_result_json`, which does not modify existing case data or entities
+      (can_mutate_internal_data=false).
   categories:
     enrichment: false
     reasoning: >-
-      While the action fetches data (user image), it does not meet the criteria for
-      an Enrichment Action because it does not update entities, create insights, or
-      add case comments. It simply returns a JSON result.
+      While the action fetches data, it does not operate on SOAR entities or alerts
+      to provide supplemental context in the way defined for enrichment actions (e.g.,
+      it does not update entity fields or create insights). It is a utility action
+      for retrieving user information.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -232,8 +237,8 @@ Get User Image:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities`. It relies solely
-      on the `Employee's Email` parameter provided by the user to perform its lookup.
+      The action does not iterate over `target_entities`. It takes an email address
+      as a direct input parameter to perform its lookup.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -250,8 +255,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping) and does not perform any of the defined
-      functional operations like enriching IOCs, updating tickets, or containing hosts.
+      The action is a connectivity test and does not perform any of the defined product
+      category operations (enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -267,14 +272,25 @@ Ping:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    General description:
+    ### General Description
 
     This action tests the connectivity between the SOAR platform and the Hibob API.
     It verifies that the provided API credentials are valid and that the service is
     reachable.
 
 
-    Flow description:
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    This action is strictly for connectivity testing and does not perform any data
+    retrieval or modification.
+
+
+    ### Flow Description
 
     1. The action retrieves the Hibob API configuration (API Token) from the integration
     settings.
@@ -285,17 +301,6 @@ Ping:
 
     4. If the request is successful, it returns a success message; otherwise, it returns
     a failure message.
-
-
-    Parameters description:
-
-    There are no parameters for this action.
-
-
-    Additional notes:
-
-    This action is strictly for connectivity testing and does not perform any data
-    retrieval or modification.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -308,13 +313,13 @@ Ping:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a GET request to verify connectivity to the Hibob API. It
-      does not modify any external or internal data, nor does it update entities or
-      create insights.
+      does not fetch contextual data for alerts or entities, nor does it mutate any
+      external or internal data.
   categories:
     enrichment: false
     reasoning: >-
-      The action is named 'Ping'. According to the instructions, 'Actions named Ping
-      must not be categorized as enrichment actions.'
+      The action is a 'Ping' action designed solely for connectivity verification.
+      Per the instructions, Ping actions are not enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -348,9 +353,8 @@ Revoke Access:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action revokes access for a user in an external system (Hibob). This aligns
-      with the 'Disable Identity' category, which is defined as 'Revokes active sessions
-      and prevents a user or service account from authenticating to the network.'
+      The action revokes access for a user in Hibob, which directly aligns with the
+      'Disable Identity' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -405,19 +409,18 @@ Revoke Access:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Revokes access for a specific employee in the Hibob platform by uninviting them.
+      Revokes access for an employee in the Hibob platform.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches user details from Hibob (GET request) and then performs a
-      revocation (POST request) on the Hibob platform. It does not modify internal
-      SOAR data (entities, insights, or case comments).
+      The action fetches user details from the Hibob API (GET) to verify existence
+      and status, then performs a POST request to revoke access (mutate external data).
+      It does not modify internal SOAR data, entities, or insights.
   categories:
     enrichment: false
     reasoning: >-
-      The action performs a mutation on an external system (Hibob) to revoke access.
-      It is not an enrichment action because it modifies the state of an external
-      system.
+      The action performs a mutation on an external system (revoking access), which
+      disqualifies it from being an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -434,9 +437,8 @@ Revoke Access:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code does not iterate over `siemplify.target_entities`. It extracts the
-      email directly from the action parameters (`siemplify.extract_action_param("Employee's
-      Email")`). Therefore, it does not run on entities.
+      The action does not operate on entities. It uses a direct input parameter ('Employee's
+      Email') to identify the target user.
 Search User:
   action_product_categories:
     add_alert_comment: false
@@ -448,18 +450,20 @@ Search User:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: true
+    enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for a user in Hibob and retrieves their details. This matches
-      the "Search Asset" outcome. It also retrieves contextual metadata (user details),
-      which matches the "Enrich Asset" outcome.
+      The action performs a lookup in an external HR system (Hibob) to retrieve user
+      details. It does not match the 'Enrich Asset' category because it does not update
+      an entity within the SOAR platform, nor does it match 'Search Asset' as it is
+      not searching for an asset associated with an alert. It is a standalone lookup
+      utility.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: true
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
@@ -475,14 +479,14 @@ Search User:
 
     Searches for a specific user in the Hibob HR system using their email address.
     This action retrieves user details from Hibob and adds them to the action result
-    JSON.
+    JSON for manual review or further processing.
 
 
     ### Flow Description
 
-    1. Extracts the "Employee's Email" parameter.
+    1. Extracts the "Employee's Email" parameter provided by the user.
 
-    2. Initializes the Hibob manager with the provided API token.
+    2. Initializes the Hibob manager with the configured API token.
 
     3. Queries the Hibob API (`/v1/people/{employee_identifier}`) to retrieve user
     details.
@@ -516,16 +520,16 @@ Search User:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the Hibob API to retrieve user details.
-      It does not mutate external data (no POST/PUT/DELETE). It does not mutate internal
-      data (no `update_entities`, `add_entity_insight`, etc.). It does not update
-      entities, create insights, modify alert data, or create case comments.
+      The action performs a GET request to retrieve user details from the Hibob API.
+      It does not modify any external systems (no POST/PUT/DELETE), nor does it modify
+      internal SOAR data such as entities, insights, or case comments. It simply returns
+      the retrieved data in the action result.
   categories:
     enrichment: false
     reasoning: >-
-      The action fetches data from an external system (Hibob) but does not operate
-      on entities or update internal SOAR data (like insights or entity fields). Therefore,
-      it does not meet the criteria for an Enrichment Action.
+      The action does not operate on entities (it does not iterate over `target_entities`)
+      and does not update entity fields, insights, or comments. Therefore, it does
+      not meet the criteria for an Enrichment Action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -542,9 +546,8 @@ Search User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers to perform its task. It takes an input parameter "Employee's Email"
-      directly. Therefore, it does not run on entities.
+      The action does not reference `target_entities` or use entity-specific identifiers.
+      It relies on a manual input parameter ('Employee's Email') to perform the search.
 Send Invitation:
   action_product_categories:
     add_alert_comment: false
@@ -561,8 +564,9 @@ Send Invitation:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action sends an invitation to an employee in Hibob, which modifies the user's
-      access state (enabling them to log in). This aligns with 'Enable Identity'.
+      The action sends an invitation to a user in Hibob, enabling them to log in.
+      This aligns with the 'Enable Identity' category, as it restores authentication
+      capabilities for the user.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -623,19 +627,20 @@ Send Invitation:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends an invitation to an employee in the Hibob system, which changes the employee's
-      invitation state.
+      Sends an invitation to an employee in the Hibob system, which changes the user's
+      invitation status in the external platform.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to invite an employee (can_mutate_external_data=true).
-      It fetches user details and wizard information (fetches_data=true). It does
-      not update internal entities or modify case data.
+      The action fetches user and wizard data from Hibob (fetches_data=true). It then
+      performs a POST request to send an invitation, which changes the user's state
+      in the external system (can_mutate_external_data=true). It does not modify internal
+      SOAR data or entities.
   categories:
     enrichment: false
     reasoning: >-
-      The action mutates external data (sends an invitation), which violates the requirement
-      for an enrichment action to be read-only regarding external systems.
+      The action mutates external data (sends an invitation), therefore it cannot
+      be an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -652,9 +657,9 @@ Send Invitation:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not use `target_entities`. It extracts parameters directly from
-      the action configuration using `siemplify.extract_action_param`. Therefore,
-      it does not run on entities.
+      The action uses parameters provided in the action configuration (`Employee's
+      Email`) rather than iterating over `target_entities`. Therefore, it does not
+      run on entities.
 Upload User Image:
   action_product_categories:
     add_alert_comment: false
@@ -672,8 +677,8 @@ Upload User Image:
     get_alert_information: false
     reasoning: >-
       The action updates a user's profile image in an external HR system (Hibob).
-      This aligns with the 'Update Identity' category, which involves modifying account
-      metadata.
+      This aligns with the 'Update Identity' category, which covers modifying account
+      metadata. It does not fit other categories like enrichment or containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -736,19 +741,18 @@ Upload User Image:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the user's avatar/image in the Hibob HR platform.
+      Updates the user's avatar image in the Hibob HR platform.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches user details (GET) to retrieve an ID, then performs a PUT
-      request to update the user's avatar in the external Hibob system. It does not
-      modify internal SOAR data or entities.
+      The action fetches user details from Hibob to retrieve an ID, then performs
+      a PUT request to update the user's avatar. It does not modify internal SOAR
+      data or entities.
   categories:
     enrichment: false
     reasoning: >-
-      The action mutates external data (uploads an image), which violates the 'External
-      State Preservation' rule for enrichment actions. Therefore, it is not an enrichment
-      action.
+      The action is not an enrichment action because it mutates external data (updates
+      an avatar).
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -765,6 +769,5 @@ Upload User Image:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies entirely on user-provided parameters (email) to identify the user in
-      the external system.
+      The action does not use or iterate over SOAR entities. It operates on parameters
+      provided directly to the action.

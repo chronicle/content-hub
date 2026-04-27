@@ -3,10 +3,9 @@
     ### General Description
 
     The Flashpoint - Compromised Credential Connector integrates with the Flashpoint
-    intelligence platform to monitor and ingest compromised credential sightings.
-    It periodically queries the Flashpoint API for new credential-related alerts and
-    automatically creates cases within Google SecOps, enabling security teams to respond
-    to potential account takeovers or credential leaks.
+    platform to monitor for compromised employee credentials. It periodically fetches
+    "Credential Sighting" alerts from Flashpoint and ingests them into Google SecOps
+    as cases, enabling security teams to respond to potential credential leaks.
 
 
     ### Parameters Description
@@ -15,47 +14,46 @@
 
     | :--- | :--- | :--- | :--- |
 
-    | API Key | Password | Yes | The API Key used to authenticate with the Flashpoint
-    service. |
+    | API Key | String | Yes | The API key for authenticating with Flashpoint. |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product in the case. |
+    product. |
 
     | EventClassId | String | No | The field name used to determine the event name
     (sub-type). |
 
-    | Limit | Integer | Yes | The maximum number of events to retrieve per execution.
+    | Limit | Integer | Yes | The maximum number of events to retrieve per iteration.
     |
 
     | Max Days Back | Integer | No | The maximum number of days to look back when
-    fetching data. |
+    retrieving data. |
 
-    | Proxy Password | Password | No | The proxy password to authenticate with. |
+    | Proxy Password | String | No | The password for proxy authentication. |
 
-    | Proxy Server Address | String | No | The address of the proxy server to use.
-    |
+    | Proxy Server Address | String | No | The address of the proxy server. |
 
-    | Proxy Username | String | No | The proxy username to authenticate with. |
+    | Proxy Username | String | No | The username for proxy authentication. |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    Python process running the script. |
+    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
+    Python process. |
 
 
     ### Flow Description
 
-    1. The connector initializes a connection to the Flashpoint API using the provided
-    API Key and optional proxy settings.
+    1. The connector initializes and retrieves configuration parameters, including
+    the API key and proxy settings.
 
-    2. It calculates the time range for data retrieval based on the last successful
-    fetch timestamp or the configured "Max Days Back" parameter.
+    2. It calculates the time range for fetching alerts based on the last successful
+    run timestamp and the "Max Days Back" configuration.
 
-    3. It queries the Flashpoint API for "credential-sighting" events that occurred
+    3. It queries the Flashpoint API (`/all/search`) for "credential-sighting" alerts
     within the calculated time window.
 
-    4. For each retrieved alert, the connector flattens the data structure and maps
-    it to a Google SecOps case format.
+    4. For each retrieved alert, it flattens the JSON data and maps it to a Google
+    SecOps `CaseInfo` object.
 
-    5. It checks for alert overflow to prevent duplicate case creation.
+    5. It validates the alert against overflow rules to prevent duplicate or excessive
+    case creation.
 
-    6. Valid cases are ingested into the SOAR platform, and the latest timestamp is
-    saved to ensure subsequent runs only fetch new data.
+    6. Valid cases are ingested into the SOAR platform, and the last successful fetch
+    timestamp is updated for the next iteration.

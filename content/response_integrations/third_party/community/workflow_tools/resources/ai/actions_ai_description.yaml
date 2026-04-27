@@ -14,9 +14,9 @@ Approval Request:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies the state of an alert/case by moving it and assigning it
-      to a reviewer, which matches 'Update Alert'. It also sends a notification to
-      Slack, which matches 'Send Message'. It does not perform other listed actions.
+      The action moves an alert to a new case, which modifies the alert's structure
+      within the platform (Update Alert). It also sends a notification to Slack (Send
+      Message).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -66,6 +66,12 @@ Approval Request:
 
     6. Returns a JSON result containing the original case ID, new case ID (if applicable),
     and reviewer information.
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities. It performs case-level management
+    operations and external notifications.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -74,24 +80,22 @@ Approval Request:
     can_mutate_internal_data: true
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Moves the alert to a new case via an external API call and sends a notification
-      to Slack.
+      Sends a notification to a Slack webhook and calls the MoveAlertToNewCase API.
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Assigns the case to the approval manager using the internal SOAR API.
+      Assigns the case to a reviewer using the Siemplify API.
     reasoning: >-
-      The action performs external API calls to move alerts and send Slack messages
-      (can_mutate_external_data=true). It also uses internal SOAR methods to assign
-      cases (can_mutate_internal_data=true). It fetches user profiles via an API call
-      (fetches_data=true). It modifies alert/case state by moving alerts and assigning
-      cases (can_modify_alert_data=true). It does not update entities, create insights,
-      or create case comments.
+      The action fetches user profile data from the API (fetches_data=true). It mutates
+      external data by sending a Slack notification and calling the MoveAlertToNewCase
+      API (can_mutate_external_data=true). It mutates internal data by assigning the
+      case to a reviewer (can_mutate_internal_data=true). It modifies alert data by
+      moving the alert to a new case (can_modify_alert_data=true). It does not update
+      entities, create insights, or create case comments.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a workflow management tool that modifies case and alert state.
-      It does not fit the definition of an enrichment action as it does not retrieve
-      contextual data for entities to enrich their profiles.
+      The action is a workflow management tool, not an enrichment action. It does
+      not fetch context for entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -109,8 +113,8 @@ Approval Request:
     filters_by_modification_time: false
     reasoning: >-
       The action operates on the case and alert level using `siemplify.case.identifier`
-      and `siemplify.current_alert.identifier`. It does not iterate over `target_entities`
-      or use entity-specific identifiers.
+      and `siemplify.current_alert.identifier`. It does not iterate over or filter
+      `target_entities`.
 Approval Response:
   action_product_categories:
     add_alert_comment: true
@@ -127,8 +131,9 @@ Approval Response:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds a comment to the alert/case, matching 'Add Alert Comment'. It
-      also sends a message to Slack, matching 'Send Message'.
+      The action adds a comment to the case, matching 'Add Alert Comment'. It sends
+      a notification to Slack, matching 'Send Message'. It does not perform other
+      listed actions such as updating alert status or enriching IOCs.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -159,7 +164,8 @@ Approval Response:
     credentials, Slack webhook URL, and authorized approval managers.
 
     2. **Authorization Check**: Validates if the `original_requesting_user` matches
-    the primary or secondary approval manager (or their roles).
+    the primary or secondary approval manager (or their roles) by querying user profiles
+    via the API.
 
     3. **Decision Processing**: Based on the `Action Approved` parameter, it sets
     the approval status and prepares a corresponding message.
@@ -191,7 +197,8 @@ Approval Response:
 
     This action does not operate on specific entities; it functions at the case and
     alert level. Authorization is strictly enforced; if the user is not authorized,
-    the action will fail.
+    the action will fail. This action performs external mutations by sending notifications
+    to Slack and internal mutations by adding comments to the case.
   capabilities:
     can_create_case_comments: true
     can_create_insight: false
@@ -202,16 +209,18 @@ Approval Response:
     external_data_mutation_explanation: >-
       Sends a notification message to a configured Slack webhook.
     fetches_data: true
-    internal_data_mutation_explanation: Adds a comment to the case wall.
+    internal_data_mutation_explanation: >-
+      Adds a comment to the case and alert using the Siemplify SDK.
     reasoning: >-
-      The action queries the Siemplify API to verify user roles (fetches data). It
-      sends a message to an external Slack webhook (mutates external data). It adds
-      a comment to the case wall (mutates internal data/creates case comment).
+      The action fetches user profile data to validate authorization. It mutates external
+      data by sending a notification to a Slack webhook. It mutates internal data
+      by adding a comment to the case and alert using the Siemplify SDK.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a workflow/operational tool for approvals. It does not fetch context
-      about entities, so it is not an enrichment action.
+      The action is not an enrichment action because it performs external mutations
+      (Slack notification) and does not primarily fetch data to enrich entities or
+      alerts. It is an operational workflow action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -228,8 +237,8 @@ Approval Response:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action operates on the case and alert context directly using `siemplify.case.identifier`
-      and `siemplify.current_alert.identifier`. It does not iterate over or filter
+      The action operates at the case and alert level using `siemplify.case.identifier`
+      and `siemplify.current_alert.identifier`. It does not iterate over or process
       `target_entities`.
 Assign Case to Current User:
   action_product_categories:
@@ -247,8 +256,9 @@ Assign Case to Current User:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the assignee of the case, which aligns with the 'Update Alert'
-      category (as it modifies alert/case metadata within the SecOps platform).
+      The action modifies the assignee of the case within the SecOps platform. This
+      aligns with the 'Update Alert' category, which includes changing the assignee
+      of an alert or case.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -263,21 +273,47 @@ Assign Case to Current User:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "### General Description\nAssigns the current case to the user who\
-    \ triggered the playbook action. This action is designed to be placed at the start\
-    \ of a playbook and executed when an analyst begins working on a case.\n\n###\
-    \ Parameters Description\n| Parameter | Type | Mandatory | Description |\n| :---\
-    \ | :--- | :--- | :--- |\n| Siemplify API Key | String | Yes | The API key used\
-    \ to authenticate with the Siemplify API. |\n| Siemplify API Root | String | Yes\
-    \ | The base URL for the Siemplify API. |\n| Siemplify Instance Hostname | String\
-    \ | Yes | The hostname of the Siemplify instance. |\n\n### Additional Notes\n\
-    - This action will fail if the requesting user is the \"System\" user. \n- This\
-    \ playbook action must be set to manual execution to work, as it relies on the\
-    \ `original_requesting_user` context.\n\n### Flow Description\n1. Extract configuration\
-    \ parameters (API Key, API Root, Hostname).\n2. Identify the current case ID,\
-    \ alert ID, and the user who triggered the action.\n3. Validate that the requesting\
-    \ user is not the \"System\" user.\n4. Use the `WorkflowToolsManager` to assign\
-    \ the case to the requesting user via the internal `siemplify.assign_case` method."
+  ai_description: >-
+    ### General Description
+
+    Assigns the current case to the user who triggered the playbook action. This action
+    is designed to be placed at the start of a playbook and executed when an analyst
+    begins working on a case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Siemplify API Key | String | Yes | The API key used to authenticate with the
+    Siemplify API. |
+
+    | Siemplify API Root | String | Yes | The base URL for the Siemplify API. |
+
+    | Siemplify Instance Hostname | String | Yes | The hostname of the Siemplify instance.
+    |
+
+
+    ### Additional Notes
+
+    - This action will fail if the requesting user is the "System" user.
+
+    - This playbook action must be set to manual execution to work, as it relies on
+    the `original_requesting_user` context.
+
+
+    ### Flow Description
+
+    1. Extract configuration parameters (API Key, API Root, Hostname).
+
+    2. Identify the current case ID, alert ID, and the user who triggered the action.
+
+    3. Validate that the requesting user is not the "System" user.
+
+    4. Use the `WorkflowToolsManager` to assign the case to the requesting user via
+    the internal `siemplify.assign_case` method.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -288,16 +324,16 @@ Assign Case to Current User:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Updates the case assignee to the user who triggered the action.
+      Assigns the current case to the user who triggered the playbook action.
     reasoning: >-
-      The action modifies the internal state of the case by assigning it to a specific
-      user. It does not fetch external data or mutate external systems. It uses internal
-      SOAR methods to perform the assignment.
+      The action modifies the internal SOAR case assignment by assigning the case
+      to the user who triggered the action. It does not fetch external data or mutate
+      external systems. It uses internal SOAR SDK methods to perform the assignment.
   categories:
     enrichment: false
     reasoning: >-
-      The action is an operational task to assign a case, not an enrichment action.
-      It does not fetch data from external sources.
+      The action does not fetch data from external sources, therefore it does not
+      meet the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -314,8 +350,8 @@ Assign Case to Current User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process entities from the `target_entities` list. It operates
-      on the case and alert identifiers directly.
+      The action does not iterate over or process entities. It operates on the current
+      case and alert context directly.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -332,8 +368,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a connectivity check and sends a test message to Slack.
-      Sending a message to Slack aligns with the 'Send Message' category.
+      The action is a connectivity check (Ping). It validates user profiles and sends
+      a test message to Slack. It does not fit standard enrichment or containment
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -341,7 +378,7 @@ Ping:
     search_email: false
     search_events: false
     send_email: false
-    send_message: true
+    send_message: false
     submit_file: false
     uncontain_host: false
     update_alert: false
@@ -394,19 +431,19 @@ Ping:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: Sends a test message to a Slack webhook.
+    external_data_mutation_explanation: >-
+      Sends a test message to the configured Slack webhook.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches user profile data from the API (fetches_data=true) and sends
-      a test message to a Slack webhook (can_mutate_external_data=true). It does not
-      modify internal SOAR data or entities.
+      The action fetches user profile data from the SecOps API to validate configuration
+      and sends a test message to an external Slack webhook. It does not modify internal
+      SecOps data or entities.
   categories:
     enrichment: false
     reasoning: >-
-      The action is named 'Ping' and performs a connectivity check. According to the
-      guidelines, actions named 'Ping' must not be categorized as enrichment actions.
-      It does not perform any data enrichment on entities.
+      The action is named 'Ping'. Per the instructions, Ping actions are not enrichment
+      actions. It does not meet the criteria for enrichment.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -423,6 +460,5 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `target_entities` or use any entity-specific
-      identifiers. It operates based on configuration parameters provided in the integration
-      settings.
+      The action does not interact with entities. It performs a connectivity check
+      and configuration validation.

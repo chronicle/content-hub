@@ -14,15 +14,17 @@ Get-Collection-Info-Async:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence collections from an external API. It
-      does not match any of the provided categories (e.g., it does not enrich specific
-      IOCs, update alerts, or perform containment).
+      The action fetches threat intelligence data from the Group-IB TI database based
+      on a collection name. This matches the 'Search Events' category as it retrieves
+      a collection of data matching specific search parameters (collection name, start
+      date). It does not operate on specific entities, so it is not an enrichment
+      action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
-    search_events: false
+    search_events: true
     send_email: false
     send_message: false
     submit_file: false
@@ -32,6 +34,8 @@ Get-Collection-Info-Async:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     Extracts threat intelligence data from the Group-IB TI database. This action retrieves
     specific collections of threat data (e.g., APT threats, malware, phishing kits)
     based on a sequence update number or a provided start date. It does not operate
@@ -72,6 +76,13 @@ Get-Collection-Info-Async:
 
     | Portion limit | ddl | Yes | Controls the number of data portions returned from
     the API. Defaults to 100. |
+
+
+    ### Additional Notes
+
+    This action is designed for data ingestion and does not interact with specific
+    entities in the case. It is intended to be used for periodic synchronization of
+    threat intelligence data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -83,16 +94,16 @@ Get-Collection-Info-Async:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches threat intelligence data from the Group-IB TI API (fetches_data=true).
-      It does not perform any write operations to external systems (can_mutate_external_data=false).
-      It does not modify internal SOAR data, update entities, create insights, or
-      add case comments (all mutation flags=false).
+      The action fetches data from the Group-IB TI API (fetches_data=true). It does
+      not mutate external data (can_mutate_external_data=false) or internal data (can_mutate_internal_data=false).
+      It does not update entities, create insights, modify alert data, or create case
+      comments.
   categories:
     enrichment: false
     reasoning: >-
-      While the action fetches data, it does not perform enrichment on specific entities
-      or alerts. It is a data retrieval action for threat intelligence feeds, not
-      an enrichment action as defined by the criteria.
+      The action fetches data from an external source but does not perform enrichment
+      on specific entities or alerts. It is a data retrieval action, not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -109,8 +120,9 @@ Get-Collection-Info-Async:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action explicitly ignores any entities provided in the context, as stated
-      in the description and confirmed by the code which does not iterate over target_entities.
+      The action does not iterate over `target_entities` or use them to perform its
+      logic. It fetches data based on configuration parameters (`Collection`, `Start
+      date`, `Portion limit`). Therefore, it does not run on any entity types.
 Get-Graph-Info:
   action_product_categories:
     add_alert_comment: false
@@ -127,9 +139,9 @@ Get-Graph-Info:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence (graph information) for indicators
-      (IPs and Domains). This directly aligns with the 'Enrich IOC' category. It does
-      not perform any other operations such as ticketing, blocking, or alert management.
+      The action retrieves threat intelligence (WHOIS/Graph info) for IP and Domain
+      indicators, which aligns with the 'Enrich IOC' category. It does not perform
+      any other actions like ticketing, blocking, or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -145,6 +157,8 @@ Get-Graph-Info:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     Retrieves WHOIS and graph information for IP addresses and domains using the Group-IB
     Threat Intelligence service. This action provides contextual intelligence to help
     analysts understand the relationships and background of specific indicators.
@@ -184,17 +198,16 @@ Get-Graph-Info:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to an external API (Group-IB) to retrieve
-      threat intelligence data. It does not perform any POST/PUT/DELETE operations
-      on external systems, nor does it modify internal case data (such as updating
-      entities, creating insights, or adding case comments). It only attaches the
-      retrieved data to the action result.
+      The action fetches threat intelligence data from the Group-IB API for IP and
+      Domain entities. It does not modify any external systems or internal case data
+      (entities, insights, comments). It only attaches the retrieved data to the action
+      result using `add_result_json`.
   categories:
     enrichment: true
     reasoning: >-
-      The action is designed to fetch supplemental context (graph info) for entities.
-      It does not mutate external systems, nor does it perform any restricted internal
-      mutations. It meets all criteria for an enrichment action.
+      The action is designed to fetch supplemental context (WHOIS/Graph info) for
+      indicators. It does not mutate external systems or modify internal case data.
+      It fits the definition of an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -214,8 +227,7 @@ Get-Graph-Info:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and filters them using `EntityValidator`
-      to ensure only 'ip' and 'domain' types are processed. These map to 'ADDRESS'
-      and 'DOMAIN' entity types in the SecOps platform.
+      to ensure they are either IP addresses or domains.
 Get-TI-Search-Info:
   action_product_categories:
     add_alert_comment: false
@@ -232,10 +244,9 @@ Get-TI-Search-Info:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action queries the Group-IB TI database for indicators (IPs, Hashes, Domains,
-      etc.) and returns the findings. This is a classic Enrichment IOC action. It
-      does not perform any other operations like ticket creation, alert updates, or
-      containment.
+      The action retrieves threat intelligence (reputation, threat actors, malware,
+      etc.) for various indicators (IP, Domain, Hash, etc.) from the Group-IB TI database.
+      This aligns with the 'Enrich IOC' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -251,12 +262,32 @@ Get-TI-Search-Info:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     Searches the Group-IB Threat Intelligence database for information related to
     entities found in the case. This action identifies the type of each entity (e.g.,
     IP, Domain, Hash, Email, Credit Card) and queries the Group-IB TI platform to
     retrieve relevant threat intelligence, such as associated threat actors, malware,
     or malicious activity. The retrieved data is then returned as a JSON result for
     further analysis.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Enable mapping parser | boolean | No | If set to true, the action parses the
+    retrieved data using predefined mapping keys. If false, it collects raw dictionary
+    items. Defaults to false. |
+
+
+    ### Additional Notes
+
+    This action does not modify any data within the case or external systems; it is
+    strictly an enrichment action that retrieves and displays threat intelligence
+    data.
 
 
     ### Flow Description
@@ -277,24 +308,6 @@ Get-TI-Search-Info:
 
     6. **Result Output**: The aggregated data is added to the action result as a JSON
     object.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Enable mapping parser | boolean | No | If set to true, the action parses the
-    retrieved data using predefined mapping keys. If false, it collects raw dictionary
-    items. Defaults to false. |
-
-
-    ### Additional Notes
-
-    This action does not modify any data within the case or external systems; it is
-    strictly an enrichment action that retrieves and displays threat intelligence
-    data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -306,16 +319,15 @@ Get-TI-Search-Info:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET-like operation to search the Group-IB TI database
-      for threat intelligence. It does not modify any external systems (no POST/PUT/DELETE).
-      It does not modify internal SOAR case data (no entity updates, insights, or
-      comments). It simply returns the retrieved data as a JSON result.
+      The action queries the Group-IB TI API for threat intelligence related to entities
+      found in the case. It does not modify external systems or internal case data
+      (entities, insights, comments). It returns the retrieved data as a JSON result.
   categories:
     enrichment: true
     reasoning: >-
-      The action is designed to fetch threat intelligence data for indicators (enrichment).
-      It does not mutate external systems or internal case data. It meets all criteria
-      for an enrichment action.
+      The action fetches threat intelligence data from an external source (Group-IB)
+      and returns it to the user without modifying any external or internal systems.
+      This fits the definition of an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -367,10 +379,9 @@ Get-TI-Search-Info:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over all `target_entities` provided in the case. It uses
-      an `EntityValidator` to determine the type of each entity and only processes
-      those it recognizes (IP, Domain, Hash, Email, Card). Since it does not filter
-      the input list before processing, it is considered to support all entity types.
+      The code iterates over `siemplify.target_entities` and processes them using
+      `EntityValidator`. It does not apply specific filters in the code, so it supports
+      all entity types provided in the metadata.
 Get-TI-Search-Info-By-Collection:
   action_product_categories:
     add_alert_comment: false
@@ -388,9 +399,8 @@ Get-TI-Search-Info-By-Collection:
     get_alert_information: false
     reasoning: >-
       The action retrieves threat intelligence (reputation, prevalence, metadata)
-      for indicators like IPs, domains, and hashes. This directly matches the 'Enrich
-      IOC' category. It does not perform any other actions like ticketing, containment,
-      or alert updates.
+      for indicators (IP, Domain, Hash, etc.) from the Group-IB TI database. This
+      matches the 'Enrich IOC' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -470,17 +480,15 @@ Get-TI-Search-Info-By-Collection:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the Group-IB TI API to retrieve threat
-      intelligence data based on the provided entities. It does not perform any write
-      operations to external systems (no mutation) and does not modify internal SOAR
-      case data (no internal mutation). It simply returns the retrieved data as a
-      result JSON.
+      The action queries an external API (Group-IB TI) to retrieve threat intelligence
+      data based on provided entities. It does not modify any external systems or
+      internal case data. It returns the results as a JSON object to the SOAR platform.
   categories:
     enrichment: true
     reasoning: >-
-      The action is designed to fetch supplemental context (threat intelligence) about
-      entities from an external source (Group-IB TI). It does not mutate external
-      state or internal SOAR data. Therefore, it qualifies as an enrichment action.
+      The action fetches threat intelligence data from an external source (Group-IB
+      TI) and does not modify any external or internal systems. This fits the definition
+      of an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -503,11 +511,9 @@ Get-TI-Search-Info-By-Collection:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and uses an `EntityValidator`
-      to determine the type of each entity. It supports multiple entity types including
-      IP addresses, domains, file hashes, URLs, emails, and credit cards. It does
-      not apply specific filters on the entities themselves (like is_internal or is_suspicious)
-      before processing them.
+      The code iterates over `siemplify.target_entities` and processes them to construct
+      queries for the Group-IB TI API. It supports multiple entity types: ADDRESS,
+      CREDITCARD, DOMAIN, DestinationURL, FILEHASH, USERUNIQNAME.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -524,9 +530,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping) that retrieves a list of collections.
-      It does not perform any of the listed operational tasks (enrichment, containment,
-      ticketing, etc.).
+      The action is a connectivity test ('Ping') and does not perform any of the defined
+      operational tasks like enrichment, containment, or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -579,14 +584,13 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to test connectivity and retrieve data (fetches_data=true).
-      It does not mutate any external or internal systems, nor does it update entities,
-      create insights, or modify alert data.
+      The action performs a GET request to verify connectivity and retrieve collection
+      metadata. It does not modify any external systems or internal case data.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a 'Ping' action. According to the rules, Ping actions are not
-      enrichment actions.
+      The action is named 'Ping' and is used for connectivity testing. Per the instructions,
+      'Ping' actions are not classified as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -603,5 +607,4 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code does not iterate over `target_entities` or use entity-specific identifiers
-      to perform its task. It only initializes the connector.
+      The action does not process any entities.

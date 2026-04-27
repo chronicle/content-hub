@@ -1,17 +1,3 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Check Hash:
   action_product_categories:
     add_alert_comment: false
@@ -28,9 +14,9 @@ Check Hash:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves the blacklist status of a file hash from McAfee ATD, which
-      provides threat intelligence about the indicator. This matches the 'Enrich IOC'
-      category. It does not perform any containment or blocking actions.
+      The action retrieves threat intelligence (blacklist status) for a file hash
+      indicator. This matches the 'Enrich IOC' category. It does not perform any other
+      actions like ticketing, containment, or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -83,18 +69,19 @@ Check Hash:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity `additional_properties` and adds a data table to the case wall.
+      Updates entity 'additional_properties' and adds a data table to the case wall.
     reasoning: >-
-      The action queries the McAfee ATD API to check if a file hash is blacklisted.
-      It does not modify external system state (it is a lookup). It updates the entity's
-      `additional_properties` and adds a data table to the case wall, which constitutes
-      internal data mutation.
+      The action fetches data from an external system (McAfee ATD) to check the blacklist
+      status of file hashes. It does not mutate external data. It mutates internal
+      data by updating entity properties and adding a data table to the case wall.
+      It updates entities but does not create insights, modify alert data, or create
+      case comments.
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches threat intelligence (blacklist status) for file hashes and
-      updates internal entity properties without modifying external systems. This
-      fits the definition of an enrichment action.
+      The action fetches data (blacklist status) from an external source and updates
+      internal entity properties. It does not mutate external systems. It meets the
+      criteria for an enrichment action.
   entity_usage:
     entity_types:
     - FILEHASH
@@ -112,8 +99,8 @@ Check Hash:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code filters `siemplify.target_entities` for `EntityTypes.FILEHASH` to process
-      only file hash entities.
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.FILEHASH`. It does not apply other filters.
 Get Analyzer Profiles:
   action_product_categories:
     add_alert_comment: false
@@ -130,10 +117,10 @@ Get Analyzer Profiles:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves configuration data (VM profiles) from the McAfee ATD server.
-      It does not match any of the specific operational categories such as IOC enrichment,
-      asset enrichment, or containment. It is a utility action for retrieving system
-      configuration.
+      The action retrieves a list of analyzer profiles from the McAfee ATD server.
+      This is a configuration retrieval task and does not match any of the defined
+      operational categories such as enriching IOCs/Assets, updating alerts, or performing
+      containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -208,16 +195,16 @@ Get Analyzer Profiles:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to retrieve configuration data (VM profiles)
-      from the McAfee ATD server. It does not mutate any external systems. It presents
-      the retrieved data to the user via a data table and JSON result, which does
-      not constitute a mutation of existing internal data.
+      The action performs a GET request to retrieve analyzer profiles from the McAfee
+      ATD server. It does not modify external systems or internal SecOps data (entities,
+      comments, insights). It only reports the retrieved data to the action results.
   categories:
-    enrichment: true
+    enrichment: false
     reasoning: >-
-      The action fetches supplemental context (analyzer profiles) from an external
-      system to assist the analyst. It does not mutate external systems or modify
-      existing internal data, fitting the definition of an enrichment action.
+      The action retrieves configuration data (analyzer profiles) from the McAfee
+      ATD server. It does not enrich specific entities or alerts, nor does it modify
+      any internal or external state. Therefore, it does not meet the criteria for
+      an Enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -234,8 +221,8 @@ Get Analyzer Profiles:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. It is a global utility action that
-      retrieves system configuration data.
+      The action does not operate on any entities. It retrieves global configuration
+      data from the McAfee ATD server and does not reference `target_entities`.
 Get Report:
   action_product_categories:
     add_alert_comment: false
@@ -250,11 +237,11 @@ Get Report:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: true
+    get_alert_information: false
     reasoning: >-
-      The action fetches analysis reports for specific Task IDs from McAfee ATD. This
-      aligns with 'Get Alert Information' as it retrieves the results of a security
-      analysis task. It does not perform any other listed actions.
+      The action retrieves reports from an external system (McAfee ATD) based on Task
+      IDs. It does not operate on entities or alerts directly, and it does not modify
+      external systems. It does not fit into any of the predefined product categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -334,16 +321,18 @@ Get Report:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Creates case insights and adds PDF attachments to the case.
+      Creates a Case Insight and adds a PDF report as an attachment to the case.
     reasoning: >-
-      The action fetches report data from McAfee ATD (fetches_data=true). It does
-      not change external system state (can_mutate_external_data=false). It modifies
-      internal SOAR data by creating case insights and adding attachments (can_mutate_internal_data=true).
+      The action fetches reports (JSON, PDF, TXT) from the McAfee ATD system (fetches_data=true).
+      It does not mutate external data. It mutates internal data by creating Case
+      Insights and adding attachments to the case (can_mutate_internal_data=true).
   categories:
     enrichment: false
     reasoning: >-
-      The action fetches data from an external system but does not operate on entities,
-      therefore it does not meet the criteria for an Enrichment action.
+      The action retrieves reports from an external system (McAfee ATD) based on Task
+      IDs. It does not operate on entities or alerts directly, and it does not modify
+      external systems. While it fetches data, it is a utility/reporting action rather
+      than an enrichment action targeting specific entities or alerts.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -360,7 +349,9 @@ Get Report:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not use entities. It operates on Task IDs provided as parameters.
+      The action does not operate on entities. It takes Task IDs as input parameters
+      to fetch reports from McAfee ATD. Therefore, it does not filter or process any
+      entity types.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -377,8 +368,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping) and does not perform any of the defined
-      operations such as enrichment, containment, or ticket management.
+      The action is a diagnostic connectivity test and does not perform any of the
+      defined product operations (enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -448,24 +439,21 @@ Ping:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      The action terminates the active session on the McAfee ATD server by sending
-      a DELETE request.
+    external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a login (GET) and a logout (DELETE) on the external McAfee
-      ATD system. While it performs network requests, it does not fetch contextual
-      data for entities or alerts, nor does it modify internal SOAR data.
+      The action performs a connectivity test by logging in and out of the McAfee
+      ATD server. It does not fetch contextual data about alerts or entities, nor
+      does it mutate external or internal data. It is a diagnostic action.
   categories:
     enrichment: false
     reasoning: >-
-      The action is named 'Ping'. According to the instructions, 'Actions named Ping
-      must not be categorized as enrichment actions.' Additionally, it does not fetch
-      contextual data for entities.
+      The action is a diagnostic 'Ping' utility. Per the instructions, Ping actions
+      are not enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -482,8 +470,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities, as indicated by the empty `SimulationDataJson`
-      and the code logic which does not iterate over `siemplify.target_entities`.
+      The action does not process any entities.
 Submit File:
   action_product_categories:
     add_alert_comment: false
@@ -500,7 +487,7 @@ Submit File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action submits files to a sandbox for analysis, which matches the 'Submit
+      The action submits a file to a sandbox for analysis. This matches the 'Submit
       File' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
@@ -561,12 +548,6 @@ Submit File:
 
     6. **Session Termination**: The action explicitly logs out of the McAfee ATD session
     before finishing.
-
-
-    ### Additional Notes
-
-    The action does not operate on entities. It requires valid file paths and an analyzer
-    profile ID to function.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -576,21 +557,22 @@ Submit File:
     can_update_entities: false
     external_data_mutation_explanation: >-
       Submits files to the McAfee ATD sandbox for analysis, creating new analysis
-      tasks on the external system.
+      tasks.
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Adds a data table containing the file paths and their corresponding Task IDs
-      to the case.
+      Adds a data table named 'Result Task IDs' to the action result containing the
+      file paths and their corresponding Task IDs.
     reasoning: >-
-      The action submits files to an external sandbox (McAfee ATD), which is an external
-      mutation. It also adds a data table to the case, which is an internal mutation.
-      It does not fetch contextual data about entities or alerts, nor does it update
-      entities or create insights.
+      The action performs a POST request to submit files to an external sandbox (McAfee
+      ATD), which constitutes external data mutation. It does not fetch contextual
+      data about entities, nor does it update entities or create insights. It modifies
+      internal action results by adding a data table.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a submission action, not an enrichment action. It does not fetch
-      data to enrich entities.
+      The action submits files to an external system. It does not fetch data for enrichment,
+      nor does it modify entities or create insights. Therefore, it is not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -607,7 +589,8 @@ Submit File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It takes file paths as input parameters.
+      The action does not operate on entities. It takes file paths as input parameters
+      directly.
 Submit URL:
   action_product_categories:
     add_alert_comment: false
@@ -624,10 +607,9 @@ Submit URL:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action submits a URL to a sandbox for analysis, which aligns with the 'Submit
-      File' category. It also returns threat intelligence (verdict, severity) and
-      updates the entity, which aligns with 'Enrich IOC'. It is not an enrichment
-      action because it mutates external data.
+      The action submits a URL to a sandbox for analysis, which aligns with 'Submit
+      File' (as it is a sandbox submission) and 'Enrich IOC' (as it returns threat
+      intelligence and reputation data).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -642,56 +624,52 @@ Submit URL:
     update_email: false
     update_identity: false
     update_ticket: false
-  ai_description: "Submits URL entities to McAfee Advanced Threat Defense (ATD) for\
-    \ sandbox analysis and retrieves detailed threat reports. This is an asynchronous\
-    \ action that operates in two stages: submission and polling.\n\n### General Description\n\
-    This action allows security analysts to automate the submission of suspicious\
-    \ URLs to a McAfee ATD appliance. It utilizes specific analyzer profiles to execute\
-    \ the URL in a sandbox environment, subsequently retrieving JSON, PDF, and TXT\
-    \ reports. The action enriches the URL entities within Google SecOps with the\
-    \ analysis results and can automatically flag entities as suspicious based on\
-    \ a severity threshold.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Analyzer Profile ID | String\
-    \ | Yes | The ID of the analyzer profile (VM Profile) to be used for the analysis.\
-    \ |\n| Create Insight | Boolean | No | If enabled (default: true), the action\
-    \ will create a case insight containing the text-based analysis report. |\n| Threshold\
-    \ | Integer | No | A severity threshold (default: 3) used to determine if an entity\
-    \ should be marked as suspicious based on the ATD verdict. |\n\n### Flow Description\n\
-    1. **Submission Stage**: The action identifies all URL entities in the current\
-    \ context and submits them to McAfee ATD using the provided Analyzer Profile ID.\
-    \ It stores the resulting Task IDs.\n2. **Polling Stage**: The action periodically\
-    \ checks the status of the submitted tasks until they reach a 'Completed' state.\n\
-    3. **Data Retrieval**: Once analysis is finished, the action fetches JSON reports\
-    \ (for enrichment), PDF reports (as attachments), and TXT reports (for insights).\n\
-    4. **Enrichment & Internal Mutation**: \n    *   Updates entity `additional_properties`\
-    \ with summary data.\n    *   Marks entities as suspicious if the ATD severity\
-    \ score exceeds the defined threshold.\n    *   Attaches the PDF report to the\
-    \ case.\n    *   Creates a case insight if the 'Create Insight' parameter is enabled."
+  ai_description: "### General Description\nThis action submits URL entities to the\
+    \ McAfee Advanced Threat Defense (ATD) appliance for sandbox analysis and retrieves\
+    \ detailed threat reports. It is an asynchronous action that operates in two stages:\
+    \ submission and polling. The action enriches the URL entities within Google SecOps\
+    \ with the analysis results (JSON, PDF, and TXT reports) and can automatically\
+    \ flag entities as suspicious based on a severity threshold.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| Analyzer Profile ID | String | Yes | The ID of the analyzer\
+    \ profile (VM Profile) to be used for the analysis. |\n| Create Insight | Boolean\
+    \ | No | If enabled (default: true), the action will create a case insight containing\
+    \ the text-based analysis report. |\n| Threshold | Integer | No | A severity threshold\
+    \ (default: 3) used to determine if an entity should be marked as suspicious based\
+    \ on the ATD verdict. |\n\n### Flow Description\n1. **Submission Stage**: The\
+    \ action identifies all URL entities in the current context and submits them to\
+    \ McAfee ATD using the provided Analyzer Profile ID. It stores the resulting Task\
+    \ IDs.\n2. **Polling Stage**: The action periodically checks the status of the\
+    \ submitted tasks until they reach a 'Completed' state.\n3. **Data Retrieval**:\
+    \ Once analysis is finished, the action fetches JSON reports (for enrichment),\
+    \ PDF reports (as attachments), and TXT reports (for insights).\n4. **Enrichment\
+    \ & Internal Mutation**: \n    *   Updates entity `additional_properties` with\
+    \ summary data.\n    *   Marks entities as suspicious if the ATD severity score\
+    \ exceeds the defined threshold.\n    *   Attaches the PDF report to the case.\n\
+    \    *   Creates a case insight if the 'Create Insight' parameter is enabled."
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: true
     can_update_entities: true
-    external_data_mutation_explanation: >-
-      Submits a URL to the McAfee ATD appliance for sandbox analysis, creating a new
-      analysis task.
+    external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with analysis results, creates case insights,
-      and adds PDF reports as attachments.
+      Updates entity additional properties, marks entities as suspicious, attaches
+      PDF reports to the case, and creates case insights.
     reasoning: >-
-      The action submits URLs to an external sandbox (McAfee ATD), which creates a
-      task/job in the external system, thus mutating external data. It also fetches
-      reports (fetches_data=true) and updates internal Google SecOps data (entities,
-      insights, attachments).
+      The action submits URLs to McAfee ATD for sandbox analysis and fetches the resulting
+      reports (JSON, PDF, TXT). It does not change the state of external systems (no
+      blocking or configuration changes). It performs internal mutations by updating
+      entity attributes, attaching files to the case, and creating insights.
   categories:
-    enrichment: false
+    enrichment: true
     reasoning: >-
-      The action is not classified as an enrichment action because it mutates external
-      data by submitting URLs for analysis (creating tasks in the external system),
-      which violates the 'External State Preservation' rule for enrichment actions.
+      The action fetches threat intelligence (sandbox reports) and enriches entities
+      without mutating external systems. It performs allowed internal mutations (updating
+      entities, creating insights), which qualifies it as an enrichment action.
   entity_usage:
     entity_types:
     - DestinationURL
@@ -709,6 +687,5 @@ Submit URL:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      == EntityTypes.URL`. This means it targets DestinationURL entities, filtering
-      by entity_type.
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.URL` (mapped to DestinationURL).

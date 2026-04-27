@@ -2,10 +2,12 @@ Cybersixgill Actionable Alerts:
   ai_description: >-
     ### General Description
 
-    This connector integrates with Cybersixgill to fetch actionable threat intelligence
-    alerts. It retrieves alerts based on configured filters (threat level, threat
-    type) and ingests them into Google SecOps as cases, providing detailed context
-    including CVE information, threat assessments, and associated assets.
+    The Cybersixgill Actionable Alerts connector integrates Google SecOps with the
+    Cybersixgill threat intelligence platform. It periodically polls for actionable
+    alerts, allowing security teams to ingest high-fidelity threat intelligence directly
+    into the SOAR platform. The connector retrieves detailed threat data, including
+    CVE information, CVSS scores, and remediation recommendations, enabling automated
+    response and investigation workflows.
 
 
     ### Parameters Description
@@ -17,11 +19,11 @@ Cybersixgill Actionable Alerts:
     | Alerts Limit | Integer | Yes | The maximum number of alerts to fetch in a single
     execution. |
 
-    | Client Id | Password | Yes | The Client ID for Cybersixgill API authentication.
-    |
+    | Client Id | String | Yes | The Client ID for authenticating with the Cybersixgill
+    API. |
 
-    | Client Secret | Password | Yes | The Client Secret for Cybersixgill API authentication.
-    |
+    | Client Secret | String | Yes | The Client Secret for authenticating with the
+    Cybersixgill API. |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
     product. |
@@ -29,35 +31,39 @@ Cybersixgill Actionable Alerts:
     | EventClassId | String | Yes | The field name used to determine the event name
     (sub-type). |
 
-    | Organization id | String | No | The specific Organization ID to filter alerts.
-    |
+    | Organization id | String | No | The specific Organization ID to filter alerts
+    (if applicable). |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
     Python process. |
 
-    | Threat Level | String | No | Filter alerts by threat level (e.g., imminent).
-    |
+    | Threat Level | String | No | Filter alerts by a specific threat level (e.g.,
+    imminent). |
 
-    | Threat Type | String | No | Filter alerts by threat type (comma-separated).
+    | Threat Type | String | No | Filter alerts by specific threat types (comma-separated).
     |
 
 
     ### Flow Description
 
-    1. Authenticates with the Cybersixgill API using the provided Client ID and Client
-    Secret.
+    1. **Authentication**: Initializes the `SixgillActionableAlertClient` using the
+    provided Client ID and Client Secret.
 
-    2. Calculates the time range for fetching alerts based on the last run timestamp
-    or a default lookback period.
+    2. **Time Range Calculation**: Determines the time window for fetching alerts
+    based on the last successful execution timestamp (or defaults to 30 days back
+    on the first run).
 
-    3. Queries the Cybersixgill API for actionable alerts, applying filters for threat
-    level, threat type, and organization ID if provided.
+    3. **Data Retrieval**: Queries the Cybersixgill API for actionable alerts, applying
+    filters for `Threat Level`, `Threat Type`, and `Alerts Limit`.
 
-    4. For each retrieved alert, fetches detailed information, including threat assessments,
-    recommendations, and associated CVE data.
+    4. **Alert Processing**: Iterates through the retrieved alerts, mapping them to
+    the SOAR `AlertInfo` format.
 
-    5. Maps the alert data into the Google SecOps AlertInfo format, including raw
-    JSON, portal URLs, and sub-alert details.
+    5. **Enrichment**: Fetches detailed event data for each alert, including CVE details,
+    CVSS scores, threat attributes, and remediation recommendations.
 
-    6. Updates the connector timestamp to the latest alert creation time and returns
-    the processed alerts to the SOAR platform.
+    6. **Ingestion**: Packages the processed alerts and sends them to the SOAR platform
+    for case creation.
+
+    7. **State Management**: Updates the connector's last execution timestamp to ensure
+    subsequent runs only fetch new alerts.

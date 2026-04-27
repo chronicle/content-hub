@@ -1,17 +1,3 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Fetch System Information:
   action_product_categories:
     add_alert_comment: false
@@ -28,8 +14,10 @@ Fetch System Information:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (device info) for a resource (device)
-      identified by an IP address. This aligns with the 'Enrich Asset' category.
+      The action fetches contextual metadata (OS version, battery level, etc.) for
+      a device associated with an IP address. This aligns with the 'Enrich Asset'
+      category. It does not return reputation or threat intelligence for the IP itself
+      (not 'Enrich IOC'), nor does it perform any other listed actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -97,16 +85,18 @@ Fetch System Information:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the MobileIron API to retrieve device information
-      based on an IP address. It does not modify any external systems or internal
-      SOAR data (entities, insights, or case wall). It simply adds a result table
-      to the action output.
+      The action fetches device information from the MobileIron API using GET requests
+      (fetches_data=true). It does not perform any POST/PUT/DELETE operations on external
+      systems (can_mutate_external_data=false). It does not modify internal SOAR case
+      data (entities, insights, comments) beyond adding a result table to the action
+      output, which is not considered an internal mutation of case data (can_mutate_internal_data=false).
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data from an external source (MobileIron) and adds it to
-      the result. It does not mutate external or internal data. It fits the criteria
-      for an enrichment action.
+      The action is designed to fetch contextual device information from an external
+      system (MobileIron) and present it to the analyst. It does not mutate external
+      systems, nor does it perform forbidden internal mutations. It fits the definition
+      of an Enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -124,8 +114,8 @@ Fetch System Information:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters for `EntityTypes.ADDRESS`
-      to perform the lookup.
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.ADDRESS`. This means it specifically targets ADDRESS entities.
 Fetch System Information By UUID:
   action_product_categories:
     add_alert_comment: false
@@ -142,9 +132,9 @@ Fetch System Information By UUID:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (OS, battery, etc.) for a mobile device,
-      which aligns with the 'Enrich Asset' category. It does not perform any other
-      operations.
+      The action retrieves contextual metadata (OS version, battery level, etc.) for
+      a mobile device. This aligns with the 'Enrich Asset' category. It does not perform
+      IOC enrichment, alert updates, or other containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -216,14 +206,14 @@ Fetch System Information By UUID:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a GET request to the MobileIron API to retrieve device details.
-      It does not modify any external systems or internal SOAR data. It simply presents
-      the retrieved data in a result table.
+      It does not modify any external systems or internal SOAR data (entities, insights,
+      etc.). It simply outputs the retrieved information as a result table.
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches contextual data (device information) from an external system
-      (MobileIron) without modifying any external or internal state. This meets the
-      criteria for an enrichment action.
+      The action fetches contextual data (system information) about a mobile device.
+      It does not mutate external or internal data. It meets the criteria for an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -240,9 +230,9 @@ Fetch System Information By UUID:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `target_entities`. It relies on a user-provided
-      `Device UUID` parameter to fetch information. Therefore, it does not operate
-      on entities.
+      The code does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers to perform its task. It relies solely on the `Device UUID` parameter
+      provided by the user. Therefore, it does not run on any specific entity types.
 List Devices:
   action_product_categories:
     add_alert_comment: false
@@ -259,96 +249,9 @@ List Devices:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of devices from MobileIron. It does not search for
-      a specific asset associated with an alert, nor does it perform any of the other
-      listed actions (e.g., containment, ticket creation, etc.).
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: >-
-    General Description: Retrieves a comprehensive list of all devices managed within
-    the MobileIron system. This action is primarily used for administrative overview
-    and asset discovery, allowing users to specify exactly which data points (fields)
-    should be returned for each device. Parameters: Fields To Fetch (String, Optional)
-    - A comma-separated string of specific device fields to retrieve (e.g., ios.DeviceName,user.display_name,user.email_address).
-    If left empty, the integration uses a predefined set of default fields including
-    hardware identifiers, status, and user information. Flow Description: 1. Authentication:
-    Connects to the MobileIron API using the configured API Root, Username, and Password.
-    2. Data Retrieval: Executes a GET request to the /api/v2/devices endpoint, passing
-    the Fields To Fetch parameter to filter the returned attributes. 3. Data Processing:
-    Flattens the resulting JSON structures into a tabular format. 4. Output Generation:
-    Constructs a CSV-formatted data table named Devices and attaches it to the action
-    results in Google SecOps. Additional Notes: This action does not target specific
-    entities in the case; it performs a global fetch of devices from the MobileIron
-    instance.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action performs a GET request to retrieve device data from MobileIron. It
-      does not modify external systems, nor does it update internal SOAR entities
-      or cases.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action does not target specific entities or alerts for enrichment. It performs
-      a global fetch of device inventory. Therefore, it does not meet the criteria
-      for an enrichment action.
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not operate on entities. It performs a global fetch of all devices
-      from the MobileIron system.
-Ping:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action is a diagnostic connectivity test (Ping). It does not perform any
-      of the listed operational tasks (enrichment, containment, ticket management,
-      etc.).
+      The action retrieves a list of devices from the MobileIron system. It does not
+      search for a specific asset associated with an alert, nor does it enrich a specific
+      entity. Therefore, it does not match any of the predefined product categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -366,16 +269,127 @@ Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic tool used to verify the connectivity between
-    Google SecOps and a MobileIron instance. It ensures that the provided credentials
-    (Username and Password) and the API Root URL are correct and that the MobileIron
-    service is reachable over the network.
+    Retrieves a comprehensive list of all devices managed within the MobileIron system.
+    This action is primarily used for administrative overview and asset discovery,
+    allowing users to specify exactly which data points (fields) should be returned
+    for each device.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Fields To Fetch | String | No | A comma-separated string of specific device
+    fields to retrieve (e.g., ios.DeviceName,user.display_name,user.email_address).
+    If left empty, the integration uses a predefined set of default fields including
+    hardware identifiers, status, and user information. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the MobileIron API using the configured API
+    Root, Username, and Password.
+
+    2. **Data Retrieval**: Executes a GET request to the `/api/v2/devices` endpoint,
+    passing the `Fields To Fetch` parameter to filter the returned attributes.
+
+    3. **Data Processing**: Flattens the resulting JSON structures into a tabular
+    format.
+
+    4. **Output Generation**: Constructs a CSV-formatted data table named "Devices"
+    and attaches it to the action results in Google SecOps.
+
+
+    ### Additional Notes
+
+    This action does not target specific entities in the case; it performs a global
+    fetch of devices from the MobileIron instance.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve a list of devices from the MobileIron
+      API. It does not modify any external systems or internal SOAR data (other than
+      adding a result table, which is not a mutation of existing data).
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action fetches data (a list of devices) but does not meet the criteria for
+      an enrichment action because it does not update entities, create insights, or
+      add case comments. It simply returns a data table in the action results.
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `target_entities` or use entity identifiers.
+      It performs a global fetch of all devices from the MobileIron system.
+Ping:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a diagnostic connectivity test and does not perform any of the
+      defined functional operations such as enrichment, containment, ticketing, or
+      alert management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the MobileIron instance. It validates that the integration configuration
+    (API Root, Username, and Password) is correct and that the MobileIron service
+    is reachable over the network.
 
 
     ### Parameters Description
 
     This action does not have any input parameters. It relies entirely on the integration's
-    configuration settings:
+    global configuration settings:
 
 
     | Parameter Name | Description | Type | Mandatory | Notes |
@@ -403,28 +417,27 @@ Ping:
 
     ### Additional Notes
 
-    - This action is typically used during the initial setup of the integration or
-    for troubleshooting communication issues.
+    - This action is intended for troubleshooting and initial setup verification.
 
-    - It performs a simple GET request to the `api/V2/ping` endpoint.
+    - It does not perform any data retrieval or modification on entities or alerts.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval:** The action fetches the integration configuration,
-    including the API Root, credentials, and connection settings.
+    1. **Configuration Retrieval:** The action retrieves the integration settings
+    (API Root, credentials, and connection options) from the Google SecOps environment.
 
-    2. **Manager Initialization:** It initializes the `MobileIronManager` with the
-    retrieved settings, handling URL formatting for cloud or on-premise instances.
+    2. **Manager Initialization:** It initializes the `MobileIronManager` using the
+    retrieved configuration, handling URL formatting for cloud or on-premise instances.
 
-    3. **Connectivity Test:** The action calls the `ping()` method of the manager,
-    which sends a GET request to the MobileIron ping API.
+    3. **Connectivity Test:** The action executes the `ping()` method, which performs
+    a GET request to the MobileIron `api/V2/ping` endpoint.
 
     4. **Response Validation:** The manager validates the HTTP response. If the status
-    code is successful, it returns `True`.
+    code indicates success, the action returns `True`.
 
-    5. **Final Result:** The action ends by providing a success message ("Connection
-    Established.") or a failure message based on the API response.
+    5. **Final Result:** The action concludes by outputting a success or failure message
+    based on the connectivity test result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -436,13 +449,15 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to verify connectivity. It does not retrieve
-      contextual data for entities, nor does it modify any external or internal systems.
+      The action performs a diagnostic connectivity test (ping) via a GET request.
+      It does not fetch contextual data for alerts or entities, nor does it mutate
+      any external or internal data. It is a purely diagnostic action.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a 'Ping' action. According to the instructions, 'Actions named
-      Ping must not be categorized as enrichment actions.'
+      The action is a 'Ping' diagnostic tool. Per the instructions, actions named
+      'Ping' must not be categorized as enrichment actions. Furthermore, it does not
+      fetch contextual data or perform any allowed internal mutations.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -459,8 +474,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities. It is a global connectivity
-      test.
+      The action does not operate on any entities. It is a global connectivity test.
 Unlock Device:
   action_product_categories:
     add_alert_comment: false
@@ -477,10 +491,8 @@ Unlock Device:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action unlocks a mobile device in MobileIron. This is a remediation action
-      that does not fit into the provided categories (e.g., it is not an enrichment,
-      containment, or identity management action as defined). Therefore, all categories
-      are set to false.
+      The action unlocks a mobile device via MobileIron. This does not fit the provided
+      categories (Enrichment, Ticket, Blocklist, Identity, Email, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -538,19 +550,17 @@ Unlock Device:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Unlocks the mobile device in the MobileIron system by sending a POST request.
+      Sends a POST request to the MobileIron API to unlock the specified device.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches device information (UUID) from MobileIron based on an IP
-      address and then performs a POST request to unlock the device. It mutates external
-      state (the device status in MobileIron). It does not modify internal SOAR data
-      (entities, insights, etc.).
+      The action fetches device UUIDs from MobileIron (GET) and then sends a POST
+      request to unlock the device. It does not modify internal SOAR data (entities/insights).
   categories:
     enrichment: false
     reasoning: >-
-      The action mutates external data (unlocks a device), so it is not an enrichment
-      action.
+      The action performs a mutation on an external system (unlocking a device). It
+      is not an enrichment action because it mutates external state.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -568,8 +578,8 @@ Unlock Device:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters for `EntityTypes.ADDRESS`
-      to identify the target devices.
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS`.
 Unlock Device by UUID:
   action_product_categories:
     add_alert_comment: false
@@ -586,9 +596,9 @@ Unlock Device by UUID:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a POST request to unlock a device in MobileIron. This action
-      does not fit into any of the predefined categories, as it is a device-specific
-      administrative action rather than an identity or network containment action.
+      The action performs a POST request to unlock a device in MobileIron. This is
+      a device management action. It does not match any of the provided categories
+      (Enrich IOC, Enrich Asset, Update Alert, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -619,27 +629,29 @@ Unlock Device by UUID:
     | :--- | :--- | :--- | :--- |
 
     | Device UUID | String | Yes | The unique identifier (UUID) of the target device
-    to be unlocked. This value is used to target the specific device in the MobileIron
-    inventory. |
+    to be unlocked. |
 
 
     ### Flow Description
 
     1. **Initialization**: The action initializes the MobileIron manager using the
-    integration's configuration settings (API Root, Credentials, etc.).
+    integration's configuration settings.
 
     2. **Parameter Extraction**: The action retrieves the mandatory `Device UUID`
     from the input parameters.
 
-    3. **Validation**: It checks if the `Device UUID` is provided; if not, it raises
-    an exception.
+    3. **API Interaction**: The action calls the `unlock_device_by_uuid` method, which
+    sends a POST request to the MobileIron API (`api/v2/devices/action`) with the
+    `actionType` set to `UNLOCK_DEVICE_ONLY`.
 
-    4. **API Interaction**: The action calls the `unlock_device_by_uuid` method in
-    the manager, which sends a POST request to the MobileIron API (`api/v2/devices/action`)
-    with the `actionType` set to `UNLOCK_DEVICE_ONLY`.
+    4. **Completion**: Upon a successful API response, the action concludes with a
+    success message.
 
-    5. **Completion**: Upon a successful API response, the action concludes with a
-    success message indicating the unlock command was sent for the specified UUID.
+
+    ### Additional Notes
+
+    This action does not operate on entities; it requires a specific Device UUID provided
+    as a parameter.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -648,18 +660,19 @@ Unlock Device by UUID:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends a POST request to the MobileIron API to unlock the specified device.
+      Unlocks a mobile device in the MobileIron platform by sending an 'UNLOCK_DEVICE_ONLY'
+      action request.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to the MobileIron API to unlock a device.
-      It does not fetch data for enrichment, nor does it modify internal Google SecOps
-      data (entities, insights, or comments).
+      The action performs a POST request to an external system (MobileIron) to unlock
+      a device. It does not fetch data, nor does it modify internal SOAR data (entities,
+      insights, comments).
   categories:
     enrichment: false
     reasoning: >-
-      The action is a mutation action (unlocking a device) and does not perform any
-      data retrieval for enrichment purposes.
+      The action is a mutation action (unlocking a device) and does not fetch data
+      for enrichment. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -676,6 +689,5 @@ Unlock Device by UUID:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `target_entities` or use entity-specific identifiers
-      from the case. It relies solely on the `Device UUID` parameter provided by the
-      user.
+      The action uses a parameter `Device UUID` provided in the configuration to identify
+      the device. It does not iterate over or filter `siemplify.target_entities`.

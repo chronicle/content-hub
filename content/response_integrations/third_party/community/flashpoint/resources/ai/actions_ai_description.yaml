@@ -10,20 +10,19 @@ Custom Query:
     download_file: false
     enable_identity: false
     enrich_asset: false
-    enrich_ioc: false
+    enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a custom query against the Flashpoint API and returns the
-      results. This aligns with the 'Search Events' category, which involves returning
-      a collection of historical logs or telemetry data matching specific search parameters.
-      It does not perform enrichment, containment, or ticket management.
+      The action retrieves threat intelligence data via a custom query, which aligns
+      with 'Enrich IOC'. It does not perform other actions like ticket creation or
+      host containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
-    search_events: true
+    search_events: false
     send_email: false
     send_message: false
     submit_file: false
@@ -33,6 +32,8 @@ Custom Query:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     Executes a custom query against the Flashpoint API. This action allows users to
     send a JSON-formatted query body to a specified API endpoint to retrieve threat
     intelligence or search results. The results are returned as a JSON object and
@@ -76,16 +77,15 @@ Custom Query:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to the Flashpoint API to execute a custom
-      query. It retrieves data (search results) but does not modify the state of the
-      external system (no blocking, deleting, or updating). It does not interact with
-      internal SOAR entities, insights, or case comments.
+      The action performs a POST request to the Flashpoint API to retrieve data based
+      on a user-provided query. It does not modify external systems or internal SOAR
+      data. It is strictly a data retrieval operation.
   categories:
-    enrichment: false
+    enrichment: true
     reasoning: >-
-      The action is a generic search tool that does not operate on specific entities
-      or alerts. It does not meet the criteria for an Enrichment Action, which requires
-      gathering supplemental context about specific alerts or entities.
+      The action fetches threat intelligence data from an external source (Flashpoint)
+      without modifying any external or internal systems. It meets the criteria for
+      an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -102,8 +102,8 @@ Custom Query:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not reference `siemplify.target_entities` and performs a generic
-      search operation. Therefore, it does not use any entity types.
+      The action does not interact with any entities. It performs a global search/query
+      against the Flashpoint API.
 IOC_Enrichment:
   action_product_categories:
     add_alert_comment: false
@@ -120,9 +120,9 @@ IOC_Enrichment:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence (reputation, etc.) for indicators from
-      Flashpoint. This aligns with the 'Enrich IOC' category. It does not perform
-      containment, ticket management, or other mutation operations.
+      The action fetches threat intelligence data for indicators from Flashpoint and
+      updates the entity properties and insights within the SOAR platform. It does
+      not mutate external systems. This aligns with the 'Enrich IOC' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -188,19 +188,21 @@ IOC_Enrichment:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity properties (additional_properties, is_enriched, is_suspicious)
+      Updates entity additional_properties, sets is_enriched and is_suspicious flags,
       and adds entity insights.
     reasoning: >-
-      The action fetches threat intelligence data from the Flashpoint API via a GET
-      request. It performs internal mutations by updating entity properties (additional_properties,
-      is_enriched, is_suspicious) and adding entity insights. It does not mutate external
-      systems.
+      The action fetches data from the Flashpoint API (fetches_data=true). It does
+      not perform any write operations to external systems (can_mutate_external_data=false).
+      It updates internal SOAR entity data by adding properties, setting flags, and
+      creating insights (can_mutate_internal_data=true, can_update_entities=true,
+      can_create_insight=true). It does not modify alert data or create case comments.
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data from an external source (Flashpoint) and performs allowed
-      internal mutations (updating entities, adding insights). It does not mutate
-      external data. Therefore, it qualifies as an enrichment action.
+      The action fetches data from an external source (Flashpoint) to enrich entities.
+      It does not mutate external systems. It performs allowed internal mutations
+      (updating entities and creating insights). Therefore, it qualifies as an enrichment
+      action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -252,9 +254,9 @@ IOC_Enrichment:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` without any type-based filtering,
-      meaning it attempts to enrich any entity provided to the action. Therefore,
-      it supports all entity types.
+      The code iterates over all `siemplify.target_entities` without applying any
+      filtering logic based on entity type or properties. Therefore, it is considered
+      to run on all supported entity types provided in the metadata.
 Indicators Custom Query:
   action_product_categories:
     add_alert_comment: false
@@ -271,10 +273,10 @@ Indicators Custom Query:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a search query against the Flashpoint API to retrieve indicators.
-      This matches the 'Search Events' category, which involves returning a collection
-      of historical logs or telemetry data matching specific search parameters. It
-      does not enrich specific IOCs or assets, nor does it perform any mutation.
+      The action performs a search for indicators (events or attributes) based on
+      custom query parameters. This aligns with the 'Search Events' category, which
+      returns collections of data matching search parameters. It does not enrich a
+      specific IOC or asset, nor does it perform any mutation or ticket creation.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -290,6 +292,8 @@ Indicators Custom Query:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     Executes a custom query against the Flashpoint API to retrieve indicators (events
     or attributes) based on user-defined criteria. This action allows analysts to
     search for specific threat intelligence data by applying filters such as date
@@ -301,7 +305,7 @@ Indicators Custom Query:
     1. The action extracts configuration parameters (API Key) and action-specific
     parameters (Limit, Dates, Tags, Query, Sort, Entity Types, and Indicator Type).
 
-    2. It initializes the FlashpointManager to establish a connection to the Flashpoint
+    2. It initializes the `FlashpointManager` to establish a connection to the Flashpoint
     API.
 
     3. It executes the `indicators_custom_query` method, which performs a GET request
@@ -339,6 +343,12 @@ Indicators Custom Query:
 
     | Indicator Type | ddl | Yes | The type of indicator to query: simple, event,
     or attribute. |
+
+
+    ### Additional Notes
+
+    This action performs a read-only search operation against the Flashpoint API.
+    It does not require or process any entities from the SOAR platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -351,16 +361,15 @@ Indicators Custom Query:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a GET request to the Flashpoint API to retrieve indicator
-      data based on user-provided parameters. It does not modify any external systems,
-      nor does it update any internal SOAR data such as entities, insights, or case
-      comments.
+      data based on user-provided search criteria. It does not modify any external
+      systems or internal SOAR data (entities, insights, comments).
   categories:
     enrichment: false
     reasoning: >-
-      While the action fetches data, it is not classified as an enrichment action
-      because it does not operate on specific entities or alerts to provide context.
-      It is a general search/query tool that retrieves data based on global parameters
-      rather than enriching a specific entity profile.
+      The action performs a search/query operation to retrieve data from an external
+      source. While it fetches data, it does not operate on specific entities or alerts
+      to provide context (enrichment). Therefore, it is classified as a search/query
+      action rather than an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -377,8 +386,8 @@ Indicators Custom Query:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `target_entities` or use entity-specific identifiers.
-      It performs a global search based on provided parameters.
+      The action does not interact with `target_entities`. It performs a general search
+      based on user-provided parameters.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -395,8 +404,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping). It does not match any of the specific
-      functional categories like Enrich IOC, Contain Host, etc.
+      The action is a connectivity test (Ping) and does not perform any of the functional
+      operations listed in the categories, such as enrichment, blocking, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -445,13 +454,14 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to verify API connectivity. It does not modify
-      external or internal data.
+      The action performs a GET request to the Flashpoint API to verify connectivity.
+      It does not mutate any external systems, nor does it modify any internal SOAR
+      data, entities, or alerts.
   categories:
     enrichment: false
     reasoning: >-
-      The action is named 'Ping'. Per the instructions, 'Actions named Ping must not
-      be categorized as enrichment actions.' Therefore, it is not an enrichment action.
+      The action is a connectivity test (Ping). According to the provided instructions,
+      actions named 'Ping' must not be categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -468,7 +478,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with entities. It is a global connectivity test.
+      The action does not interact with any entities. It performs a global connectivity
+      test.
 Run Query:
   action_product_categories:
     add_alert_comment: false
@@ -485,11 +496,11 @@ Run Query:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action executes a search query against the Flashpoint platform and returns
-      the results. This aligns with the 'Search Events' category, which involves returning
-      collections of data matching specific search parameters. It does not perform
-      enrichment on specific IOCs or assets, nor does it perform any containment or
-      ticket management actions.
+      The action performs a search against the Flashpoint platform using user-defined
+      parameters and returns a collection of data. This aligns with the 'Search Events'
+      category, which involves returning historical logs or telemetry data matching
+      specific search parameters. It is not an enrichment action as it does not target
+      specific indicators or assets.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -562,17 +573,16 @@ Run Query:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the Flashpoint API to retrieve search results
-      based on user-provided query parameters. It does not modify any external systems
-      (no POST/PUT/DELETE for state changes) and does not modify internal SOAR data
-      (entities, insights, or case comments).
+      The action performs a GET request to the Flashpoint API to retrieve data based
+      on user-provided search parameters. It does not mutate any external systems
+      (no POST/PUT/DELETE operations on external data) and does not modify any internal
+      SOAR data (no entity updates, insights, or comments).
   categories:
     enrichment: false
     reasoning: >-
-      While the action fetches data, it is a generic search/query tool that does not
-      operate on specific entities (e.g., IP, Hash) to enrich them. It does not meet
-      the criteria for an Enrichment Action, which requires operating on entities
-      to provide supplemental context.
+      The action is a generic search tool that does not operate on specific entities
+      or alerts. It does not meet the criteria for an Enrichment Action, which requires
+      gathering context about specific entities or alerts.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -589,6 +599,5 @@ Run Query:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      identifiers. It relies entirely on user-provided input parameters to construct
-      the search query.
+      The action does not iterate over or reference `target_entities`. It is a standalone
+      search tool that operates on user-provided parameters.

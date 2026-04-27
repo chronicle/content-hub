@@ -14,10 +14,9 @@ Check IP Reputation:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves reputation and threat intelligence for IP addresses from
-      AbuseIPDB and updates the entity with this information. This aligns perfectly
-      with the 'Enrich IOC' category. It does not perform any containment, ticketing,
-      or alert modification actions.
+      The action retrieves reputation data for an IP address, which directly matches
+      the 'Enrich IOC' category. It does not perform any other actions like ticketing,
+      blocking, or host containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -93,20 +92,20 @@ Check IP Reputation:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity properties (is_enriched, is_suspicious, additional_properties)
-      and creates case insights.
+      Updates entity additional properties and marks entities as suspicious. Creates
+      case insights.
     reasoning: >-
-      The action fetches data from an external API (AbuseIPDB) to enrich IP entities.
-      It does not mutate external data (only performs GET requests). It mutates internal
-      data by updating entity properties (is_enriched, is_suspicious, additional_properties)
-      and creating insights. It does not modify alert data or create case comments.
+      The action fetches IP reputation data from the AbuseIPDB API (fetches_data=true).
+      It does not mutate external systems (can_mutate_external_data=false). It performs
+      internal mutations by updating entity properties and creating insights (can_mutate_internal_data=true,
+      can_update_entities=true, can_create_insight=true). It does not modify alert
+      data or create case comments.
   categories:
     enrichment: true
     reasoning: >-
-      The action is designed to fetch reputation data for IP addresses and update
-      the entity profile within the SOAR platform. It does not mutate external systems,
-      and the internal mutations (updating entities, creating insights) are permitted
-      under the enrichment criteria.
+      The action is an enrichment action because it fetches external data (IP reputation)
+      and only performs allowed internal mutations (updating entities and creating
+      insights) without modifying external systems.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -124,9 +123,9 @@ Check IP Reputation:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them based
-      on `entity.entity_type == EntityTypes.ADDRESS`. It also optionally filters by
-      `entity.is_internal` based on the 'Exclude Internal Addresses' parameter.
+      The action iterates over `siemplify.target_entities` and filters specifically
+      for `EntityTypes.ADDRESS`. It also optionally filters based on the `is_internal`
+      attribute of the entity.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -143,9 +142,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test ('Ping'). It does not perform enrichment,
-      containment, or any other operational task on entities or alerts. It does not
-      match any of the specific product categories.
+      This is a connectivity test ('Ping'). It does not match any of the functional
+      categories like Enrich IOC, Contain Host, etc.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -161,8 +159,8 @@ Ping:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Validates connectivity to the AbuseIPDB service. This action performs a test API
-    call to ensure the provided API key is valid and the service is reachable.
+    Validates connectivity to the AbuseIPDB service by performing a test API call
+    to ensure the provided API key is valid and the service is reachable.
 
 
     ### Flow
@@ -203,16 +201,17 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to verify connectivity to the AbuseIPDB API.
-      It does not modify external systems, update internal entities, or create insights.
+      The action performs a connectivity test (GET request) to verify the API key
+      and service reachability. It does not fetch contextual data for entities, mutate
+      external systems, or modify internal SOAR data.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a 'Ping' action, which is explicitly excluded from being an enrichment
-      action per the instructions.
+      The action is named 'Ping' and is a connectivity test. Per the instructions,
+      actions named 'Ping' must not be categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -229,5 +228,5 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not use 'target_entities'. It performs a hardcoded connectivity
-      test.
+      The action does not iterate over `target_entities` or use entity identifiers.
+      It uses a hardcoded dummy IP for the connectivity test.

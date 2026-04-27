@@ -14,9 +14,9 @@ Calculate Risk Score:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs internal calculations to generate a risk score. It does
-      not match any of the defined product categories (e.g., it does not enrich IOCs/assets
-      with external data, update alerts, or perform containment).
+      The action performs a mathematical calculation on existing data to generate
+      a risk score. It does not match any of the defined categories (Enrichment, Containment,
+      Ticket Management, etc.) as it is a utility/calculation action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -34,11 +34,11 @@ Calculate Risk Score:
   ai_description: >-
     ### General Description
 
-    The 'Calculate Risk Score' action computes a risk score for entities and alerts
-    based on a set of configurable parameters and existing event or entity properties.
+    The 'Calculate Risk Score' action computes a normalized risk score for entities
+    and alerts based on configurable parameters and existing event or entity properties.
     It aggregates risk factors such as critical asset status, administrative privileges,
-    and MFA usage to provide a normalized risk score, which can be used by playbooks
-    for alert prioritization and filtering.
+    and MFA usage to provide a risk score, which can be used by playbooks for alert
+    prioritization and filtering.
 
 
     ### Flow Description
@@ -91,6 +91,13 @@ Calculate Risk Score:
 
     | Choke Point Score | ddl | Yes | Select Choke Point Score value to be used for
     the XMCyber Risk Score Calculations. |
+
+
+    ### Additional Notes
+
+    This action does not perform external API calls or modify any system state. It
+    is a utility action designed to perform internal calculations on existing alert
+    and entity data to assist in risk-based decision-making within playbooks.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -102,17 +109,16 @@ Calculate Risk Score:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs internal calculations on existing alert and entity data
-      retrieved from the SOAR platform. It does not make external API calls (fetches_data=false),
-      does not modify external systems (can_mutate_external_data=false), and does
-      not modify internal SOAR data (can_mutate_internal_data=false). It simply generates
-      a result JSON object.
+      The action performs internal calculations based on existing alert and entity
+      data. It does not fetch data from external systems, nor does it mutate any external
+      or internal data (it does not update entities, create insights, or modify alert
+      data). It simply outputs a calculated JSON result.
   categories:
     enrichment: false
     reasoning: >-
-      The action does not fetch data from an external source, which is a requirement
-      for enrichment actions. It is a utility action for calculating risk scores based
-      on internal data.
+      The action does not fetch data from an external source; it processes data already
+      present in the alert/entity context. Therefore, it does not meet the criteria
+      for an Enrichment action.
   entity_usage:
     entity_types:
     - HOSTNAME
@@ -131,9 +137,9 @@ Calculate Risk Score:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them based
-      on `SUPPORTED_ENTITY_TYPES` (USER and HOSTNAME). It also accesses `entity.additional_properties`
-      to perform the risk calculation.
+      The code iterates over `siemplify.target_entities` and filters them based on
+      `SUPPORTED_ENTITY_TYPES` (USER and HOSTNAME). It also checks `entity.additional_properties`
+      to identify relevant XM Cyber entities.
 Enrich Entities:
   action_product_categories:
     add_alert_comment: false
@@ -150,10 +156,9 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (labels, risk scores, etc.) for assets
-      and users from XM Cyber and updates the entity profile in SecOps. This matches
-      the 'Enrich Asset' category. It does not match 'Enrich IOC' as it targets assets/users,
-      not indicators like IPs or Hashes.
+      The action retrieves contextual metadata (risk scores, labels) for assets and
+      users from XM Cyber. This aligns with the 'Enrich Asset' category. It does not
+      enrich IOCs (IPs, Hashes) or perform any other listed actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -192,7 +197,8 @@ Enrich Entities:
 
     2. **Filtering**: It filters the target entities from the alert, keeping only
     `HOSTNAME` and `USER` types. It further refines this list by excluding entities
-    that have already been enriched within the last 24 hours.
+    that have already been enriched within the last 24 hours by checking the `XMC_last_enriched`
+    property.
 
     3. **Enrichment**: The action queries the XM Cyber API to fetch enrichment data
     for the remaining entities.
@@ -202,6 +208,13 @@ Enrich Entities:
 
     5. **Finalization**: The action updates the entities in the Google SecOps platform
     and provides a summary of the processed entities.
+
+
+    ### Additional Notes
+
+    This action is designed to be run on `HOSTNAME` and `USER` entities. It performs
+    internal mutations by updating entity properties but does not modify external
+    systems.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -212,18 +225,22 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties and enrichment status within Google SecOps.
+      Updates entity additional_properties with enrichment data and sets the is_enriched
+      flag to true.
     reasoning: >-
-      The action fetches data from an external API (XM Cyber) to enrich entities.
-      It updates the entity's `additional_properties` and `is_enriched` status within
-      the SecOps platform using `siemplify.update_entities`. It does not mutate external
-      data or create insights/comments.
+      The action fetches data from the XM Cyber API (fetches_data=true). It does not
+      perform any actions that change the state of the external XM Cyber platform
+      (can_mutate_external_data=false). It performs internal mutations by updating
+      entity properties (additional_properties) and the is_enriched flag (can_mutate_internal_data=true).
+      It uses the `siemplify.update_entities` method to persist these changes (can_update_entities=true).
+      It does not create insights, modify alert data, or create case comments.
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data (enrichment) and updates internal entity properties.
-      It does not mutate external systems, create insights, or add comments. It fits
-      the definition of an Enrichment Action.
+      The action is an enrichment action because it fetches data from an external
+      source (XM Cyber) and only performs allowed internal mutations (updating entity
+      fields). It does not mutate external systems, nor does it perform forbidden
+      internal mutations.
   entity_usage:
     entity_types:
     - HOSTNAME
@@ -235,16 +252,16 @@ Enrich Entities:
     filters_by_entity_type: true
     filters_by_identifier: false
     filters_by_is_artifact: false
-    filters_by_is_enriched: true
+    filters_by_is_enriched: false
     filters_by_is_internal: false
     filters_by_is_pivot: false
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code filters `siemplify.target_entities` by `SUPPORTED_ENTITY_TYPES` (`USER`,
-      `HOSTNAME`). It also checks `additional_properties` for existing enrichment
-      data and updates the entity's `is_enriched` status.
+      The action iterates over `siemplify.target_entities` and filters them based
+      on their type (HOSTNAME or USER) and their enrichment status (checking `additional_properties`
+      for `XMC_last_enriched`).
 Get Event Data JSON:
   action_product_categories:
     add_alert_comment: false
@@ -261,10 +278,9 @@ Get Event Data JSON:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a utility that formats existing data into a JSON result. It does
-      not fetch new information from an external product, nor does it perform any
-      enrichment, containment, or ticketing operations. It does not match any of the
-      defined product categories.
+      The action is a utility that formats existing data into a JSON object. It does
+      not perform enrichment, mutation, or alert management, so it does not match
+      any of the defined product categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -280,10 +296,18 @@ Get Event Data JSON:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     This action aggregates entity details (users and hostnames) from the current alert's
     security events and existing enriched entities. It formats this information into
     a structured JSON object, including direct links to the XM Cyber entity overview
-    page.
+    page. This action is primarily used for data transformation and reporting purposes
+    within the SOAR platform.
+
+
+    ### Parameters
+
+    There are no input parameters for this action.
 
 
     ### Flow Description
@@ -299,11 +323,6 @@ Get Event Data JSON:
     appending a URL to the XM Cyber instance for each.
 
     5. Output the final JSON object to the action results.
-
-
-    ### Parameters
-
-    There are no input parameters for this action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -315,21 +334,19 @@ Get Event Data JSON:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action processes existing data from the alert and entities to format a JSON
-      result. It does not perform any external API calls (fetches_data=false), does
-      not mutate external systems, and does not modify internal case data (entities,
-      insights, or comments).
+      The action processes existing data from the alert and entities. It does not
+      perform external API calls (fetches_data=false), nor does it modify any external
+      or internal systems. It is a utility action for data formatting.
   categories:
     enrichment: false
     reasoning: >-
-      The action does not fetch data from an external source (it processes existing
-      alert/entity data) and does not perform any mutations. Therefore, it does not
-      meet the criteria for an Enrichment action.
+      The action does not fetch data from an external source; it processes existing
+      data within the alert and entities. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types:
     - USERUNIQNAME
     - HOSTNAME
-    filters_by_additional_properties: true
+    filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
@@ -343,9 +360,8 @@ Get Event Data JSON:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters them based
-      on their `entity_type` (USERUNIQNAME, HOSTNAME) and the presence of specific
-      XM Cyber identifiers in their `additional_properties`.
+      The code filters `siemplify.target_entities` using `SUPPORTED_ENTITY_TYPES`
+      which includes `USER` (mapped to USERUNIQNAME) and `HOSTNAME`.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -362,8 +378,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping) and does not perform any of the listed
-      operational tasks (enrichment, containment, ticket management, etc.).
+      The action is a connectivity test (Ping) and does not perform any of the defined
+      operational tasks such as enrichment, ticketing, or containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -385,11 +401,13 @@ Ping:
     URL, API Key, Auth Type) from the configuration. 2. Initializes the ApiManager
     with the provided credentials. 3. Performs a connectivity test by sending a request
     to the XM Cyber API (specifically the /api/auth/ endpoint). 4. Returns a success
-    or failure status based on the API response. Parameters: Access Token Based Authentication
-    (Boolean, Mandatory): Determines whether to use OAuth or API Key authentication.
-    Base URL (String, Mandatory): The base URL of the XM Cyber instance. API Key (String,
-    Mandatory): The API key used for authentication. Additional Notes: This action
-    is a connectivity test and does not perform any data enrichment or system modifications.
+    or failure status based on the API response. Parameters: | Parameter | Type |
+    Mandatory | Description | | --- | --- | --- | --- | | Access Token Based Authentication
+    | Boolean | Yes | Determines whether to use OAuth or API Key authentication. |
+    | Base URL | String | Yes | The base URL of the XM Cyber instance. | | API Key
+    | String | Yes | The API key used for authentication. | Additional Notes: This
+    action is a connectivity test and does not perform any data enrichment or system
+    modifications.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -401,14 +419,14 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a simple connectivity check (Ping) to verify that the provided
-      credentials and URL are valid. It does not fetch data, mutate external systems,
-      or modify internal SOAR data.
+      The action performs a connectivity test (Ping) to verify credentials. It does
+      not fetch contextual data about alerts or entities, nor does it mutate any external
+      or internal systems. It is a diagnostic action.
   categories:
     enrichment: false
     reasoning: >-
-      The action is named Ping and is used for connectivity testing. Per the instructions,
-      Ping actions must not be categorized as enrichment actions.
+      The action is a 'Ping' connectivity test. According to the guidelines, Ping
+      actions must not be categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -425,7 +443,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities.
+      The action does not process any entities. It is a global configuration test.
 Push Breach Point Data:
   action_product_categories:
     add_alert_comment: false
@@ -442,12 +460,9 @@ Push Breach Point Data:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action pushes breach point labels to entities in the XM Cyber platform based
-      on criteria. It does not fetch data, nor does it perform standard containment
-      or ticketing actions. It modifies metadata in an external system, but does not
-      fit the specific definitions of the provided categories (e.g., it's not updating
-      an identity's password or permissions, nor is it a standard ticket update).
-      Therefore, all categories are false.
+      The action pushes metadata (labels) to entities in an external system (XM Cyber).
+      It does not match any of the provided categories such as Enrichment, Containment,
+      Ticket Management, or Identity Management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -517,23 +532,26 @@ Push Breach Point Data:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Pushes breach point labels to entities in the XM Cyber platform.
+      The action pushes breach point labels to entities within the XM Cyber platform
+      via an API POST request.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to the XM Cyber API to push breach point
-      labels to entities. It does not fetch data from the external system for enrichment,
-      nor does it modify internal SOAR case data (entities, insights, etc.).
+      The action iterates over target entities and security events to identify entities
+      matching specific criteria. It then performs a POST request to the XM Cyber
+      API to apply labels to these entities. It does not fetch data from the external
+      system, nor does it modify internal SecOps data (entities, insights, or comments).
   categories:
     enrichment: false
     reasoning: >-
-      The action is a mutation action that pushes data to an external system, not
-      an enrichment action that retrieves data.
+      The action is a mutation action that pushes data to an external system (XM Cyber).
+      It does not fetch data for enrichment purposes, nor does it modify internal
+      SecOps data. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types:
     - HOSTNAME
     - USERUNIQNAME
-    filters_by_additional_properties: false
+    filters_by_additional_properties: true
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
@@ -547,6 +565,6 @@ Push Breach Point Data:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters by `SUPPORTED_ENTITY_TYPES`
-      which includes `USER` and `HOSTNAME`. This means it targets `USERUNIQNAME` and
-      `HOSTNAME` entities, filtering by entity_type.
+      The code iterates over `siemplify.target_entities` and filters them based on
+      `SUPPORTED_ENTITY_TYPES` (USER, HOSTNAME). It also checks `additional_properties`
+      to evaluate criteria for matching entities.

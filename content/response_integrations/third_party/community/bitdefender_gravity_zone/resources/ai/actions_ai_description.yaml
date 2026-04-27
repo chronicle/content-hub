@@ -14,8 +14,9 @@ Blocklist - Add Hashes:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds file hashes to the Bitdefender blocklist, which directly matches
-      the 'Add IOC To Blocklist' category.
+      The action adds file hashes to the Bitdefender GravityZone blocklist, which
+      directly matches the 'Add IOC To Blocklist' category. It does not perform any
+      other listed actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -31,26 +32,11 @@ Blocklist - Add Hashes:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Adds one or more file hashes (SHA256 or MD5) to the Bitdefender GravityZone blocklist.
-    This action allows security analysts to proactively block malicious files across
-    the environment managed by Bitdefender.
+    ### General Description
 
-
-    ### Flow Description
-
-    1. The action extracts the required configuration (API Key, Access URL, SSL verification)
-    and action parameters (Hash List, Source Info).
-
-    2. It initializes the `BitdefenderGravityZoneManager` to establish a connection
-    with the Bitdefender GravityZone Control Center.
-
-    3. The provided comma-separated hash list is parsed and categorized into SHA256
-    and MD5 lists.
-
-    4. The action sends a POST request to the Bitdefender API to add the categorized
-    hashes to the blocklist, including the provided source information.
-
-    5. The result of the operation is returned and logged.
+    This action adds one or more file hashes (SHA256 or MD5) to the Bitdefender GravityZone
+    blocklist. It allows security analysts to proactively block malicious files across
+    the environment managed by Bitdefender GravityZone.
 
 
     ### Parameters
@@ -70,6 +56,26 @@ Blocklist - Add Hashes:
 
     - The action does not support file types other than SHA256 or MD5. If unsupported
     hashes are provided, the action will raise an error.
+
+    - This action does not operate on entities; it accepts a raw string of hashes
+    as input.
+
+
+    ### Flow Description
+
+    1. The action extracts the required configuration (API Key, Access URL, SSL verification)
+    and action parameters (Hash List, Source Info).
+
+    2. It initializes the `BitdefenderGravityZoneManager` to establish a connection
+    with the Bitdefender GravityZone Control Center.
+
+    3. The provided comma-separated hash list is parsed and categorized into SHA256
+    and MD5 lists.
+
+    4. The action sends a POST request to the Bitdefender API to add the categorized
+    hashes to the blocklist, including the provided source information.
+
+    5. The result of the operation is returned and logged.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -78,18 +84,17 @@ Blocklist - Add Hashes:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds specified file hashes (SHA256/MD5) to the Bitdefender GravityZone blocklist.
+      Adds file hashes (SHA256 or MD5) to the Bitdefender GravityZone blocklist.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a POST request to the Bitdefender GravityZone API to add
-      hashes to a blocklist. It does not fetch data, nor does it modify internal SOAR
-      entities or case data.
+      file hashes to a blocklist. It does not fetch data or modify internal SOAR data.
   categories:
     enrichment: false
     reasoning: >-
       The action is a mutation action (adding to blocklist) and does not fetch data
-      for enrichment. Therefore, it is not an enrichment action.
+      for enrichment, therefore it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -106,8 +111,8 @@ Blocklist - Add Hashes:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities`. It accepts a raw
-      string input for the hash list via action parameters.
+      The action does not operate on entities. It takes a raw string of hashes as
+      input and does not reference the `target_entities` attribute.
 Blocklist - List Items:
   action_product_categories:
     add_alert_comment: false
@@ -124,9 +129,11 @@ Blocklist - List Items:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves the current blocklist from the external system. It does
-      not match any of the specific categories provided (e.g., it is not enriching
-      a specific IOC, nor is it updating an alert or ticket).
+      The action retrieves a list of blocklisted hashes from Bitdefender GravityZone.
+      It does not enrich specific entities, update alerts, or perform containment
+      actions. It is a read-only utility action to view current configuration. None
+      of the provided categories (which focus on enrichment, containment, or ticket
+      management) apply to this specific 'list' operation.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -148,20 +155,6 @@ Blocklist - List Items:
     GravityZone blocklist. It connects to the Bitdefender GravityZone Control Center
     to fetch the blocklist data and returns it as a JSON result for further analysis
     or reporting.
-
-
-    ### Flow Description
-
-    1. The action initializes the Bitdefender GravityZone manager using the provided
-    API credentials and connection settings.
-
-    2. It executes a request to the Bitdefender API to retrieve all items currently
-    in the blocklist.
-
-    3. The retrieved blocklist data is added to the action's result output as a JSON
-    object.
-
-    4. The action completes with a success status.
 
 
     ### Parameters Description
@@ -194,6 +187,20 @@ Blocklist - List Items:
 
     This action is a read-only operation that fetches data from the external system.
     It does not modify any entities or alert data within the SOAR platform.
+
+
+    ### Flow Description
+
+    1. The action initializes the Bitdefender GravityZone manager using the provided
+    API credentials and connection settings.
+
+    2. It executes a request to the Bitdefender API to retrieve all items currently
+    in the blocklist.
+
+    3. The retrieved blocklist data is added to the action's result output as a JSON
+    object.
+
+    4. The action completes with a success status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -205,15 +212,16 @@ Blocklist - List Items:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to retrieve the blocklist from the Bitdefender
-      GravityZone API. It does not perform any write operations on external systems,
-      nor does it modify any internal SOAR data (entities, insights, or alert fields).
+      The action performs a GET-like operation (via POST to the API) to retrieve the
+      blocklist from Bitdefender GravityZone. It does not modify any external systems,
+      nor does it modify any internal SOAR data (entities, cases, or alerts). It simply
+      returns the fetched data as a JSON result.
   categories:
     enrichment: false
     reasoning: >-
-      The action retrieves data (the blocklist) but does not perform enrichment on
-      specific entities or alerts. It is a utility/retrieval action rather than an
-      enrichment action.
+      The action fetches data from an external system, but it does not enrich specific
+      entities or alerts. It is a utility action to list configuration data (the blocklist).
+      Therefore, it does not meet the criteria for an Enrichment Action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -230,8 +238,8 @@ Blocklist - List Items:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with the `siemplify.target_entities` list. It operates
-      globally to retrieve the blocklist from the external system.
+      The action does not interact with any entities. It operates globally to fetch
+      the blocklist from the Bitdefender GravityZone API.
 Blocklist - Remove Item:
   action_product_categories:
     add_alert_comment: false
@@ -248,8 +256,8 @@ Blocklist - Remove Item:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action explicitly removes an item from the Bitdefender GravityZone blocklist,
-      which directly matches the 'Remove IOC From Blocklist' category.
+      The action removes a hash from the Bitdefender GravityZone blocklist, which
+      directly matches the 'Remove IOC From Blocklist' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: true
     reset_identity_password: false
@@ -265,9 +273,11 @@ Blocklist - Remove Item:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Removes a specific hash item from the Bitdefender GravityZone blocklist. This
-    action allows security analysts to manage the blocklist by deleting entries that
-    are no longer required or were added in error.
+    ### General Description
+
+    This action removes a specific hash item from the Bitdefender GravityZone blocklist.
+    It allows security analysts to manage the blocklist by deleting entries that are
+    no longer required or were added in error.
 
 
     ### Parameters
@@ -303,19 +313,18 @@ Blocklist - Remove Item:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a specific hash item from the Bitdefender GravityZone blocklist.
+      Removes a hash item from the Bitdefender GravityZone blocklist.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a mutation on an external system (Bitdefender GravityZone)
-      by removing an item from the blocklist. It does not fetch data, nor does it
-      modify internal SOAR case data or entities.
+      The action performs a PUT request to the Bitdefender GravityZone API to remove
+      a specific hash from the blocklist. It does not fetch data for enrichment, nor
+      does it modify internal SOAR data or entities.
   categories:
     enrichment: false
     reasoning: >-
       The action is a mutation action (removing an item from a blocklist) and does
-      not retrieve data for enrichment purposes. Therefore, it is not an enrichment
-      action.
+      not fetch data for enrichment. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -332,8 +341,8 @@ Blocklist - Remove Item:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with SOAR entities. It operates based on a provided
-      'Hash ID' input parameter.
+      The action does not operate on entities. It takes a 'Hash ID' as a direct input
+      parameter and does not iterate over the target_entities list.
 Create Scan Task:
   action_product_categories:
     add_alert_comment: false
@@ -347,12 +356,12 @@ Create Scan Task:
     enable_identity: false
     enrich_asset: false
     enrich_ioc: false
-    execute_command_on_the_host: true
+    execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action triggers a scan task on a remote endpoint via the Bitdefender GravityZone
-      platform. This aligns with the 'Execute Command on the Host' category as it
-      initiates a remote operation on the endpoint.
+      The action creates a scan task on the Bitdefender GravityZone platform. This
+      does not fit any of the provided categories (e.g., Enrich IOC, Contain Host,
+      Execute Command). It is a management/administrative action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -374,26 +383,6 @@ Create Scan Task:
     endpoints or containers. It allows users to trigger different types of scans (Quick,
     Full, Memory, or Custom) and configure custom scan settings such as depth and
     paths.
-
-
-    ### Flow Description
-
-    1. **Configuration Extraction**: The action retrieves the necessary integration
-    configuration parameters, including the API Key, Access URL, and SSL verification
-    settings.
-
-    2. **Parameter Extraction**: The action extracts the specific scan parameters
-    provided by the user, including the target IDs, scan type, task name, and optional
-    custom scan settings (depth and paths).
-
-    3. **Manager Initialization**: The `BitdefenderGravityZoneManager` is initialized
-    with the provided credentials.
-
-    4. **Task Execution**: The action calls the `task_create_scan` method, which sends
-    a POST request to the Bitdefender GravityZone API to initiate the scan task.
-
-    5. **Result Handling**: The action logs the outcome of the request and terminates
-    with a success or failure status.
 
 
     ### Parameters Description
@@ -422,6 +411,26 @@ Create Scan Task:
 
     - The parameters 'Custom Scan - Depth' and 'Custom Scan - Paths' are only utilized
     when the 'Scan Type' is set to 'Custom'.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the necessary integration
+    configuration parameters, including the API Key, Access URL, and SSL verification
+    settings.
+
+    2. **Parameter Extraction**: The action extracts the specific scan parameters
+    provided by the user, including the target IDs, scan type, task name, and optional
+    custom scan settings (depth and paths).
+
+    3. **Manager Initialization**: The `BitdefenderGravityZoneManager` is initialized
+    with the provided credentials.
+
+    4. **Task Execution**: The action calls the `task_create_scan` method, which sends
+    a POST request to the Bitdefender GravityZone API to initiate the scan task.
+
+    5. **Result Handling**: The action logs the outcome of the request and terminates
+    with a success or failure status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -430,20 +439,19 @@ Create Scan Task:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new scan task on the Bitdefender GravityZone platform for the specified
-      endpoints.
+      Initiates a scan task on the Bitdefender GravityZone platform for the specified
+      endpoints or containers.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to the Bitdefender GravityZone API to create
-      a scan task on the external platform. It does not fetch data for enrichment,
-      nor does it modify any internal SOAR data or entities.
+      The action triggers a scan task on the Bitdefender GravityZone platform via
+      an API call (POST request). It does not fetch data for enrichment, nor does
+      it modify internal SOAR case data or entities.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a mutation action (creating a task) and does not fetch data for
-      enrichment purposes. Therefore, it does not meet the criteria for an enrichment
-      action.
+      The action performs an external mutation (creating a scan task) and does not
+      fetch data for enrichment. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -460,8 +468,9 @@ Create Scan Task:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action takes 'Target IDs' as a direct input parameter string and does not
-      iterate over or filter 'siemplify.target_entities'.
+      The action does not use the `target_entities` list from the SOAR platform. It
+      accepts `Target IDs` as a manual input parameter, meaning it does not operate
+      on specific SOAR entity objects.
 Create Scan Task by MAC Address:
   action_product_categories:
     add_alert_comment: false
@@ -551,20 +560,17 @@ Create Scan Task by MAC Address:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new scan task on the Bitdefender GravityZone platform for the specified
-      endpoints.
+      Triggers a scan task on managed endpoints in Bitdefender GravityZone.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to the Bitdefender GravityZone API to create
-      a scan task on remote endpoints. It does not fetch data for enrichment, nor
-      does it modify internal SOAR data or entities.
+      The action triggers a scan task in Bitdefender GravityZone via a POST request.
+      It does not fetch data or modify internal SOAR data.
   categories:
     enrichment: false
     reasoning: >-
-      The action performs a state-changing operation (creating a scan task) on an
-      external system and does not retrieve data for enrichment purposes, therefore
-      it is not an enrichment action.
+      The action triggers an external task (scan) and does not retrieve data for enrichment,
+      therefore it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -581,9 +587,8 @@ Create Scan Task by MAC Address:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or utilize the `siemplify.target_entities`
-      object. Instead, it accepts MAC addresses as a direct input parameter from the
-      user.
+      The action does not operate on SOAR entities. It takes MAC addresses as a direct
+      input parameter.
 Get Custom Groups List:
   action_product_categories:
     add_alert_comment: false
@@ -601,8 +606,9 @@ Get Custom Groups List:
     get_alert_information: false
     reasoning: >-
       The action retrieves a list of custom groups from Bitdefender GravityZone. It
-      does not match any of the defined categories such as enriching IOCs/Assets,
-      updating alerts, or performing containment actions.
+      does not match any of the defined categories (e.g., Enrich IOC, Enrich Asset,
+      Search Events, etc.), as it is a utility action for retrieving configuration
+      data rather than security intelligence or alert/asset information.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -618,40 +624,19 @@ Get Custom Groups List:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Retrieves a list of custom groups from the Bitdefender GravityZone platform. This
-    action connects to the GravityZone Control Center and fetches the hierarchy of
-    groups based on an optional parent group identifier. The retrieved data is returned
-    as a JSON result for further use in the playbook.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Parent ID | string | No | Parent group ID for which the child groups will be
-    listed. 'Computers and Groups' and 'Deleted' groups are returned if the passed
-    parameter is null. |
-
-
-    ### Additional Notes
-
-    If the `Parent ID` parameter is not provided, the action returns the root groups
-    ('Computers and Groups' and 'Deleted').
-
-
-    ### Flow Description
-
-    1. Initialize the Bitdefender GravityZone manager with API credentials.
-
-    2. Extract the `Parent ID` parameter.
-
-    3. Execute the `getCustomGroupsList` API call using the provided `Parent ID`.
-
-    4. Return the list of groups in the action result.
+    ### General Description\nRetrieves a list of custom groups from the Bitdefender
+    GravityZone platform. This action connects to the GravityZone Control Center and
+    fetches the hierarchy of groups based on an optional parent group identifier.
+    The retrieved data is returned as a JSON result for further use in the playbook.\n\n###
+    Parameters Description\n| Parameter | Type | Mandatory | Description |\n| ---
+    | --- | --- | --- |\n| Parent ID | string | No | Parent group ID for which the
+    child groups will be listed. 'Computers and Groups' and 'Deleted' groups are returned
+    if the passed parameter is null. |\n\n### Additional Notes\nIf the `Parent ID`
+    parameter is not provided, the action returns the root groups ('Computers and
+    Groups' and 'Deleted').\n\n### Flow Description\n1. Initialize the Bitdefender
+    GravityZone manager with API credentials.\n2. Extract the `Parent ID` parameter.\n3.
+    Execute the `getCustomGroupsList` API call using the provided `Parent ID`.\n4.
+    Return the list of groups in the action result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -663,16 +648,16 @@ Get Custom Groups List:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to retrieve a list of groups (read-only operation).
-      It does not fetch context data for entities, nor does it update internal entities
-      or create insights.
+      The action fetches data from the Bitdefender GravityZone API to retrieve a list
+      of custom groups. It does not mutate external data, nor does it modify internal
+      SecOps data (entities, insights, or comments). It simply returns the retrieved
+      data to the playbook.
   categories:
     enrichment: false
     reasoning: >-
-      The action retrieves a list of groups from an external system. It does not perform
-      enrichment on any SOAR entities (e.g., updating entity fields or creating insights),
-      nor does it take entities as input. Therefore, it does not meet the criteria
-      for an Enrichment Action.
+      The action retrieves a list of groups from an external system. While it fetches
+      data, it does not perform enrichment on entities (it does not take entities
+      as input or update them). Therefore, it is not classified as an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -689,9 +674,8 @@ Get Custom Groups List:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with `siemplify.target_entities`. It operates independently
-      of any specific entity, using only the provided `Parent ID` parameter to query
-      the Bitdefender API.
+      The action does not operate on any entities. It takes a `Parent ID` parameter
+      to fetch a list of groups from the Bitdefender GravityZone platform.
 Get Endpoints List:
   action_product_categories:
     add_alert_comment: false
@@ -708,9 +692,10 @@ Get Endpoints List:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of endpoints (assets) from the Bitdefender GravityZone
-      platform based on user-defined filters. This aligns with the 'Search Asset'
-      category, as it searches for assets associated with the product.
+      The action retrieves a list of endpoints from Bitdefender GravityZone based
+      on filters. This matches the 'Search Asset' category, which involves searching
+      for assets (endpoints) within the product. It does not perform enrichment on
+      a specific entity, nor does it modify external or internal data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -802,16 +787,16 @@ Get Endpoints List:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET-like operation (via RPC POST) to retrieve a list of
-      endpoints from the Bitdefender GravityZone API. It does not modify any external
-      system state, nor does it modify any internal SOAR case data, entities, or alerts.
-      It simply returns the requested data to the user.
+      The action performs a `getEndpointsList` API call to retrieve data from Bitdefender
+      GravityZone. It does not modify any external system state (no POST/PUT/DELETE
+      that changes configuration or state), nor does it modify internal SOAR data
+      (no entity updates, insights, or comments).
   categories:
     enrichment: false
     reasoning: >-
-      The action retrieves data (a list of endpoints) but does not perform enrichment
-      on specific entities (it does not take entities as input or update them). Therefore,
-      it does not meet the criteria for an Enrichment action.
+      The action fetches data (list of endpoints), but it does not operate on specific
+      entities (it's a global search). Therefore, it does not meet the criteria for
+      an Enrichment Action, which requires operating on entities to provide context.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -828,8 +813,9 @@ Get Endpoints List:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with the `siemplify.target_entities` list. It performs
-      a standalone search operation based on parameters provided in the action configuration.
+      The code does not reference `target_entities` and performs a global search operation
+      against the Bitdefender GravityZone API. Therefore, it does not operate on any
+      specific entity types.
 Get Hourly Usage for EC2 Instances:
   action_product_categories:
     add_alert_comment: false
@@ -846,9 +832,9 @@ Get Hourly Usage for EC2 Instances:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves hourly usage statistics for EC2 instances. It does not
-      match any of the provided categories (Enrich IOC, Enrich Asset, Update Alert,
-      etc.).
+      The action retrieves usage statistics for EC2 instances. It does not match any
+      of the specific operational categories like enrichment, containment, or ticket
+      management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -908,14 +894,16 @@ Get Hourly Usage for EC2 Instances:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action retrieves usage data from the Bitdefender GravityZone API. It does
-      not modify any external or internal systems. It simply returns the data in the
-      action result.
+      The action performs a read-only operation by querying the Bitdefender GravityZone
+      API for usage statistics. It does not modify any external systems, nor does
+      it update internal entities, create insights, or modify case data. It simply
+      returns the fetched data in the action result.
   categories:
     enrichment: false
     reasoning: >-
-      The action fetches data, but it does not operate on entities or alerts. It is
-      a general reporting action, not an enrichment action.
+      While the action fetches data, it does not perform enrichment on specific entities
+      or alerts. It is a reporting/utility action that retrieves general usage statistics.
+      Therefore, it does not meet the criteria for an Enrichment Action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -932,8 +920,8 @@ Get Hourly Usage for EC2 Instances:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code does not reference `siemplify.target_entities` or any entity objects.
-      It operates independently of entities.
+      The action does not interact with any entities. It operates independently of
+      the case's entity list.
 Get Managed Endpoint Details:
   action_product_categories:
     add_alert_comment: false
@@ -950,10 +938,10 @@ Get Managed Endpoint Details:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (security agent status, endpoint identification)
-      for a specific resource (endpoint). This directly matches the 'Enrich Asset'
-      category. It does not perform any other operations like ticket creation, alert
-      modification, or containment.
+      The action retrieves contextual metadata (OS version, agent status, protection
+      modules) for a specific resource (endpoint). This aligns with the 'Enrich Asset'
+      category. It does not perform any other actions like blocking, ticketing, or
+      alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -969,25 +957,13 @@ Get Managed Endpoint Details:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Retrieves detailed information about a managed endpoint from the Bitdefender GravityZone
-    platform. This action provides visibility into endpoint identification, security
-    agent details, and the status of installed protection modules.
+    ### General Description
 
-
-    ### Flow Description
-
-    1. **Configuration Extraction**: The action retrieves the necessary integration
-    settings, including the API Key, Access URL, and SSL verification preference.
-
-    2. **Parameter Extraction**: The action extracts the `Endpoint ID` provided by
-    the user.
-
-    3. **API Interaction**: The action initializes the `BitdefenderGravityZoneManager`
-    and executes a request to the Bitdefender GravityZone API to fetch the specific
-    details for the provided endpoint ID.
-
-    4. **Result Processing**: The retrieved endpoint data is added to the action's
-    result output for further analysis or display in the SOAR platform.
+    This action retrieves detailed information about a managed endpoint from the Bitdefender
+    GravityZone platform. It provides visibility into endpoint identification, security
+    agent details, and the status of installed protection modules. This action is
+    useful for gathering context about a specific endpoint identified by its unique
+    ID within the Bitdefender environment.
 
 
     ### Parameters
@@ -1004,7 +980,24 @@ Get Managed Endpoint Details:
 
     This action performs a read-only operation to fetch data from the Bitdefender
     GravityZone API. It does not modify the state of the endpoint or the Bitdefender
-    environment.
+    environment. It does not operate on SOAR entities directly; it requires an explicit
+    Endpoint ID as input.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the necessary integration
+    settings, including the API Key, Access URL, and SSL verification preference.
+
+    2. **Parameter Extraction**: The action extracts the `Endpoint ID` provided by
+    the user.
+
+    3. **API Interaction**: The action initializes the `BitdefenderGravityZoneManager`
+    and executes a request to the Bitdefender GravityZone API to fetch the specific
+    details for the provided endpoint ID.
+
+    4. **Result Processing**: The retrieved endpoint data is added to the action's
+    result output for further analysis or display in the SOAR platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1016,16 +1009,18 @@ Get Managed Endpoint Details:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET-like operation (via JSON-RPC POST) to retrieve endpoint
+      The action performs a GET-like request (via JSON-RPC POST) to retrieve endpoint
       details from the Bitdefender GravityZone API. It does not modify any external
-      system state, nor does it update internal SOAR entities, insights, or case data.
+      system state (no block/unblock/isolate actions). It does not modify internal
+      SOAR data (no entity updates, insights, or comments). It simply returns the
+      retrieved data as a result JSON.
   categories:
-    enrichment: true
+    enrichment: false
     reasoning: >-
-      The action is designed to fetch contextual information about an endpoint from
-      an external source (Bitdefender GravityZone). It does not mutate external or
-      internal data, and it is not a Ping or download action. Therefore, it qualifies
-      as an enrichment action.
+      The action fetches data, but it does not operate on SOAR entities (it takes
+      a raw ID as input). According to the definition, an Enrichment Action must gather
+      context about alerts or entities. Since this action does not interact with the
+      entity model, it is not classified as an Enrichment Action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1042,9 +1037,9 @@ Get Managed Endpoint Details:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process `siemplify.target_entities`. It
-      relies on a specific `Endpoint ID` provided as an input parameter to perform
-      its lookup.
+      The action does not iterate over `target_entities` or use the entity object
+      model. It accepts a raw `Endpoint ID` string as a parameter. Therefore, it does
+      not run on any specific entity types.
 Get Network Inventory Items:
   action_product_categories:
     add_alert_comment: false
@@ -1061,14 +1056,14 @@ Get Network Inventory Items:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for and retrieves a list of network inventory items (assets/endpoints)
-      from the Bitdefender GravityZone platform based on user-defined filters. This
-      aligns with the 'Search Asset' category. It does not perform enrichment on a
-      specific entity, nor does it update alerts or tickets.
+      The action retrieves a list of network inventory items from Bitdefender GravityZone.
+      It does not match any of the defined product categories, as it is a general
+      search/listing action rather than an enrichment, containment, or alert management
+      action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: true
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
@@ -1170,18 +1165,15 @@ Get Network Inventory Items:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request (via `control_center_paged`) to the Bitdefender
-      GravityZone API to retrieve network inventory data. It does not modify any external
-      systems (no POST/PUT/DELETE that changes state), nor does it modify internal
-      SOAR data (entities, insights, or case comments). It simply returns the fetched
-      data as a JSON result.
+      The action performs a GET-like operation (via JSON-RPC) to retrieve network
+      inventory data from Bitdefender GravityZone. It does not mutate external systems,
+      nor does it modify internal SOAR data (entities, insights, etc.).
   categories:
     enrichment: false
     reasoning: >-
-      The action fetches data from an external system (Bitdefender GravityZone). However,
-      it does not operate on specific entities (it is a standalone search/list action)
-      and does not enrich existing entities in the SOAR case. Therefore, it does not
-      meet the criteria for an Enrichment Action.
+      The action is a global search/retrieval operation and does not operate on specific
+      entities or alerts. It does not meet the criteria for an Enrichment Action,
+      which requires gathering context about specific alerts or entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1198,9 +1190,8 @@ Get Network Inventory Items:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code does not iterate over `siemplify.target_entities` or reference any
-      entity objects. It performs a general search based on provided parameters. Therefore,
-      it does not run on any specific entity types.
+      The action does not iterate over or use any entities from the SOAR platform.
+      It performs a global search based on provided parameters.
 Get Scan Tasks List:
   action_product_categories:
     add_alert_comment: false
@@ -1217,15 +1208,16 @@ Get Scan Tasks List:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of scan tasks from the product. It does not match
-      any of the specific categories like 'Enrich IOC', 'Contain Host', or 'Create
-      Ticket'. It is a general utility action for retrieving information.
+      The action retrieves a list of scan tasks from the Bitdefender GravityZone platform
+      based on status and name filters. This matches the 'Search Events' category
+      as it returns a collection of telemetry/status data matching specific search
+      parameters. It does not mutate external or internal data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
-    search_events: false
+    search_events: true
     send_email: false
     send_message: false
     submit_file: false
@@ -1235,12 +1227,14 @@ Get Scan Tasks List:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     Retrieves a list of scan tasks from the Bitdefender GravityZone platform based
     on specified filters. This action allows analysts to query the status of scan
     tasks, which can be useful for monitoring the progress of security operations.
 
 
-    ### Parameters
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
@@ -1276,15 +1270,14 @@ Get Scan Tasks List:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET/List operation to retrieve scan task data from the
-      Bitdefender GravityZone API. It does not modify any external systems, nor does
-      it interact with internal SOAR entities or case data.
+      The action performs a POST request to retrieve a list of scan tasks from the
+      Bitdefender GravityZone API. It does not mutate any external or internal data,
+      nor does it update entities or create insights.
   categories:
     enrichment: false
     reasoning: >-
-      The action retrieves a list of scan tasks. It does not enrich entities or alerts,
-      nor does it perform any mutations. Therefore, it does not meet the criteria
-      for an enrichment action.
+      The action does not operate on entities or alerts, and therefore does not meet
+      the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1301,8 +1294,8 @@ Get Scan Tasks List:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or filter by any SOAR entities. It operates
-      independently of the entity model.
+      The action does not interact with `target_entities` or any entity-specific logic.
+      It performs a global search for scan tasks based on provided parameters.
 Isolate Endpoint:
   action_product_categories:
     add_alert_comment: false
@@ -1319,8 +1312,9 @@ Isolate Endpoint:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action isolates an endpoint in Bitdefender GravityZone, which directly aligns
-      with the 'Contain Host' category as it restricts network access to the endpoint.
+      The action triggers an isolation task on an endpoint in Bitdefender GravityZone.
+      This matches the 'Contain Host' expected outcome of isolating an endpoint from
+      the network.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1384,19 +1378,20 @@ Isolate Endpoint:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action triggers an isolation task on the target endpoint within the Bitdefender
-      GravityZone platform, which changes the endpoint's network state.
+      Sends a POST request to the Bitdefender GravityZone API to create an isolation
+      task for the specified endpoint, restricting its network connectivity.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a state-changing operation (isolating an endpoint) on an
-      external system (Bitdefender GravityZone) via an API POST request. It does not
-      fetch data for enrichment, nor does it modify internal SOAR case data or entities.
+      The action performs a POST request to the Bitdefender GravityZone API to isolate
+      an endpoint. It does not fetch data, nor does it modify internal SOAR data or
+      entities.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a containment/mutation action, not an enrichment action. It does
-      not fetch data to enrich entities or alerts.
+      The action performs a mutation on an external system (Bitdefender) and does
+      not retrieve data for enrichment purposes, therefore it is not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1413,9 +1408,8 @@ Isolate Endpoint:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities`. It uses an `Endpoint
-      ID` provided as a direct input parameter to identify the target, therefore it
-      does not run on any specific entity types.
+      The action does not utilize the SOAR entity model; it relies on the 'Endpoint
+      ID' provided via the action parameters.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -1432,8 +1426,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity check (Ping) and does not perform any of the defined
-      functional outcomes like enriching data, blocking IOCs, or managing tickets.
+      The action is a connectivity test (Ping) and does not perform any of the listed
+      functional operations (enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1480,12 +1474,11 @@ Ping:
 
     ### Flow Description
 
-    1. The action extracts the `API Key`, `Access URL`, and `Verify SSL` configuration
-    parameters.
+    1. The action extracts the API Key, Access URL, and Verify SSL configuration parameters.
 
-    2. It initializes the `BitdefenderGravityZoneManager` with the provided credentials.
+    2. It initializes the BitdefenderGravityZoneManager with the provided credentials.
 
-    3. It executes the `getApiKeyDetails` API method to test the connection.
+    3. It executes the getApiKeyDetails API method to test the connection.
 
     4. If the API call is successful, it returns a success status. If the API key
     is invalid or the connection fails, it raises an error and returns a failure status.
@@ -1500,15 +1493,13 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a connectivity check by calling the `getApiKeyDetails` method
-      on the Bitdefender GravityZone API. It does not modify any external or internal
-      data, nor does it interact with entities. It fetches API key details to validate
-      the connection.
+      The action performs a connectivity check by calling the getApiKeyDetails API
+      method. It does not modify any external or internal data.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a 'Ping' action, which is explicitly excluded from being an enrichment
-      action per the instructions.
+      The action is a Ping action. Per the instructions, Actions named Ping must not
+      be categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1542,9 +1533,10 @@ Policies - Get Details:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves policy details from Bitdefender GravityZone. It does not
-      match any of the defined categories such as Enrich IOC, Enrich Asset, or Update
-      Alert, as it is a specific administrative query for policy configuration.
+      The action retrieves configuration details for a specific policy from Bitdefender
+      GravityZone. It does not enrich IOCs, assets, or alerts, nor does it perform
+      any containment or ticketing operations. It does not match any of the predefined
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1560,38 +1552,18 @@ Policies - Get Details:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description
-
-    This action retrieves detailed information about a specific security policy from
-    the Bitdefender GravityZone platform. It allows analysts to query the configuration
-    and settings of a policy by its unique identifier.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Policy ID | string | Yes | The unique identifier of the policy to be queried.
-    |
-
-
-    ### Flow Description
-
-    1. The action extracts the integration configuration (API Key, Access URL, and
-    SSL verification settings).
-
-    2. It extracts the mandatory `Policy ID` parameter provided by the user.
-
-    3. The action initializes the `BitdefenderGravityZoneManager` to establish a connection
-    with the Bitdefender GravityZone Control Center.
-
-    4. It calls the `getPolicyDetails` method via the Bitdefender API using the provided
-    `Policy ID`.
-
-    5. The retrieved policy details are added to the action's result JSON.
-
+    ### General Description This action retrieves detailed configuration information
+    for a specific security policy from the Bitdefender GravityZone platform. It allows
+    analysts to query the settings and rules of a policy by its unique identifier.
+    ### Parameters Description | Parameter | Type | Mandatory | Description | | :---
+    | :--- | :--- | :--- | | Policy ID | string | Yes | The unique identifier of the
+    policy to be queried. | ### Additional Notes There are no additional notes for
+    this action. ### Flow Description 1. The action extracts the integration configuration
+    (API Key, Access URL, and SSL verification settings). 2. It extracts the mandatory
+    Policy ID parameter provided by the user. 3. The action initializes the BitdefenderGravityZoneManager
+    to establish a connection with the Bitdefender GravityZone Control Center. 4.
+    It calls the getPolicyDetails method via the Bitdefender API using the provided
+    Policy ID. 5. The retrieved policy details are added to the action's result JSON.
     6. The action terminates and returns the success status.
   capabilities:
     can_create_case_comments: false
@@ -1604,16 +1576,16 @@ Policies - Get Details:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a read-only operation to fetch policy details from the Bitdefender
-      GravityZone API. It does not modify any external systems, nor does it update
-      internal SOAR entities, insights, or alert data. It simply outputs the retrieved
-      data to the action result.
+      The action makes a GET request to retrieve policy details (fetches_data=true).
+      It does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   categories:
     enrichment: false
     reasoning: >-
-      The action fetches data from an external system, but it does not perform enrichment
-      on entities or alerts. It is a standalone utility action to retrieve policy
-      information. Therefore, it does not meet the criteria for an Enrichment action.
+      The action retrieves configuration details for a specific policy from Bitdefender
+      GravityZone. It does not enrich IOCs, assets, or alerts, nor does it perform
+      any containment or ticketing operations. It does not meet the criteria for an
+      enrichment action as it does not operate on entities or alerts.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1630,8 +1602,8 @@ Policies - Get Details:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or utilize `siemplify.target_entities`. It
-      operates solely based on the provided `Policy ID` parameter.
+      The action does not iterate over target_entities or use entity-specific identifiers
+      to perform its task. It operates on a policy ID provided as a parameter.
 Policies - List All:
   action_product_categories:
     add_alert_comment: false
@@ -1648,9 +1620,9 @@ Policies - List All:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of policies from Bitdefender GravityZone. It does
-      not match any of the specific categories like 'Enrich IOC', 'Enrich Asset',
-      or 'Get Alert Information' as it is a configuration/utility retrieval action.
+      The action retrieves a list of policies from the Bitdefender GravityZone Control
+      Center. It does not match any of the defined categories such as enrichment,
+      containment, or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1711,16 +1683,15 @@ Policies - List All:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a retrieval operation (JSON-RPC POST request) to fetch a
-      list of policies from the Bitdefender GravityZone API. It does not modify any
-      external system state, nor does it update internal SOAR entities, insights,
-      or case data.
+      The action performs a read-only operation to fetch a list of policies from the
+      Bitdefender GravityZone API. It does not mutate any external systems, nor does
+      it modify internal SOAR data (entities, insights, or case comments).
   categories:
     enrichment: false
     reasoning: >-
-      The action retrieves a list of policies. It does not perform enrichment on specific
-      entities or alerts, nor does it meet the criteria for an enrichment action as
-      it does not add context to entities or alerts.
+      The action retrieves a list of policies but does not perform enrichment on specific
+      alerts or entities. It is a utility/configuration retrieval action, not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1737,8 +1708,8 @@ Policies - List All:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities. It is a global utility action
-      that retrieves configuration data from the external system.
+      The action does not process any entities. It operates globally to retrieve configuration
+      data.
 Quarantine - Add File:
   action_product_categories:
     add_alert_comment: false
@@ -1755,11 +1726,9 @@ Quarantine - Add File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a remediation task (quarantining a file) on an external
-      system. It does not match the specific definitions for enrichment, ticket creation,
-      or host isolation/blocking provided in the categories list. While it is a containment-like
-      action, it does not isolate the host from the network as defined by the 'Contain
-      Host' category.
+      The action triggers a quarantine task for a file on an endpoint. This does not
+      match the expected outcomes of the provided categories (e.g., it is not network
+      isolation, ticket creation, or IOC blocking). Therefore, no categories are selected.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1827,21 +1796,20 @@ Quarantine - Add File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a task in Bitdefender GravityZone to quarantine a specific file on target
-      endpoints.
+      Triggers a quarantine task on the Bitdefender GravityZone platform for a specified
+      file on target endpoints.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a POST request to the Bitdefender GravityZone API to create
-      a quarantine task for a specific file on specified endpoints. It does not fetch
-      data for enrichment, nor does it modify internal SOAR case data (entities, insights,
-      or comments).
+      a quarantine task. This constitutes an external data mutation. It does not fetch
+      data, nor does it modify internal SOAR data or entities.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a remediation/containment action that modifies external system
-      state (quarantining a file). It does not fetch data for enrichment, so it is
-      not an enrichment action.
+      The action performs a mutation on an external system (Bitdefender GravityZone)
+      to quarantine a file. It does not fetch data for enrichment, nor does it modify
+      internal SOAR data. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1858,8 +1826,8 @@ Quarantine - Add File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action takes 'Endpoint IDs' as a string parameter. It does not iterate over
-      or interact with 'siemplify.target_entities'.
+      The code does not reference `target_entities` and relies on user-provided parameters
+      for endpoint IDs. Therefore, it does not operate on SOAR entities.
 Quarantine - Get Items List:
   action_product_categories:
     add_alert_comment: false
@@ -1876,16 +1844,18 @@ Quarantine - Get Items List:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of quarantined items from Bitdefender GravityZone.
-      It does not match the expected outcomes for enrichment, containment, ticket
-      management, or alert modification. It is a specific retrieval action that does
-      not fit the provided product categories.
+      The action retrieves a list of quarantined items, which constitutes telemetry
+      or log data regarding security incidents. This aligns with the 'Search Events'
+      category, as it returns a collection of historical logs or telemetry data matching
+      specific search parameters. It does not match other categories like 'Enrich
+      IOC' or 'Contain Host' as it does not perform enrichment on entities or state-changing
+      operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
-    search_events: false
+    search_events: true
     send_email: false
     send_message: false
     submit_file: false
@@ -1930,6 +1900,13 @@ Quarantine - Get Items List:
     for. If omitted, retrieves items for the entire network. |
 
 
+    ### Additional Notes
+
+    This action does not operate on specific entities (e.g., IP, FileHash) passed
+    from the case. It performs a global or endpoint-specific query against the Bitdefender
+    GravityZone API based on the provided parameters.
+
+
     ### Flow Description
 
     1. **Initialization**: The action extracts the integration configuration (API
@@ -1955,18 +1932,17 @@ Quarantine - Get Items List:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the Bitdefender GravityZone API to retrieve
-      a list of quarantined items. It does not modify any external system state (no
-      POST/PUT/DELETE for state changes) and does not modify any internal SOAR data
-      (no entity updates, insights, or case comments). It simply returns the retrieved
-      data to the action result.
+      The action performs a GET-like operation (via RPC) to retrieve a list of quarantined
+      items from the Bitdefender GravityZone platform. It does not modify any external
+      system state, nor does it modify internal SOAR case data, entities, or insights.
+      It simply returns the retrieved data as a JSON result.
   categories:
     enrichment: false
     reasoning: >-
-      The action retrieves data from an external system, but it does not operate on
-      entities to enrich them, nor does it meet the criteria for an enrichment action
-      (which typically involves updating entity profiles or adding insights). It is
-      a retrieval/search action.
+      While the action fetches data, it does not operate on entities (it is a general
+      query action). Therefore, it does not meet the criteria for an Enrichment Action,
+      which is defined as a task designed to gather supplemental context about alerts
+      or entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1983,9 +1959,9 @@ Quarantine - Get Items List:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities`. It uses input
-      parameters provided in the action configuration to filter the request, meaning
-      it does not run on specific entities.
+      The action does not iterate over `target_entities` and is designed to query
+      the Bitdefender platform globally or by a specific Endpoint ID parameter. Therefore,
+      it does not use any entity types.
 Quarantine - Remove Items:
   action_product_categories:
     add_alert_comment: false
@@ -2002,10 +1978,9 @@ Quarantine - Remove Items:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes items from quarantine in Bitdefender GravityZone. This is
-      a remediation/containment-related action. It does not match any of the specific
-      categories provided (e.g., it is not blocking an IOC, updating an alert, or
-      managing identity/host containment).
+      The action removes items from quarantine in Bitdefender GravityZone. This does
+      not match any of the provided categories (e.g., Enrichment, Blocklist, Ticket,
+      Identity, Host, Email, etc.). Therefore, all categories are false.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2074,19 +2049,17 @@ Quarantine - Remove Items:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes items from quarantine in the Bitdefender GravityZone platform.
+      Removes specified items from quarantine in the Bitdefender GravityZone platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to the Bitdefender GravityZone API to remove
-      items from quarantine. This is a state-changing operation on an external system.
-      It does not fetch data for enrichment, nor does it modify internal SOAR case
-      data or entities.
+      The action performs a POST request to the Bitdefender API to remove items from
+      quarantine. It does not fetch data or update internal SOAR entities.
   categories:
     enrichment: false
     reasoning: >-
       The action is a mutation action (removing items from quarantine) and does not
-      fetch data for enrichment purposes. Therefore, it is not an enrichment action.
+      fetch data for enrichment.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2103,8 +2076,7 @@ Quarantine - Remove Items:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with SOAR entities. It operates based on parameters
-      provided directly in the action configuration (Service and Quarantine Item IDs).
+      The action does not operate on entities. It takes IDs as input parameters.
 Quarantine - Restore Exchange Items:
   action_product_categories:
     add_alert_comment: false
@@ -2121,9 +2093,104 @@ Quarantine - Restore Exchange Items:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
+      The action restores quarantined items in an external system. This does not align
+      with any of the provided categories (e.g., it is not an enrichment, containment,
+      or ticketing action).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description<br>This action restores quarantined items from the Bitdefender
+    GravityZone Exchange environment. It allows analysts to recover items that were
+    previously quarantined by the security solution, facilitating the restoration
+    of legitimate files or messages that may have been incorrectly flagged.<br><br>###
+    Flow Description<br>1. **Initialization**: The action connects to the Bitdefender
+    GravityZone Control Center using the provided API key and SSL verification settings.<br>2.
+    **Parameter Extraction**: It retrieves the required parameters, including the
+    list of `Quarantine Item IDs`, `Username`, `Password`, and optional parameters
+    like `Email` and `EWS URL`.<br>3. **Execution**: It invokes the `createRestoreQuarantineExchangeItemTask`
+    method via the Bitdefender GravityZone API to initiate the restoration process.<br>4.
+    **Completion**: The action logs the status of the operation and returns a success
+    or failure message to the SOAR platform.<br><br>### Parameters Description<br>|
+    Parameter | Type | Mandatory | Description |<br>| :--- | :--- | :--- | :--- |<br>|
+    EWS URL | string | No | The Exchange Web Services URL. Required if Exchange Autodiscovery
+    is not functional. |<br>| Email | string | No | The email address of the Exchange
+    user. Required if the email address differs from the username. |<br>| Password
+    | password | Yes | The password of the Exchange user. |<br>| Username | string
+    | Yes | The username of the Microsoft Exchange user (must include the domain name).
+    |<br>| Quarantine Item IDs | string | Yes | A comma-separated list of quarantine
+    item IDs to be restored (maximum 100 items). |<br><br>### Additional Notes<br>This
+    action performs a direct mutation on the external Bitdefender GravityZone system.
+    Ensure that the provided credentials have the necessary permissions to perform
+    restoration tasks within the Exchange environment.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Restores quarantined items in the Bitdefender GravityZone Exchange environment.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a POST request to the Bitdefender GravityZone API to restore
+      quarantined items. It does not fetch data for enrichment, nor does it modify
+      internal SOAR data or entities.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action is a remediation/mutation action that modifies external system state
+      (restoring quarantined items). It does not fetch data for enrichment purposes.
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities from the SOAR platform. It operates
+      on provided IDs directly.
+Quarantine - Restore Items:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
       The action restores quarantined items in Bitdefender GravityZone. This does
-      not align with the provided categories such as IOC enrichment, identity management,
-      host containment, or ticket management.
+      not align with any of the provided categories (e.g., it is not an IOC blocklist
+      action, identity action, or email action).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2141,129 +2208,10 @@ Quarantine - Restore Exchange Items:
   ai_description: >-
     ### General Description
 
-    This action restores quarantined items from the Bitdefender GravityZone Exchange
-    environment. It allows analysts to recover items that were previously quarantined
-    by the security solution, facilitating the restoration of legitimate files or
-    messages that may have been incorrectly flagged.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action connects to the Bitdefender GravityZone Control
-    Center using the provided API key and SSL verification settings.
-
-    2. **Parameter Extraction**: It retrieves the required parameters, including the
-    list of `Quarantine Item IDs`, `Username`, `Password`, and optional parameters
-    like `Email` and `EWS URL`.
-
-    3. **Execution**: It invokes the `createRestoreQuarantineExchangeItemTask` method
-    via the Bitdefender GravityZone API to initiate the restoration process.
-
-    4. **Completion**: The action logs the status of the operation and returns a success
-    or failure message to the SOAR platform.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | EWS URL | string | No | The Exchange Web Services URL. Required if Exchange
-    Autodiscovery is not functional. |
-
-    | Email | string | No | The email address of the Exchange user. Required if the
-    email address differs from the username. |
-
-    | Password | password | Yes | The password of the Exchange user. |
-
-    | Username | string | Yes | The username of the Microsoft Exchange user (must
-    include the domain name). |
-
-    | Quarantine Item IDs | string | Yes | A comma-separated list of quarantine item
-    IDs to be restored (maximum 100 items). |
-
-
-    ### Additional Notes
-
-    This action performs a direct mutation on the external Bitdefender GravityZone
-    system. Ensure that the provided credentials have the necessary permissions to
-    perform restoration tasks within the Exchange environment.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Restores quarantined items in the Bitdefender GravityZone Exchange environment.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action performs a POST request to the Bitdefender GravityZone API to restore
-      quarantined items. It does not fetch data, update entities, or create insights.
-      It is a pure mutation action on an external system.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is a mutation action (restoring items) and does not fetch data for
-      enrichment. Therefore, it does not meet the criteria for an enrichment action.
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not use `siemplify.target_entities`. It relies entirely on action
-      parameters provided by the user to identify the items to restore.
-Quarantine - Restore Items:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action restores items from quarantine in Bitdefender GravityZone. This is
-      a remediation action. It does not match any of the provided categories (Enrichment,
-      Ticket, Blocklist, Identity, Host Containment, Email, etc.).
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: >-
-    Restores quarantined items in Bitdefender GravityZone. This action interacts with
-    the Bitdefender API to move files from quarantine back to their original or specified
-    location on the target endpoint.
+    This action restores quarantined items in Bitdefender GravityZone. It interacts
+    with the Bitdefender API to move files from quarantine back to their original
+    or specified location on the target endpoint, optionally adding an exclusion to
+    the policy to prevent future detection.
 
 
     ### Flow Description
@@ -2314,19 +2262,20 @@ Quarantine - Restore Items:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Restores quarantined items in Bitdefender GravityZone, changing their status
-      from quarantined to restored on the target endpoint.
+      Restores quarantined items in Bitdefender GravityZone, potentially moving files
+      back to their original or specified location.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a `POST` request to the Bitdefender API to restore quarantined
-      items. This is a state-changing operation on an external system. It does not
-      fetch data for enrichment or modify internal SOAR data.
+      The action performs a POST request to the Bitdefender GravityZone API to restore
+      quarantined items. It does not fetch contextual data for entities, nor does
+      it modify internal SOAR data such as entities, insights, or case comments.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a remediation/mutation action, not an enrichment action. It does
-      not fetch data for the purpose of enriching entities or alerts.
+      The action is a mutation action that modifies the state of quarantined items
+      in an external system (Bitdefender). It does not fetch data for enrichment purposes,
+      nor does it meet the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2343,9 +2292,8 @@ Quarantine - Restore Items:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers. It relies on parameters provided in the action configuration to
-      perform its task.
+      The action does not operate on entities. It uses specific IDs provided as parameters
+      to perform the restoration task.
 Reports - Get Download Links:
   action_product_categories:
     add_alert_comment: false
@@ -2362,9 +2310,9 @@ Reports - Get Download Links:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves report download links from Bitdefender GravityZone. It
-      does not match any of the defined categories such as Enrich IOC, Enrich Asset,
-      or Ticket management, as it is a specific utility for report retrieval.
+      The action retrieves report download links from an external system. It does
+      not match any of the defined categories such as enriching IOCs/assets, updating
+      alerts, or performing containment/blocking actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2420,16 +2368,16 @@ Reports - Get Download Links:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a retrieval operation (GET/POST to fetch data) from the
-      Bitdefender GravityZone API. It does not modify any external system state, nor
-      does it modify internal SOAR case data, entities, or insights. It simply returns
-      the requested report information as a result.
+      The action performs a retrieval operation (GET/POST request to fetch data) from
+      the Bitdefender GravityZone API. It does not modify any external system state,
+      nor does it interact with or modify internal SOAR entities, alerts, or case
+      data. It simply returns the requested report information to the action result.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a utility task for retrieving report information. It does not
-      run on entities, nor does it gather supplemental context about alerts or entities
-      as defined by the Enrichment Action criteria.
+      While the action fetches data, it does not enrich an entity or an alert (it
+      operates on a standalone Report ID). Therefore, it does not meet the criteria
+      for an Enrichment Action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2446,8 +2394,8 @@ Reports - Get Download Links:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or iterate over any entities. It operates
-      solely based on the provided 'Report ID' parameter.
+      The action does not utilize or iterate over any entities. It operates solely
+      on the provided 'Report ID' parameter.
 Reports - List All:
   action_product_categories:
     add_alert_comment: false
@@ -2464,10 +2412,9 @@ Reports - List All:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of reports from the Bitdefender GravityZone platform.
-      It does not match any of the specific operational categories such as IOC enrichment,
-      asset enrichment, containment, or ticket management. It is a general data retrieval
-      action.
+      The action retrieves a list of reports from Bitdefender GravityZone. It does
+      not match any of the defined categories such as enriching IOCs/assets, updating
+      alerts, or performing containment actions. It is a reporting/utility action.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2526,16 +2473,16 @@ Reports - List All:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET-like request (via RPC POST) to retrieve a list of
-      reports from the Bitdefender GravityZone API. It does not modify any external
-      systems, nor does it modify internal SOAR case data, entities, or insights.
-      It simply fetches and returns data.
+      The action performs a GET request to retrieve a list of reports from the Bitdefender
+      GravityZone API. It does not mutate any external data, nor does it modify any
+      internal SOAR data (entities, insights, or comments). It simply fetches data
+      and returns it in the result JSON.
   categories:
-    enrichment: true
+    enrichment: false
     reasoning: >-
-      The action fetches data (list of reports) from an external source without mutating
-      any external or internal state. It does not perform any prohibited actions (like
-      Ping or file downloads). Therefore, it qualifies as an enrichment action.
+      While the action fetches data, it does not operate on any entities or alerts
+      to provide supplemental context. Therefore, it does not meet the definition
+      of an Enrichment Action, which requires gathering context about alerts or entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2552,8 +2499,8 @@ Reports - List All:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities. It operates globally on the
-      Bitdefender GravityZone configuration to list reports.
+      The action does not interact with any entities. The `SimulationDataJson` explicitly
+      defines an empty list of entities, and the code does not reference `target_entities`.
 Restore Isolated Endpoint:
   action_product_categories:
     add_alert_comment: false
@@ -2571,8 +2518,8 @@ Restore Isolated Endpoint:
     get_alert_information: false
     reasoning: >-
       The action restores an endpoint from isolation in Bitdefender GravityZone. This
-      directly matches the 'Uncontain Host' category, which involves removing network
-      isolation and restoring full communication capabilities.
+      directly matches the 'Uncontain Host' category, which is defined as removing
+      network isolation and restoring full communication capabilities.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2630,18 +2577,19 @@ Restore Isolated Endpoint:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Restores an endpoint from network isolation in Bitdefender GravityZone.
+      Triggers a task in Bitdefender GravityZone to restore an endpoint from network
+      isolation.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a POST request to the Bitdefender GravityZone API to trigger
-      an endpoint restoration task. It does not fetch data for enrichment, nor does
-      it modify internal SOAR data or entities.
+      a task that restores an endpoint from isolation. This is an external mutation.
+      It does not fetch data for enrichment or modify internal SOAR data.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a remediation/containment action (un-isolating a host), not an
-      enrichment action. It does not fetch data to enrich entities.
+      The action performs an external mutation (restoring an endpoint) and does not
+      fetch data for enrichment. Therefore, it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2658,8 +2606,8 @@ Restore Isolated Endpoint:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action uses an 'Endpoint ID' provided as a parameter, not an entity from
-      the SOAR case. Therefore, it does not run on entities.
+      The action does not iterate over `siemplify.target_entities`. It uses a specific
+      `Endpoint ID` provided as a parameter, so it does not operate on SecOps entities.
 Set Endpoint Label:
   action_product_categories:
     add_alert_comment: false
@@ -2677,9 +2625,9 @@ Set Endpoint Label:
     get_alert_information: false
     reasoning: >-
       The action updates the label of an endpoint in Bitdefender GravityZone. This
-      is an administrative update to an asset's metadata. It does not match any of
-      the predefined categories (e.g., it is not an enrichment, containment, or alert/ticket
-      update action).
+      is a configuration change on an external asset. None of the provided categories
+      (which focus on IOCs, alerts, tickets, identities, or host containment) specifically
+      cover updating asset metadata/labels.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -2695,17 +2643,46 @@ Set Endpoint Label:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     This action updates the label of a specific endpoint within the Bitdefender GravityZone
-    platform. The action flow is as follows: 1. It extracts the necessary configuration
-    parameters (API Key, Access URL, and SSL verification) from the integration settings.
-    2. It extracts the action-specific parameters: Endpoint ID and Label. 3. It initializes
-    the BitdefenderGravityZoneManager to communicate with the Bitdefender API. 4.
-    It executes the label_endpoint_set method, which sends a POST request to the Bitdefender
-    API to update the endpoint's label. 5. It logs the success or failure of the operation
-    and terminates the action. Parameters: Label (string, mandatory): The new label
-    to assign to the endpoint. The maximum allowed length is 64 characters. Enter
-    an empty string to reset a previously set label. Endpoint ID (string, mandatory):
-    The ID of the endpoint for which the details will be returned.
+    platform. It allows administrators to assign a new label to an endpoint, which
+    can be used for organizational or tracking purposes.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Label | String | Yes | The new label to assign to the endpoint. The maximum
+    allowed length is 64 characters. Enter an empty string to reset a previously set
+    label. |
+
+    | Endpoint ID | String | Yes | The ID of the endpoint for which the details will
+    be returned. |
+
+
+    ### Additional Notes
+
+    None.
+
+
+    ### Flow Description
+
+    1. Extract configuration parameters (API Key, Access URL, and SSL verification)
+    from the integration settings.
+
+    2. Extract the action-specific parameters: Endpoint ID and Label.
+
+    3. Initialize the `BitdefenderGravityZoneManager` to communicate with the Bitdefender
+    API.
+
+    4. Execute the `label_endpoint_set` method, which sends a POST request to the
+    Bitdefender API to update the endpoint's label.
+
+    5. Log the success or failure of the operation and terminate the action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -2714,18 +2691,19 @@ Set Endpoint Label:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the label of an endpoint in the Bitdefender GravityZone system.
+      Updates the label of an endpoint in the Bitdefender GravityZone platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to the Bitdefender GravityZone API to set
-      a label on an endpoint. This is an external mutation. It does not fetch data,
-      nor does it modify internal SOAR data (entities, insights, etc.).
+      The action performs a POST request to the Bitdefender API to update an endpoint's
+      label. This is an external mutation. It does not fetch data, nor does it interact
+      with internal SecOps entities or alerts.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a mutation action (setting a label), not an enrichment action
-      (fetching data). Therefore, it is not an enrichment action.
+      The action performs a mutation on an external system (Bitdefender) and does
+      not retrieve data or perform any enrichment tasks. Therefore, it is not an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -2742,6 +2720,5 @@ Set Endpoint Label:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action uses Endpoint ID as a direct input parameter provided by the user,
-      not by iterating over siemplify.target_entities. Therefore, it does not use
-      entities.
+      The action does not interact with the `target_entities` list. It operates on
+      an `Endpoint ID` provided as a direct parameter.

@@ -14,8 +14,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping). It does not match any of the functional
-      categories like Enrich IOC, Contain Host, etc. It is a diagnostic action.
+      The action is a connectivity test ('Ping') and does not perform any of the defined
+      product category operations such as enrichment, ticketing, or blocking.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -33,39 +33,17 @@ Ping:
   ai_description: >-
     Validates connectivity to Logz.io by testing provided security and operations
     tokens. This action ensures that the configured API tokens are valid and that
-    the integration can successfully communicate with the Logz.io API.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | logzio_security_token | String | Yes | The security token for Logz.io. |
-
-    | logzio_operations_token | String | Yes | The operations token for Logz.io. |
-
-    | logzio_region | String | No | The region for the Logz.io account (defaults to
-    US). |
-
-    | logzio_custom_endpoint | String | No | A custom API endpoint URL if required.
-    |
-
-
-    ### Flow
-
-    1. Extract configuration parameters (tokens, region, custom endpoint).
-
-    2. Validate that tokens are provided and are strings.
-
-    3. Construct the API endpoint URL based on the region or custom endpoint.
-
-    4. Send a GET request to the Logz.io `whoami` endpoint using the provided tokens.
-
-    5. Verify the response status code (200) and log the account name.
-
-    6. Return success or failure status.
+    the integration can successfully communicate with the Logz.io API. ### Parameters
+    | Parameter | Type | Mandatory | Description | | :--- | :--- | :--- | :--- | |
+    logzio_security_token | String | Yes | The security token for Logz.io. | | logzio_operations_token
+    | String | Yes | The operations token for Logz.io. | | logzio_region | String
+    | No | The region for the Logz.io account (defaults to US). | | logzio_custom_endpoint
+    | String | No | A custom API endpoint URL if required. | ### Flow 1. Extract configuration
+    parameters (tokens, region, custom endpoint). 2. Validate that tokens are provided
+    and are strings. 3. Construct the API endpoint URL based on the region or custom
+    endpoint. 4. Send a GET request to the Logz.io whoami endpoint using the provided
+    tokens. 5. Verify the response status code (200) and log the account name. 6.
+    Return success or failure status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -77,15 +55,14 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a connectivity test (Ping) by sending a GET request to an
-      external API. It does not modify any external state, nor does it modify internal
-      SOAR data (entities, insights, etc.). It is a read-only connectivity check.
+      The action performs a GET request to the Logz.io API to validate connectivity.
+      While this technically fetches data from an external system, it does not perform
+      any enrichment, mutation, or entity updates. It is a connectivity test.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a 'Ping' action. According to the instructions, 'Actions named
-      Ping must not be categorized as enrichment actions.' Even though it fetches
-      data (GET request), it is explicitly excluded from the enrichment category.
+      The action is named 'Ping'. Per the instructions, actions named 'Ping' must
+      not be categorized as enrichment actions, even if they fetch data.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -102,8 +79,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code does not reference `siemplify.target_entities` or any entity objects.
-      It is a global connectivity test.
+      The action does not interact with any entities. It is a standalone connectivity
+      test.
 json-adapter:
   action_product_categories:
     add_alert_comment: false
@@ -120,9 +97,9 @@ json-adapter:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a data parsing utility that transforms raw JSON input into a specific
-      format. It does not perform any of the defined product category operations (e.g.,
-      enrichment, containment, ticketing, etc.).
+      The action is a utility for parsing and normalizing JSON data. It does not perform
+      any external API calls, interact with entities, or perform any of the defined
+      product category actions (e.g., enrichment, containment, ticketing).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -139,18 +116,42 @@ json-adapter:
     update_ticket: false
   ai_description: >-
     Parses raw JSON log data to extract specific fields and format them into a standardized
-    JSON structure suitable for playbook consumption. This utility is designed to
-    normalize data from Logz.io logs. Parameters: | Parameter | Type | Mandatory |
-    Description | | --- | --- | --- | --- | | fields_to_search | string | Yes | Comma
-    separated list of fields to search within the JSON. | | raw_json | string | Yes
-    | Raw data in JSON format that is to be searched. | Flow description: 1. Retrieve
-    fields_to_search and raw_json from action parameters. 2. Parse the raw_json string
-    into a JSON object. 3. Iterate through the results array within the parsed JSON.
-    4. For each item, check if the specified fields exist. 5. If a field exists, create
-    a mapping where the field name is the entityType and the field value is the entityIdentifier.
-    6. Collect these mappings into an output structure. 7. If any mappings are found,
-    add the resulting JSON to the action output using add_result_json. 8. Complete
-    the action with a success status if results were found, or failure otherwise.
+    JSON structure. This utility is designed to normalize data from Logz.io logs for
+    playbook consumption.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | fields_to_search | string | Yes | Comma separated list of fields to search within
+    the JSON. |
+
+    | raw_json | string | Yes | Raw data in JSON format that is to be searched. |
+
+
+    ### Flow description
+
+    1. Retrieve `fields_to_search` and `raw_json` from action parameters.
+
+    2. Parse the `raw_json` string into a JSON object.
+
+    3. Iterate through the results array within the parsed JSON.
+
+    4. For each item, check if the specified fields exist.
+
+    5. If a field exists, create a mapping where the field name is the `entityType`
+    and the field value is the `entityIdentifier`.
+
+    6. Collect these mappings into an output structure.
+
+    7. If any mappings are found, add the resulting JSON to the action output using
+    `add_result_json`.
+
+    8. Complete the action with a success status if results were found, or failure
+    otherwise.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -162,15 +163,15 @@ json-adapter:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action processes input parameters to transform data. It does not perform
-      any external API calls (fetches_data=false), nor does it modify any internal
-      SOAR entities, insights, or case data. It simply outputs a JSON result.
+      The action is a utility that parses raw JSON input. It does not fetch data from
+      external APIs, nor does it mutate any external or internal systems. It simply
+      processes the provided input and returns a result JSON.
   categories:
     enrichment: false
     reasoning: >-
-      The action does not fetch data from external sources, nor does it modify the
-      state of the SOAR platform or external systems. It is a data parsing utility,
-      not an enrichment action.
+      The action is a utility for parsing JSON data. It does not fetch data from external
+      sources, nor does it modify internal or external systems. It does not meet the
+      criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -187,8 +188,9 @@ json-adapter:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with siemplify.target_entities. It processes raw
-      input strings provided as parameters.
+      The action does not interact with `siemplify.target_entities` or any entity-related
+      logic. It processes raw JSON input provided as a parameter and returns a result
+      JSON. Therefore, it does not run on any entity types.
 logzio-get-logs-by-event-id:
   action_product_categories:
     add_alert_comment: false
@@ -203,11 +205,11 @@ logzio-get-logs-by-event-id:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: false
+    get_alert_information: true
     reasoning: >-
-      The action retrieves historical logs from Logz.io based on a provided event
-      ID. This matches the Search Events category. It does not perform enrichment,
-      update alerts, or modify external systems.
+      The action fetches logs from Logz.io, which aligns with 'Get Alert Information'
+      (fetching info from a 3rd party product) and 'Search Events' (returning historical
+      logs).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -225,15 +227,35 @@ logzio-get-logs-by-event-id:
   ai_description: >-
     Fetches logs from Logz.io associated with a specific security event ID. The action
     retrieves logs in a paginated manner and adds them as a JSON result to the action
-    output. Additionally, it creates case insights for the retrieved logs. Flow: 1.
-    Extracts the alert_event_id and page_size from the action parameters. 2. Constructs
-    the API request body with the event ID and pagination settings. 3. Sends a POST
-    request to the Logz.io API to retrieve logs. 4. Handles pagination by fetching
-    subsequent pages if necessary. 5. Adds the retrieved logs as a JSON result to
-    the action output. 6. Creates case insights for the retrieved logs. Parameters:
-    alert_event_id (string, mandatory): Unique GUID of the security event in your
-    Logz.io security account. page_size (string, optional): Controls the number of
-    results per page. Valid inputs are 1 to 1000. Defaults to 25.
+    output. Additionally, it creates case insights for the retrieved logs.
+
+
+    ### Flow
+
+    1. Extracts the `alert_event_id` and `page_size` from the action parameters.
+
+    2. Constructs the API request body with the event ID and pagination settings.
+
+    3. Sends a POST request to the Logz.io API to retrieve logs.
+
+    4. Handles pagination by fetching subsequent pages if necessary.
+
+    5. Adds the retrieved logs as a JSON result to the action output.
+
+    6. Creates case insights for the retrieved logs.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | alert_event_id | string | Yes | Unique GUID of the security event in your Logz.io
+    security account. |
+
+    | page_size | string | No | Controls the number of results per page. Valid inputs
+    are 1 to 1000. Defaults to 25. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -244,18 +266,17 @@ logzio-get-logs-by-event-id:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Creates case insights containing the retrieved logs.
+      Creates case insights for the retrieved logs.
     reasoning: >-
-      The action fetches logs from Logz.io via a POST request (fetches_data=true).
-      It does not modify external systems (can_mutate_external_data=false). It creates
-      case insights within the SOAR platform (can_mutate_internal_data=true, can_create_insight=true).
+      The action fetches logs from Logz.io via a POST request. It does not mutate
+      external systems. It creates case insights within the SOAR platform, which is
+      an internal mutation.
   categories:
-    enrichment: false
+    enrichment: true
     reasoning: >-
-      The action fetches logs from an external source (Logz.io). However, it is not
-      an enrichment action because it does not provide supplemental context (reputation,
-      prevalence, etc.) for entities or alerts, but rather retrieves raw log data.
-      It is classified as a search action.
+      The action fetches data from an external source (Logz.io) and creates insights.
+      It does not mutate external systems. This meets the criteria for an enrichment
+      action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -272,9 +293,8 @@ logzio-get-logs-by-event-id:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over siemplify.target_entities or use entity-specific
-      identifiers. It relies on a user-provided alert_event_id parameter to fetch
-      logs.
+      The action does not iterate over `target_entities`. It uses an `alert_event_id`
+      provided as a parameter.
 logzio-search-logs:
   action_product_categories:
     add_alert_comment: false
@@ -291,9 +311,9 @@ logzio-search-logs:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for logs in Logz.io and returns the results. This matches
-      the 'Search Events' category. It does not perform enrichment, containment, or
-      ticket management.
+      The action searches for logs in Logz.io based on a query and time range, which
+      directly matches the 'Search Events' category. It does not perform enrichment,
+      ticket creation, or containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -309,21 +329,47 @@ logzio-search-logs:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     Searches for logs in your Logz.io operations account based on a provided query
-    and time range. \n\n### Flow Description \n1. The action extracts configuration
-    parameters (Logz.io API token, region, and optional custom endpoint) and action
-    parameters (query, size, from_time, and to_time). \n2. It constructs a Lucene-based
-    search query and prepares the request body. \n3. It sends a POST request to the
-    Logz.io search API. \n4. It parses the response and returns the log results as
-    a JSON object to the SOAR platform. \n\n### Parameters Description \n| Parameter
-    | Type | Mandatory | Description | \n| :--- | :--- | :--- | :--- | \n| query |
-    string | No | A search query written in valid Lucene syntax. Default is `*`. |
-    \n| size | string | No | Number of log results per query. Limited to 1000 logs.
-    | \n| from_time | string | Yes | Earliest time to search. Accepts Unix timestamps,
-    relative time, or format `%Y-%m-%dT%H:%M:%S.%f`. | \n| to_time | string | No |
-    Latest time to search. | \n\n### Additional Notes \nIf no size is provided, the
-    action defaults to 1000 logs. The `from_time` parameter is mandatory for the search
-    to execute.
+    and time range.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | query | string | No | A search query written in valid Lucene syntax. Default
+    is `*`. |
+
+    | size | string | No | Number of log results per query. Limited to 1000 logs.
+    |
+
+    | from_time | string | Yes | Earliest time to search. Accepts Unix timestamps,
+    relative time, or format `%Y-%m-%dT%H:%M:%S.%f`. |
+
+    | to_time | string | No | Latest time to search. |
+
+
+    ### Flow Description
+
+    1. The action extracts configuration parameters (Logz.io API token, region, and
+    optional custom endpoint) and action parameters (query, size, from_time, and to_time).
+
+    2. It constructs a Lucene-based search query and prepares the request body.
+
+    3. It sends a POST request to the Logz.io search API.
+
+    4. It parses the response and returns the log results as a JSON object to the
+    SOAR platform.
+
+
+    ### Additional Notes
+
+    If no size is provided, the action defaults to 1000 logs. The `from_time` parameter
+    is mandatory for the search to execute.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -335,15 +381,16 @@ logzio-search-logs:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to the Logz.io API to retrieve logs based
-      on a query and time range. It does not modify external systems or internal SOAR
-      data (entities, insights, comments). It is a read-only operation.
+      The action performs a search query against the Logz.io API to retrieve logs.
+      It does not modify any external systems (read-only) or internal SOAR data (no
+      entity updates or insights).
   categories:
     enrichment: false
     reasoning: >-
-      The action is a search utility for logs. It does not operate on specific entities
-      to enrich them, nor does it meet the criteria for an enrichment action (which
-      requires operating on entities).
+      The action is a search utility that retrieves logs from an external system.
+      While it fetches data, it does not enrich specific entities or alerts within
+      the SOAR platform, nor does it meet the criteria for an enrichment action as
+      it does not operate on entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -360,5 +407,5 @@ logzio-search-logs:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      logic. It is a standalone search action.
+      The action does not interact with any entities. It operates on global search
+      parameters.

@@ -14,9 +14,10 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence (reputation, scores, analysis) for
-      IOCs (IPs, Domains, Hashes, URLs). This matches the 'Enrich IOC' category. It
-      does not perform containment or other actions.
+      The action retrieves threat intelligence (reputation, AI analysis) for indicators
+      like IPs, Domains, and File Hashes. This aligns with the 'Enrich IOC' category.
+      It does not perform asset metadata retrieval, ticket management, or containment
+      actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -32,27 +33,18 @@ Enrich Entities:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Enriches entities by scanning them using the Houdin.io platform. This action processes
-    specific entity types (Public IP, Domain, File Hash, URL, and Destination URL)
-    by launching a scan via the Houdin.io API and polling for the results. Once the
-    analysis is complete, it updates the entity's `additional_properties` with a threat
-    score, AI analysis summary, and the sources used for the scan.
+    ### General Description
 
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | scanOn | multi_choice_parameter | No | An optional array of scanners (e.g.,
-    vt, urlscan, alienvault, abuseipdb, triage, mesmer, servicenow) to be used by
-    Houdin for the scan. |
+    This action enriches entities by scanning them using the Houdin.io platform. It
+    retrieves threat intelligence, including threat scores, AI analysis summaries,
+    and analysis sources, and updates the entity's `additional_properties` within
+    the SOAR platform. This helps analysts quickly assess the risk associated with
+    various indicators.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the HoudinManager using the provided
+    1. **Initialization**: The action initializes the `HoudinManager` using the provided
     API Key.
 
     2. **Filtering**: It iterates through the target entities, filtering for compatible
@@ -71,6 +63,25 @@ Enrich Entities:
     6. **Update**: It updates the `additional_properties` of the successful entities
     with the retrieved threat intelligence and adds the full result JSON to the action
     output.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | scanOn | multi_choice_parameter | No | An optional array of scanners (e.g.,
+    vt, urlscan, alienvault, abuseipdb, triage, mesmer, servicenow) to be used by
+    Houdin for the scan. |
+
+
+    ### Additional Notes
+
+    - The action is asynchronous; ensure the script timeout value in the Google SecOps
+    IDE is adjusted if necessary to accommodate the polling duration.
+
+    - Compatible entity types are: Public IPv4/IPv6, URL, Domain, MD5, SHA1, SHA256.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -81,17 +92,21 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the `additional_properties` of the processed entities with threat scores
-      and analysis summaries.
+      Updates the 'additional_properties' of entities with threat intelligence data
+      (threat score, AI analysis, sources).
     reasoning: >-
-      The action fetches threat intelligence data from Houdin.io by launching scans
-      and polling results. It updates the entity's `additional_properties` with the
-      retrieved data. It does not modify external systems or alert data.
+      The action fetches threat intelligence data from the Houdin.io API (fetches_data=true).
+      It does not perform any actions that change the state of external systems (can_mutate_external_data=false).
+      It modifies internal SOAR data by updating entity `additional_properties` (can_mutate_internal_data=true,
+      can_update_entities=true). It does not create insights, modify alert data, or
+      create case comments.
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data (enrichment) and only performs allowed internal mutations
-      (updating entities). It does not mutate external systems.
+      The action is designed to fetch contextual threat intelligence for entities
+      and update them within the SOAR platform. It does not mutate external systems,
+      nor does it perform prohibited internal mutations. It fits the definition of
+      an Enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -106,16 +121,15 @@ Enrich Entities:
     filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
-    filters_by_is_internal: false
+    filters_by_is_internal: true
     filters_by_is_pivot: false
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters by specific types
-      (`ADDRESS`, `DOMAIN`, `FILEHASH`, `DestinationURL`). It also performs a check
-      on the identifier of `ADDRESS` entities to ensure they are external, but this
-      is not a filter on the `is_internal` attribute.
+      The code iterates over `siemplify.target_entities` and explicitly filters for
+      specific entity types: URL, ADDRESS (with an internal check), DOMAIN, FILEHASH,
+      and DestinationURL. It uses these types to determine which entities to scan.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -132,8 +146,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test ('Ping'). It does not match any of the specific
-      functional categories like Enrich IOC, Contain Host, etc.
+      The action is a connectivity test ('Ping') and does not perform any of the defined
+      functional operations such as enrichment, containment, or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -171,15 +185,14 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a connectivity test by sending a POST request to the Houdin.io
-      API. It does not fetch contextual data for entities, nor does it mutate any
-      external or internal data.
+      The action performs a connectivity check (ping) to the Houdin.io API. It does
+      not fetch contextual data, mutate external systems, or modify internal SOAR
+      data.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a 'Ping' action. According to the instructions, 'Actions named
-      Ping must not be categorized as enrichment actions.' It also does not fetch
-      contextual data.
+      The action is a connectivity test ('Ping'). According to the guidelines, actions
+      named 'Ping' must not be categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -196,8 +209,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code does not reference siemplify.target_entities or any entity objects.
-      It is a global connectivity test.
+      The action does not interact with any entities. The SimulationDataJson confirms
+      an empty list of entities.
 Scan Artifact:
   action_product_categories:
     add_alert_comment: false
@@ -214,9 +227,11 @@ Scan Artifact:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action submits an artifact to the Houdin.io platform for analysis (matching
-      'Submit File') and retrieves the resulting threat intelligence (matching 'Enrich
-      IOC').
+      The action submits an artifact to the Houdin.io platform for analysis, which
+      aligns with the 'Submit File' category. It subsequently retrieves the scan results,
+      including reputation and threat intelligence, which aligns with the 'Enrich
+      IOC' category. It does not modify internal SecOps data or perform other containment
+      actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -280,15 +295,14 @@ Scan Artifact:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action initiates a scan on an external platform (Houdin.io) via a POST request,
-      which constitutes an external mutation. It then polls for and retrieves the
-      scan results (fetches data). It does not modify internal SOAR data (case/alert
-      data) or update entities.
+      which constitutes external data mutation. It then polls for results via a GET
+      request, which constitutes fetching data. It does not modify internal SecOps
+      data, update entities, create insights, or modify alert data.
   categories:
     enrichment: false
     reasoning: >-
-      The action performs a POST request to launch a scan, which is an external mutation.
-      Therefore, it does not meet the 'External State Preservation' requirement for
-      an Enrichment Action.
+      The action is not classified as an enrichment action because it mutates the
+      external system state by launching a scan (POST request).
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -305,5 +319,6 @@ Scan Artifact:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action uses the `artifact` parameter provided by the user, not the `target_entities`
-      list from the SOAR platform.
+      The action does not iterate over `target_entities` or use entity-specific identifiers.
+      It takes a raw string input `artifact` from the action parameters. Therefore,
+      it does not run on entities.

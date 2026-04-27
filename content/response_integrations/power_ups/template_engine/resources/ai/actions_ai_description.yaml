@@ -14,10 +14,9 @@ Entity Insight:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a generic template engine used to create entity insights. It does
-      not perform any specific product-related tasks like enriching IOCs, enriching
-      assets, or containing hosts. Therefore, it does not match any of the predefined
-      product categories.
+      This action is a utility for formatting data and creating insights. It does
+      not perform any of the specific product-related operations like enriching IOCs,
+      blocking, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -33,29 +32,14 @@ Entity Insight:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    This action renders a Jinja2 template using a provided JSON object and entity
-    data to create entity insights. It is a utility action that allows for dynamic
-    generation of insights based on custom templates.
+    ### General Description
 
-
-    ### Flow Description
-
-    1. Extracts action parameters: `JSON Object`, `Template`, `Triggered By`, `Remove
-    BRs`, and `Create Insight`.
-
-    2. Iterates through the target entities, excluding those with the type "ALERT".
-
-    3. Parses the input `JSON Object`.
-
-    4. Initializes a Jinja2 environment, loading custom filters and helper functions.
-
-    5. Renders the template for each entity using the provided JSON data and the entity's
-    properties.
-
-    6. Adds the rendered result as an entity JSON result.
-
-    7. Optionally creates an entity insight in the SOAR platform if `Create Insight`
-    is enabled.
+    The Entity Insight action is a utility tool designed to generate formatted entity
+    insights using Jinja2 templates. It processes a provided JSON object and renders
+    it into a human-readable format, which can then be attached to entities as JSON
+    results or displayed as insights within the SOAR platform. This action is highly
+    flexible, allowing for custom template definitions to suit various reporting or
+    documentation needs.
 
 
     ### Parameters Description
@@ -64,27 +48,47 @@ Entity Insight:
 
     | :--- | :--- | :--- | :--- |
 
-    | JSON Object | content | Yes | The raw JSON object that will be used to render
-    the template. |
+    | JSON Object | content | Yes | The raw JSON object containing the data to be
+    rendered by the template. |
 
-    | Template | email_content | No | The Jinja2 template to display. Can be a HTML
-    template from "Settings->Environment" or added in content box. |
+    | Template | email_content | No | The Jinja2 template string. Can be an HTML template
+    or plain text. |
 
     | Triggered By | string | Yes | The name of the integration that triggered this
     entity insight. |
 
-    | Remove BRs | boolean | No | Remove all <br> tags from the rendered template.
-    Default is false. |
+    | Remove BRs | boolean | No | If true, removes all `<br>` tags from the rendered
+    template. Default is false. |
 
-    | Create Insight | boolean | No | When enabled, the action will create entity
-    insights. Default is true. |
+    | Create Insight | boolean | No | If true, creates an entity insight in the SOAR
+    platform. Default is true. |
 
 
     ### Additional Notes
 
-    This action is a generic template engine and does not perform any specific external
-    system interactions. It is primarily used for internal data formatting and insight
-    creation.
+    This action does not interact with external systems. It is strictly an internal
+    utility for data formatting and insight generation. It supports a wide range of
+    entity types and uses custom Jinja2 filters for advanced data manipulation.
+
+
+    ### Flow Description
+
+    1. Extracts action parameters: `JSON Object`, `Template`, `Triggered By`, `Remove
+    BRs`, and `Create Insight`.
+
+    2. Iterates through the `target_entities`, excluding any entities with the type
+    "ALERT".
+
+    3. Parses the input `JSON Object`.
+
+    4. Initializes a Jinja2 environment, loading standard and custom filters.
+
+    5. Renders the template for each entity using the provided JSON data and the entity's
+    properties.
+
+    6. Adds the rendered result as an entity JSON result using `siemplify.result.add_entity_json`.
+
+    7. If `Create Insight` is enabled, creates an entity insight using `siemplify.add_entity_insight`.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -95,18 +99,19 @@ Entity Insight:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      Creates entity insights and adds entity JSON results within the SOAR platform.
+      The action creates entity insights and adds entity JSON results within the SOAR
+      platform.
     reasoning: >-
-      The action processes input data and entity properties to render a template.
-      It does not fetch data from external systems (fetches_data=false) or mutate
-      external systems (can_mutate_external_data=false). It performs internal mutations
-      by adding entity JSON results and creating entity insights (can_mutate_internal_data=true).
+      The action processes provided input data using a template engine to generate
+      formatted text. It does not perform any external API calls (fetches_data=false)
+      or external mutations. It performs internal SOAR operations by adding entity
+      JSON results and creating entity insights, which constitutes internal data mutation.
   categories:
-    enrichment: true
+    enrichment: false
     reasoning: >-
-      The action creates entity insights, which is an allowed internal mutation for
-      enrichment actions. It does not fetch data from external systems or mutate external
-      data, and it does not perform any prohibited actions.
+      The action does not fetch data from an external source, which is a mandatory
+      requirement for the Enrichment category. It is a utility for formatting and
+      insight creation.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -147,7 +152,7 @@ Entity Insight:
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
-    filters_by_entity_type: false
+    filters_by_entity_type: true
     filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
@@ -157,9 +162,9 @@ Entity Insight:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over all `siemplify.target_entities` and processes them
-      if their `additional_properties['Type']` is not 'ALERT'. It uses `entity.additional_properties`
-      to access entity data.
+      The action iterates over all `target_entities` provided to the playbook. It
+      explicitly filters out entities with the type 'ALERT' using `entity.additional_properties['Type']
+      != 'ALERT'`. It does not filter by other attributes.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -176,8 +181,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity check ('Ping'). It does not perform any of the
-      defined functional operations (enrichment, containment, ticketing, etc.).
+      The action is a connectivity check ('Ping') and does not perform any of the
+      defined product category operations such as enrichment, containment, ticket
+      management, or alert modification.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -223,15 +229,15 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action is a simple 'Ping' utility. It does not fetch data from external
-      sources, nor does it modify any internal or external data. It is strictly used
-      for verifying connectivity.
+      The action performs a simple connectivity check by initializing the SiemplifyAction
+      object and terminating with a success message. It does not interact with external
+      APIs, fetch data, or modify any internal or external systems.
   categories:
     enrichment: false
     reasoning: >-
-      The action is named 'Ping'. According to the guidelines, actions named 'Ping'
-      must not be categorized as enrichment actions. It also does not perform any
-      data retrieval or modification.
+      The action is a 'Ping' utility action. According to the instructions, actions
+      named 'Ping' must not be categorized as enrichment actions. It does not fetch
+      data or perform any enrichment tasks.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -248,8 +254,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities. It is a standalone connectivity
-      check.
+      The action does not reference `target_entities` or perform any operations on
+      entities. It is a global utility action.
 Render Template:
   action_product_categories:
     add_alert_comment: false
@@ -266,9 +272,8 @@ Render Template:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a utility for rendering templates. It does not fit into any of
-      the specific product categories like enrichment, ticketing, or containment.
-      It is a general-purpose transformation action.
+      The action is a utility for rendering templates and does not perform any of
+      the defined product actions (enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -286,19 +291,42 @@ Render Template:
   ai_description: >-
     General description: This action renders a Jinja2 template using a provided JSON
     object as input. It is a utility action designed to transform data into a formatted
-    string (e.g., HTML or text).\n\nFlow description:\n1. The action parses the provided
-    JSON object.\n2. If 'Include Case Data' is enabled, it retrieves security events
-    and entity information from the current alert.\n3. It initializes a Jinja2 environment,
-    loading standard and custom filters.\n4. It renders the template using the input
-    JSON (and case data if included).\n5. The final rendered output is returned as
-    a JSON result.\n\nParameters description:\n| Parameter | Type | Mandatory | Description
-    |\n| --- | --- | --- | --- |\n| JSON Object | content | No | The raw JSON object
-    used to render the template. Available as 'input_json' in the template. |\n| Template
-    | email_content | No | The Jinja template code to be rendered. |\n| Jinja | code
-    | No | Alternative Jinja template code. |\n| Include Case Data | boolean | No
-    | If true, includes case events and entities in the template context. |\n\nAdditional
-    notes: Either 'Template' or 'Jinja' should be configured to provide the template
-    content.
+    string (e.g., HTML or text).
+
+
+    Flow description:
+
+    1. The action parses the provided JSON object.
+
+    2. If 'Include Case Data' is enabled, it retrieves security events and entity
+    information from the current alert.
+
+    3. It initializes a Jinja2 environment, loading standard and custom filters.
+
+    4. It renders the template using the input JSON (and case data if included).
+
+    5. The final rendered output is returned as a JSON result.
+
+
+    Parameters description:
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | JSON Object | content | No | The raw JSON object used to render the template.
+    Available as 'input_json' in the template. |
+
+    | Template | email_content | No | The Jinja template code to be rendered. |
+
+    | Jinja | code | No | Alternative Jinja template code. |
+
+    | Include Case Data | boolean | No | If true, includes case events and entities
+    in the template context. |
+
+
+    Additional notes: Either 'Template' or 'Jinja' should be configured to provide
+    the template content.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -310,19 +338,18 @@ Render Template:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action is a utility that processes input data (JSON and templates) to generate
-      a rendered string. It does not interact with external systems (no external mutation
-      or fetching) and does not modify internal SOAR data (no internal mutation).
+      The action processes internal data (alert events and entities) and renders a
+      template. It does not perform any external API calls, nor does it mutate any
+      external or internal systems. It is a pure utility action.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a utility/transformation tool. It does not fetch data from external
-      sources, nor does it perform any of the allowed internal mutations (comments,
-      insights, entity updates). Therefore, it is not an enrichment action.
+      The action is a utility for rendering templates. It does not fetch external
+      data, nor does it mutate any systems. Therefore, it does not meet the criteria
+      for an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
-    - ALERT
     - APPLICATION
     - CHILDHASH
     - CHILDPROCESS
@@ -370,10 +397,9 @@ Render Template:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and collects data if `Include
-      Case Data` is enabled. It filters entities by their `additional_properties`
-      attribute (specifically checking for 'ALERT' type). It does not filter by entity
-      type, so it supports all entity types.
+      The action iterates over `siemplify.target_entities` to gather entity information
+      for the template context. It filters out entities of type "ALERT" using their
+      additional properties. Therefore, it supports all entity types except "ALERT".
 Render Template from Array:
   action_product_categories:
     add_alert_comment: false
@@ -390,10 +416,10 @@ Render Template from Array:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a utility for template rendering and does not perform any of the
-      listed operations such as enrichment, containment, or ticketing. It does not
-      interact with external systems or modify alert data, therefore it does not match
-      any of the product categories.
+      This action is a utility for rendering templates and formatting data. It does
+      not perform any security-related operations such as enrichment, containment,
+      ticketing, or alert management. Therefore, it does not match any of the defined
+      product categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -409,17 +435,53 @@ Render Template from Array:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     This action renders a Jinja2 template for each item in a provided JSON array.
-    It is useful for formatting data into custom strings, HTML, or reports. Parameters
-    description: Array input (Optional): A JSON array string to be processed. Jinja
-    (Optional): The Jinja2 template string. join (Optional): The separator string
-    used to join the rendered items. prefix (Optional): A string to prepend to the
-    final output. suffix (Optional): A string to append to the final output. Flow
-    description: 1. Parse the Array input parameter as a JSON object/list. 2. Initialize
-    a Jinja2 environment with available filters. 3. Iterate through each item in the
-    input array. 4. Render the provided Jinja template for each item. 5. Concatenate
-    the rendered results using the join parameter. 6. Apply prefix and suffix to the
-    final string. 7. Return the result in the html_output field.
+    It is designed for data transformation, allowing users to format complex JSON
+    data into custom strings, HTML, or reports using Jinja2 templating syntax. It
+    supports custom filters for advanced data manipulation.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Array input | String | No | A JSON array string to be processed. Defaults to
+    an empty object if not provided. |
+
+    | Jinja | String | No | The Jinja2 template string to be rendered for each item
+    in the array. |
+
+    | join | String | No | The separator string used to join the rendered items. Defaults
+    to an empty string. |
+
+    | prefix | String | No | A string to prepend to the final output. |
+
+    | suffix | String | No | A string to append to the final output. |
+
+
+    ### Flow Description
+
+    1. **Parse Input**: The action parses the `Array input` parameter as a JSON object
+    or list.
+
+    2. **Environment Setup**: A Jinja2 environment is initialized, and custom filters
+    (from `JinjaFilters` and `CustomFilters`) are loaded to enable advanced template
+    logic.
+
+    3. **Iteration**: The action iterates through each item in the input array.
+
+    4. **Rendering**: The provided Jinja template is rendered for each item.
+
+    5. **Formatting**: The rendered results are concatenated using the `join` parameter.
+
+    6. **Finalization**: The `prefix` and `suffix` are applied to the final string.
+
+    7. **Output**: The final result is returned in the `html_output` field of the
+    action result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -431,14 +493,16 @@ Render Template from Array:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs local string manipulation and template rendering. It does
-      not interact with external APIs, modify internal SOAR data, or update entities.
+      The action is a pure utility for data transformation and string formatting.
+      It does not perform any external API calls (fetches_data=false), does not mutate
+      external systems, and does not modify any internal Google SecOps data (entities,
+      insights, comments, or alert data).
   categories:
     enrichment: false
     reasoning: >-
-      The action is a utility for data transformation (templating) and does not fetch
-      data from external sources or perform enrichment. Therefore, it is not an enrichment
-      action.
+      The action does not fetch data from external sources, nor does it perform any
+      security operations. It is strictly a data formatting utility, so it does not
+      meet the criteria for an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -455,5 +519,5 @@ Render Template from Array:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with siemplify.target_entities or any entity-specific
-      logic. It operates on raw input data provided via parameters.
+      The action operates on a provided JSON array input and does not interact with
+      the SOAR entity model or the `target_entities` list.

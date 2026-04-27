@@ -2,11 +2,11 @@ Thinkst - Alert Connector:
   ai_description: >-
     ### General Description
 
-    The Thinkst Alert Connector integrates with the Thinkst Canary Console to retrieve
-    security incidents. It periodically polls the Canary API for new, unacknowledged
-    incidents, transforms them into standardized SOAR alerts, and ingests them into
-    Google SecOps. This allows security teams to monitor and respond to honeypot triggers
-    and other Canary-detected events directly within the SOAR platform.
+    This connector integrates with the Thinkst Canary Console to ingest security incidents.
+    It periodically polls the Canary Console API for new, unacknowledged incidents,
+    transforms them into standardized SOAR alerts, and creates cases within Google
+    SecOps. This allows security teams to centralize and respond to alerts generated
+    by Canary tokens and honeypots.
 
 
     ### Parameters Description
@@ -15,7 +15,7 @@ Thinkst - Alert Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | API Key | Password | Yes | The API key for your Thinkst Canary console. |
+    | API Key | String | Yes | The API key for your Canary Console. |
 
     | Console Hash | String | Yes | The unique hash for your console (the part before
     .canary.tools). |
@@ -24,10 +24,10 @@ Thinkst - Alert Connector:
     to the console. |
 
     | Ignore Informative | Boolean | No | If enabled, prevents the creation of cases
-    for informative incidents. |
+    for incidents classified as 'informative'. |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    Python process. |
+    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
+    Python process running the script. |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
     product. |
@@ -38,23 +38,21 @@ Thinkst - Alert Connector:
 
     ### Flow Description
 
-    1. **Initialization**: The connector initializes using the provided API Key and
-    Console Hash to establish a secure connection to the Thinkst Canary API.
+    1. The connector initializes a connection to the Thinkst Canary Console using
+    the provided API Key and Console Hash.
 
-    2. **Data Fetching**: It queries the `/incidents/unacknowledged` endpoint, handling
-    pagination to retrieve all new incidents since the last successful run (tracked
-    via context properties).
+    2. It retrieves the last processed incident ID and timestamp from the SOAR connector
+    context to ensure only new incidents are fetched.
 
-    3. **Filtering**: If the "Ignore Informative" option is enabled, the connector
-    filters out incidents classified as informative (e.g., system configuration changes).
+    3. It queries the Canary Console API (/api/v1/incidents/unacknowledged) for new
+    incidents, handling pagination via cursors.
 
-    4. **Transformation**: Each incident is mapped to a SOAR `AlertInfo` object. This
-    includes normalizing timestamps, mapping incident types to priorities, and flattening
-    event data into a format compatible with Google SecOps.
+    4. Incidents are filtered based on the 'Ignore Informative' configuration.
 
-    5. **Ingestion**: The processed alerts are returned to the SOAR platform for case
-    creation.
+    5. The raw incident data is mapped and transformed into SOAR AlertInfo objects,
+    including priority assignment, timestamp conversion, and event parsing.
 
-    6. **State Management**: Upon successful ingestion, the connector updates its
-    context with the latest incident ID and timestamp to ensure subsequent runs only
-    fetch new data.
+    6. The connector updates the SOAR connector context with the latest incident ID
+    and timestamp to maintain state for the next execution.
+
+    7. The processed alerts are returned to the SOAR platform for case creation.

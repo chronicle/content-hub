@@ -14,8 +14,8 @@ Add IOCs to Allowed list:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds indicators to an allowed list in an external system (Cyware).
-      This directly matches the 'Add IOC To Allowlist' category.
+      The action adds indicators to an allowlist in Cyware, which directly matches
+      the 'Add IOC To Allowlist' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -55,7 +55,7 @@ Add IOCs to Allowed list:
     ### Additional Notes
 
     If no entities are found in the case, the action completes without performing
-    any API calls.
+    any API calls. This action does not modify internal SOAR case data or entities.
 
 
     ### Flow Description
@@ -66,8 +66,8 @@ Add IOCs to Allowed list:
 
     3. Retrieve target entities from the case.
 
-    4. If entities are present, send a request to the Cyware API to add these indicators
-    to the allowed list.
+    4. If entities are present, send a POST request to the Cyware API to add these
+    indicators to the allowed list.
 
     5. Process the API response to identify newly added, existing, or invalid indicators.
 
@@ -80,18 +80,19 @@ Add IOCs to Allowed list:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds indicators to the allowed list in Cyware Intel Exchange.
+      Adds indicators to the allowed list (whitelist) in the Cyware Intel Exchange
+      platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to an external system (Cyware) to add indicators
-      to an allowed list. It does not fetch data, nor does it modify internal SOAR
-      data (entities, insights, etc.).
+      The action performs a POST request to the Cyware API to add indicators to an
+      allowlist. It does not fetch external data for enrichment, nor does it modify
+      internal SOAR case data (entities/insights).
   categories:
     enrichment: false
     reasoning: >-
-      The action is a mutation action (adding to an allowlist) and does not fetch
-      data for enrichment. Therefore, it is not an enrichment action.
+      The action is a mutation action (adding to allowlist) and does not perform enrichment
+      or data retrieval.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -143,10 +144,9 @@ Add IOCs to Allowed list:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code calls `get_entities(siemplify)`, which retrieves all target entities
-      from the case. It does not filter by type or other properties in the script
-      itself (the `IOC Type` parameter is passed to the API, but the script processes
-      all entities found in the case). Therefore, it supports all entity types.
+      The action retrieves target entities from the case using `get_entities` and
+      processes them without specific filtering logic. It supports all entity types
+      listed in the metadata.
 Add Note to IOCs:
   action_product_categories:
     add_alert_comment: false
@@ -163,9 +163,9 @@ Add Note to IOCs:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds a note to an IOC in the Cyware Intel Exchange. This does not
-      match any of the predefined categories (e.g., it is not an enrichment action,
-      nor does it modify alerts, tickets, or blocklists).
+      The action adds a note to an external IOC in Cyware Intel Exchange. It does
+      not match the expected outcomes of the provided categories (e.g., it is not
+      an alert comment, ticket creation, or IOC blocklist action).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -224,17 +224,23 @@ Add Note to IOCs:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a note to an indicator in the Cyware Intel Exchange.
+      Adds a note to an existing threat data object (IOC) in the Cyware Intel Exchange
+      platform.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (lookup_iocs) and mutates external data (add_note_to_indicator).
-      It does not mutate internal data, update entities, create insights, or modify
-      alert data.
+      The action fetches data by performing a bulk lookup of IOCs to resolve their
+      internal IDs. It mutates external data by sending a POST request to add a note
+      to the indicator in the Cyware Intel Exchange platform. It does not mutate internal
+      SOAR data, update entities, create insights, modify alert data, or create case
+      comments.
   categories:
     enrichment: false
     reasoning: >-
-      The action mutates external data (adds a note), so it is not an enrichment action.
+      The action performs a mutation on an external system (adding a note to an IOC).
+      According to the enrichment criteria, an action is only classified as enrichment
+      if it does not create, update, or delete data in any external platform. Therefore,
+      this action is not an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -286,8 +292,9 @@ Add Note to IOCs:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code uses `get_entities(siemplify)` to retrieve all `target_entities` from
-      the case without filtering by type. Therefore, it supports all entity types.
+      The action retrieves all target entities from the case using `get_entities(siemplify)`
+      and processes them without applying any specific filters (e.g., type, creation
+      time, etc.). Therefore, it supports all entity types provided in the metadata.
 Create Intel in Cyware Intel Exchange:
   action_product_categories:
     add_alert_comment: false
@@ -304,9 +311,9 @@ Create Intel in Cyware Intel Exchange:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates an intelligence record in an external system (Cyware Intel
-      Exchange). It does not match any of the provided categories (Enrich IOC, Create
-      Ticket, etc.).
+      The action creates an intelligence record in an external threat intelligence
+      platform. It does not match any of the provided categories (e.g., ITSM ticket
+      creation, sandbox submission, or blocklist management).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -400,19 +407,20 @@ Create Intel in Cyware Intel Exchange:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new intelligence record in Cyware Intel Exchange.
+      Creates a new intelligence record in the Cyware Intel Exchange (CTIX) platform.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to create an intelligence record in Cyware Intel
-      Exchange (can_mutate_external_data=true). It also polls for the status of the
-      creation task (fetches_data=true). It does not modify internal SOAR data or
-      update entities.
+      The action performs a POST request to create an intelligence record in the Cyware
+      Intel Exchange (external mutation). It also performs GET requests to poll the
+      status of the created intel (fetches data). It does not modify internal SOAR
+      data, update entities, or create insights.
   categories:
     enrichment: false
     reasoning: >-
-      The action creates external data (an intelligence record) rather than retrieving
-      data, so it cannot be an Enrichment action.
+      The action creates data in an external system (Cyware Intel Exchange) and does
+      not primarily function as an enrichment action (which is read-only regarding
+      external systems).
   entity_usage:
     entity_types:
     - ADDRESS
@@ -464,9 +472,9 @@ Create Intel in Cyware Intel Exchange:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code uses `get_entities(siemplify)` to retrieve all target entities from
-      the case and processes them without filtering by type. Therefore, it supports
-      all entity types.
+      The action iterates over all target entities provided in the case to create
+      intelligence records for them. It does not apply any filtering logic to the
+      entities, so it supports all entity types.
 Create Task for IOCs:
   action_product_categories:
     add_alert_comment: false
@@ -483,10 +491,9 @@ Create Task for IOCs:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a task in an external system (Cyware), which is functionally
-      equivalent to creating a ticket or record. This aligns with the 'Create Ticket'
-      category. It does not match other categories like enrichment, containment, or
-      alert updates.
+      The action creates a task in the Cyware Intel Exchange platform, which aligns
+      with the 'Create Ticket' category as it generates a new record in an external
+      system. It does not perform enrichment, alert updates, or containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -558,442 +565,20 @@ Create Task for IOCs:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates new tasks for indicators in the Cyware Intel Exchange platform.
+      Creates new task records for indicators in the Cyware Intel Exchange platform.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (user information and indicator IDs) from the Cyware
-      Intel Exchange API. It mutates external data by creating new tasks in the Cyware
-      platform. It does not mutate internal SOAR data (other than returning results)
-      or modify alert data.
+      The action interacts with the Cyware API to create tasks for specified IOCs.
+      It fetches data (user info, IOC IDs) but primarily performs a mutation on the
+      external Cyware system by creating new task records. It does not modify internal
+      SecOps data (entities, insights, etc.).
   categories:
     enrichment: false
     reasoning: >-
-      The action is not an enrichment action because it performs a mutation on an
-      external system (creating a task). It does not meet the criteria for an enrichment
-      action.
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
-    - USERUNIQNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The code retrieves all target entities using `get_entities(siemplify)` and performs
-      a lookup for these entities in Cyware. It does not filter by specific entity
-      types, so it supports all available entity types.
-Get Allowed IOCs:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action retrieves a list of allowed IOCs from the Cyware platform. It does
-      not match any of the specific categories like 'Enrich IOC' (which requires enriching
-      a specific indicator), 'Search Events', or 'Get Alert Information'. It is a
-      general data retrieval action.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: >-
-    Retrieves a list of allowed (whitelisted) Indicators of Compromise (IOCs) from
-    the Cyware Intel Exchange platform. This action allows users to filter the results
-    by indicator type and creation time. The retrieved data is presented as a data
-    table in the action results.
-
-
-    ### Flow Description
-
-    1. The action extracts the configuration parameters (Base URL, Access ID, Secret
-    Key) and action parameters (IOC Type, Created From).
-
-    2. It initializes the Cyware API manager.
-
-    3. It performs a GET request to the Cyware Intel Exchange API to fetch the allowed
-    IOCs, applying any specified filters.
-
-    4. The retrieved IOCs are processed and formatted into a CSV-style data table.
-
-    5. The action adds the data table to the result and returns the full JSON response.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | IOC Type | ddl | No | Filter the results by a specific indicator type (e.g.,
-    domain-name, ipv4-addr). Select 'All' to retrieve all types. |
-
-    | Created From | string | No | Filter records based on the creation time in epoch
-    format (seconds). |
-
-
-    ### Additional Notes
-
-    - If no filters are provided, the action retrieves all allowed IOCs up to the
-    default page size limits.
-
-    - The action outputs a data table named 'Allowed IOCs' containing the ID, Type,
-    and Value of the retrieved indicators.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action performs a GET request to retrieve data from the Cyware Intel Exchange.
-      It does not mutate any external systems or internal SOAR data (entities, insights,
-      etc.). It only outputs the retrieved data as a table in the action results.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action retrieves a list of allowed IOCs from an external system. It does
-      not enrich specific entities or alerts within the case, nor does it meet the
-      criteria for an enrichment action as it is a global data retrieval task rather
-      than context gathering for specific entities.
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not interact with siemplify.target_entities. It performs a global
-      query against the Cyware API based on provided parameters.
-Get IOC Details:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches threat intelligence data (reputation, scores, tags) for indicators
-      from Cyware Intel Exchange and updates the SOAR entities with this information.
-      This matches the 'Enrich IOC' category. It does not mutate external systems
-      or perform other actions like ticket creation or containment.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: >-
-    This action retrieves threat intelligence details for indicators (IOCs) from the
-    Cyware Intel Exchange platform. It allows users to optionally include enrichment
-    data and relations in the response. The action fetches details for the provided
-    entities, displays them in a data table, and enriches the entities within the
-    SOAR case by updating their properties with threat intelligence scores and metadata.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Enrichment Data | boolean | false | Whether to include enrichment data in the
-    results. |
-
-    | Relation Data | boolean | false | Whether to include relations in the results.
-    |
-
-    | Fields | string | false | Specific fields to retrieve (e.g., "name,id"). |
-
-
-    ### Flow Description
-
-    1. Extracts configuration parameters (Base URL, Access ID, Secret Key, Verify
-    SSL).
-
-    2. Extracts action parameters (Enrichment Data, Relation Data, Fields).
-
-    3. Retrieves target entities from the case.
-
-    4. Queries the Cyware Intel Exchange API for IOC details.
-
-    5. Constructs a data table with the retrieved IOC information.
-
-    6. Updates the SOAR entities with the retrieved enrichment data (e.g., scores,
-    TLP, tags).
-
-    7. Updates the entities in the SOAR platform.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes with threat intelligence data and marks the entity
-      as enriched.
-    reasoning: >-
-      The action fetches threat intelligence data from an external API (Cyware Intel
-      Exchange) using a POST request. It does not mutate external systems (no state
-      change on Cyware). It performs internal mutations by updating entity attributes
-      (e.g., adding enrichment data) and updating the entities in the SOAR platform.
-      It does not create insights, modify alert data, or create case comments.
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches data (IOC details) and updates entity attributes (enrichment).
-      It does not mutate external systems. It fits the definition of an enrichment
-      action.
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
-    - USERUNIQNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: true
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action retrieves all target entities from the case and filters them based
-      on whether their identifier exists in the results returned from the Cyware API.
-      Since no explicit type-based filtering is performed in the code, it is considered
-      to support all entity types.
-Manage Tags in IOCs:
-  action_product_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action performs tag management (add/remove) on IOCs in an external system.
-      It does not match any of the provided specific categories like 'Enrich IOC'
-      (which is read-only), 'Contain Host', or 'Update Alert'. Therefore, all flags
-      are false.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  ai_description: >-
-    ### General Description
-
-    This action manages tags for Indicators of Compromise (IOCs) within the Cyware
-    Intel Exchange platform. It allows analysts to either add or remove specific tags
-    from a set of IOCs identified in the SOAR case. If adding tags, the action automatically
-    creates any tags that do not already exist in the Cyware platform before applying
-    them to the IOCs.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Tags | string | Yes | A comma-separated list of tag names to add or remove (e.g.,
-    "malware, phishing"). |
-
-    | Operation Type | ddl | Yes | The operation to perform: "Add Tag" or "Remove
-    Tag". |
-
-
-    ### Flow Description
-
-    1. **Initialization**: Extracts integration configuration (Base URL, Access ID,
-    Secret Key) and action parameters.
-
-    2. **Entity Retrieval**: Retrieves all target entities (IOCs) from the current
-    SOAR case.
-
-    3. **Tag Resolution**: Fetches existing tags from Cyware Intel Exchange to map
-    tag names to their respective IDs.
-
-    4. **Operation Execution**:
-        * **If "Add Tag"**: Looks up IOC IDs for the provided entities. If any tags
-    are missing in Cyware, it creates them. Finally, it performs a bulk update to
-    add the tags to the identified IOCs.
-        * **If "Remove Tag"**: Looks up IOC IDs for the provided entities and performs
-    a bulk update to remove the specified tags from the identified IOCs.
-    5. **Result Reporting**: Returns the operation status and details via the script
-    result JSON.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      The action adds or removes tags from IOCs in the Cyware Intel Exchange platform
-      and may create new tags if they do not exist.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data (tag lists and IOC lookups) from the Cyware Intel Exchange
-      API. It performs external mutations by adding, removing, or creating tags in
-      the Cyware platform. It does not modify internal SOAR case data (e.g., updating
-      entity fields or adding case comments), nor does it update alert status.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is not an enrichment action because it performs mutations on an external
-      system (Cyware Intel Exchange) by adding/removing tags. It does not meet the
-      criteria for an enrichment action, which must be read-only regarding external
-      systems.
+      The action is not an enrichment action because it performs a mutation (creating
+      tasks) on an external system, which violates the requirement for external state
+      preservation.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -1046,8 +631,439 @@ Manage Tags in IOCs:
     filters_by_modification_time: false
     reasoning: >-
       The action retrieves all target entities from the case using `get_entities`
-      and attempts to look them up in Cyware. It does not filter by specific entity
-      types in the code, so it is considered to support all entity types.
+      and processes them to find corresponding indicator IDs in Cyware. It does not
+      apply specific type filters in the code, so it supports all entity types.
+Get Allowed IOCs:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of allowed IOCs from the Cyware Intel Exchange platform.
+      It does not perform enrichment on specific entities, nor does it modify alerts,
+      tickets, or external security controls. It is a utility action for retrieving
+      configuration data from the platform. Therefore, it does not match any of the
+      defined product categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of allowed (whitelisted) Indicators of Compromise (IOCs) from
+    the Cyware Intel Exchange platform. This action allows users to filter the results
+    by indicator type and creation time. The retrieved data is presented as a data
+    table in the action results.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | IOC Type | ddl | No | Filter the results by a specific indicator type (e.g.,
+    domain-name, ipv4-addr). Select 'All' to retrieve all types. |
+
+    | Created From | string | No | Filter records based on the creation time in epoch
+    format (seconds). |
+
+
+    ### Additional Notes
+
+    - If no filters are provided, the action retrieves all allowed IOCs up to the
+    default page size limits.
+
+    - The action outputs a data table named 'Allowed IOCs' containing the ID, Type,
+    and Value of the retrieved indicators.
+
+
+    ### Flow Description
+
+    1. The action extracts the configuration parameters (Base URL, Access ID, Secret
+    Key) and action parameters (IOC Type, Created From).
+
+    2. It initializes the Cyware API manager.
+
+    3. It performs a GET request to the Cyware Intel Exchange API to fetch the allowed
+    IOCs, applying any specified filters.
+
+    4. The retrieved IOCs are processed and formatted into a CSV-style data table.
+
+    5. The action adds the data table to the result and returns the full JSON response.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the Cyware Intel Exchange API to retrieve
+      allowed IOCs. It does not mutate any external data (no POST/PUT/DELETE). It
+      does not mutate any internal SOAR case data (no entity updates, insights, or
+      comments). It simply returns the retrieved data as a table in the action result.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action retrieves a list of allowed IOCs from the Cyware Intel Exchange platform.
+      It does not perform enrichment on specific entities, nor does it modify alerts,
+      tickets, or external security controls. It is a utility action for retrieving
+      configuration data from the platform. Therefore, it does not meet the criteria
+      for an Enrichment Action.
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It retrieves a list of allowed
+      IOCs from the Cyware Intel Exchange platform based on user-provided filters.
+      Therefore, it does not use any entity types or apply any entity filters.
+Get IOC Details:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence (reputation, TLP, tags) for indicators
+      (IOCs) and updates the entity profile. This matches the 'Enrich IOC' category.
+      It does not perform any other actions like blocking, ticketing, or alert management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    This action retrieves comprehensive threat intelligence details for indicators
+    (IOCs) from the Cyware Intel Exchange platform. It allows users to optionally
+    include enrichment data and relations in the response. The action fetches details
+    for the provided entities, displays them in a data table, and enriches the entities
+    within the SOAR case by updating their properties with threat intelligence scores,
+    TLP, tags, and other metadata.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Enrichment Data | boolean | false | Whether to include enrichment data in the
+    results. |
+
+    | Relation Data | boolean | false | Whether to include relations in the results.
+    |
+
+    | Fields | string | false | Specific fields to retrieve (e.g., "name,id"). |
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (Base URL, Access ID, Secret Key, Verify
+    SSL).
+
+    2. Extracts action parameters (Enrichment Data, Relation Data, Fields).
+
+    3. Retrieves target entities from the case.
+
+    4. Queries the Cyware Intel Exchange API for IOC details.
+
+    5. Constructs a data table with the retrieved IOC information.
+
+    6. Updates the SOAR entities with the retrieved enrichment data (e.g., scores,
+    TLP, tags).
+
+    7. Updates the entities in the SOAR platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates SOAR entities with retrieved threat intelligence data (e.g., scores,
+      TLP, tags) and marks them as enriched.
+    reasoning: >-
+      The action fetches threat intelligence from Cyware Intel Exchange for provided
+      IOC entities. It does not modify external systems. It updates internal SOAR
+      entities with the retrieved data (enrichment) and displays the results in a
+      data table.
+  categories:
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Cyware Intel Exchange) and
+      updates internal entities with this information. It does not mutate external
+      systems. This fits the definition of an Enrichment action.
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action retrieves all target entities from the case and processes them. It
+      does not filter by specific entity types in the code, so it supports all entity
+      types provided in the metadata. It filters entities based on whether they are
+      found in the Cyware API results.
+Manage Tags in IOCs:
+  action_product_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies the metadata (tags) of IOCs in an external system (Cyware
+      Intel Exchange). It does not fit into the provided categories like 'Enrich IOC',
+      'Update Alert', or 'Contain Host'.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    This action manages tags for Indicators of Compromise (IOCs) within the Cyware
+    Intel Exchange platform. It allows analysts to either add or remove specific tags
+    from a set of IOCs identified in the SOAR case. If adding tags, the action automatically
+    creates any tags that do not already exist in the Cyware platform before applying
+    them to the IOCs.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Tags | string | Yes | A comma-separated list of tag names to add or remove (e.g.,
+    "malware, phishing"). |
+
+    | Operation Type | ddl | Yes | The operation to perform: "Add Tag" or "Remove
+    Tag". |
+
+
+    ### Additional Notes
+
+    This action performs bulk operations on IOCs found in the Cyware Intel Exchange.
+    It does not modify the SOAR case entities themselves, but rather updates the metadata
+    of the corresponding indicators in the external Cyware platform.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts integration configuration (Base URL, Access ID,
+    Secret Key) and action parameters.
+
+    2. **Entity Retrieval**: Retrieves all target entities (IOCs) from the current
+    SOAR case.
+
+    3. **Tag Resolution**: Fetches existing tags from Cyware Intel Exchange to map
+    tag names to their respective IDs.
+
+    4. **Operation Execution**:
+        * **If "Add Tag"**: Looks up IOC IDs for the provided entities. If any tags
+    are missing in Cyware, it creates them. Finally, it performs a bulk update to
+    add the tags to the identified IOCs.
+        * **If "Remove Tag"**: Looks up IOC IDs for the provided entities and performs
+    a bulk update to remove the specified tags from the identified IOCs.
+    5. **Result Reporting**: Returns the operation status and details via the script
+    result JSON.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds or removes tags from IOCs within the Cyware Intel Exchange platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action interacts with the Cyware Intel Exchange API to add or remove tags
+      from indicators. It performs POST requests to modify external data (tags on
+      IOCs). It does not modify internal SOAR case data (entities, insights, or comments).
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action mutates external data (adds/removes tags) and does not meet the criteria
+      for an enrichment action, which must be read-only regarding external systems.
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action retrieves all target entities from the SOAR case and attempts to
+      look them up in Cyware to perform tag operations. It does not filter by specific
+      entity types in the code, so it supports all types provided in the metadata.
 Mark IOCs False Positive:
   action_product_categories:
     add_alert_comment: false
@@ -1064,11 +1080,10 @@ Mark IOCs False Positive:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies the status of an indicator in an external threat intelligence
-      platform (Cyware) to 'false positive'. This aligns with the 'Add IOC To Allowlist'
-      category, as marking an indicator as a false positive is a standard method to
-      prevent future alerts on that indicator. It does not perform enrichment, containment,
-      or ticket creation.
+      The action marks indicators as false positives in an external system. This aligns
+      with the 'Add IOC To Allowlist' category, as marking an indicator as a false
+      positive is functionally equivalent to marking it as 'known good' to prevent
+      future security alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1131,20 +1146,20 @@ Mark IOCs False Positive:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Marks indicators as false positive in the Cyware Intel Exchange platform.
+      Marks indicators as false positives in the Cyware Intel Exchange platform.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from Cyware Intel Exchange to lookup IOC IDs (fetches_data=true).
-      It then performs a POST request to mark these indicators as false positives
-      in the external system (can_mutate_external_data=true). It does not modify internal
-      SOAR data, update entities, create insights, or modify alert data.
+      The action fetches data from the Cyware Intel Exchange platform to perform a
+      lookup of indicator IDs (fetches_data=true). It then performs a POST request
+      to mark these indicators as false positives in the external system (can_mutate_external_data=true).
+      It does not modify internal Google SecOps data, update entities, or create insights.
   categories:
     enrichment: false
     reasoning: >-
-      The action mutates external data (marks indicators as false positive in Cyware),
-      which violates the 'External State Preservation' rule for enrichment actions.
-      Therefore, it is not an enrichment action.
+      The action mutates external data (marks indicators as false positives), which
+      violates the 'External State Preservation' rule for enrichment actions. Therefore,
+      it is not an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -1196,10 +1211,9 @@ Mark IOCs False Positive:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action retrieves all target entities from the case using `get_entities(siemplify)`.
-      It does not filter by specific entity types in the code, meaning it attempts
-      to process any entity provided. Therefore, it supports all available entity
-      types.
+      The action retrieves all target entities from the case and processes them to
+      find corresponding IDs in Cyware. It does not apply specific filters to the
+      entities, so it supports all entity types provided in the metadata.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -1216,8 +1230,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test ("Ping") and does not perform any of the defined
-      product category operations (e.g., enrichment, containment, ticketing).
+      The action is a connectivity test and does not perform any of the defined functional
+      operations (enrichment, containment, ticket management, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1284,13 +1298,13 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the `/ping/` endpoint to verify connectivity.
-      It does not modify external or internal data, nor does it fetch contextual data
-      about alerts or entities.
+      The action performs a connectivity test (ping) to the Cyware Intel Exchange
+      API. It does not fetch contextual data for entities or alerts, nor does it mutate
+      any external or internal data.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a connectivity test ("Ping"). Per the instructions, Ping actions
+      The action is a connectivity test ('Ping'). Per the instructions, Ping actions
       are not enrichment actions.
   entity_usage:
     entity_types: []
@@ -1308,7 +1322,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with entities, as it is a connectivity test.
+      The action does not process any entities.
 Remove IOCs from Allowed list:
   action_product_categories:
     add_alert_comment: false
@@ -1325,8 +1339,8 @@ Remove IOCs from Allowed list:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes indicators from an allowlist in an external system (Cyware
-      Intel Exchange). This directly matches the 'Remove IOC From Allowlist' category.
+      The action removes IOCs from the allowlist in Cyware Intel Exchange, which directly
+      aligns with the 'Remove IOC From Allowlist' category.
     remove_ioc_from_allowlist: true
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1399,15 +1413,16 @@ Remove IOCs from Allowed list:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (bulk lookup of IOCs) and mutates external data (removes
-      IOCs from the allowlist in Cyware). It does not mutate internal SOAR data (no
-      entity updates, insights, or case comments are created).
+      The action fetches data from Cyware Intel Exchange to map entity identifiers
+      to internal indicator IDs (fetches_data=true). It then performs a POST request
+      to remove these indicators from the allowlist, which constitutes an external
+      data mutation (can_mutate_external_data=true). It does not modify internal SOAR
+      data, update entities, create insights, or modify alert data.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a mutation action (removes from allowlist) and does not meet the
-      criteria for an enrichment action, which must be read-only regarding external
-      systems.
+      The action is not an enrichment action because it mutates external data (removes
+      indicators from the allowlist).
   entity_usage:
     entity_types:
     - ADDRESS
@@ -1430,6 +1445,7 @@ Remove IOCs from Allowed list:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action retrieves all target entities from the case and attempts to look
-      them up in Cyware. It does not filter by specific entity attributes within the
-      code, so it supports all relevant IOC entity types.
+      The action retrieves all target entities from the case using `get_entities(siemplify)`
+      and processes them to identify which ones to remove from the allowlist. It does
+      not apply any specific filtering logic based on entity attributes within the
+      code.

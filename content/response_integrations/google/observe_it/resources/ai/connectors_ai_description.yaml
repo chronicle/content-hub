@@ -1,25 +1,13 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 ObserveIT - Alerts Connector:
   ai_description: >-
     ### General Description
 
-    This connector fetches alerts from the ObserveIT platform and creates cases in
-    Google SecOps. It authenticates via OAuth2, retrieves alerts based on specified
-    severity levels, and applies filtering logic (whitelist/blacklist) to ensure only
-    relevant incidents are processed.
+    The ObserveIT - Alerts Connector enables the integration of the ObserveIT platform
+    with Google SecOps. It automates the retrieval of security alerts from ObserveIT,
+    allowing security teams to centralize incident management and response within
+    the SOAR platform. The connector supports OAuth2 authentication, severity-based
+    filtering, and custom whitelist/blacklist rules to ensure only relevant alerts
+    are ingested.
 
 
     ### Parameters Description
@@ -28,65 +16,68 @@ ObserveIT - Alerts Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | DeviceProductField | String | Yes | Enter the source field name in order to
-    retrieve the Product Field name. |
-
-    | EventClassId | String | Yes | Enter the source field name in order to retrieve
-    the Event Field name. |
-
-    | Environment Field Name | String | No | Describes the name of the field where
-    the environment name is stored. |
-
-    | Environment Regex Pattern | String | No | A regex pattern to run on the value
-    found in the "Environment Field Name" field. |
-
-    | PythonProcessTimeout | Integer | Yes | Timeout limit for the python process
-    running the current script. |
-
-    | API Root | String | Yes | API root of ObserveIT server. |
-
-    | Client ID | String | Yes | Client ID of the ObserveIT app. |
-
-    | Client Secret | String | Yes | Client Secret of the ObserveIT app. |
-
-    | Lowest Severity To Fetch | String | Yes | Lowest severity that will be used
-    to fetch Alerts (Low, Medium, High, Critical). |
-
-    | Fetch Max Hours Backwards | Integer | No | Number of hours before the first
-    connector iteration to retrieve alerts from. |
-
-    | Max Alerts To Fetch | Integer | No | How many alerts to process per one connector
-    iteration. |
-
-    | Use whitelist as a blacklist | Boolean | Yes | If enabled, whitelist will be
-    used as a blacklist. |
-
-    | Use SSL | Boolean | Yes | Option to enable SSL/TLS connection. |
-
-    | Proxy Server Address | String | No | The address of the proxy server to use.
+    | DeviceProductField | String | Yes | Source field name for the Product Field.
     |
 
-    | Proxy Username | String | No | The proxy username to authenticate with. |
+    | EventClassId | String | Yes | Source field name for the Event Field. |
 
-    | Proxy Password | String | No | The proxy password to authenticate with. |
+    | Environment Field Name | String | No | Field name where the environment is stored.
+    |
+
+    | Environment Regex Pattern | String | No | Regex pattern to manipulate the environment
+    field. |
+
+    | PythonProcessTimeout | Integer | Yes | Timeout limit for the script execution.
+    |
+
+    | API Root | String | Yes | API root URL of the ObserveIT server. |
+
+    | Client ID | String | Yes | Client ID for OAuth2 authentication. |
+
+    | Client Secret | String | Yes | Client Secret for OAuth2 authentication. |
+
+    | Lowest Severity To Fetch | String | Yes | Minimum severity level to fetch (Low,
+    Medium, High, Critical). |
+
+    | Fetch Max Hours Backwards | Integer | No | Hours to look back during the initial
+    run. |
+
+    | Max Alerts To Fetch | Integer | No | Maximum number of alerts to process per
+    iteration. |
+
+    | Use whitelist as a blacklist | Boolean | Yes | If enabled, treats the whitelist
+    as a blacklist. |
+
+    | Use SSL | Boolean | Yes | Enables SSL/TLS for the connection. |
+
+    | Proxy Server Address | String | No | Address of the proxy server. |
+
+    | Proxy Username | String | No | Username for proxy authentication. |
+
+    | Proxy Password | String | No | Password for proxy authentication. |
 
 
     ### Flow Description
 
-    1. Connects to the ObserveIT API using OAuth2 credentials.
+    1. **Initialization**: The connector initializes with the provided configuration,
+    validating parameters and setting up the environment.
 
-    2. Determines the time range for fetching alerts based on the last run timestamp
-    or the `Fetch Max Hours Backwards` parameter.
+    2. **Authentication**: It authenticates with the ObserveIT API using the provided
+    Client ID and Client Secret to obtain an OAuth2 access token.
 
-    3. Queries the ObserveIT API for alerts with a severity level meeting or exceeding
-    the configured threshold.
+    3. **Data Retrieval**: The connector queries the ObserveIT API for alerts, applying
+    filters for the configured minimum severity, time range, and maximum alert limit.
 
-    4. Filters out previously processed alerts using a local tracking file.
+    4. **Filtering**: It filters out already processed alerts using a local state
+    file and applies user-defined whitelist or blacklist rules based on the alert
+    name.
 
-    5. Applies whitelist or blacklist filtering based on the `Use whitelist as a blacklist`
-    configuration.
+    5. **Mapping**: Valid alerts are mapped into the standard Google SecOps `AlertInfo`
+    format, incorporating event details and environment information.
 
-    6. Maps the remaining alerts to the Google SecOps case format, including environment
-    mapping.
+    6. **Overflow Check**: The connector performs an overflow check to prevent duplicate
+    or excessive alert creation.
 
-    7. Ingests the alerts into the SOAR platform and updates the last run timestamp.
+    7. **Finalization**: It saves the latest timestamp and updated list of processed
+    alert IDs to the local filesystem for future runs and returns the ingested alerts
+    to the SOAR platform.

@@ -1,17 +1,3 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get Analysis Results:
   action_product_categories:
     add_alert_comment: false
@@ -29,8 +15,9 @@ Get Analysis Results:
     get_alert_information: false
     reasoning: >-
       The action retrieves threat intelligence (analysis scores, malicious activity)
-      for IOCs (FileHash and URL). This directly matches the 'Enrich IOC' category.
-      It does not perform any containment, ticketing, or alert modification actions.
+      for indicators (FileHash/URL) and updates the entity profile. This matches the
+      'Enrich IOC' category. It does not perform any other actions like ticketing,
+      blocking, or identity management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -48,11 +35,11 @@ Get Analysis Results:
   ai_description: >-
     ### General Description
 
-    Enriches `FileHash` and `URL` entities by retrieving results from previously completed
-    analysis tasks in Lastline. This action is useful for gaining immediate context
-    on known files or URLs without triggering a new sandbox submission. It retrieves
-    scores, malicious activity summaries, and technical metadata, updating the entity's
-    profile within Google SecOps.
+    Enriches `FileHash` and `DestinationURL` entities by retrieving results from previously
+    completed analysis tasks in Lastline. This action is useful for gaining immediate
+    context on known files or URLs without triggering a new sandbox submission. It
+    retrieves scores, malicious activity summaries, and technical metadata, updating
+    the entity's profile within Google SecOps.
 
 
     ### Parameters Description
@@ -92,7 +79,7 @@ Get Analysis Results:
     credentials.
 
     2. **Entity Filtering**: Iterates through the target entities, filtering for supported
-    types (`URL` and `FileHash`).
+    types (`DestinationURL` and `FileHash`).
 
     3. **History Search**: For each valid entity, it searches the Lastline analysis
     history (up to the defined 'Search in last x scans' limit) to find the most recent
@@ -121,21 +108,20 @@ Get Analysis Results:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes (is_enriched, is_suspicious, additional_properties),
-      creates entity insights, and adds data tables to the case wall.
+      Updates entity attributes (is_enriched, is_suspicious), adds data tables to
+      the case, and creates insights.
     reasoning: >-
-      The action fetches analysis data from the external Lastline service (fetches_data=true).
-      It does not perform any actions that change the state of the external Lastline
-      system (can_mutate_external_data=false). It performs internal mutations by updating
-      entity attributes (is_enriched, is_suspicious, additional_properties), creating
-      entity insights, and adding data tables to the case wall (can_mutate_internal_data=true).
+      The action fetches data from the Lastline API (fetches_data=true). It does not
+      perform any actions that change the state of the external Lastline system (can_mutate_external_data=false).
+      It performs internal mutations by updating entity attributes (is_enriched, is_suspicious),
+      adding data tables, and creating insights (can_mutate_internal_data=true).
   categories:
     enrichment: true
     reasoning: >-
-      The action is designed to fetch contextual threat intelligence (analysis results)
-      for entities and update them within Google SecOps. It does not mutate external
-      systems and only performs allowed internal mutations (updating entities and
-      creating insights). Therefore, it qualifies as an enrichment action.
+      The action is designed to fetch contextual data (analysis results) for entities
+      and enrich them within the SOAR platform. It does not mutate external systems
+      and only performs allowed internal mutations (updating entities, creating insights).
+      Therefore, it qualifies as an enrichment action.
   entity_usage:
     entity_types:
     - FILEHASH
@@ -154,11 +140,9 @@ Get Analysis Results:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and explicitly filters
-      for `FILEHASH` and `URL` (mapped to `DestinationURL`) types. It performs validation
-      on the identifiers (URL validation and hash format validation) but does not
-      filter by other entity attributes like creation time, modification time, or
-      internal status.
+      The code iterates over `siemplify.target_entities` and explicitly checks if
+      the entity type is `URL` or `FILEHASH`. It does not filter by other attributes
+      like creation time, modification time, or specific flags.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -175,10 +159,10 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      This is a diagnostic 'Ping' action used to verify connectivity to the Lastline
-      service. It does not perform any operational tasks like enriching data, blocking
-      IOCs, or managing tickets. Therefore, it does not match any of the defined product
-      categories.
+      The action is a diagnostic connectivity test (Ping). It does not perform any
+      of the defined operational tasks such as enriching IOCs, managing tickets, blocking/allowing
+      indicators, or modifying alerts. Therefore, it does not match any of the provided
+      product categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -228,18 +212,19 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: false
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a connectivity test by sending a GET request to the Lastline
-      API login endpoint. It does not modify external systems, update internal entities,
-      or create insights. It is a diagnostic tool and does not fetch contextual data
-      about alerts or entities.
+      The action performs a GET request to the Lastline API to verify connectivity.
+      It does not mutate any external data (no POST/PUT/DELETE operations that change
+      state) and does not mutate any internal Google SecOps data (no entity updates,
+      insights, or comments).
   categories:
     enrichment: false
     reasoning: >-
-      The action is named 'Ping' and is a diagnostic connectivity test. Per the instructions,
-      'Actions named Ping must not be categorized as enrichment actions.'
+      The action is a connectivity test (Ping). According to the provided instructions,
+      actions named 'Ping' must not be categorized as enrichment actions, even if
+      they fetch data.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -256,8 +241,9 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on any entities. The SimulationDataJson confirms
-      that the entity list is empty.
+      The action does not interact with any entities. The `SimulationDataJson` explicitly
+      defines an empty list of entities, and the code does not iterate over or process
+      any `target_entities`.
 Search Analysis History:
   action_product_categories:
     add_alert_comment: false
@@ -274,10 +260,10 @@ Search Analysis History:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for historical analysis tasks in Lastline based on provided
-      parameters. This aligns with the 'Search Events' category as it retrieves historical
-      telemetry/logs. It does not perform reputation lookups (Enrich IOC) or modify
-      data.
+      The action searches for historical analysis tasks in Lastline, which aligns
+      with the 'Search Events' category as it returns historical telemetry data matching
+      specific search parameters. It does not perform enrichment, containment, or
+      ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -298,9 +284,8 @@ Search Analysis History:
     This action searches the Lastline analysis history for completed tasks based on
     user-provided parameters. It allows security analysts to look up previous scan
     results for specific URLs or file hashes (MD5/SHA1) within a defined timeframe
-    and scan limit. Unlike typical enrichment actions, this action does not process
-    entities from the SOAR case; it operates exclusively on the input parameters provided
-    at runtime.
+    and scan limit. This action operates exclusively on the input parameters provided
+    at runtime and does not process entities from the SOAR case.
 
 
     ### Parameters Description
@@ -365,15 +350,16 @@ Search Analysis History:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to search for analysis history in Lastline.
-      It does not modify external systems or internal SOAR data. It does not interact
-      with entities, create insights, or modify alert data.
+      The action performs a GET request to the Lastline API to search for analysis
+      history. It does not modify any external system state (no POST/PUT/DELETE).
+      It does not modify internal SOAR case data (entities, insights, or case comments);
+      it only outputs results to the action result object.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a search/query tool that does not operate on entities or enrich
-      them. It does not fit the definition of an enrichment action which requires
-      operating on entities to gather supplemental context.
+      The action does not operate on entities (it uses input parameters) and does
+      not enrich alerts or entities. Therefore, it does not meet the criteria for
+      an Enrichment Action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -390,8 +376,8 @@ Search Analysis History:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not use entities. It relies solely on input parameters provided
-      at runtime.
+      The action does not reference `target_entities` and relies entirely on user-provided
+      input parameters for its search functionality.
 Submit File:
   action_product_categories:
     add_alert_comment: false
@@ -408,9 +394,9 @@ Submit File:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action submits a file to a sandbox for analysis. This directly matches the
-      'Submit File' category. It does not perform enrichment, ticket management, or
-      containment.
+      The action submits a file to a sandbox for analysis, which directly matches
+      the 'Submit File' category. It does not perform enrichment, containment, or
+      other listed actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -426,6 +412,8 @@ Submit File:
     update_identity: false
     update_ticket: false
   ai_description: >-
+    ### General Description
+
     Submits a file to the Lastline sandbox for automated analysis and retrieves the
     resulting report. This action operates asynchronously, allowing it to submit a
     file and optionally poll for the analysis results until they are ready. It does
@@ -473,20 +461,20 @@ Submit File:
     can_update_entities: false
     external_data_mutation_explanation: >-
       Submits a file to the Lastline sandbox for analysis, creating a new analysis
-      task on the external platform.
+      task.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a POST request to submit a file to the Lastline sandbox,
-      which constitutes an external data mutation (creating an analysis task). It
-      also fetches analysis results (fetches data) from the Lastline API. It does
-      not modify internal SOAR entities, insights, or alert data.
+      which constitutes an external data mutation. It subsequently polls the API to
+      fetch analysis results. It does not modify internal SecOps case data, entities,
+      or alert data.
   categories:
     enrichment: false
     reasoning: >-
-      The action creates an analysis task on an external system (Lastline), which
-      violates the 'External State Preservation' rule for enrichment actions. Therefore,
-      it is not classified as an enrichment action.
+      While the action fetches data (analysis results), it fails the Enrichment criteria
+      because it performs a POST request to submit a file, which mutates the state
+      of the external Lastline system.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -503,8 +491,8 @@ Submit File:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It takes a file path as an input parameter
-      and does not reference the `target_entities` list.
+      The action does not operate on SecOps entities. It accepts a file path as an
+      input parameter and does not iterate over or filter any target_entities.
 Submit URL:
   action_product_categories:
     add_alert_comment: false
@@ -517,14 +505,14 @@ Submit URL:
     download_file: false
     enable_identity: false
     enrich_asset: false
-    enrich_ioc: true
+    enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action submits a URL for analysis and returns a report containing threat
-      intelligence (score, malicious activity). This aligns with the 'Enrich IOC'
-      category as it provides reputation and threat intelligence for the indicator.
-      It does not fit 'Submit File' as it processes a URL, not a file.
+      The action submits a URL to a sandbox for analysis. This matches the 'Submit
+      File' category, which covers submitting samples (including URLs) to a sandbox
+      or analysis engine. It is not an enrichment action because it creates a task
+      in an external system.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -533,7 +521,7 @@ Submit URL:
     search_events: false
     send_email: false
     send_message: false
-    submit_file: false
+    submit_file: true
     uncontain_host: false
     update_alert: false
     update_email: false
@@ -600,21 +588,20 @@ Submit URL:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits a URL to the Lastline sandbox for analysis, creating a new task in the
-      external system.
+      The action creates a new analysis task in the Lastline platform by submitting
+      a URL.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action submits a URL for analysis (POST request), which mutates the external
-      state of the Lastline platform by creating a new analysis task. It fetches data
-      (reports) from the external system. It does not modify internal Google SecOps
-      data (like case fields or entities), nor does it update entities or create insights.
+      The action performs a POST request to submit a URL for analysis (mutating external
+      state by creating a task). It then fetches the analysis results (fetches data).
+      It does not modify internal SecOps data, update entities, or create insights.
   categories:
     enrichment: false
     reasoning: >-
-      While the action returns threat intelligence (enrichment data), it is not classified
-      as an Enrichment action because it mutates the external system state by creating
-      a new analysis task (submission).
+      The action creates a new analysis task in an external system (Lastline), which
+      violates the 'External State Preservation' rule for enrichment actions. Therefore,
+      it is not an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -631,5 +618,5 @@ Submit URL:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or process Google SecOps entities. It relies
-      entirely on the 'URL For Analysis' input parameter provided by the user.
+      The action does not use or iterate over Google SecOps entities. It takes a URL
+      as a manual input parameter.

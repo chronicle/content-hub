@@ -1,17 +1,3 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Add Deceptive Server:
   action_product_categories:
     add_alert_comment: false
@@ -28,9 +14,9 @@ Add Deceptive Server:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a deceptive server in the Illusive Networks platform. This
-      does not align with any of the provided categories (e.g., IOC enrichment, ticket
-      creation, identity management, or host containment).
+      The action creates a new deceptive server in the Illusive Networks platform.
+      This does not match any of the provided standard categories (e.g., ticket creation,
+      IOC management, identity management, or host containment).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -103,15 +89,14 @@ Add Deceptive Server:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to check for the existence of a server (fetches_data=true)
-      and a POST request to create a new deceptive server in the Illusive Networks
-      platform (can_mutate_external_data=true). It does not modify any internal Google
-      SecOps data or entities.
+      The action performs a GET request to check for the existence of a deceptive
+      server and a POST request to create a new one in the Illusive Networks platform.
+      It does not modify internal SOAR data or entities.
   categories:
     enrichment: false
     reasoning: >-
-      The action is not an enrichment action because it mutates external data (creates
-      a server) and does not meet the read-only requirement for external systems.
+      The action mutates external data (creates a server), which violates the requirement
+      for an enrichment action (which must be read-only regarding external systems).
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -146,9 +131,9 @@ Add Deceptive User:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action creates a deceptive user in Illusive Networks. This does not match
-      any of the provided categories (e.g., ticket creation, IOC management, host
-      containment).
+      The action creates a new deceptive user in the Illusive Networks platform. This
+      does not align with any of the provided categories (e.g., it is not a ticket,
+      not an IOC blocklist, not an identity update/disable/enable, not an enrichment).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -226,18 +211,19 @@ Add Deceptive User:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new deceptive user in the Illusive Networks platform.
+      Creates a new deceptive user account in the Illusive Networks platform.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to check if a user exists (fetches_data=true)
-      and a POST request to create a new deceptive user (can_mutate_external_data=true).
-      It does not modify any internal SOAR data or entities.
+      The action performs a GET request to check for the existence of a deceptive
+      user and a POST request to create a new one in the Illusive Networks platform.
+      It does not modify internal SOAR data, update entities, or create insights.
   categories:
     enrichment: false
     reasoning: >-
-      The action performs a mutation on an external system (creating a user), which
-      disqualifies it from being an enrichment action.
+      While the action fetches data (existence check), it also mutates external data
+      (creates a user). Therefore, it fails the 'External State Preservation' requirement
+      for enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -254,8 +240,8 @@ Add Deceptive User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities; it uses input parameters provided by
-      the user.
+      The action does not operate on entities. It uses input parameters to create
+      a deceptive user.
 Enrich Entities:
   action_product_categories:
     add_alert_comment: false
@@ -272,9 +258,9 @@ Enrich Entities:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (OS, health, user) for a host, which
-      aligns with the 'Enrich Asset' category. It does not perform IOC enrichment,
-      ticket creation, or containment.
+      The action retrieves contextual metadata (OS, health, agent version) for a host
+      entity, which directly matches the 'Enrich Asset' category. It does not perform
+      IOC enrichment, ticket management, or containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -322,18 +308,21 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity properties and adds entity tables within Google SecOps.
+      Updates the entity's 'is_enriched' status, populates 'additional_properties',
+      and adds a data table to the entity within Google SecOps.
     reasoning: >-
-      The action fetches host metadata from Illusive Networks via GET requests. It
-      updates internal entity properties (`is_enriched`, `additional_properties`)
-      and adds entity tables to the SOAR platform. It does not mutate external systems
-      or modify alerts/comments.
+      The action fetches host data from the Illusive Networks API (fetches_data=true).
+      It does not perform any actions that change the state of the external system
+      (can_mutate_external_data=false). It updates internal entities by setting the
+      'is_enriched' flag, updating 'additional_properties', and adding data tables
+      (can_mutate_internal_data=true, can_update_entities=true).
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data from an external source (Illusive Networks) and updates
-      internal entities without mutating external systems. This fits the definition
-      of an Enrichment action.
+      The action is designed to fetch contextual data about host entities from an
+      external source and update the entity's profile within the SOAR platform. It
+      does not mutate external data or perform unauthorized internal mutations, thus
+      qualifying as an enrichment action.
   entity_usage:
     entity_types:
     - HOSTNAME
@@ -351,8 +340,8 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters specifically
-      for `HOSTNAME` entities.
+      The code iterates over `siemplify.target_entities` and explicitly filters for
+      entities where `entity.entity_type == EntityTypes.HOSTNAME`.
 List Deceptive Items:
   action_product_categories:
     add_alert_comment: false
@@ -369,9 +358,9 @@ List Deceptive Items:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a list of deceptive items from Illusive Networks. It does
-      not match any of the defined categories, such as enriching IOCs/assets, updating
-      alerts, or performing containment actions.
+      The action retrieves a list of deceptive items (users/servers) from the Illusive
+      Networks platform. It does not match any of the specific operational categories
+      like enrichment, containment, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -420,17 +409,15 @@ List Deceptive Items:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs GET requests to the Illusive Networks API to retrieve a
-      list of deceptive items. It does not mutate any external systems, nor does it
-      modify internal Google SecOps data (such as entities, insights, or case comments).
-      It simply outputs the retrieved data as tables and JSON results.
+      The action performs GET requests to the Illusive Networks API to retrieve lists
+      of deceptive items. It does not modify external systems or internal SOAR data
+      (entities/insights). It simply presents the retrieved data in the action results.
   categories:
     enrichment: false
     reasoning: >-
-      The action retrieves a list of deceptive items from an external system. It does
-      not enrich specific alerts or entities, nor does it perform any of the allowed
-      internal mutations (like adding insights or comments). Therefore, it does not
-      meet the criteria for an enrichment action.
+      The action retrieves data but does not enrich specific entities or alerts. It
+      is a general utility action for listing deceptive items. Therefore, it does
+      not meet the criteria for an Enrichment Action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -447,9 +434,8 @@ List Deceptive Items:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities. It operates globally to list deceptive
-      items from the Illusive Networks platform and does not iterate over or filter
-      by `target_entities`.
+      The action does not use or filter any entities. It operates on global configuration
+      data from the Illusive Networks platform.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -466,9 +452,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test used to validate integration configuration.
-      It does not perform any of the defined operational tasks like enrichment, containment,
-      or ticket management.
+      The action is a connectivity test and does not perform any of the defined product
+      category operations (enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -519,13 +504,13 @@ Ping:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a GET request to verify connectivity to the Illusive Networks
-      API. It does not modify external or internal data, nor does it interact with
-      entities.
+      API. It does not modify any external or internal data, nor does it interact
+      with entities.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a connectivity test ('Ping'). Per the instructions, 'Actions named
-      Ping must not be categorized as enrichment actions.'
+      The action is a diagnostic 'Ping' tool. Per the instructions, actions named
+      'Ping' must not be categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -542,7 +527,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities.
+      The action does not interact with any entities, as confirmed by the simulation
+      data and the code logic.
 Remove Deceptive Server:
   action_product_categories:
     add_alert_comment: false
@@ -559,9 +545,10 @@ Remove Deceptive Server:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes a deceptive server from the Illusive Networks platform. This
-      is a product-specific management action that does not align with the provided
-      categories such as IOC enrichment, ticket management, or host containment.
+      The action removes a deceptive server configuration from the Illusive Networks
+      platform. This is a management/cleanup operation that does not align with the
+      provided security-specific categories such as IOC enrichment, ticket management,
+      or host containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -624,20 +611,19 @@ Remove Deceptive Server:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a deceptive server configuration from the Illusive Networks platform.
+      Removes the specified deceptive server configuration from the Illusive Networks
+      platform.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data (GET request) to verify the server's existence and then
-      mutates external data (DELETE request) to remove the server configuration from
-      the Illusive Networks platform. It does not modify any internal SecOps data
-      or entities.
+      The action performs a GET request to verify the existence of the deceptive server
+      and a DELETE request to remove it from the Illusive Networks platform. It does
+      not modify internal SOAR data (entities, insights, or case comments).
   categories:
     enrichment: false
     reasoning: >-
-      The action performs a DELETE request to remove a server from the Illusive Networks
-      platform, which constitutes an external mutation. Therefore, it cannot be classified
-      as an enrichment action.
+      The action performs a state-changing operation (deletion) on an external system,
+      which disqualifies it from being an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -654,9 +640,8 @@ Remove Deceptive Server:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` and does not perform
-      any operations on SecOps entities. It relies on a user-provided 'Server Name'
-      parameter to identify the target server in the Illusive Networks platform.
+      The action does not operate on SecOps entities; it requires the manual input
+      of a server name via the 'Server Name' parameter.
 Remove Deceptive User:
   action_product_categories:
     add_alert_comment: false
@@ -674,8 +659,9 @@ Remove Deceptive User:
     get_alert_information: false
     reasoning: >-
       The action removes a deceptive user from the Illusive Networks platform. This
-      does not map to any of the standard categories like IOC enrichment, ticket management,
-      or host containment.
+      is a platform-specific management task that does not align with standard categories
+      such as 'Disable Identity' (which typically refers to IAM/AD accounts), 'Contain
+      Host', or 'Enrich IOC'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -729,20 +715,19 @@ Remove Deceptive User:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a deceptive user from the Illusive Networks platform via a DELETE API
-      request.
+      Removes a deceptive user from the Illusive Networks platform via a DELETE request.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to verify the existence of a deceptive user
-      and then a DELETE request to remove it from the Illusive Networks platform.
-      It does not modify any internal Google SecOps data or entities.
+      The action performs a GET request to verify the existence of the deceptive user
+      and a DELETE request to remove the user from the Illusive Networks platform.
+      It does not modify internal SOAR data, entities, or alert data.
   categories:
     enrichment: false
     reasoning: >-
-      The action performs a mutation on an external system (deleting a user) and does
-      not meet the criteria for an enrichment action, which must be read-only regarding
-      external systems.
+      The action is a mutation action (DELETE) that modifies the state of an external
+      system. It does not meet the criteria for an enrichment action, which must be
+      read-only regarding external systems.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -759,8 +744,8 @@ Remove Deceptive User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities; it takes a username as a parameter
-      and does not iterate over target_entities.
+      The action does not utilize the `target_entities` list. It operates based on
+      a provided `Username` parameter.
 Run Forensic Scan:
   action_product_categories:
     add_alert_comment: false
@@ -777,15 +762,16 @@ Run Forensic Scan:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata about a host (OS, user, processes),
-      which aligns with the 'Enrich Asset' category. It does not perform IOC reputation
-      lookups, alert updates, or containment actions.
+      The action retrieves contextual metadata about a resource (host/IP), which aligns
+      with 'Enrich Asset'. It also retrieves historical logs/telemetry data (processes,
+      prefetch, etc.), which aligns with 'Search Events'. It does not perform reputation
+      lookups (Enrich IOC), nor does it perform containment or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
     search_asset: false
     search_email: false
-    search_events: false
+    search_events: true
     send_email: false
     send_message: false
     submit_file: false
@@ -865,23 +851,28 @@ Run Forensic Scan:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: false
+    can_mutate_external_data: true
     can_mutate_internal_data: true
     can_update_entities: true
-    external_data_mutation_explanation: null
+    external_data_mutation_explanation: >-
+      Initiates a forensic scan on the target endpoint in the Illusive Networks platform
+      by creating a new scan event.
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity properties and adds forensic data tables to the case.
+      Updates entities with forensic enrichment data and adds data tables to the case.
     reasoning: >-
-      The action initiates a forensic scan (data collection) and retrieves the results.
-      It does not perform destructive actions on the external system. Internally,
-      it updates entity properties (enrichment) and adds data tables to the case results.
+      The action triggers an external forensic scan via a POST request (can_mutate_external_data=true).
+      It then polls for results and fetches forensic data (fetches_data=true). It
+      updates entity attributes and adds data tables to the case (can_mutate_internal_data=true,
+      can_update_entities=true). It does not create insights, modify alert data, or
+      create case comments.
   categories:
-    enrichment: true
+    enrichment: false
     reasoning: >-
-      The action fetches forensic data from an external source and updates internal
-      entities with this information. It does not mutate external systems or perform
-      prohibited internal mutations, making it a valid enrichment action.
+      While the action fetches data and updates entities, it is not classified as
+      an Enrichment action because it mutates external data by triggering a forensic
+      scan (creating a scan event) in the Illusive Networks platform, which violates
+      the 'Read-Only' requirement for enrichment actions.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -900,6 +891,5 @@ Run Forensic Scan:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      == EntityTypes.HOSTNAME or entity.entity_type == EntityTypes.ADDRESS`. This
-      means it targets HOSTNAME and ADDRESS entities, filtering by entity_type.
+      The action iterates over `siemplify.target_entities` and filters them based
+      on whether their type is `HOSTNAME` or `ADDRESS`.

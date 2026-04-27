@@ -3,9 +3,11 @@ Darktrace - AI Incident Events Connector:
     ### General Description
 
     The Darktrace - AI Incident Events Connector is designed to ingest AI-driven incident
-    events from the Darktrace platform into Google SecOps. It enables security teams
-    to monitor and respond to high-fidelity AI-detected threats by automatically creating
-    cases within the SOAR platform.
+    events from the Darktrace platform into Google SecOps. By periodically polling
+    the Darktrace API, this connector identifies and retrieves high-fidelity AI incidents,
+    allowing security teams to centralize their incident response workflows. It supports
+    configurable filtering based on incident severity scores and dynamic lists, ensuring
+    that only relevant and actionable alerts are ingested.
 
 
     ### Parameters Description
@@ -26,67 +28,68 @@ Darktrace - AI Incident Events Connector:
     | Environment Regex Pattern | String | No | Regex pattern to manipulate the environment
     field value. |
 
-    | PythonProcessTimeout | Integer | Yes | Timeout limit for the connector script.
+    | PythonProcessTimeout | Integer | Yes | Timeout limit for the Python process.
     |
 
     | API Root | String | Yes | API root URL of the Darktrace instance. |
 
     | API Token | String | Yes | Darktrace API token. |
 
-    | API Private Token | Password | Yes | Darktrace API private token. |
+    | API Private Token | String | Yes | Darktrace API private token. |
 
-    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate for the connection.
+    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate. |
+
+    | Lowest AI Incident Score To Fetch | Integer | Yes | Minimum score (0-100) for
+    AI incidents to fetch. |
+
+    | Max Hours Backwards | Integer | No | Hours to look back for the initial run.
     |
-
-    | Lowest AI Incident Score To Fetch | Integer | Yes | Minimum score threshold
-    for fetching AI incidents (0-100). |
-
-    | Max Hours Backwards | Integer | No | Hours to look back for the initial fetch
-    or fallback. |
 
     | Max AI Incidents To Fetch | Integer | No | Maximum number of incidents to process
     per iteration. |
 
-    | Use dynamic list as a blocklist | Boolean | Yes | Whether to use a dynamic list
-    as a blocklist. |
+    | Use dynamic list as a blocklist | Boolean | Yes | Whether to use the dynamic
+    list as a blocklist. |
 
-    | Proxy Server Address | String | No | Proxy server address. |
+    | Proxy Server Address | String | No | Address of the proxy server. |
 
-    | Proxy Username | String | No | Proxy username. |
+    | Proxy Username | String | No | Username for proxy authentication. |
 
-    | Proxy Password | Password | No | Proxy password. |
+    | Proxy Password | String | No | Password for proxy authentication. |
 
 
     ### Flow Description
 
-    1. The connector authenticates with the Darktrace API using the provided API Token
-    and Private Token.
+    1. Authenticates with the Darktrace API using the provided API credentials and
+    verifies the connection.
 
-    2. It determines the time range for data retrieval based on the last successful
-    run timestamp or the configured `Max Hours Backwards`.
+    2. Calculates the time range for fetching incidents, starting from the last successful
+    run or the configured Max Hours Backwards.
 
-    3. It queries the Darktrace `/aianalyst/incidentevents` endpoint for AI incidents,
-    applying the `Lowest AI Incident Score To Fetch` filter.
+    3. Queries the Darktrace /aianalyst/incidentevents endpoint for incidents matching
+    the minimum score threshold.
 
-    4. Fetched incidents are filtered against `existing_ids` to prevent duplicates
-    and checked against the configured whitelist/blacklist.
+    4. Filters out previously processed incidents using a stored ID list.
 
-    5. Valid incidents are mapped to the Google SecOps `AlertInfo` format, including
-    environment and severity details.
+    5. Applies whitelist/blacklist filtering based on incident names.
 
-    6. The connector creates cases in Google SecOps for each processed incident.
+    6. Maps each incident to a SOAR case, incorporating environment settings and device
+    product information.
 
-    7. Finally, it updates the last success timestamp to ensure subsequent runs only
-    fetch new data.
+    7. Saves the current state (last success time and processed IDs) to ensure continuity
+    in subsequent runs.
+
+    8. Returns the processed incidents to the SOAR platform for case creation.
 Darktrace - Model Breaches Connector:
   ai_description: >-
     ### General Description
 
-    The Darktrace Model Breaches Connector is designed to fetch model breach alerts
-    and their associated connection events from the Darktrace platform. By integrating
-    this connector, users can automatically ingest security incidents into Google
-    SecOps, allowing for centralized monitoring and automated response to anomalous
-    network behavior.
+    The Darktrace - Model Breaches Connector is designed to integrate Google SecOps
+    with Darktrace, enabling the automated ingestion of model breach events. This
+    connector periodically polls the Darktrace API to retrieve security model breaches,
+    filters them based on user-defined criteria such as severity, score, and behavior
+    visibility, and creates corresponding cases within the SOAR platform for further
+    investigation and response.
 
 
     ### Parameters Description
@@ -95,77 +98,80 @@ Darktrace - Model Breaches Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | API Root | String | Yes | The base URL of the Darktrace API. |
+    | API Root | String | Yes | The base URL of the Darktrace instance. |
 
-    | API Token | String | Yes | The API token for authentication. |
+    | API Token | String | Yes | The API token for authentication with Darktrace.
+    |
 
-    | API Private Token | Password | Yes | The private API token for signature generation.
+    | API Private Token | String | Yes | The private API token used for request signing.
     |
 
     | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate of the Darktrace
     server. |
 
+    | DeviceProductField | String | Yes | The source field name used to retrieve the
+    Product Field name. |
+
+    | EventClassId | String | Yes | The source field name used to retrieve the Event
+    Class ID. |
+
+    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
+    connector script execution. |
+
+    | Use whitelist as a blacklist | Boolean | Yes | If enabled, the configured whitelist
+    acts as a blacklist. |
+
     | Lowest Model Breach Score To Fetch | Integer | No | The minimum score (0-100)
-    for breaches to be fetched. |
+    for a model breach to be fetched. |
 
-    | Lowest Priority To Fetch | Integer | No | The minimum priority (1-5) for breaches
-    to be fetched. |
+    | Lowest Priority To Fetch | Integer | No | The minimum priority level (1-5) for
+    a model breach to be fetched. |
 
-    | Max Hours Backwards | Integer | No | The lookback period in hours for the initial
-    fetch. |
+    | Max Hours Backwards | Integer | No | The number of hours to look back for the
+    initial data fetch. |
 
     | Max Model Breaches To Fetch | Integer | No | The maximum number of breaches
     to process per iteration. |
 
-    | Behaviour Visibility | String | No | Filter breaches by behavior category (Critical,
-    Suspicious, Compliance, Informational). |
+    | Environment Field Name | String | No | The field name where the environment
+    information is stored. |
 
-    | Use whitelist as a blacklist | Boolean | Yes | If enabled, the whitelist acts
-    as a blacklist. |
+    | Environment Regex Pattern | String | No | A regex pattern to manipulate the
+    environment field value. |
 
-    | PythonProcessTimeout | Integer | Yes | Timeout limit for the connector script.
+    | Proxy Server Address | String | No | The address of the proxy server, if required.
     |
 
-    | DeviceProductField | String | Yes | Field name to retrieve the product name.
-    |
+    | Proxy Username | String | No | The username for proxy authentication. |
 
-    | EventClassId | String | Yes | Field name to retrieve the event type. |
+    | Proxy Password | String | No | The password for proxy authentication. |
 
-    | Environment Field Name | String | No | Field name where the environment name
-    is stored. |
+    | Behaviour Visibility | String | No | Comma-separated list of behavior categories
+    to ingest (Critical, Suspicious, Compliance, Informational). |
 
-    | Environment Regex Pattern | String | No | Regex pattern to manipulate the environment
-    field value. |
-
-    | Proxy Server Address | String | No | Proxy server address. |
-
-    | Proxy Username | String | No | Proxy username. |
-
-    | Proxy Password | Password | No | Proxy password. |
-
-    | Padding Time | Integer | No | Padding time in hours for the last success timestamp.
+    | Padding Time | Integer | No | Padding time in hours to adjust the fetch window.
     |
 
 
     ### Flow Description
 
-    1. The connector initializes the connection to the Darktrace API using the provided
-    credentials and configuration.
+    1. **Authentication**: The connector authenticates with the Darktrace API using
+    the provided API Token and Private Token, generating the necessary request signatures.
 
-    2. It calculates the `last_success_timestamp` based on the configured `Max Hours
-    Backwards` and `Padding Time` to determine the starting point for fetching new
-    alerts.
+    2. **Time Range Calculation**: It determines the fetch window based on the last
+    successful run timestamp, the `Max Hours Backwards` parameter, and any configured
+    `Padding Time`.
 
-    3. It queries the Darktrace API for model breaches, applying filters for score,
-    priority, and existing alert IDs to avoid duplicates.
+    3. **Data Fetching**: The connector queries the Darktrace `/modelbreaches` endpoint
+    to retrieve new breaches, applying filters for score and priority.
 
-    4. For each fetched breach, the connector retrieves detailed event information.
+    4. **Filtering and Enrichment**: It filters breaches against the whitelist/blacklist
+    and retrieves detailed event data for each breach using the `/details` endpoint.
 
-    5. It applies additional filtering based on the `Behaviour Visibility` and whitelist/blacklist
-    settings.
+    5. **Mapping and Ingestion**: The retrieved data is mapped to the SOAR `AlertInfo`
+    format, applying environment mapping and behavior visibility filters. Validated
+    alerts are then ingested as cases into Google SecOps.
 
-    6. The breach data is mapped into the SOAR alert format, including environment
-    and device information.
-
-    7. Finally, the connector saves the state (processed IDs and timestamps) and returns
-    the ingested alerts to the SOAR platform for case creation.
+    6. **State Management**: Upon successful processing, the connector saves the IDs
+    of processed breaches and updates the last success timestamp to ensure subsequent
+    iterations only fetch new data.

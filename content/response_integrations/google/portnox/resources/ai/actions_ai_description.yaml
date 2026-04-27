@@ -1,17 +1,3 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Device:
   action_product_categories:
     add_alert_comment: false
@@ -29,8 +15,8 @@ Enrich Device:
     get_alert_information: false
     reasoning: >-
       The action retrieves device metadata (security status, location, history) from
-      Portnox and attaches it to the entity. This matches the 'Enrich Asset' category.
-      It does not perform IOC enrichment (reputation/threat intel) or other actions.
+      Portnox and attaches it to the entity. This aligns with the 'Enrich Asset' category.
+      It does not perform IOC reputation lookups (Enrich IOC) or other actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -76,16 +62,17 @@ Enrich Device:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional_properties and is_enriched status.
+      Updates the entity's `additional_properties` and `is_enriched` flag within Google
+      SecOps.
     reasoning: >-
-      The action fetches device information from Portnox using a search query (POST).
-      It then updates the entity's `additional_properties` and `is_enriched` status
-      within the SOAR platform. It does not modify external system state.
+      The action fetches device information from Portnox based on IP or MAC address
+      entities. It updates the internal entity properties in Google SecOps with this
+      retrieved data. It does not modify external systems or create insights/comments.
   categories:
     enrichment: true
     reasoning: >-
-      The action retrieves contextual data from an external system (Portnox) and updates
-      internal entity attributes without modifying external state. This fits the definition
+      The action fetches data from an external source (Portnox) and updates internal
+      entity attributes without modifying external state. This fits the definition
       of an enrichment action.
   entity_usage:
     entity_types:
@@ -106,7 +93,7 @@ Enrich Device:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and explicitly checks for
-      `EntityTypes.ADDRESS` and `EntityTypes.MACADDRESS` to perform the search.
+      `ADDRESS` and `MACADDRESS` types to perform the search.
 Get Device History:
   action_product_categories:
     add_alert_comment: false
@@ -123,13 +110,13 @@ Get Device History:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action searches for a device (asset) in Portnox and retrieves its history.
-      This matches 'Search Asset' and 'Enrich Asset'. It does not modify external
-      systems.
+      The action retrieves historical metadata for a device (asset) and attaches it
+      to the entity. This matches 'Enrich Asset'. It does not perform IOC enrichment
+      (threat intel), nor does it perform any containment or ticket actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: true
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
@@ -192,19 +179,18 @@ Get Device History:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds a CSV table of device history to the entity and updates the entity status
-      in Google SecOps.
+      Updates entities and adds a data table containing device history to the entity.
     reasoning: >-
-      The action fetches device history from Portnox using IP or MAC address entities.
-      It does not modify external systems (the search operation is a query). It performs
-      internal mutations by adding a CSV table to the entity and updating the entity
-      status in Google SecOps.
+      The action fetches device history from Portnox (fetches_data=true). It does
+      not modify external systems (can_mutate_external_data=false). It updates internal
+      entities by adding a data table and marking them as updated (can_mutate_internal_data=true,
+      can_update_entities=true). It does not create insights or modify alerts.
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data (enrichment) and does not mutate external systems. It
-      performs allowed internal mutations (updating entities, adding tables), which
-      qualifies it as an enrichment action.
+      The action fetches data (history) and enriches the entity with this information
+      (adding a table and updating the entity). It does not mutate external systems.
+      It fits the definition of an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -223,8 +209,8 @@ Get Device History:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters by `entity.entity_type
-      == EntityTypes.ADDRESS` or `entity.entity_type == EntityTypes.MACADDRESS`.
+      The code iterates over `siemplify.target_entities` and checks `entity.entity_type`
+      for `ADDRESS` and `MACADDRESS` (mapped to `MacAddress`).
 Get Device Locations:
   action_product_categories:
     add_alert_comment: false
@@ -241,15 +227,12 @@ Get Device Locations:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (location) for a device, which matches
-      the 'Enrich Asset' category. It also searches for the device in the Portnox
-      platform, matching the 'Search Asset' category. It does not match 'Enrich IOC'
-      as it is not providing threat intelligence for an indicator, nor does it perform
-      any containment or ticketing actions.
+      The action retrieves location metadata for a device, which aligns with the 'Enrich
+      Asset' category. It does not perform IOC enrichment, ticket management, or containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
-    search_asset: true
+    search_asset: false
     search_email: false
     search_events: false
     send_email: false
@@ -304,21 +287,17 @@ Get Device Locations:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action updates the entity within the SOAR platform using `siemplify.update_entities`
-      to reflect the retrieved location information.
+      Updates entities with location data and adds an entity table to the SOAR case.
     reasoning: >-
-      The action fetches device location data from the Portnox API (fetches_data=true).
-      It does not perform any write operations on external systems (can_mutate_external_data=false).
-      It updates the entity within the SOAR platform using `siemplify.update_entities`
-      (can_mutate_internal_data=true, can_update_entities=true). It does not create
-      insights, modify alert data, or create case comments.
+      The action queries the Portnox API to retrieve location data for devices identified
+      by IP or MAC address. It does not modify external systems. It updates internal
+      SOAR entities with the retrieved location data via `add_entity_table` and `update_entities`.
   categories:
     enrichment: true
     reasoning: >-
-      The action is an enrichment action because it retrieves contextual data (location)
-      for entities and updates the entity profile without modifying external systems
-      or performing unauthorized internal mutations. It does not perform any 'Ping'
-      or 'Download File' operations.
+      The action fetches data from an external source (Portnox) and updates internal
+      entities without modifying external state. This fits the definition of an enrichment
+      action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -337,9 +316,8 @@ Get Device Locations:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and explicitly filters
-      for `ADDRESS` and `MacAddress` entity types using conditional checks in the
-      code.
+      The code iterates over `siemplify.target_entities` and filters by `EntityTypes.ADDRESS`
+      and `EntityTypes.MACADDRESS` to perform the lookup.
 Get Installed Applications:
   action_product_categories:
     add_alert_comment: false
@@ -356,9 +334,9 @@ Get Installed Applications:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves software inventory for a device, which is contextual metadata.
-      This matches the 'Enrich Asset' category. It does not perform any external mutations
-      or alert modifications.
+      The action retrieves a list of installed applications for a device, which provides
+      contextual metadata about the asset. This aligns with the 'Enrich Asset' category.
+      It does not perform IOC enrichment, ticket management, or containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -430,20 +408,19 @@ Get Installed Applications:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entities with retrieved application data and adds a data table to the
-      entity.
+      Updates entities by attaching a CSV table of installed applications and calling
+      update_entities.
     reasoning: >-
-      The action fetches data from the Portnox API (GET request) to retrieve installed
-      applications. It does not mutate external systems (the POST request is for searching,
-      not state change). It mutates internal data by updating entities and adding
-      an entity table.
+      The action fetches application data from Portnox for specific devices (IP/MAC).
+      It does not modify external systems. It updates internal entities by attaching
+      a CSV table of installed applications and calling update_entities.
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data from an external source (Portnox) to enrich the entity
-      with software inventory information. It does not mutate external systems and
-      only performs allowed internal mutations (updating entities and adding data
-      tables). Therefore, it is an enrichment action.
+      The action retrieves contextual information (installed applications) about an
+      asset (device) from an external system (Portnox) and updates the entity within
+      the SOAR platform. It does not mutate external state. This fits the definition
+      of an Enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -462,9 +439,8 @@ Get Installed Applications:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and checks `entity.entity_type
-      == EntityTypes.ADDRESS` or `entity.entity_type == EntityTypes.MACADDRESS`. This
-      means it targets ADDRESS and MacAddress entities, filtering by entity_type.
+      The code iterates over `siemplify.target_entities` and explicitly checks for
+      `ADDRESS` and `MACADDRESS` types to perform the search.
 Get Open Ports:
   action_product_categories:
     add_alert_comment: false
@@ -481,9 +457,9 @@ Get Open Ports:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (open ports) for a device/asset. This
-      matches the 'Enrich Asset' category. It does not perform IOC enrichment (as
-      it is device-centric), nor does it perform any containment or ticketing actions.
+      The action retrieves contextual metadata (open ports) for a resource (device),
+      which aligns with the 'Enrich Asset' category. It does not perform IOC enrichment,
+      ticket management, or containment actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -542,7 +518,7 @@ Get Open Ports:
     new information and provides a summary message.
   capabilities:
     can_create_case_comments: false
-    can_create_insight: false
+    can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
     can_mutate_internal_data: true
@@ -550,20 +526,20 @@ Get Open Ports:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds a CSV table of open ports to the entity and updates the entity within the
-      SOAR platform.
+      The action updates the entity in the SOAR case and adds an entity table with
+      open port information.
     reasoning: >-
-      The action fetches device port information from Portnox (fetches_data=true).
-      It does not modify external systems (can_mutate_external_data=false). It updates
-      internal SOAR entities by adding a table of open ports and calling update_entities
-      (can_mutate_internal_data=true, can_update_entities=true).
+      The action fetches data from an external system (Portnox) to enrich entities
+      with open port information. It does not mutate external data (it only performs
+      GET/search operations). It mutates internal data by adding an entity table and
+      updating the entity status in the SOAR platform.
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data from an external system (Portnox) to enrich the entity
-      with open port information. It does not mutate external systems. It performs
-      allowed internal mutations (updating entities, adding tables). Therefore, it
-      is an enrichment action.
+      The action is designed to gather supplemental context (open ports) about entities
+      (devices). It does not mutate external systems and only performs allowed internal
+      mutations (updating entities and adding insights/tables). Therefore, it is classified
+      as an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -583,7 +559,8 @@ Get Open Ports:
     filters_by_modification_time: false
     reasoning: >-
       The code iterates over `siemplify.target_entities` and explicitly checks for
-      `ADDRESS` and `MACADDRESS` types to perform the lookup.
+      `EntityTypes.ADDRESS` and `EntityTypes.MACADDRESS` to perform the device lookup
+      and port retrieval.
 Get Services:
   action_product_categories:
     add_alert_comment: false
@@ -600,9 +577,9 @@ Get Services:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (services) for a device, which matches
-      the 'Enrich Asset' category. It does not perform IOC enrichment, ticket creation,
-      or containment.
+      The action retrieves a list of services running on a device, which is contextual
+      metadata for an asset. This matches the 'Enrich Asset' category. It does not
+      perform IOC enrichment, ticket creation, or containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -670,17 +647,18 @@ Get Services:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entities with a data table containing service information.
+      Updates entities with service information and adds a data table to the entity.
     reasoning: >-
-      The action fetches device service information from Portnox (fetches_data=true).
+      The action fetches device service information from the Portnox API (fetches_data=true).
       It does not modify external systems (can_mutate_external_data=false). It updates
-      internal SOAR entities by adding a data table and updating the entity object
-      (can_mutate_internal_data=true, can_update_entities=true).
+      internal SOAR entities with the retrieved data using `add_entity_table` and
+      `update_entities` (can_mutate_internal_data=true, can_update_entities=true).
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data (services) and enriches the entity with a data table.
-      It does not mutate external systems. It fits the definition of an enrichment
+      The action fetches data (services) from an external system (Portnox) and enriches
+      the entity within the SOAR platform (adding a data table and updating the entity).
+      It does not mutate external systems. This fits the definition of an enrichment
       action.
   entity_usage:
     entity_types:
@@ -700,8 +678,8 @@ Get Services:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and checks `entity.entity_type`
-      for `ADDRESS` and `MACADDRESS` to perform the lookup.
+      The code iterates over `siemplify.target_entities` and explicitly checks `entity.entity_type`
+      for `ADDRESS` and `MACADDRESS` types to perform the search.
 Get User History:
   action_product_categories:
     add_alert_comment: false
@@ -720,7 +698,7 @@ Get User History:
     reasoning: >-
       The action retrieves authentication history for a device, which provides contextual
       metadata about the asset. This aligns with 'Enrich Asset'. It does not perform
-      any blocking, ticketing, or alert modification.
+      IOC enrichment, ticket creation, or containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -796,19 +774,18 @@ Get User History:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds a CSV data table to the entity and updates the entity record within Google
-      SecOps.
+      Updates entities by attaching a CSV data table containing user authentication
+      history.
     reasoning: >-
-      The action fetches user authentication history from Portnox for specific IP
-      or MAC address entities. It does not modify external systems. It enriches the
-      internal entity by attaching a CSV table of the retrieved history and updating
-      the entity record within Google SecOps.
+      The action fetches user authentication history from Portnox for specific devices
+      (IP/MAC). It does not change external system state (read-only/search). It updates
+      internal SOAR entities by attaching a CSV table of the retrieved history.
   categories:
     enrichment: true
     reasoning: >-
-      The action retrieves data (user history) from an external source (Portnox) and
-      enriches the internal entity with this information without modifying any external
-      system state. This fits the definition of an enrichment action.
+      The action fetches data (user history) and enriches the entity within the SOAR
+      platform (via data table). It does not mutate external systems. It meets the
+      criteria for an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -828,7 +805,7 @@ Get User History:
     filters_by_modification_time: false
     reasoning: >-
       The action iterates over `siemplify.target_entities` and filters them based
-      on their type, specifically checking for `ADDRESS` and `MacAddress` types.
+      on `entity_type` (ADDRESS or MACADDRESS).
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -845,8 +822,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping) and does not perform any of the defined
-      operational tasks like enrichment, containment, or ticket management.
+      The action is a connectivity test (Ping) and does not perform any operational
+      tasks like enrichment, containment, or ticket management. Therefore, it does
+      not map to any of the defined product categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -885,17 +863,17 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the Portnox API to verify connectivity.
-      It does not modify external or internal data, nor does it update entities or
-      create insights.
+      The action performs a GET request to verify connectivity to the Portnox API.
+      It does not modify external systems, update internal SOAR data, or interact
+      with entities.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a connectivity test (Ping). According to the instructions, Ping
-      actions must not be categorized as enrichment actions.
+      The action is a connectivity test (Ping). Per the instructions, Ping actions
+      are not categorized as enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -918,7 +896,7 @@ Revalidate Device:
     add_alert_comment: false
     add_ioc_to_allowlist: false
     add_ioc_to_blocklist: false
-    contain_host: false
+    contain_host: true
     create_ticket: false
     delete_email: false
     disable_identity: false
@@ -929,10 +907,9 @@ Revalidate Device:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a management operation (revalidation) on a device via Portnox
-      NAC. It does not fit into standard categories like 'Contain Host' (which is
-      EDR-specific isolation), 'Enrich Asset' (read-only), or 'Update Alert'. It is
-      a specific device management action.
+      The action triggers a revalidation of a device's security policy in the Portnox
+      NAC system. This is an enforcement action that can change the device's network
+      access state, which aligns with the 'Contain Host' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -995,19 +972,19 @@ Revalidate Device:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Triggers a security policy re-evaluation for a device in the Portnox NAC system.
+      Triggers a revalidation of the device's security policy in the Portnox NAC system.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action triggers a revalidation process on the Portnox NAC system (mutating
-      external data) and polls the device status (fetching data). It does not modify
-      internal SecOps data or entities.
+      The action triggers a revalidation of a device's security policy in the Portnox
+      NAC system via a POST request (can_mutate_external_data=true). It then polls
+      the device's status via GET requests (fetches_data=true). It does not modify
+      internal SOAR data (can_mutate_internal_data=false).
   categories:
     enrichment: false
     reasoning: >-
-      The action mutates external data (triggers revalidation), which violates the
-      'External State Preservation' rule for enrichment actions. Therefore, it is
-      not an enrichment action.
+      The action is a mutation action (revalidation), not an enrichment action, as
+      it modifies the state of the device in the external NAC system.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1024,8 +1001,8 @@ Revalidate Device:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on SecOps entities. It takes a `DeviceId` as a direct
-      input parameter.
+      The action uses a parameter `DeviceId` provided by the user, not the `target_entities`
+      list. Therefore, it does not run on any specific entity types.
 Revalidate Device By Address:
   action_product_categories:
     add_alert_comment: false
@@ -1043,9 +1020,9 @@ Revalidate Device By Address:
     get_alert_information: false
     reasoning: >-
       The action triggers a revalidation of a device's authentication policy on the
-      Portnox NAC system. This is a device control action. It does not match the specific
-      definitions of 'Contain Host' (which implies isolation), 'Update Identity',
-      or other provided categories.
+      Portnox NAC. This is an operational action on a device, not an enrichment, ticket
+      creation, or standard containment/blocking action. None of the specific categories
+      provided match this functionality.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1102,20 +1079,20 @@ Revalidate Device By Address:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Triggers a revalidation of the device's authentication policy on the Portnox
+      Triggers a revalidation of the authentication policy for the device on the Portnox
       NAC system.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches device information from Portnox (fetches_data=true) and triggers
-      a revalidation process via a POST request (can_mutate_external_data=true). It
-      does not modify internal SOAR data, update entities, or create insights.
+      The action searches for devices (fetches data) and triggers a revalidation process
+      on the Portnox NAC system (mutates external data). It does not update internal
+      entities, create insights, or modify alert data.
   categories:
     enrichment: false
     reasoning: >-
-      The action performs a mutation on the external Portnox system (revalidation),
-      which violates the 'External State Preservation' rule for enrichment actions.
-      Therefore, it is not an enrichment action.
+      The action triggers a revalidation process on an external system (Portnox NAC),
+      which is a state change. Therefore, it is not an enrichment action (which must
+      be read-only regarding external systems).
   entity_usage:
     entity_types:
     - ADDRESS
@@ -1134,5 +1111,6 @@ Revalidate Device By Address:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters for `ADDRESS`
-      and `MacAddress` entity types to perform the revalidation operation.
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS` or `entity.entity_type == EntityTypes.MACADDRESS`. This
+      means it targets ADDRESS and MacAddress entities, filtering by entity_type.

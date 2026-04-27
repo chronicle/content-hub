@@ -1,30 +1,49 @@
 Telegram Connector:
-  ai_description: "### General Description\nThe Telegram Connector enables the ingestion\
-    \ of messages from Telegram channels, groups, and private chats into Google SecOps.\
-    \ By leveraging the Telegram Bot API, this connector monitors for new messages\
-    \ and transforms them into actionable alerts within the SOAR platform. \n\n**Important\
-    \ Considerations:**\n* For channel monitoring, the bot must be an administrator.\n\
-    * For group monitoring, the bot must have access to messages.\n* This connector\
-    \ cannot operate simultaneously with an active Telegram Webhook. If a webhook\
-    \ is active, it must be disabled using the Telegram API `setWebhook` method before\
-    \ running this connector.\n\n### Parameters Description\n| Parameter | Type |\
-    \ Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| API Token | Password\
-    \ | Yes | The Telegram Bot API token used to authenticate and communicate with\
-    \ the Telegram API. |\n| DeviceProductField | String | Yes | The field name used\
-    \ to determine the device product in the ingested event. |\n| EventClassId | String\
-    \ | Yes | The field name used to determine the event name (sub-type) in the ingested\
-    \ event. |\n| PythonProcessTimeout | String | Yes | The timeout limit (in seconds)\
-    \ for the Python process running the connector script. |\n\n### Flow Description\n\
-    1. **Initialization**: The connector initializes the `TelegramManager` using the\
-    \ provided API Token.\n2. **State Retrieval**: It retrieves the `last_saved_update_id`\
-    \ from the connector context to ensure only new messages are processed.\n3. **Data\
-    \ Fetching**: It queries the Telegram API (`getUpdates`) starting from the next\
-    \ message ID (`last_saved_update_id + 1`).\n4. **Processing**: \n    * Iterates\
-    \ through the retrieved updates.\n    * Identifies the message type (`message`\
-    \ for private/group or `channel_post` for channels).\n    * Flattens the message\
-    \ data and maps it to a standard event format.\n5. **Alert Creation**: Each processed\
-    \ event is converted into a SOAR `AlertInfo` object with defined start/end times\
-    \ and priority.\n6. **Persistence**: After processing, the latest `update_id`\
-    \ is saved back to the connector context to prevent duplicate processing in future\
-    \ runs.\n7. **Output**: The collected alerts are returned to the SOAR platform\
-    \ for case creation."
+  ai_description: >-
+    ### General Description
+
+    The Telegram Connector enables the ingestion of messages from Telegram channels
+    and supergroups into Google SecOps. It allows security teams to monitor Telegram
+    activity by treating messages as alerts within the SOAR platform. Note: The bot
+    must be a member of the group or an admin of the channel to access messages. This
+    connector cannot run concurrently with an active Telegram Webhook.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Token | String | Yes | The API token for your Telegram bot. |
+
+    | DeviceProductField | String | Yes | The field name used to determine the device
+    product. |
+
+    | EventClassId | String | Yes | The field name used to determine the event name
+    (sub-type). |
+
+    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
+    Python process running the connector. |
+
+
+    ### Flow Description
+
+    1. Initializes the `TelegramManager` using the provided API Token.
+
+    2. Retrieves the last processed `update_id` from the connector's persistent storage
+    to ensure only new messages are fetched.
+
+    3. Queries the Telegram API (`getUpdates`) for new messages starting from the
+    offset of the last processed ID.
+
+    4. Iterates through the retrieved updates, distinguishing between standard messages
+    (private/group) and channel posts.
+
+    5. Maps each message into a standardized event format, including timestamps and
+    metadata.
+
+    6. Creates an `AlertInfo` object for each event and adds it to the SOAR case queue.
+
+    7. Updates the persistent storage with the latest `update_id` upon successful
+    processing.

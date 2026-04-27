@@ -2,10 +2,11 @@ LOGZIO fetch-security-events:
   ai_description: >-
     ### General Description
 
-    The Logz.io Fetch Security Events connector enables the ingestion of security
-    events from a Logz.io account into Google SecOps. It allows security teams to
-    monitor and respond to security rules triggered within Logz.io by converting these
-    events into actionable cases within the SOAR platform.
+    This connector integrates with Logz.io to fetch security events and ingest them
+    as alerts into Google SecOps. It enables continuous monitoring of security rules
+    by querying the Logz.io Security Rules API, allowing for filtering by severity,
+    search terms, and specific time ranges. The connector handles pagination and concurrent
+    data retrieval to ensure efficient ingestion of security data.
 
 
     ### Parameters Description
@@ -21,48 +22,50 @@ LOGZIO fetch-security-events:
     (sub-type). |
 
     | from_date | String | Yes | Earliest time to search. Accepts Unix timestamps,
-    relative time, or "%Y-%m-%dT%H:%M:%S.%f". |
+    relative time, or specific date formats. |
 
     | logzio_custom_endpoint | String | No | Optional custom URL for the Logz.io API;
-    overrides logzio_region. |
+    overrides the region setting. |
 
     | logzio_region | String | No | 2-letter region code for your Logz.io account.
     |
 
-    | logzio_token | Password | Yes | API token for your Logz.io security account.
-    |
+    | logzio_token | String | Yes | API token for your Logz.io security account. |
 
     | page_size | Integer | No | Controls the number of results per page (1-1000).
     |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    python process. |
+    | PythonProcessTimeout | Integer | Yes | The timeout limit (in seconds) for the
+    Python process. |
 
     | search_term | String | No | Filter for a matching string in the rule name. |
 
-    | severities | String | No | Comma-delimited list of security rules severities
+    | severities | String | No | A comma-delimited list of security rules severities
     (e.g., "INFO", "LOW", "MEDIUM", "HIGH", "SEVERE"). |
 
 
     ### Flow Description
 
-    1. Initializes the connector and extracts configuration parameters, including
+    1. The connector initializes and retrieves configuration parameters, including
     the API token and region.
 
-    2. Determines the API endpoint based on the provided region or custom URL.
+    2. It determines the search time range based on the `from_date` parameter or the
+    last saved timestamp from previous runs.
 
-    3. Calculates the time range for the query, using either the last saved timestamp
-    or the user-provided `from_date`.
+    3. It constructs a request body with filters (time range, search term, severities)
+    and pagination settings.
 
-    4. Queries the Logz.io Security Rules API (`v2/security/rules/events/search`)
-    with the specified filters (search term, severities, pagination).
+    4. It queries the Logz.io Security Rules API (`v2/security/rules/events/search`)
+    to fetch security events.
 
-    5. Iterates through all available pages of results to collect all relevant security
-    events.
+    5. If multiple pages of results exist, it uses a thread pool to fetch all pages
+    concurrently.
 
-    6. Maps each Logz.io event to the Google SecOps alert format, including severity
-    mapping and event details.
+    6. Each retrieved event is mapped to a Google SecOps alert format, including severity
+    translation and metadata extraction.
 
-    7. Updates the internal timestamp to ensure subsequent runs fetch only new events.
+    7. The connector saves the latest event timestamp to ensure subsequent runs fetch
+    only new data.
 
-    8. Returns the collected alerts to the SOAR platform for case creation.
+    8. Finally, it returns the processed alerts to the Google SecOps platform for
+    case creation.

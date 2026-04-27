@@ -1,17 +1,3 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Block IP:
   action_product_categories:
     add_alert_comment: false
@@ -28,9 +14,9 @@ Block IP:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies external firewall policies to block specific IP addresses.
-      This directly aligns with the 'Add IOC To Blocklist' category. It does not perform
-      enrichment, ticket creation, or alert modification.
+      The action updates firewall policies in McAfee NSM to block specific IP addresses.
+      This aligns directly with the 'Add IOC To Blocklist' category. It does not perform
+      EDR host containment, so 'Contain Host' is false.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -105,21 +91,21 @@ Block IP:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates firewall policy and rule objects in McAfee NSM to block the specified
+      Updates firewall policies and rule objects in McAfee NSM to block the specified
       IP addresses.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action interacts with the McAfee NSM API to check the block status of an
-      IP (fetching data) and subsequently modifies firewall policies to block the
-      IP (mutating external data). It does not modify internal SOAR case data, update
-      entities, or create insights.
+      The action interacts with the McAfee NSM API to block IP addresses. It performs
+      GET requests to check the current block status and available rule objects, and
+      PUT/POST requests to update firewall policies and deploy changes, thus mutating
+      external data. It does not modify internal SOAR data (entities, insights, etc.).
   categories:
     enrichment: false
     reasoning: >-
-      The action is a containment action that modifies external firewall policies.
-      It does not meet the criteria for an enrichment action as it performs external
-      mutations and does not primarily serve to gather supplemental context.
+      The action mutates external data (blocks an IP on a firewall), which violates
+      the 'External State Preservation' rule for enrichment actions. Therefore, it
+      is not an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -137,8 +123,8 @@ Block IP:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and explicitly filters
-      for entities where `entity.entity_type == ADDRESS`.
+      The code iterates over `siemplify.target_entities` and filters specifically
+      for `EntityTypes.ADDRESS`.
 Get Alert Info Data:
   action_product_categories:
     add_alert_comment: false
@@ -155,9 +141,8 @@ Get Alert Info Data:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action retrieves detailed information about an alert from McAfee NSM. This
-      directly matches the 'Get Alert Information' category. It does not perform any
-      other operations like blocking, ticketing, or updating entities.
+      The action retrieves detailed information about an alert from the McAfee NSM
+      platform. This matches the 'Get Alert Information' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -173,24 +158,48 @@ Get Alert Info Data:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    ### General Description Retrieves detailed information for a specific alert from
-    McAfee Network Security Manager (NSM). This action is used to fetch the full context
-    of an alert, including signature details, attacker/target information, and malware
-    metadata, which can be used for further investigation or automated decision-making
-    within a playbook. ### Parameters Description | Parameter | Type | Mandatory |
-    Description | | :--- | :--- | :--- | :--- | | Alert ID | String | Yes | The unique
-    identifier of the alert in McAfee NSM. | | Sensor Name | String | Yes | The name
-    of the sensor that generated the alert. This is required to locate the alert within
-    the NSM architecture. | ### Additional Notes This action does not run on entities.
-    It requires a specific Alert ID and Sensor Name as input parameters. The retrieved
-    data is returned as a JSON object and displayed in a formatted data table within
-    the case wall. ### Flow Description 1. **Initialization**: The action initializes
-    the McAfee NSM manager using the integration's configuration (API Root, credentials,
-    and domain information). 2. **Parameter Retrieval**: The action extracts the Alert
-    ID and Sensor Name provided by the user or playbook. 3. **Sensor Resolution**:
-    The manager resolves the provided Sensor Name to its internal Sensor ID by querying
-    the NSM API. 4. **Data Retrieval**: A GET request is sent to the NSM API to fetch
-    the detailed alert information using the Alert ID and the resolved Sensor ID.
+    ### General Description
+
+    Retrieves detailed information for a specific alert from McAfee Network Security
+    Manager (NSM). This action is used to fetch the full context of an alert, including
+    signature details, attacker/target information, and malware metadata, which can
+    be used for further investigation or automated decision-making within a playbook.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Alert ID | String | Yes | The unique identifier of the alert in McAfee NSM.
+    |
+
+    | Sensor Name | String | Yes | The name of the sensor that generated the alert.
+    This is required to locate the alert within the NSM architecture. |
+
+
+    ### Additional Notes
+
+    This action does not run on entities. It requires a specific Alert ID and Sensor
+    Name as input parameters. The retrieved data is returned as a JSON object and
+    displayed in a formatted data table within the case wall.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the McAfee NSM manager using the
+    integration's configuration (API Root, credentials, and domain information).
+
+    2. **Parameter Retrieval**: The action extracts the Alert ID and Sensor Name provided
+    by the user or playbook.
+
+    3. **Sensor Resolution**: The manager resolves the provided Sensor Name to its
+    internal Sensor ID by querying the NSM API.
+
+    4. **Data Retrieval**: A GET request is sent to the NSM API to fetch the detailed
+    alert information using the Alert ID and the resolved Sensor ID.
+
     5. **Output Generation**: If data is found, it is added to the action's results
     as a raw JSON object and a formatted data table. The action then concludes with
     a success message.
@@ -207,13 +216,13 @@ Get Alert Info Data:
     reasoning: >-
       The action performs a GET request to the McAfee NSM API to retrieve alert details
       based on the provided Alert ID and Sensor Name. It does not modify any external
-      systems or internal case data.
+      systems or internal SOAR data (entities, insights, etc.).
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data from an external source (McAfee NSM) to provide context
-      about an alert. It does not mutate external or internal data. It qualifies as
-      an enrichment action because it gathers supplemental context about an alert.
+      The action fetches data from an external system (McAfee NSM) to provide context
+      for an alert. It does not mutate external or internal data. It qualifies as
+      an enrichment action.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -231,7 +240,7 @@ Get Alert Info Data:
     filters_by_modification_time: false
     reasoning: >-
       The action does not operate on entities. It uses input parameters (Alert ID,
-      Sensor Name) to fetch data directly from the McAfee NSM API.
+      Sensor Name) to fetch data.
 Is IP Blocked:
   action_product_categories:
     add_alert_comment: false
@@ -248,9 +257,10 @@ Is IP Blocked:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action returns the block status of an IP address, which provides context
-      on the indicator's current security enforcement state. This aligns with 'Enrich
-      IOC'. It does not perform any containment or blocking actions itself.
+      The action retrieves the block status of an IP address from the McAfee NSM,
+      which provides threat intelligence regarding the indicator's current enforcement
+      state. This matches the 'Enrich IOC' category. It does not perform any containment
+      or modification actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -317,15 +327,15 @@ Is IP Blocked:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action queries the McAfee NSM API to determine if an IP address is currently
-      blocked. It does not modify any external system state (no block/unblock commands
-      are sent). It does not modify internal SOAR data (no entity updates, insights,
-      or comments).
+      The action queries the McAfee NSM API to check the block status of IP addresses.
+      It performs GET requests to retrieve rule objects and verify if the IP is present.
+      It does not modify any external or internal data, nor does it update entities
+      or create insights.
   categories:
     enrichment: true
     reasoning: >-
       The action fetches data (block status) from an external system (McAfee NSM)
-      and does not mutate any external or internal state. This fits the definition
+      without modifying any external or internal state. This aligns with the definition
       of an enrichment action.
   entity_usage:
     entity_types:
@@ -344,8 +354,8 @@ Is IP Blocked:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code explicitly filters `siemplify.target_entities` for `ADDRESS` type using
-      `entity.entity_type == ADDRESS`.
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == ADDRESS`. It does not apply any other filters.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -362,8 +372,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping) and does not perform any of the listed
-      functional operations (enrichment, containment, ticket management, etc.).
+      The action is a connectivity test (Ping) and does not perform any of the defined
+      functional operations like enrichment, containment, or ticketing. Therefore,
+      it does not match any of the categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -381,14 +392,27 @@ Ping:
   ai_description: >-
     Tests connectivity to the McAfee Network Security Manager (NSM) instance. This
     action validates the provided credentials and network reachability by attempting
-    to establish an API session and immediately terminating it. ### Parameters There
-    are no parameters for this action. ### Flow Description 1. Configuration Retrieval:
-    The action fetches the integration configuration, including API Root, credentials,
-    and Domain ID. 2. Authentication: The NsmManager is initialized, which automatically
-    attempts to authenticate with the NSM API to retrieve a session token via a GET
-    request to the session endpoint. 3. Session Termination: The action explicitly
-    calls the logout method to close the established session using a DELETE request.
-    4. Result Reporting: If the authentication and logout cycle completes without
+    to establish an API session and immediately terminating it.
+
+
+    ### Parameters
+
+    There are no parameters for this action.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches the integration configuration,
+    including API Root, credentials, and Domain ID.
+
+    2. **Authentication**: The `NsmManager` is initialized, which automatically attempts
+    to authenticate with the NSM API to retrieve a session token via a GET request
+    to the session endpoint.
+
+    3. **Session Termination**: The action explicitly calls the `logout` method to
+    close the established session using a DELETE request.
+
+    4. **Result Reporting**: If the authentication and logout cycle completes without
     error, the action reports a successful connection.
   capabilities:
     can_create_case_comments: false
@@ -398,18 +422,19 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Terminates the API session on the McAfee NSM instance via a DELETE request.
+      Terminates the active API session on the McAfee NSM system.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a GET request to authenticate (fetches data/session token)
-      and a DELETE request to terminate the session (mutates external state). It does
-      not modify internal SOAR data or entities.
+      and a DELETE request to logout (mutates external state by ending the session).
+      It does not interact with SOAR entities or internal data.
   categories:
     enrichment: false
     reasoning: >-
-      The action is named Ping and is a connectivity test. Per the instructions, Actions
-      named Ping must not be categorized as enrichment actions.
+      The action is named 'Ping' and is a connectivity test. Per the instructions,
+      'Actions named Ping must not be categorized as enrichment actions.' It does
+      not perform any enrichment or data retrieval for entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -426,7 +451,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities as indicated by the empty SimulationDataJson.
+      The action does not interact with any entities. The `SimulationDataJson` confirms
+      an empty list of entities.
 Quarantine IP:
   action_product_categories:
     add_alert_comment: false
@@ -443,10 +469,10 @@ Quarantine IP:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a POST request to quarantine an IP address on McAfee NSM
-      sensors, which isolates the host from the network. This aligns with 'Contain
-      Host' and 'Add IOC To Blocklist' as it prevents network traffic for the specified
-      IP.
+      The action performs a quarantine operation on an IP address via the McAfee NSM
+      API. This aligns with the 'Contain Host' category, as it isolates the endpoint
+      from the network. It also functions as a blocklist update, as it prevents future
+      interaction with the IOC.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -518,20 +544,21 @@ Quarantine IP:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Performs a POST request to the NSM API to quarantine the IP address, effectively
-      blocking network traffic for that host.
-    fetches_data: true
+      Sends a POST request to the McAfee NSM API to quarantine the specified IP address
+      on the configured sensors.
+    fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches sensor IDs from the McAfee NSM API to resolve the target
-      sensors. It then performs a POST request to quarantine the specified IP address
-      entities, which mutates the external system state.
+      The action iterates over `ADDRESS` entities and performs a POST request to the
+      McAfee NSM API to quarantine the IP address on specified sensors. This is an
+      external mutation. It does not fetch entity context or update internal SOAR
+      data (entities, insights, or comments).
   categories:
     enrichment: false
     reasoning: >-
-      The action is a containment action that modifies the external system state (quarantining
-      an IP). It does not retrieve contextual data about the entities for enrichment
-      purposes, so it is not an enrichment action.
+      The action performs a state change on an external system (McAfee NSM) to quarantine
+      an IP. It does not retrieve data for enrichment or modify internal SOAR data.
+      Therefore, it is not an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -549,8 +576,8 @@ Quarantine IP:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters for entities
-      where `entity.entity_type == ADDRESS`. It does not filter by other attributes.
+      The code iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type == ADDRESS` to filter the entities it processes.
 Unblock IP:
   action_product_categories:
     add_alert_comment: false
@@ -567,9 +594,9 @@ Unblock IP:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action removes an IP address from a firewall blocklist in McAfee NSM, which
-      directly matches the 'Remove IOC From Blocklist' category. It does not perform
-      enrichment, containment, or other identity-related tasks.
+      The action removes an IP address from a firewall blocklist in McAfee NSM. This
+      directly aligns with the 'Remove IOC From Blocklist' category. It does not perform
+      enrichment, containment (which is blocking), or other listed operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: true
     reset_identity_password: false
@@ -613,21 +640,21 @@ Unblock IP:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes the IP address from the firewall blocklist rule object in McAfee NSM
-      and triggers a configuration deployment to sensors.
+      Removes IP addresses from firewall rules or deletes rule objects in McAfee NSM,
+      and deploys configuration changes to sensors.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches rule objects and policy information from the McAfee NSM API
-      to identify the target IP's rule. It then performs PUT/DELETE operations to
-      remove the IP from the rule or delete the rule object, and triggers a configuration
-      deployment. It does not modify internal SOAR data.
+      The action interacts with the McAfee NSM API to identify and remove IP addresses
+      from firewall rules. It performs GET requests to find the rule objects and PUT/DELETE
+      requests to modify the firewall configuration, thus mutating external data.
+      It does not modify internal SOAR data (entities, insights, or comments).
   categories:
     enrichment: false
     reasoning: >-
-      The action modifies external data (removes an IP from a firewall rule and updates
-      sensor configuration), which violates the 'External State Preservation' rule
-      for enrichment actions. Therefore, it is not an enrichment action.
+      The action is a mutation action (unblocking an IP) that modifies external firewall
+      configurations. It does not meet the criteria for an enrichment action, which
+      must be read-only regarding external systems.
   entity_usage:
     entity_types:
     - ADDRESS

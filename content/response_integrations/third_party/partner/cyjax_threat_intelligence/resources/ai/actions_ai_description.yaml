@@ -14,10 +14,9 @@ Domain monitor:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves domain monitoring data from the Cyjax API based on search
-      parameters. This matches the 'Search Events' category, as it returns a collection
-      of telemetry data. It does not match enrichment categories because it does not
-      operate on specific entities.
+      The action retrieves a collection of domain monitoring records based on search
+      parameters. This aligns with the 'Search Events' category, which involves returning
+      historical logs or telemetry data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -33,18 +32,45 @@ Domain monitor:
     update_identity: false
     update_ticket: false
   ai_description: >-
-    Retrieves domain monitoring information from Cyjax, tracking brands against newly
-    registered global domains and certificate transparency logs (CTL). This action
-    queries the Cyjax API based on provided search parameters (Query, Since, Until)
-    and returns a structured list of domain monitor results. The results are displayed
-    in a data table and provided as raw JSON output. Parameters: Query (string, optional):
-    A query string to search for a domain or part of it. Since (string, optional):
-    The start date time in ISO8601 format. Until (string, optional): The end date
-    time in ISO8601 format. Flow: 1. Extracts configuration (API token, SSL verification)
-    and action parameters (Query, Since, Until). 2. Validates date parameters. 3.
-    Initializes the Cyjax API client. 4. Queries the Cyjax Domain Monitor endpoint
-    with pagination support. 5. Processes the retrieved domain data into a structured
-    format. 6. Adds a data table to the action results and returns the raw JSON output.
+    ### General Description
+
+    This action retrieves domain monitoring information from Cyjax, tracking brands
+    against newly registered global domains and certificate transparency logs (CTL).
+    It allows users to search for specific domains or monitor activity within a defined
+    timeframe.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Query | string | No | A query string to search for a domain or part of it. |
+
+    | Since | string | No | The start date time in ISO8601 format (YYYY-MM-DDTHH:MM:SSZ).
+    |
+
+    | Until | string | No | The end date time in ISO8601 format (YYYY-MM-DDTHH:MM:SSZ).
+    |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts configuration (API token, SSL verification) and
+    action parameters (Query, Since, Until).
+
+    2. **Validation**: Validates the provided date parameters to ensure the 'Since'
+    date is not after the 'Until' date.
+
+    3. **API Interaction**: Initializes the Cyjax API client and queries the Domain
+    Monitor endpoint. The action supports automatic pagination to retrieve up to 1000
+    records.
+
+    4. **Processing**: Processes the retrieved domain data into a structured format.
+
+    5. **Output**: Adds a data table to the action results for display and returns
+    the raw JSON output.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -57,13 +83,16 @@ Domain monitor:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a GET request to the Cyjax API to retrieve domain monitoring
-      data. It does not modify external systems or internal SOAR data (entities, insights,
-      etc.). It simply displays the results in a table and JSON format.
+      data. It does not modify any external systems (no POST/PUT/DELETE), nor does
+      it modify internal SOAR data (entities, case fields, etc.). It simply reports
+      findings via data tables and JSON results.
   categories:
     enrichment: false
     reasoning: >-
-      The action does not operate on entities (no target_entities usage), so it cannot
-      be an enrichment action. It is a standalone search action.
+      While the action fetches data, it does not operate on specific entities (it
+      is a global search/monitoring action). Therefore, it does not meet the criteria
+      for an Enrichment Action, which is defined as a task to gather context about
+      specific alerts or entities.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -80,8 +109,8 @@ Domain monitor:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code does not iterate over siemplify.target_entities or use any entity-specific
-      logic. It is a standalone search action.
+      The action does not iterate over or process any target entities. It is a global
+      search action.
 Enrich IOCs:
   action_product_categories:
     add_alert_comment: false
@@ -98,8 +127,9 @@ Enrich IOCs:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves reputation and threat intelligence (GeoIP, ASN, Sightings)
-      for indicators of compromise. This aligns with the 'Enrich IOC' category.
+      The action retrieves threat intelligence (GeoIP, ASN, sightings) for indicators
+      of compromise, which directly matches the 'Enrich IOC' category. It does not
+      perform any other actions such as ticketing, blocking, or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -145,18 +175,20 @@ Enrich IOCs:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity `additional_properties` with enrichment data and sets `is_enriched`
-      to True.
+      Updates entity `additional_properties` and the `is_enriched` flag for processed
+      entities.
     reasoning: >-
-      The action fetches threat intelligence data from the Cyjax API (GET requests)
-      and updates the entities within the SOAR platform with the retrieved enrichment
-      data. It does not mutate external systems, modify alert data, or create insights/comments.
+      The action fetches threat intelligence data from the Cyjax API (GET request).
+      It does not mutate external systems. It performs internal mutations by updating
+      entity `additional_properties` and the `is_enriched` flag, and it updates the
+      entities within the SOAR platform. It does not create insights, modify alert
+      data, or create case comments.
   categories:
     enrichment: true
     reasoning: >-
-      The action fetches data from an external source (Cyjax) and updates internal
-      entity attributes. It does not mutate external systems or perform forbidden
-      internal mutations. It is a valid enrichment action.
+      The action fetches data from an external source (Cyjax) to enrich entities.
+      It does not mutate external systems. It performs allowed internal mutations
+      (updating entities). Therefore, it qualifies as an enrichment action.
   entity_usage:
     entity_types:
     - ADDRESS
@@ -180,10 +212,9 @@ Enrich IOCs:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action retrieves all target entities from the case using `get_entity_objects`
-      and iterates through them to perform enrichment. It does not apply any filtering
-      logic based on entity attributes (like type, creation time, etc.) within the
-      script, so it is considered to run on all supported entity types.
+      The action processes all target entities provided in the case without specific
+      type filtering in the code logic. It supports the entity types defined in the
+      integration metadata.
 List Data Breaches:
   action_product_categories:
     add_alert_comment: false
@@ -200,10 +231,9 @@ List Data Breaches:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches data breach records from the Cyjax API based on search parameters.
-      This matches the 'Search Events' category as it retrieves historical telemetry
-      data. It does not perform enrichment on entities, nor does it mutate external
-      or internal systems.
+      The action retrieves historical data breach records from an external service
+      based on search parameters. This aligns with the 'Search Events' category, which
+      involves returning collections of historical logs or telemetry data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -245,7 +275,8 @@ List Data Breaches:
     ### Additional Notes
 
     The action automatically handles pagination up to a limit of 1000 records. If
-    the limit is reached, a note is added to the output message.
+    the limit is reached, a note is added to the output message. The results are presented
+    as a data table within the case and returned as raw JSON.
 
 
     ### Flow Description
@@ -273,15 +304,17 @@ List Data Breaches:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the Cyjax API to retrieve data breach records
-      (fetches_data=true). It does not perform any POST/PUT/DELETE operations (can_mutate_external_data=false).
-      It does not modify any internal case data, entities, or insights (can_mutate_internal_data=false).
+      The action performs a GET request to the Cyjax API to retrieve data breach information.
+      It does not modify any external systems (no POST/PUT/DELETE). It does not modify
+      internal SOAR case data (entities, insights, or case wall), but rather outputs
+      results via data tables and JSON results, which are standard output mechanisms.
   categories:
     enrichment: false
     reasoning: >-
-      The action is not an enrichment action because it does not operate on entities
-      or alerts to gather supplemental context. It is a standalone search action that
-      retrieves data breach records.
+      The action is a search/lookup tool that does not operate on specific entities
+      or alerts to provide enrichment. It does not meet the criteria for an Enrichment
+      Action as it does not gather supplemental context about existing entities or
+      alerts.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -298,9 +331,8 @@ List Data Breaches:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or utilize `siemplify.target_entities`. It
-      performs a standalone search against the Cyjax API based on provided parameters,
-      therefore it does not operate on any specific entity types.
+      The action does not iterate over or process any entities from the case. It performs
+      a global search based on provided parameters.
 Ping:
   action_product_categories:
     add_alert_comment: false
@@ -317,8 +349,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test ('Ping') and does not perform any of the defined
-      functional operations such as enrichment, containment, ticketing, or alert management.
+      The action is a connectivity test ("Ping") and does not perform any of the defined
+      functional outcomes (enrichment, containment, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -361,17 +393,17 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the Cyjax API to verify connectivity. It
-      does not modify any external systems, update internal entities, or create insights.
-      It is a utility action for connectivity testing.
+      The action performs a connectivity test (Ping) by making a GET request to the
+      Cyjax API. It does not fetch contextual data about alerts or entities, nor does
+      it mutate any external or internal data.
   categories:
     enrichment: false
     reasoning: >-
-      The action is a connectivity test ('Ping'). Per the instructions, actions named
-      'Ping' must not be categorized as enrichment actions, even if they fetch data.
+      The action is a connectivity test ("Ping"). Per the instructions, Ping actions
+      are not enrichment actions.
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -388,5 +420,5 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or process any entities. It is a global connectivity
-      test.
+      The action does not process any entities, therefore it does not use any entity
+      types or apply any filters.

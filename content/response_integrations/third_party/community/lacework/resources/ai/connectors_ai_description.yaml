@@ -2,11 +2,10 @@ Lacework Connector:
   ai_description: >-
     ### General Description
 
-    The Lacework Connector is designed to ingest security events from the Lacework
-    platform into Google SecOps (SOAR). It periodically polls the Lacework Events
-    API to retrieve security alerts, filters them based on a configurable severity
-    threshold, and maps them into standardized alert objects for further investigation
-    and response within the SOAR platform.
+    The Lacework Connector integrates Google SecOps (SOAR) with the Lacework platform.
+    It periodically polls the Lacework Events API to retrieve security events, filters
+    them based on a configurable severity threshold, and ingests them into the SOAR
+    platform as alerts for further investigation and response.
 
 
     ### Parameters Description
@@ -15,7 +14,8 @@ Lacework Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | accountName | String | Yes | The Lacework account name/URL identifier. |
+    | accountName | String | Yes | The Lacework account name used to construct the
+    API URL. |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
     product. |
@@ -26,29 +26,32 @@ Lacework Connector:
     | keyId | String | Yes | The Lacework API Key ID. |
 
     | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    python process. |
+    Python process. |
 
-    | secret | Password | Yes | The Lacework API Secret. |
+    | secret | String | Yes | The Lacework API Secret. |
 
-    | severity_threshold | String | Yes | Lacework Event Severity Threshold (1-Critical
-    to 5-Info). |
+    | severity_threshold | String | Yes | Lacework Event Severity Threshold (1-Critical,
+    2-High, 3-Medium, 4-Low, 5-Info). Only events with severity equal to or higher
+    than this value are processed. |
 
 
     ### Flow Description
 
-    1. The connector initializes by authenticating with the Lacework API using the
-    provided `keyId`, `secret`, and `accountName` to obtain a temporary access token.
+    1. The connector initializes the `LaceworkManager` using the provided credentials
+    (`keyId`, `secret`, `accountName`).
 
-    2. It queries the Lacework Events API for events occurring within the last hour.
+    2. It authenticates with the Lacework API to obtain a temporary access token.
 
-    3. For each retrieved event, the connector checks the event's severity against
-    the configured `severity_threshold`.
+    3. It queries the Lacework Events API (`/api/v1/external/events/GetEventsForDateRange`)
+    to fetch events generated within the last hour.
 
-    4. If the event meets the threshold, the connector fetches detailed information
-    for that specific event ID.
+    4. For each retrieved event, the connector checks the severity against the configured
+    `severity_threshold`.
 
-    5. The event data is mapped to a standardized SOAR `AlertInfo` format, including
-    severity mapping, start/end times, and event details.
+    5. If the event meets the threshold, the connector fetches full event details
+    using the `GetEventDetails` endpoint.
 
-    6. Finally, the processed alerts are returned to the SOAR system for case creation
-    and ingestion.
+    6. The event data is mapped to the SOAR `AlertInfo` format, including severity
+    mapping (e.g., Lacework 1 maps to SOAR 100/Critical).
+
+    7. The processed alerts are packaged and returned to the SOAR platform for ingestion.

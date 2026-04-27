@@ -1,26 +1,12 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 FireEye EX - Alerts Connector:
   ai_description: >-
     ### General Description
 
-    The FireEye EX - Alerts Connector is designed to integrate with the FireEye EX
-    (Email Security) platform to ingest malicious email alerts into Google SecOps.
-    It periodically polls the FireEye EX API for new alerts, groups them based on
-    email metadata (subject, sender, recipient), and creates corresponding cases within
-    the SOAR platform for further investigation and response.
+    The FireEye EX - Alerts Connector is designed to ingest security alerts from the
+    FireEye EX (Email Security) platform into Google SecOps. It periodically polls
+    the FireEye EX API for new alerts, processes them, and creates corresponding cases
+    within the SOAR platform. This integration helps security teams centralize email-based
+    threat detection and response.
 
 
     ### Parameters Description
@@ -41,44 +27,51 @@ FireEye EX - Alerts Connector:
     | Environment Regex Pattern | String | No | Regex pattern to manipulate the environment
     field value. |
 
-    | PythonProcessTimeout | Integer | Yes | Timeout limit for the Python process.
-    |
+    | PythonProcessTimeout | Integer | Yes | Timeout limit (in seconds) for the Python
+    process. |
 
     | API Root | String | Yes | API root URL of the FireEye EX server. |
 
-    | Username | String | Yes | Username for the FireEye EX account. |
+    | Username | String | Yes | Username for FireEye EX authentication. |
 
-    | Password | String | Yes | Password for the FireEye EX account. |
+    | Password | String | Yes | Password for FireEye EX authentication. |
 
-    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate for the connection.
-    |
+    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate of the FireEye
+    EX server. |
 
-    | Fetch Max Hours Backwards | Integer | Yes | Hours to look back for initial alert
-    retrieval. |
+    | Fetch Max Hours Backwards | Integer | Yes | Hours to look back for alerts during
+    the initial run or fallback. |
 
     | Proxy Server Address | String | No | Address of the proxy server. |
 
-    | Proxy Username | String | No | Proxy username for authentication. |
+    | Proxy Username | String | No | Username for proxy authentication. |
 
-    | Proxy Password | String | No | Proxy password for authentication. |
+    | Proxy Password | String | No | Password for proxy authentication. |
 
 
     ### Flow Description
 
-    1. Authenticates with the FireEye EX API using the provided credentials.
+    1. The connector initializes and connects to the FireEye EX API using the provided
+    credentials.
 
-    2. Retrieves alerts from the FireEye EX server based on the configured time range.
+    2. It retrieves the last successful execution time to determine the starting point
+    for fetching alerts.
 
-    3. Filters out previously processed alerts using a local tracking file (`ids.json`).
+    3. It fetches alerts from the FireEye EX API, filtering by the specified time
+    range.
 
-    4. Excludes alerts that occurred within the last 5 minutes to ensure data stability.
+    4. It filters out previously processed alerts using a local `ids.json` file to
+    prevent duplication.
 
-    5. Groups individual alerts into logical groups based on email subject, sender,
-    and recipient.
+    5. It drops alerts that occurred within the last 5 minutes to ensure data completeness.
 
-    6. Maps the grouped alerts into the SOAR `AlertInfo` format, including environment
+    6. It groups the remaining alerts by email subject, recipient, and sender.
+
+    7. It maps the grouped alerts into the SOAR `AlertInfo` format, including environment
     mapping.
 
-    7. Checks for alert overflow to prevent system saturation.
+    8. It checks for overflow alerts and creates cases in Google SecOps for valid
+    alerts.
 
-    8. Ingests the processed alert groups into the SOAR platform as cases.
+    9. Finally, it updates the last success timestamp and saves the processed alert
+    IDs.

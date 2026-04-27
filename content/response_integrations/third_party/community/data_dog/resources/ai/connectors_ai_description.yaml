@@ -2,10 +2,10 @@ DataDog Connector:
   ai_description: >-
     ### General Description
 
-    The DataDog Connector is designed to ingest events from DataDog into Google SecOps.
-    It allows security teams to monitor DataDog-generated incidents, such as monitor
-    triggers, by fetching event data based on configurable filters like tags, priority,
-    and source types.
+    The DataDog Connector enables the ingestion of events and alerts from DataDog
+    into Google SecOps. It allows security teams to monitor and respond to infrastructure
+    and application alerts directly within the SOAR platform, facilitating centralized
+    incident management.
 
 
     ### Parameters Description
@@ -14,60 +14,53 @@ DataDog Connector:
 
     | :--- | :--- | :--- | :--- |
 
-    | API Key | Password | Yes | The API Key used to authenticate with the DataDog
-    API. |
+    | API Key | String | Yes | Your DataDog API key. |
 
-    | APP Key | Password | Yes | The Application Key used to authenticate with the
-    DataDog API. |
+    | APP Key | String | Yes | Your DataDog Application key. |
 
     | Base URL | String | Yes | The base URL for the DataDog API (default: https://api.datadoghq.com).
     |
 
     | DeviceProductField | String | Yes | The field name used to determine the device
-    product. |
+    product (default: device_product). |
 
     | EventClassId | String | Yes | The field name used to determine the event name
-    (sub-type). |
+    (default: event_name). |
 
-    | Max Days Back | Integer | Yes | The maximum number of days to look back when
-    fetching events. |
+    | Max Days Back | Integer | Yes | The maximum number of days to look back for
+    events (default: 7). |
 
     | Priority | String | No | The priority of events to retrieve (e.g., 'low', 'normal',
     'all'). |
 
-    | PythonProcessTimeout | String | Yes | The timeout limit (in seconds) for the
-    Python process. |
+    | PythonProcessTimeout | String | Yes | The timeout limit in seconds for the Python
+    process (default: 30). |
 
     | Sources | String | Yes | The sources to retrieve events from (e.g., 'alert').
     |
 
-    | Tags | String | No | A comma-separated list of tags to filter the list of monitors.
-    |
+    | Tags | String | No | A comma-separated list of tags to filter monitors by scope
+    (default: 'monitor'). |
 
     | Unaggregated | Boolean | No | If true, retrieves the full list of events; if
-    false, retrieves an aggregated list. |
+    false, retrieves an aggregated list (default: true). |
 
 
     ### Flow Description
 
-    1. **Initialization**: Connects to the DataDog API using the provided API and
-    Application keys.
+    1. Initializes the DataDog client using the provided API and APP keys.
 
-    2. **Time Range Calculation**: Determines the time range for fetching events based
-    on the last successful run's timestamp or the configured `Max Days Back`.
+    2. Determines the start time for fetching events based on the last saved timestamp
+    or the configured 'Max Days Back' value.
 
-    3. **Event Retrieval**: Queries the DataDog API (`/api/v1/events`) for events
-    matching the specified sources, tags, priority, and aggregation settings.
+    3. Queries the DataDog API for events matching the configured sources, tags, and
+    priority.
 
-    4. **Filtering**: Iterates through the retrieved events, filtering for those with
-    "error" or "warning" alert types.
+    4. Iterates through the retrieved events:
+        * If an event contains children, each child is processed as a separate alert.
+        * If an event has no children, the parent event is processed as an alert.
+    5. Maps event data (e.g., monitor name, metric, timestamp) to the Google SecOps
+    alert format.
 
-    5. **Data Processing**: For each relevant event, fetches full details, maps the
-    data (including tags, metrics, and URLs) into a standardized `AlertInfo` format,
-    and identifies child events if present.
-
-    6. **Ingestion**: Creates and ingests the processed alerts into the Google SecOps
-    platform.
-
-    7. **State Management**: Updates the last saved timestamp to ensure subsequent
-    runs only fetch new events.
+    6. Ingests the processed alerts into the SOAR platform and updates the last saved
+    timestamp to the latest event time.
