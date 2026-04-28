@@ -43,7 +43,12 @@ def main(is_test_run: bool) -> None:
         input_type=int,
         default_value=24,
     )
-    services: str = siemplify.extract_connector_param(param_name="Services")
+
+    verify_ssl: bool = siemplify.extract_connector_param(
+        param_name="Verify SSL",
+        input_type=bool,
+        default_value=True,
+    )
     proxy_address: str = siemplify.extract_connector_param(
         param_name="Proxy Server Address"
     )
@@ -53,6 +58,7 @@ def main(is_test_run: bool) -> None:
     siemplify.LOGGER.info("------------------- Main - Started -------------------")
     manager = PagerDutyManager(
         api_key=api_key,
+        verify_ssl=verify_ssl,
     )
 
     if proxy_address:
@@ -77,10 +83,7 @@ def main(is_test_run: bool) -> None:
             datetime.datetime.now(datetime.timezone.utc) - time_diff
         ).strftime("%Y-%m-%dT%H:%M:%SZ")
         params: dict[str, Any] = {"since": since}
-        if services:
-            params["service_ids[]"] = [
-                s.strip() for s in services.split(",") if s.strip()
-            ]
+
         incidents_list: list[SingleJson] = manager.list_filtered_incidents(
             params=params
         )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from email.utils import parseaddr
 from types import SimpleNamespace
 from typing import Any
 
@@ -39,8 +40,19 @@ class SyncIncidents(BaseSyncJob[PagerDutyManager]):
         Returns:
             The initialized API client.
         """
-        verify_ssl: bool = getattr(self.params, "Verify SSL", True)
-        from_email: str | None = getattr(self.params, "From Email", None)
+        verify_ssl: bool = self.params.verify_ssl
+        from_email: str = self.params.from_email
+        max_hours_backwards: int = int(self.params.max_hours_backwards)
+        if max_hours_backwards <= 0:
+            raise ValueError("'Max Hours Backwards' must be a positive integer.")
+
+        if not from_email:
+            raise ValueError("'From Email' must be provided.")
+
+        realname, email = parseaddr(from_email)
+        if not email or "@" not in email:
+            raise ValueError("'From Email' must be a valid email address.")
+
         return PagerDutyManager(
             api_key=self.params.api_key,
             verify_ssl=verify_ssl,
