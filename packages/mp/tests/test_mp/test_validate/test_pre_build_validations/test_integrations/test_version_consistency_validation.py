@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
@@ -28,10 +27,6 @@ from mp.core.exceptions import NonFatalValidationError
 from mp.validate.pre_build_validation.integrations.version_consistency_validation import (
     VersionConsistencyValidation,
 )
-
-if TYPE_CHECKING:
-    pass
-
 
 def _write_pyproject_version(integration_path: Path, version: str) -> None:
     """Write a minimal pyproject.toml with the given version."""
@@ -142,7 +137,7 @@ class TestVersionConsistencyValidation:
             mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
             mock.patch(
                 "mp.core.unix.get_files_unmerged_to_main_branch",
-                return_value=["some_file.py"],
+                return_value=[Path("some_file.py")],
             ),
             pytest.raises(NonFatalValidationError, match="doesn't match"),
         ):
@@ -161,3 +156,12 @@ class TestVersionConsistencyValidation:
         rn_path = temp_integration / "release_notes.yaml"
         rn_path.write_text("", encoding="utf-8")
         self.runner.run(temp_integration)  # Should not raise
+
+    def test_pyproject_matches_non_last_entry_fails(self, temp_integration: Path) -> None:
+        """Only the last RN entry is compared; matching an earlier entry is not sufficient."""
+        # pyproject=2.0 matches the middle entry but NOT the last (3.0) — should fail
+        _write_pyproject_version(temp_integration, "2.0")
+        _write_release_notes(temp_integration, ["1.0", "2.0", "3.0"])
+
+        with pytest.raises(NonFatalValidationError, match="doesn't match"):
+            self.runner.run(temp_integration)

@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
@@ -25,9 +24,6 @@ from mp.core.unix import NonFatalCommandError
 from mp.validate.pre_build_validation.integrations.release_notes_date_validation import (
     ReleaseNotesDateValidation,
 )
-
-if TYPE_CHECKING:
-    pass
 
 VALIDATOR = ReleaseNotesDateValidation()
 
@@ -100,7 +96,7 @@ class TestReleaseNotesDateValidationLocal:
         """In local runs, all entries (including pre-existing) are validated."""
         rn = temp_integration / "release_notes.yaml"
         rn.write_text(TWO_ENTRY_RN_OLD_MISSING, encoding="utf-8")
-        with pytest.raises(NonFatalValidationError, match="v1.0"):
+        with pytest.raises(NonFatalValidationError, match=r"v1:"):
             VALIDATOR.run(temp_integration)
 
 
@@ -140,7 +136,7 @@ class TestReleaseNotesDateValidationCI:
             mock.patch("mp.core.unix.get_files_unmerged_to_main_branch", return_value=self._make_changed(temp_integration)),
             mock.patch("mp.core.unix.get_file_content_from_main_branch", return_value=OLD_MAIN_RN),
         ):
-            with pytest.raises(NonFatalValidationError, match="v2.0"):
+            with pytest.raises(NonFatalValidationError, match=r"v2:"):
                 VALIDATOR.run(temp_integration)
 
     def test_no_changes_in_integration_skips(self, temp_integration: Path) -> None:
@@ -176,3 +172,28 @@ class TestReleaseNotesDateValidationCI:
         ):
             with pytest.raises(NonFatalValidationError, match="invalid publish_time"):
                 VALIDATOR.run(temp_integration)
+
+    def test_float_int_version_coercion_skips_correctly(self, temp_integration: Path) -> None:
+        """YAML parses unquoted 1.0 as float and 1 as int — both must be treated as equal
+        so a pre-existing entry with version 1.0 (float) is skipped when comparing to a
+        new entry at version 2.0, and the old float-versioned entry isn't re-validated."""
+        # Main branch has unquoted 1.0 → parsed as float by yaml.safe_load
+        old_main_rn_unquoted = "- integration_version: 1.0\n  description: Initial\n"
+        # Current file has new entry (2.0) plus pre-existing (1.0, no publish_time)
+        current_rn = (
+            "- integration_version: 2.0\n"
+            "  publish_time: '2026-04-28'\n"
+            "  description: New\n"
+            "- integration_version: 1.0\n"
+            "  description: Initial\n"
+        )
+        rn = temp_integration / "release_notes.yaml"
+        rn.write_text(current_rn, encoding="utf-8")
+
+        with (
+            mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
+            mock.patch("mp.core.unix.get_files_unmerged_to_main_branch", return_value=self._make_changed(temp_integration)),
+            mock.patch("mp.core.unix.get_file_content_from_main_branch", return_value=old_main_rn_unquoted),
+        ):
+            # v1.0 pre-exists on main (unquoted float); v2.0 is new with valid date → pass
+            VALIDATOR.run(temp_integration)

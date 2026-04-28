@@ -134,3 +134,24 @@ class TestEmptyInitFilesValidation:
         ):
             with pytest.raises(NonFatalValidationError, match="__init__.py files must be empty"):
                 self.validator_runner.run(temp_integration)
+
+    def test_non_init_change_still_validates_all_inits(self, temp_integration: pathlib.Path) -> None:
+        """The CI gate is integration-level (any change triggers), not file-level.
+
+        Changing a non-init file (e.g. an action) still causes ALL __init__.py
+        files in checked dirs to be validated.
+        """
+        init_file = temp_integration / "actions" / "__init__.py"
+        init_file.write_text("import os\n", encoding="utf-8")  # bad content
+        other_changed = temp_integration / "actions" / "ping.py"  # different file changed
+
+        with (
+            mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
+            mock.patch(
+                "mp.core.unix.get_files_unmerged_to_main_branch",
+                return_value=[other_changed],
+            ),
+        ):
+            # Integration has changes → all inits validated → bad actions/__init__.py caught
+            with pytest.raises(NonFatalValidationError, match="__init__.py files must be empty"):
+                self.validator_runner.run(temp_integration)

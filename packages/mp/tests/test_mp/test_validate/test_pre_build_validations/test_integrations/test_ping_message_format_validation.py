@@ -205,3 +205,12 @@ class TestPingMessageFormatValidation:
 
         # No ping file found — should not raise
         self.validator_runner.run(temp_integration)
+
+    def test_failure_on_missing_success_message_no_ci(self, temp_integration: pathlib.Path) -> None:
+        """Test that bad ping content fails in a local (non-CI) run too."""
+        ping_file = temp_integration / constants.ACTIONS_DIR / "ping.py"
+        ping_file.write_text(_MISSING_SUCCESS_PING_CONTENT, encoding="utf-8")
+
+        # No GITHUB_PR_SHA → validator always runs (no CI gate)
+        with pytest.raises(NonFatalValidationError, match="Ping success message must contain"):
+            self.validator_runner.run(temp_integration)

@@ -112,17 +112,19 @@ jobs:
       - name: Run integration tests
         env:
           GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
+          TEST_ALL: ${{ needs.changes.outputs.test_all }}
+          CHANGED_INTEGRATIONS: ${{ needs.changes.outputs.changed_integrations }}
         # language=bash
         run: |
           mp config --root-path . --processes 10 --display-config
 
-          if [[ "${{ needs.changes.outputs.test_all }}" == "true" ]]; then
+          if [[ "$TEST_ALL" == "true" ]]; then
             echo "Shared packages changed — testing all integrations"
             mp test --repository third_party --raise-error-on-violations
           else
-            echo "Testing only changed integrations: ${{ needs.changes.outputs.changed_integrations }}"
+            echo "Testing only changed integrations: $CHANGED_INTEGRATIONS"
             FAILED=0
-            for integration in ${{ needs.changes.outputs.changed_integrations }}; do
+            for integration in $CHANGED_INTEGRATIONS; do
               echo "--- Testing: $integration ---"
               mp test --integration "$integration" --raise-error-on-violations || FAILED=1
             done

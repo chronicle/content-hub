@@ -29,6 +29,22 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+def _normalize_version(v: object) -> str:
+    """Normalize a YAML-parsed version value to a canonical string.
+
+    YAML parses unquoted ``1.0`` as ``float`` and ``1`` as ``int``, causing
+    ``str(1.0) == "1.0"`` while ``str(1) == "1"``.  Converting through
+    ``float`` first ensures both map to the same representation.
+    """
+    try:
+        f = float(str(v))
+        if f == int(f):
+            return str(int(f))
+        return str(f)
+    except (ValueError, OverflowError, TypeError):
+        return str(v)
+
+
 @dataclasses.dataclass(slots=True, frozen=True)
 class ReleaseNotesDateValidation:
     """Validate that release notes have valid publish dates."""
@@ -66,14 +82,14 @@ class ReleaseNotesDateValidation:
             try:
                 base_content = yaml.safe_load(mp.core.unix.get_file_content_from_main_branch(rn_path))
                 if isinstance(base_content, list):
-                    existing_versions = {str(note.get("integration_version", "")) for note in base_content}
+                    existing_versions = {_normalize_version(note.get("integration_version", "")) for note in base_content}
             except mp.core.unix.NonFatalCommandError:
                 pass  # File doesn't exist on main yet — all entries are new
 
         date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
         invalid: list[str] = []
         for note in content:
-            version = str(note.get("integration_version", "?"))
+            version = _normalize_version(note.get("integration_version", "?"))
             if head_sha and version in existing_versions:
                 continue  # Pre-existing entry — skip
             publish_time = str(note.get("publish_time", ""))

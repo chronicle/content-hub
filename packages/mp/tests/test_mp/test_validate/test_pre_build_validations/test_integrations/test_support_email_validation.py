@@ -85,7 +85,7 @@ class TestSupportEmailValidation:
             mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
             mock.patch(
                 "mp.core.unix.get_files_unmerged_to_main_branch",
-                return_value=["some_file.py"],
+                return_value=[Path("some_file.py")],
             ),
             pytest.raises(NonFatalValidationError, match="support email"),
         ):
