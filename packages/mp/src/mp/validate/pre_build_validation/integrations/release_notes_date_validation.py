@@ -35,6 +35,10 @@ def _normalize_version(v: object) -> str:
     YAML parses unquoted ``1.0`` as ``float`` and ``1`` as ``int``, causing
     ``str(1.0) == "1.0"`` while ``str(1) == "1"``.  Converting through
     ``float`` first ensures both map to the same representation.
+
+    Returns:
+        A canonical string representation of the version.
+
     """
     try:
         f = float(str(v))
@@ -43,6 +47,26 @@ def _normalize_version(v: object) -> str:
         return str(f)
     except (ValueError, OverflowError, TypeError):
         return str(v)
+
+
+def _versions_on_main(rn_path: Path) -> set[str]:
+    """Return normalized version strings from the main-branch release notes.
+
+    Args:
+        rn_path: Path to the release_notes.yaml file in the working tree.
+
+    Returns:
+        Set of canonical version strings already on main, or an empty set
+        when the file does not yet exist on main or cannot be parsed.
+
+    """
+    try:
+        base_content = yaml.safe_load(mp.core.unix.get_file_content_from_main_branch(rn_path))
+        if isinstance(base_content, list):
+            return {_normalize_version(note.get("integration_version", "")) for note in base_content}
+    except mp.core.unix.NonFatalCommandError:
+        pass  # File doesn't exist on main — new integration, validate all entries
+    return set()
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -79,12 +103,7 @@ class ReleaseNotesDateValidation:
             changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
             if not changed:
                 return
-            try:
-                base_content = yaml.safe_load(mp.core.unix.get_file_content_from_main_branch(rn_path))
-                if isinstance(base_content, list):
-                    existing_versions = {_normalize_version(note.get("integration_version", "")) for note in base_content}
-            except mp.core.unix.NonFatalCommandError:
-                pass  # File doesn't exist on main yet — all entries are new
+            existing_versions = _versions_on_main(rn_path)
 
         date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
         invalid: list[str] = []

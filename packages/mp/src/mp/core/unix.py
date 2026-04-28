@@ -602,9 +602,9 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
     """
     # git show requires a repo-root-relative path; convert absolute paths.
     try:
+        rev_parse_command: list[str] = ["git", "rev-parse", "--show-toplevel"]
         repo_root_result = sp.run(  # noqa: S603
-            ["git", "rev-parse", "--show-toplevel"],
-            check=True, text=True, capture_output=True,
+            rev_parse_command, check=True, text=True, capture_output=True,
         )
         relative_path: pathlib.Path = file_path.relative_to(repo_root_result.stdout.strip())
     except (sp.CalledProcessError, ValueError):
