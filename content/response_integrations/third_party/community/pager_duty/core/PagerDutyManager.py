@@ -81,6 +81,9 @@ class PagerDutyManager:
         Returns:
             SingleJson: The API response.
         """
+        if not self.from_email:
+            raise ValueError("from_email is required for resolve_incident operation.")
+
         url: str = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}"
         payload: SingleJson = {
             "incident": {
@@ -109,6 +112,9 @@ class PagerDutyManager:
         Returns:
             SingleJson: The API response.
         """
+        if not self.from_email:
+            raise ValueError("from_email is required for add_incident_note operation.")
+
         url: str = self.BASE_URL + self.INCIDENTS_URI + f"/{incident_id}/notes"
         payload: SingleJson = {
             "note": {

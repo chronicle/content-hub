@@ -94,15 +94,16 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         """
         raise NotImplementedError
 
-    @abstractmethod
+    @nativemethod
     def sync_status(self, job_case: JobCase) -> None:
         """Sync status between source and target items.
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
         """
-        raise NotImplementedError
+        pass
 
+    @nativemethod
     def sync_comments(self, job_case: JobCase) -> None:
         """Sync comments between source and target items.
 
@@ -111,6 +112,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         """
         pass
 
+    @nativemethod
     def sync_tags(self, job_case: JobCase) -> None:
         """Sync tags between source and target items.
 
@@ -141,6 +143,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         """
         pass
 
+    @nativemethod
     def sync_severity(self, job_case: JobCase) -> None:
         """Sync severity between source and target items.
 
@@ -149,6 +152,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         """
         pass
 
+    @nativemethod
     def sync_assignee(self, job_case: JobCase) -> None:
         """Sync assignee between source and target items.
 
@@ -639,11 +643,16 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                     from_timestamp=self.last_run_time,
                 )
                 self.map_product_data_to_case(job_case=job_case)
-                self.sync_comments(job_case)
-                self.sync_tags(job_case)
-                self.sync_severity(job_case)
-                self.sync_assignee(job_case)
-                self.sync_status(job_case)
+                if not is_native(self.sync_comments):
+                    self.sync_comments(job_case)
+                if not is_native(self.sync_tags):
+                    self.sync_tags(job_case)
+                if not is_native(self.sync_severity):
+                    self.sync_severity(job_case)
+                if not is_native(self.sync_assignee):
+                    self.sync_assignee(job_case)
+                if not is_native(self.sync_status):
+                    self.sync_status(job_case)
 
             self.job_completed_successfully = True
 
