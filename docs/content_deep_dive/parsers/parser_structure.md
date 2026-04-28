@@ -18,7 +18,6 @@ content-hub/
         │   ├── community/
         │   │   ├── VENDOR1_PRODUCT1/cbn/
         │   │   └── VENDOR2_PRODUCT2/cbn/
-        │   │
         │   ├── partner/
         │       ├── partnerA/
         │       │     └── VENDOR1_PRODUCT1/cbn/
