@@ -47,10 +47,6 @@ class ReleaseNotesDateValidation:
 
         """
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
-        if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
-            if not changed:
-                return
 
         rn_path = validation_path / constants.RELEASE_NOTES_FILE
         if not rn_path.exists():
@@ -60,12 +56,28 @@ class ReleaseNotesDateValidation:
         if not content or not isinstance(content, list):
             return
 
+        # In PR context, only validate entries that are new (not present on main).
+        # This avoids penalising pre-existing entries that predate the requirement.
+        existing_versions: set[str] = set()
+        if head_sha:
+            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
+            if not changed:
+                return
+            try:
+                base_content = yaml.safe_load(mp.core.unix.get_file_content_from_main_branch(rn_path))
+                if isinstance(base_content, list):
+                    existing_versions = {str(note.get("integration_version", "")) for note in base_content}
+            except mp.core.unix.NonFatalCommandError:
+                pass  # File doesn't exist on main yet — all entries are new
+
         date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
         invalid: list[str] = []
         for note in content:
+            version = str(note.get("integration_version", "?"))
+            if head_sha and version in existing_versions:
+                continue  # Pre-existing entry — skip
             publish_time = str(note.get("publish_time", ""))
             if not date_pattern.match(publish_time):
-                version = note.get("integration_version", "?")
                 invalid.append(f"v{version}: '{publish_time}'")
 
         if invalid:
