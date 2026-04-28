@@ -52,15 +52,11 @@ from .constants import (
 
 class TestDebugStepEnrichmentDataModel:
     def test_from_built_with_valid_data(self) -> None:
-        assert (
-            DebugStepEnrichmentData.from_built(BUILT_STEP_DEBUG_ENRICHMENT_DATA)
-            == DEBUG_STEP_ENRICHMENT_DATA
-        )
+        assert DebugStepEnrichmentData.from_built(BUILT_STEP_DEBUG_ENRICHMENT_DATA) == DEBUG_STEP_ENRICHMENT_DATA
 
     def test_from_non_built_with_valid_data(self) -> None:
         assert (
-            DebugStepEnrichmentData.from_non_built(NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA)
-            == DEBUG_STEP_ENRICHMENT_DATA
+            DebugStepEnrichmentData.from_non_built(NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA) == DEBUG_STEP_ENRICHMENT_DATA
         )
 
     def test_to_built(self) -> None:
@@ -85,9 +81,7 @@ class TestDebugStepEnrichmentDataModel:
 
     def test_from_non_built_to_non_built_is_idempotent(self) -> None:
         assert (
-            DebugStepEnrichmentData.from_non_built(
-                NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA
-            ).to_non_built()
+            DebugStepEnrichmentData.from_non_built(NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA).to_non_built()
             == NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA
         )
 
@@ -103,10 +97,7 @@ class TestStepDebugDataModel:
         assert StepDebugData.from_built(BUILT_STEP_DEBUG_DATA).to_built() == BUILT_STEP_DEBUG_DATA
 
     def test_to_non_built(self) -> None:
-        assert (
-            StepDebugData.from_non_built(NON_BUILT_STEP_DEBUG_DATA).to_non_built()
-            == NON_BUILT_STEP_DEBUG_DATA
-        )
+        assert StepDebugData.from_non_built(NON_BUILT_STEP_DEBUG_DATA).to_non_built() == NON_BUILT_STEP_DEBUG_DATA
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
@@ -120,21 +111,13 @@ class TestStepDebugDataModel:
         assert StepDebugData.from_built(BUILT_STEP_DEBUG_DATA).to_built() == BUILT_STEP_DEBUG_DATA
 
     def test_from_non_built_to_non_built_is_idempotent(self) -> None:
-        assert (
-            StepDebugData.from_non_built(NON_BUILT_STEP_DEBUG_DATA).to_non_built()
-            == NON_BUILT_STEP_DEBUG_DATA
-        )
+        assert StepDebugData.from_non_built(NON_BUILT_STEP_DEBUG_DATA).to_non_built() == NON_BUILT_STEP_DEBUG_DATA
 
     def test_from_built_with_none_values(self) -> None:
-        assert (
-            StepDebugData.from_built(BUILT_STEP_DEBUG_DATA_WITH_NONE) == STEP_DEBUG_DATA_WITH_NONE
-        )
+        assert StepDebugData.from_built(BUILT_STEP_DEBUG_DATA_WITH_NONE) == STEP_DEBUG_DATA_WITH_NONE
 
     def test_from_non_built_with_none_values(self) -> None:
-        assert (
-            StepDebugData.from_non_built(NON_BUILT_STEP_DEBUG_DATA_WITH_NONE)
-            == STEP_DEBUG_DATA_WITH_NONE
-        )
+        assert StepDebugData.from_non_built(NON_BUILT_STEP_DEBUG_DATA_WITH_NONE) == STEP_DEBUG_DATA_WITH_NONE
 
     def test_to_built_with_none_values(self) -> None:
         assert STEP_DEBUG_DATA_WITH_NONE.to_built() == BUILT_STEP_DEBUG_DATA_WITH_NONE
@@ -168,19 +151,13 @@ class TestStepParameterDataModel:
         assert StepParameter.from_built(BUILT_STEP_PARAMETER).to_built() == BUILT_STEP_PARAMETER
 
     def test_from_non_built_to_non_built_is_idempotent(self) -> None:
-        assert (
-            StepParameter.from_non_built(NON_BUILT_STEP_PARAMETER).to_non_built()
-            == NON_BUILT_STEP_PARAMETER
-        )
+        assert StepParameter.from_non_built(NON_BUILT_STEP_PARAMETER).to_non_built() == NON_BUILT_STEP_PARAMETER
 
     def test_from_built_with_none_values(self) -> None:
         assert StepParameter.from_built(BUILT_STEP_PARAMETER_WITH_NONE) == STEP_PARAMETER_WITH_NONE
 
     def test_from_non_built_with_none_values(self) -> None:
-        assert (
-            StepParameter.from_non_built(NON_BUILT_STEP_PARAMETER_WITH_NONE)
-            == STEP_PARAMETER_WITH_NONE
-        )
+        assert StepParameter.from_non_built(NON_BUILT_STEP_PARAMETER_WITH_NONE) == STEP_PARAMETER_WITH_NONE
 
     def test_to_built_with_none_values(self) -> None:
         assert STEP_PARAMETER_WITH_NONE.to_built() == BUILT_STEP_PARAMETER_WITH_NONE

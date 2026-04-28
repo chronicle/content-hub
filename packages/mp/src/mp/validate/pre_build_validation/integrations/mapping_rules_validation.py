@@ -19,9 +19,7 @@ from typing import TYPE_CHECKING
 
 from mp.core import constants, exclusions
 from mp.core.exceptions import NonFatalValidationError
-from mp.validate.utils import (
-    load_components_defs,
-)
+from mp.validate.utils import load_components_defs
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -45,10 +43,7 @@ class IntegrationHasMappingRulesIfHasConnectorValidation:
             have mapping rules.
 
         """
-        if (
-            validation_path.name
-            in exclusions.get_excluded_integrations_with_connectors_and_no_mapping()
-        ):
+        if validation_path.name in exclusions.get_excluded_integrations_with_connectors_and_no_mapping():
             return
 
         component_defs: dict[str, list[YamlFileContent]] = load_components_defs(
@@ -59,7 +54,5 @@ class IntegrationHasMappingRulesIfHasConnectorValidation:
         has_mapping: bool = (validation_path / constants.MAPPING_RULES_FILE).is_file()
 
         if has_connectors and not has_mapping:
-            msg: str = (
-                f"'{validation_path.name}' has connectors but doesn't have default mapping rules"
-            )
+            msg: str = f"'{validation_path.name}' has connectors but doesn't have default mapping rules"
             raise NonFatalValidationError(msg)

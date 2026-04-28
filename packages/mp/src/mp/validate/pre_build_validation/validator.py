@@ -31,9 +31,7 @@ class PreBuildValidations:
     def __init__(self, validation_path: Path, content_type: ContentType) -> None:
         self.validation_path: Path = validation_path
         self.content_type: ContentType = content_type
-        self.results: ValidationResults = ValidationResults(
-            validation_path.name, ValidationTypes.PRE_BUILD
-        )
+        self.results: ValidationResults = ValidationResults(validation_path.name, ValidationTypes.PRE_BUILD)
 
     def run_pre_build_validation(self) -> None:
         """Run all the pre-build validations."""
@@ -41,10 +39,7 @@ class PreBuildValidations:
         total_validations = len(validations)
         integration_name = self.validation_path.name
 
-        rich.print(
-            f"[bold blue]Running pre-build validations:[/bold blue] "
-            f"[cyan]{integration_name}[/cyan]..."
-        )
+        rich.print(f"[bold blue]Running pre-build validations:[/bold blue] [cyan]{integration_name}[/cyan]...")
 
         count: int = 0
         for validator in validations:

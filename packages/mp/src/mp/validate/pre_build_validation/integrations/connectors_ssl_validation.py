@@ -20,10 +20,7 @@ from pydantic import dataclasses
 
 from mp.core import constants
 from mp.core.exceptions import NonFatalValidationError
-from mp.validate.utils import (
-    load_components_defs,
-    validate_ssl_parameter_from_yaml,
-)
+from mp.validate.utils import load_components_defs, validate_ssl_parameter_from_yaml
 
 if TYPE_CHECKING:
     from pathlib import Path

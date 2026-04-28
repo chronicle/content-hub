@@ -23,18 +23,13 @@ class ActionCapabilities(BaseModel):
     fetches_data: Annotated[
         bool,
         Field(
-            description=(
-                "Whether the action fetches additional contextual data on alerts/entities etc."
-            ),
+            description=("Whether the action fetches additional contextual data on alerts/entities etc."),
         ),
     ]
     can_mutate_external_data: Annotated[
         bool,
         Field(
-            description=(
-                "Whether the action mutates or changes any data in any external system outside"
-                " Google SecOps."
-            )
+            description=("Whether the action mutates or changes any data in any external system outside Google SecOps.")
         ),
     ]
     external_data_mutation_explanation: Annotated[
@@ -49,10 +44,7 @@ class ActionCapabilities(BaseModel):
     can_mutate_internal_data: Annotated[
         bool,
         Field(
-            description=(
-                "Whether the action mutates or changes any data in any internal system inside"
-                " Google SecOps."
-            )
+            description=("Whether the action mutates or changes any data in any internal system inside Google SecOps.")
         ),
     ]
     internal_data_mutation_explanation: Annotated[
@@ -66,9 +58,5 @@ class ActionCapabilities(BaseModel):
     ]
     can_update_entities: Annotated[bool, Field(description="Whether the action updates entities.")]
     can_create_insight: Annotated[bool, Field(description="Whether the action creates insights.")]
-    can_modify_alert_data: Annotated[
-        bool, Field(description="Whether the action can modify data of alerts.")
-    ]
-    can_create_case_comments: Annotated[
-        bool, Field(description="Whether the action creates case comments.")
-    ]
+    can_modify_alert_data: Annotated[bool, Field(description="Whether the action can modify data of alerts.")]
+    can_create_case_comments: Annotated[bool, Field(description="Whether the action creates case comments.")]

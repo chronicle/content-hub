@@ -28,20 +28,14 @@ from mp.validate.pre_build_validation.integrations.required_dependencies_validat
 
 def test_required_dependencies_present_success(temp_integration: Path) -> None:
     pyproject_content = {
-        "dependency-groups": {
-            "dev": ["soar-sdk>=1.0.0", "pytest>=7.0.0", "pytest-json-report==1.2.3"]
-        }
+        "dependency-groups": {"dev": ["soar-sdk>=1.0.0", "pytest>=7.0.0", "pytest-json-report==1.2.3"]}
     }
     _create_pyproject_toml(temp_integration, pyproject_content)
     RequiredDevDependenciesValidation.run(integration_path=temp_integration)
 
 
 def test_required_dependencies_with_extra_success(temp_integration: Path) -> None:
-    pyproject_content = {
-        "dependency-groups": {
-            "dev": ["soar-sdk", "pytest", "pytest-json-report", "black", "flake8"]
-        }
-    }
+    pyproject_content = {"dependency-groups": {"dev": ["soar-sdk", "pytest", "pytest-json-report", "black", "flake8"]}}
     _create_pyproject_toml(temp_integration, pyproject_content)
     RequiredDevDependenciesValidation.run(integration_path=temp_integration)
 
@@ -49,9 +43,7 @@ def test_required_dependencies_with_extra_success(temp_integration: Path) -> Non
 def test_missing_one_required_dependency_fail(temp_integration: Path) -> None:
     pyproject_content = {"dependency-groups": {"dev": ["soar-sdk", "pytest"]}}
     _create_pyproject_toml(temp_integration, pyproject_content)
-    error_msg: str = (
-        "Missing required development dependencies in pyproject.toml: pytest-json-report"
-    )
+    error_msg: str = "Missing required development dependencies in pyproject.toml: pytest-json-report"
     with pytest.raises(NonFatalCommandError, match=error_msg):
         RequiredDevDependenciesValidation.run(integration_path=temp_integration)
 
@@ -59,9 +51,7 @@ def test_missing_one_required_dependency_fail(temp_integration: Path) -> None:
 def test_missing_multiple_required_dependencies_fail(temp_integration: Path) -> None:
     pyproject_content = {"dependency-groups": {"dev": ["soar-sdk"]}}
     _create_pyproject_toml(temp_integration, pyproject_content)
-    error_msg: str = (
-        "Missing required development dependencies in pyproject.toml: pytest, pytest-json-report"
-    )
+    error_msg: str = "Missing required development dependencies in pyproject.toml: pytest, pytest-json-report"
     with pytest.raises(NonFatalCommandError, match=error_msg):
         RequiredDevDependenciesValidation.run(integration_path=temp_integration)
 
