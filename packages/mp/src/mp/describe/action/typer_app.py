@@ -43,19 +43,14 @@ app = typer.Typer(help="Commands for describing actions")
 )
 def describe(  # noqa: PLR0913
     actions: Annotated[list[str] | None, typer.Argument(help="Action names")] = None,
-    integration: Annotated[
-        str | None, typer.Option("-i", "--integration", help="Integration name")
-    ] = None,
+    integration: Annotated[str | None, typer.Option("-i", "--integration", help="Integration name")] = None,
     *,
     all_marketplace: Annotated[
         bool,
         typer.Option(
             "-a",
             "--all",
-            help=(
-                "Describe all integrations in the marketplace, or all actions if an"
-                " integration is specified"
-            ),
+            help=("Describe all integrations in the marketplace, or all actions if an integration is specified"),
         ),
     ] = False,
     src: Annotated[
@@ -116,9 +111,9 @@ def describe(  # noqa: PLR0913
 
         sem: asyncio.Semaphore = asyncio.Semaphore(mp.core.config.get_gemini_concurrency())
         asyncio.run(
-            DescribeAction(
-                integration, target_action_file_names, src=src, dst=dst, override=override
-            ).describe_actions(sem=sem)
+            DescribeAction(integration, target_action_file_names, src=src, dst=dst, override=override).describe_actions(
+                sem=sem
+            )
         )
     elif all_marketplace:
         asyncio.run(describe_all_actions(src=src, dst=dst, override=override))

@@ -247,14 +247,7 @@ def to_snake_case(s: str, /) -> str:
         The string converted to snake_case.
 
     """
-    return (
-        re
-        .sub(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z\d]", " ", s)
-        .strip()
-        .replace(" ", "_")
-        .replace("-", "_")
-        .lower()
-    )
+    return re.sub(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z\d]", " ", s).strip().replace(" ", "_").replace("-", "_").lower()
 
 
 def is_integration_repo(repositories: list[RepositoryType]) -> bool:
@@ -302,9 +295,7 @@ def should_preform_integration_logic(
 
 
 # Deprecated
-def should_preform_playbook_logic(
-    playbooks: Iterable[str], repos: Iterable[RepositoryType]
-) -> bool:
+def should_preform_playbook_logic(playbooks: Iterable[str], repos: Iterable[RepositoryType]) -> bool:
     """Decide if needed to build playbooks or not.
 
     Returns:

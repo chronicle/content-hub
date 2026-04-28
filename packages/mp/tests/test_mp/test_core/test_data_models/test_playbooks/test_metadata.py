@@ -56,15 +56,11 @@ class TestAccessPermissionDataModel:
             AccessPermission.from_non_built({})
 
     def test_from_built_to_built_is_idempotent(self) -> None:
-        assert (
-            AccessPermission.from_built(BUILT_ACCESS_PERMISSION).to_built()
-            == BUILT_ACCESS_PERMISSION
-        )
+        assert AccessPermission.from_built(BUILT_ACCESS_PERMISSION).to_built() == BUILT_ACCESS_PERMISSION
 
     def test_from_non_built_to_non_built_is_idempotent(self) -> None:
         assert (
-            AccessPermission.from_non_built(NON_BUILT_ACCESS_PERMISSION).to_non_built()
-            == NON_BUILT_ACCESS_PERMISSION
+            AccessPermission.from_non_built(NON_BUILT_ACCESS_PERMISSION).to_non_built() == NON_BUILT_ACCESS_PERMISSION
         )
 
 
@@ -90,16 +86,10 @@ class TestPlaybookMetadataDataModel:
             PlaybookMetadata.from_non_built("", {})
 
     def test_from_built_with_none_values(self) -> None:
-        assert (
-            PlaybookMetadata.from_built("", BUILT_PLAYBOOK_METADATA_WITH_NONE)
-            == PLAYBOOK_METADATA_WITH_NONE
-        )
+        assert PlaybookMetadata.from_built("", BUILT_PLAYBOOK_METADATA_WITH_NONE) == PLAYBOOK_METADATA_WITH_NONE
 
     def test_from_non_built_with_none_values(self) -> None:
-        assert (
-            PlaybookMetadata.from_non_built("", NON_BUILT_PLAYBOOK_METADATA_WITH_NONE)
-            == PLAYBOOK_METADATA_WITH_NONE
-        )
+        assert PlaybookMetadata.from_non_built("", NON_BUILT_PLAYBOOK_METADATA_WITH_NONE) == PLAYBOOK_METADATA_WITH_NONE
 
     def test_to_built_with_none_values(self) -> None:
         assert PLAYBOOK_METADATA_WITH_NONE.to_built() == BUILT_PLAYBOOK_METADATA_WITH_NONE
@@ -108,10 +98,7 @@ class TestPlaybookMetadataDataModel:
         assert PLAYBOOK_METADATA_WITH_NONE.to_non_built() == NON_BUILT_PLAYBOOK_METADATA_WITH_NONE
 
     def test_from_built_to_built_is_idempotent(self) -> None:
-        assert (
-            PlaybookMetadata.from_built("", BUILT_PLAYBOOK_METADATA).to_built()
-            == BUILT_PLAYBOOK_METADATA
-        )
+        assert PlaybookMetadata.from_built("", BUILT_PLAYBOOK_METADATA).to_built() == BUILT_PLAYBOOK_METADATA
 
     def test_from_non_built_to_non_built_is_idempotent(self) -> None:
         assert (

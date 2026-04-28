@@ -17,11 +17,11 @@ from __future__ import annotations
 import re
 import tempfile
 import uuid
-from typing import TYPE_CHECKING, Any
-from TIPCommon.types import SingleJson
+from typing import Any, TYPE_CHECKING
 
 from jinja2 import Template
 
+from TIPCommon.types import SingleJson
 from .cache import Cache, Context, get_context_factory
 from .constants import (
     ALL_ENVIRONMENTS_IDENTIFIER,
@@ -38,6 +38,7 @@ from .definitions import Connector, File, Integration, Job, Mapping, Workflow
 from .GitContentManager import GitContentManager
 from .GitManager import Git
 from .SiemplifyApiClient import SiemplifyApiClient
+
 
 if TYPE_CHECKING:
     from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -640,6 +641,7 @@ class WorkflowInstaller:
         """Update an existing workflow in the platform."""
         self.logger.info(f"Updating existing workflow '{workflow.name}'")
         self._adjust_workflow_ids(workflow)
+        self._remap_workflow_roles(workflow)
         self.api.save_playbook(workflow.raw_data)
         self._save_workflow_mod_time_to_context(workflow)
         self.logger.info(f"Workflow '{workflow.name}' was updated successfully")
@@ -658,9 +660,42 @@ class WorkflowInstaller:
         self.logger.info(f"Installing new workflow '{workflow.name}'")
         self._define_workflow_as_new(workflow)
         self._process_steps(workflow)
+        self._remap_workflow_roles(workflow)
         self.api.save_playbook(workflow.raw_data)
         self._save_workflow_mod_time_to_context(workflow)
         self.logger.info(f"New workflow '{workflow.name}' was installed successfully")
+
+    def _remap_workflow_roles(self, workflow: Workflow) -> None:
+        """Remap the role IDs of a workflow overviewTemplate based on the roles available in the system.
+
+        Args:
+            workflow: The workflow object to remap roles for.
+        """
+        if not workflow.raw_data.get("overviewTemplates"):
+            return
+
+        roles_map = {
+            role["name"]: role["id"]
+            for role in self._soc_roles
+            if "name" in role and "id" in role
+        }
+
+        for template in workflow.raw_data["overviewTemplates"]:
+            role_names = template.pop("roleNames", None)
+            if not role_names:
+                continue
+
+            valid_role_ids = []
+            for role_name in role_names:
+                if role_name in roles_map:
+                    valid_role_ids.append(roles_map[role_name])
+                else:
+                    self.logger.warn(
+                        f"Role '{role_name}' for view '{template.get('name')}' in workflow "
+                        f"'{workflow.name}' does not exist in the destination system. It will be removed."
+                    )
+
+            template["roles"] = valid_role_ids
 
     def _process_steps(
         self,
@@ -759,8 +794,7 @@ class WorkflowInstaller:
                 param_value = param.get("value")
 
                 # Handle Start/EndLoopStepIdentifier parameter
-                if (param_name in {"StartLoopStepIdentifier", "EndLoopStepIdentifier"} and
-                        param_value):
+                if (param_name in {"StartLoopStepIdentifier", "EndLoopStepIdentifier"} and param_value):
                     mapped_id = identifier_mappings.get(param_value)
                     if mapped_id:
                         param["value"] = mapped_id
@@ -792,6 +826,13 @@ class WorkflowInstaller:
                 x.get("name"): x for x in self.api.get_playbooks()
             }
         return self._cache.get("playbooks")
+
+    @property
+    def _soc_roles(self) -> list[dict[str, Any]]:
+        """Currently configured SOC roles"""
+        if "soc_roles" not in self._cache:
+            self._cache["soc_roles"] = self.api.get_soc_roles()
+        return self._cache.get("soc_roles") or []
 
     @property
     def _playbook_categories(self) -> dict:
@@ -834,17 +875,26 @@ class WorkflowInstaller:
                 existing_step,
                 "IntegrationInstance",
             ).get("value")
-            self._set_step_parameter_by_name(step, "IntegrationInstance", instance)
             fallback = self._get_step_parameter_by_name(
                 existing_step,
                 "FallbackIntegrationInstance",
             ).get("value")
-            self._set_step_parameter_by_name(
-                step,
-                "FallbackIntegrationInstance",
-                fallback,
-            )
-            return
+            # Validate the existing instance before copying it.
+            # If it's invalid (e.g. from a prior failed import), fall through
+            # to the instance-discovery logic below.
+            instance_to_validate = fallback if instance == "AutomaticEnvironment" else instance
+            if instance_to_validate and self._is_valid_existing_instance(
+                step.get("integration"),
+                instance_to_validate,
+                environments,
+            ):
+                self._set_step_parameter_by_name(
+                    step, "IntegrationInstance", instance,
+                )
+                self._set_step_parameter_by_name(
+                    step, "FallbackIntegrationInstance", fallback,
+                )
+                return
 
         instance_display_name = self._get_instance_display_name(
             step,
@@ -873,6 +923,13 @@ class WorkflowInstaller:
                 step.get("integration"),
                 environments[0],
             )
+            # Fallback: also check the shared environment if no instances
+            # found in the playbook's specific environment
+            if not integration_instances:
+                integration_instances = self._find_integration_instances_for_step(
+                    step.get("integration"),
+                    ALL_ENVIRONMENTS_IDENTIFIER,
+                )
             if integration_instances:
                 instance_id = self.api.get_integration_instance_id_by_name(
                     self.chronicle_soar,
@@ -896,6 +953,17 @@ class WorkflowInstaller:
                 step.get("integration"),
                 ALL_ENVIRONMENTS_IDENTIFIER,
             )
+            # Fallback: check individual environments if no shared instances
+            if not integration_instances:
+                for env in environments:
+                    if env == ALL_ENVIRONMENTS_IDENTIFIER:
+                        continue
+                    integration_instances = self._find_integration_instances_for_step(
+                        step.get("integration"),
+                        env,
+                    )
+                    if integration_instances:
+                        break
             self._set_step_parameter_by_name(
                 step,
                 "IntegrationInstance",
@@ -933,29 +1001,67 @@ class WorkflowInstaller:
         integration_name: str,
         environment: str,
     ) -> list[dict]:
-        """Find integration instances available for integration per environment
+        """Find integration instances available for integration per environment.
+
+        Returns configured instances if any exist; otherwise falls back to
+        unconfigured instances to preserve backward compatibility while still
+        enabling a fallback when no configured instances are available.
 
         Args:
             integration_name: The integration name to look for
             environment: The environment to fetch the integration instances
 
         Returns:
-            A list of configured integration instances
+            A list of integration instances, preferring configured ones.
 
         """
         cache_key = f"integration_instances_{environment}"
         if cache_key not in self._cache:
-            self._cache[cache_key] = self.api.get_integrations_instances(environment)
+            self._cache[cache_key] = self.api.get_integrations_instances(environment) or []
 
-        instances = self._cache.get(cache_key)
-        instances.sort(key=lambda x: x.get("instanceName"))
+        instances = self._cache.get(cache_key, [])
 
-        return [
+        filtered_instances = [
             x
             for x in instances
             if x.get("integrationIdentifier") == integration_name
-            and x.get("isConfigured")
         ]
+
+        configured_instances = [x for x in filtered_instances if x.get("isConfigured")]
+        if configured_instances:
+            return sorted(configured_instances, key=lambda x: x.get("instanceName") or "")
+
+        # Fallback: return unconfigured instances sorted by name when no configured
+        # instances are available, so callers can still find something to assign.
+        return sorted(filtered_instances, key=lambda x: x.get("instanceName") or "")
+
+    def _is_valid_existing_instance(
+        self,
+        integration_name: str,
+        instance_id: str,
+        environments: list[str],
+    ) -> bool:
+        """Check if an instance ID exists among the available integration instances.
+
+        Args:
+            integration_name: The integration identifier to check.
+            instance_id: The instance UUID to validate.
+            environments: Playbook assigned environments to search.
+
+        Returns:
+            True if the instance exists in any of the playbook's environments
+            or in the shared environment.
+        """
+        envs_to_check = {*environments, ALL_ENVIRONMENTS_IDENTIFIER}
+        for env in envs_to_check:
+            instances = self._find_integration_instances_for_step(
+                integration_name,
+                env,
+            )
+            if any(x.get("identifier") == instance_id for x in instances):
+                return True
+
+        return False
 
     @staticmethod
     def _flatten_playbook_steps(steps: list) -> list[dict]:
@@ -997,8 +1103,8 @@ class WorkflowInstaller:
     def _is_matching_step(step_1: SingleJson, step_2: SingleJson) -> bool:
         """Checks if step 'step_1' matches the key attributes of 'step_2'."""
         return (
-                step_1.get("instanceName") == step_2.get("instanceName")
-                and step_1.get("actionProvider") == step_2.get("actionProvider")
+            step_1.get("instanceName") == step_2.get("instanceName")
+            and step_1.get("actionProvider") == step_2.get("actionProvider")
         )
 
     @staticmethod

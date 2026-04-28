@@ -115,9 +115,7 @@ class MarketplaceJsonDefinition:
             An integrations built version of the marketplace JSON definition
 
         """
-        metadata: BuiltFullDetailsIntegrationMetadata = json.loads(
-            def_file_path.read_text(encoding="utf-8")
-        )
+        metadata: BuiltFullDetailsIntegrationMetadata = json.loads(def_file_path.read_text(encoding="utf-8"))
         self._update_full_details_with_extra_attrs(metadata)
         return metadata
 
@@ -158,9 +156,7 @@ class MarketplaceJsonDefinition:
 
         supported_action: list[BuiltSupportedAction] = []
         for action_meta_path in actions_definitions.iterdir():
-            action_meta: BuiltActionMetadata = json.loads(
-                action_meta_path.read_text(encoding="utf-8")
-            )
+            action_meta: BuiltActionMetadata = json.loads(action_meta_path.read_text(encoding="utf-8"))
             supported_action.append(
                 {
                     "Name": action_meta["Name"],
@@ -176,9 +172,7 @@ def _get_latest_release_time(release_notes: Iterable[ReleaseNote]) -> int | None
         return 0
 
     latest_version: float = max(float(rn.version) for rn in release_notes)
-    latest_version_rn: list[ReleaseNote] = [
-        rn for rn in release_notes if rn.version == latest_version
-    ]
+    latest_version_rn: list[ReleaseNote] = [rn for rn in release_notes if rn.version == latest_version]
     if not latest_version:
         return None
 

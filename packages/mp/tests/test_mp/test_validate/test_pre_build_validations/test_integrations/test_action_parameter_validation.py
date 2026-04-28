@@ -200,9 +200,7 @@ class TestActionParameterValidation:
         ):
             self.validator_runner.run(temp_integration)
 
-    def test_failure_on_numeric_default_vs_string_options(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_failure_on_numeric_default_vs_string_options(self, temp_integration: pathlib.Path) -> None:
         action_file = temp_integration / constants.ACTIONS_DIR / "ping.yaml"
         params = [
             {

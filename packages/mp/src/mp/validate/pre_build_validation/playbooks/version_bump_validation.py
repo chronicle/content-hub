@@ -69,16 +69,12 @@ class VersionBumpValidation:
         if not head_sha:
             return
 
-        changed_files: list[Path] = mp.core.unix.get_files_unmerged_to_main_branch(
-            "main", head_sha, playbook_path
-        )
+        changed_files: list[Path] = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, playbook_path)
 
         if not changed_files:
             return
 
-        rn_path: Path | None = next(
-            (p for p in changed_files if p.name == RELEASE_NOTES_FILE), None
-        )
+        rn_path: Path | None = next((p for p in changed_files if p.name == RELEASE_NOTES_FILE), None)
 
         if not rn_path:
             msg = "release_notes.yml file must be updated before PR"
@@ -99,9 +95,7 @@ def _create_data_for_version_bump_validation(
     try:
         old_rn_content = mp.core.unix.get_file_content_from_main_branch(rn_path)
         existing_files["rn"]["old"] = utils.get_last_release_note(old_rn_content)
-        existing_files["rn"]["new"] = utils.get_new_release_notes(
-            rn_path.read_text(encoding="utf-8"), old_rn_content
-        )
+        existing_files["rn"]["new"] = utils.get_new_release_notes(rn_path.read_text(encoding="utf-8"), old_rn_content)
 
     except mp.core.unix.NonFatalCommandError:
         new_files["rn"] = ReleaseNote.from_non_built_str(rn_path.read_text(encoding="utf-8"))

@@ -74,10 +74,7 @@ def validate_repository(
     only_pre_build: Annotated[
         bool,
         typer.Option(
-            help=(
-                "Execute only pre-build validations "
-                "checks on the integrations, skipping the full build process."
-            ),
+            help=("Execute only pre-build validations checks on the integrations, skipping the full build process."),
         ),
     ] = False,
     quiet: Annotated[
