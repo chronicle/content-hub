@@ -77,9 +77,8 @@ class CreateSiemplifyTaskAction(Action):
 
     def _validate_params(self) -> None:
         if not self.params.due_date and not self.params.duration:
-            raise ValueError(
-                'either "Due Date" or "SLA (in minutes)" parameter should have a value.'
-            )
+            msg = 'either "Due Date" or "SLA (in minutes)" parameter should have a value.'
+            raise ValueError(msg)
 
     def _init_api_clients(self) -> None:
         """Initialize API clients if required (placeholder)."""
@@ -89,9 +88,7 @@ class CreateSiemplifyTaskAction(Action):
         self._create_task(task_due_date)
 
         due_date_info: str = (
-            f"by {self.params.due_date}"
-            if self.params.due_date
-            else f"in the next {self.params.duration} minutes"
+            f"by {self.params.due_date}" if self.params.due_date else f"in the next {self.params.duration} minutes"
         )
         self.output_message = (
             f"A new task has been created for the user: {self.params.assign_to}.\n"
@@ -105,10 +102,7 @@ class CreateSiemplifyTaskAction(Action):
             return int(parse(self.params.due_date).timestamp() * NUM_OF_MILLI_IN_SEC)
 
         minutes: int = int(self.params.duration)
-        return (
-            int(time.time() * NUM_OF_MILLI_IN_SEC)
-            + minutes * NUM_OF_SEC_IN_MIN * NUM_OF_MILLI_IN_SEC
-        )
+        return int(time.time() * NUM_OF_MILLI_IN_SEC) + minutes * NUM_OF_SEC_IN_MIN * NUM_OF_MILLI_IN_SEC
 
     def _create_task(self, task_due_date: int) -> None:
         current_version = self.soar_action.get_system_version()

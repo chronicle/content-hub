@@ -65,7 +65,7 @@ def main():
             )
 
     except Exception as e:
-        siemplify.LOGGER.error(f"General error performing action {SCRIPT_NAME}")
+        siemplify.LOGGER.exception("General error performing action %s", SCRIPT_NAME)
         siemplify.LOGGER.exception(e)
         raise
 

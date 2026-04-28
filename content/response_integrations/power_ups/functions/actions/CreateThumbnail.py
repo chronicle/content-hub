@@ -48,13 +48,15 @@ def find_key_path_recursive(key_list, current_json):
             return MISSING_VAL
     else:
         if isinstance(current_json, dict):
+            msg = f"Not a simple value.  Unable to enrich. Key: {key_list}, json: {current_json}"
             raise Exception(
-                f"Not a simple value.  Unable to enrich. Key: {key_list}, json: {current_json}",
+                msg,
             )
         if isinstance(current_json, list):
             return ",".join(current_json)
 
         return f"{current_json}"  # Found val, return it. Format to make everything into string
+    return None
 
 
 def create_thumbnail(base64_str, thumb_size):
@@ -72,12 +74,8 @@ def create_thumbnail(base64_str, thumb_size):
 def main():
     siemplify = SiemplifyAction()
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
-    )
-    result_value = (
-        None  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    output_message = "output message :"  # human readable message, showed in UI as the action result
+    result_value = None  # Set a simple result value, used for playbook if\else and placeholders.
 
     base64_str = siemplify.extract_action_param("Base64 Image", print_value=False)
     thumb_size = list(
@@ -96,7 +94,7 @@ def main():
 
     json_result = {}
 
-    if input_json != None:
+    if input_json is not None:
         in_json = json.loads(input_json)
         for entity_json in in_json:
             base64_str = find_key_path_in_json(image_key_path, entity_json)

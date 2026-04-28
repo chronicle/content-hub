@@ -28,14 +28,7 @@ def main():
     siemplify.script_name = SCRIPT_NAME
 
     commit_msg = siemplify.extract_job_param("Commit")
-    cases = [
-        _f
-        for _f in [
-            x.strip()
-            for x in siemplify.extract_job_param("Simulated Cases", " ").split(",")
-        ]
-        if _f
-    ]
+    cases = [_f for _f in [x.strip() for x in siemplify.extract_job_param("Simulated Cases", " ").split(",")] if _f]
 
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)

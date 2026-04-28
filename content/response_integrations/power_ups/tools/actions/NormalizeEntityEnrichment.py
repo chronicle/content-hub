@@ -33,18 +33,12 @@ def main():
     for entity in siemplify.target_entities:
         for pair in enrichment_data:
             if pair["entitiy_field_name"] in entity.additional_properties:
-                entity.additional_properties[pair["new_name"]] = (
-                    entity.additional_properties.get(
-                        pair["entitiy_field_name"],
-                        "NotFound",
-                    )
+                entity.additional_properties[pair["new_name"]] = entity.additional_properties.get(
+                    pair["entitiy_field_name"],
+                    "NotFound",
                 )
-            elif (
-                pair["new_name"] not in entity.additional_properties
-            ):  # Normalized key does not exist yet anyway
-                entity.additional_properties[pair["new_name"]] = (
-                    ""  # No key anyway, we put empty string
-                )
+            elif pair["new_name"] not in entity.additional_properties:  # Normalized key does not exist yet anyway
+                entity.additional_properties[pair["new_name"]] = ""  # No key anyway, we put empty string
         updated_entities.append(entity)
 
     count_updated_entities = len(updated_entities)

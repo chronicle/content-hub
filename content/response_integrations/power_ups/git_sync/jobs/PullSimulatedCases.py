@@ -28,12 +28,7 @@ def main():
     siemplify.script_name = SCRIPT_NAME
 
     case_names = [
-        _f
-        for _f in [
-            x.strip()
-            for x in siemplify.extract_job_param("Simulated Cases", " ").split(",")
-        ]
-        if _f
+        _f for _f in [x.strip() for x in siemplify.extract_job_param("Simulated Cases", " ").split(",")] if _f
     ]
 
     try:

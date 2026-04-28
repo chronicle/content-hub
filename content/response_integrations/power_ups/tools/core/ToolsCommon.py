@@ -15,13 +15,14 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from tldextract import extract
-from tldextract.tldextract import ExtractResult
 
 from .constants import LABEL_REGEX
 
+if TYPE_CHECKING:
+    from tldextract.tldextract import ExtractResult
 
 # CONSTS
 OPEN_PH_PARENTHASIS = "{"
@@ -34,8 +35,6 @@ DEBUG = True
 
 def print_debug(to_print: str, function: str = "") -> None:
     """Print debug messages if DEBUG is enabled."""
-    if DEBUG:
-        print(f"{function} DEBUG: {to_print}")
 
 
 def evaluate_function(val: Any, func_name: str, func_values: list[str]) -> Any:
@@ -55,7 +54,8 @@ def evaluate_function(val: Any, func_name: str, func_values: list[str]) -> Any:
             return len(val)
         if isinstance(val, dict):
             return len(val.keys())
-        raise TypeError(f"unsupported object: {val}")
+        msg = f"unsupported object: {val}"
+        raise TypeError(msg)
     if func_name == "to_str":
         if isinstance(val, list):
             return ", ".join([str(x) for x in val])
@@ -69,7 +69,8 @@ def evaluate_function(val: Any, func_name: str, func_values: list[str]) -> Any:
         except Exception:
             raise ValueError(val)
     else:
-        raise ValueError(f"Unknown pipe function: {func_name}")
+        msg = f"Unknown pipe function: {func_name}"
+        raise ValueError(msg)
 
 
 def parse_placeholder(curr_json: Any, placeholder: str, pipe: str) -> Any | None:
@@ -79,17 +80,18 @@ def parse_placeholder(curr_json: Any, placeholder: str, pipe: str) -> Any | None
     for i, function_str in enumerate(pipes):
         first_split = function_str.strip().split("(")
         if len(first_split) > 2:
-            raise ValueError(f"Bad format for pipe function: {function_str}")
+            msg = f"Bad format for pipe function: {function_str}"
+            raise ValueError(msg)
         if len(first_split) == 1:
             # Assuming key_path here
-            if isinstance(curr_json, list) or isinstance(curr_json, dict):
+            if isinstance(curr_json, (list, dict)):
                 curr_json = find_key_path_in_json(function_str.split("."), curr_json)
             else:
                 return None  # cant find "keys" in a string
         else:  # len is 2
             func_name = first_split[0]
             func_values_string = first_split[1].split(")")[0]
-            func_values = [x for x in func_values_string.split(",")]
+            func_values = list(func_values_string.split(","))
             curr_json = evaluate_function(curr_json, func_name, func_values)
 
     return curr_json
@@ -110,8 +112,9 @@ def parse_raw_message(
     while i < len(first_break):
         second_break = first_break[i].split(close_ph)
         if len(second_break) < 2:
+            msg = f"Missing close PH: '{close_ph}'. Raw message {raw_message}"
             raise ValueError(
-                f"Missing close PH: '{close_ph}'. Raw message {raw_message}",
+                msg,
             )
         message_shard = parse_placeholder(curr_json, second_break[0], pipe)
         new_message += str(message_shard) + close_ph.join(second_break[1:])
@@ -169,6 +172,7 @@ def find_key_path_recursive(
         return [
             f"{current_json}",
         ]
+    return None
 
 
 def get_entity_by_string(identifier: str, entities: list[Any]) -> Any | None:
@@ -200,8 +204,7 @@ def is_supported_siemplify_version(version: tuple, min_version: tuple) -> bool:
 
 
 def get_domain_from_string(identifier: str, extract_subdomain: bool) -> str | None:
-    """
-    Extract the domain or full subdomain+domain+suffix from a given identifier string.
+    """Extract the domain or full subdomain+domain+suffix from a given identifier string.
 
     Args:
         identifier: The input URL or identifier.
@@ -209,21 +212,20 @@ def get_domain_from_string(identifier: str, extract_subdomain: bool) -> str | No
 
     Returns:
         A valid domain string or None if the input is invalid.
+
     """
     result: ExtractResult = extract(identifier.strip().lower())
 
     if not (result.domain and is_valid_label(result.domain)):
         return None
-    if not (
-        result.suffix and all(is_valid_label(part) for part in result.suffix.split("."))
-    ):
+    if not (result.suffix and all(is_valid_label(part) for part in result.suffix.split("."))):
         return None
 
     if extract_subdomain:
         if result.subdomain:
             sub_parts = result.subdomain.split(".")
             if all(is_valid_label(part) for part in sub_parts):
-                return ".".join(sub_parts + [result.domain, result.suffix])
+                return ".".join([*sub_parts, result.domain, result.suffix])
 
         return f"{result.domain}.{result.suffix}"
 

@@ -41,9 +41,7 @@ def main():
     key_path_raw = siemplify.parameters.get("Identifier KeyPath")
     separator = siemplify.parameters.get("Separator", ".")
 
-    list_of_key_lists = [
-        key_path.split(separator) for key_path in key_path_raw.split("\n")
-    ]
+    list_of_key_lists = [key_path.split(separator) for key_path in key_path_raw.split("\n")]
     prefix = siemplify.parameters.get("PrefixForEnrichment")
     enrichment_jsonpath = siemplify.parameters.get("Enrichment JSONPath", None)
 
@@ -52,7 +50,7 @@ def main():
     updated_entities = []
 
     target_entities = []
-    target_entities = [entity for entity in siemplify.target_entities]
+    target_entities = list(siemplify.target_entities)
 
     for entity in target_entities:
         for curr_enrich_json in enrichment_json:
@@ -130,13 +128,15 @@ def find_key_path_recursive(key_list, current_json):
             return MISSING_VAL
     else:
         if isinstance(current_json, dict):
+            msg = f"Not a simple value.  Unable to enrich. Key: {key_list}, json: {current_json}"
             raise Exception(
-                f"Not a simple value.  Unable to enrich. Key: {key_list}, json: {current_json}",
+                msg,
             )
         if isinstance(current_json, list):
             return ",".join(current_json)
 
         return f"{current_json}"  # Found val, return it. Format to make everything into string
+    return None
 
 
 def dict_to_flat(target_dict):
@@ -203,11 +203,7 @@ def dict_to_flat(target_dict):
             return value_list
         return [(get_unicode(key), get_unicode(value))]
 
-    items = [
-        item
-        for sub_key, sub_value in target_dict.items()
-        for item in expand(sub_key, sub_value)
-    ]
+    items = [item for sub_key, sub_value in target_dict.items() for item in expand(sub_key, sub_value)]
     return dict(items)
 
 

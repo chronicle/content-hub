@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO:
+# TODO: Implement the following features:
 # 1) Add DMARC, SPF, DKIM and ARC verification flags. If exists and if pass or not (pass/fail)
 
 from __future__ import annotations
@@ -46,8 +46,7 @@ def get_html_headers_table(headers):
     for k, v in headers.items():
         row = f"<tr><td>{k}</td><td>{v}</td></tr>"
         rows.append(row)
-    html_table = html_table.format("".join(rows))
-    return html_table
+    return html_table.format("".join(rows))
 
 
 def get_domains_and_addresses(headers):
@@ -66,10 +65,7 @@ def process_header_to_extract_domain_address(header):
     extracted_addresses = re.findall(r"\s\[(.*?)\]\)", header)
 
     if extracted_domains and extracted_addresses:
-        if (
-            extracted_domains[0] in EXCLUDED_DOMAINS_ADDRESSES
-            or extracted_addresses[0] in EXCLUDED_DOMAINS_ADDRESSES
-        ):
+        if extracted_domains[0] in EXCLUDED_DOMAINS_ADDRESSES or extracted_addresses[0] in EXCLUDED_DOMAINS_ADDRESSES:
             return None
         return extracted_domains[0], extracted_addresses[0]
     return None
@@ -211,9 +207,8 @@ def get_generic_siemplify_recommendations(headers):
             },
         )
 
-    if (
-        "Message-Id".lower() not in lower_case_headers
-        or "SMTPIN_ADDED_MISSING" in lower_case_headers.get("Message-ID".lower(), "")
+    if "Message-Id".lower() not in lower_case_headers or "SMTPIN_ADDED_MISSING" in lower_case_headers.get(
+        "Message-ID".lower(), ""
     ):  # Message-ID   SMTPIN_ADDED_MISSING
         return_list.append(
             {
@@ -269,10 +264,13 @@ def main():
         if siemplify.parameters.get("Base64 EML"):
             eml_content = base64.b64decode(siemplify.parameters.get("Base64 EML"))
             if not eml_content:
-                raise Exception(
+                msg = (
                     "Missing eml example for {}".format(
                         siemplify.parameters.get("EML Example"),
-                    ),
+                    )
+                )
+                raise Exception(
+                    msg,
                 )
 
             extracted_email = message_from_string(eml_content)
@@ -282,7 +280,8 @@ def main():
             real_headers = {}
             header_list = json.loads(siemplify.parameters.get("Header List"))
         else:
-            raise Exception("Bad input. You must have at least one.")
+            msg = "Bad input. You must have at least one."
+            raise Exception(msg)
 
         headers_dict = {}
         duplicate_key_dict = {}
@@ -307,16 +306,12 @@ def main():
         result_json["html_table_all_headers"] = html_table_all_headers
 
         list_of_domain_address_tuples = get_domains_and_addresses(real_headers)
-        list_of_domain_address = []
-        for t in list_of_domain_address_tuples:
-            list_of_domain_address.append({"domain": t[0], "address": t[1]})
+        list_of_domain_address = [{"domain": t[0], "address": t[1]} for t in list_of_domain_address_tuples]
         result_json["list_of_domain_address"] = list_of_domain_address
 
         user_authenticated_header = process_user_authenticated_header(real_headers)
         if "domain" in user_authenticated_header:
-            result_json["user_authenticated_header_domain"] = user_authenticated_header[
-                "domain"
-            ]
+            result_json["user_authenticated_header_domain"] = user_authenticated_header["domain"]
 
         siemplify_recommendations = get_generic_siemplify_recommendations(real_headers)
 
@@ -332,9 +327,7 @@ def main():
         result_json["total_rules_checked"] = len(siemplify_recommendations)
 
         if not siemplify_recommendations:
-            siemplify_recommendations = (
-                "Siemlify did not find anything suspicious in the headers"
-            )
+            siemplify_recommendations = "Siemlify did not find anything suspicious in the headers"
         else:
             siemplify_recommendations = "<table>{}</table>".format(
                 "".join(
@@ -354,7 +347,7 @@ def main():
             siemplify.result.add_result_json(result_json)
 
     except Exception as e:
-        siemplify.LOGGER.error(f"General error performing action {SCRIPT_NAME}")
+        siemplify.LOGGER.exception("General error performing action %s", SCRIPT_NAME)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "Failed"

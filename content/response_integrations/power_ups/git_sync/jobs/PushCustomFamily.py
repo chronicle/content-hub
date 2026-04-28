@@ -29,36 +29,29 @@ def main():
     siemplify.script_name = SCRIPT_NAME
 
     commit_msg = siemplify.extract_job_param("Commit")
-    family_names = [
-        _f
-        for _f in [
-            x.strip()
-            for x in siemplify.extract_job_param("Family Name", " ").split(",")
-        ]
-        if _f
-    ]
+    family_names = [_f for _f in [x.strip() for x in siemplify.extract_job_param("Family Name", " ").split(",")] if _f]
     readme_addon = siemplify.extract_job_param("Readme Addon", input_type=str)
 
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
-        for visualFamily in gitsync.api.get_custom_families():
-            if visualFamily["family"] in family_names:
+        for visual_family in gitsync.api.get_custom_families():
+            if visual_family["family"] in family_names:
                 if readme_addon:
                     siemplify.LOGGER.info(
                         "Readme addon found - adding to GitSync metadata file (GitSync.json)",
                     )
                     gitsync.content.metadata.set_readme_addon(
                         "Visual Family",
-                        visualFamily.get("family"),
+                        visual_family.get("family"),
                         readme_addon,
                     )
 
                 siemplify.LOGGER.info(
-                    f"Pushing Visual Family - {visualFamily.get('family')}",
+                    f"Pushing Visual Family - {visual_family.get('family')}",
                 )
                 gitsync.content.push_visual_family(
-                    VisualFamily(gitsync.api.get_custom_family(visualFamily["id"])),
+                    VisualFamily(gitsync.api.get_custom_family(visual_family["id"])),
                 )
 
         gitsync.commit_and_push(commit_msg)

@@ -41,9 +41,7 @@ def main():
     elif scope == "Global":
         set_global_context(siemplify, key, value)
 
-    output_message = (
-        f"Successfully Updated field {key} with value '{value}' in scope {scope}."
-    )
+    output_message = f"Successfully Updated field {key} with value '{value}' in scope {scope}."
 
     siemplify.end(output_message, True, EXECUTION_STATE_COMPLETED)
 

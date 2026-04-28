@@ -28,17 +28,11 @@ def main():
     format = siemplify.extract_action_param("Datetime Format", print_value=True)
 
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
-    )
-    result_value = (
-        None  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    output_message = "output message :"  # human readable message, showed in UI as the action result
 
     now = datetime.now()
 
     current_time = now.strftime(format)
-    print("Current Time =", current_time)
     siemplify.end(output_message, current_time, status)
 
 

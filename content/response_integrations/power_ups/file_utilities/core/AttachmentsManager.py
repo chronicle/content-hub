@@ -21,6 +21,7 @@ import os
 import re
 import time
 import zipfile
+from typing import TYPE_CHECKING
 
 import magic
 import requests
@@ -32,7 +33,9 @@ from TIPCommon.rest.soar_api import (
     create_entity,
     get_attachments_metadata,
 )
-from TIPCommon.types import SingleJson
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 ORIG_EMAIL_DESCRIPTION = "This is the original message as EML"
 
@@ -45,9 +48,7 @@ class AttachmentsManager:
         self.attachments = self._get_attachments()
 
     def get_alert_entities(self):
-        return [
-            entity for alert in self.siemplify.case.alerts for entity in alert.entities
-        ]
+        return [entity for alert in self.siemplify.case.alerts for entity in alert.entities]
 
     def get_attachments(self):
         attachments = []
@@ -62,10 +63,7 @@ class AttachmentsManager:
         attachments = []
         for wall_item in self.attachments:
             if wall_item["type"] == 4:
-                if (
-                    self.siemplify.current_alert.identifier
-                    == wall_item["alertIdentifier"]
-                ):
+                if self.siemplify.current_alert.identifier == wall_item["alertIdentifier"]:
                     attachments.append(wall_item)
         return attachments
 
@@ -74,10 +72,11 @@ class AttachmentsManager:
 
         Returns:
             list[SingleJson]: List of attachments metadata
+
         """
         return [
-            attachment.to_json() for attachment in
-            get_attachments_metadata(self.siemplify, self.siemplify.case.identifier)
+            attachment.to_json()
+            for attachment in get_attachments_metadata(self.siemplify, self.siemplify.case.identifier)
         ]
 
     def add_attachment(
@@ -119,9 +118,12 @@ class AttachmentsManager:
 
         except requests.HTTPError as e:
             if "Attachment size" in str(e):
-                raise ValueError(
+                msg = (
                     "Attachment size should be < 5MB. Original file size: "
                     f"{attachment.orig_size}. Size after encoding: {attachment.size}."
+                )
+                raise ValueError(
+                    msg
                 ) from e
 
         return result
@@ -137,10 +139,7 @@ class AttachmentsManager:
                 properties = dict_to_flat(file_entity)
                 del properties["filename"]
                 if "parent_file" in properties:
-                    self.logger.info(
-                        f"creating with relation: {entity_identifier} to "
-                        f"{properties['parent_file']}"
-                    )
+                    self.logger.info(f"creating with relation: {entity_identifier} to {properties['parent_file']}")
                     self.create_entity_with_relation(
                         entity_identifier,
                         properties["parent_file"].upper(),
@@ -148,13 +147,10 @@ class AttachmentsManager:
                     )
                     new_entities_w_rel[entity_identifier] = properties
                 else:
-                    name, attachment_type = os.path.splitext(entity_identifier)
+                    name, _attachment_type = os.path.splitext(entity_identifier)
                     found = 0
                     for alert_entity in self.alert_entities:
-                        if (
-                            alert_entity.identifier == name.upper()
-                            and alert_entity.entity_type == "EMAILSUBJECT"
-                        ):
+                        if alert_entity.identifier == name.upper() and alert_entity.entity_type == "EMAILSUBJECT":
                             self.create_entity_with_relation(
                                 entity_identifier,
                                 alert_entity.identifier,
@@ -165,7 +161,7 @@ class AttachmentsManager:
                             break
                     if found == 0:
                         self.logger.info(
-                            f"Creating entity: {entity_identifier} without relationship.",
+                            "Creating entity: %s without relationship.", entity_identifier,
                         )
                         self.siemplify.add_entity_to_case(
                             entity_identifier,
@@ -177,11 +173,9 @@ class AttachmentsManager:
                             properties,
                         )
             except Exception as e:
-                self.logger.error(e)
+                self.logger.exception(e)
                 raise
-            self.logger.info(
-                f"Creating entity: {properties['hash_md5']} and linking it to f{entity_identifier}."
-            )
+            self.logger.info(f"Creating entity: {properties['hash_md5']} and linking it to f{entity_identifier}.")
             self.create_entity_with_relation(
                 properties["hash_md5"],
                 entity_identifier,
@@ -191,15 +185,15 @@ class AttachmentsManager:
         if new_entities_w_rel:
             self.siemplify.load_case_data()
             time.sleep(3)
-            for new_entity in new_entities_w_rel:
+            for new_entity, properties in new_entities_w_rel.items():
                 for entity in self.get_alert_entities():
                     if new_entity.strip() == entity.identifier.strip():
                         entity.additional_properties.update(
-                            new_entities_w_rel[new_entity],
+                            properties,
                         )
                         updated_entities.append(entity)
                         break
-            self.logger.info(f"updating entities: {updated_entities}")
+            self.logger.info("updating entities: %s", updated_entities)
             self.siemplify.update_entities(updated_entities)
 
     def check_if_entity_exists(self, entity_identifier):
@@ -209,10 +203,7 @@ class AttachmentsManager:
         :param entity_identifier: identifier of entity, which we're checking
         :return: True if entity with such identier exists already within case; False - otherwise
         """
-        for entity in self.alert_entities:
-            if entity.identifier.strip() == entity_identifier:
-                return True
-        return False
+        return any(entity.identifier.strip() == entity_identifier for entity in self.alert_entities)
 
     def create_entity_with_relation(
         self,
@@ -252,39 +243,33 @@ class AttachmentsManager:
                         for name in attach_zip.namelist():
                             _file = attach_zip.read(name)
                             pwd = password
-                            self.logger.info(f"Password found {pwd}")
+                            self.logger.info("Password found %s", pwd)
                             break
                         break
                     except Exception:
                         pass
 
             if pwds and pwd is None:
-                try:
-                    found = 0
-                    for passwd in pwds:
-                        try:
-                            attach_zip.setpassword(passwd.encode())
-                            for name in attach_zip.namelist():
-                                _file = attach_zip.read(name)
-                                pwd = passwd
-                                self.logger.info(f"Password found {pwd}")
-                                found = 1
-                                break
-                            if found == 1:
-                                break
-                        except Exception:
-                            pass
-                except:
-                    raise
+                found = 0
+                for passwd in pwds:
+                    try:
+                        attach_zip.setpassword(passwd.encode())
+                        for name in attach_zip.namelist():
+                            _file = attach_zip.read(name)
+                            pwd = passwd
+                            self.logger.info("Password found %s", pwd)
+                            found = 1
+                            break
+                        if found == 1:
+                            break
+                    except Exception:
+                        pass
 
-            try:
-                for name in attach_zip.namelist():
-                    extracted_file = self.attachment(name, attach_zip.read(name))
-                    extracted_file["parent_file"] = zip_filename
-                    extracted_files.append(extracted_file)
-                return extracted_files
-            except RuntimeError:
-                raise
+            for name in attach_zip.namelist():
+                extracted_file = self.attachment(name, attach_zip.read(name))
+                extracted_file["parent_file"] = zip_filename
+                extracted_files.append(extracted_file)
+            return extracted_files
 
     @staticmethod
     def get_file_hash(data: bytes) -> dict[str, str]:
@@ -333,7 +318,7 @@ class AttachmentsManager:
     @staticmethod
     def attachment(filename, content):
         mime_type, mime_type_short = AttachmentsManager.get_mime_type(content)
-        attachment_json = {
+        return {
             "filename": filename,
             "size": len(content),
             "extension": os.path.splitext(filename)[1][1:],
@@ -347,4 +332,3 @@ class AttachmentsManager:
             "mime_type_short": mime_type_short,
             "raw": base64.b64encode(content).decode(),
         }
-        return attachment_json

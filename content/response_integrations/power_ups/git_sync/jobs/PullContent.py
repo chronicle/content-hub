@@ -32,11 +32,7 @@ def id_validator(resource, fields_to_compare, id_field, current_state):
     if isinstance(fields_to_compare, str):
         fields_to_compare = [fields_to_compare]
     current = next(
-        (
-            x
-            for x in current_state
-            if all(x[y] == resource[y] for y in fields_to_compare)
-        ),
+        (x for x in current_state if all(x[y] == resource[y] for y in fields_to_compare)),
         None,
     )
     if current:
@@ -61,12 +57,12 @@ def main():
                 "========== Environment Dynamic Parameters ==========",
             )
             current_parameters = gitsync.api.get_env_dynamic_parameters()
-            for dynParam in gitsync.content.get_dynamic_parameters():
+            for dyn_param in gitsync.content.get_dynamic_parameters():
                 siemplify.LOGGER.info(
-                    f"Adding dynamic parameter {dynParam.get('name')}",
+                    f"Adding dynamic parameter {dyn_param.get('name')}",
                 )
                 gitsync.api.add_dynamic_env_param(
-                    id_validator(dynParam, "name", "id", current_parameters),
+                    id_validator(dyn_param, "name", "id", current_parameters),
                 )
 
         if features["Environments"]:
@@ -75,9 +71,7 @@ def main():
             for environment in gitsync.content.get_environments():
                 if environment.get("name") in all_environments_names:
                     existing_env_id = next(
-                        x["id"]
-                        for x in gitsync.api.get_environments()
-                        if x.get("name") == environment.get("name")
+                        x["id"] for x in gitsync.api.get_environments() if x.get("name") == environment.get("name")
                     )
                     environment["id"] = existing_env_id
                     siemplify.LOGGER.info(
@@ -110,10 +104,8 @@ def main():
                             x
                             for x in current_instances
                             if x["environmentIdentifier"] == instance["environment"]
-                            and x["integrationIdentifier"]
-                            == instance["integrationIdentifier"]
-                            and x["instanceName"]
-                            == instance["settings"]["instanceName"]
+                            and x["integrationIdentifier"] == instance["integrationIdentifier"]
+                            and x["instanceName"] == instance["settings"]["instanceName"]
                         ),
                         None,
                     )
@@ -198,9 +190,7 @@ def main():
             for family in gitsync.content.get_visual_families():
                 gitsync.api.add_custom_family(
                     {
-                        "visualFamilyDataModel": (
-                            id_validator(family.raw_data, "family", "id", current_vfs)
-                        ),
+                        "visualFamilyDataModel": (id_validator(family.raw_data, "family", "id", current_vfs)),
                     },
                 )
 

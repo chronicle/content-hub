@@ -24,30 +24,27 @@ from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_han
 
 
 def get_filename_from_path(path):
-    is_win = re.match("^[A-Za-z]:\\\\", path.strip())
+    is_win = re.match(r"^[A-Za-z]:\\", path.strip())
     if is_win:
         (file_path, full_file_name) = ntpath.split(path)
     else:
         file_path, full_file_name = os.path.split(path)
-    filename, file_extension = os.path.splitext(full_file_name)
+    _filename, file_extension = os.path.splitext(full_file_name)
     file_details = {}
     if file_path:
         file_details["file_name"] = full_file_name
         file_details["file_path"] = file_path
         file_details["file_extension"] = file_extension
         return file_details
+    return None
 
 
 @output_handler
 def main():
     siemplify = SiemplifyAction()
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
-    )
-    result_value = (
-        None  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    output_message = "output message :"  # human readable message, showed in UI as the action result
+    result_value = None  # Set a simple result value, used for playbook if\else and placeholders.
     json_results = {}
     entities_to_update = []
     for entity in siemplify.target_entities:

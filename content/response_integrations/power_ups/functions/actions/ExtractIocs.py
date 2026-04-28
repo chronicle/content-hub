@@ -82,7 +82,7 @@ def main() -> None:
 
     except Exception as e:
         status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(f"Error occurred: {e!s}")
+        siemplify.LOGGER.exception(f"Error occurred: {e!s}")
         siemplify.end(f"Failed due to error: {e!s}", "", status)
 
 
@@ -139,19 +139,10 @@ def clean_found_url(url: str) -> str | None:
         url = url.lstrip("\"'\t \r\n").replace("\r", "").replace("\n", "").rstrip("/")
         url = urllib.parse.urlparse(url).geturl()
 
-        if ":/" in url[:10]:
-            scheme_url = re.sub(r":/{1,3}", "://", url, count=1)
+        scheme_url = re.sub(r":/{1,3}", "://", url, count=1) if ":/" in url[:10] else f"noscheme://{url}"
 
-        else:
-            scheme_url = f"noscheme://{url}"
-
-        tld = (
-            urllib.parse.urlparse(scheme_url)
-            .hostname.rstrip(".")
-            .rsplit(".", 1)[-1]
-            .lower()
-        )
-        if tld in (
+        tld = urllib.parse.urlparse(scheme_url).hostname.rstrip(".").rsplit(".", 1)[-1].lower()
+        if tld in {
             "aspx",
             "css",
             "gif",
@@ -162,7 +153,7 @@ def clean_found_url(url: str) -> str | None:
             "jpeg",
             "php",
             "png",
-        ):
+        }:
             return None
 
     except ValueError:
@@ -218,17 +209,13 @@ def extract_ips(body: str, include_internal: bool = True) -> list[str]:
     for ip_type in (IPV4_REGEX, IPV6_REGEX):
         for match in ip_type.findall(body):
             try:
-                ipaddress_match: ipaddress.IPv4Address | ipaddress.IPv6Address = (
-                    ipaddress.ip_address(match)
-                )
+                ipaddress_match: ipaddress.IPv4Address | ipaddress.IPv6Address = ipaddress.ip_address(match)
 
             except ValueError:
                 continue
 
             else:
-                if not ipaddress_match.is_private or (
-                    include_internal and match != "::"
-                ):
+                if not ipaddress_match.is_private or (include_internal and match != "::"):
                     ips[match] = None
 
     return list(ips)

@@ -32,13 +32,7 @@ def create_root_readme(gitsync: GitSyncManager):
 
 
 def extract_list_parameter(siemplify: SiemplifyJob, param_name: str):
-    return [
-        _f
-        for _f in [
-            x.strip() for x in siemplify.extract_job_param(param_name, " ").split(",")
-        ]
-        if _f
-    ]
+    return [_f for _f in [x.strip() for x in siemplify.extract_job_param(param_name, " ").split(",")] if _f]
 
 
 @output_handler
@@ -62,10 +56,7 @@ def main():
         installed_playbooks = gitsync.api.get_playbooks()
 
         for playbook in installed_playbooks:
-            if (
-                playbook.get("name") in playbooks_allowlist
-                or playbook.get("categoryName") in folders_allowlist
-            ):
+            if playbook.get("name") in playbooks_allowlist or playbook.get("categoryName") in folders_allowlist:
                 siemplify.LOGGER.info(f"Pushing Playbook {playbook['name']}")
 
                 if readme_addon:
@@ -86,15 +77,11 @@ def main():
                 if include_blocks:
                     for block in workflow.get_involved_blocks():
                         installed_block = next(
-                            (
-                                x
-                                for x in installed_playbooks
-                                if x.get("name") == block.get("name")
-                            ),
+                            (x for x in installed_playbooks if x.get("name") == block.get("name")),
                             None,
                         )
                         if not installed_block:
-                            siemplify.LOGGER.warn(
+                            siemplify.LOGGER.warning(
                                 f"Block {block.get('name')} wasn't found in the repo, ignoring",
                             )
                             continue
@@ -104,7 +91,7 @@ def main():
                         block.update_instance_name_in_steps(gitsync.api, siemplify)
                         gitsync.content.push_playbook(block)
             else:
-                siemplify.LOGGER.warn(
+                siemplify.LOGGER.warning(
                     f"Playbook {playbook.get('name')} not found, Skipping",
                 )
 

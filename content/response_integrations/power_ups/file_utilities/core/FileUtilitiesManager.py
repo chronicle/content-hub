@@ -36,44 +36,44 @@ class EntityFileManager:
         self.entities = []
 
     def __enter__(self):
-        """This function is executed with a "with" statement. It will acquire the lock,
+        """Execute with a "with" statement. Acquire the lock,
         and block other processes from using this file (only if it's using py-filelock
-        or check the .lock file). Once locked, it will fetch the rows
+        or check the .lock file). Once locked, fetch the rows
         from the file to self.entities to make changes.
         :return:
         """
         self.lock.acquire()
-        self.entities = self.readFile()
+        self.entities = self.read_file()
         return self
 
     def __exit__(self, typ, value, traceback):
-        """This function is executed in the end of the "with" statement.
-        It will write the changed to the file and release the lock. All parameters are
+        """End the "with" statement.
+        Write the changed to the file and release the lock. All parameters are
         built-ins of python and are not required.
         :param typ: Ignore.
         :param value: Ignore.
         :param traceback: Ignore.
         """
-        self.writeFile()
+        self.write_file()
         self.lock.release()
 
-    def readFile(self):
+    def read_file(self):
         """Helper function to read all entities from the file.
         :return: List with file contents (Entity Identifiers)
         """
         try:
-            with open(self.filepath) as f:
+            with open(self.filepath, encoding="utf-8") as f:
                 data = f.readlines()
             return [x.strip() for x in data]
         except FileNotFoundError:
             return []
 
-    def writeFile(self):
+    def write_file(self):
         """Helper function to write the entities list to the file"""
-        with open(self.filepath, "w") as f:
+        with open(self.filepath, "w", encoding="utf-8") as f:
             f.write("\n".join(self.entities))
 
-    def addEntity(self, entity):
+    def add_entity(self, entity):
         """Add elements to self.entities list
         :param entity: Entity identifier
         :return: True
@@ -81,7 +81,7 @@ class EntityFileManager:
         self.entities.append(entity)
         return True
 
-    def removeEntity(self, entity):
+    def remove_entity(self, entity):
         """Remove elements from self.entities list
         :param entity: Entity identifier
         :return: True
@@ -90,7 +90,8 @@ class EntityFileManager:
             self.entities.remove(entity)
             return True
         except KeyError:
-            raise EntityFileManagerException("Entity not found in file")
+            msg = "Entity not found in file"
+            raise EntityFileManagerException(msg)
 
 
 def validate_response(

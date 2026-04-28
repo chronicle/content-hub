@@ -14,12 +14,15 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import get_investigator_data
-from TIPCommon.types import SingleJson
 
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 ACTION_NAME = "Enrich Source and Destinations"
 
@@ -34,25 +37,18 @@ def get_alert_entities(siemplify):
 
 
 def get_ip_entities(siemplify):
-    return [
-        entity.identifier
-        for entity in get_alert_entities(siemplify)
-        if entity.entity_type == "ADDRESS"
-    ]
+    return [entity.identifier for entity in get_alert_entities(siemplify) if entity.entity_type == "ADDRESS"]
 
 
 def get_host_entities(siemplify):
-    return [
-        entity.identifier
-        for entity in get_alert_entities(siemplify)
-        if entity.entity_type == "HOSTNAME"
-    ]
+    return [entity.identifier for entity in get_alert_entities(siemplify) if entity.entity_type == "HOSTNAME"]
 
 
 def get_current_alert(alerts, current_alert):
     for alert in alerts:
         if alert["identifier"] == current_alert:
             return alert
+    return None
 
 
 def get_sources_and_dest(
@@ -65,6 +61,7 @@ def get_sources_and_dest(
 
     Returns:
         tuple[list[str], list[str]]: Tuple containing list of sources and destinations.
+
     """
     target_lists = {
         "sources": [],
@@ -73,14 +70,12 @@ def get_sources_and_dest(
 
     if isinstance(alert, dict) and "securityEventCards" in alert:
         for event_card in alert["securityEventCards"]:
-            for key in target_lists:
-                target_lists[key].extend(event_card.get(key, []))
+            for key, target_list in target_lists.items():
+                target_list.extend(event_card.get(key, []))
 
         for key, lst in target_lists.items():
             if lst and isinstance(lst[0], dict):
-                target_lists[key] = [
-                    x.get("identifier") for x in lst if isinstance(x, dict)
-                ]
+                target_lists[key] = [x.get("identifier") for x in lst if isinstance(x, dict)]
 
     else:
         key_map = {"source": "sources", "destination": "destinations"}
@@ -137,8 +132,7 @@ def main():
     result_value = None
 
     siemplify.LOGGER.info(
-        f"\n  status: {status}\n  result_value: {result_value}\n"
-        f"output_message: {output_message}",
+        f"\n  status: {status}\n  result_value: {result_value}\noutput_message: {output_message}",
     )
     siemplify.end(output_message, result_value, status)
 

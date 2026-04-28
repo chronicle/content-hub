@@ -26,13 +26,13 @@ SCRIPT_NAME = "TagCasesBasedOnLastModifiedTime"
 def main():
     siemplify = SiemplifyJob()
     siemplify.script_name = SCRIPT_NAME  # In order to use the SiemplifyLogger, you must assign a name to the script.
-    maxTime = siemplify.parameters.get("Unmodified Time")
+    max_time = siemplify.parameters.get("Unmodified Time")
     tags = siemplify.parameters.get("Tags")
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     try:
-        timeNow = datetime.datetime.now()
-        update_time_to = timeNow - datetime.timedelta(hours=int(maxTime))
+        time_now = datetime.datetime.now()
+        update_time_to = time_now - datetime.timedelta(hours=int(max_time))
 
         case_ids = siemplify.get_cases_ids_by_filter(
             status="OPEN",
@@ -49,7 +49,7 @@ def main():
         )
 
         if len(case_ids):
-            siemplify.LOGGER.info(f"The following cases will be affected: {case_ids}")
+            siemplify.LOGGER.info("The following cases will be affected: %s", case_ids)
             tags_list = []
             tags_list.extend(t.strip() for t in tags.split(","))
             tags_string = ", ".join(tags_list)
@@ -64,11 +64,11 @@ def main():
 
         else:
             siemplify.LOGGER.info(
-                f"No Cases open for longer than {maxTime} hours were found",
+                "No Cases open for longer than %s hours were found", maxTime,
             )
 
     except Exception as e:
-        siemplify.LOGGER.error(f"General error performing Job {SCRIPT_NAME}")
+        siemplify.LOGGER.exception("General error performing Job %s", SCRIPT_NAME)
         siemplify.LOGGER.exception(e)
         raise
 

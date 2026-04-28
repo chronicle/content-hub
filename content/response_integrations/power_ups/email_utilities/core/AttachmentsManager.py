@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import os
+from typing import TYPE_CHECKING
 
 import requests
 from soar_sdk.SiemplifyDataModel import Attachment
@@ -23,7 +24,9 @@ from TIPCommon.rest.soar_api import (
     add_attachment_to_case_wall,
     get_attachments_metadata,
 )
-from TIPCommon.types import SingleJson
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 ORIG_EMAIL_DESCRIPTION = "This is the original message as EML"
 
@@ -36,9 +39,7 @@ class AttachmentsManager:
         self.attachments = self._get_attachments()
 
     def get_alert_entities(self):
-        return [
-            entity for alert in self.siemplify.case.alerts for entity in alert.entities
-        ]
+        return [entity for alert in self.siemplify.case.alerts for entity in alert.entities]
 
     def get_attachments(self):
         attachments = []
@@ -53,10 +54,7 @@ class AttachmentsManager:
         attachments = []
         for wall_item in self.attachments:
             if wall_item["type"] == 4:
-                if (
-                    self.siemplify.current_alert.identifier
-                    == wall_item["alertIdentifier"]
-                ):
+                if self.siemplify.current_alert.identifier == wall_item["alertIdentifier"]:
                     attachments.append(wall_item)
         return attachments
 
@@ -65,10 +63,11 @@ class AttachmentsManager:
 
         Returns:
             list[SingleJson]: List of attachments metadata
+
         """
         return [
-            attachment.to_json() for attachment in
-            get_attachments_metadata(self.siemplify, self.siemplify.case.identifier)
+            attachment.to_json()
+            for attachment in get_attachments_metadata(self.siemplify, self.siemplify.case.identifier)
         ]
 
     def add_attachment(
@@ -110,9 +109,12 @@ class AttachmentsManager:
 
         except requests.HTTPError as e:
             if "Attachment size" in str(e):
-                raise ValueError(
+                msg = (
                     "Attachment size should be < 5MB. Original file size: "
-                    f"{attachment.orig_size}. Size after encoding: {attachment.size}.",
+                    f"{attachment.orig_size}. Size after encoding: {attachment.size}."
+                )
+                raise ValueError(
+                    msg,
                 ) from e
 
         return result

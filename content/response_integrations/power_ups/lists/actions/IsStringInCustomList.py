@@ -28,12 +28,7 @@ def get_custom_list_items_from_identifier_list(siemplify, category_name, identif
     :param identifiers: a list of strings
     :return: a list of custom list item objects
     """
-    custom_list_items = []
-    for identifier in identifiers:
-        custom_list_items.append(
-            CustomList(identifier, category_name, siemplify.environment),
-        )
-    return custom_list_items
+    return [CustomList(identifier, category_name, siemplify.environment) for identifier in identifiers]
 
 
 def is_identifier_in_custom_list(siemplify, identifier, category):

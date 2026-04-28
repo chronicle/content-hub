@@ -13,14 +13,17 @@
 # limitations under the License.
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
 
-from TIPCommon.types import SingleJson
-
 from ..core.ToolsCommon import get_domain_from_string
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 # Consts:
 INTEGRATION_NAME = "Tools"
@@ -43,12 +46,7 @@ def main() -> None:
         out_message_list: list[str] = []
 
         urls = siemplify.parameters.get("URLs")
-        extract_subdomain = (
-            siemplify.extract_action_param(
-                "Extract subdomain", print_value=True
-            ).lower()
-            == "true"
-        )
+        extract_subdomain = siemplify.extract_action_param("Extract subdomain", print_value=True).lower() == "true"
 
         if urls:
             separator = siemplify.parameters.get("Separator")
@@ -63,24 +61,18 @@ def main() -> None:
                         }
                         result_value += 1
                     else:
-                        out_message_list.append(
-                            f"Invalid domain or suffix for URL {url}"
-                        )
+                        out_message_list.append(f"Invalid domain or suffix for URL {url}")
                         json_result[url.strip()] = {"Error": "Invalid domain or suffix"}
 
                 except Exception as e:
-                    out_message_list.append(
-                        f"Failed extracting domain for param URL {url}"
-                    )
+                    out_message_list.append(f"Failed extracting domain for param URL {url}")
                     json_result[url.strip()] = {"Error": f"Exception: {e}"}
 
         for entity in siemplify.target_entities:
             try:
                 domain = get_domain_from_string(entity.identifier, extract_subdomain)
                 if domain:
-                    entity.additional_properties["siemplifytools_extracted_domain"] = (
-                        domain
-                    )
+                    entity.additional_properties["siemplifytools_extracted_domain"] = domain
                     successful_entities.append(entity)
                     json_result[entity.identifier] = {
                         "domain": domain,
@@ -88,29 +80,20 @@ def main() -> None:
                     }
                 else:
                     failed_entities.append(entity)
-                    json_result[entity.identifier] = {
-                        "Error": "Invalid domain or suffix"
-                    }
+                    json_result[entity.identifier] = {"Error": "Invalid domain or suffix"}
             except Exception as e:
                 failed_entities.append(entity)
                 json_result[entity.identifier] = {"Error": f"Exception: {e}"}
 
         if successful_entities:
             siemplify.update_entities(successful_entities)
-            out_message_list.append(
-                f"Domain extracted for {[x.identifier for x in successful_entities]}"
-            )
+            out_message_list.append(f"Domain extracted for {[x.identifier for x in successful_entities]}")
 
         if failed_entities:
-            out_message_list.append(
-                "Failed extracting domain for "
-                f"{[x.identifier for x in failed_entities]}"
-            )
+            out_message_list.append(f"Failed extracting domain for {[x.identifier for x in failed_entities]}")
 
         if json_result:
-            siemplify.result.add_result_json(
-                convert_dict_to_json_result_dict(json_result)
-            )
+            siemplify.result.add_result_json(convert_dict_to_json_result_dict(json_result))
         if out_message_list:
             output_message = "\n".join(out_message_list)
 

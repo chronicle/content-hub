@@ -22,17 +22,15 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 
 def try_parse_float(s, val=None):
     try:
-        number = float(s)
-        return number
+        return float(s)
     except ValueError:
         return val
 
 
 def try_parse_int(s, val=None):
     try:
-        number = int(s, 10)
+        return int(s, 10)
         # print(number)
-        return number
     except ValueError:
         return val
 
@@ -71,17 +69,13 @@ def main():
         for number in numbers:
             updated_number = abs(number)
             updated_numbers.append(updated_number)
-        output_message = (
-            f"{numbers} successfully converted to {updated_numbers} with abs function"
-        )
+        output_message = f"{numbers} successfully converted to {updated_numbers} with abs function"
 
     elif function == "Float":
         for number in numbers:
             updated_number = abs(number)
             updated_numbers.append(updated_number)
-        output_message = (
-            f"{numbers} successfully converted to {updated_numbers} with float function"
-        )
+        output_message = f"{numbers} successfully converted to {updated_numbers} with float function"
 
     elif function == "Display":
         for number in numbers:
@@ -94,17 +88,13 @@ def main():
         for int_item in int_array:
             updated_number = hex(int_item)
             updated_numbers.append(updated_number)
-        output_message = (
-            f"{numbers} successfully converted to {updated_numbers} with hex function"
-        )
+        output_message = f"{numbers} successfully converted to {updated_numbers} with hex function"
 
     elif function == "Int":
         for number in numbers:
             updated_number = int(number)
             updated_numbers.append(updated_number)
-        output_message = (
-            f"{numbers} successfully converted to {updated_numbers} with int function"
-        )
+        output_message = f"{numbers} successfully converted to {updated_numbers} with int function"
 
     elif function == "Max":
         max_number = max(numbers)
@@ -120,9 +110,7 @@ def main():
         for number in numbers:
             updated_number = round(number)
             updated_numbers.append(updated_number)
-        output_message = (
-            f"{numbers} successfully converted to {updated_numbers} with round function"
-        )
+        output_message = f"{numbers} successfully converted to {updated_numbers} with round function"
 
     elif function == "Sort":
         updated_numbers = sorted(numbers)

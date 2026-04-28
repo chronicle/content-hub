@@ -39,18 +39,9 @@ def main():
         ).lower()
         == "true"
     )
-    bruteforce_password = (
-        siemplify.extract_action_param("BruteForce Password", print_value=True).lower()
-        == "true"
-    )
-    create_entities = (
-        siemplify.extract_action_param("Create Entities", print_value=True).lower()
-        == "true"
-    )
-    add_to_case_wall = (
-        siemplify.extract_action_param("Add to Case Wall", print_value=True).lower()
-        == "true"
-    )
+    bruteforce_password = siemplify.extract_action_param("BruteForce Password", print_value=True).lower() == "true"
+    create_entities = siemplify.extract_action_param("Create Entities", print_value=True).lower() == "true"
+    add_to_case_wall = siemplify.extract_action_param("Add to Case Wall", print_value=True).lower() == "true"
 
     zip_passwords = list(
         filter(
@@ -70,9 +61,7 @@ def main():
         ),
     )
     status = EXECUTION_STATE_COMPLETED
-    output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
-    )
+    output_message = "output message :"  # human readable message, showed in UI as the action result
     result_value = "false"  # Set a simple result value, used for playbook if\else and placeholders.
     attach_mgr = AttachmentsManager(siemplify=siemplify)
 
@@ -83,10 +72,10 @@ def main():
                 f"The entity {entity.identifier} is being checked for being zip",
             )
             if "attachment_id" in entity.additional_properties:
-                _attachment = siemplify.get_attachment(
+                attachment = siemplify.get_attachment(
                     entity.additional_properties["attachment_id"],
                 )
-                zip_file_content = io.BytesIO(_attachment.getvalue())
+                zip_file_content = io.BytesIO(attachment.getvalue())
                 if zipfile.is_zipfile(zip_file_content):
                     extracted_files[entity.identifier] = attach_mgr.extract_zip(
                         entity.identifier,
@@ -97,12 +86,11 @@ def main():
                     result_value = "true"
 
     if add_to_case_wall:
-        for file_name in extracted_files:
-            for x_file in extracted_files[file_name]:
+        for file_name, files in extracted_files.items():
+            for x_file in files:
                 if x_file["filename"].endswith("/") or not x_file.get("raw", ""):
                     siemplify.LOGGER.info(
-                        "Skipping directory or empty file: "
-                        f"{x_file['filename']} from case wall.",
+                        f"Skipping directory or empty file: {x_file['filename']} from case wall.",
                     )
                     continue
                 siemplify.LOGGER.info(
@@ -117,14 +105,14 @@ def main():
                 x_file["attachment_id"] = attachment_res
 
     if not include_data:
-        for file_name in extracted_files:
-            for x_file in extracted_files[file_name]:
+        for file_name, files in extracted_files.items():
+            for x_file in files:
                 del x_file["raw"]
 
     if create_entities:
-        for file_name in extracted_files:
-            siemplify.result.add_json(file_name, extracted_files[file_name], "Zip File")
-            attach_mgr.create_file_entities(extracted_files[file_name])
+        for file_name, files in extracted_files.items():
+            siemplify.result.add_json(file_name, files, "Zip File")
+            attach_mgr.create_file_entities(files)
 
     siemplify.result.add_result_json(convert_dict_to_json_result_dict(extracted_files))
     siemplify.LOGGER.info(

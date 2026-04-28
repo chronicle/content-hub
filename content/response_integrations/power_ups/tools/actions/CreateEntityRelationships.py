@@ -30,9 +30,7 @@ ACTION_NAME = "Create Entity Relationships"
 def get_alert_entities(siemplify):
     alert_entities = []
     for alert in siemplify.case.alerts:
-        for entity in alert.entities:
-            if entity.alert_identifier == siemplify.current_alert.identifier:
-                alert_entities.append(entity)
+        alert_entities.extend(entity for entity in alert.entities if entity.alert_identifier == siemplify.current_alert.identifier)
     return alert_entities
 
 
@@ -164,12 +162,7 @@ def main():
 
     for entity in alert_entities:
         if len(linked_entities) > 0:
-            for l_entity in linked_entities:
-                if (
-                    entity.entity_type == linked_entity_type
-                    and entity.identifier.casefold() == l_entity.casefold()
-                ):
-                    target_entities.append(entity.identifier)
+            target_entities.extend(entity.identifier for l_entity in linked_entities if entity.entity_type == linked_entity_type and entity.identifier.casefold() == l_entity.casefold())
         elif entity.entity_type == linked_entity_type:
             target_entities.append(entity.identifier)
 
@@ -199,7 +192,7 @@ def main():
                     f" : {linked_entity_type} successfully\n"
                 )
             except Exception as e:
-                siemplify.LOGGER.error(
+                siemplify.LOGGER.exception(
                     f"Error creating entity:{linked_entity}, error: {e}",
                 )
                 status = EXECUTION_STATE_FAILED
@@ -217,11 +210,7 @@ def main():
             json_results[new_entity_identifier]["linked_entities"] = linked_entity_obj
             json_results[new_entity_identifier]["entity_type"] = entity_type
 
-    elif (
-        len(target_entities) > len(entity_identifiers)
-        and len(entity_identifiers) == 1
-        and len(linked_entities) > 0
-    ):
+    elif len(target_entities) > len(entity_identifiers) and len(entity_identifiers) == 1 and len(linked_entities) > 0:
         linked_entities_arr = []
         for target_entity in target_entities:
             try:
@@ -234,7 +223,7 @@ def main():
                 result_value = True
                 linked_entities_arr.append(target_entity)
             except Exception as e:
-                siemplify.LOGGER.error(
+                siemplify.LOGGER.exception(
                     f"Error creating entity:{target_entity}, error: {e}",
                 )
                 status = EXECUTION_STATE_FAILED
@@ -254,11 +243,7 @@ def main():
         linked_entity_obj["entities"] = linked_entities_arr
         json_results[entity_identifiers[0]]["linked_entities"] = linked_entity_obj
 
-    elif (
-        len(entity_identifiers) > len(target_entities)
-        and len(target_entities) == 1
-        and len(linked_entities) > 0
-    ):
+    elif len(entity_identifiers) > len(target_entities) and len(target_entities) == 1 and len(linked_entities) > 0:
         for new_entity_identifier in entity_identifiers:
             linked_entities_arr = []
             linked_entity = target_entities[0]
@@ -272,7 +257,7 @@ def main():
                 result_value = True
                 linked_entities_arr.append(linked_entity)
             except Exception as e:
-                siemplify.LOGGER.error(
+                siemplify.LOGGER.exception(
                     f"Error creating entity:{linked_entity}, error: {e}",
                 )
                 status = EXECUTION_STATE_FAILED
@@ -304,19 +289,17 @@ def main():
                     json_payload,
                 )
             except Exception as e:
-                siemplify.LOGGER.error(
+                siemplify.LOGGER.exception(
                     f"Error creating entity:{new_entity_identifier}, error: {e}",
                 )
                 status = EXECUTION_STATE_FAILED
             result_value = True
             target_entities_str = ",".join(target_entities)
             siemplify.LOGGER.info(
-                f"The Entity {new_entity_identifier} was created and linked to "
-                f"{target_entities_str} successfully\n",
+                f"The Entity {new_entity_identifier} was created and linked to {target_entities_str} successfully\n",
             )
             output_message += (
-                f"The Entity {new_entity_identifier} was created and linked to "
-                f"{target_entities_str} successfully\n"
+                f"The Entity {new_entity_identifier} was created and linked to {target_entities_str} successfully\n"
             )
             json_results[new_entity_identifier]["status"] = "created"
 
@@ -335,9 +318,7 @@ def main():
                 if new_entity.strip() == entity.identifier.strip():
                     entity.additional_properties.update(enrichment_json)
                     updated_entities.append(entity)
-                    output_message += (
-                        f"Enrichment added for entity: {entity.identifier}.\n"
-                    )
+                    output_message += f"Enrichment added for entity: {entity.identifier}.\n"
                     break
         siemplify.update_entities(updated_entities)
     siemplify.result.add_result_json(convert_dict_to_json_result_dict(json_results))
