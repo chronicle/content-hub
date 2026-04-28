@@ -74,26 +74,16 @@ class TestGetViolationDetails:
             FakeEntity(identifier=url_b, entity_type="DestinationURL"),
         ]
         events = [
-            FakeSecurityEvent(
-                additional_properties={"violation_url": url_a, "violation_uid": "uid-a"}
-            ),
-            FakeSecurityEvent(
-                additional_properties={"violation_url": url_b, "violation_uid": "uid-b"}
-            ),
+            FakeSecurityEvent(additional_properties={"violation_url": url_a, "violation_uid": "uid-a"}),
+            FakeSecurityEvent(additional_properties={"violation_url": url_b, "violation_uid": "uid-b"}),
         ]
-        siemplify = action_siemplify_factory(
-            target_entities=entities, security_events=events
-        )
+        siemplify = action_siemplify_factory(target_entities=entities, security_events=events)
 
         responses = {
             "uid-a": _violation_payload("uid-a"),
             "uid-b": _violation_payload("uid-b", subtype="counterfeit"),
         }
-        fake_poller.set_search_feed_side_effect(
-            lambda feed_id: type(
-                "P", (), {"raw_dict": responses[feed_id]}
-            )()
-        )
+        fake_poller.set_search_feed_side_effect(lambda feed_id: type("P", (), {"raw_dict": responses[feed_id]})())
 
         with (
             patch.object(gvd_module, "SiemplifyAction", return_value=siemplify),
@@ -118,16 +108,12 @@ class TestGetViolationDetails:
         assert end["status"] == EXECUTION_STATE_COMPLETED
         assert end["result_value"] is True
 
-    def test_skips_non_destination_url_entities(
-        self, gvd_module, action_siemplify_factory, fake_poller
-    ):
+    def test_skips_non_destination_url_entities(self, gvd_module, action_siemplify_factory, fake_poller):
         """An entity of type ``IPAddress`` should be ignored entirely — no
         API call, no JSON row, no insight."""
 
         entities = [FakeEntity(identifier="1.2.3.4", entity_type="IPAddress")]
-        siemplify = action_siemplify_factory(
-            target_entities=entities, security_events=[]
-        )
+        siemplify = action_siemplify_factory(target_entities=entities, security_events=[])
 
         with (
             patch.object(gvd_module, "SiemplifyAction", return_value=siemplify),
@@ -145,17 +131,13 @@ class TestGetViolationDetails:
         assert end["result_value"] is False
         assert "No DestinationURL" in end["message"]
 
-    def test_marks_failed_when_uid_missing_for_url_entity(
-        self, gvd_module, action_siemplify_factory, fake_poller
-    ):
+    def test_marks_failed_when_uid_missing_for_url_entity(self, gvd_module, action_siemplify_factory, fake_poller):
         """A URL entity that doesn't appear in the URL→UID map is reported,
         no API call is made, and the action ends ``FAILED``."""
 
         url = "https://bad.example.com/no-uid"
         entities = [FakeEntity(identifier=url, entity_type="DestinationURL")]
-        siemplify = action_siemplify_factory(
-            target_entities=entities, security_events=[]
-        )
+        siemplify = action_siemplify_factory(target_entities=entities, security_events=[])
 
         with (
             patch.object(gvd_module, "SiemplifyAction", return_value=siemplify),
@@ -170,22 +152,14 @@ class TestGetViolationDetails:
         assert end["status"] == EXECUTION_STATE_FAILED
         assert "No UID found" in end["message"]
 
-    def test_marks_failed_when_search_feed_raises(
-        self, gvd_module, action_siemplify_factory, fake_poller
-    ):
+    def test_marks_failed_when_search_feed_raises(self, gvd_module, action_siemplify_factory, fake_poller):
         """If ``search_feed_by_id`` raises for an entity we record the
         failure but don't crash; the action ends ``FAILED``."""
 
         url = "https://bad.example.com/x"
         entities = [FakeEntity(identifier=url, entity_type="DestinationURL")]
-        events = [
-            FakeSecurityEvent(
-                additional_properties={"violation_url": url, "violation_uid": "uid-x"}
-            )
-        ]
-        siemplify = action_siemplify_factory(
-            target_entities=entities, security_events=events
-        )
+        events = [FakeSecurityEvent(additional_properties={"violation_url": url, "violation_uid": "uid-x"})]
+        siemplify = action_siemplify_factory(target_entities=entities, security_events=events)
 
         with (
             patch.object(gvd_module, "SiemplifyAction", return_value=siemplify),
@@ -195,9 +169,7 @@ class TestGetViolationDetails:
             with fake_poller.fail_requests("DRP 500 error"):
                 gvd_module.main()
 
-        assert fake_poller.calls_to("search_feed_by_id") == [
-            fake_poller.calls_to("search_feed_by_id")[0]
-        ]
+        assert fake_poller.calls_to("search_feed_by_id") == [fake_poller.calls_to("search_feed_by_id")[0]]
         end = siemplify._end_calls[0]
         assert end["status"] == EXECUTION_STATE_FAILED
         assert "Failed to fetch violation details" in end["message"]
@@ -211,14 +183,8 @@ class TestGetViolationDetails:
         url_event = "https://bad.EXAMPLE.com/abc"
         url_entity = "HTTPS://bad.example.COM/abc"
         entities = [FakeEntity(identifier=url_entity, entity_type="DestinationURL")]
-        events = [
-            FakeSecurityEvent(
-                additional_properties={"violation_url": url_event, "violation_uid": "uid-x"}
-            )
-        ]
-        siemplify = action_siemplify_factory(
-            target_entities=entities, security_events=events
-        )
+        events = [FakeSecurityEvent(additional_properties={"violation_url": url_event, "violation_uid": "uid-x"})]
+        siemplify = action_siemplify_factory(target_entities=entities, security_events=events)
 
         fake_poller.set_search_feed_response(_violation_payload("uid-x"))
 

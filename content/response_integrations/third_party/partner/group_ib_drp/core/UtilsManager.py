@@ -1,13 +1,12 @@
 from __future__ import annotations
+
 import logging
 import urllib.parse
 import uuid
 
 import validators
-
-from soar_sdk.SiemplifyDataModel import EntityTypes
-
 from TIPCommon.extraction import extract_configuration_param
+
 from .adapter import create_drp_poller
 
 # Import Managers
@@ -65,7 +64,6 @@ def extract_host(value, fallback=""):
 
 
 class EntityValidator(object):
-
     def __init__(self):
         pass
 
@@ -82,7 +80,6 @@ class EntityValidator(object):
             return entity, "hash"
 
         elif validators.url(entity):
-
             _address = urllib.parse.urlsplit(entity).netloc
 
             if validators.domain(_address):
@@ -102,13 +99,12 @@ class EntityValidator(object):
 
 
 class GIBConnector:
-
     def __init__(self, siemplify):
         self.siemplify = siemplify
 
     def init_action_poller(self, creds=None):
         self.siemplify.LOGGER.info("Provider Name = " + Config.PROVIDER_NAME)
-        self.siemplify.LOGGER.info('──── GET USER PARAMS')
+        self.siemplify.LOGGER.info("──── GET USER PARAMS")
 
         verify_ssl = True
         if creds:
@@ -117,9 +113,15 @@ class GIBConnector:
             else:
                 username, api_key, api_url = creds
         else:
-            username = extract_configuration_param(self.siemplify, provider_name=Config.PROVIDER_NAME, param_name="API login", print_value=True)
-            api_key = extract_configuration_param(self.siemplify, provider_name=Config.PROVIDER_NAME, param_name="API key", print_value=False)
-            api_url = extract_configuration_param(self.siemplify, provider_name=Config.PROVIDER_NAME, param_name="API URL", print_value=True)
+            username = extract_configuration_param(
+                self.siemplify, provider_name=Config.PROVIDER_NAME, param_name="API login", print_value=True
+            )
+            api_key = extract_configuration_param(
+                self.siemplify, provider_name=Config.PROVIDER_NAME, param_name="API key", print_value=False
+            )
+            api_url = extract_configuration_param(
+                self.siemplify, provider_name=Config.PROVIDER_NAME, param_name="API URL", print_value=True
+            )
             verify_ssl = extract_configuration_param(
                 self.siemplify,
                 provider_name=Config.PROVIDER_NAME,
@@ -132,7 +134,7 @@ class GIBConnector:
         if api_url and not api_url.endswith("/"):
             api_url += "/"
 
-        self.siemplify.LOGGER.info('──── API INITIALIZATION')
+        self.siemplify.LOGGER.info("──── API INITIALIZATION")
         poller = create_drp_poller(
             username=username,
             api_key=api_key,
@@ -143,7 +145,6 @@ class GIBConnector:
 
 
 class CaseProcessor:
-
     entity_types = {
         0: "SourceHostName",
         1: "SourceAddress",
@@ -155,7 +156,7 @@ class CaseProcessor:
         7: "DestinationUserName",
         8: "DestinationProcessName",
         9: "DestinationMacAddress",
-        "URL": "DestinationURL",            # 10
+        "URL": "DestinationURL",  # 10
         11: "Process",
         12: "FileName",
         13: "FileHash",
@@ -174,8 +175,8 @@ class CaseProcessor:
         26: "ChildProcess",
         27: "ChildHash",
         28: "SourceDomain",
-        "DOMAIN": "DestinationDomain",      # 29
-        30: "IPSet"
+        "DOMAIN": "DestinationDomain",  # 29
+        30: "IPSet",
     }
 
     def __init__(self, siemplify):
@@ -208,5 +209,5 @@ class CaseProcessor:
             # Group-IB ID
             alert_identifier=alert_id,
             # Environment
-            environment=None
+            environment=None,
         )

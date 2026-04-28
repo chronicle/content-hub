@@ -23,18 +23,14 @@ def reject_module():
 
 
 def _make_event(url: str, uid: str) -> FakeSecurityEvent:
-    return FakeSecurityEvent(
-        additional_properties={"violation_url": url, "violation_uid": uid}
-    )
+    return FakeSecurityEvent(additional_properties={"violation_url": url, "violation_uid": uid})
 
 
 class TestUrlReject:
     """Cover the same matrix of outcomes as ``URL-Approve`` and assert
     ``approve=False`` in every POST."""
 
-    def test_rejects_every_mapped_destination_url_entity(
-        self, reject_module, action_siemplify_factory, fake_poller
-    ):
+    def test_rejects_every_mapped_destination_url_entity(self, reject_module, action_siemplify_factory, fake_poller):
         """Two URL entities, both with UIDs → two POSTs and ``COMPLETED``."""
 
         url, uid = "https://bad.example.com/a", "uid-a"
@@ -61,9 +57,7 @@ class TestUrlReject:
         assert end["result_value"] is True
         assert "Rejected" in end["message"]
 
-    def test_records_failures_and_returns_failed(
-        self, reject_module, action_siemplify_factory, fake_poller
-    ):
+    def test_records_failures_and_returns_failed(self, reject_module, action_siemplify_factory, fake_poller):
         """An API exception during reject → ``FAILED``."""
 
         url, uid = "https://bad.example.com/x", "uid-x"

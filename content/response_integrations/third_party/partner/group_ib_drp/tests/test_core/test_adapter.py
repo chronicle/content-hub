@@ -16,10 +16,10 @@ _SOAR_SDK_DIR = _SITE_PACKAGES / "soar_sdk"
 if _SOAR_SDK_DIR.is_dir() and str(_SOAR_SDK_DIR) not in sys.path:
     sys.path.insert(0, str(_SOAR_SDK_DIR))
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch  # noqa: E402
 
-from group_ib_drp.core.adapter import create_drp_poller
-from group_ib_drp.core.mapping import mapping_config
+from group_ib_drp.core.adapter import create_drp_poller  # noqa: E402
+from group_ib_drp.core.mapping import mapping_config  # noqa: E402
 
 
 class TestCreateDRPPoller:
@@ -64,9 +64,7 @@ class TestCreateDRPPoller:
                 api_key="k",
                 api_url="https://drp.example.com/api/",
             )
-        actual_collections = {
-            call.kwargs["collection_name"] for call in instance.set_keys.call_args_list
-        }
+        actual_collections = {call.kwargs["collection_name"] for call in instance.set_keys.call_args_list}
         assert actual_collections == set(mapping_config.keys())
         for call in instance.set_keys.call_args_list:
             collection = call.kwargs["collection_name"]

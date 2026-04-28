@@ -108,9 +108,7 @@ class FakeDRPPoller:
         self.calls.append(PollerCall("set_verify", (verify,), {}))
 
     def set_keys(self, collection_name: str, keys: dict) -> None:
-        self.calls.append(
-            PollerCall("set_keys", (), {"collection_name": collection_name, "keys": keys})
-        )
+        self.calls.append(PollerCall("set_keys", (), {"collection_name": collection_name, "keys": keys}))
 
     def send_request(
         self,
@@ -126,9 +124,7 @@ class FakeDRPPoller:
         if self._fail_requests:
             raise Exception(self._fail_message)
         if self._send_request_side_effect is not None:
-            return self._send_request_side_effect(
-                endpoint=endpoint, params=params, method=method, json=json, **kwargs
-            )
+            return self._send_request_side_effect(endpoint=endpoint, params=params, method=method, json=json, **kwargs)
         return self._send_request_response
 
     def search_feed_by_id(self, feed_id: str) -> FakeFeedParser:

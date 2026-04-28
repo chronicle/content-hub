@@ -1,18 +1,17 @@
 from __future__ import annotations
+
 import uuid
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urljoin, urlencode
+from urllib.parse import urlencode, urljoin
 
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
-
 from TIPCommon.extraction import extract_connector_param
 
 # Import Managers
 from ..core.config import Config
 from ..core.UtilsManager import GIBConnector, extract_host
-
 
 _SEVERITY_MAP = {"Informative": -1, "Low": 40, "Medium": 60, "High": 80, "Critical": 100}
 _DEFAULT_PRIORITY = 60
@@ -59,14 +58,17 @@ def main() -> None:
     section_raw = extract_connector_param(siemplify, param_name="Section", print_value=True)
 
     brand_ids = [b.strip() for b in brand_ids_raw.split(",") if b.strip()] if brand_ids_raw else None
-    approve_states = [int(s.strip()) for s in approve_states_raw.split(",") if s.strip()] if approve_states_raw else None
+    approve_states = (
+        [int(s.strip()) for s in approve_states_raw.split(",") if s.strip()] if approve_states_raw else None
+    )
     subtypes = [int(s.strip()) for s in subtypes_raw.split(",") if s.strip()] if subtypes_raw else None
     section = int(section_raw.strip()) if section_raw and section_raw.strip() else None
 
     # Create alerts holder (The main output of each connector run)
     alerts = []
     events, state = gather_events(
-        siemplify, start_date,
+        siemplify,
+        start_date,
         brand_ids=brand_ids,
         approve_states=approve_states,
         subtypes=subtypes,
@@ -101,11 +103,13 @@ def main() -> None:
                 siemplify.LOGGER.info("Alert {} overflowed. Skipping this run.".format(uid))
                 continue
 
-            siemplify.LOGGER.info("Created alert — display_id={} source_grouping_identifier={} url={}".format(
-                alert_instance.display_id,
-                alert_instance.source_grouping_identifier,
-                fake_uri,
-            ))
+            siemplify.LOGGER.info(
+                "Created alert — display_id={} source_grouping_identifier={} url={}".format(
+                    alert_instance.display_id,
+                    alert_instance.source_grouping_identifier,
+                    fake_uri,
+                )
+            )
             alerts.append(alert_instance)
 
         siemplify.LOGGER.info("Returning {} alert(s) to package".format(len(alerts)))
@@ -113,7 +117,8 @@ def main() -> None:
 
         if state["last_sequpdate"] != state["init_sequpdate"]:
             siemplify.save_timestamp(
-                datetime_format=False, timezone=False,
+                datetime_format=False,
+                timezone=False,
                 new_timestamp=state["last_sequpdate"],
             )
             siemplify.LOGGER.info("Persisted cursor sequpdate={}".format(state["last_sequpdate"]))
@@ -122,8 +127,11 @@ def main() -> None:
 
     except Exception as e:
         siemplify.LOGGER.error(
-            "Failed to process violations after {} alert(s); cursor NOT advanced — next run will retry from sequpdate {} (SOAR dedupes via source_grouping_identifier).".format(
-                len(alerts), state["init_sequpdate"],
+            "Failed to process violations after {} alert(s); cursor NOT "
+            "advanced — next run will retry from sequpdate {} (SOAR "
+            "dedupes via source_grouping_identifier).".format(
+                len(alerts),
+                state["init_sequpdate"],
             )
         )
         siemplify.LOGGER.exception(e)
@@ -138,9 +146,9 @@ def create_alert(siemplify, uid, fake_uri, alert_name, alert_type, alert_severit
     display_name = "{}: {}".format(prefix, host)
 
     alert_info = AlertInfo()
-    alert_info.display_id                 = str(uuid.uuid4())  # unique per ingestion event
-    alert_info.ticket_id                  = uid                # metadata reference
-    alert_info.source_grouping_identifier = uid                # deduplication key
+    alert_info.display_id = str(uuid.uuid4())  # unique per ingestion event
+    alert_info.ticket_id = uid  # metadata reference
+    alert_info.source_grouping_identifier = uid  # deduplication key
     alert_info.name = display_name
     # Case title in the tenant is seeded from rule_generator, so include the host
     # here so the case list shows the violated URL's host instead of just the
@@ -190,12 +198,13 @@ def gather_events(siemplify, start_date, brand_ids=None, approve_states=None, su
         extract_connector_param(siemplify, param_name="API login", print_value=False),
         extract_connector_param(siemplify, param_name="API key", print_value=False),
         api_url,
-        extract_connector_param(siemplify, param_name="Verify SSL", input_type=bool,
-                                default_value=True, print_value=True),
+        extract_connector_param(
+            siemplify, param_name="Verify SSL", input_type=bool, default_value=True, print_value=True
+        ),
     )
     poller = connector.init_action_poller(creds=creds)
 
-    siemplify.LOGGER.info('──── GATHER SEQUPDATE')
+    siemplify.LOGGER.info("──── GATHER SEQUPDATE")
 
     fetched_ts = siemplify.fetch_timestamp(datetime_format=False, timezone=False)
     siemplify.LOGGER.info("fetch_ts: {}".format(fetched_ts))
@@ -212,9 +221,12 @@ def gather_events(siemplify, start_date, brand_ids=None, approve_states=None, su
         init_seq_update = _seq_update_dict.get(collection, None)
 
     siemplify.LOGGER.info("Sequence update number: {}".format(init_seq_update))
-    siemplify.LOGGER.info("DEBUG request: {}?{}".format(
-        urljoin(api_url, collection), urlencode({"seqUpdate": init_seq_update}),
-    ))
+    siemplify.LOGGER.info(
+        "DEBUG request: {}?{}".format(
+            urljoin(api_url, collection),
+            urlencode({"seqUpdate": init_seq_update}),
+        )
+    )
 
     generator = poller.create_update_generator(
         collection_name=collection,
@@ -225,7 +237,7 @@ def gather_events(siemplify, start_date, brand_ids=None, approve_states=None, su
         section=section,
     )
 
-    siemplify.LOGGER.info('──── PARSE DATA')
+    siemplify.LOGGER.info("──── PARSE DATA")
 
     state = {
         "init_sequpdate": init_seq_update,
@@ -239,9 +251,12 @@ def gather_events(siemplify, start_date, brand_ids=None, approve_states=None, su
 
     parsed_portion = portion.parse_portion() or []
     state["last_sequpdate"] = portion.sequpdate
-    siemplify.LOGGER.info("Fetched {} events (sequpdate={})".format(
-        len(parsed_portion), portion.sequpdate,
-    ))
+    siemplify.LOGGER.info(
+        "Fetched {} events (sequpdate={})".format(
+            len(parsed_portion),
+            portion.sequpdate,
+        )
+    )
     return parsed_portion, state
 
 

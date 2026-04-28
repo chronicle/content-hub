@@ -1,21 +1,21 @@
-
 from __future__ import annotations
-class Config(object):
 
+
+class Config(object):
     # Set application name
     PROVIDER_NAME = "Group-IB DRP"
 
     # Set up product metadata
-    PRODUCT_TYPE =        "SOAR"
-    PRODUCT_NAME =        "Google_Chronicle"
-    PRODUCT_VERSION =     "unknown"
-    INTEGRATION =         "Group-IB_DRP_Chronicle"
+    PRODUCT_TYPE = "SOAR"
+    PRODUCT_NAME = "Google_Chronicle"
+    PRODUCT_VERSION = "unknown"
+    INTEGRATION = "Group-IB_DRP_Chronicle"
     INTEGRATION_VERSION = "2.0.0"
 
     # Set up Google Chronicle variables
     # - Alert
-    GC_ALERT_VENDOR =       "Group-IB"
-    GC_ALERT_PRODUCT =      "Group-IB"
+    GC_ALERT_VENDOR = "Group-IB"
+    GC_ALERT_PRODUCT = "Group-IB"
     GC_ALERT_NAME_DEFAULT = "Violation URL"
     GC_ALERT_TYPE_DEFAULT = "Violations"
     # - Ping
@@ -28,6 +28,6 @@ class Config(object):
     GC_ADD_URLS_SCRIPT_NAME = "Add-Phishing-URLs"
     # - Approve/Reject phishing URL (API)
     GC_APPROVE_SCRIPT_NAME = "URL-Approve"
-    GC_REJECT_SCRIPT_NAME =  "URL-Reject"
+    GC_REJECT_SCRIPT_NAME = "URL-Reject"
     # - Search
     GC_SEARCH_SCRIPT_NAME = "Get-DRP-Search-Info"

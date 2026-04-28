@@ -1,11 +1,13 @@
 """Lightweight test doubles for the ``soar_sdk`` Siemplify* classes.
 
-The DRP integration uses the legacy ``SiemplifyAction``/``SiemplifyConnectorExecution``/``SiemplifyJob`` API. Spinning up the
-real classes inside a unit test would require reproducing the SOAR
-runtime context (a JSON document fed via stdin, a session pointing at
-the SOAR REST API, etc.). These tests bypass that entirely by patching
-each script's module-level ``SiemplifyAction``/``SiemplifyConnectorExecution``/``SiemplifyJob`` symbol with a small recording stub
-defined here.
+The DRP integration uses the legacy
+``SiemplifyAction``/``SiemplifyConnectorExecution``/``SiemplifyJob`` API.
+Spinning up the real classes inside a unit test would require reproducing
+the SOAR runtime context (a JSON document fed via stdin, a session pointing
+at the SOAR REST API, etc.). These tests bypass that entirely by patching
+each script's module-level
+``SiemplifyAction``/``SiemplifyConnectorExecution``/``SiemplifyJob`` symbol
+with a small recording stub defined here.
 
 The stubs intentionally mimic only the surface the DRP scripts actually
 use:
@@ -72,9 +74,11 @@ def make_action_siemplify(
     """Build a ``SiemplifyAction`` test double.
 
     ``integration_config`` is consulted by ``extract_configuration_param``
-    via ``siemplify.get_configuration``. The DRP ``GIBConnector.init_action_poller`` calls ``extract_configuration_param`` which in turn calls
-    ``siemplify.get_configuration(provider_name)``; we wire that to return
-    the supplied dictionary so the action picks up the test credentials.
+    via ``siemplify.get_configuration``. The DRP
+    ``GIBConnector.init_action_poller`` calls ``extract_configuration_param``
+    which in turn calls ``siemplify.get_configuration(provider_name)``;
+    we wire that to return the supplied dictionary so the action picks up
+    the test credentials.
     """
     parameters = parameters or {}
     target_entities = target_entities or []
@@ -90,8 +94,8 @@ def make_action_siemplify(
     siemplify.current_alert = FakeAlert(security_events=list(security_events))
 
     siemplify.get_configuration.return_value = dict(integration_config)
-    siemplify.extract_configuration_param.side_effect = (
-        lambda *a, **kw: integration_config.get(kw.get("param_name") or (a[1] if len(a) > 1 else ""))
+    siemplify.extract_configuration_param.side_effect = lambda *a, **kw: integration_config.get(
+        kw.get("param_name") or (a[1] if len(a) > 1 else "")
     )
 
     siemplify.result = MagicMock(name="result")
@@ -99,9 +103,7 @@ def make_action_siemplify(
     siemplify._end_calls = []
 
     def _end(message: str = "", result_value: Any = None, status: int | None = None) -> None:
-        siemplify._end_calls.append(
-            {"message": message, "result_value": result_value, "status": status}
-        )
+        siemplify._end_calls.append({"message": message, "result_value": result_value, "status": status})
 
     siemplify.end.side_effect = _end
 
@@ -140,9 +142,7 @@ def make_connector_siemplify(
     siemplify.parameters = dict(parameters)
     siemplify.context = MagicMock()
     siemplify.context.connector_info.environment = environment
-    siemplify.context.connector_info.params = [
-        {"param_name": k, "param_value": v} for k, v in parameters.items()
-    ]
+    siemplify.context.connector_info.params = [{"param_name": k, "param_value": v} for k, v in parameters.items()]
 
     siemplify.fetch_timestamp.return_value = fetched_timestamp
     siemplify.save_timestamp = MagicMock(name="save_timestamp")
@@ -155,8 +155,8 @@ def make_connector_siemplify(
 
     siemplify.return_package.side_effect = _return_package
 
-    siemplify.extract_connector_param.side_effect = (
-        lambda *a, **kw: parameters.get(kw.get("param_name") or (a[1] if len(a) > 1 else ""))
+    siemplify.extract_connector_param.side_effect = lambda *a, **kw: parameters.get(
+        kw.get("param_name") or (a[1] if len(a) > 1 else "")
     )
     return siemplify
 
@@ -183,9 +183,7 @@ def make_job_siemplify(
     siemplify.LOGGER = make_logger()
     siemplify.script_name = ""
 
-    siemplify.extract_job_param.side_effect = lambda **kw: parameters.get(
-        kw.get("param_name"), kw.get("default_value")
-    )
+    siemplify.extract_job_param.side_effect = lambda **kw: parameters.get(kw.get("param_name"), kw.get("default_value"))
 
     siemplify.get_cases_ids_by_filter.return_value = list(case_ids)
     siemplify._get_case_by_id.side_effect = lambda cid: cases_by_id[str(cid)]

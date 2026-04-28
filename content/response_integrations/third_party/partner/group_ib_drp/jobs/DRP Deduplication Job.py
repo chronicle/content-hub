@@ -11,6 +11,7 @@
 #                        entities to the primary before close.
 
 from __future__ import annotations
+
 import re
 
 from soar_sdk.SiemplifyJob import SiemplifyJob
@@ -24,9 +25,7 @@ MERGE_MODE_MERGE = "merge"
 MERGE_MODE_VALUES = {MERGE_MODE_CLOSE, MERGE_MODE_MERGE}
 
 # Matches the 'projects/<p>/locations/<l>/instances/<i>' segment inside a URL.
-_INSTANCE_PATH_RE = re.compile(
-    r"projects/[^/]+/locations/[^/]+/instances/[^/]+"
-)
+_INSTANCE_PATH_RE = re.compile(r"projects/[^/]+/locations/[^/]+/instances/[^/]+")
 
 # If sdk_config's URL template embeds these literals, the SOAR runtime didn't
 # populate the one-platform env vars on this worker and auto-detection has to
@@ -177,20 +176,21 @@ def main() -> None:
             )
             siemplify.end_script()
             return
-        siemplify.LOGGER.info(
-            "Resolved cases:merge URL via {}: {}".format(source, merge_url)
-        )
+        siemplify.LOGGER.info("Resolved cases:merge URL via {}: {}".format(source, merge_url))
 
     # ── Step 1: fetch candidate case IDs ────────────────────────────────────
     # Use get_cases_ids_by_filter (10k cap) rather than get_cases_by_filter,
     # which silently caps at ~100.
     lookback_ms = unix_now() - int(lookback_days) * MS_PER_DAY
     try:
-        all_ids = siemplify.get_cases_ids_by_filter(
-            status="OPEN",
-            start_time_from_unix_time_in_ms=lookback_ms,
-            max_results=10000,
-        ) or []
+        all_ids = (
+            siemplify.get_cases_ids_by_filter(
+                status="OPEN",
+                start_time_from_unix_time_in_ms=lookback_ms,
+                max_results=10000,
+            )
+            or []
+        )
     except Exception as e:
         siemplify.LOGGER.error("Failed to fetch case IDs: {}".format(e))
         raise
@@ -200,13 +200,9 @@ def main() -> None:
     before_dedupe = len(all_ids)
     all_ids = list(dict.fromkeys(all_ids))
     if len(all_ids) != before_dedupe:
-        siemplify.LOGGER.info(
-            "Deduplicated case ID list: {} → {} unique IDs.".format(before_dedupe, len(all_ids))
-        )
+        siemplify.LOGGER.info("Deduplicated case ID list: {} → {} unique IDs.".format(before_dedupe, len(all_ids)))
 
-    siemplify.LOGGER.info(
-        "Fetched {} open case IDs (lookback {} days).".format(len(all_ids), lookback_days)
-    )
+    siemplify.LOGGER.info("Fetched {} open case IDs (lookback {} days).".format(len(all_ids), lookback_days))
 
     if len(all_ids) > max_cases:
         siemplify.LOGGER.info("Capping to {} cases (Max Cases To Process).".format(max_cases))
@@ -236,9 +232,7 @@ def main() -> None:
         if case_status_val != STATUS_OPEN:
             siemplify.LOGGER.warn(
                 "Fetched case {} has status {} but filter asked for OPEN ({}). "
-                "SOAR filter anomaly or concurrent close? Skipping.".format(
-                    cid, case_status_val, STATUS_OPEN
-                )
+                "SOAR filter anomaly or concurrent close? Skipping.".format(cid, case_status_val, STATUS_OPEN)
             )
             continue
 
@@ -286,13 +280,9 @@ def main() -> None:
         if matched_this_case:
             inspected += 1
 
+    siemplify.LOGGER.info("Status distribution across all fetched cases: {}".format(status_dist))
     siemplify.LOGGER.info(
-        "Status distribution across all fetched cases: {}".format(status_dist)
-    )
-    siemplify.LOGGER.info(
-        "Inspected {} DRP cases. Found {} distinct violation UIDs.".format(
-            inspected, len(uid_to_cases)
-        )
+        "Inspected {} DRP cases. Found {} distinct violation UIDs.".format(inspected, len(uid_to_cases))
     )
 
     if inspected == 0 and len(all_ids) > 0:
@@ -330,9 +320,7 @@ def main() -> None:
             if dup["case_id"] == primary["case_id"]:
                 siemplify.LOGGER.warning(
                     "Refusing self-reconcile: primary and duplicate both point "
-                    "to case {} for UID {}…. Skipping.".format(
-                        primary["case_id"], uid[:16]
-                    )
+                    "to case {} for UID {}…. Skipping.".format(primary["case_id"], uid[:16])
                 )
                 self_pair_skipped += 1
                 continue
@@ -372,9 +360,7 @@ def main() -> None:
                 except Exception as e:
                     siemplify.LOGGER.warn(
                         "Carry-over from case {} to primary {} partially failed at "
-                        "the outer level: {}. Proceeding to close.".format(
-                            dup["case_id"], primary["case_id"], e
-                        )
+                        "the outer level: {}. Proceeding to close.".format(dup["case_id"], primary["case_id"], e)
                     )
 
             try:
@@ -396,18 +382,21 @@ def main() -> None:
             except Exception as e:
                 failed_duplicates_count += 1
                 siemplify.LOGGER.error(
-                    "Failed to close duplicate case {} (primary {}): {}".format(
-                        dup["case_id"], primary["case_id"], e
-                    )
+                    "Failed to close duplicate case {} (primary {}): {}".format(dup["case_id"], primary["case_id"], e)
                 )
 
     siemplify.LOGGER.info(
         "=== Done. Mode: {} | Merged: {} | Closed: {} | Failed: {} | "
         "Single-UID cases (skipped): {} | Self-pair guarded: {} | "
         "Dry Run: {} | Carry Over: {} ===".format(
-            merge_mode, merged_duplicates_count, closed_duplicates_count,
-            failed_duplicates_count, skipped_count, self_pair_skipped,
-            dry_run, carry_over
+            merge_mode,
+            merged_duplicates_count,
+            closed_duplicates_count,
+            failed_duplicates_count,
+            skipped_count,
+            self_pair_skipped,
+            dry_run,
+            carry_over,
         )
     )
     siemplify.end_script()
@@ -474,8 +463,7 @@ def _resolve_merge_url(siemplify, instance_path_override):
         if not host:
             return (
                 None,
-                "Chronicle Instance Path given but siemplify.API_ROOT is empty; "
-                "cannot derive host",
+                "Chronicle Instance Path given but siemplify.API_ROOT is empty; cannot derive host",
             )
         return (
             "{}/v1beta/{}/cases:merge".format(host, path_override),
@@ -512,8 +500,9 @@ def _merge_cases_v1beta(
     rg = (duplicate_rule_generator or "").strip()
     if not (rg == case_type or rg.startswith(case_type + ":")):
         siemplify.LOGGER.warn(
-            "Skipping merge of case {}: rule_generator {!r} no longer matches "
-            "'{}' prefix.".format(duplicate_case_id, rg, case_type)
+            "Skipping merge of case {}: rule_generator {!r} no longer matches '{}' prefix.".format(
+                duplicate_case_id, rg, case_type
+            )
         )
         return False
 
@@ -523,9 +512,7 @@ def _merge_cases_v1beta(
     except (TypeError, ValueError):
         siemplify.LOGGER.warn(
             "Skipping merge: case IDs must be integers (got duplicate={!r}, "
-            "primary={!r}). cases.merge rejects non-integer IDs.".format(
-                duplicate_case_id, primary_case_id
-            )
+            "primary={!r}). cases.merge rejects non-integer IDs.".format(duplicate_case_id, primary_case_id)
         )
         return False
 
@@ -539,8 +526,7 @@ def _merge_cases_v1beta(
 
     if dry_run:
         siemplify.LOGGER.info(
-            "[DRY RUN] Would POST {} with body {} (merge duplicate case {} into "
-            "primary {} for UID {}…).".format(
+            "[DRY RUN] Would POST {} with body {} (merge duplicate case {} into primary {} for UID {}…).".format(
                 merge_url, body, duplicate_case_id, primary_case_id, uid[:16]
             )
         )
@@ -561,8 +547,9 @@ def _merge_cases_v1beta(
         except Exception:
             pass
         siemplify.LOGGER.error(
-            "cases.merge call failed for duplicate {} → primary {}: {} | "
-            "body={}".format(duplicate_case_id, primary_case_id, e, body_text)
+            "cases.merge call failed for duplicate {} → primary {}: {} | body={}".format(
+                duplicate_case_id, primary_case_id, e, body_text
+            )
         )
         raise
 
@@ -613,15 +600,15 @@ def _close_duplicate_with_reference(
     rg = (duplicate_rule_generator or "").strip()
     if not (rg == case_type or rg.startswith(case_type + ":")):
         siemplify.LOGGER.warn(
-            "Skipping close of case {}: rule_generator {!r} no longer matches "
-            "'{}' prefix.".format(duplicate_case_id, rg, case_type)
+            "Skipping close of case {}: rule_generator {!r} no longer matches '{}' prefix.".format(
+                duplicate_case_id, rg, case_type
+            )
         )
         return False
 
     if dry_run:
         siemplify.LOGGER.info(
-            "[DRY RUN] Would close duplicate case {} (alert {}) and comment back "
-            "on primary {} for UID {}….".format(
+            "[DRY RUN] Would close duplicate case {} (alert {}) and comment back on primary {} for UID {}….".format(
                 duplicate_case_id, duplicate_alert_id, primary_case_id, uid[:16]
             )
         )
@@ -630,17 +617,16 @@ def _close_duplicate_with_reference(
     siemplify.close_case(
         root_cause=close_root_cause,
         comment=(
-            "[DRP Dedup] Duplicate of case {} (violation UID {}). "
-            "Auto-closed by Dedup Job.".format(primary_case_id, uid)
+            "[DRP Dedup] Duplicate of case {} (violation UID {}). Auto-closed by Dedup Job.".format(
+                primary_case_id, uid
+            )
         ),
         reason=close_reason,
         case_id=duplicate_case_id,
         alert_identifier=duplicate_alert_id,
     )
     siemplify.add_comment(
-        "[DRP Dedup] Closed duplicate case {} (same violation UID {}).".format(
-            duplicate_case_id, uid
-        ),
+        "[DRP Dedup] Closed duplicate case {} (same violation UID {}).".format(duplicate_case_id, uid),
         primary_case_id,
         primary_alert_id,
     )
@@ -668,9 +654,7 @@ def _carry_over_to_primary(siemplify, primary, duplicate, dry_run):
     try:
         comments = siemplify.get_case_comments(duplicate_case_id) or []
     except Exception as e:
-        siemplify.LOGGER.warn(
-            "Could not fetch comments from duplicate {}: {}".format(duplicate_case_id, e)
-        )
+        siemplify.LOGGER.warn("Could not fetch comments from duplicate {}: {}".format(duplicate_case_id, e))
         comments = []
 
     for c in comments:
@@ -682,9 +666,7 @@ def _carry_over_to_primary(siemplify, primary, duplicate, dry_run):
         wrapped = "[from merged case #{}] {}".format(duplicate_case_id, text)
         if dry_run:
             siemplify.LOGGER.info(
-                "[DRY RUN] Would carry over comment to primary {}: {!r}".format(
-                    primary_case_id, text[:80]
-                )
+                "[DRY RUN] Would carry over comment to primary {}: {!r}".format(primary_case_id, text[:80])
             )
             continue
         try:
@@ -707,9 +689,7 @@ def _carry_over_to_primary(siemplify, primary, duplicate, dry_run):
         if not tag or tag in already_present:
             continue
         if dry_run:
-            siemplify.LOGGER.info(
-                "[DRY RUN] Would add tag {!r} to primary {}".format(tag, primary_case_id)
-            )
+            siemplify.LOGGER.info("[DRY RUN] Would add tag {!r} to primary {}".format(tag, primary_case_id))
             already_present.add(tag)
             continue
         try:
@@ -724,9 +704,7 @@ def _carry_over_to_primary(siemplify, primary, duplicate, dry_run):
 
     # ── 3. Entities (from the duplicate's DRP alert) ────────────────────────
     primary_entity_ids = {
-        (e.get("identifier") or "").strip()
-        for e in (primary.get("entities") or [])
-        if e.get("identifier")
+        (e.get("identifier") or "").strip() for e in (primary.get("entities") or []) if e.get("identifier")
     }
 
     environment = primary.get("environment") or duplicate.get("environment")
@@ -742,9 +720,7 @@ def _carry_over_to_primary(siemplify, primary, duplicate, dry_run):
 
         if dry_run:
             siemplify.LOGGER.info(
-                "[DRY RUN] Would add entity {!r} (type={}) to primary {}".format(
-                    ident, ent_type, primary_case_id
-                )
+                "[DRY RUN] Would add entity {!r} (type={}) to primary {}".format(ident, ent_type, primary_case_id)
             )
             primary_entity_ids.add(ident)
             continue

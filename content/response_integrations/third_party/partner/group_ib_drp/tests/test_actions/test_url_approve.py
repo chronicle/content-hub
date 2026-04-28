@@ -24,18 +24,14 @@ def approve_module():
 
 
 def _make_event(url: str, uid: str) -> FakeSecurityEvent:
-    return FakeSecurityEvent(
-        additional_properties={"violation_url": url, "violation_uid": uid}
-    )
+    return FakeSecurityEvent(additional_properties={"violation_url": url, "violation_uid": uid})
 
 
 class TestUrlApprove:
     """One test per outcome: full success, mixed (some fail), unmapped only,
     nothing-to-do, and verify the per-call payload shape."""
 
-    def test_approves_every_mapped_destination_url_entity(
-        self, approve_module, action_siemplify_factory, fake_poller
-    ):
+    def test_approves_every_mapped_destination_url_entity(self, approve_module, action_siemplify_factory, fake_poller):
         """Two URL entities, both with UIDs → two POSTs and ``COMPLETED``."""
 
         url_a, uid_a = "https://bad.example.com/a", "uid-a"
@@ -68,9 +64,7 @@ class TestUrlApprove:
         assert end["result_value"] is True
         assert "Approved" in end["message"]
 
-    def test_records_failures_and_returns_failed(
-        self, approve_module, action_siemplify_factory, fake_poller
-    ):
+    def test_records_failures_and_returns_failed(self, approve_module, action_siemplify_factory, fake_poller):
         """If any approve POST raises, action ends ``FAILED`` and the failed
         entity's identifier appears in the message."""
 

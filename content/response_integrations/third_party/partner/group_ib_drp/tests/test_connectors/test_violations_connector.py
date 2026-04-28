@@ -2,8 +2,9 @@
 
 The connector turns DRP violation feeds into SOAR ``AlertInfo`` objects.
 It applies optional filters (brand IDs / approve states / subtypes /
-section), iterates every API portion, dedupes via ``source_grouping_identifier`` and persists the highest seen ``sequpdate`` so the next
-run resumes from the correct cursor.
+section), iterates every API portion, dedupes via
+``source_grouping_identifier`` and persists the highest seen ``sequpdate``
+so the next run resumes from the correct cursor.
 """
 
 from __future__ import annotations
@@ -18,9 +19,7 @@ from ..core.poller import FakePortion
 
 @pytest.fixture
 def conn_module():
-    return load_script(
-        CONNECTORS_PATH, "DRP Violations Connector.py", "DRPViolationsConnector"
-    )
+    return load_script(CONNECTORS_PATH, "DRP Violations Connector.py", "DRPViolationsConnector")
 
 
 def _conn_params(**overrides):
@@ -53,21 +52,17 @@ class TestGatherEvents:
         """No prior timestamp → connector queries DRP for the seq update
         floor and feeds it to ``create_update_generator``."""
 
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=None
-        )
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=None)
         fake_poller.set_seq_update_dict({"violation/list": 12345})
-        fake_poller.set_update_portions(
-            [
-                FakePortion(
-                    events=[
-                        {"uid": "u1", "fake_uri": "https://bad.example.com/u1"},
-                        {"uid": "u2", "fake_uri": "https://bad.example.com/u2"},
-                    ],
-                    sequpdate=99999,
-                )
-            ]
-        )
+        fake_poller.set_update_portions([
+            FakePortion(
+                events=[
+                    {"uid": "u1", "fake_uri": "https://bad.example.com/u1"},
+                    {"uid": "u2", "fake_uri": "https://bad.example.com/u2"},
+                ],
+                sequpdate=99999,
+            )
+        ])
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
             gib_cls.return_value.init_action_poller.return_value = fake_poller
@@ -82,22 +77,16 @@ class TestGatherEvents:
         siemplify.save_timestamp.assert_called_once()
         assert siemplify.save_timestamp.call_args.kwargs["new_timestamp"] == 99999
 
-    def test_resumes_from_fetched_timestamp_when_present(
-        self, conn_module, connector_siemplify_factory, fake_poller
-    ):
+    def test_resumes_from_fetched_timestamp_when_present(self, conn_module, connector_siemplify_factory, fake_poller):
         """A persisted ``fetch_timestamp`` short-circuits the bootstrap call."""
 
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=70000
-        )
-        fake_poller.set_update_portions(
-            [
-                FakePortion(
-                    events=[{"uid": "u1", "fake_uri": "https://bad.example.com/u1"}],
-                    sequpdate=70000,  # unchanged → no save_timestamp
-                )
-            ]
-        )
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=70000)
+        fake_poller.set_update_portions([
+            FakePortion(
+                events=[{"uid": "u1", "fake_uri": "https://bad.example.com/u1"}],
+                sequpdate=70000,  # unchanged → no save_timestamp
+            )
+        ])
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
             gib_cls.return_value.init_action_poller.return_value = fake_poller
@@ -108,28 +97,20 @@ class TestGatherEvents:
         assert gen_call.kwargs["sequpdate"] == 70000
         siemplify.save_timestamp.assert_not_called()
 
-    def test_returns_none_when_no_portions(
-        self, conn_module, connector_siemplify_factory, fake_poller
-    ):
+    def test_returns_none_when_no_portions(self, conn_module, connector_siemplify_factory, fake_poller):
         """An empty generator yields ``None`` so ``main`` knows nothing to do."""
 
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=1
-        )
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=1)
         fake_poller.set_update_portions([])
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
             gib_cls.return_value.init_action_poller.return_value = fake_poller
             assert conn_module.gather_events(siemplify, start_date=None) is None
 
-    def test_forwards_optional_filters_to_generator(
-        self, conn_module, connector_siemplify_factory, fake_poller
-    ):
+    def test_forwards_optional_filters_to_generator(self, conn_module, connector_siemplify_factory, fake_poller):
         """Brand/approve/subtypes/section filters are forwarded as-is."""
 
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=10
-        )
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=10)
         fake_poller.set_update_portions([])
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
@@ -155,9 +136,7 @@ class TestCreateAlert:
     violation event. Verify severity mapping, the deterministic
     ``source_grouping_identifier``, and the embedded URL event."""
 
-    def test_severity_map_unknown_value_defaults_to_medium(
-        self, conn_module, connector_siemplify_factory
-    ):
+    def test_severity_map_unknown_value_defaults_to_medium(self, conn_module, connector_siemplify_factory):
         siemplify = connector_siemplify_factory(parameters=_conn_params())
         with patch.object(conn_module, "AlertInfo") as alert_info_cls:
             alert_info_cls.return_value = _alert_info_stub()
@@ -171,9 +150,7 @@ class TestCreateAlert:
             )
         assert alert.priority == 60
 
-    def test_uses_uid_as_source_grouping_identifier(
-        self, conn_module, connector_siemplify_factory
-    ):
+    def test_uses_uid_as_source_grouping_identifier(self, conn_module, connector_siemplify_factory):
         siemplify = connector_siemplify_factory(parameters=_conn_params())
         with patch.object(conn_module, "AlertInfo") as alert_info_cls:
             alert_info_cls.return_value = _alert_info_stub()
@@ -191,9 +168,7 @@ class TestCreateAlert:
         assert alert.name == "Violation URL: bad.example.com"
         assert alert.rule_generator == "Violations: bad.example.com"
 
-    def test_appends_destination_url_event_with_uid(
-        self, conn_module, connector_siemplify_factory
-    ):
+    def test_appends_destination_url_event_with_uid(self, conn_module, connector_siemplify_factory):
         siemplify = connector_siemplify_factory(parameters=_conn_params())
         with patch.object(conn_module, "AlertInfo") as alert_info_cls:
             alert_info_cls.return_value = _alert_info_stub()
@@ -216,23 +191,17 @@ class TestCreateAlert:
 class TestMain:
     """End-to-end: portions in → alerts out via ``return_package``."""
 
-    def test_main_returns_alerts_for_each_event(
-        self, conn_module, connector_siemplify_factory, fake_poller
-    ):
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=10
-        )
-        fake_poller.set_update_portions(
-            [
-                FakePortion(
-                    events=[
-                        {"uid": "u1", "fake_uri": "https://bad.example.com/u1"},
-                        {"uid": "u2", "fake_uri": "https://bad.example.com/u2"},
-                    ],
-                    sequpdate=70,
-                )
-            ]
-        )
+    def test_main_returns_alerts_for_each_event(self, conn_module, connector_siemplify_factory, fake_poller):
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=10)
+        fake_poller.set_update_portions([
+            FakePortion(
+                events=[
+                    {"uid": "u1", "fake_uri": "https://bad.example.com/u1"},
+                    {"uid": "u2", "fake_uri": "https://bad.example.com/u2"},
+                ],
+                sequpdate=70,
+            )
+        ])
 
         with (
             patch.object(conn_module, "SiemplifyConnectorExecution", return_value=siemplify),
@@ -247,20 +216,14 @@ class TestMain:
         assert len(alerts) == 2
         assert {a.ticket_id for a in alerts} == {"u1", "u2"}
 
-    def test_main_skips_overflow_alerts(
-        self, conn_module, connector_siemplify_factory, fake_poller
-    ):
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=1, is_overflow=True
-        )
-        fake_poller.set_update_portions(
-            [
-                FakePortion(
-                    events=[{"uid": "u1", "fake_uri": "https://bad.example.com/u1"}],
-                    sequpdate=2,
-                )
-            ]
-        )
+    def test_main_skips_overflow_alerts(self, conn_module, connector_siemplify_factory, fake_poller):
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=1, is_overflow=True)
+        fake_poller.set_update_portions([
+            FakePortion(
+                events=[{"uid": "u1", "fake_uri": "https://bad.example.com/u1"}],
+                sequpdate=2,
+            )
+        ])
 
         with (
             patch.object(conn_module, "SiemplifyConnectorExecution", return_value=siemplify),
@@ -272,26 +235,20 @@ class TestMain:
 
         assert siemplify._returned_packages == [[]]
 
-    def test_main_skips_events_missing_uid_or_uri(
-        self, conn_module, connector_siemplify_factory, fake_poller
-    ):
+    def test_main_skips_events_missing_uid_or_uri(self, conn_module, connector_siemplify_factory, fake_poller):
         """An event without ``uid`` or ``fake_uri`` is logged & skipped."""
 
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=1
-        )
-        fake_poller.set_update_portions(
-            [
-                FakePortion(
-                    events=[
-                        {"uid": "u1", "fake_uri": ""},
-                        {"uid": "", "fake_uri": "https://bad.example.com/x"},
-                        {"uid": "u3", "fake_uri": "https://bad.example.com/u3"},
-                    ],
-                    sequpdate=2,
-                )
-            ]
-        )
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=1)
+        fake_poller.set_update_portions([
+            FakePortion(
+                events=[
+                    {"uid": "u1", "fake_uri": ""},
+                    {"uid": "", "fake_uri": "https://bad.example.com/x"},
+                    {"uid": "u3", "fake_uri": "https://bad.example.com/u3"},
+                ],
+                sequpdate=2,
+            )
+        ])
 
         with (
             patch.object(conn_module, "SiemplifyConnectorExecution", return_value=siemplify),
@@ -304,15 +261,11 @@ class TestMain:
         alerts = siemplify._returned_packages[0]
         assert [a.ticket_id for a in alerts] == ["u3"]
 
-    def test_main_handles_gather_events_exception(
-        self, conn_module, connector_siemplify_factory, fake_poller
-    ):
+    def test_main_handles_gather_events_exception(self, conn_module, connector_siemplify_factory, fake_poller):
         """A failure in ``gather_events`` must not crash the connector;
         an empty package is returned and the exception is logged."""
 
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=1
-        )
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=1)
 
         with (
             patch.object(conn_module, "SiemplifyConnectorExecution", return_value=siemplify),
@@ -355,12 +308,8 @@ class TestParameterParsing:
         assert gen.kwargs["subtypes"] == [6, 7]
         assert gen.kwargs["section"] == 1
 
-    def test_blank_filters_pass_through_as_none(
-        self, conn_module, connector_siemplify_factory, fake_poller
-    ):
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=1
-        )
+    def test_blank_filters_pass_through_as_none(self, conn_module, connector_siemplify_factory, fake_poller):
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=1)
         fake_poller.set_update_portions([])
 
         with (

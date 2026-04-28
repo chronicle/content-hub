@@ -1,12 +1,12 @@
 from __future__ import annotations
+
 import json
 
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import InsightSeverity, InsightType
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import InsightSeverity, InsightType
+from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.config import Config
 from ..core.UtilsManager import GIBConnector
 
 
@@ -33,12 +33,12 @@ def main() -> None:
 
     poller = GIBConnector(siemplify).init_action_poller()
 
-    siemplify.LOGGER.info('──── GATHER ENTITIES')
+    siemplify.LOGGER.info("──── GATHER ENTITIES")
 
     # Build URL → UID lookup once from event data
     url_to_uid = {}
     for event in siemplify.current_alert.security_events:
-        props = getattr(event, 'additional_properties', {}) or {}
+        props = getattr(event, "additional_properties", {}) or {}
         url = props.get("violation_url", "").lower()
         uid_val = props.get("violation_uid", "")
         if url and uid_val and url not in url_to_uid:
@@ -116,7 +116,7 @@ def main() -> None:
                 content="<br>".join(insight_lines),
                 entity_identifier=entity.identifier,
                 severity=InsightSeverity.INFO,
-                insight_type=InsightType.Entity
+                insight_type=InsightType.Entity,
             )
 
         except Exception as e:

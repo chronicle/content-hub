@@ -104,22 +104,13 @@ class TestStripTrailingApi:
     """``_strip_trailing_api`` strips trailing ``/api`` and trailing slashes."""
 
     def test_strips_api_suffix(self, job_module):
-        assert (
-            job_module._strip_trailing_api("https://soar.example.com/api")
-            == "https://soar.example.com"
-        )
+        assert job_module._strip_trailing_api("https://soar.example.com/api") == "https://soar.example.com"
 
     def test_strips_trailing_slash_first(self, job_module):
-        assert (
-            job_module._strip_trailing_api("https://soar.example.com/api/")
-            == "https://soar.example.com"
-        )
+        assert job_module._strip_trailing_api("https://soar.example.com/api/") == "https://soar.example.com"
 
     def test_no_op_when_no_api_suffix(self, job_module):
-        assert (
-            job_module._strip_trailing_api("https://soar.example.com")
-            == "https://soar.example.com"
-        )
+        assert job_module._strip_trailing_api("https://soar.example.com") == "https://soar.example.com"
 
     def test_handles_none_and_empty(self, job_module):
         assert job_module._strip_trailing_api(None) == ""
@@ -139,19 +130,13 @@ class TestResolveMergeUrl:
         renders a Chronicle resource path and we use it."""
         siemplify = job_siemplify_factory()
         siemplify.sdk_config = SimpleNamespace(
-            one_platform_api_root_uri_format=(
-                "https://chronicle.example.com/{}/projects/p/locations/l/instances/i"
-            )
+            one_platform_api_root_uri_format=("https://chronicle.example.com/{}/projects/p/locations/l/instances/i")
         )
         url, source = job_module._resolve_merge_url(siemplify, instance_path_override="")
-        assert url == (
-            "https://chronicle.example.com/v1beta/projects/p/locations/l/instances/i/cases:merge"
-        )
+        assert url == ("https://chronicle.example.com/v1beta/projects/p/locations/l/instances/i/cases:merge")
         assert "auto-detected" in source
 
-    def test_falls_back_to_override_when_sdk_config_uses_placeholders(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_falls_back_to_override_when_sdk_config_uses_placeholders(self, job_module, job_siemplify_factory):
         """When sdk_config still has the placeholder literals, we must
         fall through to the operator-supplied override."""
 
@@ -166,28 +151,20 @@ class TestResolveMergeUrl:
             siemplify,
             instance_path_override="projects/p/locations/l/instances/i",
         )
-        assert url == (
-            "https://soar.example.com/v1beta/projects/p/locations/l/instances/i/cases:merge"
-        )
+        assert url == ("https://soar.example.com/v1beta/projects/p/locations/l/instances/i/cases:merge")
         assert "override" in source
 
-    def test_returns_none_when_neither_strategy_works(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_returns_none_when_neither_strategy_works(self, job_module, job_siemplify_factory):
         siemplify = job_siemplify_factory()
         siemplify.sdk_config = SimpleNamespace(one_platform_api_root_uri_format=None)
         url, reason = job_module._resolve_merge_url(siemplify, instance_path_override="")
         assert url is None
         assert "auto-detection failed" in reason
 
-    def test_returns_none_when_override_lacks_path_segment(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_returns_none_when_override_lacks_path_segment(self, job_module, job_siemplify_factory):
         siemplify = job_siemplify_factory()
         siemplify.sdk_config = SimpleNamespace(one_platform_api_root_uri_format=None)
-        url, _reason = job_module._resolve_merge_url(
-            siemplify, instance_path_override="bogus/value"
-        )
+        url, _reason = job_module._resolve_merge_url(siemplify, instance_path_override="bogus/value")
         assert url is None
 
 
@@ -213,9 +190,7 @@ class TestMergeCases:
         assert ok is True
         siemplify.session.post.assert_not_called()
 
-    def test_skips_when_rule_generator_no_longer_matches(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_skips_when_rule_generator_no_longer_matches(self, job_module, job_siemplify_factory):
         siemplify = job_siemplify_factory()
         ok = job_module._merge_cases_v1beta(
             siemplify=siemplify,
@@ -230,9 +205,7 @@ class TestMergeCases:
         assert ok is False
         siemplify.session.post.assert_not_called()
 
-    def test_skips_when_case_ids_are_not_integers(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_skips_when_case_ids_are_not_integers(self, job_module, job_siemplify_factory):
         """``cases.merge`` rejects non-integer IDs — we must short-circuit
         before the POST so the error surfaces as a single warn, not 50."""
         siemplify = job_siemplify_factory()
@@ -249,9 +222,7 @@ class TestMergeCases:
         assert ok is False
         siemplify.session.post.assert_not_called()
 
-    def test_posts_documented_payload_on_success(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_posts_documented_payload_on_success(self, job_module, job_siemplify_factory):
         """The ``casesIds`` list MUST include both the duplicate AND the
         primary; passing only the duplicate causes server-side rejection."""
         siemplify = job_siemplify_factory()
@@ -272,14 +243,12 @@ class TestMergeCases:
         )
         assert ok is True
         siemplify.session.post.assert_called_once()
-        url_arg, = siemplify.session.post.call_args.args
+        (url_arg,) = siemplify.session.post.call_args.args
         body = siemplify.session.post.call_args.kwargs["json"]
         assert url_arg.endswith("cases:merge")
         assert body == {"casesIds": [101, 100], "caseToMergeWith": 100}
 
-    def test_returns_false_when_response_reports_errors(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_returns_false_when_response_reports_errors(self, job_module, job_siemplify_factory):
         siemplify = job_siemplify_factory()
         response = MagicMock()
         response.json.return_value = {
@@ -327,9 +296,7 @@ class TestCloseDuplicate:
         siemplify.close_case.assert_not_called()
         siemplify.add_comment.assert_not_called()
 
-    def test_skips_when_rule_generator_no_longer_matches(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_skips_when_rule_generator_no_longer_matches(self, job_module, job_siemplify_factory):
         siemplify = job_siemplify_factory()
         ok = job_module._close_duplicate_with_reference(
             siemplify=siemplify,
@@ -347,9 +314,7 @@ class TestCloseDuplicate:
         assert ok is False
         siemplify.close_case.assert_not_called()
 
-    def test_closes_duplicate_and_back_references_primary(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_closes_duplicate_and_back_references_primary(self, job_module, job_siemplify_factory):
         """``close_case`` runs against the duplicate, then a comment is
         added to the *primary* pointing back at the duplicate."""
         siemplify = job_siemplify_factory()
@@ -388,9 +353,7 @@ class TestCarryOverToPrimary:
     onto the primary. The behaviour we lock down is best-effort:
     sub-step failures are logged but never raise."""
 
-    def test_carries_user_comments_skips_dedup_back_references(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_carries_user_comments_skips_dedup_back_references(self, job_module, job_siemplify_factory):
         siemplify = job_siemplify_factory()
         siemplify.get_case_comments.return_value = [
             {"comment": "investigated; phishing confirmed"},
@@ -414,18 +377,14 @@ class TestCarryOverToPrimary:
             "environment": "env",
         }
 
-        job_module._carry_over_to_primary(
-            siemplify=siemplify, primary=primary, duplicate=duplicate, dry_run=False
-        )
+        job_module._carry_over_to_primary(siemplify=siemplify, primary=primary, duplicate=duplicate, dry_run=False)
 
         assert siemplify.add_comment.call_count == 1
         wrapped = siemplify.add_comment.call_args.args[0]
         assert "investigated; phishing confirmed" in wrapped
         assert "[from merged case #101]" in wrapped
 
-    def test_skips_tags_already_present_on_primary(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_skips_tags_already_present_on_primary(self, job_module, job_siemplify_factory):
         siemplify = job_siemplify_factory()
         siemplify.get_case_comments.return_value = []
         primary = {
@@ -445,17 +404,13 @@ class TestCarryOverToPrimary:
             "environment": "env",
         }
 
-        job_module._carry_over_to_primary(
-            siemplify=siemplify, primary=primary, duplicate=duplicate, dry_run=False
-        )
+        job_module._carry_over_to_primary(siemplify=siemplify, primary=primary, duplicate=duplicate, dry_run=False)
 
         assert siemplify.add_tag.call_count == 1
         added_tag = siemplify.add_tag.call_args.args[0]
         assert added_tag == "new-tag"
 
-    def test_skips_entities_already_on_primary(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_skips_entities_already_on_primary(self, job_module, job_siemplify_factory):
         siemplify = job_siemplify_factory()
         siemplify.get_case_comments.return_value = []
         primary = {
@@ -482,9 +437,7 @@ class TestCarryOverToPrimary:
             "environment": "env",
         }
 
-        job_module._carry_over_to_primary(
-            siemplify=siemplify, primary=primary, duplicate=duplicate, dry_run=False
-        )
+        job_module._carry_over_to_primary(siemplify=siemplify, primary=primary, duplicate=duplicate, dry_run=False)
 
         assert siemplify.add_entity_to_case.call_count == 1
         kw = siemplify.add_entity_to_case.call_args.kwargs
@@ -512,9 +465,7 @@ class TestCarryOverToPrimary:
             "environment": "env",
         }
 
-        job_module._carry_over_to_primary(
-            siemplify=siemplify, primary=primary, duplicate=duplicate, dry_run=True
-        )
+        job_module._carry_over_to_primary(siemplify=siemplify, primary=primary, duplicate=duplicate, dry_run=True)
 
         siemplify.add_comment.assert_not_called()
         siemplify.add_tag.assert_not_called()
@@ -529,9 +480,7 @@ class TestJobMain:
     permutation here; we cover a representative subset that proves the
     pipeline keeps a primary alive and reconciles its duplicate."""
 
-    def test_close_mode_dry_run_records_plan_without_mutation(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_close_mode_dry_run_records_plan_without_mutation(self, job_module, job_siemplify_factory):
         """Two cases sharing the same UID. Close-mode + dry-run → the
         duplicate is *not* closed, but the plan is produced."""
 
@@ -571,9 +520,7 @@ class TestJobMain:
         siemplify.add_comment.assert_not_called()
         siemplify.end_script.assert_called_once()
 
-    def test_close_mode_real_run_closes_duplicate_only(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_close_mode_real_run_closes_duplicate_only(self, job_module, job_siemplify_factory):
         """Two cases sharing the same UID. Close-mode + real run → exactly
         one ``close_case`` call against the *newer* duplicate, not the
         primary."""
@@ -617,16 +564,8 @@ class TestJobMain:
         """A unique UID is not a duplicate; nothing should be closed/merged."""
 
         params = _job_params(**{"Merge Mode": "close", "Dry Run": False})
-        cases_by_id = {
-            "100": _make_case(
-                cyber_alerts=[
-                    _make_alert(ticket_id="uid-unique", identifier="alert-100")
-                ]
-            )
-        }
-        siemplify = job_siemplify_factory(
-            parameters=params, case_ids=["100"], cases_by_id=cases_by_id
-        )
+        cases_by_id = {"100": _make_case(cyber_alerts=[_make_alert(ticket_id="uid-unique", identifier="alert-100")])}
+        siemplify = job_siemplify_factory(parameters=params, case_ids=["100"], cases_by_id=cases_by_id)
 
         with patch.object(job_module, "SiemplifyJob", return_value=siemplify):
             job_module.main()
@@ -638,25 +577,11 @@ class TestJobMain:
         list. We expect ``_get_case_by_id`` to be called only ``max_cases``
         times even if the filter returned more IDs."""
 
-        params = _job_params(
-            **{"Max Cases To Process": 1, "Merge Mode": "close", "Dry Run": True}
-        )
+        params = _job_params(**{"Max Cases To Process": 1, "Merge Mode": "close", "Dry Run": True})
         cases_by_id = {
-            "100": _make_case(
-                cyber_alerts=[
-                    _make_alert(ticket_id="uid-1", identifier="alert-100")
-                ]
-            ),
-            "101": _make_case(
-                cyber_alerts=[
-                    _make_alert(ticket_id="uid-1", identifier="alert-101")
-                ]
-            ),
-            "102": _make_case(
-                cyber_alerts=[
-                    _make_alert(ticket_id="uid-1", identifier="alert-102")
-                ]
-            ),
+            "100": _make_case(cyber_alerts=[_make_alert(ticket_id="uid-1", identifier="alert-100")]),
+            "101": _make_case(cyber_alerts=[_make_alert(ticket_id="uid-1", identifier="alert-101")]),
+            "102": _make_case(cyber_alerts=[_make_alert(ticket_id="uid-1", identifier="alert-102")]),
         }
         siemplify = job_siemplify_factory(
             parameters=params,
@@ -669,9 +594,7 @@ class TestJobMain:
 
         assert siemplify._get_case_by_id.call_count == 1
 
-    def test_skips_alerts_whose_rule_generator_does_not_match_case_type(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_skips_alerts_whose_rule_generator_does_not_match_case_type(self, job_module, job_siemplify_factory):
         """An alert from a different connector should be ignored entirely
         even if its case is OPEN within the lookback window."""
 
@@ -707,9 +630,7 @@ class TestJobMain:
 
         siemplify.close_case.assert_not_called()
 
-    def test_aborts_when_merge_mode_url_cannot_be_resolved(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_aborts_when_merge_mode_url_cannot_be_resolved(self, job_module, job_siemplify_factory):
         """In merge mode, if the URL can't be resolved we end_script and
         emit nothing — never silently fall back to close mode."""
         params = _job_params(**{"Merge Mode": "merge", "Chronicle Instance Path": ""})
@@ -723,17 +644,13 @@ class TestJobMain:
         siemplify.get_cases_ids_by_filter.assert_not_called()
         siemplify.session.post.assert_not_called()
 
-    def test_unknown_merge_mode_falls_back_to_merge_mode(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_unknown_merge_mode_falls_back_to_merge_mode(self, job_module, job_siemplify_factory):
         """An unrecognised merge_mode value should fall back to ``merge``,
         which means the URL must still resolve — wire that up."""
         params = _job_params(**{"Merge Mode": "unknown-mode"})
         siemplify = job_siemplify_factory(parameters=params)
         siemplify.sdk_config = SimpleNamespace(
-            one_platform_api_root_uri_format=(
-                "https://chronicle.example.com/{}/projects/p/locations/l/instances/i"
-            )
+            one_platform_api_root_uri_format=("https://chronicle.example.com/{}/projects/p/locations/l/instances/i")
         )
         siemplify.LOGGER.error = MagicMock(name="error")
 
@@ -744,22 +661,16 @@ class TestJobMain:
         first_error = siemplify.LOGGER.error.call_args_list[0].args[0]
         assert "Unrecognised Merge Mode" in first_error
 
-    def test_carry_over_redundancy_warning_in_merge_mode(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_carry_over_redundancy_warning_in_merge_mode(self, job_module, job_siemplify_factory):
         """Merge mode + carry_over=True logs an info that carry-over is
         redundant. We don't enforce silencing the flag because the
         cascading downstream behaviour is already covered above; we just
         verify the operator sees the warning."""
 
-        params = _job_params(
-            **{"Merge Mode": "merge", "Carry Over To Primary": True, "Dry Run": True}
-        )
+        params = _job_params(**{"Merge Mode": "merge", "Carry Over To Primary": True, "Dry Run": True})
         siemplify = job_siemplify_factory(parameters=params)
         siemplify.sdk_config = SimpleNamespace(
-            one_platform_api_root_uri_format=(
-                "https://chronicle.example.com/{}/projects/p/locations/l/instances/i"
-            )
+            one_platform_api_root_uri_format=("https://chronicle.example.com/{}/projects/p/locations/l/instances/i")
         )
 
         with patch.object(job_module, "SiemplifyJob", return_value=siemplify):
@@ -768,9 +679,7 @@ class TestJobMain:
         all_info = " | ".join(c.args[0] for c in siemplify.LOGGER.info.call_args_list)
         assert "Carry Over To Primary is redundant" in all_info
 
-    def test_skips_self_pair_when_primary_and_duplicate_are_same_case(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_skips_self_pair_when_primary_and_duplicate_are_same_case(self, job_module, job_siemplify_factory):
         """A single OPEN case with two alerts that share the same UID can
         end up registering itself twice under that UID. The job's
         per-case dedup guard prevents that, so ``close_case`` must NOT
@@ -793,18 +702,14 @@ class TestJobMain:
                 ]
             ),
         }
-        siemplify = job_siemplify_factory(
-            parameters=params, case_ids=["100"], cases_by_id=cases_by_id
-        )
+        siemplify = job_siemplify_factory(parameters=params, case_ids=["100"], cases_by_id=cases_by_id)
 
         with patch.object(job_module, "SiemplifyJob", return_value=siemplify):
             job_module.main()
 
         siemplify.close_case.assert_not_called()
 
-    def test_skips_cases_whose_status_is_not_open(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_skips_cases_whose_status_is_not_open(self, job_module, job_siemplify_factory):
         """A case the filter returned but that's no longer OPEN must be
         skipped (not closed again, not merged)."""
         params = _job_params(**{"Merge Mode": "close", "Dry Run": False})
@@ -829,18 +734,14 @@ class TestJobMain:
                 ]
             ),
         }
-        siemplify = job_siemplify_factory(
-            parameters=params, case_ids=["100", "101"], cases_by_id=cases_by_id
-        )
+        siemplify = job_siemplify_factory(parameters=params, case_ids=["100", "101"], cases_by_id=cases_by_id)
 
         with patch.object(job_module, "SiemplifyJob", return_value=siemplify):
             job_module.main()
 
         siemplify.close_case.assert_not_called()
 
-    def test_handles_get_case_by_id_failures_gracefully(
-        self, job_module, job_siemplify_factory
-    ):
+    def test_handles_get_case_by_id_failures_gracefully(self, job_module, job_siemplify_factory):
         """A failed ``_get_case_by_id`` for one case must not abort the
         whole run — the remaining cases must still be processed."""
         params = _job_params(**{"Merge Mode": "close", "Dry Run": False})

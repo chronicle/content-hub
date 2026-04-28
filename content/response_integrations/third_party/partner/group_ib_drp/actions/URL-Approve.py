@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
 from ..core.config import Config
 from ..core.UtilsManager import GIBConnector
@@ -26,15 +26,15 @@ def main() -> None:
 
     poller = GIBConnector(siemplify).init_action_poller()
 
-    siemplify.LOGGER.info('──── GATHER ENTITIES')
+    siemplify.LOGGER.info("──── GATHER ENTITIES")
 
     received_entities = [(entity.identifier, entity.entity_type) for entity in siemplify.target_entities]
 
-    siemplify.LOGGER.info('──── PARSE DATA')
+    siemplify.LOGGER.info("──── PARSE DATA")
 
     url_to_uid = {}
     for event in siemplify.current_alert.security_events:
-        props = getattr(event, 'additional_properties', {}) or {}
+        props = getattr(event, "additional_properties", {}) or {}
         url = props.get("violation_url", "").lower()
         uid_val = props.get("violation_uid", "")
         if url and uid_val and url not in url_to_uid:

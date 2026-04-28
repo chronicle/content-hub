@@ -8,8 +8,8 @@ internally. The fixtures here let individual tests:
 - get a ``FakeDRPPoller`` they can program with canned responses and
   inspect for recorded calls,
 - get pre-built siemplify stubs (action / connector / job),
-- patch the script's module-level ``SiemplifyAction``/``GIBConnector``/etc. without each test having to do its own ``unittest.mock.patch``
-  boilerplate.
+- patch the script's module-level ``SiemplifyAction``/``GIBConnector``/etc.
+  without each test having to do its own ``unittest.mock.patch`` boilerplate.
 
 The structure is modelled after
 ``content/response_integrations/third_party/community/telegram/tests/conftest.py``: one
@@ -43,14 +43,14 @@ _INTEGRATION_PARENT = pathlib.Path(__file__).resolve().parent.parent.parent
 if str(_INTEGRATION_PARENT) not in sys.path:
     sys.path.insert(0, str(_INTEGRATION_PARENT))
 
-from typing import Callable
-from unittest.mock import MagicMock
+from typing import Callable  # noqa: E402
+from unittest.mock import MagicMock  # noqa: E402
 
-import pytest
+import pytest  # noqa: E402
 
-from .common import load_test_config
-from .core.poller import FakeDRPPoller
-from .core.siemplify_mocks import (
+from .common import load_test_config  # noqa: E402
+from .core.poller import FakeDRPPoller  # noqa: E402
+from .core.siemplify_mocks import (  # noqa: E402
     make_action_siemplify,
     make_connector_siemplify,
     make_job_siemplify,

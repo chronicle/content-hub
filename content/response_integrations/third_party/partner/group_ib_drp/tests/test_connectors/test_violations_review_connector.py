@@ -67,12 +67,8 @@ class TestReviewGather:
     """Lock the ``approve_states=[3]`` filter — drift here would surface
     *all* violations to review queues, defeating the connector's purpose."""
 
-    def test_filters_to_under_review_state(
-        self, conn_module, connector_siemplify_factory, fake_poller
-    ):
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=42
-        )
+    def test_filters_to_under_review_state(self, conn_module, connector_siemplify_factory, fake_poller):
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=42)
         fake_poller.set_update_portions([])
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
@@ -92,20 +88,16 @@ class TestReviewMain:
     def test_main_uses_review_script_name_and_returns_alerts(
         self, conn_module, connector_siemplify_factory, fake_poller
     ):
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=5
-        )
-        fake_poller.set_update_portions(
-            [
-                FakePortion(
-                    events=[
-                        {"uid": "rev-1", "fake_uri": "https://review.example.com/1"},
-                        {"uid": "rev-2", "fake_uri": "https://review.example.com/2"},
-                    ],
-                    sequpdate=8,
-                )
-            ]
-        )
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=5)
+        fake_poller.set_update_portions([
+            FakePortion(
+                events=[
+                    {"uid": "rev-1", "fake_uri": "https://review.example.com/1"},
+                    {"uid": "rev-2", "fake_uri": "https://review.example.com/2"},
+                ],
+                sequpdate=8,
+            )
+        ])
 
         with (
             patch.object(conn_module, "SiemplifyConnectorExecution", return_value=siemplify),
@@ -115,10 +107,7 @@ class TestReviewMain:
             gib_cls.return_value.init_action_poller.return_value = fake_poller
             conn_module.main()
 
-        assert (
-            siemplify.script_name
-            == conn_module.Config.GC_REVIEW_CONNECTOR_SCRIPT_NAME
-        )
+        assert siemplify.script_name == conn_module.Config.GC_REVIEW_CONNECTOR_SCRIPT_NAME
         alerts = siemplify._returned_packages[0]
         assert [a.ticket_id for a in alerts] == ["rev-1", "rev-2"]
         assert all(a.priority == 80 for a in alerts)  # Case severity = High

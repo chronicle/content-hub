@@ -16,7 +16,6 @@ import pytest
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
 from ..common import ACTIONS_PATH, load_script
-from ..core.poller import FakeDRPPoller
 
 
 @pytest.fixture
@@ -77,9 +76,7 @@ class TestPing:
         assert end["result_value"] is False
         assert end["status"] == EXECUTION_STATE_FAILED
 
-    def test_ping_sets_script_name(
-        self, ping_module, action_siemplify_factory, fake_poller
-    ):
+    def test_ping_sets_script_name(self, ping_module, action_siemplify_factory, fake_poller):
         """The script name must match ``Config.GC_PING`` so SOAR's run logs
         and metrics tag this run as the Ping action."""
         siemplify = action_siemplify_factory()

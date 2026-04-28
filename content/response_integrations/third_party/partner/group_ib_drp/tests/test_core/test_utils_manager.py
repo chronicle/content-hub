@@ -17,11 +17,11 @@ _SOAR_SDK_DIR = _SITE_PACKAGES / "soar_sdk"
 if _SOAR_SDK_DIR.is_dir() and str(_SOAR_SDK_DIR) not in sys.path:
     sys.path.insert(0, str(_SOAR_SDK_DIR))
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch  # noqa: E402
 
-import pytest
+import pytest  # noqa: E402
 
-from group_ib_drp.core.UtilsManager import (
+from group_ib_drp.core.UtilsManager import (  # noqa: E402
     CaseProcessor,
     EntityValidator,
     GIBConnector,
@@ -67,14 +67,10 @@ class TestExtractHost:
         def boom(_):
             raise ValueError("kaboom")
 
-        monkeypatch.setattr(
-            "group_ib_drp.core.UtilsManager.urllib.parse.urlsplit", boom
-        )
+        monkeypatch.setattr("group_ib_drp.core.UtilsManager.urllib.parse.urlsplit", boom)
         assert extract_host("anything", fallback="fallback-uid") == "fallback-uid"
 
-    def test_falls_back_to_truncated_raw_when_parse_explodes_and_no_fallback(
-        self, monkeypatch
-    ):
+    def test_falls_back_to_truncated_raw_when_parse_explodes_and_no_fallback(self, monkeypatch):
         """The 60-char safety cap on ``raw[:60]`` only fires when parsing
         raised and no fallback was supplied. Without it, the function would
         leak unbounded user input into alert names."""
@@ -82,9 +78,7 @@ class TestExtractHost:
         def boom(_):
             raise ValueError("kaboom")
 
-        monkeypatch.setattr(
-            "group_ib_drp.core.UtilsManager.urllib.parse.urlsplit", boom
-        )
+        monkeypatch.setattr("group_ib_drp.core.UtilsManager.urllib.parse.urlsplit", boom)
         long_input = "x" * 200
         assert extract_host(long_input) == "x" * 60
 
@@ -146,9 +140,7 @@ class TestGIBConnector:
 
     def test_init_action_poller_with_explicit_creds_tuple(self):
         siemplify = self._make_siemplify_with_config({})
-        with patch(
-            "group_ib_drp.core.UtilsManager.create_drp_poller"
-        ) as create_drp_poller_mock:
+        with patch("group_ib_drp.core.UtilsManager.create_drp_poller") as create_drp_poller_mock:
             create_drp_poller_mock.return_value = MagicMock(name="DRPPoller")
             poller = GIBConnector(siemplify).init_action_poller(
                 creds=("user", "key", "https://drp.example.com/client_api/", True)
@@ -163,9 +155,7 @@ class TestGIBConnector:
 
     def test_init_action_poller_appends_trailing_slash(self):
         siemplify = self._make_siemplify_with_config({})
-        with patch(
-            "group_ib_drp.core.UtilsManager.create_drp_poller"
-        ) as create_drp_poller_mock:
+        with patch("group_ib_drp.core.UtilsManager.create_drp_poller") as create_drp_poller_mock:
             GIBConnector(siemplify).init_action_poller(
                 creds=("user", "key", "https://drp.example.com/client_api", False)
             )
@@ -176,12 +166,8 @@ class TestGIBConnector:
     def test_init_action_poller_with_3_value_creds_defaults_verify_ssl_true(self):
         """Backwards-compat: older connectors passed only 3 values."""
         siemplify = self._make_siemplify_with_config({})
-        with patch(
-            "group_ib_drp.core.UtilsManager.create_drp_poller"
-        ) as create_drp_poller_mock:
-            GIBConnector(siemplify).init_action_poller(
-                creds=("user", "key", "https://drp.example.com/api/")
-            )
+        with patch("group_ib_drp.core.UtilsManager.create_drp_poller") as create_drp_poller_mock:
+            GIBConnector(siemplify).init_action_poller(creds=("user", "key", "https://drp.example.com/api/"))
         kwargs = create_drp_poller_mock.call_args.kwargs
         assert kwargs["verify_ssl"] is True
 
@@ -193,12 +179,8 @@ class TestGIBConnector:
             "Verify SSL": False,
         }
         siemplify = self._make_siemplify_with_config(cfg)
-        with patch(
-            "group_ib_drp.core.UtilsManager.create_drp_poller"
-        ) as create_drp_poller_mock:
-            with patch(
-                "group_ib_drp.core.UtilsManager.extract_configuration_param"
-            ) as extract_param_mock:
+        with patch("group_ib_drp.core.UtilsManager.create_drp_poller") as create_drp_poller_mock:
+            with patch("group_ib_drp.core.UtilsManager.extract_configuration_param") as extract_param_mock:
                 extract_param_mock.side_effect = lambda *_a, **kw: cfg.get(kw["param_name"])
                 GIBConnector(siemplify).init_action_poller()
         create_drp_poller_mock.assert_called_once()

@@ -72,9 +72,7 @@ class TestTyposquattingGather:
     def test_passes_use_typo_squatting_true_and_no_brand_filters(
         self, conn_module, connector_siemplify_factory, fake_poller
     ):
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=42
-        )
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=42)
         fake_poller.set_update_portions([])
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
@@ -89,32 +87,22 @@ class TestTyposquattingGather:
         assert "subtypes" not in gen.kwargs
         assert "section" not in gen.kwargs
 
-    def test_returns_none_for_empty_generator(
-        self, conn_module, connector_siemplify_factory, fake_poller
-    ):
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=1
-        )
+    def test_returns_none_for_empty_generator(self, conn_module, connector_siemplify_factory, fake_poller):
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=1)
         fake_poller.set_update_portions([])
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
             gib_cls.return_value.init_action_poller.return_value = fake_poller
             assert conn_module.gather_events(siemplify, start_date=None) is None
 
-    def test_persists_advanced_sequpdate(
-        self, conn_module, connector_siemplify_factory, fake_poller
-    ):
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=10
-        )
-        fake_poller.set_update_portions(
-            [
-                FakePortion(
-                    events=[{"uid": "u1", "fake_uri": "https://typo.example.com/1"}],
-                    sequpdate=11,
-                )
-            ]
-        )
+    def test_persists_advanced_sequpdate(self, conn_module, connector_siemplify_factory, fake_poller):
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=10)
+        fake_poller.set_update_portions([
+            FakePortion(
+                events=[{"uid": "u1", "fake_uri": "https://typo.example.com/1"}],
+                sequpdate=11,
+            )
+        ])
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
             gib_cls.return_value.init_action_poller.return_value = fake_poller
@@ -130,17 +118,13 @@ class TestTyposquattingMain:
     def test_main_returns_alerts_with_typosquatting_script_name(
         self, conn_module, connector_siemplify_factory, fake_poller
     ):
-        siemplify = connector_siemplify_factory(
-            parameters=_conn_params(), fetched_timestamp=5
-        )
-        fake_poller.set_update_portions(
-            [
-                FakePortion(
-                    events=[{"uid": "u1", "fake_uri": "https://typo.example.com/1"}],
-                    sequpdate=6,
-                )
-            ]
-        )
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=5)
+        fake_poller.set_update_portions([
+            FakePortion(
+                events=[{"uid": "u1", "fake_uri": "https://typo.example.com/1"}],
+                sequpdate=6,
+            )
+        ])
 
         with (
             patch.object(conn_module, "SiemplifyConnectorExecution", return_value=siemplify),
