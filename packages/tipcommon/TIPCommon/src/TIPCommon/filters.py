@@ -58,13 +58,7 @@ def filter_old_ids(alert_ids, existing_ids):
         (list) List of filtered ids
 
     """
-    new_alert_ids = []
-
-    for alert_id in alert_ids:
-        if alert_id not in existing_ids:
-            new_alert_ids.append(alert_id)
-
-    return new_alert_ids
+    return [alert_id for alert_id in alert_ids if alert_id not in existing_ids]
 
 
 def filter_old_ids_by_timestamp(ids, offset_in_hours, convert_to_milliseconds, offset_is_in_days):
@@ -81,17 +75,16 @@ def filter_old_ids_by_timestamp(ids, offset_in_hours, convert_to_milliseconds, o
         (dict) The filtered ids.
 
     """
-    filtered_ids = {}
     milliseconds = NUM_OF_MILLI_IN_SEC if convert_to_milliseconds else NUM_OF_SEC_IN_SEC
 
     if offset_is_in_days:
-        offset_in_hours = offset_in_hours * NUM_OF_HOURS_IN_DAY
+        offset_in_hours *= NUM_OF_HOURS_IN_DAY
 
-    for alert_id, timestamp in ids.items():
-        if timestamp > arrow.utcnow().shift(hours=-offset_in_hours).int_timestamp * milliseconds:
-            filtered_ids[alert_id] = timestamp
-
-    return filtered_ids
+    return {
+        alert_id: timestamp
+        for alert_id, timestamp in ids.items()
+        if timestamp > arrow.utcnow().shift(hours=-offset_in_hours).int_timestamp * milliseconds
+    }
 
 
 def filter_old_alerts(siemplify, alerts, existing_ids, id_key="alert_id"):
@@ -115,12 +108,12 @@ def filter_old_alerts(siemplify, alerts, existing_ids, id_key="alert_id"):
         if ids not in existing_ids:
             filtered_alerts.append(alert)
         else:
-            siemplify.LOGGER.info(f"The alert {ids} skipped since it has been fetched before")
+            siemplify.LOGGER.info("The alert %s skipped since it has been fetched before", ids)
 
     return filtered_alerts
 
 
-def pass_whitelist_filter(siemplify, whitelist_as_a_blacklist, model, model_key, whitelist=None):
+def pass_whitelist_filter(siemplify, whitelist_as_a_blacklist, model, model_key, whitelist=None) -> bool:
     """Determines whether a values from a key in a model pass the allowlist filter.
 
     Args:
@@ -147,18 +140,18 @@ def pass_whitelist_filter(siemplify, whitelist_as_a_blacklist, model, model_key,
     if allowlist:
         for value in model_values:
             if allowlist_filter_type == BLOCKLIST_FILTER and value in allowlist:
-                siemplify.LOGGER.info(f"'{value}' did not pass blocklist filter.")
+                siemplify.LOGGER.info("'%s' did not pass blocklist filter.", value)
                 return False
 
             if allowlist_filter_type == ALLOWLIST_FILTER and value not in allowlist:
-                siemplify.LOGGER.info(f"'{value}' did not pass allowlist filter.")
+                siemplify.LOGGER.info("'%s' did not pass allowlist filter.", value)
                 return False
 
     return True
 
 
 def filter_none_kwargs(**kwargs):
-    """Filters out arguments with `None` values
+    """Filters out arguments with `None` values.
 
     Args:
         **kwargs: key-word arguments

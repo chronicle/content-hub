@@ -15,7 +15,8 @@
 import abc
 from typing import Generic, TypeVar
 
-from ...types import ApiParams
+from TIPCommon.types import ApiParams
+
 from .session import AuthenticatedSession
 
 

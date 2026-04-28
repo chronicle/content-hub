@@ -16,16 +16,17 @@ import base64
 import datetime
 import re
 
-from ...consts import NUM_OF_MILLI_IN_SEC
+from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
+
 from .data_models import *
 
 
 class PubSubParser:
-    """Parser class for Google PubSub API responses"""
+    """Parser class for Google PubSub API responses."""
 
     @staticmethod
     def _get_resource_name(resource_id):
-        """Get simplified resource name
+        """Get simplified resource name.
 
         Args:
             resource_id (str): full GCP resource identifier
@@ -40,16 +41,14 @@ class PubSubParser:
     def build_topic_object(cls, raw_data):
         """Builds `Topic` object from api response
         Args:
-            raw_data (dict): http response json content
+            raw_data (dict): http response json content.
 
         Returns:
             Topic: parsed response object
 
         """
         schema_settings = (
-            cls.build_schema_settings_object(raw_data.get("schemaSettings"))
-            if raw_data.get("schemaSettings")
-            else None
+            cls.build_schema_settings_object(raw_data.get("schemaSettings")) if raw_data.get("schemaSettings") else None
         )
         return Topic(
             raw_data=raw_data,
@@ -64,7 +63,7 @@ class PubSubParser:
     def build_schema_settings_object(raw_data):
         """Builds `SchemaSettings` object from api response
         Args:
-            raw_data (dict): http response json content
+            raw_data (dict): http response json content.
 
         Returns:
             SchemaSettings: parsed response object
@@ -82,7 +81,7 @@ class PubSubParser:
     def build_subscription_object(cls, raw_data):
         """Builds `Subscription` object from api response
         Args:
-            raw_data (dict): http response json content
+            raw_data (dict): http response json content.
 
         Returns:
             Subscription: parsed response object
@@ -113,15 +112,14 @@ class PubSubParser:
         """Builds `PubSubMessage` object from api response
         Args:
             raw_data (dict): http response json content
-            encoding (str): pubsub message encoding. defaults to 'utf-8'
+            encoding (str): pubsub message encoding. defaults to 'utf-8'.
 
         Returns:
             PubSubMessage: parsed response object
 
         """
         publish_time_timestamp = int(
-            datetime.datetime.fromisoformat(raw_data.get("publishTime")).timestamp()
-            * NUM_OF_MILLI_IN_SEC
+            datetime.datetime.fromisoformat(raw_data.get("publishTime")).timestamp() * NUM_OF_MILLI_IN_SEC
         )
         return PubSubMessage(
             raw_data=raw_data,
@@ -137,16 +135,14 @@ class PubSubParser:
         """Builds `ReceivedMessage` object from api response
         Args:
             raw_data (dict): http response json content
-            encoding (str): pubsub message encoding. defaults to 'utf-8'
+            encoding (str): pubsub message encoding. defaults to 'utf-8'.
 
         Returns:
             ReceivedMessage: parsed response object
 
         """
         message = (
-            cls.build_pub_sub_message_object(raw_data.get("message"), encoding)
-            if raw_data.get("message")
-            else None
+            cls.build_pub_sub_message_object(raw_data.get("message"), encoding) if raw_data.get("message") else None
         )
         return ReceivedMessage(
             raw_data=raw_data,
@@ -160,22 +156,19 @@ class PubSubParser:
         """Builds list of `ReceivedMessage` objects from api response
         Args:
             raw_data (dict): http response json content
-            encoding (str): pubsub message encoding. defaults to 'utf-8'
+            encoding (str): pubsub message encoding. defaults to 'utf-8'.
 
         Returns:
             list[ReceivedMessage]: list of parsed response objects
 
         """
-        return [
-            cls.build_received_message_object(msg, encoding)
-            for msg in raw_data.get("receivedMessages", [])
-        ]
+        return [cls.build_received_message_object(msg, encoding) for msg in raw_data.get("receivedMessages", [])]
 
     @staticmethod
     def build_message_ids_list(raw_data):
         """Builds list of message ids from api response
         Args:
-            raw_data (dict): http response json content
+            raw_data (dict): http response json content.
 
         Returns:
             list[str]: list of message ids

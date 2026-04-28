@@ -17,13 +17,16 @@ from __future__ import annotations
 import abc
 import dataclasses
 import json
+from typing import TYPE_CHECKING
 
 from httpx import Client, Response
 
 from .consts import GLOBAL_CONTEXT_SCOPE
 from .encryption import decrypt, encrypt
 from .smp_time import unix_now
-from .types import ChronicleSOAR, JsonString, SingleJson
+
+if TYPE_CHECKING:
+    from .types import ChronicleSOAR, JsonString, SingleJson
 
 DB_TOKEN_KEY = "OAUTH_TOKEN"
 
@@ -192,7 +195,8 @@ class CredStorage:
         if hasattr(self.chronicle_soar, "context"):
             return self.chronicle_soar.context.connector_info.identifier
 
-        raise AuthenticationError("Can't extract instance identifier from ChronicleSOAR context.")
+        msg = "Can't extract instance identifier from ChronicleSOAR context."
+        raise AuthenticationError(msg)
 
     def get_token(self) -> OauthToken | None:
         """Extract ad decrypt a token from context database."""
@@ -221,7 +225,8 @@ class CredStorage:
         try:
             return decrypt(encrypted_data, key=self.encryption_password)
         except UnicodeError as err:
-            raise EncryptionError("Can't decrypt token from ChronicleSOAR context.") from err
+            msg = "Can't decrypt token from ChronicleSOAR context."
+            raise EncryptionError(msg) from err
 
     def _encrypt(self, raw_data: str) -> bytes:
         return encrypt(raw_data, key=self.encryption_password)

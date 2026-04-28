@@ -16,15 +16,18 @@ from __future__ import annotations
 
 import functools
 import inspect
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def main(class_: Callable[[], Any]) -> Callable[[], Any]:
     @functools.wraps(class_)
     def do_main() -> Any:
         if not inspect.isclass(class_):
-            raise TypeError("The main decorator supports classes only")
+            msg = "The main decorator supports classes only"
+            raise TypeError(msg)
 
         if callable(class_) and hasattr(class_, "run") and callable(class_.run):
             class_().run()
@@ -33,7 +36,8 @@ def main(class_: Callable[[], Any]) -> Callable[[], Any]:
             class_().start()
 
         else:
-            raise RuntimeError("Could not run script using 'run' or 'start' methods")
+            msg = "Could not run script using 'run' or 'start' methods"
+            raise RuntimeError(msg)
 
     if __name__ == "__main__":
         do_main()

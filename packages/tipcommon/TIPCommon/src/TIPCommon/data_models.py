@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""data_models
+"""data_models.
 ===========
 
 This module contains data classes for representing:
@@ -27,21 +27,24 @@ This module contains data classes for representing:
 from __future__ import annotations
 
 import dataclasses
-import email
 import json
 from enum import Enum
-from typing import Any, Generic, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Self, TypeVar
 
-import SiemplifyVault
 from SiemplifyConnectorsDataModel import ConnectorContext
 
-from TIPCommon.types import SingleJson
+if TYPE_CHECKING:
+    import email
+
+    import SiemplifyVault
+
+    from TIPCommon.types import SingleJson
 
 T = TypeVar("T")
 
 
 class TypedContainer(Generic[T]):
-    """Container for a specific type that provides type intellisense"""
+    """Container for a specific type that provides type intellisense."""
 
     def __init__(self) -> None:
         self._params: dict[str, T] = {}
@@ -75,10 +78,10 @@ class BaseDataModel:
 
     """
 
-    def __init__(self, raw_data):
+    def __init__(self, raw_data) -> None:
         self.raw_data = raw_data
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.raw_data)
 
     def to_json(self):
@@ -107,7 +110,7 @@ class BaseAlert:
 
     """
 
-    def __init__(self, raw_data, alert_id):
+    def __init__(self, raw_data, alert_id) -> None:
         self.raw_data = raw_data
         self.alert_id = alert_id
 
@@ -127,13 +130,13 @@ class Container:
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._params = {}
 
     def __get__(self, ins, instype=None):
         return self._params.get(ins)
 
-    def __set__(self, ins, value):
+    def __set__(self, ins, value) -> None:
         self._params[ins] = value
 
 
@@ -152,7 +155,7 @@ class Parameter:
 
     """
 
-    def __init__(self, raw_param):
+    def __init__(self, raw_param) -> None:
         self._raw_data = raw_param
 
     @property
@@ -183,7 +186,7 @@ class ConnectorParameter(Parameter):
 
     """
 
-    def __init__(self, raw_param):
+    def __init__(self, raw_param) -> None:
         super().__init__(raw_param)
         self._name = raw_param.get("param_name", "")
         self._value = raw_param.get("param_value", "")
@@ -277,7 +280,8 @@ class CaseDataStatus(Enum):
             if candidate_name in cls.__members__:
                 return cls.__members__[candidate_name]
 
-        raise ValueError(f"'{value}' is not a valid {cls.__name__}")
+        msg = f"'{value}' is not a valid {cls.__name__}"
+        raise ValueError(msg)
 
 
 CASE_DATA_STATUS_VAL_NAME_MAP = {
@@ -310,7 +314,8 @@ class CasePriority(Enum):
             if candidate_name in cls.__members__:
                 return cls.__members__[candidate_name]
 
-        raise ValueError(f"'{value}' is not a valid {cls.__name__}")
+        msg = f"'{value}' is not a valid {cls.__name__}"
+        raise ValueError(msg)
 
 
 CASE_PRIORITY_VAL_NAME_MAP = {
@@ -421,9 +426,7 @@ class ScriptContext:
                     "vault_password": self.vault_settings.password,
                     "vault_client_ca_certificate": (self.vault_settings.client_ca_certificate),
                     "vault_client_certificate": self.vault_settings.client_certificate,
-                    "vault_client_certificate_passphrase": (
-                        self.vault_settings.client_certificate_passphrase
-                    ),
+                    "vault_client_certificate_passphrase": (self.vault_settings.client_certificate_passphrase),
                 }
             ),
             "environment_api_key": self.environment_api_key,
@@ -432,9 +435,7 @@ class ScriptContext:
             "connector_info": {
                 "environment": self.connector_context.connector_info.environment,
                 "integration": self.connector_context.connector_info.integration,
-                "connector_definition_name": (
-                    self.connector_context.connector_info.connector_definition_name
-                ),
+                "connector_definition_name": (self.connector_context.connector_info.connector_definition_name),
                 "identifier": self.connector_context.connector_info.identifier,
                 "display_name": self.connector_context.connector_info.display_name,
                 "description": self.connector_context.connector_info.description,
@@ -446,7 +447,7 @@ class ScriptContext:
 
 
 class FieldItem:
-    def __init__(self, original_name, name, value):
+    def __init__(self, original_name, name, value) -> None:
         # type: (str, str, str) -> None
         self.original_name = original_name
         self.name = name
@@ -463,7 +464,7 @@ class FieldItem:
 
 
 class EventPropertyField:
-    def __init__(self, order, group_name, is_integration, is_highlight, items):
+    def __init__(self, order, group_name, is_integration, is_highlight, items) -> None:
         # type: (int, str, bool, bool, list[FieldItem]) -> None
         self.order = order
         self.group_name = group_name
@@ -498,7 +499,7 @@ class AlertEvent:
         time,
         type_,
         artifact_entities,
-    ):
+    ) -> None:
         # type: (list[EventPropertyField], str, int, str, str, str, str | None, str, str | None, int, str, list[str]) -> None
         self.fields = fields
         self.identifier = identifier
@@ -533,7 +534,7 @@ class AlertEvent:
 
 
 class FieldGroupItem:
-    def __init__(self, original_name, name, value):
+    def __init__(self, original_name, name, value) -> None:
         # type: (str, str, str) -> None
         self.original_name = original_name
         self.name = name
@@ -557,7 +558,7 @@ class FieldGroupItem:
 
 
 class FieldsGroup:
-    def __init__(self, order, group_name, is_integration, is_highlight, hide_options, items):
+    def __init__(self, order, group_name, is_integration, is_highlight, hide_options, items) -> None:
         self.order = order
         self.group_name = group_name
         self.is_integration = is_integration
@@ -595,7 +596,7 @@ class SLA:
         critical_expiration_time,
         expiration_status,
         remaining_time_since_last_pause,
-    ):
+    ) -> None:
         # type: (int | None, int | None, int, int | None) -> None
         self.sla_expiration_time = sla_expiration_time
         self.critical_expiration_time = critical_expiration_time
@@ -606,9 +607,7 @@ class SLA:
     def from_json(cls, sla_json):
         # type: (SingleJson) -> SLA
         return cls(
-            sla_expiration_time=sla_json.get(
-                "expirationTime", sla_json.get("slaExpirationTime", -1)
-            ),
+            sla_expiration_time=sla_json.get("expirationTime", sla_json.get("slaExpirationTime", -1)),
             critical_expiration_time=sla_json.get("criticalExpirationTime", -1),
             expiration_status=sla_json.get("expirationStatus", -1),
             remaining_time_since_last_pause=sla_json.get("remainingTimeSinceLastPause", -1),
@@ -662,7 +661,7 @@ class AlertCard:
         entity_cards: list[SingleJson] | None = None,
         security_event_cards: list[SingleJson] | None = None,
         involved_relations: list[SingleJson] | None = None,
-    ):
+    ) -> None:
         self.id_ = id_
         self.creation_time_unix_time_ms = creation_time_unix_time_ms
         self.modification_time_unix_time_ms = modification_time_unix_time_ms
@@ -719,14 +718,10 @@ class AlertCard:
             status=alert_card_json.get("status", 0),
             name=alert_card_json.get("displayName", alert_card_json.get("name", "")),
             priority=priority,
-            workflow_status=alert_card_json.get(
-                "workflowsStatus", alert_card_json.get("playbookStatus")
-            ),
+            workflow_status=alert_card_json.get("workflowsStatus", alert_card_json.get("playbookStatus")),
             sla_expiration_unix_time=alert_card_json.get("slaExpirationUnixTime"),
             sla_critical_expiration_unix_time=alert_card_json.get("slaCriticalExpirationUnixTime"),
-            start_time=alert_card_json.get(
-                "startTime", alert_card_json.get("startTimeUnixTimeInMs", 0)
-            ),
+            start_time=alert_card_json.get("startTime", alert_card_json.get("startTimeUnixTimeInMs", 0)),
             end_time=alert_card_json.get("endTime", 0),
             alert_group_identifier=alert_card_json.get("alertGroupIdentifier", ""),
             events_count=alert_card_json.get("eventsCount", alert_card_json.get("eventCount", 0)),
@@ -735,14 +730,11 @@ class AlertCard:
             device_product=alert_card_json.get("product", alert_card_json.get("deviceProduct")),
             device_vendor=alert_card_json.get("vendor", alert_card_json.get("deviceVendor")),
             playbook_attached=alert_card_json.get("playbookAttached"),
-            playbook_run_count=(
-                alert_card_json.get("playbookRunCount") or alert_card_json.get("playbook_run_count")
-            ),
+            playbook_run_count=(alert_card_json.get("playbookRunCount") or alert_card_json.get("playbook_run_count")),
             is_manual_alert=alert_card_json.get("isManualAlert", alert_card_json.get("manual")),
             sla=SLA.from_json(alert_card_json.get("sla")) if alert_card_json.get("sla") else None,
             fields_groups=[
-                FieldsGroup.from_json(x)
-                for x in alert_card_json.get("fieldsGroups", alert_card_json.get("fields", []))
+                FieldsGroup.from_json(x) for x in alert_card_json.get("fieldsGroups", alert_card_json.get("fields", []))
             ],
             source_url=alert_card_json.get("sourceUrl"),
             source_rule_url=alert_card_json.get("sourceRuleUrl"),
@@ -843,7 +835,7 @@ class CaseDetails:
         sla,
         stage_sla,
         alerts_sla,
-    ):
+    ) -> None:
         # type: (int, int, int, str, CasePriority, bool, bool, int, int, str, str | None, bool, int, str, str, CaseDataStatus, int | None, list[str], list[AlertCard], bool, bool, int | None, int | None, int | None, int | None, bool, SLA, SLA) -> None
         self.id_ = id_
         self.creation_time_unix_time_ms = creation_time_unix_time_ms
@@ -881,9 +873,7 @@ class CaseDetails:
         self.sla_expiration_unix_time = sla_expiration_unix_time
         self.sla_critical_expiration_unix_time = sla_critical_expiration_unix_time
         self.stage_sla_expiration_unix_time_ms = stage_sla_expiration_unix_time_ms
-        self.stage_sla__critical_expiration_unix_time_in_ms = (
-            stage_sla__critical_expiration_unix_time_in_ms
-        )
+        self.stage_sla__critical_expiration_unix_time_in_ms = stage_sla__critical_expiration_unix_time_in_ms
         self.can_open_incident = can_open_incident
         self.sla = sla
         self.stage_sla = stage_sla
@@ -905,12 +895,10 @@ class CaseDetails:
         return cls(
             id_=case_details_json.get("id"),
             creation_time_unix_time_ms=(
-                case_details_json.get("creationTimeUnixTimeInMs")
-                or case_details_json.get("createTime")
+                case_details_json.get("creationTimeUnixTimeInMs") or case_details_json.get("createTime")
             ),
             modification_time_unix_time_ms=(
-                case_details_json.get("modificationTimeUnixTimeInMs")
-                or case_details_json.get("updateTime")
+                case_details_json.get("modificationTimeUnixTimeInMs") or case_details_json.get("updateTime")
             ),
             name=case_details_json.get("displayName", case_details_json.get("name")),
             priority=CasePriority(case_details_json.get("priority", 0)),
@@ -923,18 +911,12 @@ class CaseDetails:
                 case_details_json.get("isIncident", False),
             ),
             start_time_unix_time_ms=(
-                case_details_json.get("startTimeUnixTimeInMs")
-                or case_details_json.get("createTime")
+                case_details_json.get("startTimeUnixTimeInMs") or case_details_json.get("createTime")
             ),
-            end_time_unix_time_ms=(
-                case_details_json.get("endTimeUnixTimeInMs") or case_details_json.get("endTime")
-            ),
-            assigned_user=(
-                case_details_json.get("assignedUser") or case_details_json.get("assignee")
-            ),
+            end_time_unix_time_ms=(case_details_json.get("endTimeUnixTimeInMs") or case_details_json.get("endTime")),
+            assigned_user=(case_details_json.get("assignedUser") or case_details_json.get("assignee")),
             description=case_details_json.get("description", ""),
-            is_test_case=case_details_json.get("type", case_details_json.get("isTestCase", False))
-            in [True, "Test"],
+            is_test_case=case_details_json.get("type", case_details_json.get("isTestCase", False)) in {True, "Test"},
             type_=case_details_json.get("type"),
             stage=case_details_json.get("stage"),
             tags=case_details_json.get("tags", []),
@@ -952,17 +934,13 @@ class CaseDetails:
             alert_count=case_details_json.get("alertCount", 0),
             alerts=[
                 AlertCard.from_json(alert_card_json)
-                for alert_card_json in (
-                    case_details_json.get("alertCards", case_details_json.get("alerts", []))
-                )
+                for alert_card_json in (case_details_json.get("alertCards", case_details_json.get("alerts", [])))
             ],
             wall_data=[
-                WallData.from_json(alert_card_json)
-                for alert_card_json in case_details_json.get("wallData", {})
+                WallData.from_json(alert_card_json) for alert_card_json in case_details_json.get("wallData", {})
             ],
             entity_cards=[
-                EntityCard.from_json(alert_card_json)
-                for alert_card_json in case_details_json.get("entityCards", {})
+                EntityCard.from_json(alert_card_json) for alert_card_json in case_details_json.get("entityCards", {})
             ],
             entities=[
                 Entity.from_json(alert_card_json)
@@ -976,20 +954,14 @@ class CaseDetails:
             ),
             is_manual_case=case_details_json.get("isManualCase", False),
             sla_expiration_unix_time=case_details_json.get("slaExpirationUnixTime"),
-            sla_critical_expiration_unix_time=(
-                case_details_json.get("slaCriticalExpirationUnixTime")
-            ),
-            stage_sla_expiration_unix_time_ms=(
-                case_details_json.get("stageSlaExpirationUnixTimeInMs")
-            ),
+            sla_critical_expiration_unix_time=(case_details_json.get("slaCriticalExpirationUnixTime")),
+            stage_sla_expiration_unix_time_ms=(case_details_json.get("stageSlaExpirationUnixTimeInMs")),
             stage_sla__critical_expiration_unix_time_in_ms=(
                 case_details_json.get("stageSlaCriticalExpirationUnixTimeInMs")
             ),
             can_open_incident=case_details_json.get("canOpenIncident", False),
             sla=SLA.from_json(case_details_json.get("sla", {})),
-            stage_sla=(
-                SLA.from_json(case_details_json.get("stageSla", case_details_json.get("sla", {})))
-            ),
+            stage_sla=(SLA.from_json(case_details_json.get("stageSla", case_details_json.get("sla", {})))),
             alerts_sla=SLA.from_json(case_details_json.get("alertsSla", {})),
         )
 
@@ -1004,7 +976,7 @@ class CaseDetails:
         entities_json = [entity.to_json() for entity in self.entities]
         sla_json = self.sla.to_json()
         stage_sla_json = self.stage_sla.to_json()
-        tags = [tag["displayName"] if "displayName" in tag else tag for tag in self.tags]
+        tags = [tag.get("displayName", tag) for tag in self.tags]
 
         case_data = {
             "id": self.id_,
@@ -1051,9 +1023,7 @@ class CaseDetails:
             "slaExpirationUnixTime": self.sla_expiration_unix_time,
             "slaCriticalExpirationUnixTime": self.sla_critical_expiration_unix_time,
             "stageSlaExpirationUnixTimeInMs": self.stage_sla_expiration_unix_time_ms,
-            "stageSlaCriticalExpirationUnixTimeInMs": (
-                self.stage_sla__critical_expiration_unix_time_in_ms
-            ),
+            "stageSlaCriticalExpirationUnixTimeInMs": (self.stage_sla__critical_expiration_unix_time_in_ms),
             "canOpenIncident": self.can_open_incident,
             "sla": sla_json,
             "stageSla": stage_sla_json,
@@ -1078,10 +1048,8 @@ class Insight:
         return cls(raw_data=insights_response)
 
     def to_json(self):
-        """Converts the Insight object to a JSON-serializable dictionary"""
-        entity_data: SingleJson | None = self.raw_data.pop(
-            "entityData", self.raw_data.pop("entity", None)
-        )
+        """Converts the Insight object to a JSON-serializable dictionary."""
+        entity_data: SingleJson | None = self.raw_data.pop("entityData", self.raw_data.pop("entity", None))
         if entity_data is not None:
             entity_data["fields"] = entity_data.pop("fieldsGroups", entity_data.pop("fields", []))
 
@@ -1097,9 +1065,7 @@ class Insight:
             "additionalDataType": self.raw_data.pop("additionalDataType", None),
             "additionalData": self.raw_data.pop("additionalData", None),
             "additionalDataTitle": self.raw_data.pop("additionalDataTitle", None),
-            "creatorUserName": self.raw_data.pop(
-                "creatorFullName", self.raw_data.pop("creatorUserName", None)
-            ),
+            "creatorUserName": self.raw_data.pop("creatorFullName", self.raw_data.pop("creatorUserName", None)),
             **self.raw_data,
         }
 
@@ -1112,7 +1078,7 @@ class UserProfileCard:
         last_name,
         user_name,
         account_state,
-    ):
+    ) -> None:
         # type: (dict, str, str, str, int) -> None
         self.raw_data = raw_data
         self.first_name = first_name
@@ -1156,12 +1122,9 @@ class ConnectorCard:
     def from_json(cls, connector_card_json: SingleJson) -> ConnectorCard:
         return cls(
             integration=connector_card_json["integration"],
-            display_name=connector_card_json.get("display_name")
-            or connector_card_json.get("displayName"),
+            display_name=connector_card_json.get("display_name") or connector_card_json.get("displayName"),
             identifier=connector_card_json["identifier"],
-            is_enabled=(
-                connector_card_json.get("is_enabled") or connector_card_json.get("enabled")
-            ),
+            is_enabled=(connector_card_json.get("is_enabled") or connector_card_json.get("enabled")),
             is_remote=connector_card_json.get("is_remote") or connector_card_json.get("remote"),
             status=ConnectorConnectivityStatusEnum(connector_card_json.get("status", 1)),
         )
@@ -1203,12 +1166,9 @@ class InstalledIntegrationInstance:
             identifier=integration_env_json["identifier"],
             integration_identifier=integration_env_json["integrationIdentifier"],
             environment_identifier=(
-                integration_env_json.get("environmentIdentifier")
-                or integration_env_json.get("environment")
+                integration_env_json.get("environmentIdentifier") or integration_env_json.get("environment")
             ),
-            instance_name=(
-                integration_env_json.get("instanceName") or integration_env_json.get("displayName")
-            ),
+            instance_name=(integration_env_json.get("instanceName") or integration_env_json.get("displayName")),
         )
 
     def to_json(self) -> SingleJson:
@@ -1219,22 +1179,14 @@ class InstalledIntegrationInstance:
 
         """
         return {
-            "environmentIdentifier": self.instance.get(
-                "environmentIdentifier", self.instance.get("environment")
-            ),
+            "environmentIdentifier": self.instance.get("environmentIdentifier", self.instance.get("environment")),
             "identifier": self.instance.get("identifier"),
-            "instanceDescription": self.instance.get(
-                "instanceDescription", self.instance.get("displayName")
-            ),
+            "instanceDescription": self.instance.get("instanceDescription", self.instance.get("displayName")),
             "instanceName": self.instance.get("instanceName", self.instance.get("displayName")),
-            "integrationIdentifier": self.instance.get(
-                "integrationIdentifier", self.instance.get("integration")
-            ),
+            "integrationIdentifier": self.instance.get("integrationIdentifier", self.instance.get("integration")),
             "isConfigured": self.instance.get("isConfigured", self.instance.get("configured")),
             "isRemote": self.instance.get("isRemote", None),
-            "isSystemDefault": self.instance.get(
-                "isSystemDefault", self.instance.get("systemDefault")
-            ),
+            "isSystemDefault": self.instance.get("isSystemDefault", self.instance.get("systemDefault")),
         }
 
 
@@ -1251,7 +1203,7 @@ class GoogleServiceAccount:
         token_uri,
         auth_provider_x509_url,
         client_x509_cert_url,
-    ):
+    ) -> None:
         # type: (str, str, str, str, str, str, str, str, str, str) -> None
         self.account_type = account_type
         self.project_id = project_id
@@ -1379,9 +1331,7 @@ class EnvironmentData:
     def from_json(cls, json_data: SingleJson) -> EnvironmentData:
         return cls(
             environment=json_data["environment"],
-            dynamic_parameters=[
-                DynamicParameter.from_json(p) for p in json_data.get("dynamicParameters", [])
-            ],
+            dynamic_parameters=[DynamicParameter.from_json(p) for p in json_data.get("dynamicParameters", [])],
             base64_image=json_data.get("base64Image"),
             platform=json_data.get("platform"),
         )
@@ -1493,8 +1443,7 @@ class EventCard:
             product=event_data["product"],
             port=event_data["port"],
             outcome=event_data["outcome"],
-            artifact_entities=event_data.get("artifactEntities", [])
-            or event_data.get("artificats"),
+            artifact_entities=event_data.get("artifactEntities", []) or event_data.get("artificats"),
             fields=event_data.get("fields", []),
         )
 
@@ -1529,10 +1478,7 @@ class Entity:
 
     @classmethod
     def from_json(cls, entity_response: SingleJson) -> Entity:
-        if isinstance(entity_response, str):
-            raw_data = json.loads(entity_response)
-        else:
-            raw_data = entity_response
+        raw_data = json.loads(entity_response) if isinstance(entity_response, str) else entity_response
 
         return cls(
             raw_data=raw_data,
@@ -1545,9 +1491,7 @@ class Entity:
             attacker=raw_data.get("isAttacker", raw_data.get("attacker", False)),
             pivot=raw_data.get("isPivot", raw_data.get("pivot", False)),
             internal=raw_data.get("isInternal", raw_data.get("internal", False)),
-            manually_created=raw_data.get(
-                "isManuallyCreated", raw_data.get("manuallyCreated", False)
-            ),
+            manually_created=raw_data.get("isManuallyCreated", raw_data.get("manuallyCreated", False)),
             fields=raw_data.get("fieldsGroups", raw_data.get("fields", [])),
         )
 
@@ -1582,10 +1526,7 @@ class WallData:
 
     @classmethod
     def from_json(cls, data: SingleJson) -> WallData:
-        if isinstance(data, str):
-            raw_data = json.loads(data)
-        else:
-            raw_data = data
+        raw_data = json.loads(data) if isinstance(data, str) else data
 
         legacy_kind = raw_data.get("activityKind")
         converted_kind = None
@@ -1655,7 +1596,7 @@ class EntityCard:
 
 
 class DataAccessContext:
-    def __init__(self, global_access: bool, assigned_scopes: list[Any]):
+    def __init__(self, global_access: bool, assigned_scopes: list[Any]) -> None:
         # type: (bool, List[Any]) -> None
         self.global_access = global_access
         self.assigned_scopes = assigned_scopes
@@ -1710,7 +1651,7 @@ class UserDetails:
         data_access_context: DataAccessContext,
         soc_role: str | None,
         image_base64: str | None,
-    ):
+    ) -> None:
         self.id_ = id_
         self.creation_time_unix_time_in_ms = creation_time_unix_time_in_ms
         self.modification_time_unix_time_in_ms = modification_time_unix_time_in_ms
@@ -1753,9 +1694,7 @@ class UserDetails:
         return cls(
             id_=user_details_json.get("id"),
             creation_time_unix_time_in_ms=user_details_json.get("creationTimeUnixTimeInMs", 0),
-            modification_time_unix_time_in_ms=user_details_json.get(
-                "modificationTimeUnixTimeInMs", 0
-            ),
+            modification_time_unix_time_in_ms=user_details_json.get("modificationTimeUnixTimeInMs", 0),
             permission_group=user_details_json.get("permissionGroup", ""),
             permission_groups=user_details_json.get("permissionGroups", []),
             soc_role=user_details_json.get("socRole", None),
@@ -1779,9 +1718,7 @@ class UserDetails:
             last_login_time=user_details_json.get("lastLoginTime"),
             previous_login_time=user_details_json.get("previousLoginTime", None),
             last_password_change_time=user_details_json.get("lastPasswordChangeTime", None),
-            last_password_change_notification_time=user_details_json.get(
-                "lastPasswordChangeNotificationTime", None
-            ),
+            last_password_change_notification_time=user_details_json.get("lastPasswordChangeNotificationTime", None),
             login_wrong_password_count=user_details_json.get("loginWrongPasswordCount", None),
             is_deleted=user_details_json.get("isDeleted", False),
             deletion_time_unix_time_in_ms=user_details_json.get("deletionTimeUnixTimeInMs", None),
@@ -1837,7 +1774,7 @@ class InternalDomain:
         environments_json: str,
         creation_time_unix_time_in_ms: int,
         modification_time_unix_time_in_ms: int,
-    ):
+    ) -> None:
         self.alias_name = alias_name
         self.id_ = id_
         self.domain_display_name = domain_display_name
@@ -1955,19 +1892,13 @@ class AttachmentMetadata:
         creator_user_id = self.raw_data.pop("user", self.raw_data.pop("creator_user_id", None))
         case_id = self.raw_data.pop("case", self.raw_data.pop("case_id", -1))
         is_favorite = self.raw_data.pop("isFavorite", self.raw_data.pop("is_favorite", False))
-        update_time = self.raw_data.pop(
-            "updateTime", self.raw_data.pop("modification_time_unix_time_in_ms", -1)
-        )
-        create_time = self.raw_data.pop(
-            "createTime", self.raw_data.pop("creation_time_unix_time_in_ms", -1)
-        )
+        update_time = self.raw_data.pop("updateTime", self.raw_data.pop("modification_time_unix_time_in_ms", -1))
+        create_time = self.raw_data.pop("createTime", self.raw_data.pop("creation_time_unix_time_in_ms", -1))
         attachment_data = self.raw_data.pop("caseAttachment", {})
         evidence_name = attachment_data.pop("fileName", self.raw_data.pop("evidence_name", None))
         evidence_id = attachment_data.pop("attachmentId", self.raw_data.pop("evidence_id", 0))
         file_type = attachment_data.pop("fileType", self.raw_data.pop("file_type", None))
-        alert_identifier = self.raw_data.pop(
-            "alertIdentifier", self.raw_data.pop("alert_identifier", None)
-        )
+        alert_identifier = self.raw_data.pop("alertIdentifier", self.raw_data.pop("alert_identifier", None))
 
         return {
             "caseId": case_id,
@@ -2001,7 +1932,7 @@ class CreateEntity:
     is_directional: bool = False
 
     def to_json(self) -> SingleJson:
-        """Converts the CreateEntity object to a JSON-serializable dictionary"""
+        """Converts the CreateEntity object to a JSON-serializable dictionary."""
         return {
             "caseId": f"{self.case_id}",
             "alertIdentifier": self.alert_identifier,
@@ -2020,20 +1951,12 @@ class CaseCloseComment:
 
     @classmethod
     def from_json(cls, json_data: SingleJson) -> CaseCloseComment:
-        """
-        Parses case closure comment from either Legacy or 1P responses.
-        """
+        """Parses case closure comment from either Legacy or 1P responses."""
         if "objectsList" in json_data:
             case_activities = json_data.get("objectsList", [])
-            close_activity = next(
-                filter(lambda x: x.get("activityKind") == 9, case_activities), 
-                {}
-            )
+            close_activity = next(filter(lambda x: x.get("activityKind") == 9, case_activities), {})
             description = close_activity.get("description", "")
-            close_comment = next(
-                filter(lambda x: x.startswith("Comment:"), description.split("\n")),
-                ""
-            )
+            close_comment = next(filter(lambda x: x.startswith("Comment:"), description.split("\n")), "")
             return cls(comment=close_comment.removeprefix("Comment:").strip())
 
         records = json_data.get("caseWallRecords", [])

@@ -15,12 +15,16 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from ...exceptions import EnrichActionError
-from ...types import Entity
+from TIPCommon.exceptions import EnrichActionError
+
 from .base_action import Action
-from .data_models import EntityTypesEnum
+
+if TYPE_CHECKING:
+    from TIPCommon.types import Entity
+
+    from .data_models import EntityTypesEnum
 
 
 class EnrichAction(Action):
@@ -63,7 +67,7 @@ class EnrichAction(Action):
 
     @abstractmethod
     def _get_entity_types(self) -> list[EntityTypesEnum]:
-        """Set which entity types the action accepts"""
+        """Set which entity types the action accepts."""
         raise NotImplementedError
 
     @abstractmethod
@@ -71,7 +75,7 @@ class EnrichAction(Action):
         self,
         current_entity: Entity | None = None,
     ) -> None:
-        """Perform the main enrichment logic"""
+        """Perform the main enrichment logic."""
         raise NotImplementedError
 
     # ==================== Action Methods ==================== #

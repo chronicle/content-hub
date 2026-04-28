@@ -14,24 +14,19 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
 import itertools
 import json
 import math
-from typing import Generic, TYPE_CHECKING
-from requests.exceptions import HTTPError, JSONDecodeError
+import operator
+from abc import abstractmethod
+from typing import TYPE_CHECKING, Generic
 
+from requests.exceptions import HTTPError, JSONDecodeError
 from SiemplifyUtils import convert_unixtime_to_datetime, unix_now
 
-from .base_job import Job
-from .job_case import (
-    JobCase,
-    JobCommentsResult,
-    JobTagsResult,
-    JobAssigneeResult,
-    ProductTagsData,
-)
-from ...consts import (
+from TIPCommon.base.interfaces import ApiClient
+from TIPCommon.base.utils import is_native, merge_ids_by_timestamp, nativemethod
+from TIPCommon.consts import (
     CASE_ALERTS_LIMIT,
     COMMENTS_MODIFICATION_TIME_FILTER,
     INCREMENT_CASE_UPDATED_TIME_BY_MS,
@@ -40,9 +35,8 @@ from ...consts import (
     TAGS_KEY,
     UNIX_FORMAT,
 )
-from ...exceptions import BaseSyncJobException
-from ..interfaces import ApiClient
-from ...rest.soar_api import (
+from TIPCommon.exceptions import BaseSyncJobException
+from TIPCommon.rest.soar_api import (
     add_tags_to_case_in_bulk,
     get_case_close_comment,
     get_case_overview_details,
@@ -50,12 +44,22 @@ from ...rest.soar_api import (
     remove_case_tag,
     set_alert_priority,
 )
-from ...soar_ops import get_user_by_id, get_users_profile_cards_with_pagination
-from ...types import SingleJson, SyncItem, SyncData
-from ..utils import nativemethod, is_native, merge_ids_by_timestamp
+from TIPCommon.soar_ops import get_user_by_id, get_users_profile_cards_with_pagination
+
+from .base_job import Job
+from .job_case import (
+    JobAssigneeResult,
+    JobCase,
+    JobCommentsResult,
+    JobTagsResult,
+    ProductTagsData,
+)
 
 if TYPE_CHECKING:
-    from typing import Iterator, Any
+    from collections.abc import Iterator
+    from typing import Any
+
+    from TIPCommon.types import SingleJson, SyncData, SyncItem
 
 
 class BaseSyncJob(Job, Generic[ApiClient]):
@@ -66,7 +70,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         job_name: str,
         context_identifier: str,
         tags_identifiers: list[str],
-    ):
+    ) -> None:
         super().__init__(name=job_name)
         self.tags_identifiers: list[str] = tags_identifiers
         self.context_identifier: str = context_identifier
@@ -91,6 +95,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Returns:
             SyncItem: A list of product IDs extracted from the case details.
+
         """
         raise NotImplementedError
 
@@ -100,6 +105,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
+
         """
         raise NotImplementedError
 
@@ -109,6 +115,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
+
         """
         raise NotImplementedError
 
@@ -118,6 +125,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
+
         """
         raise NotImplementedError
 
@@ -131,6 +139,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Returns:
             bool: True if both the alert and the product are closed, False otherwise.
+
         """
         raise NotImplementedError
 
@@ -141,6 +150,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
             product_details (Any): The details of the product to sync.
+
         """
         raise NotImplementedError
 
@@ -150,6 +160,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
+
         """
         raise NotImplementedError
 
@@ -159,6 +170,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
+
         """
         raise NotImplementedError
 
@@ -168,6 +180,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
+
         """
         raise NotImplementedError
 
@@ -185,6 +198,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Returns:
             list[tuple[str, int]]: A list of modified synced case IDs.
+
         """
         return []
 
@@ -195,6 +209,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
             comments (list[str]): A list of comments to sync to the product.
+
         """
         raise NotImplementedError
 
@@ -220,15 +235,14 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Returns:
             JobCommentsResult: An object containing the comments to add and remove for syncing.
+
         """
-        comments_to_sync = job_case.get_comments_to_sync(
+        return job_case.get_comments_to_sync(
             product_comment_prefix=product_comment_prefix,
             case_comment_prefix=case_comment_prefix,
             product_comment_key=product_comment_key,
             product_incident_key=product_incident_key,
         )
-
-        return comments_to_sync
 
     @nativemethod
     def sync_case_tags_to_product(
@@ -241,6 +255,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Args:
             job_case (JobCase): The JobCase object containing the details of the case to sync.
             tags (ProductTagsData): An object containing the tags to add and remove for syncing.
+
         """
         raise NotImplementedError
 
@@ -277,6 +292,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Args:
             updated_items (SyncData): The dictionary containing the updated processed
             items data to be written.
+
         """
         self.soar_job.set_job_context_property(
             identifier=self.name_id,
@@ -293,6 +309,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Args:
             synced_list (list[tuple[str, int]]): A list of tuples containing case IDs
             and alert IDs that were successfully synced.
+
         """
         for case_id, alert_id in synced_list:
             case_id = str(case_id)
@@ -316,6 +333,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Returns:
             list[JobCase]: A list of JobCase objects that are prepared
             for synchronization.
+
         """
         final_prepared_cases: list[JobCase] = []
         cases_by_modified_timestamp = self._get_case_ids_by_timestamp()
@@ -326,9 +344,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         )
 
         if not is_native(self.modified_synced_case_ids_by_product):
-            synced_incident_ids: Iterator[str] = itertools.chain.from_iterable(
-                self.processed_items.values()
-            )
+            synced_incident_ids: Iterator[str] = itertools.chain.from_iterable(self.processed_items.values())
             modified_synced_case_ids_by_product = self.modified_synced_case_ids_by_product(
                 synced_incident_ids,
                 sorted_modified_ids,
@@ -337,7 +353,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                 sorted_modified_ids,
                 modified_synced_case_ids_by_product,
             )
-        sorted_modified_ids.sort(key=lambda x: x[1])
+        sorted_modified_ids.sort(key=operator.itemgetter(1))
 
         potential_cases = sorted_modified_ids[: self.sync_limit]
         total_alerts_accumulated = 0
@@ -352,9 +368,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                     alert_expand=["ClosureDetails"],
                 )
                 alert_count = len(case_details.alerts)
-                if self.product_alerts_limit and total_alerts_accumulated + alert_count > (
-                    self.product_alerts_limit
-                ):
+                if self.product_alerts_limit and total_alerts_accumulated + alert_count > (self.product_alerts_limit):
                     if total_alerts_accumulated == 0:
                         self.logger.info(
                             f"Case {case_id} has {alert_count} alerts, exceeding "
@@ -380,9 +394,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                     final_prepared_ids.append((case_id, modification_time))
 
             except (HTTPError, JSONDecodeError) as e:
-                self.logger.info(
-                    f"Could not retrieve details for new case {case_id}. Skipping. Error: {e}"
-                )
+                self.logger.info("Could not retrieve details for new case %s. Skipping. Error: %s", case_id, e)
         self.sorted_modified_ids = final_prepared_ids
 
         return final_prepared_cases
@@ -396,6 +408,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Returns:
             list[tuple[str, int]]: A list of tuples containing case IDs and their modification
             timestamps.
+
         """
         start_time_ms = self.last_run_time + INCREMENT_CASE_UPDATED_TIME_BY_MS
         time_diff_ms = self._cached_unix_now - start_time_ms
@@ -411,10 +424,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         )
 
         if not self.tags_identifiers:
-            filtered_case_ids: list[tuple[str, int]] = []
-            for case in cases:
-                if case.get("id"):
-                    filtered_case_ids.append((str(case["id"]), case["updateTime"]))
+            filtered_case_ids: list[tuple[str, int]] = [
+                (str(case["id"]), case["updateTime"]) for case in cases if case.get("id")
+            ]
             return filtered_case_ids
 
         return self._filter_cases_by_tags(cases)
@@ -429,6 +441,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Returns:
             list[tuple[str, int]]: A list of tuples containing the IDs and modification times
             of cases that contain all of the required tags.
+
         """
         filtered_case_ids: list[tuple[str, int]] = []
         for case in cases:
@@ -449,6 +462,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Args:
             case_id (int): The ID of the case to sync the comments to.
             comments (list[str]): A list of comments to sync to the case.
+
         """
         for comment in comments:
             alert_identifier = comment.split(":")[0]
@@ -458,7 +472,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                 comment=comment,
                 alert_identifier=alert_identifier,
             )
-            self.logger.info(f"Successfully synced comments to case {case_id}.")
+            self.logger.info("Successfully synced comments to case %s.", case_id)
 
     def get_tags_to_sync(
         self,
@@ -480,6 +494,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Returns:
             JobTagsResult: An object containing the tags to add and remove for syncing.
+
         """
         return job_case.get_tags_to_sync(
             product_tag_prefix=product_tag_prefix,
@@ -495,10 +510,11 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Args:
             case_id (int): The ID of the case to sync the tags to.
             tags (ProductTagsData): An object containing the tags to add and remove for syncing.
+
         """
         if tags.tags_to_add:
             add_tags_to_case_in_bulk(self.soar_job, [case_id], tags.tags_to_add)
-            self.logger.info(f"Successfully added tags to case {case_id}.")
+            self.logger.info("Successfully added tags to case %s.", case_id)
 
         if tags.tags_to_remove:
             for tag in tags.tags_to_remove:
@@ -507,7 +523,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                     case_id=case_id,
                     tag=tag,
                 )
-            self.logger.info(f"Successfully removed tags from case {case_id}.")
+            self.logger.info("Successfully removed tags from case %s.", case_id)
 
     def get_secops_assignee(self, job_case: JobCase) -> SingleJson:
         """Get assignee from secops case.
@@ -517,6 +533,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Returns:
             SingleJson: A dictionary containing the assignee's details.
+
         """
         return get_user_by_id(self.soar_job, job_case.case_detail.assigned_user)
 
@@ -536,17 +553,16 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             reason (str): The reason for closing the case.
             root_cause (str): The root cause of the issue.
             comment (str): A comment to add when closing the case.
+
         """
         try:
             self.soar_job.close_alert(root_cause, comment, reason, case_id, alert_id)
-            self.logger.info(f"Successfully closed alert {alert_id} in case {case_id}.")
+            self.logger.info("Successfully closed alert %s in case %s.", alert_id, case_id)
 
         except Exception as e:
             error_message = str(e)
             if "You can not perform this action on a closed alert" in error_message:
-                self.logger.warn(
-                    f"Alert {alert_id} in case {case_id} was already closed on the platform. "
-                )
+                self.logger.warning("Alert %s in case %s was already closed on the platform. ", alert_id, case_id)
 
     def get_assignee_to_sync(self, job_case: JobCase) -> JobAssigneeResult:
         """Fetches assignee from the product item.
@@ -557,11 +573,10 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         Returns:
             JobAssigneeResult: An object containing the assignee's display name
             and a flag indicating whether to sync the assignee or not.
+
         """
         if not self._secops_user_list:
-            self._secops_user_list = [
-                user.raw_data for user in get_users_profile_cards_with_pagination(self.soar_job)
-            ]
+            self._secops_user_list = [user.raw_data for user in get_users_profile_cards_with_pagination(self.soar_job)]
 
         return job_case.get_assignee_to_sync(self._secops_user_list)
 
@@ -577,9 +592,10 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             alert_id (str): The identifier of the alert to sync the assignee to.
             case_id (str): The ID of the case to sync the assignee to.
             user_display_name (str): The display name of the user to assign to the case.
+
         """
         self.soar_job.assign_case(user_display_name, case_id, alert_id)
-        self.logger.info(f"Successfully synced assignee to case {case_id}.")
+        self.logger.info("Successfully synced assignee to case %s.", case_id)
 
     def sync_severity_to_case(
         self,
@@ -595,15 +611,14 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             alert_name (str): The name of the alert to sync the severity to.
             case_id (str): The ID of the case to sync the severity to.
             new_priority (str): The new priority for the alert.
+
         """
         try:
             set_alert_priority(self.soar_job, case_id, alert_identifier, alert_name, new_priority)
-            self.logger.info(
-                f"Successfully updated alert {alert_identifier} priority to {new_priority}."
-            )
+            self.logger.info("Successfully updated alert %s priority to %s.", alert_identifier, new_priority)
 
         except Exception as e:
-            self.logger.error(f"Failed to update priority for alert {alert_identifier}: {e}")
+            self.logger.exception("Failed to update priority for alert %s: %s", alert_identifier, e)
 
     def get_secops_closure_comment(self, job_case: JobCase, sync_info: dict) -> str:
         """Fetches the closure comment for the Case/Alert.
@@ -614,6 +629,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Returns:
             str: The closure comment for the case/alert.
+
         """
         if sync_info["is_case_closed"]:
             comment = get_case_close_comment(self.soar_job, job_case.case_detail.id_)
@@ -627,6 +643,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         Raises:
             BaseSyncJobException: If any unexpected error occurs during the sync cycle.
+
         """
         try:
             self._cached_unix_now = unix_now()
@@ -653,10 +670,9 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             self.job_completed_successfully = True
 
         except Exception as e:
-            self.logger.exception(f"An unexpected error occurred during the sync cycle: {e}")
-            raise BaseSyncJobException(
-                f"An unexpected error occurred during the sync cycle: {e}"
-            ) from e
+            self.logger.exception("An unexpected error occurred during the sync cycle: %s", e)
+            msg = f"An unexpected error occurred during the sync cycle: {e}"
+            raise BaseSyncJobException(msg) from e
 
         finally:
             self._finalize_job()
@@ -669,6 +685,4 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             self.current_run_latest_timestamp_ms = self.sorted_modified_ids[-1][1]
         latest_time = self.current_run_latest_timestamp_ms
         self._save_timestamp_by_unique_id(new_timestamp=latest_time)
-        self.logger.info(
-            f"Saving timestamp: {latest_time} [{convert_unixtime_to_datetime(latest_time)}]"
-        )
+        self.logger.info(f"Saving timestamp: {latest_time} [{convert_unixtime_to_datetime(latest_time)}]")

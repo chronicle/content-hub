@@ -17,10 +17,9 @@ from __future__ import annotations
 import datetime
 import json
 from abc import ABC, abstractmethod
-from typing import Generic
+from typing import TYPE_CHECKING, Generic
 
 import requests
-from SiemplifyJob import SiemplifyJob
 from SiemplifyUtils import (
     convert_datetime_to_unix_time,
     convert_string_to_unix_time,
@@ -31,19 +30,8 @@ from SiemplifyUtils import (
     utc_now,
 )
 
-from ...consts import DATETIME_FORMAT, NONE_VALS, NUM_OF_MILLI_IN_SEC, UNIX_FORMAT
-from ...data_models import Container, JobParamType
-from ...exceptions import JobSetupError, ParameterExtractionError
-from ...extraction import extract_job_param
-from ...rest.soar_api import get_installed_jobs
-from ...types import JSON, Contains, JsonString
-from ...utils import (
-    camel_to_snake_case,
-    safe_cast_bool_value_from_str,
-    safe_cast_int_value_from_str,
-)
-from ..interfaces import ApiClient, ScriptLogger
-from ..utils import (
+from TIPCommon.base.interfaces import ApiClient, ScriptLogger
+from TIPCommon.base.utils import (
     create_logger,
     create_params_container,
     create_soar_job,
@@ -51,6 +39,13 @@ from ..utils import (
     is_native,
     nativemethod,
 )
+from TIPCommon.consts import DATETIME_FORMAT, NONE_VALS, NUM_OF_MILLI_IN_SEC, UNIX_FORMAT
+from TIPCommon.data_models import Container, JobParamType
+from TIPCommon.exceptions import JobSetupError, ParameterExtractionError
+from TIPCommon.extraction import extract_job_param
+from TIPCommon.rest.soar_api import get_installed_jobs
+from TIPCommon.utils import camel_to_snake_case, safe_cast_bool_value_from_str, safe_cast_int_value_from_str
+
 from .consts import (
     JOB_ID_KEY,
     JOB_INSTANCES_PARSE_ERROR_MSG,
@@ -58,9 +53,14 @@ from .consts import (
 )
 from .data_models import JobParameter
 
+if TYPE_CHECKING:
+    from SiemplifyJob import SiemplifyJob
+
+    from TIPCommon.types import JSON, Contains, JsonString
+
 
 class Job(ABC, Generic[ApiClient]):
-    """A class that represent a Job script in Chronicle SOAR
+    """A class that represent a Job script in Chronicle SOAR.
 
     Properties:
         soar_job: the SDK SiemplifyJob object
@@ -128,12 +128,12 @@ class Job(ABC, Generic[ApiClient]):
 
     @abstractmethod
     def _init_api_clients(self) -> Contains[ApiClient]:
-        """Initiate and return all the API clients used by the action"""
+        """Initiate and return all the API clients used by the action."""
         raise NotImplementedError
 
     @abstractmethod
     def _perform_job(self) -> None:
-        """Perform the main flow of the job
+        """Perform the main flow of the job.
 
         Raises:
             NotImplementedError: If not overridden
@@ -145,7 +145,7 @@ class Job(ABC, Generic[ApiClient]):
 
     @nativemethod
     def _validate_params(self) -> None:
-        """Validate the parameters' values
+        """Validate the parameters' values.
 
         Examples::
 
@@ -168,7 +168,7 @@ class Job(ABC, Generic[ApiClient]):
 
     @nativemethod
     def _finalize(self) -> None:
-        """Perform finalize steps before the job script ends"""
+        """Perform finalize steps before the job script ends."""
 
     # ==================== Job Methods ==================== #
 
@@ -188,9 +188,7 @@ class Job(ABC, Generic[ApiClient]):
 
         """
         self._start_job_clock()
-        self.logger.info(
-            f"==================== Starting Job - {self.name} - Execution ===================="
-        )
+        self.logger.info(f"==================== Starting Job - {self.name} - Execution ====================")
 
         self.logger.info("-------------------- Main - Param Init --------------------")
         try:
@@ -202,7 +200,7 @@ class Job(ABC, Generic[ApiClient]):
                 if isinstance(e, requests.HTTPError)
                 else JOB_INSTANCES_PARSE_ERROR_MSG.format(error=e)
             )
-            self.logger.error(error_msg)
+            self.logger.exception(error_msg)
             self.logger.exception(e)
             raise ParameterExtractionError(error_msg) from e
 
@@ -221,7 +219,7 @@ class Job(ABC, Generic[ApiClient]):
 
         except Exception as error:
             self.logger.info("-------------------- Main - Failed --------------------")
-            self.logger.error(f"{self.error_msg}")
+            self.logger.exception(f"{self.error_msg}")
             self.logger.exception(error)
             # Fix this behavior of job status in SDK/Python service
             raise RuntimeError from error
@@ -240,7 +238,7 @@ class Job(ABC, Generic[ApiClient]):
         case_id: str,
         property_key: str,
     ) -> JSON | JsonString | None:
-        """Get case context property
+        """Get case context property.
 
         Args:
             case_id: The case ID to get the context from
@@ -262,7 +260,7 @@ class Job(ABC, Generic[ApiClient]):
         property_key: str,
         property_value: str,
     ) -> None:
-        """Set case context property
+        """Set case context property.
 
         Args:
             case_id: The case ID to set the context under
@@ -316,11 +314,7 @@ class Job(ABC, Generic[ApiClient]):
             setattr(
                 self.params,
                 camel_to_snake_case(param.name),
-                input_type(
-                    value
-                    if vault_settings is None
-                    else get_param_value_from_vault(vault_settings, value)
-                )
+                input_type(value if vault_settings is None else get_param_value_from_vault(vault_settings, value))
                 if value not in NONE_VALS
                 else value,
             )
@@ -330,7 +324,7 @@ class Job(ABC, Generic[ApiClient]):
         new_timestamp: int | datetime.datetime | None = None,
         timestamp_key: str | None = None,
     ) -> None:
-        """Save Job timestamp under its unique ID
+        """Save Job timestamp under its unique ID.
 
         Args:
             new_timestamp (int | datetime.datetime | None):
@@ -358,7 +352,8 @@ class Job(ABC, Generic[ApiClient]):
                 property_value=json.dumps(new_timestamp),
             )
         except Exception as e:
-            raise RuntimeError(f"Failed saving timestamps to db, ERROR: {e}") from e
+            msg = f"Failed saving timestamps to db, ERROR: {e}"
+            raise RuntimeError(msg) from e
 
     def _fetch_timestamp_by_unique_id(
         self,
@@ -366,7 +361,7 @@ class Job(ABC, Generic[ApiClient]):
         timezone: bool = False,
         timestamp_key: str | None = None,
     ) -> int | datetime.datetime:
-        """Fetch Job timestamp by using its unique ID
+        """Fetch Job timestamp by using its unique ID.
 
         Args:
             datetime_format (bool):
@@ -392,7 +387,8 @@ class Job(ABC, Generic[ApiClient]):
                 property_key=timestamp_key,
             )
         except Exception as e:
-            raise RuntimeError(f"Failed reading timestamps from db, ERROR: {e}") from e
+            msg = f"Failed reading timestamps from db, ERROR: {e}"
+            raise RuntimeError(msg) from e
 
         if last_run_time is None:
             last_run_time = 0
@@ -443,9 +439,7 @@ class Job(ABC, Generic[ApiClient]):
             int | datetime.datetime: The last success time.
 
         """
-        last_run_timestamp = self._fetch_timestamp_by_unique_id(
-            datetime_format=True, timestamp_key=timestamp_key
-        )
+        last_run_timestamp = self._fetch_timestamp_by_unique_id(datetime_format=True, timestamp_key=timestamp_key)
         offset = datetime.timedelta(**offset_with_metric)
         current_time = utc_now()
         # Take more recent between last run and offset time
@@ -456,7 +450,7 @@ class Job(ABC, Generic[ApiClient]):
             unix_result //= NUM_OF_MILLI_IN_SEC
 
         if print_value:
-            self.logger.info(f"Last success time. Date time:{datetime_result}. Unix:{unix_result}")
+            self.logger.info("Last success time. Date time:%s. Unix:%s", datetime_result, unix_result)
 
         return unix_result if time_format == UNIX_FORMAT else datetime_result
 
@@ -467,7 +461,7 @@ class Job(ABC, Generic[ApiClient]):
     # ==================== Private Methods ==================== #
 
     def __get_job_parameters(self) -> list[JobParameter]:
-        """Get a job extracted parameters
+        """Get a job extracted parameters.
 
         Raises:
             ParameterExtractionError: If fails to extract the parameters
@@ -478,7 +472,7 @@ class Job(ABC, Generic[ApiClient]):
         """
         job_id = self.soar_job.unique_identifier
 
-        self.logger.info(f"Searching for the job instance of {job_id}")
+        self.logger.info("Searching for the job instance of %s", job_id)
         installed_jobs_response = get_installed_jobs(self.soar_job)
         if isinstance(installed_jobs_response, dict) and "job_instances" in installed_jobs_response:
             job_instances = installed_jobs_response["job_instances"]
@@ -500,9 +494,10 @@ class Job(ABC, Generic[ApiClient]):
                     return [JobParameter(p) for p in full_job_details.get("parameters", [])]
 
         # If we didn't return and got to this point the job is not installed
-        raise ParameterExtractionError(
+        msg = (
             f"The job {self.name} instance (id {job_id}) was not found!"
             "\nCustom/copy jobs - Make sure you saved the job, toggled it on "
             "and saved its instance at least once before running it "
             "and after each parameter change!"
         )
+        raise ParameterExtractionError(msg)
