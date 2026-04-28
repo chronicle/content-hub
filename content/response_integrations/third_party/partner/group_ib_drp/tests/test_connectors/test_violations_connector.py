@@ -2,9 +2,10 @@
 
 The connector turns DRP violation feeds into SOAR ``AlertInfo`` objects.
 It applies optional filters (brand IDs / approve states / subtypes /
-section), iterates every API portion, dedupes via
-``source_grouping_identifier`` and persists the highest seen ``sequpdate``
-so the next run resumes from the correct cursor.
+section), pulls a single API portion per scheduled run (bounded memory),
+dedupes via ``source_grouping_identifier`` and persists the seen
+``sequpdate`` from ``main()`` *only after* ``return_package`` succeeds
+so a crash leaves the cursor unchanged for safe retry.
 """
 
 from __future__ import annotations
@@ -44,13 +45,19 @@ def _conn_params(**overrides):
 
 class TestGatherEvents:
     """``gather_events`` is the data path; cover bootstrap (no fetched
-    timestamp), resume-from-timestamp, and the empty-portion case."""
+    timestamp), resume-from-timestamp, and the empty-portion case.
+
+    Contract: ``gather_events`` returns a tuple ``(events, state)`` and
+    NEVER calls ``save_timestamp`` itself — the cursor is now persisted by
+    ``main()`` only after ``return_package`` succeeds (safe retry).
+    """
 
     def test_bootstrap_uses_get_seq_update_dict_when_no_fetched_ts(
         self, conn_module, connector_siemplify_factory, fake_poller
     ):
         """No prior timestamp → connector queries DRP for the seq update
-        floor and feeds it to ``create_update_generator``."""
+        floor and feeds it to ``create_update_generator``. The advanced
+        cursor is reported back via ``state``, not persisted yet."""
 
         siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=None)
         fake_poller.set_seq_update_dict({"violation/list": 12345})
@@ -66,7 +73,7 @@ class TestGatherEvents:
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
             gib_cls.return_value.init_action_poller.return_value = fake_poller
-            events = conn_module.gather_events(siemplify, start_date="2026-01-01")
+            events, state = conn_module.gather_events(siemplify, start_date="2026-01-01")
 
         assert {e["uid"] for e in events} == {"u1", "u2"}
         seq_calls = fake_poller.calls_to("get_seq_update_dict")
@@ -74,38 +81,48 @@ class TestGatherEvents:
         assert seq_calls[0].kwargs["collection_name"] == "violation/list"
         gen_call = fake_poller.calls_to("create_update_generator")[0]
         assert gen_call.kwargs["sequpdate"] == 12345
-        siemplify.save_timestamp.assert_called_once()
-        assert siemplify.save_timestamp.call_args.kwargs["new_timestamp"] == 99999
+
+        # State reports the advanced cursor; gather_events does NOT persist it.
+        assert state == {"init_sequpdate": 12345, "last_sequpdate": 99999}
+        siemplify.save_timestamp.assert_not_called()
 
     def test_resumes_from_fetched_timestamp_when_present(self, conn_module, connector_siemplify_factory, fake_poller):
-        """A persisted ``fetch_timestamp`` short-circuits the bootstrap call."""
+        """A persisted ``fetch_timestamp`` short-circuits the bootstrap call,
+        and an unchanged cursor is reflected as ``init == last`` in state."""
 
         siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=70000)
         fake_poller.set_update_portions([
             FakePortion(
                 events=[{"uid": "u1", "fake_uri": "https://bad.example.com/u1"}],
-                sequpdate=70000,  # unchanged → no save_timestamp
+                sequpdate=70000,  # unchanged → main() will skip save_timestamp
             )
         ])
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
             gib_cls.return_value.init_action_poller.return_value = fake_poller
-            conn_module.gather_events(siemplify, start_date="2026-01-01")
+            events, state = conn_module.gather_events(siemplify, start_date="2026-01-01")
 
         assert fake_poller.calls_to("get_seq_update_dict") == []
         gen_call = fake_poller.calls_to("create_update_generator")[0]
         assert gen_call.kwargs["sequpdate"] == 70000
+        assert state["init_sequpdate"] == state["last_sequpdate"] == 70000
         siemplify.save_timestamp.assert_not_called()
 
-    def test_returns_none_when_no_portions(self, conn_module, connector_siemplify_factory, fake_poller):
-        """An empty generator yields ``None`` so ``main`` knows nothing to do."""
+    def test_returns_empty_events_with_unchanged_state_when_no_portions(
+        self, conn_module, connector_siemplify_factory, fake_poller
+    ):
+        """An empty generator returns ``([], state)`` with cursor unchanged
+        — never ``None`` — so ``main`` always has a state dict to inspect."""
 
         siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=1)
         fake_poller.set_update_portions([])
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
             gib_cls.return_value.init_action_poller.return_value = fake_poller
-            assert conn_module.gather_events(siemplify, start_date=None) is None
+            events, state = conn_module.gather_events(siemplify, start_date=None)
+
+        assert events == []
+        assert state == {"init_sequpdate": 1, "last_sequpdate": 1}
 
     def test_forwards_optional_filters_to_generator(self, conn_module, connector_siemplify_factory, fake_poller):
         """Brand/approve/subtypes/section filters are forwarded as-is."""
@@ -261,9 +278,12 @@ class TestMain:
         alerts = siemplify._returned_packages[0]
         assert [a.ticket_id for a in alerts] == ["u3"]
 
-    def test_main_handles_gather_events_exception(self, conn_module, connector_siemplify_factory, fake_poller):
-        """A failure in ``gather_events`` must not crash the connector;
-        an empty package is returned and the exception is logged."""
+    def test_main_propagates_gather_events_exception_and_keeps_cursor(
+        self, conn_module, connector_siemplify_factory, fake_poller
+    ):
+        """A failure during the initial fetch must propagate (so the SOAR
+        runtime marks the run failed) AND must not touch the cursor —
+        ``return_package`` and ``save_timestamp`` are both off the table."""
 
         siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=1)
 
@@ -273,10 +293,85 @@ class TestMain:
         ):
             gib_cls.return_value.init_action_poller.return_value = fake_poller
             with fake_poller.fail_requests("DRP API down"):
-                conn_module.main()
+                with pytest.raises(Exception, match="DRP API down"):
+                    conn_module.main()
 
+        siemplify.return_package.assert_not_called()
+        siemplify.save_timestamp.assert_not_called()
+
+    def test_main_persists_cursor_after_successful_return_package(
+        self, conn_module, connector_siemplify_factory, fake_poller
+    ):
+        """Cursor advanced + return_package succeeds → save_timestamp is
+        called with the new cursor. This is the safe-retry contract."""
+
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=10)
+        fake_poller.set_update_portions([
+            FakePortion(
+                events=[{"uid": "u1", "fake_uri": "https://bad.example.com/u1"}],
+                sequpdate=99,
+            )
+        ])
+
+        with (
+            patch.object(conn_module, "SiemplifyConnectorExecution", return_value=siemplify),
+            patch.object(conn_module, "GIBConnector") as gib_cls,
+            patch.object(conn_module, "AlertInfo", side_effect=_alert_info_stub),
+        ):
+            gib_cls.return_value.init_action_poller.return_value = fake_poller
+            conn_module.main()
+
+        siemplify.return_package.assert_called_once()
+        siemplify.save_timestamp.assert_called_once()
+        assert siemplify.save_timestamp.call_args.kwargs["new_timestamp"] == 99
+
+    def test_main_does_not_persist_cursor_when_return_package_raises(
+        self, conn_module, connector_siemplify_factory, fake_poller
+    ):
+        """``return_package`` failing → cursor MUST stay put so the next
+        run re-fetches the same portion (SOAR dedupes via
+        ``source_grouping_identifier``). The exception is swallowed
+        because we've already passed the fetch step."""
+
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=10)
+        siemplify.return_package.side_effect = Exception("SOAR rejected package")
+        fake_poller.set_update_portions([
+            FakePortion(
+                events=[{"uid": "u1", "fake_uri": "https://bad.example.com/u1"}],
+                sequpdate=99,
+            )
+        ])
+
+        with (
+            patch.object(conn_module, "SiemplifyConnectorExecution", return_value=siemplify),
+            patch.object(conn_module, "GIBConnector") as gib_cls,
+            patch.object(conn_module, "AlertInfo", side_effect=_alert_info_stub),
+        ):
+            gib_cls.return_value.init_action_poller.return_value = fake_poller
+            conn_module.main()
+
+        siemplify.save_timestamp.assert_not_called()
         siemplify.LOGGER.exception.assert_called()
-        assert siemplify._returned_packages == [[]]
+
+    def test_main_skips_save_timestamp_when_cursor_unchanged(
+        self, conn_module, connector_siemplify_factory, fake_poller
+    ):
+        """If no new portion advanced the cursor, ``main()`` must NOT call
+        ``save_timestamp`` — writing the same value is wasted I/O."""
+
+        siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=10)
+        fake_poller.set_update_portions([])  # no portions → cursor stays at 10
+
+        with (
+            patch.object(conn_module, "SiemplifyConnectorExecution", return_value=siemplify),
+            patch.object(conn_module, "GIBConnector") as gib_cls,
+            patch.object(conn_module, "AlertInfo", side_effect=_alert_info_stub),
+        ):
+            gib_cls.return_value.init_action_poller.return_value = fake_poller
+            conn_module.main()
+
+        siemplify.return_package.assert_called_once_with([])
+        siemplify.save_timestamp.assert_not_called()
 
 
 class TestParameterParsing:

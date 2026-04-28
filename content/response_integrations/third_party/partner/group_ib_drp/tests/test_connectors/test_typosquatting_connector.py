@@ -87,15 +87,28 @@ class TestTyposquattingGather:
         assert "subtypes" not in gen.kwargs
         assert "section" not in gen.kwargs
 
-    def test_returns_none_for_empty_generator(self, conn_module, connector_siemplify_factory, fake_poller):
+    def test_returns_empty_events_with_unchanged_state_when_no_portions(
+        self, conn_module, connector_siemplify_factory, fake_poller
+    ):
+        """An empty generator returns ``([], state)`` with cursor unchanged
+        — never ``None`` — so ``main`` always has a state dict to inspect."""
+
         siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=1)
         fake_poller.set_update_portions([])
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
             gib_cls.return_value.init_action_poller.return_value = fake_poller
-            assert conn_module.gather_events(siemplify, start_date=None) is None
+            events, state = conn_module.gather_events(siemplify, start_date=None)
 
-    def test_persists_advanced_sequpdate(self, conn_module, connector_siemplify_factory, fake_poller):
+        assert events == []
+        assert state == {"init_sequpdate": 1, "last_sequpdate": 1}
+
+    def test_returns_state_with_advanced_sequpdate(self, conn_module, connector_siemplify_factory, fake_poller):
+        """An advanced cursor is reported via ``state["last_sequpdate"]``;
+        ``gather_events`` does NOT call ``save_timestamp`` itself —
+        ``main()`` is responsible for persisting the new cursor only after
+        ``return_package`` succeeds."""
+
         siemplify = connector_siemplify_factory(parameters=_conn_params(), fetched_timestamp=10)
         fake_poller.set_update_portions([
             FakePortion(
@@ -106,10 +119,11 @@ class TestTyposquattingGather:
 
         with patch.object(conn_module, "GIBConnector") as gib_cls:
             gib_cls.return_value.init_action_poller.return_value = fake_poller
-            conn_module.gather_events(siemplify, start_date=None)
+            events, state = conn_module.gather_events(siemplify, start_date=None)
 
-        siemplify.save_timestamp.assert_called_once()
-        assert siemplify.save_timestamp.call_args.kwargs["new_timestamp"] == 11
+        assert [e["uid"] for e in events] == ["u1"]
+        assert state == {"init_sequpdate": 10, "last_sequpdate": 11}
+        siemplify.save_timestamp.assert_not_called()
 
 
 class TestTyposquattingMain:
