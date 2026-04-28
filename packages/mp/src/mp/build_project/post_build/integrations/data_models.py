@@ -28,9 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from mp.core.data_models.integrations.integration_meta.feature_tags import BuiltFeatureTags
-    from mp.core.data_models.integrations.integration_meta.parameter import (
-        BuiltIntegrationParameter,
-    )
+    from mp.core.data_models.integrations.integration_meta.parameter import BuiltIntegrationParameter
 
 
 class BuiltSupportedAction(TypedDict):

@@ -69,9 +69,7 @@ def sandbox(
     def_path: Path = built_dst / f"Integration-{integration_name}.def"
     shutil.move(built_dst / "Integration-mock_integration.def", def_path)
 
-    version_cache_path: Path = (
-        INTEGRATIONS_CACHE_FOLDER_PATH / integration_name / "version_cache.yaml"
-    )
+    version_cache_path: Path = INTEGRATIONS_CACHE_FOLDER_PATH / integration_name / "version_cache.yaml"
 
     try:
         yield {

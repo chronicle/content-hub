@@ -50,10 +50,7 @@ def format_files(
     changed_files: Annotated[
         bool,
         typer.Option(
-            help=(
-                "Check all changed files based on a diff with the"
-                " origin/develop branch instead of --file-paths"
-            ),
+            help=("Check all changed files based on a diff with the origin/develop branch instead of --file-paths"),
         ),
     ] = False,
     quiet: Annotated[

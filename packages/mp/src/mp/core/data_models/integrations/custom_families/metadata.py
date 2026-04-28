@@ -65,11 +65,7 @@ class CustomFamily(SequentialMetadata[BuiltCustomFamily, NonBuiltCustomFamily]):
             A list of `CustomFamily` objects
 
         """
-        meta_path: Path = (
-            path
-            / mp.core.constants.OUT_CUSTOM_FAMILIES_DIR
-            / mp.core.constants.OUT_CUSTOM_FAMILIES_FILE
-        )
+        meta_path: Path = path / mp.core.constants.OUT_CUSTOM_FAMILIES_DIR / mp.core.constants.OUT_CUSTOM_FAMILIES_FILE
         if not meta_path.exists():
             return []
 

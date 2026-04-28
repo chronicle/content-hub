@@ -21,11 +21,7 @@ from pydantic import dataclasses
 from mp.core import constants
 from mp.core.exceptions import NonFatalValidationError
 from mp.core.utils import filter_and_map_yaml_files
-from mp.validate.utils import (
-    extract_name,
-    load_components_defs,
-    load_integration_def,
-)
+from mp.validate.utils import extract_name, load_components_defs, load_integration_def
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -54,9 +50,7 @@ class NoCustomComponentsInIntegrationValidation:
             constants.JOBS_DIR,
             constants.CONNECTORS_DIR,
         ]
-        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(
-            validation_path, *components
-        )
+        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(validation_path, *components)
 
         is_integration_custom: bool = _is_custom(integration_def)
 

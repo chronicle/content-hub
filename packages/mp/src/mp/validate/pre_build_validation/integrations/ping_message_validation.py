@@ -60,9 +60,7 @@ def _is_ping_changed_in_pr(validation_path: Path) -> bool:
     head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
     if not head_sha:
         return True
-    changed = mp.core.unix.get_files_unmerged_to_main_branch(
-        "main", head_sha, validation_path
-    )
+    changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
     return any(p.name in {"Ping.py", "ping.py"} for p in changed)
 
 
