@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import shutil
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
@@ -23,6 +24,9 @@ from mp.core.exceptions import NonFatalValidationError
 from mp.validate.pre_build_validation.integrations.json_result_example_validation import (
     JsonResultExampleValidation,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 VALIDATOR = JsonResultExampleValidation()
 
@@ -63,7 +67,6 @@ class TestJsonResultExampleValidationLocal:
         VALIDATOR.run(temp_integration)  # _ prefix — skipped, no error
 
     def test_no_actions_dir_passes(self, temp_integration: Path) -> None:
-        import shutil
         shutil.rmtree(temp_integration / "actions")
         VALIDATOR.run(temp_integration)  # no error
 
@@ -78,9 +81,9 @@ class TestJsonResultExampleValidationCI:
         with (
             mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
             mock.patch("mp.core.unix.get_files_unmerged_to_main_branch", return_value=[action]),
+            pytest.raises(NonFatalValidationError, match="get_data"),
         ):
-            with pytest.raises(NonFatalValidationError, match="get_data"):
-                VALIDATOR.run(temp_integration)
+            VALIDATOR.run(temp_integration)
 
     def test_unchanged_action_missing_example_passes(self, temp_integration: Path) -> None:
         """Pre-existing action without example should not be flagged if not in diff."""
@@ -125,6 +128,6 @@ class TestJsonResultExampleValidationCI:
         with (
             mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
             mock.patch("mp.core.unix.get_files_unmerged_to_main_branch", return_value=[action]),
+            pytest.raises(NonFatalValidationError, match="new_action"),
         ):
-            with pytest.raises(NonFatalValidationError, match="new_action"):
-                VALIDATOR.run(temp_integration)
+            VALIDATOR.run(temp_integration)

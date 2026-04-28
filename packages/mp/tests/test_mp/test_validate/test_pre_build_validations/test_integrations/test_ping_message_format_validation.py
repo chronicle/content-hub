@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import shutil
 from typing import TYPE_CHECKING
 from unittest import mock
 
@@ -121,10 +122,9 @@ class TestPingMessageFormatValidation:
             mock.patch(
                 "mp.core.unix.get_files_unmerged_to_main_branch",
                 return_value=[ping_file],
-            ),
+            ), pytest.raises(NonFatalValidationError, match="Ping success message must contain")
         ):
-            with pytest.raises(NonFatalValidationError, match="Ping success message must contain"):
-                self.validator_runner.run(temp_integration)
+            self.validator_runner.run(temp_integration)
 
     def test_failure_on_missing_failure_message(self, temp_integration: pathlib.Path) -> None:
         """Test failure when the ping file lacks the required failure message."""
@@ -136,10 +136,9 @@ class TestPingMessageFormatValidation:
             mock.patch(
                 "mp.core.unix.get_files_unmerged_to_main_branch",
                 return_value=[ping_file],
-            ),
+            ), pytest.raises(NonFatalValidationError, match="Ping failure message must contain")
         ):
-            with pytest.raises(NonFatalValidationError, match="Ping failure message must contain"):
-                self.validator_runner.run(temp_integration)
+            self.validator_runner.run(temp_integration)
 
     def test_failure_on_both_messages_missing(self, temp_integration: pathlib.Path) -> None:
         """Test failure when the ping file is missing both required messages."""
@@ -151,10 +150,9 @@ class TestPingMessageFormatValidation:
             mock.patch(
                 "mp.core.unix.get_files_unmerged_to_main_branch",
                 return_value=[ping_file],
-            ),
+            ), pytest.raises(NonFatalValidationError)
         ):
-            with pytest.raises(NonFatalValidationError):
-                self.validator_runner.run(temp_integration)
+            self.validator_runner.run(temp_integration)
 
     def test_ci_ping_not_changed_skips_validation(self, temp_integration: pathlib.Path) -> None:
         """Test that validation is skipped when ping file is not changed in CI."""
@@ -187,8 +185,6 @@ class TestPingMessageFormatValidation:
 
     def test_no_actions_directory_skips_validation(self, temp_integration: pathlib.Path) -> None:
         """Test that a missing actions/ directory is handled gracefully."""
-        import shutil
-
         actions_dir = temp_integration / constants.ACTIONS_DIR
         if actions_dir.exists():
             shutil.rmtree(actions_dir)

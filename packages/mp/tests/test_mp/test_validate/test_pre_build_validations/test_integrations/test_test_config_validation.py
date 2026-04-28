@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from typing import TYPE_CHECKING
 from unittest import mock
 
@@ -53,7 +54,7 @@ class TestTestConfigValidation:
         config_file = tests_dir / "config.json"
         config_file.unlink(missing_ok=True)
 
-        with pytest.raises(NonFatalValidationError, match="missing tests/config.json"):
+        with pytest.raises(NonFatalValidationError, match=r"missing tests/config\.json"):
             self.validator_runner.run(temp_integration)
 
     def test_failure_on_invalid_json(self, temp_integration: pathlib.Path) -> None:
@@ -81,8 +82,6 @@ class TestTestConfigValidation:
         tests_dir = temp_integration / "tests"
         # Remove the tests directory entirely if it exists
         if tests_dir.exists():
-            import shutil
-
             shutil.rmtree(tests_dir)
 
         # Should not raise — no tests dir is handled gracefully
@@ -117,7 +116,6 @@ class TestTestConfigValidation:
             mock.patch(
                 "mp.core.unix.get_files_unmerged_to_main_branch",
                 return_value=[temp_integration / "actions" / "ping.py"],
-            ),
+            ), pytest.raises(NonFatalValidationError, match=r"missing tests/config\.json")
         ):
-            with pytest.raises(NonFatalValidationError, match="missing tests/config.json"):
-                self.validator_runner.run(temp_integration)
+            self.validator_runner.run(temp_integration)

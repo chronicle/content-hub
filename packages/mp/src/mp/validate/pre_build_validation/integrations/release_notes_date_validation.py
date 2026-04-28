@@ -100,8 +100,7 @@ class ReleaseNotesDateValidation:
         # This avoids penalising pre-existing entries that predate the requirement.
         existing_versions: set[str] = set()
         if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
-            if not changed:
+            if not mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path):
                 return
             existing_versions = _versions_on_main(rn_path)
 

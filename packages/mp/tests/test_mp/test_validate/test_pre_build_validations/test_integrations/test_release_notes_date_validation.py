@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
@@ -24,6 +24,9 @@ from mp.core.unix import NonFatalCommandError
 from mp.validate.pre_build_validation.integrations.release_notes_date_validation import (
     ReleaseNotesDateValidation,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 VALIDATOR = ReleaseNotesDateValidation()
 
@@ -112,7 +115,10 @@ class TestReleaseNotesDateValidationCI:
 
         with (
             mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
-            mock.patch("mp.core.unix.get_files_unmerged_to_main_branch", return_value=self._make_changed(temp_integration)),
+            mock.patch(
+                "mp.core.unix.get_files_unmerged_to_main_branch",
+                return_value=self._make_changed(temp_integration),
+            ),
             mock.patch("mp.core.unix.get_file_content_from_main_branch", return_value=OLD_MAIN_RN),
         ):
             # v1.0 is pre-existing on main (no publish_time) — should be skipped
@@ -133,11 +139,14 @@ class TestReleaseNotesDateValidationCI:
 
         with (
             mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
-            mock.patch("mp.core.unix.get_files_unmerged_to_main_branch", return_value=self._make_changed(temp_integration)),
+            mock.patch(
+                "mp.core.unix.get_files_unmerged_to_main_branch",
+                return_value=self._make_changed(temp_integration),
+            ),
             mock.patch("mp.core.unix.get_file_content_from_main_branch", return_value=OLD_MAIN_RN),
+            pytest.raises(NonFatalValidationError, match=r"v2:"),
         ):
-            with pytest.raises(NonFatalValidationError, match=r"v2:"):
-                VALIDATOR.run(temp_integration)
+            VALIDATOR.run(temp_integration)
 
     def test_no_changes_in_integration_skips(self, temp_integration: Path) -> None:
         rn = temp_integration / "release_notes.yaml"
@@ -156,7 +165,10 @@ class TestReleaseNotesDateValidationCI:
 
         with (
             mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
-            mock.patch("mp.core.unix.get_files_unmerged_to_main_branch", return_value=self._make_changed(temp_integration)),
+            mock.patch(
+                "mp.core.unix.get_files_unmerged_to_main_branch",
+                return_value=self._make_changed(temp_integration),
+            ),
             mock.patch("mp.core.unix.get_file_content_from_main_branch", side_effect=NonFatalCommandError("not found")),
         ):
             VALIDATOR.run(temp_integration)  # valid date — passes
@@ -167,11 +179,14 @@ class TestReleaseNotesDateValidationCI:
 
         with (
             mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
-            mock.patch("mp.core.unix.get_files_unmerged_to_main_branch", return_value=self._make_changed(temp_integration)),
+            mock.patch(
+                "mp.core.unix.get_files_unmerged_to_main_branch",
+                return_value=self._make_changed(temp_integration),
+            ),
             mock.patch("mp.core.unix.get_file_content_from_main_branch", side_effect=NonFatalCommandError("not found")),
+            pytest.raises(NonFatalValidationError, match="invalid publish_time"),
         ):
-            with pytest.raises(NonFatalValidationError, match="invalid publish_time"):
-                VALIDATOR.run(temp_integration)
+            VALIDATOR.run(temp_integration)
 
     def test_float_int_version_coercion_skips_correctly(self, temp_integration: Path) -> None:
         """YAML parses unquoted 1.0 as float and 1 as int — both must be treated as equal
@@ -192,7 +207,10 @@ class TestReleaseNotesDateValidationCI:
 
         with (
             mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
-            mock.patch("mp.core.unix.get_files_unmerged_to_main_branch", return_value=self._make_changed(temp_integration)),
+            mock.patch(
+                "mp.core.unix.get_files_unmerged_to_main_branch",
+                return_value=self._make_changed(temp_integration),
+            ),
             mock.patch("mp.core.unix.get_file_content_from_main_branch", return_value=old_main_rn_unquoted),
         ):
             # v1.0 pre-exists on main (unquoted float); v2.0 is new with valid date → pass

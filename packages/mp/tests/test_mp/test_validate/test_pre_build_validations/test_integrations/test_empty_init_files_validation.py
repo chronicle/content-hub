@@ -47,14 +47,14 @@ class TestEmptyInitFilesValidation:
         license_header = (
             "# Copyright 2026 Google LLC\n"
             "#\n"
-            "# Licensed under the Apache License, Version 2.0 (the \"License\");\n"
+            '# Licensed under the Apache License, Version 2.0 (the "License");\n'
             "# you may not use this file except in compliance with the License.\n"
             "# You may obtain a copy of the License at\n"
             "#\n"
             "#     http://www.apache.org/licenses/LICENSE-2.0\n"
             "#\n"
             "# Unless required by applicable law or agreed to in writing, software\n"
-            "# distributed under the License is distributed on an \"AS IS\" BASIS,\n"
+            '# distributed under the License is distributed on an "AS IS" BASIS,\n'
             "# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n"
             "# See the License for the specific language governing permissions and\n"
             "# limitations under the License.\n"
@@ -76,7 +76,7 @@ class TestEmptyInitFilesValidation:
         init_file = temp_integration / "actions" / "__init__.py"
         init_file.write_text("import os\n", encoding="utf-8")
 
-        with pytest.raises(NonFatalValidationError, match="__init__.py files must be empty"):
+        with pytest.raises(NonFatalValidationError, match=r"__init__\.py files must be empty"):
             self.validator_runner.run(temp_integration)
 
     def test_failure_on_init_with_from_import(self, temp_integration: pathlib.Path) -> None:
@@ -84,7 +84,7 @@ class TestEmptyInitFilesValidation:
         init_file = temp_integration / "actions" / "__init__.py"
         init_file.write_text("from .some_module import SomeClass\n", encoding="utf-8")
 
-        with pytest.raises(NonFatalValidationError, match="__init__.py files must be empty"):
+        with pytest.raises(NonFatalValidationError, match=r"__init__\.py files must be empty"):
             self.validator_runner.run(temp_integration)
 
     def test_tests_dir_init_not_checked(self, temp_integration: pathlib.Path) -> None:
@@ -131,9 +131,9 @@ class TestEmptyInitFilesValidation:
                 "mp.core.unix.get_files_unmerged_to_main_branch",
                 return_value=[init_file],
             ),
+            pytest.raises(NonFatalValidationError, match=r"__init__\.py files must be empty"),
         ):
-            with pytest.raises(NonFatalValidationError, match="__init__.py files must be empty"):
-                self.validator_runner.run(temp_integration)
+            self.validator_runner.run(temp_integration)
 
     def test_non_init_change_still_validates_all_inits(self, temp_integration: pathlib.Path) -> None:
         """The CI gate is integration-level (any change triggers), not file-level.
@@ -151,7 +151,7 @@ class TestEmptyInitFilesValidation:
                 "mp.core.unix.get_files_unmerged_to_main_branch",
                 return_value=[other_changed],
             ),
-        ):
             # Integration has changes → all inits validated → bad actions/__init__.py caught
-            with pytest.raises(NonFatalValidationError, match="__init__.py files must be empty"):
-                self.validator_runner.run(temp_integration)
+            pytest.raises(NonFatalValidationError, match=r"__init__\.py files must be empty"),
+        ):
+            self.validator_runner.run(temp_integration)

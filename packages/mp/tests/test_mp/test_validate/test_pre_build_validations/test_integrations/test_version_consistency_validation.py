@@ -28,6 +28,7 @@ from mp.validate.pre_build_validation.integrations.version_consistency_validatio
     VersionConsistencyValidation,
 )
 
+
 def _write_pyproject_version(integration_path: Path, version: str) -> None:
     """Write a minimal pyproject.toml with the given version."""
     content = {
