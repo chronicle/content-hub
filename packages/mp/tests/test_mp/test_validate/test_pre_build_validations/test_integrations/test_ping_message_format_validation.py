@@ -122,7 +122,8 @@ class TestPingMessageFormatValidation:
             mock.patch(
                 "mp.core.unix.get_files_unmerged_to_main_branch",
                 return_value=[ping_file],
-            ), pytest.raises(NonFatalValidationError, match="Ping success message must contain")
+            ),
+            pytest.raises(NonFatalValidationError, match="Ping success message must contain"),
         ):
             self.validator_runner.run(temp_integration)
 
@@ -136,7 +137,8 @@ class TestPingMessageFormatValidation:
             mock.patch(
                 "mp.core.unix.get_files_unmerged_to_main_branch",
                 return_value=[ping_file],
-            ), pytest.raises(NonFatalValidationError, match="Ping failure message must contain")
+            ),
+            pytest.raises(NonFatalValidationError, match="Ping failure message must contain"),
         ):
             self.validator_runner.run(temp_integration)
 
@@ -150,7 +152,8 @@ class TestPingMessageFormatValidation:
             mock.patch(
                 "mp.core.unix.get_files_unmerged_to_main_branch",
                 return_value=[ping_file],
-            ), pytest.raises(NonFatalValidationError)
+            ),
+            pytest.raises(NonFatalValidationError),
         ):
             self.validator_runner.run(temp_integration)
 

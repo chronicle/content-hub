@@ -604,7 +604,10 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
     try:
         rev_parse_command: list[str] = ["git", "rev-parse", "--show-toplevel"]
         repo_root_result = sp.run(  # noqa: S603
-            rev_parse_command, check=True, text=True, capture_output=True,
+            rev_parse_command,
+            check=True,
+            text=True,
+            capture_output=True,
         )
         relative_path: pathlib.Path = file_path.relative_to(repo_root_result.stdout.strip())
     except (sp.CalledProcessError, ValueError):

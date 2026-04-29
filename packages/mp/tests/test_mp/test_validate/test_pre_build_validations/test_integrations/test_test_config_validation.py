@@ -116,6 +116,7 @@ class TestTestConfigValidation:
             mock.patch(
                 "mp.core.unix.get_files_unmerged_to_main_branch",
                 return_value=[temp_integration / "actions" / "ping.py"],
-            ), pytest.raises(NonFatalValidationError, match=r"missing tests/config\.json")
+            ),
+            pytest.raises(NonFatalValidationError, match=r"missing tests/config\.json"),
         ):
             self.validator_runner.run(temp_integration)
