@@ -34,7 +34,7 @@ from .utils import llm, paths
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import AsyncIterator, Callable
+    from collections.abc import AsyncGenerator, Callable
 
     from rich.progress import Progress
 
@@ -476,7 +476,7 @@ def _create_prompt_constructor(
 
 
 @contextlib.asynccontextmanager
-async def _maybe_use_semaphore(sem: asyncio.Semaphore | None) -> AsyncIterator[None]:
+async def _maybe_use_semaphore(sem: asyncio.Semaphore | None) -> AsyncGenerator[None, None]:
     """Use a context manager that optionally uses semaphore.
 
     Args:

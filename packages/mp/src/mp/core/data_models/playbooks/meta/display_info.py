@@ -89,8 +89,8 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
     allowed_debug_data: bool = False
 
     @classmethod
-    def _from_built(cls, _: BuiltPlaybookDisplayInfo) -> Self:  # ty:ignore[invalid-method-override]
-        return cls()  # ty:ignore[missing-argument]
+    def _from_built(cls, built: BuiltPlaybookDisplayInfo) -> Self:  # noqa: ARG003
+        return cls(tags=[])
 
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltPlaybookDisplayInfo) -> Self:

@@ -171,7 +171,7 @@ def _get_latest_release_time(release_notes: Iterable[ReleaseNote]) -> int | None
     if not release_notes:
         return 0
 
-    latest_version: float = max(float(rn.version) for rn in release_notes)
+    latest_version: float = max(rn.version for rn in release_notes)
     latest_version_rn: list[ReleaseNote] = [rn for rn in release_notes if rn.version == latest_version]
     if not latest_version:
         return None

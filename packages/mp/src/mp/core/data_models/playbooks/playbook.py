@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict, cast
 
 import pydantic
 
@@ -82,13 +82,13 @@ class BuiltPlaybookDefinition(TypedDict):
     VersionComment: str | None
     OriginalWorkflowIdentifier: str
     TemplateName: str | None
-    PlaybookType: int
+    PlaybookType: int | str
     IsDebugMode: bool
     DebugBaseAlertIdentifier: str | None
     DebugAlertIdentifier: str | None
     SimulationClone: NotRequired[bool | None]
-    DefaultAccessLevel: NotRequired[int | None]
-    CreationSource: NotRequired[int | None]
+    DefaultAccessLevel: NotRequired[int | str | None]
+    CreationSource: NotRequired[int | str | None]
     Steps: list[BuiltStep]
     Triggers: list[BuiltTrigger]
     OverviewTemplates: list[BuiltOverviewDetails]
@@ -141,7 +141,7 @@ class Playbook:
             trigger=Trigger.from_built_path(path),
             release_notes=[EMPTY_RN],
             meta_data=PlaybookMetadata.from_built_path(path),
-            display_info=PlaybookDisplayInfo.from_built({}),  # ty:ignore[missing-typed-dict-key, invalid-argument-type]
+            display_info=PlaybookDisplayInfo.from_built(cast("Any", {})),
         )
 
     @classmethod

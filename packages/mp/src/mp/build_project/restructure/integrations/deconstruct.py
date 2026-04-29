@@ -71,7 +71,7 @@ def _update_pyproject_from_integration_meta(
         {
             "name": integration_meta.identifier.replace(" ", "-"),
             "description": integration_meta.description,
-            "version": str(float(integration_meta.version)),
+            "version": str(integration_meta.version),
             "requires-python": py_version,
         },
     )
@@ -214,7 +214,7 @@ class DeconstructIntegration:
                 content=[
                     NonBuiltReleaseNote(
                         description="",
-                        integration_version=float(self.integration.metadata.version),
+                        integration_version=self.integration.metadata.version,
                         item_name=self.integration.metadata.identifier,
                         item_type="Integration",
                         publish_time=str(datetime.datetime.now(datetime.UTC).date()),

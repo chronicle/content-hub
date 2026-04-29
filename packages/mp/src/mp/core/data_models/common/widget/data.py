@@ -91,7 +91,7 @@ class HtmlWidgetDataDefinition(ComponentMetadata[BuiltWidgetDataDefinition, NonB
         raise NotImplementedError
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltWidgetDataDefinition) -> Self:  # ty:ignore[invalid-method-override]
+    def _from_built(cls, file_name: str, built: BuiltWidgetDataDefinition) -> Self:  # noqa: ARG003
         return cls(
             html_height=built["htmlHeight"],
             safe_rendering=built["safeRendering"],
@@ -101,7 +101,7 @@ class HtmlWidgetDataDefinition(ComponentMetadata[BuiltWidgetDataDefinition, NonB
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltWidgetDataDefinition) -> Self:  # ty:ignore[invalid-method-override]
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltWidgetDataDefinition) -> Self:  # noqa: ARG003
         return cls(
             html_height=non_built["html_height"],
             safe_rendering=non_built["safe_rendering"],

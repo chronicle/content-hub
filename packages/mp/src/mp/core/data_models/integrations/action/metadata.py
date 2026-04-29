@@ -288,7 +288,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             ScriptResultName=self.script_result_name,
             SimulationDataJson=self.simulation_data_json,
             DefaultResultValue=self.default_result_value,
-            Version=float(self.version),
+            Version=self.version,
             AIDescription=self.ai_description,
             AICategories=[c.value for c in self.ai_categories] or None,
             EntityTypes=[e.value for e in self.entity_types] or None,

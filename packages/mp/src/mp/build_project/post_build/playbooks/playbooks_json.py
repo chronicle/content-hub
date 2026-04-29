@@ -110,7 +110,7 @@ def _update_display_info(
     built_display_info["CreateTime"] = rn_values.creation_time
     built_display_info["UpdateTime"] = rn_values.update_time
     built_display_info["Version"] = rn_values.version
-    built_display_info["Type"] = PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE[built_playbook["Definition"]["PlaybookType"]]
+    built_display_info["Type"] = PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE[int(built_playbook["Definition"]["PlaybookType"])]
     built_display_info["Integrations"] = _extract_integrations(built_playbook, out_path)
     built_display_info["DependentPlaybookIds"] = list(
         mp.core.utils.get_playbook_dependent_blocks_ids(non_built_playbook_path)
@@ -176,7 +176,7 @@ def _is_specific_block(block_json: dict, block_identifier: str | None) -> bool:
 
 def _extract_display_info_from_rn(rn_path: Path) -> ReleaseNotesDisplayInfo:
     release_notes: list[ReleaseNote] = ReleaseNote.from_non_built_path(rn_path)
-    latest_version: float = max(float(rn.version) for rn in release_notes)
+    latest_version: float = max(rn.version for rn in release_notes)
     creation_time: int = min(rn.publish_time for rn in release_notes if rn.publish_time is not None)
     update_time: int = max(rn.publish_time for rn in release_notes if rn.publish_time is not None)
     return ReleaseNotesDisplayInfo(creation_time, update_time, latest_version)

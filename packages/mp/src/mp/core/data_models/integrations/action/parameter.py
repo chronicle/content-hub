@@ -58,7 +58,7 @@ class BuiltActionParameter(TypedDict):
     IsMandatory: bool
     Name: str
     OptionalValues: list[str] | None
-    Type: int
+    Type: int | str
     Value: str | bool | int | float | None
     DefaultValue: str | bool | int | float | None
 
