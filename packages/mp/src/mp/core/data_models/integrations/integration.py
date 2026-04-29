@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import tomllib
-from typing import TYPE_CHECKING, Self, TypedDict
+from typing import TYPE_CHECKING, Self, TypedDict, cast
 
 import mp.core.constants
 import mp.core.file_utils
@@ -169,7 +169,7 @@ class Integration:
         """
         project_file_path: Path = path / mp.core.constants.PROJECT_FILE
         file_content: str = project_file_path.read_text(encoding="utf-8")
-        pyproject_toml: PyProjectTomlFile = tomllib.loads(file_content)  # ty: ignore[invalid-assignment]
+        pyproject_toml: PyProjectTomlFile = cast("PyProjectTomlFile", cast("object", tomllib.loads(file_content)))
         try:
             integration_meta: IntegrationMetadata = IntegrationMetadata.from_non_built_path(path)
             _update_integration_meta_form_pyproject(

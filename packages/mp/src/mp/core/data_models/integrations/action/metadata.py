@@ -207,7 +207,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             file_name=file_name,
             creator=built["Creator"],
             description=built["Description"],
-            documentation_link=built.get("DocumentationLink"),  # ty: ignore[invalid-argument-type]
+            documentation_link=cast("pydantic.HttpUrl | pydantic.FileUrl | None", built.get("DocumentationLink")),
             dynamic_results_metadata=[
                 DynamicResultsMetadata.from_built(drm) for drm in built.get("DynamicResultsMetadata", []) or []
             ],
@@ -242,7 +242,10 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             file_name=file_name,
             creator=non_built.get("creator", "admin"),
             description=non_built["description"],
-            documentation_link=non_built.get("documentation_link"),  # ty: ignore[invalid-argument-type]
+            documentation_link=cast(
+                "pydantic.HttpUrl | pydantic.FileUrl | None",
+                non_built.get("documentation_link"),
+            ),
             dynamic_results_metadata=[
                 DynamicResultsMetadata.from_non_built(drm) for drm in non_built.get("dynamic_results_metadata", [])
             ],

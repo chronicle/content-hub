@@ -74,7 +74,7 @@ class ActionParametersValuesValidation:
                 elif optional_values is not None and not _is_optional_values_type(param_type):
                     invalid_non_multiple_options.setdefault(action_name, []).append(param_name)
 
-                if not _is_valid_default_value(optional_values, default_value):
+                if not _is_valid_default_value(optional_values, default_value=default_value):
                     invalid_default_value.setdefault(action_name, []).append(param_name)
 
         if invalid_multiple_options or invalid_non_multiple_options or invalid_default_value:
@@ -120,10 +120,7 @@ def _is_optional_values_type(param_type: ActionParamType) -> bool:
     return param_type in OPT_PARAMS
 
 
-def _is_valid_default_value(
-    optional_values: list[str] | None,
-    default_value: str | bool | float | None,  # noqa: FBT001
-) -> bool:
+def _is_valid_default_value(optional_values: list[str] | None, *, default_value: str | bool | float | None) -> bool:
     return default_value in {None, ""} or optional_values is None or default_value in optional_values
 
 

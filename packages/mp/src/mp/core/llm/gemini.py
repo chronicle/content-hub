@@ -19,7 +19,7 @@ import io
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Annotated, Any, Literal, Self, overload
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self, cast, overload
 
 from google import genai
 from google.genai.errors import ClientError
@@ -289,7 +289,7 @@ class Gemini(LlmSdk[GeminiConfig]):
 
         response = await self.client.models.generate_content(
             model=self.config.model_name,
-            contents=[Content(role="user", parts=parts)],  # type: ignore[invalid-argument-type]
+            contents=cast("Any", [Content(role="user", parts=parts)]),
             config=config,
         )
 
@@ -328,7 +328,7 @@ class Gemini(LlmSdk[GeminiConfig]):
             inlined_requests.append(
                 InlinedRequest(
                     model=self.config.model_name,
-                    contents=[Content(role="user", parts=parts)],  # type: ignore[invalid-argument-type]
+                    contents=cast("Any", [Content(role="user", parts=parts)]),
                     config=config,
                 )
             )

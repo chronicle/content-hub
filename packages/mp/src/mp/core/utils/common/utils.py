@@ -20,7 +20,7 @@ import os
 import platform
 import re
 import sys
-from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from mp.core.constants import WINDOWS_PLATFORM
 from mp.core.custom_types import RepositoryType
@@ -82,20 +82,19 @@ def get_python_version_from_version_string(version: str) -> str:
     return ".".join(map(str, lowest_version))
 
 
-class _TypedDictType(TypedDict):
-    """Wrapper for TypedDicts to allow for attribute access."""
-
-
-def remove_none_entries_from_mapping(d: _TypedDictType, /) -> None:
+def remove_none_entries_from_mapping(d: Any, /) -> None:  # noqa: ANN401
     """Remove all the keys that have `None` value in place.
 
     Args:
         d: the mapping to remove keys that have `None` as the value
 
     """
+    if not isinstance(d, dict):
+        return
+
     keys_to_remove: list[str] = [k for k, v in d.items() if v is None]
     for k in keys_to_remove:
-        del d[k]  # ty: ignore[invalid-argument-type]
+        del d[k]
 
 
 def str_to_snake_case(s: str) -> str:

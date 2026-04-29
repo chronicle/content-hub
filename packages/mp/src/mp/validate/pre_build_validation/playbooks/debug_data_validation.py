@@ -59,19 +59,20 @@ class DebugDataValidation:
                 "is set to False in the display info file. "
                 "Set 'acknowledge_debug_data_included' to True to allow this data."
             )
-            for step in steps_with_debug_data:
-                error_messages.append(f"Step <{step.instance_name}> contains debug data.")  # noqa: PERF401
+            error_messages.extend([
+                f"Step <{step.instance_name}> contains debug data." for step in steps_with_debug_data
+            ])
 
         if playbook_metadata.is_debug_mode:
             error_messages.append(
                 "Playbook Simulator (definition.yaml/'is_debug_mode') cannot be enabled. Please disable it."
             )
 
-        for step in steps_with_debug_data:
-            if step.is_debug_mock_data:
-                error_messages.append(  # noqa: PERF401
-                    f"Step <{step.instance_name}> debug mode cannot be enabled. Please disable it."
-                )
+        error_messages.extend([
+            f"Step <{step.instance_name}> debug mode cannot be enabled. Please disable it."
+            for step in steps_with_debug_data
+            if step.is_debug_mock_data
+        ])
 
         if error_messages:
             raise NonFatalValidationError("\n".join(error_messages))

@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import libcst as cst
 from libcst import FlattenSentinel
@@ -453,6 +453,10 @@ def _get_attribute_list(node: cst.ImportFrom) -> list[cst.Attribute]:
     current_node: cst.Name | cst.Attribute | None = node.module
     while isinstance(current_node, cst.Attribute):
         nodes.append(current_node)
-        current_node = current_node.value  # ty: ignore[invalid-assignment]
+        val: Any = current_node.value
+        if not isinstance(val, cst.Name | cst.Attribute):
+            break
+
+        current_node = val
 
     return nodes

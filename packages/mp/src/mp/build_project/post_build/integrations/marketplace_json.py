@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 import mp.core.constants
 import mp.core.file_utils
@@ -133,7 +133,7 @@ class MarketplaceJsonDefinition:
             UpdateNotificationExpired=release_times.update_notification,
             NewNotificationExpired=release_times.new_notification,
         )
-        metadata.update(extra_attrs)  # ty: ignore[invalid-argument-type]
+        cast("dict[str, Any]", cast("object", metadata)).update(cast("dict[str, Any]", extra_attrs))
         mp.core.utils.remove_none_entries_from_mapping(metadata)
 
     def _get_integration_release_time(self) -> ReleaseTimes:
