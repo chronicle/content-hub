@@ -46,30 +46,32 @@ def extract_script_param(
     """
     # internal param validation:
     if not siemplify:
-        raise Exception("Parameter 'siemplify' cannot be None")
+        msg = "Parameter 'siemplify' cannot be None"
+        raise Exception(msg)
 
     if not param_name:
-        raise Exception("Parameter 'param_name' cannot be None")
+        msg = "Parameter 'param_name' cannot be None"
+        raise Exception(msg)
 
-    if default_value and not (type(default_value) == input_type):
-        raise Exception(
-            f"Given default_value of '{default_value}' doesn't match expected type {input_type.__name__}"
-        )
+    if default_value and type(default_value) != input_type:
+        msg = f"Given default_value of '{default_value}' doesn't match expected type {input_type.__name__}"
+        raise Exception(msg)
 
     #  =========== start validation logic =====================
     value = input_dictionary.get(param_name)
 
     if not value:
         if is_mandatory:
-            raise Exception(f"Missing mandatory parameter {param_name}")
+            msg = f"Missing mandatory parameter {param_name}"
+            raise Exception(msg)
         value = default_value
         siemplify.LOGGER.info(
-            f"Parameter {param_name} was not found or was empty, used default_value {default_value} instead"
+            "Parameter %s was not found or was empty, used default_value %s instead", param_name, default_value
         )
         return value
 
     if print_value:
-        siemplify.LOGGER.info("{}: {}".format(param_name, value))
+        siemplify.LOGGER.info("%s: %s", param_name, value)
 
     # None values should not be converted.
     if value is None:
@@ -84,13 +86,12 @@ def extract_script_param(
         ]  # In Python - None and bool False are the same logicly
 
         if lowered not in valid_lowered_bool_values:
-            raise Exception(f"Paramater named {param_name}, with value {value} isn't a valid BOOL")
+            msg = f"Paramater named {param_name}, with value {value} isn't a valid BOOL"
+            raise Exception(msg)
         result = lowered == str(True).lower()
     elif input_type == int:
         validator = ParameterValidator(siemplify)
-        result = validator.validate_integer(
-            param_name=param_name, value=value, print_value=print_value
-        )
+        result = validator.validate_integer(param_name=param_name, value=value, print_value=print_value)
     elif input_type == float:
         result = float(value)
     elif input_type == str:
@@ -98,7 +99,8 @@ def extract_script_param(
     elif input_type == unicode:
         result = value
     else:
-        raise Exception(f"input_type {input_type.__name__} isn't not supported for conversion")
+        msg = f"input_type {input_type.__name__} isn't not supported for conversion"
+        raise Exception(msg)
 
     if remove_whitespaces:
         return clean_result(result)
@@ -133,7 +135,8 @@ def extract_configuration_param(
 
     """
     if not provider_name:
-        raise Exception("provider_name cannot be None/empty")
+        msg = "provider_name cannot be None/empty"
+        raise Exception(msg)
 
     configuration = siemplify.get_configuration(provider_name)
     return extract_script_param(
@@ -273,7 +276,8 @@ def get_connector_detailed_params(siemplify):
 
     """
     if not siemplify:
-        raise Exception("Parameter 'siemplify' cannot be None")
+        msg = "Parameter 'siemplify' cannot be None"
+        raise Exception(msg)
     try:
         context = siemplify.context
         connector_info = context.connector_info
@@ -282,10 +286,8 @@ def get_connector_detailed_params(siemplify):
 
         # TODO: (b/288932557)
         # This is workaround for SDK legacy code and should be removed when fixed
-        detailed_params = [p for p in detailed_params if p.type != ConnectorParamTypes.SCRIPT]
-
-        return detailed_params
+        return [p for p in detailed_params if p.type != ConnectorParamTypes.SCRIPT]
 
     except AttributeError as e:
-        siemplify.LOGGER.error("could not fetch connector detailed parameters: {}".format(e))
+        siemplify.LOGGER.exception("could not fetch connector detailed parameters: %s", e)
         raise

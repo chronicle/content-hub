@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""cache
+"""cache.
 ==========
 
 Module for handling distributed context across different context value to avoid
@@ -51,15 +51,17 @@ import json
 import uuid
 import warnings
 from collections.abc import Iterator, MutableMapping
-from typing import Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 import SiemplifyUtils
 
-from .base.action import Action
-from .base.connector import BaseConnector
-from .base.job import Job
 from .context import Context, get_context_factory
-from .types import JsonString, SingleJson
+
+if TYPE_CHECKING:
+    from .base.action import Action
+    from .base.connector import BaseConnector
+    from .base.job import Job
+    from .types import JsonString, SingleJson
 
 _KT = TypeVar("_KT")
 _VT = TypeVar("_VT")
@@ -117,7 +119,7 @@ class CacheChunk(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
         context_handler: Context,
         cache_chunk_metadata: CacheChunkMetadata,
         content: _CacheChunkContent[_KT, _VT] | None = None,
-    ):
+    ) -> None:
         self._context: Context = context_handler
         self._content: _CacheChunkContent[_KT, _VT] | None = content
         self.cache_chunk_metadata: CacheChunkMetadata = cache_chunk_metadata
@@ -126,9 +128,7 @@ class CacheChunk(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
     def content(self) -> _CacheChunkContent[_KT, _VT]:
         """Get content of cache chunk, fetch from db if needed."""
         if self._content is None:
-            self._content = _load__json(
-                self._context.get_context(key=self.cache_chunk_metadata.key)
-            )
+            self._content = _load__json(self._context.get_context(key=self.cache_chunk_metadata.key))
 
         return self._content
 
@@ -169,17 +169,17 @@ class CacheChunk(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
 
         """
         keys_sorted = sorted(self.content.keys(), key=lambda _k: _hash_string(_k[0]))
-        _target_lookup = set(keys_sorted[:target_length])
-        _extra_lookup = set(keys_sorted[target_length:])
+        target_lookup = set(keys_sorted[:target_length])
+        extra_lookup = set(keys_sorted[target_length:])
 
-        _extra = {_k: _v for _k, _v in self.content.items() if _k in _extra_lookup}
-        self.content = {_k: _v for _k, _v in self.content.items() if _k in _target_lookup}
-        return CacheChunkCut(index=_hash_string(keys_sorted[target_length]), content=_extra)
+        extra = {k: v for k, v in self.content.items() if k in extra_lookup}
+        self.content = {k: v for k, v in self.content.items() if k in target_lookup}
+        return CacheChunkCut(index=_hash_string(keys_sorted[target_length]), content=extra)
 
     def split(self) -> CacheChunk:
         """Splits current chunk in two approximately equal sized chunks."""
         cut_result = self.cut(len(self) // 2)
-        warnings.warn(f"Chunk with key {self.cache_chunk_metadata.key} was split", ResourceWarning)
+        warnings.warn(f"Chunk with key {self.cache_chunk_metadata.key} was split", ResourceWarning, stacklevel=2)
         return CacheChunk(
             context_handler=self._context,
             cache_chunk_metadata=CacheChunkMetadata(
@@ -223,9 +223,7 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
     retrieve / updated / add a key to a specific chunk, data will NOT be queried for it.
     """
 
-    def __init__(
-        self, chronicle_soar: Action | Job | BaseConnector, prefix: str, max_size: int | None = None
-    ) -> None:
+    def __init__(self, chronicle_soar: Action | Job | BaseConnector, prefix: str, max_size: int | None = None) -> None:
         self._context: Context = get_context_factory(chronicle_soar)
         self.prefix = prefix
         self.max_size = max_size
@@ -238,9 +236,7 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
             return [
                 CacheChunk(
                     context_handler=self._context,
-                    cache_chunk_metadata=CacheChunkMetadata(
-                        prefix=self.prefix, db_key=str(uuid.uuid4())
-                    ),
+                    cache_chunk_metadata=CacheChunkMetadata(prefix=self.prefix, db_key=str(uuid.uuid4())),
                     content={},
                 )
             ]
@@ -252,9 +248,7 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
 
     def _load_chunks_metadata(self) -> list[CacheChunkMetadata]:
         """Load chunks metadata from DB / FS."""
-        metadata_list_json = self._context.get_context(
-            key=CACHE_CHUNKS_METADATA_PATH.format(prefix=self.prefix)
-        )
+        metadata_list_json = self._context.get_context(key=CACHE_CHUNKS_METADATA_PATH.format(prefix=self.prefix))
         if metadata_list_json is None:
             return []
 
@@ -295,11 +289,11 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
         Note: Since this will return a new dictionary with merged content across all
         chunks, it is generally not recommended to be used.
         """
-        _full_content = {}
+        full_content = {}
         for chunk in self._cache_chunks:
-            _full_content.update(chunk.content)
+            full_content.update(chunk.content)
 
-        return _full_content
+        return full_content
 
     # @override
     def __len__(self) -> int:
@@ -311,9 +305,9 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
 
     # @override
     def __setitem__(self, key: _KT, value: _VT) -> None:
-        _cache_chunk = self._find_chunk_by_key(key)
-        _cache_chunk[key] = value
-        self.__setitem_callback(_cache_chunk)
+        cache_chunk = self._find_chunk_by_key(key)
+        cache_chunk[key] = value
+        self.__setitem_callback(cache_chunk)
 
     def __setitem_callback(self, _cache_chunk: CacheChunk[_KT, _VT]) -> None:
         """Set item callback that's used for cache size management.
@@ -335,25 +329,25 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
 
     # @override
     def __getitem__(self, key: _KT) -> _VT:
-        _cache_chunk = self._find_chunk_by_key(key)
-        return _cache_chunk[key]
+        cache_chunk = self._find_chunk_by_key(key)
+        return cache_chunk[key]
 
     # @override
     def __delitem__(self, key: _KT) -> None:
-        _cache_chunk = self._find_chunk_by_key(key)
-        del _cache_chunk[key]
+        cache_chunk = self._find_chunk_by_key(key)
+        del cache_chunk[key]
 
     def _get_next_non_emtpy_chunk(self, index: int) -> CacheChunk | None:
-        _cache_chunks_list = self._cache_chunks[index:] + self._cache_chunks[:index]
-        return next(filter(lambda chunk: len(chunk) > 0, _cache_chunks_list), None)
+        cache_chunks_list = self._cache_chunks[index:] + self._cache_chunks[:index]
+        return next(filter(lambda chunk: len(chunk) > 0, cache_chunks_list), None)
 
     def _truncate_to_max_size(self) -> None:
         """Truncate chunks one value at a time, until cache max size is met."""
-        _current_index = 0
+        current_index = 0
         while len(self) > self.max_size:
-            _chunk = self._get_next_non_emtpy_chunk(_current_index)
-            _chunk.popleft()
-            _current_index += 1
+            chunk = self._get_next_non_emtpy_chunk(current_index)
+            chunk.popleft()
+            current_index += 1
 
     def balance_chunks(self) -> None:
         """Try balancing the chunks, accessing their data only if necessary.
@@ -384,9 +378,7 @@ class Cache(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
             self._truncate_to_max_size()
             self.balance_chunks()
 
-        self._cache_chunks = list(
-            itertools.chain.from_iterable(chunk.commit() for chunk in self._cache_chunks)
-        )
+        self._cache_chunks = list(itertools.chain.from_iterable(chunk.commit() for chunk in self._cache_chunks))
         self._commit_chunks_metadata()
 
 
@@ -395,19 +387,16 @@ def _hash_string(value__: str) -> int:
 
     The resulting hash will be cut to KEY_HASH_LENGTH length.
     """
-    return (
-        int(hashlib.sha256(value__.encode("utf-8")).hexdigest(), INT_CAST_BASE_HEX)
-        % 10**KEY_HASH_LENGTH
-    )
+    return int(hashlib.sha256(value__.encode("utf-8")).hexdigest(), INT_CAST_BASE_HEX) % 10**KEY_HASH_LENGTH
 
 
 def _load__json(row_value: JsonString) -> SingleJson | list[SingleJson]:
     """Helper function to load json data from json serialized string."""
-    _record = {}
+    record = {}
     if row_value:
-        _record = json.loads(row_value)
+        record = json.loads(row_value)
 
-    return _record
+    return record
 
 
 def _row_is_too_long(row: JsonString) -> bool:

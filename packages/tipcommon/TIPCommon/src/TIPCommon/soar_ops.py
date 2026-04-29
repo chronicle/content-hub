@@ -115,9 +115,7 @@ def get_users_profile_cards_with_pagination(
     return users
 
 
-def get_soar_case_comments(
-    chronicle_soar: SiemplifyAction | SiemplifyJob, case_id: str | int
-) -> list[CaseComment]:
+def get_soar_case_comments(chronicle_soar: SiemplifyAction | SiemplifyJob, case_id: str | int) -> list[CaseComment]:
     """Get a list of comment objects from a case by its ID.
 
     Args:
@@ -163,10 +161,7 @@ def get_clean_comment_body(comment: str | CaseComment, prefix: str) -> str:
     if isinstance(comment, str):
         return removeprefix(comment, prefix)
 
-    msg = (
-        f"The provided comment was of type {type(comment)}, which is not str "
-        "or TIPCommon.base.action.CaseComment"
-    )
+    msg = f"The provided comment was of type {type(comment)}, which is not str or TIPCommon.base.action.CaseComment"
     raise TypeError(msg)
 
 
@@ -197,14 +192,10 @@ def is_slo_comment(comment: str) -> bool:
         bool: True if it's an SLO comment, else False
 
     """
-    return (
-        comment == SLO_BREACHED_COMMENT or re.fullmatch(SLO_APPROACHING_REGEXP, comment) is not None
-    )
+    return comment == SLO_BREACHED_COMMENT or re.fullmatch(SLO_APPROACHING_REGEXP, comment) is not None
 
 
-def create_slo_message(
-    slo: int, interval_days: Iterable[int], existing_comments: Iterable[str]
-) -> str | None:
+def create_slo_message(slo: int, interval_days: Iterable[int], existing_comments: Iterable[str]) -> str | None:
     """Get SLO warnings message based on time intervals, and existing comments.
 
     For interval_days=[0, 1, 7, 14] it will send a message warning that the
@@ -232,7 +223,8 @@ def create_slo_message(
     """
     for interval in interval_days:
         if interval < 0:
-            raise ValueError("Dy intervals must be positive!")
+            msg = "Dy intervals must be positive!"
+            raise ValueError(msg)
 
     unique_comments = set(existing_comments)
     if SLO_BREACHED_COMMENT in unique_comments:
@@ -280,10 +272,8 @@ def create_slo_message(
         if i > 0 and not (sorted_days[i - 1] < days_left <= days):
             continue
 
-        comment = (
-            SLO_BREACHED_COMMENT if days_left <= 0 else SLO_APPROACHING_COMMENT.format(days_left)
-        )
-        return comment
+        return SLO_BREACHED_COMMENT if days_left <= 0 else SLO_APPROACHING_COMMENT.format(days_left)
+    return None
 
 
 def save_file(chronicle_soar: ChronicleSOAR, path: str, name: str, content: bytes) -> bytes | None:

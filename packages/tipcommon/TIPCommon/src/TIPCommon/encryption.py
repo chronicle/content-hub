@@ -18,15 +18,18 @@ import base64
 import email
 import subprocess as sp
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from Crypto import Random
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 
-from .base.interfaces import ScriptLogger
 from .data_models import SmimeEmailConfig, SmimeType
 from .exceptions import ParameterExtractionError, SMIMEMailError
 from .utils import create_and_write_to_tempfile
+
+if TYPE_CHECKING:
+    from .base.interfaces import ScriptLogger
 
 BLOCK_SIZE: int = 16
 
@@ -51,7 +54,7 @@ def encrypt(data: str, key: str) -> bytes:
     """Encrypt data with the key
     Args:
         data: json string to encrypt
-        key: password to use for key generation
+        key: password to use for key generation.
 
     Returns:
         The encrypted message
@@ -66,7 +69,7 @@ def encrypt(data: str, key: str) -> bytes:
 
 
 def decrypt(enc_data: bytes, key: str) -> str:
-    """Decrypt data with the password
+    """Decrypt data with the password.
 
     Args:
         enc_data: data to encrypt
@@ -84,7 +87,7 @@ def decrypt(enc_data: bytes, key: str) -> str:
 
 
 def _pad(s: str) -> str:
-    """Adjust str length to the multiple of BLOCK_SIZE
+    """Adjust str length to the multiple of BLOCK_SIZE.
 
     Args:
         s: A string to adjust
@@ -98,7 +101,7 @@ def _pad(s: str) -> str:
 
 
 def _unpad(b: bytes) -> bytes:
-    """Adjust bytes length to the multiple of BLOCK_SIZE
+    """Adjust bytes length to the multiple of BLOCK_SIZE.
 
     Args:
         b: A bytes object to adjust
@@ -181,7 +184,8 @@ def _decrypt_smime_message(
     key_file_path = None
     cert_file_path = None
     if not smime_email_config.private_key_b64 or not smime_email_config.certificate_b64:
-        raise ValueError("Private key and Certificate are required to decrypt S/MIME email.")
+        msg = "Private key and Certificate are required to decrypt S/MIME email."
+        raise ValueError(msg)
 
     try:
         private_key: bytes = base64.b64decode(smime_email_config.private_key_b64)
@@ -204,7 +208,8 @@ def _decrypt_smime_message(
         return decrypted_msg
 
     except sp.CalledProcessError as e:
-        raise SMIMEMailError(f"Failed to decrypt S/MIME email. Error: {e.stderr}") from e
+        msg = f"Failed to decrypt S/MIME email. Error: {e.stderr}"
+        raise SMIMEMailError(msg) from e
 
     finally:
         if key_file_path is not None:
@@ -232,14 +237,14 @@ def _verify_smime_message(
     """
     ca_file_path = None
     if not ca_certificate_b64:
-        raise ParameterExtractionError("CA certificate is required to verify S/MIME signed email.")
+        msg_0 = "CA certificate is required to verify S/MIME signed email."
+        raise ParameterExtractionError(msg_0)
 
     try:
         ca_certificate = base64.b64decode(ca_certificate_b64)
         ca_file_path: Path = create_and_write_to_tempfile(ca_certificate)
         verify_command = (
-            f"openssl smime -verify -in {message_file_path} -CAfile {ca_file_path} "
-            f"-out {message_file_path}"
+            f"openssl smime -verify -in {message_file_path} -CAfile {ca_file_path} -out {message_file_path}"
         )
 
         sp.run(verify_command.split(), capture_output=True, text=True, check=True)
@@ -252,7 +257,8 @@ def _verify_smime_message(
         return extracted_msg
 
     except sp.CalledProcessError as e:
-        raise SMIMEMailError(f"Failed to verify S/MIME email. Error: {e.stderr}") from e
+        msg_0 = f"Failed to verify S/MIME email. Error: {e.stderr}"
+        raise SMIMEMailError(msg_0) from e
 
     finally:
         if ca_file_path is not None:
@@ -274,7 +280,7 @@ def _get_smime_type(
 
     """
     content_type: str = msg.get("Content-Type", "").lower()
-    logger.info(f'Message Content-Type: "{content_type}"')
+    logger.info('Message Content-Type: "%s"', content_type)
 
     is_encrypted = "application/pkcs7-mime" in content_type
     is_signed = "multipart/signed" in content_type or "signed-data" in content_type

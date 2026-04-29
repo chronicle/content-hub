@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -26,7 +26,8 @@ from ScriptResult import (
 )
 from SiemplifyDataModel import EntityTypes, InsightSeverity, InsightType
 
-from ...types import Entity
+if TYPE_CHECKING:
+    from TIPCommon.types import Entity
 
 
 class EntityTypesEnum(Enum):
@@ -417,7 +418,7 @@ class CaseInsight:
 
 @dataclasses.dataclass(frozen=True, eq=True)
 class CaseAttachment:
-    """A case attachment
+    """A case attachment.
 
     This class is immutable, after assigning values and creating the object,
     new values cannot be assigned to the attributes.
@@ -440,7 +441,7 @@ class CaseAttachment:
 
 @dataclasses.dataclass(frozen=True, eq=True)
 class CaseComment:
-    """A case comment
+    """A case comment.
 
     This class is immutable, after assigning values and creating the object,
     new values cannot be assigned to the attributes.

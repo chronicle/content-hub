@@ -46,9 +46,9 @@ def validate_map_file_exists(map_file_path: str, logger: Any) -> None:
                         "Env1": "MyEnv1",
                     })
                 )
-                logger.info(f"Mapping file was created at {map_file}")
+                logger.info("Mapping file was created at %s", map_file)
     except Exception as e:
-        logger.error(f"Unable to create mapping file: {e}")
+        logger.exception("Unable to create mapping file: %s", e)
         logger.exception(e)
 
 
@@ -65,7 +65,7 @@ class GetEnvironmentCommonFactory:
         :param environment_field_name: {string} The environment field name
         :param environment_regex_pattern: {string} The environment regex pattern
         :param map_file: {string} The map file
-        :return: {EnvironmentHandle}
+        :return: {EnvironmentHandle}.
         """
         if platform_supports_db(siemplify):
             return EnvironmentHandleForDBSystem(
@@ -109,13 +109,13 @@ class EnvironmentHandle(ABC):
         In the end, try to resolve the found environment to its mapped alias - using the map file
         If nothing supply, return the default connector environment
         :param data: {dict} fetch the environment value from this data field (can be the alert or the event)
-        :return: {string} environment
+        :return: {string} environment.
         """
 
 
 class EnvironmentHandleForFileSystem(EnvironmentHandle):
     """handle environment logic
-    environment_field_name + environment_regex + environment map.json
+    environment_field_name + environment_regex + environment map.json.
     """
 
     def __init__(
@@ -137,7 +137,7 @@ class EnvironmentHandleForFileSystem(EnvironmentHandle):
         In the end, try to resolve the found environment to its mapped alias - using the map file
         If nothing supply, return the default connector environment
         :param data: {dict} fetch the environment value from this data field (can be the alert or the event)
-        :return: {string} environment
+        :return: {string} environment.
         """
         # Check first if map.json exists, and if not, create it.
 
@@ -156,30 +156,24 @@ class EnvironmentHandleForFileSystem(EnvironmentHandle):
             # Try to resolve the found environment to its mapped alias.
             # If the found environment / extracted environment is empty
             # use the default environment
-            return (
-                self._get_mapped_environment(environment)
-                if environment
-                else self.default_environment
-            )
+            return self._get_mapped_environment(environment) if environment else self.default_environment
 
         return self.default_environment
 
     def _get_mapped_environment(self, original_env: str) -> str:
         """Get mapped environment alias from mapping file
         :param original_env: {str} The environment to try to resolve
-        :return: {str} The resolved alias (if no alias - returns the original env)
+        :return: {str} The resolved alias (if no alias - returns the original env).
         """
         try:
             with pathlib.Path(self.map_file_path).open("r+", encoding="utf-8") as map_file:
                 mappings = json.loads(map_file.read())
         except Exception as e:
-            self.logger.error(f"Unable to read environment mappings: {e}")
+            self.logger.exception("Unable to read environment mappings: %s", e)
             mappings = {}
 
         if not isinstance(mappings, dict):
-            self.logger.LOGGER.error(
-                "Mappings are not in valid format. Environment will not be mapped."
-            )
+            self.logger.LOGGER.error("Mappings are not in valid format. Environment will not be mapped.")
             return original_env
 
         return mappings.get(original_env, original_env)
@@ -187,7 +181,7 @@ class EnvironmentHandleForFileSystem(EnvironmentHandle):
 
 class EnvironmentHandleForDBSystem(EnvironmentHandle):
     """handle environment logic
-    environment_field_name + environment_regex + environment map.json
+    environment_field_name + environment_regex + environment map.json.
     """
 
     def __init__(
@@ -207,7 +201,7 @@ class EnvironmentHandleForDBSystem(EnvironmentHandle):
         In the end, try to resolve the found environment to its mapped alias - using the map file
         If nothing supply, return the default connector environment
         :param data: {dict} fetch the environment value from this data field (can be the alert or the event)
-        :return: {string} environment
+        :return: {string} environment.
         """
         if self.environment_field_name and data.get(self.environment_field_name):
             # Get the environment from the given field

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""consts
+"""consts.
 ======
 
 A module containing all constant in use by TIPCommon package,
