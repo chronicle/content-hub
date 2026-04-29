@@ -36,6 +36,7 @@ flags.DEFINE_string("customer_id", None, "Chronicle customer ID.")
 flags.DEFINE_string("project_id", None, "Google Cloud project ID.")
 flags.DEFINE_string("region", None, "Chronicle region.")
 flags.DEFINE_boolean("generate_report", False, "Whether to generate the markdown report file.")
+flags.DEFINE_boolean("debug", False, "Whether to generate debug JSON dump files.")
 flags.DEFINE_list(
     "log_type_folders",
     [],
@@ -287,8 +288,9 @@ def main(argv: list[str]) -> None:
                 })
                 continue
 
-            # with open("validation_results_dump.json", "w") as f:
-            #     json.dump(validation_results, f, indent=2)
+            if FLAGS.debug:
+                with open("validation_results_dump.json", "w") as f:
+                    json.dump(validation_results, f, indent=2)
 
             transformed_events = []
             for result in validation_results.get("runParserResults", []):
@@ -336,8 +338,9 @@ def main(argv: list[str]) -> None:
             expected_events = test_events_data.get("events", [])
             actual_events = transformed_events
 
-            # with open("validation_actual_results_dump.json", "w") as f:
-                # json.dump(actual_events, f, indent=2)
+            if FLAGS.debug:
+                with open("validation_actual_results_dump.json", "w") as f:
+                    json.dump(actual_events, f, indent=2)
 
             event_failures = []
             for i in range(max(len(expected_events), len(actual_events))):
