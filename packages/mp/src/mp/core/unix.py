@@ -600,7 +600,20 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
         NonFatalCommandError: If the git command fails (e.g., file not found on main).
 
     """
-    git_path_arg: str = f"origin/main:{file_path.as_posix()}"
+    # git show requires a repo-root-relative path; convert absolute paths.
+    try:
+        rev_parse_command: list[str] = ["git", "rev-parse", "--show-toplevel"]
+        repo_root_result = sp.run(  # noqa: S603
+            rev_parse_command,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        relative_path: pathlib.Path = file_path.relative_to(repo_root_result.stdout.strip())
+    except (sp.CalledProcessError, ValueError):
+        relative_path = file_path
+
+    git_path_arg: str = f"origin/main:{relative_path.as_posix()}"
     command: list[str] = ["git", "show", git_path_arg]
 
     try:
