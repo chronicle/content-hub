@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      validate_args: ${{ steps.compute.outputs.args }}
+      validate_command: ${{ steps.compute.outputs.validate_command }}
       should_validate: ${{ steps.compute.outputs.should_validate }}
     steps:
       - name: Checkout repository
@@ -31,51 +31,85 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for changes
+      - name: Check for MP package changes
         uses: dorny/paths-filter@v3
         id: filter
         with:
-          base: ${{ github.event.pull_request.base.sha || github.event.before }}
-          # language=yaml
           filters: |
             mp:
               - 'packages/mp/**'
-            response_integrations_google:
-              - 'content/response_integrations/google/**'
-            response_integrations_third_party:
-              - 'content/response_integrations/third_party/**'
-              - 'content/response_integrations/power_ups/**'
-            playbooks:
-              - 'content/playbooks/**'
+
+      - name: Get all changed content files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: content/**
 
       - name: Compute validation targets
         id: compute
+        shell: bash
         # language=bash
         run: |
-          MP="${{ steps.filter.outputs.mp }}"
-          GOOGLE="${{ steps.filter.outputs.response_integrations_google }}"
-          THIRD_PARTY="${{ steps.filter.outputs.response_integrations_third_party }}"
-          PLAYBOOKS="${{ steps.filter.outputs.playbooks }}"
-          
-          # If mp package changed, validate everything
-          if [[ "$MP" == "true" ]]; then
-            echo "args=all_content" >> $GITHUB_OUTPUT
+          # 1. If the mp CLI itself changed, validate everything
+          if [[ "${{ steps.filter.outputs.mp }}" == "true" ]]; then
+            echo "validate_command=mp validate repository google third_party playbooks --only-pre-build" >> $GITHUB_OUTPUT
             echo "should_validate=true" >> $GITHUB_OUTPUT
             exit 0
           fi
           
-          # Build args from changed content areas
-          ARGS=""
-          [[ "$GOOGLE" == "true" ]] && ARGS="$ARGS google"
-          [[ "$THIRD_PARTY" == "true" ]] && ARGS="$ARGS third_party"
-          [[ "$PLAYBOOKS" == "true" ]] && ARGS="$ARGS playbooks"
-          ARGS=$(echo "$ARGS" | xargs)  # trim whitespace
+          FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+          if [[ -z "$FILES" ]]; then
+            echo "should_validate=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           
-          if [[ -n "$ARGS" ]]; then
-            echo "args=$ARGS" >> $GITHUB_OUTPUT
+          INTS=()
+          PLAYBOOKS=()
+          
+          for file in $FILES; do
+            IFS='/' read -ra ADDR <<< "$file"
+            if [[ $file == content/response_integrations/* ]]; then
+              # content/response_integrations/[google|third_party|power_ups]/...
+              if [[ ${ADDR[2]} == "third_party" ]]; then
+                # content/response_integrations/third_party/[community|partner]/NAME
+                [[ -n "${ADDR[4]}" ]] && INTS+=("${ADDR[4]}")
+              else
+                # content/response_integrations/[google|power_ups]/NAME
+                [[ -n "${ADDR[3]}" ]] && INTS+=("${ADDR[3]}")
+              fi
+            elif [[ $file == content/playbooks/* ]]; then
+              # content/playbooks/[commercial|third_party]/...
+              if [[ ${ADDR[2]} == "third_party" ]]; then
+                 # content/playbooks/third_party/[community|partner]/NAME
+                 [[ -n "${ADDR[4]}" ]] && PLAYBOOKS+=("${ADDR[4]}")
+              else
+                 # content/playbooks/commercial/NAME.json
+                 # Strip .json if present
+                 NAME="${ADDR[3]%.json}"
+                 [[ -n "$NAME" ]] && PLAYBOOKS+=("$NAME")
+              fi
+            fi
+          done
+          
+          # Deduplicate lists
+          UNIQ_INTS=$(echo "${INTS[@]}" | tr ' ' '\n' | sort -u | xargs)
+          UNIQ_PBs=$(echo "${PLAYBOOKS[@]}" | tr ' ' '\n' | sort -u | xargs)
+          
+          # Build the commands
+          COMMAND=""
+          if [[ -n "$UNIQ_INTS" ]]; then
+            COMMAND="mp validate integration $UNIQ_INTS --only-pre-build"
+          fi
+          
+          if [[ -n "$UNIQ_PBs" ]]; then
+            [[ -n "$COMMAND" ]] && COMMAND="$COMMAND && "
+            COMMAND="${COMMAND}mp validate playbook $UNIQ_PBs --only-pre-build"
+          fi
+          
+          if [[ -n "$COMMAND" ]]; then
+            echo "validate_command=$COMMAND" >> $GITHUB_OUTPUT
             echo "should_validate=true" >> $GITHUB_OUTPUT
           else
-            echo "args=" >> $GITHUB_OUTPUT
             echo "should_validate=false" >> $GITHUB_OUTPUT
           fi
 
@@ -106,7 +140,7 @@ jobs:
         # language=bash
         run: |
           mp config --root-path . --processes 10 --display-config
-          mp validate repository ${{ needs.changes.outputs.validate_args }} --only-pre-build
+          ${{ needs.changes.outputs.validate_command }}
       - name: Upload Report
         if: always()
         uses: actions/upload-artifact@v4
