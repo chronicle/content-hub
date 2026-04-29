@@ -48,22 +48,27 @@ jobs:
 
       - name: Find changed integrations
         id: find_integrations
+        env:
+          FILTER_MP: ${{ steps.filter.outputs.mp }}
+          FILTER_PACKAGES: ${{ steps.filter.outputs.integration_packages }}
+          FILTER_THIRD_PARTY: ${{ steps.filter.outputs.response_integrations_third_party }}
+          FILTER_THIRD_PARTY_FILES: ${{ steps.filter.outputs.response_integrations_third_party_files }}
         # language=bash
         run: |
           # If shared packages or mp changed, test everything
-          if [[ "${{ steps.filter.outputs.mp }}" == "true" ]] || \
-             [[ "${{ steps.filter.outputs.integration_packages }}" == "true" ]]; then
+          if [[ "$FILTER_MP" == "true" ]] || \
+             [[ "$FILTER_PACKAGES" == "true" ]]; then
             echo "test_all=true" >> $GITHUB_OUTPUT
             echo "integrations=" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           echo "test_all=false" >> $GITHUB_OUTPUT
-          
+
           # Extract unique integration names from changed file paths
-          if [[ "${{ steps.filter.outputs.response_integrations_third_party }}" == "true" ]]; then
-            CHANGED_FILES="${{ steps.filter.outputs.response_integrations_third_party_files }}"
-            INTEGRATIONS=$(echo "$CHANGED_FILES" | tr ',' '\n' | \
+          if [[ "$FILTER_THIRD_PARTY" == "true" ]]; then
+            INTEGRATIONS=$(echo "$FILTER_THIRD_PARTY_FILES" | tr ',' '\n' | \
+              sed 's/"//g' | \
               grep "^content/response_integrations/" | \
               sed 's|content/response_integrations/third_party/[^/]*/||' | \
               sed 's|content/response_integrations/power_up[s]*/||' | \
@@ -107,17 +112,19 @@ jobs:
       - name: Run integration tests
         env:
           GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
+          TEST_ALL: ${{ needs.changes.outputs.test_all }}
+          CHANGED_INTEGRATIONS: ${{ needs.changes.outputs.changed_integrations }}
         # language=bash
         run: |
           mp config --root-path . --processes 10 --display-config
 
-          if [[ "${{ needs.changes.outputs.test_all }}" == "true" ]]; then
+          if [[ "$TEST_ALL" == "true" ]]; then
             echo "Shared packages changed — testing all integrations"
             mp test --repository third_party --raise-error-on-violations
           else
-            echo "Testing only changed integrations: ${{ needs.changes.outputs.changed_integrations }}"
+            echo "Testing only changed integrations: $CHANGED_INTEGRATIONS"
             FAILED=0
-            for integration in ${{ needs.changes.outputs.changed_integrations }}; do
+            for integration in $CHANGED_INTEGRATIONS; do
               echo "--- Testing: $integration ---"
               mp test --integration "$integration" --raise-error-on-violations || FAILED=1
             done
