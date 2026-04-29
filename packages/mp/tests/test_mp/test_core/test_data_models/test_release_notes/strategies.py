@@ -16,10 +16,7 @@ from __future__ import annotations
 
 from hypothesis import strategies as st
 
-from test_mp.test_core.test_data_models.utils import (
-    st_valid_long_description,
-    st_valid_version,
-)
+from test_mp.test_core.test_data_models.utils import st_valid_long_description, st_valid_version
 
 # Strategies for ReleaseNote
 ST_VALID_BUILT_RELEASE_NOTE_DICT = st.fixed_dictionaries(

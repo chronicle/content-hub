@@ -32,25 +32,25 @@ class UniqueNameValidation:
     name: str = "Unique Name Validation"
 
     @staticmethod
-    def run(playbook_path: Path) -> None:
+    def run(validation_path: Path) -> None:
         """Validate that a playbook's display name is unique.
 
         Args:
-            playbook_path: The path to the playbook to validate.
+            validation_path: The path to the playbook to validate.
 
         Raises:
             FatalValidationError: If a playbook with the same display name
                 already exists.
 
         """
-        display_name: str = mp.core.file_utils.get_display_info(playbook_path).content_hub_display_name
+        display_name: str = mp.core.file_utils.get_display_info(validation_path).content_hub_display_name
 
         duplicate_paths: set[Path] = set()
         for repo in mp.core.constants.PLAYBOOK_REPOSITORY_TYPE:
             repo_path: Path = mp.core.file_utils.get_or_create_playbook_repo_base_path(repo)
             duplicate_paths.update(_search_duplicate_names(display_name, repo_path))
 
-        duplicate_paths.discard(playbook_path)
+        duplicate_paths.discard(validation_path)
 
         if duplicate_paths:
             msg: str = (

@@ -144,10 +144,7 @@ def _extract_from_block(step: BuiltStep, parent_folder: Path, result: set[str]) 
             result.update(temp)
 
 
-def _extract_integrations_from_nested_block(
-    block_identifier: str | None,
-    base_folder: Path,
-) -> set[str]:
+def _extract_integrations_from_nested_block(block_identifier: str | None, base_folder: Path) -> set[str]:
     result: set[str] = set()
     for file in base_folder.iterdir():
         if file.is_dir() or file.suffix == ".zip":
@@ -159,9 +156,9 @@ def _extract_integrations_from_nested_block(
         if not _is_specific_block(block_json, block_identifier):
             continue
 
-        steps: list[dict] = block_json.get("Definition").get("Steps")
+        steps: list[dict] = block_json.get("Definition", {}).get("Steps", [])
         for step in steps:
-            integration_name: str = step.get("Integration")
+            integration_name: str | None = step.get("Integration")
             if integration_name not in {"Flow", None}:
                 result.add(integration_name)
 

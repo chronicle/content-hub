@@ -15,10 +15,14 @@
 import pytest
 
 from mp.core.data_models.common.condition.condition import (
+    BuiltCondition,
     Condition,
+    NonBuiltCondition,
 )
 from mp.core.data_models.common.condition.condition_group import (
+    BuiltConditionGroup,
     ConditionGroup,
+    NonBuiltConditionGroup,
 )
 
 from .constants import (
@@ -49,11 +53,11 @@ class TestConditionDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            Condition.from_built({})
+            Condition.from_built(BuiltCondition())
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            Condition.from_non_built({})
+            Condition.from_non_built(NonBuiltCondition())
 
     def test_from_built_to_built_is_idempotent(self) -> None:
         assert Condition.from_built(BUILT_CONDITION).to_built() == BUILT_CONDITION
@@ -77,11 +81,11 @@ class TestConditionGroupDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            ConditionGroup.from_built({})
+            ConditionGroup.from_built(BuiltConditionGroup())
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            ConditionGroup.from_non_built({})
+            ConditionGroup.from_non_built(NonBuiltConditionGroup())
 
     def test_from_built_with_none_values(self) -> None:
         assert ConditionGroup.from_built(BUILT_CONDITION_GROUP_WITH_NONE) == CONDITION_GROUP_WITH_NONE

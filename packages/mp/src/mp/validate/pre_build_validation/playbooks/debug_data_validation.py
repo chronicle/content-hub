@@ -33,19 +33,19 @@ class DebugDataValidation:
     name: str = "Debug Data Validation"
 
     @staticmethod
-    def run(playbook_path: Path) -> None:
+    def run(validation_path: Path) -> None:
         """Check for inconsistencies in playbook debug data.
 
         Args:
-            playbook_path: The path to the playbook directory.
+            validation_path: The path to the playbook directory.
 
         Raises:
             NonFatalValidationError: If any debug data inconsistencies are found.
 
         """
-        display_info: PlaybookDisplayInfo = mp.core.file_utils.get_display_info(playbook_path)
-        playbook_metadata: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
-        steps: list[Step] = Step.from_non_built_path(playbook_path)
+        display_info: PlaybookDisplayInfo = mp.core.file_utils.get_display_info(validation_path)
+        playbook_metadata: PlaybookMetadata = PlaybookMetadata.from_non_built_path(validation_path)
+        steps: list[Step] = Step.from_non_built_path(validation_path)
         steps_with_debug_data: list[Step] = [step for step in steps if step.step_debug_data]
 
         if not steps_with_debug_data:

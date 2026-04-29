@@ -18,7 +18,7 @@ import dataclasses
 from typing import TYPE_CHECKING
 
 from mp.core import constants
-from mp.core.data_models.integrations.action.parameter import ActionParameter, ActionParamType
+from mp.core.data_models.integrations.action.parameter import ActionParameter, ActionParamType, NonBuiltActionParameter
 from mp.core.exceptions import NonFatalValidationError
 from mp.core.utils import filter_and_map_yaml_files
 from mp.validate.utils import DEF_FILE_NAME_KEY, load_components_defs
@@ -53,7 +53,7 @@ class ActionParametersValuesValidation:
         """
         component_defs: dict[str, list[YamlFileContent]] = load_components_defs(validation_path, constants.ACTIONS_DIR)
 
-        actions_data: list[tuple[ActionName, list[ActionParameter]]] = filter_and_map_yaml_files(
+        actions_data: list[tuple[ActionName, list[NonBuiltActionParameter]]] = filter_and_map_yaml_files(
             component_defs.get(constants.ACTIONS_DIR, []),
             _has_parameters,
             _extract_name_and_parameters,

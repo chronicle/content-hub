@@ -141,41 +141,23 @@ class Gemini(LlmSdk[GeminiConfig]):
         return self
 
     async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
+        self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None
     ) -> None:
         await self.close()
 
     @overload
     async def send_message(
-        self,
-        prompt: str,
-        /,
-        *,
-        raise_error_if_empty_response: Literal[True],
-        response_json_schema: type[T_Schema],
+        self, prompt: str, /, *, raise_error_if_empty_response: Literal[True], response_json_schema: type[T_Schema]
     ) -> T_Schema: ...
 
     @overload
     async def send_message(
-        self,
-        prompt: str,
-        /,
-        *,
-        raise_error_if_empty_response: Literal[False],
-        response_json_schema: type[T_Schema],
+        self, prompt: str, /, *, raise_error_if_empty_response: Literal[False], response_json_schema: type[T_Schema]
     ) -> T_Schema | Literal[""]: ...
 
     @overload
     async def send_message(
-        self,
-        prompt: str,
-        /,
-        *,
-        raise_error_if_empty_response: bool,
-        response_json_schema: None = None,
+        self, prompt: str, /, *, raise_error_if_empty_response: bool, response_json_schema: None = None
     ) -> str: ...
 
     @retry(
@@ -186,12 +168,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         before_sleep=_log_retry_attempt,
     )
     async def send_message(
-        self,
-        prompt: str,
-        /,
-        *,
-        raise_error_if_empty_response: bool,
-        response_json_schema: type[T_Schema] | None = None,
+        self, prompt: str, /, *, raise_error_if_empty_response: bool, response_json_schema: type[T_Schema] | None = None
     ) -> T_Schema | str:
         """Send a message to the LLM and get a response.
 
@@ -210,7 +187,7 @@ class Gemini(LlmSdk[GeminiConfig]):
             ValueError: If the JSON schema is invalid.
 
         """
-        schema: str | None = None
+        schema: dict[str, Any] | None = None
         if response_json_schema is not None:
             schema = response_json_schema.model_json_schema()
 
@@ -254,11 +231,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         self.content = Content(role="user", parts=[])
 
     async def send_bulk_messages(
-        self,
-        prompts: list[str],
-        /,
-        *,
-        response_json_schema: type[T_Schema] | None = None,
+        self, prompts: list[str], /, *, response_json_schema: type[T_Schema] | None = None
     ) -> list[T_Schema | str]:
         """Send multiple messages to the LLM and get responses.
 
@@ -291,9 +264,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         before_sleep=_log_retry_attempt,
     )
     async def _send_single_message_independent(
-        self,
-        prompt: str,
-        response_json_schema: type[T_Schema] | None = None,
+        self, prompt: str, response_json_schema: type[T_Schema] | None = None
     ) -> T_Schema | str:
         """Send a single message independently of the session history.
 
@@ -329,9 +300,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         return text
 
     def _prepare_batch_requests(
-        self,
-        prompts: list[str],
-        response_json_schema: type[T_Schema] | None,
+        self, prompts: list[str], response_json_schema: type[T_Schema] | None
     ) -> list[InlinedRequest]:
         """Prepare inlined requests for a batch job.
 
@@ -423,9 +392,7 @@ class Gemini(LlmSdk[GeminiConfig]):
             raise RuntimeError(msg)
 
     async def _get_batch_results(
-        self,
-        batch_job: BatchJob,
-        response_json_schema: type[T_Schema] | None,
+        self, batch_job: BatchJob, response_json_schema: type[T_Schema] | None
     ) -> list[T_Schema | str]:
         """Extract results from a completed batch job.
 
@@ -454,9 +421,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         raise RuntimeError(msg)
 
     async def _parse_file_responses(
-        self,
-        file_name: str,
-        response_json_schema: type[T_Schema] | None,
+        self, file_name: str, response_json_schema: type[T_Schema] | None
     ) -> list[T_Schema | str]:
         """Parse file-based responses from a batch job.
 
@@ -478,7 +443,9 @@ class Gemini(LlmSdk[GeminiConfig]):
 
         return results
 
-    def create_generate_content_config(self, response_json_schema: str | None = None) -> GenerateContentConfig:
+    def create_generate_content_config(
+        self, response_json_schema: dict[str, Any] | None = None
+    ) -> GenerateContentConfig:
         """Create a GenerateContentConfig object for the Gemini API.
 
         Args:
@@ -558,7 +525,7 @@ class Gemini(LlmSdk[GeminiConfig]):
 
 def _parse_response_line_to_text(line: str) -> str:
     data: dict[str, Any] = json.loads(line)
-    response_data: dict[str, Any] = data.get("response")
+    response_data: dict[str, Any] | None = data.get("response")
     text: str = ""
     if response_data and response_data.get("candidates"):
         resp_content: dict[str, Any] = response_data["candidates"][0].get("content", {})
@@ -570,8 +537,7 @@ def _parse_response_line_to_text(line: str) -> str:
 
 
 def _parse_inlined_responses(
-    inline_responses: list[InlinedResponse],
-    response_json_schema: type[T_Schema] | None,
+    inline_responses: list[InlinedResponse], response_json_schema: type[T_Schema] | None
 ) -> list[T_Schema | str]:
     """Parse inlined responses from a batch job.
 
