@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import warnings
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import libcst as cst
 from libcst import FlattenSentinel
@@ -450,13 +450,11 @@ def _is_reserved_node(node: cst.Attribute) -> bool:
 
 def _get_attribute_list(node: cst.ImportFrom) -> list[cst.Attribute]:
     nodes: list[cst.Attribute] = []
-    current_node: cst.Name | cst.Attribute | None = node.module
+    current_node: cst.BaseExpression | cst.Name | cst.Attribute | None = node.module
     while isinstance(current_node, cst.Attribute):
         nodes.append(current_node)
-        val: Any = current_node.value
-        if not isinstance(val, cst.Name | cst.Attribute):
+        current_node = current_node.value
+        if not isinstance(current_node, cst.Name | cst.Attribute):
             break
-
-        current_node = val
 
     return nodes

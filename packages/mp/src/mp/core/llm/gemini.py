@@ -27,6 +27,7 @@ from google.genai.types import (
     BatchJob,
     Content,
     GenerateContentConfig,
+    GenerateContentResponse,
     GoogleSearch,
     HarmBlockThreshold,
     HarmCategory,
@@ -287,9 +288,9 @@ class Gemini(LlmSdk[GeminiConfig]):
             parts.extend(self.content.parts)
         parts.append(Part.from_text(text=prompt))
 
-        response = await self.client.models.generate_content(
+        response: GenerateContentResponse = await self.client.models.generate_content(
             model=self.config.model_name,
-            contents=cast("Any", [Content(role="user", parts=parts)]),
+            contents=Content(role="user", parts=parts),
             config=config,
         )
 
