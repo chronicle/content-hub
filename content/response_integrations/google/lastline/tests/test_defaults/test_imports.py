@@ -25,7 +25,7 @@ VALID_SUFFIXES = (".py",)
 
 def import_all_integration_modules(integration: pathlib.Path) -> None:
     if not integration.exists():
-        msg: str = f"Cannot find integration {integration.name}"
+        msg: str = f"Cannot find integration check {integration.name}"
         raise AssertionError(msg)
 
     imports: list[str] = _get_integration_modules_import_strings(integration)
