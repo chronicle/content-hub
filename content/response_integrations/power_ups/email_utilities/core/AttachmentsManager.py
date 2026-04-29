@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import os
+from enum import Enum
 
 import requests
 from soar_sdk.SiemplifyDataModel import Attachment
@@ -26,6 +27,12 @@ from TIPCommon.rest.soar_api import (
 from TIPCommon.types import SingleJson
 
 ORIG_EMAIL_DESCRIPTION = "This is the original message as EML"
+
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
 
 
 class AttachmentsManager:
@@ -57,6 +64,43 @@ class AttachmentsManager:
                     self.siemplify.current_alert.identifier
                     == wall_item["alertIdentifier"]
                 ):
+                    attachments.append(wall_item)
+        return attachments
+
+    def get_target_alerts(self) -> list:
+        """Get the target alerts based on the execution scope.
+
+        Returns:
+            The target alerts.
+
+        Raises:
+            ValueError: If the action is running in Alert scope but no alert is found.
+        """
+        execution_scope = getattr(
+            getattr(self.siemplify, "soar_action", self.siemplify),
+            "execution_scope",
+            ExecutionScope.Alert.value,
+        )
+        if execution_scope == ExecutionScope.Alert.value:
+            if not self.siemplify.current_alert:
+                raise ValueError("Action cannot run on case, only on alerts")
+            return [self.siemplify.current_alert]
+        else:
+            return getattr(self.siemplify.case, "alerts", [])
+
+    def get_attachments_for_target_alerts(self) -> list[SingleJson]:
+        """Get attachments for the target alerts.
+
+        Returns:
+            The list of attachments.
+        """
+        target_alerts = self.get_target_alerts()
+        target_alert_ids = [alert.identifier for alert in target_alerts]
+
+        attachments = []
+        for wall_item in self.attachments:
+            if wall_item["type"] == 4:
+                if wall_item["alertIdentifier"] in target_alert_ids:
                     attachments.append(wall_item)
         return attachments
 
