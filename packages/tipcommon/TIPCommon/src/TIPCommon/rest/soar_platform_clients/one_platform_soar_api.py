@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from TIPCommon.consts import DATAPLANE_1P_HEADER, DEFAULT_1P_PAGE_SIZE
+from TIPCommon.exceptions import EmptyMandatoryValues, ParameterValidationError
 from TIPCommon.rest.custom_types import HttpMethod
 from TIPCommon.utils import escape_odata_literal, safe_json_for_204, temporarily_remove_header
 
@@ -552,15 +553,16 @@ class OnePlatformSoarApi(BaseSoarApi):
             }
 
         Raises:
-            ValueError: If ``job_data`` is missing required
-                fields (``name``, ``parameters``) or if the
-                resource path cannot be parsed.
+            EmptyMandatoryValues: If ``job_data`` is missing
+                required fields (``name``, ``parameters``).
+            ParameterValidationError: If the resource path
+                cannot be parsed.
         """
         job_data = self.params.job_data
 
         resource_path = job_data.get("name")
         if resource_path is None:
-            raise ValueError(
+            raise EmptyMandatoryValues(
                 "Job data must include a 'name' field with the resource path. "
                 "Example (1P resource path): "
                 "projects/{project}/locations/{location}/instances/{instance}/"
@@ -571,7 +573,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         parameters = job_data.get("parameters")
         if parameters is None:
-            raise ValueError(
+            raise EmptyMandatoryValues(
                 "Job data is missing 'parameters' field, Nothing to update."
             )
         # The resource path is a full GCP resource name, e.g.:
@@ -580,9 +582,13 @@ class OnePlatformSoarApi(BaseSoarApi):
         # just the relative path starting from /integrations/...
         segment_pos = resource_path.find("integrations/")
         if segment_pos == -1:
-            raise ValueError(
-                f"Cannot parse resource path: '{resource_path}'. "
-                "Expected path to contain 'integrations/'."
+            raise ParameterValidationError(
+                param_name="name",
+                value=resource_path,
+                message=(
+                    "Cannot parse resource path. "
+                    "Expected path to contain 'integrations/'"
+                ),
             )
         endpoint = f"/{resource_path[segment_pos:]}"
 
