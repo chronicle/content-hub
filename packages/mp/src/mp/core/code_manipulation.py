@@ -428,6 +428,8 @@ class ImportTransformer(cst.CSTTransformer):
                 ),
                 names=names,
             ):
+                if isinstance(names, cst.ImportStar):
+                    return updated_node
                 return cst.Import(names=names)
 
             # `from .module import ...` => `from module import ...`

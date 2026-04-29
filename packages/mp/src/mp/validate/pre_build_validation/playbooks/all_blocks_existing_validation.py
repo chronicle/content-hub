@@ -29,22 +29,22 @@ class AllBlocksExistValidation:
     name: str = "All Blocks Exist Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check that all blocks that are part of a playbook are existing in the content-hub.
 
         Args:
-            validation_path: The path to the playbook.
+            path: The path to the playbook.
 
         Raises:
             FatalValidationError: If any referenced blocks are missing.
 
         """
-        required_block_ids: set[str] = get_playbook_dependent_blocks_ids(validation_path)
+        required_block_ids: set[str] = get_playbook_dependent_blocks_ids(path)
 
         if not required_block_ids:
             return
 
-        available_block_ids = get_all_blocks_id_from_path(validation_path.parent)
+        available_block_ids = get_all_blocks_id_from_path(path.parent)
         missing_blocks = required_block_ids - available_block_ids
         if missing_blocks:
             msg: str = (

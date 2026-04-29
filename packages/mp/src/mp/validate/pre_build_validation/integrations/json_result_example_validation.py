@@ -40,14 +40,14 @@ class JsonResultExampleValidation:
     name: str = "JSON Result Example Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check that each action returning JSON has a corresponding example.
 
         Scans action .py files for JSON result patterns and verifies that
         a matching *_JsonResult_example.json file exists in resources/.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If a JSON result example is missing.
@@ -56,12 +56,12 @@ class JsonResultExampleValidation:
         # Only validate integrations with changes in the current PR
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
         if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
+            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, path)
             if not changed:
                 return
 
-        actions_dir = validation_path / constants.ACTIONS_DIR
-        resources_dir = validation_path / "resources"
+        actions_dir = path / constants.ACTIONS_DIR
+        resources_dir = path / "resources"
 
         if not actions_dir.is_dir() or not resources_dir.is_dir():
             return

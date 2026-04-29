@@ -31,17 +31,17 @@ class BlockDoesNotContainAnOverviewValidation:
     name: str = "Block Overview Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Validate that blocks do not contain overviews.
 
         Args:
-             validation_path: The path to the playbook.
+             path: The path to the playbook.
 
         Raises:
             NonFatalValidationError: If the playbook contains overviews.
 
         """
-        playbook: Playbook = Playbook.from_non_built_path(validation_path)
+        playbook: Playbook = Playbook.from_non_built_path(path)
         if playbook.meta_data.type_ is PlaybookType.BLOCK and playbook.overviews:
             msg: str = "Block cannot have overviews"
             raise NonFatalValidationError(msg)

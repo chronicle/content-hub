@@ -29,17 +29,17 @@ class LoopStepValidation:
     name: str = "Loop Step Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Validate that all loops in a playbook are properly opened and closed.
 
         Args:
-            validation_path: The path to the playbook file.
+            path: The path to the playbook file.
 
         Raises:
             FatalValidationError: If there are any loop validation errors.
 
         """
-        steps: list[Step] = Step.from_non_built_path(validation_path)
+        steps: list[Step] = Step.from_non_built_path(path)
         balance: int = 0
         error_msgs: list[str] = []
 

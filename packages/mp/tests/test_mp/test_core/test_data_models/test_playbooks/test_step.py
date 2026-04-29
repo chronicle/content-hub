@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import cast
+
 import pytest
 
 from mp.core.data_models.playbooks.step.metadata import Step
@@ -73,11 +75,11 @@ class TestDebugStepEnrichmentDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            StepDebugEnrichmentData.from_built(BuiltStepDebugEnrichmentData())
+            StepDebugEnrichmentData.from_built(cast("BuiltStepDebugEnrichmentData", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            StepDebugEnrichmentData.from_non_built(NonBuiltStepDebugEnrichmentData())
+            StepDebugEnrichmentData.from_non_built(cast("NonBuiltStepDebugEnrichmentData", cast("object", {})))
 
     def test_from_built_to_built_is_idempotent(self) -> None:
         assert (
@@ -107,11 +109,11 @@ class TestStepDebugDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            StepDebugData.from_built(BuiltStepDebugData())
+            StepDebugData.from_built(cast("BuiltStepDebugData", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            StepDebugData.from_non_built(NonBuiltStepDebugData())
+            StepDebugData.from_non_built(cast("NonBuiltStepDebugData", cast("object", {})))
 
     def test_from_built_to_built_is_idempotent(self) -> None:
         assert StepDebugData.from_built(BUILT_STEP_DEBUG_DATA).to_built() == BUILT_STEP_DEBUG_DATA
@@ -147,11 +149,11 @@ class TestStepParameterDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            StepParameter.from_built(BuiltStepParameter())
+            StepParameter.from_built(cast("BuiltStepParameter", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            StepParameter.from_non_built(NonBuiltStepParameter())
+            StepParameter.from_non_built(cast("NonBuiltStepParameter", cast("object", {})))
 
     def test_from_built_to_built_is_idempotent(self) -> None:
         assert StepParameter.from_built(BUILT_STEP_PARAMETER).to_built() == BUILT_STEP_PARAMETER

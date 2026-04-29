@@ -55,11 +55,11 @@ class VersionBumpValidation:
     name: str = "Playbook Version Bump"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Validate that `release_notes.yml` files are correctly versioned.
 
         Args:
-            validation_path (Path): Path to the playbook directory.
+            path (Path): Path to the playbook directory.
 
         Raises:
             NonFatalValidationError: If versioning rules are violated.
@@ -69,7 +69,7 @@ class VersionBumpValidation:
         if not head_sha:
             return
 
-        changed_files: list[Path] = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
+        changed_files: list[Path] = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, path)
 
         if not changed_files:
             return

@@ -36,11 +36,11 @@ class VersionConsistencyValidation:
     name: str = "Version Consistency Check"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check that the version in pyproject.toml matches release_notes.yaml.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If the versions don't match.
@@ -48,12 +48,12 @@ class VersionConsistencyValidation:
         """
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
         if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
+            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, path)
             if not changed:
                 return
 
-        pyproject = validation_path / constants.PROJECT_FILE
-        rn_path = validation_path / constants.RELEASE_NOTES_FILE
+        pyproject = path / constants.PROJECT_FILE
+        rn_path = path / constants.RELEASE_NOTES_FILE
 
         if not pyproject.exists() or not rn_path.exists():
             return

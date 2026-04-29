@@ -445,7 +445,7 @@ class DescribeAction:
 
         await save_dir.mkdir(parents=True, exist_ok=True)
         metadata_file: anyio.Path = save_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
-        yaml.add_representer(str, folded_string_representer, Dumper=yaml.SafeDumper)
+        yaml.SafeDumper.add_representer(str, folded_string_representer)
         await metadata_file.write_text(yaml.safe_dump(metadata))
 
 

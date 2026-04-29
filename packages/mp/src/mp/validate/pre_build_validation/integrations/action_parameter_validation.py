@@ -41,17 +41,17 @@ class ActionParametersValuesValidation:
     name: str = "Action Parameters Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Validate all actions parameters type, default value, and optional values.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If the integration has actions with invalid parameters.
 
         """
-        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(validation_path, constants.ACTIONS_DIR)
+        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(path, constants.ACTIONS_DIR)
 
         actions_data: list[tuple[ActionName, list[NonBuiltActionParameter]]] = filter_and_map_yaml_files(
             component_defs.get(constants.ACTIONS_DIR, []),
@@ -79,7 +79,7 @@ class ActionParametersValuesValidation:
 
         if invalid_multiple_options or invalid_non_multiple_options or invalid_default_value:
             msg = (
-                f"Integration '{validation_path.name}' contains actions with invalid parameters:"
+                f"Integration '{path.name}' contains actions with invalid parameters:"
                 f"\n  - Invalid multiple options parameters: "
                 f"{_format_error_dict(invalid_multiple_options)}"
                 f"\n    Multiple options parameters must have optional values"

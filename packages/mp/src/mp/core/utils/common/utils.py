@@ -41,7 +41,7 @@ TRIM_CHARS: str = " ... "
 _T = TypeVar("_T")
 
 
-def folded_string_representer(dumper: yaml.Dumper, data: str, min_str_len: int = 40) -> yaml.ScalarNode:
+def folded_string_representer(dumper: yaml.SafeDumper, data: str, min_str_len: int = 40) -> yaml.ScalarNode:
     """Apply folded style if the string is long or has newlines in YAML.
 
     Examples:

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import cast
+
 import pytest
 
 from mp.core.data_models.playbooks.meta.access_permissions import (
@@ -51,11 +53,11 @@ class TestAccessPermissionDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            AccessPermission.from_built(BuiltAccessPermission())
+            AccessPermission.from_built(cast("BuiltAccessPermission", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            AccessPermission.from_non_built(NonBuiltAccessPermission())
+            AccessPermission.from_non_built(cast("NonBuiltAccessPermission", cast("object", {})))
 
     def test_from_built_to_built_is_idempotent(self) -> None:
         assert AccessPermission.from_built(BUILT_ACCESS_PERMISSION).to_built() == BUILT_ACCESS_PERMISSION

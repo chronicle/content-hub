@@ -36,11 +36,11 @@ class ReleaseNotesDateValidation:
     name: str = "Release Notes Date Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check that all publish_time entries are valid YYYY-MM-DD dates.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If any publish_time is invalid.
@@ -48,11 +48,11 @@ class ReleaseNotesDateValidation:
         """
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
         if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
+            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, path)
             if not changed:
                 return
 
-        rn_path = validation_path / constants.RELEASE_NOTES_FILE
+        rn_path = path / constants.RELEASE_NOTES_FILE
         if not rn_path.exists():
             return
 

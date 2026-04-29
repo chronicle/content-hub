@@ -32,19 +32,19 @@ class IntegrationHasDocumentationLinkValidation:
     name: str = "Documentation Link Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check if the integration has a documentation link.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If the integration doesn't have a documentation link.
 
         """
-        if validation_path.name in exclusions.get_excluded_integrations_without_documentation_link():
+        if path.name in exclusions.get_excluded_integrations_without_documentation_link():
             return
-        integration_def: YamlFileContent = load_integration_def(validation_path)
+        integration_def: YamlFileContent = load_integration_def(path)
         if not integration_def.get("documentation_link"):
-            msg: str = f"'{validation_path.name}' is missing a documentation link"
+            msg: str = f"'{path.name}' is missing a documentation link"
             raise NonFatalValidationError(msg)

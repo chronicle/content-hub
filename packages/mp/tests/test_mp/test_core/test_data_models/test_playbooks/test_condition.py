@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import cast
+
 import pytest
 
 from mp.core.data_models.common.condition.condition import (
@@ -53,11 +55,11 @@ class TestConditionDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            Condition.from_built(BuiltCondition())
+            Condition.from_built(cast("BuiltCondition", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            Condition.from_non_built(NonBuiltCondition())
+            Condition.from_non_built(cast("NonBuiltCondition", cast("object", {})))
 
     def test_from_built_to_built_is_idempotent(self) -> None:
         assert Condition.from_built(BUILT_CONDITION).to_built() == BUILT_CONDITION
@@ -81,11 +83,11 @@ class TestConditionGroupDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            ConditionGroup.from_built(BuiltConditionGroup())
+            ConditionGroup.from_built(cast("BuiltConditionGroup", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            ConditionGroup.from_non_built(NonBuiltConditionGroup())
+            ConditionGroup.from_non_built(cast("NonBuiltConditionGroup", cast("object", {})))
 
     def test_from_built_with_none_values(self) -> None:
         assert ConditionGroup.from_built(BUILT_CONDITION_GROUP_WITH_NONE) == CONDITION_GROUP_WITH_NONE
