@@ -159,13 +159,16 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
           GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
+          IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
+          GOOGLE_INTEGRATIONS: ${{ needs.changes.outputs.google_integrations }}
         # language=bash
         run: |
           wmp config --root-path . --processes 7 --display-config
-          if ("${{ needs.changes.outputs.mp }}" -eq "true" -or "${{ needs.changes.outputs.integration_packages }}" -eq "true") {
+          if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
             wmp validate repository google --only-pre-build
           } else {
-            $integrations = "${{ needs.changes.outputs.google_integrations }}".Trim()
+            $integrations = $env:GOOGLE_INTEGRATIONS.Trim()
             if ($integrations) {
               $integrationList = $integrations.Split(" ")
               wmp validate integration $integrationList --only-pre-build
@@ -202,13 +205,16 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
           GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
+          IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
+          THIRD_PARTY_INTEGRATIONS: ${{ needs.changes.outputs.third_party_integrations }}
         # language=bash
         run: |
           wmp config --root-path . --processes 7 --display-config
-          if ("${{ needs.changes.outputs.mp }}" -eq "true" -or "${{ needs.changes.outputs.integration_packages }}" -eq "true") {
+          if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
             wmp validate repository third_party --only-pre-build
           } else {
-            $integrations = "${{ needs.changes.outputs.third_party_integrations }}".Trim()
+            $integrations = $env:THIRD_PARTY_INTEGRATIONS.Trim()
             if ($integrations) {
               $integrationList = $integrations.Split(" ")
               wmp validate integration $integrationList --only-pre-build
@@ -287,13 +293,17 @@ jobs:
           uv pip install --system -e ./packages/mp
       - name: Run Validations
         shell: pwsh
+        env:
+          IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
+          IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
+          PLAYBOOKS_LIST: ${{ needs.changes.outputs.playbooks_list }}
         # language=bash
         run: |
           wmp config --root-path . --processes 7 --display-config
-          if ("${{ needs.changes.outputs.mp }}" -eq "true" -or "${{ needs.changes.outputs.integration_packages }}" -eq "true") {
+          if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
             wmp validate repository playbooks --only-pre-build
           } else {
-            $playbooks = "${{ needs.changes.outputs.playbooks_list }}".Trim()
+            $playbooks = $env:PLAYBOOKS_LIST.Trim()
             if ($playbooks) {
               $playbookList = $playbooks.Split(" ")
               wmp validate playbook $playbookList --only-pre-build
