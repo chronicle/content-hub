@@ -85,7 +85,7 @@ class BackendAPI:
 
         """
         hostname = urlparse(self.api_root).hostname
-        local_hostnames = ["localhost", "127.0.0.1"]
+        local_hostnames = ["localhost", "127.0.0.1", "::1"]
         return hostname in local_hostnames
 
     def login(self) -> None:
