@@ -12,6 +12,8 @@
 > **Note:** At this time, only response integration and playbook content is supported via this contribution
 > workflow. We expect to expand support to other critical content types in the near future.
 
+
+
 👋 Hello and welcome!
 
 This repository is the central hub for a wide array of community-contributed content intended to
