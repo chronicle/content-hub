@@ -32,7 +32,7 @@ class AiCategories(BaseModel):
                 "does not match the criteria before setting their boolean flags."
             ),
         ),
-    ]
+    ] = ""
     enrichment: Annotated[
         bool,
         Field(

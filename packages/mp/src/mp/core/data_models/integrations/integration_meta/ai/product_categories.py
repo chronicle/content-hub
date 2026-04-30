@@ -31,7 +31,7 @@ class IntegrationProductCategories(BaseModel):
                 "criteria of relevant categories before setting their boolean flags."
             ),
         ),
-    ]
+    ] = ""
     siem: Annotated[
         bool,
         Field(

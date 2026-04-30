@@ -31,7 +31,7 @@ class ActionProductCategories(BaseModel):
                 "'Expected Outcome' of relevant categories before setting their boolean flags."
             ),
         ),
-    ]
+    ] = ""
     enrich_ioc: Annotated[
         bool,
         Field(

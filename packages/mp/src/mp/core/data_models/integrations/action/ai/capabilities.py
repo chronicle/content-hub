@@ -31,7 +31,7 @@ class ActionCapabilities(BaseModel):
                 "case comments before setting the boolean flags."
             ),
         ),
-    ]
+    ] = ""
     fetches_data: Annotated[
         bool,
         Field(description="Whether the action fetches additional contextual data on alerts/entities etc."),

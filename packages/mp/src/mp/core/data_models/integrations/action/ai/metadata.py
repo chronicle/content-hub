@@ -79,7 +79,7 @@ class ActionAiMetadata(BaseModel):
         ),
     ]
     action_product_categories: Annotated[
-        ActionProductCategories,
+        ActionProductCategories | None,
         Field(
             description=(
                 "Categories that describe the action's capabilities in its security product."
@@ -87,4 +87,4 @@ class ActionAiMetadata(BaseModel):
                 " action."
             ),
         ),
-    ]
+    ] = None

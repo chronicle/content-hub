@@ -32,7 +32,7 @@ class EntityUsage(BaseModel):
                 "met before setting the boolean flags."
             ),
         ),
-    ]
+    ] = ""
     entity_types: Annotated[
         list[EntityType],
         Field(
