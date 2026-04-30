@@ -17,12 +17,32 @@ content-hub/
         ├── third_party/
         │   ├── community/
         │   │   ├── VENDOR1_PRODUCT1/cbn/
-        │   │   └── VENDOR2_PRODUCT2/cbn/
+        │   │   ├                     ├── <config>.conf
+        │   │   ├                     ├── metadata.json
+        │   │   ├                     └── testdata/
+        │   │   ├                           ├── raw_logs/
+        │   │   ├                           │   └── <usecase>_log.json
+        │   │   ├                           └── expected_events/
+        │   │   ├                               └── <usecase>_events.json
         │   ├── partner/
-        │       ├── partnerA/
-        │       │     └── VENDOR1_PRODUCT1/cbn/
-        │       └── partnerB/
-        │             └── VENDOR1_PRODUCT1/cbn/
+        │   │   ├── partnerA/
+        │   │   │     └── VENDOR1_PRODUCT1/cbn/
+        │   │   │                     ├── <config>.conf
+        │   │   │                     ├── metadata.json
+        │   │   │                     └── testdata/
+        │   │   │                           ├── raw_logs/
+        │   │   │                           │   └── <usecase>_log.json
+        │   │   │                           └── expected_events/
+        │   │   │                               └── <usecase>_events.json
+        │   │   └── partnerB/
+        │   │   │    └── VENDOR1_PRODUCT1/cbn/
+        │   │   │                     ├── <config>.conf
+        │   │   │                     ├── metadata.json
+        │   │   │                     └── testdata/
+        │   │   │                           ├── raw_logs/
+        │   │   │                           │   └── <usecase>_log.json
+        │   │   │                           └── expected_events/
+        │   │   │                               └── <usecase>_events.json
         ...
 ```
 
