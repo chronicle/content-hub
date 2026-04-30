@@ -14,14 +14,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 import dataclasses
+from typing import TYPE_CHECKING
 
 from TIPCommon.base.interfaces import Authable
 from TIPCommon.base.utils import CreateSession
 
-from . import api_utils
-from . import constants
+from . import api_utils, constants
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
