@@ -34,9 +34,10 @@ if TYPE_CHECKING:
 class PlaybookCreationSource(RepresentableEnum):
     """Represents the source of a playbook's creation."""
 
-    USER_OR_API_INITIATED = 0
-    AI_GENERATED_FROM_ALERT = 1
-    AI_GENERATED_FROM_PROMPT = 2
+    PLAYBOOK_CREATION_SOURCE_UNSPECIFIED = 0
+    USER_OR_API_INITIATED = 1
+    AI_GENERATED_FROM_ALERT = 2
+    AI_GENERATED_FROM_PROMPT = 3
 
 
 class BuiltPlaybookMetadata(TypedDict):

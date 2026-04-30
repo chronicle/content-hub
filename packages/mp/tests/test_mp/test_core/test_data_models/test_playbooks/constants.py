@@ -513,7 +513,7 @@ BUILT_PLAYBOOK_METADATA: BuiltPlaybookMetadata = {
     "IsEnable": True,
     "Version": 1.0,
     "Description": "description",
-    "CreationSource": 0,
+    "CreationSource": 1,
     "DefaultAccessLevel": 1,
     "SimulationClone": False,
     "DebugAlertIdentifier": "debug_alert_id",
@@ -668,7 +668,6 @@ PLAYBOOK_METADATA_WITH_NONE = PlaybookMetadata(
     permissions=[],
     environments=["*"],
 )
-
 
 BUILT_WIDGET_DATA_DEFINITION: BuiltWidgetDataDefinition = {
     "htmlHeight": 400,
@@ -835,7 +834,6 @@ DISPLAY_INFO = PlaybookDisplayInfo(
     should_display_in_content_hub=False,
     allowed_debug_data=False,
 )
-
 
 BUILT_OVERVIEW: BuiltOverview = {
     "OverviewTemplate": {
