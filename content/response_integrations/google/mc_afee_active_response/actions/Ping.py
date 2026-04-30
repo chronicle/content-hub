@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.McAfeeActiveResponseManager import McAfeeActiveResponseManager
 
 PROVIDER = "McAfeeActiveResponse"
@@ -25,15 +27,18 @@ def main():
     siemplify = SiemplifyAction()
     conf = siemplify.get_configuration(PROVIDER)
 
-    # The connection is established at the Init function of the class.
-    mar_manager = McAfeeActiveResponseManager(
-        conf.get("Broker URLs List").split(",") if conf.get("Broker URLs List") else [],
-        conf.get("Broker CA Bundle File Path"),
-        conf.get("Certificate File Path"),
-        conf.get("Private Key File Path"),
-    )
-
-    siemplify.end("Connection Established.", True)
+    try:
+        # The connection is established at the Init function of the class.
+        McAfeeActiveResponseManager(
+            conf.get("Broker URLs List").split(",") if conf.get("Broker URLs List") else [],
+            conf.get("Broker CA Bundle File Path"),
+            conf.get("Certificate File Path"),
+            conf.get("Private Key File Path"),
+        )
+        siemplify.end("Successfully connected to the McAfee Active Response server.", True)
+    except Exception as e:
+        siemplify.LOGGER.error(f"Failed to connect to the McAfee Active Response server. Error: {e}")
+        siemplify.end("Failed to connect to the McAfee Active Response server.", False)
 
 
 if __name__ == "__main__":

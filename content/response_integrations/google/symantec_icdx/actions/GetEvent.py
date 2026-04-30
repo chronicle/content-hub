@@ -13,11 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.SymantecICDXManager import SymantecICDXManager
-from soar_sdk.SiemplifyUtils import dict_to_flat
 
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import dict_to_flat, output_handler
+
+from ..core.SymantecICDXManager import SymantecICDXManager
 
 PROVIDER = "SymantecICDX"
 ACTION_NAME = "SymantecICDX - Get Event"

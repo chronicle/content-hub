@@ -27,14 +27,7 @@ def main():
     siemplify = SiemplifyJob()
     siemplify.script_name = SCRIPT_NAME
 
-    job_names = [
-        _f
-        for _f in [
-            x.strip()
-            for x in siemplify.extract_job_param("Job Whitelist", " ").split(",")
-        ]
-        if _f
-    ]
+    job_names = [_f for _f in [x.strip() for x in siemplify.extract_job_param("Job Whitelist", " ").split(",")] if _f]
 
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)

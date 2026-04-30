@@ -13,21 +13,23 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
-from ..core.Outpost24Manager import Outpost24Manager
-from ..core.Outpost24Exceptions import DeviceNotFoundError
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
+from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+
 from ..core.constants import (
-    INTEGRATION_NAME,
-    INTEGRATION_DISPLAY_NAME,
     ENRICH_ENTITIES_SCRIPT_NAME,
     ENRICHMENT_PREFIX,
+    INTEGRATION_DISPLAY_NAME,
+    INTEGRATION_NAME,
     SUPORTED_RISK_LEVELS,
 )
+from ..core.Outpost24Exceptions import DeviceNotFoundError
+from ..core.Outpost24Manager import Outpost24Manager
 from ..core.UtilsManager import load_csv_to_list
-from soar_sdk.SiemplifyDataModel import EntityTypes
 
 SUPPORTED_ENTITY_TYPES = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]
 
@@ -128,9 +130,12 @@ def main():
         manager.test_connectivity()
 
         if max_findings_to_return < 1:
-            raise Exception(
+            msg = (
                 f'Given value of {max_findings_to_return} for parameter "Max Findings '
                 'To Return" is non positive.'
+            )
+            raise Exception(
+                msg
             )
 
         # check the risk level input
@@ -143,10 +148,13 @@ def main():
                 )
                 invalid_risk_levels_message = ",".join(invalid_risk_levels)
                 if invalid_risk_levels is not None:
-                    raise Exception(
+                    msg = (
                         f"invalid risk level filter values provided: "
                         f"{invalid_risk_levels_message}. Possible values: "
                         f"Recommendation, Initial, Low, Medium, High, Critical."
+                    )
+                    raise Exception(
+                        msg
                     )
 
         suitable_entities = [

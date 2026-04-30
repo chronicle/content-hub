@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
 
 # Imports
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.A1000MalwareAnalysis import A1000MalwareAnalysisClient
 
 # Consts

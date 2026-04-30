@@ -23,8 +23,10 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
-import requests
+
 import copy
+
+import requests
 
 # =====================================
 #             CONSTANTS               #
@@ -68,23 +70,23 @@ class SymantecICDXManager:
 
     @staticmethod
     def validate_response(response, error_msg="An error occurred"):
-        """
-        Validate a response
+        """Validate a response
         :param response: {requests.Response} The response to validate
         :param error_msg: {str} The message to display on error
         """
         try:
             if response.status_code == 204 and not response.content:
-                raise SymantecICDXContentError("No content")
+                msg = "No content"
+                raise SymantecICDXContentError(msg)
 
             response.raise_for_status()
 
         except requests.HTTPError as error:
-            raise SymantecICDXManagerError(f"{error_msg}: {error} - {response.content}")
+            msg = f"{error_msg}: {error} - {response.content}"
+            raise SymantecICDXManagerError(msg)
 
         def _paginate_results(self, request_url, payload, next_uuid):
-            """
-            Get all paginated results.
+            """Get all paginated results.
             :param request_url: {string} Target request URL.
             :param payload: {dict} Last payload sent.
             :param next_uuid: {string} Next page UUID.
@@ -108,8 +110,7 @@ class SymantecICDXManager:
             return result_list
 
     def test_connectivity(self):
-        """
-        Test connectivity
+        """Test connectivity
         :return: {bool} True if successful, exception otherwise.
         """
         self.get_event("c196fb70-591a-11e9-c000-0000000000aa")
@@ -118,8 +119,7 @@ class SymantecICDXManager:
     def find_events(
         self, query, start_time, end_time=None, fields=None, limit=EVENT_LIMIT
     ):
-        """
-        Find events in ICDX
+        """Find events in ICDX
         :param query: {string}
         :param start_time: {long} in milliseconds
         :param end_time: {long} in milliseconds
@@ -161,8 +161,7 @@ class SymantecICDXManager:
         return result_events
 
     def get_event(self, event_uuid):
-        """
-        Get event data by it's ID.
+        """Get event data by it's ID.
         :param event_uuid: {string} Event ID.
         :return: {dict} Event data.
         """

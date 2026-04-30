@@ -13,10 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv
+from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv, output_handler
+
 from ..core.CyberXManager import CyberXManager
 
 ACTION_NAME = "CyberX_Get Connections for endpoint."
@@ -44,8 +45,7 @@ def main():
     target_entities = [
         entity
         for entity in siemplify.target_entities
-        if entity.entity_type == EntityTypes.ADDRESS
-        or entity.entity_type == EntityTypes.HOSTNAME
+        if entity.entity_type in {EntityTypes.ADDRESS, EntityTypes.HOSTNAME}
     ]
 
     for entity in target_entities:
@@ -74,12 +74,12 @@ def main():
             errors.append(error_message)
 
     if success_entities:
-        output_message = f'Fetched connection information for the following entities: {", ".join([ entity.identifier for entity in success_entities])}'
+        output_message = f'Fetched connection information for the following entities: {", ".join([entity.identifier for entity in success_entities])}'
     else:
         output_message = "No connections information found for target entities."
 
     if errors:
-        output_message = "{0} \n \n Errors: \n {1}".format(
+        output_message = "{} \n \n Errors: \n {}".format(
             output_message, "\n ".join(errors)
         )
 

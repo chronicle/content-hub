@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import dns.resolver
-import dns.reversename
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
@@ -87,9 +86,6 @@ def main():
 
                         if answer.answer:
                             for i in range(len(answer.answer)):
-                                print(
-                                    f"A record of type {dns.rdatatype.to_text(answer.answer[i].rdtype)} was found on DNS server {server} with a response of {answer.answer[i][0]} for entity {entity.identifier}",
-                                )
 
                                 hn_record = dns.rdatatype.to_text(
                                     answer.answer[i].rdtype,
@@ -112,9 +108,9 @@ def main():
                             siemplify.LOGGER.info("No record found")
 
                     except Exception as err:
-                        siemplify.LOGGER.error(err)
+                        siemplify.LOGGER.exception(err)
             except Exception as err:
-                siemplify.LOGGER.error(err)
+                siemplify.LOGGER.exception(err)
 
     if json_results:
         siemplify.result.add_result_json(convert_dict_to_json_result_dict(json_results))

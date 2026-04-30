@@ -13,17 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-class Outpost24GeneralException(Exception):
-    """
-    General exception for Outpost24
-    """
 
-    pass
+
+class Outpost24GeneralException(Exception):
+    """General exception for Outpost24"""
 
 
 class DeviceNotFoundError(Exception):
-    """
-    Exception for Outpost24 when no device - hostname or IP Aaddress is not found
-    """
+    """Exception for Outpost24 when no device - hostname or IP Aaddress is not found"""
 
-    pass

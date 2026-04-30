@@ -13,14 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon import dict_to_flat, add_prefix_to_dict
+
 import copy
+
+from TIPCommon import add_prefix_to_dict, dict_to_flat
 
 
 class BaseModel:
-    """
-    Base model for inheritance
-    """
+    """Base model for inheritance"""
 
     def __init__(self, raw_data):
         self.raw_data = raw_data
@@ -38,7 +38,7 @@ class BaseModel:
 
 class Address(BaseModel):
     def __init__(self, raw_data, original_url, final_url, title, history, har, png):
-        super(Address, self).__init__(raw_data)
+        super().__init__(raw_data)
         self.original_url = original_url
         self.final_url = final_url
         self.title = title
@@ -80,7 +80,7 @@ class Address(BaseModel):
         content += f'<br><strong>Title:</strong> {self.title or "N/A"}'
         content += f'<br><strong>Final URL:</strong> {self.final_url or "N/A"}<br>'
         if include_screenshot:
-            content += f"<br><strong>Screenshot</strong><br><br>"
+            content += "<br><strong>Screenshot</strong><br><br>"
             content += f'<img src="data:image/jpeg;base64,{self.png}"><br>'
         content += "</body>"
         content += "<p>&nbsp;</p>"

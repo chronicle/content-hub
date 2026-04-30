@@ -28,9 +28,7 @@ def main():
 
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
     output_message = "Most likely hash types found"  # human readable message, showed in UI as the action result
-    result_value = (
-        "true"  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    result_value = "true"  # Set a simple result value, used for playbook if\else and placeholders.
 
     res = []
     to_enrich = []
@@ -40,28 +38,24 @@ def main():
     if hashes:
         hashes = hashes.split(",")
     try:
-        for _hash in hashes:
+        for hash_ in hashes:
             intersection = list(
-                set([x.name for x in hid.identifyHash(_hash)]).intersection(
+                {x.name for x in hid.identifyHash(hash_)}.intersection(
                     SUPPORTED_OUTPUT_TYPES,
                 ),
             )
             if intersection:
-                res.append({"Hash": _hash, "HashType": intersection[0]})
+                res.append({"Hash": hash_, "HashType": intersection[0]})
             else:
-                res.append({"Hash": _hash, "HashType": "UNDETECTED"})
+                res.append({"Hash": hash_, "HashType": "UNDETECTED"})
 
         for entity in siemplify.target_entities:
             if entity.entity_type == "FILEHASH":
                 intersection = list(
-                    set(
-                        [x.name for x in hid.identifyHash(entity.identifier)],
-                    ).intersection(SUPPORTED_OUTPUT_TYPES),
+                    {
+                        x.name for x in hid.identifyHash(entity.identifier)}.intersection(SUPPORTED_OUTPUT_TYPES),
                 )
-                if intersection:
-                    d = {"HashType": intersection[0]}
-                else:
-                    d = {"HashType": "UNDETECTED"}
+                d = {"HashType": intersection[0]} if intersection else {"HashType": "UNDETECTED"}
                 entity.additional_properties.update(d)
                 to_enrich.append(entity)
                 d["Hash"] = entity.identifier

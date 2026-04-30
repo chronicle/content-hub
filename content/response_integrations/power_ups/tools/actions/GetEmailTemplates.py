@@ -43,9 +43,7 @@ def main():
     template_type = siemplify.extract_action_param("Template Type", print_value=True)
 
     status = EXECUTION_STATE_COMPLETED
-    output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
-    )
+    output_message = "output message :"  # human readable message, showed in UI as the action result
 
     email_templates = get_email_template(siemplify)
     res = []
@@ -54,9 +52,9 @@ def main():
         template_json = template.to_json()
         template_type_value = template_json.get("type")
 
-        if is_html_template(
+        if is_html_template(template_type, template_type_value) or is_standard_template(
             template_type, template_type_value
-        ) or is_standard_template(template_type, template_type_value):
+        ):
             res.append(template_json)
 
     siemplify.result.add_result_json({"templates": res})

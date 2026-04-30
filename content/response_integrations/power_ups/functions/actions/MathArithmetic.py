@@ -18,13 +18,11 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 
 
-def try_parse_float_or_int(s, val=None):
+def try_parse_float_or_int(s):
     try:
-        number = int(s, 10)
-        return number
+        return int(s, 10)
     except ValueError:
-        number = float(s)
-        return number
+        return float(s)
 
 
 def main():

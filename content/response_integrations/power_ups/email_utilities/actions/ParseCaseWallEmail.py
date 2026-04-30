@@ -37,11 +37,11 @@ CASE_EVIDENCE_ID: str = "evidenceId"
 def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
     if isinstance(obj, datetime.datetime):
-        serial = obj.isoformat()
-        return serial
+        return obj.isoformat()
     if isinstance(obj, bytes):
         return base64.b64encode(obj).decode()
-    raise TypeError("Type not serializable")
+    msg = "Type not serializable"
+    raise TypeError(msg)
 
 
 @output_handler
@@ -55,9 +55,7 @@ def main():
     siemplify.script_name = "Parse Email"
     siemplify.LOGGER.info(f"Starting {siemplify.script_name}.")
 
-    save_to_case_wall = (
-        siemplify.parameters["Save Attachments to Case Wall"].lower() == "true"
-    )
+    save_to_case_wall = siemplify.parameters["Save Attachments to Case Wall"].lower() == "true"
     create_base_entities = siemplify.parameters["Create Entities"].lower() == "true"
     create_observed_entity_types = siemplify.parameters.get(
         "Create Observed Entities",
@@ -72,7 +70,7 @@ def main():
     try:
         custom_regex = json.loads(custom_regex)
     except Exception as e:
-        siemplify.LOGGER.error(e)
+        siemplify.LOGGER.exception(e)
         output_message += "\nFailed to load custom regex mappings."
         custom_regex = {}
 
@@ -103,10 +101,7 @@ def main():
         ):
             attached_email = eml_attachment
 
-    if attached_email and not original_eml_only:
-        attachment = attached_email
-    else:
-        attachment = orig_email_attachment
+    attachment = attached_email if attached_email and not original_eml_only else orig_email_attachment
 
     if not attachment:
         attachments = attach_mgr.get_attachments()
@@ -127,16 +122,11 @@ def main():
             ):
                 attached_email = eml_attachment
 
-        if attached_email:
-            attachment = attached_email
-        else:
-            attachment = orig_email_attachment
+        attachment = attached_email or orig_email_attachment
 
     if not attachment or CASE_EVIDENCE_ID not in attachment:
         output_message += "No EML attachments found on the case."
-        siemplify.LOGGER.info(
-            f"\n  status: {status}\n result_value: False\n output_message: {output_message}"
-        )
+        siemplify.LOGGER.info(f"\n  status: {status}\n result_value: False\n output_message: {output_message}")
         siemplify.end(output_message, False, status)
 
     attachment_record = siemplify.get_attachment(attachment[CASE_EVIDENCE_ID])
@@ -144,9 +134,7 @@ def main():
     attachment_content = attachment_record.getvalue()
     siemplify.LOGGER.info(f"Extracting from Case Wall Attachment: {attachment_name}")
     parsed_email = email_mgr.parse_email(attachment_name, attachment_content)
-    parsed_email["attachment_name"] = (
-        f"{attachment['evidenceName']}{attachment['fileType']}"
-    )
+    parsed_email["attachment_name"] = f"{attachment['evidenceName']}{attachment['fileType']}"
     parsed_email["attachment_id"] = attachment[CASE_EVIDENCE_ID]
     parsed_emails.append(parsed_email)
 
@@ -171,9 +159,8 @@ def main():
             except Exception as e:
                 current_entities = email_mgr.get_alert_entity_identifiers()
                 created_count = len(set(current_entities) - set(initial_entities))
-                siemplify.LOGGER.error(
-                    f"Maximum number of entities was reached. "
-                    f"Created {created_count} entities. Original error: {e}"
+                siemplify.LOGGER.exception(
+                    f"Maximum number of entities was reached. Created {created_count} entities. Original error: {e}"
                 )
                 limit_reached = True
                 break
@@ -196,24 +183,21 @@ def main():
                         siemplify.alert_id,
                     )
                     del attachment["raw"]
-                    name, attachment_type = os.path.splitext(
+                    name, _attachment_type = os.path.splitext(
                         attachment["filename"].strip().upper(),
                     )
                     for entity in email_mgr.get_alert_entities():
                         if (
-                            attachment["filename"].strip().upper()
-                            == entity.identifier.strip().upper()
+                            attachment["filename"].strip().upper() == entity.identifier.strip().upper()
                             or name == entity.identifier.strip().upper()
                         ) and entity.entity_type == "FILENAME":
-                            entity.additional_properties["attachment_id"] = (
-                                attachment_res
-                            )
+                            entity.additional_properties["attachment_id"] = attachment_res
                             updated_entities.append(entity)
                             break
                 except Exception as e:
                     if "raw" in attachment:
                         del attachment["raw"]
-                    siemplify.LOGGER.error(e)
+                    siemplify.LOGGER.exception(e)
                     output_message += f"Unable to add file {attachment['filename']}.  "
                     raise
 
@@ -226,10 +210,7 @@ def main():
 
     siemplify.result.add_result_json(
         json.dumps(
-            {
-                "parsed_emails": parsed_emails,
-                "created_entities": created_entities
-            },
+            {"parsed_emails": parsed_emails, "created_entities": created_entities},
             sort_keys=True,
             default=json_serial,
         ),

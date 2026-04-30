@@ -35,7 +35,7 @@ def main():
         case_ids = [item.get("id") for item in results]
 
         if case_ids:
-            siemplify.LOGGER.info(f"The following cases will be affected: {case_ids}")
+            siemplify.LOGGER.info("The following cases will be affected: %s", case_ids)
 
             execute_bulk_close_case(
                 chronicle_soar=siemplify,
@@ -50,7 +50,7 @@ def main():
             siemplify.LOGGER.info("No cases found with the search payload")
 
     except Exception as e:
-        siemplify.LOGGER.error(f"General error performing Job {SCRIPT_NAME}")
+        siemplify.LOGGER.exception("General error performing Job %s", SCRIPT_NAME)
         siemplify.LOGGER.exception(e)
         raise
 

@@ -13,10 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
 
 # Imports
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.A1000MalwareAnalysis import A1000MalwareAnalysisClient
 
 
@@ -37,7 +38,11 @@ def main():
     )
 
     connectivity = a1000_manager.test_connectivity()
-    output_message = "Connected Successfully"
+    output_message = (
+        "Successfully connected to the Reversinglabs A1000 server."
+        if connectivity
+        else "Failed to connect to the Reversinglabs A1000 server."
+    )
     siemplify.end(output_message, connectivity)
 
 

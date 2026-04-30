@@ -13,20 +13,23 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.Siemplify import InsightSeverity, InsightType
-from ..core.McAfeeATDManager import McAfeeATDManager, READY_STATUSES, McAfeeATDManagerError
-from soar_sdk.ScriptResult import (
-    EXECUTION_STATE_COMPLETED,
-    EXECUTION_STATE_INPROGRESS,
-    EXECUTION_STATE_FAILED,
-)
-from TIPCommon import extract_configuration_param, extract_action_param
-from ..core.constants import INTEGRATION_NAME, INTEGRATION_DISPLAY_NAME, GET_REPORT_SCRIPT_NAME
+
 import base64
 import json
 import sys
+
+from soar_sdk.ScriptResult import (
+    EXECUTION_STATE_COMPLETED,
+    EXECUTION_STATE_FAILED,
+    EXECUTION_STATE_INPROGRESS,
+)
+from soar_sdk.Siemplify import InsightSeverity, InsightType
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import extract_action_param, extract_configuration_param
+
+from ..core.constants import GET_REPORT_SCRIPT_NAME, INTEGRATION_DISPLAY_NAME, INTEGRATION_NAME
+from ..core.McAfeeATDManager import READY_STATUSES, McAfeeATDManager, McAfeeATDManagerError
 
 PDF_FILE_NAME = "{0}.pdf"
 PDF_FILE_HEADER = "{0} PDF Report"
@@ -216,7 +219,7 @@ def fetch_scan_report_async():
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(err)
 
-    siemplify.LOGGER.info(f"----------------- Get Report - Finished -----------------")
+    siemplify.LOGGER.info("----------------- Get Report - Finished -----------------")
     siemplify.LOGGER.info(
         f"\n  status: {status}\n  is_success: {result_value}\n  output_message: {output_message}"
     )

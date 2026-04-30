@@ -14,11 +14,15 @@
 
 from __future__ import annotations
 
-from integration_testing.platform.script_output import MockActionOutput
+from typing import TYPE_CHECKING
+
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from ...actions import IpToInteger
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
 
 
 @set_metadata(

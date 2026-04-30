@@ -15,10 +15,11 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=line-too-long
 
-"""This module is used for parsing the received lines into a machine readable structure."""
+"""Module used for parsing the received lines into a machine readable structure."""
 
 from __future__ import annotations
 
+import contextlib
 import re
 import typing
 
@@ -79,16 +80,16 @@ def get_domain_ip(line: str) -> list[str]:
 
     """
     m = (
-            EmailParserRegex.dom_regex.findall(" " + line)
-            + EmailParserRegex.ipv4_regex.findall(line)
-            + EmailParserRegex.ipv6_regex.findall(line)
+        EmailParserRegex.dom_regex.findall(" " + line)
+        + EmailParserRegex.ipv4_regex.findall(line)
+        + EmailParserRegex.ipv6_regex.findall(line)
     )
 
     return list(set(m))
 
 
 def parserouting(line: str) -> dict[str, typing.Any]:
-    """This method tries to parsed a e-mail header received line\
+    """Try to parse a e-mail header received line\
     and extract machine readable information.
 
     Note that there are a large number of formats for these lines
@@ -181,7 +182,7 @@ def parserouting(line: str) -> dict[str, typing.Any]:
     # build regex.
     reg = ""
     for item in tout:
-        reg += item[1] + "(?P<" + item[1].strip() + ">.*)"  # type: ignore
+        reg += item[1] + "(?P<" + item[1].strip() + ">.*)"  # type: ignore[attr-defined]
     if npdate:
         # escape special regex chars
         reg += EmailParserRegex.escape_special_regex_chars.sub(r"""\\\1""", npdate)
@@ -189,11 +190,9 @@ def parserouting(line: str) -> dict[str, typing.Any]:
     reparseg = reparse.search(line)
 
     # Fill the data
-    for item in borders:  # type: ignore
-        try:
-            out[item.strip()] = cleanline(reparseg.group(item.strip()))  # type: ignore
-        except (LookupError, ValueError):
-            pass
+    for item in borders:  # type: ignore[attr-defined]
+        with contextlib.suppress(LookupError, ValueError):
+            out[item.strip()] = cleanline(reparseg.group(item.strip()))  # type: ignore[attr-defined]
 
     out["date"] = EmailParserDecode.robust_string2date(npdate)
     # Fixup for "From" in "for" field
@@ -201,7 +200,7 @@ def parserouting(line: str) -> dict[str, typing.Any]:
     if out.get("for"):
         # include spaces in test, otherwise there will be an exception with domains containing "from" in itself
         if " from " in out.get("for", ""):
-            temp = re.split(" from ", out["for"])
+            temp = out["for"].split(" from ")
             out["for"] = temp[0]
             out["from"] = f"{out['from']} {' '.join(temp[1:])}"
 
@@ -214,13 +213,13 @@ def parserouting(line: str) -> dict[str, typing.Any]:
     # Now.. find IP and Host in from
     if out.get("from"):
         out["from"] = get_domain_ip(out["from"])
-        if not out.get("from", []):  # if array is empty remove
+        if not out.get("from"):  # if array is empty remove
             del out["from"]
 
     # Now.. find IP and Host in from
     if out.get("by"):
         out["by"] = get_domain_ip(out["by"])
-        if not out.get("by", []):  # If array is empty remove
+        if not out.get("by"):  # If array is empty remove
             del out["by"]
 
     return out

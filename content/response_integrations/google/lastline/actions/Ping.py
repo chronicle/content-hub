@@ -13,14 +13,15 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon import extract_configuration_param
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from ..core.LastlineManager import LastlineManager
+from TIPCommon import extract_configuration_param
+
 from ..core.consts import INTEGRATION_NAME, PING
 from ..core.exceptions import LastlineAuthenticationException
+from ..core.LastlineManager import LastlineManager
 
 
 @output_handler

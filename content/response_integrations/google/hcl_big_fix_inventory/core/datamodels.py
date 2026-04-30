@@ -13,14 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon import dict_to_flat, add_prefix_to_dict
+
+from TIPCommon import add_prefix_to_dict, dict_to_flat
+
 from .UtilsManager import convert_list_to_comma_string
 
 
 class BaseModel:
-    """
-    Base model for inheritance
-    """
+    """Base model for inheritance"""
 
     def __init__(self, raw_data):
         self.raw_data = raw_data

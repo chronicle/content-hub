@@ -35,11 +35,7 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
         siemplify.LOGGER.info(f"Pushing mappings of {source}")
-        records = [
-            x
-            for x in gitsync.api.get_ontology_records()
-            if x.get("source").lower() == source.lower()
-        ]
+        records = [x for x in gitsync.api.get_ontology_records() if x.get("source").lower() == source.lower()]
         rules = []
         for record in records:
             record["exampleEventFields"] = []  # remove event assets
@@ -50,10 +46,7 @@ def main():
             )
             for r in rule["familyFields"] + rule["systemFields"]:
                 # remove bad rules with no source
-                if (
-                    r["mappingRule"]["source"]
-                    and r["mappingRule"]["source"].lower() == source.lower()
-                ):
+                if r["mappingRule"]["source"] and r["mappingRule"]["source"].lower() == source.lower():
                     rules.append(rule)
                     break
 

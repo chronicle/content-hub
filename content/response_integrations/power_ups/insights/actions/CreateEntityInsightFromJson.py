@@ -31,8 +31,7 @@ DEBUG = True
 
 
 def print_debug(to_print, function=""):
-    if DEBUG:
-        print(f"{function} DEBUG: {to_print}")
+    pass
 
 
 def find_key_path_in_json(key_path, json_data):
@@ -75,6 +74,7 @@ def find_key_path_recursive(key_list, current_json, iteration=0):
         return [
             f"{current_json}",
         ]  # Found val, return it. Format to make everything into string
+    return None
 
 
 def GetEntityByString(identifier, entities):
@@ -96,28 +96,29 @@ def evaluate_function(val, func_name, func_values):
         return delimeter.join(val)
     # elif func_name == "ph":
     #     pass
-    raise Exception(f"Unknown pipe function: {func_name}")
+    msg = f"Unknown pipe function: {func_name}"
+    raise Exception(msg)
 
 
 def parse_placeholder(curr_json, placeholder, pipe):
     pipes = [x.strip() for x in placeholder.split(pipe)]
 
-    val = None
     for i, function_str in enumerate(pipes):
         # print_debug("function_str: {}, curr_json: {}".format(function_str, curr_json), "iteration {}".format(i))
         first_split = function_str.strip().split("(")
         if len(first_split) > 2:
-            raise Exception(f"Bad format for pipe function: {function_str}")
+            msg = f"Bad format for pipe function: {function_str}"
+            raise Exception(msg)
         if len(first_split) == 1:
             # Assuming key_path here
-            if isinstance(curr_json, list) or isinstance(curr_json, dict):
+            if isinstance(curr_json, (list, dict)):
                 curr_json = find_key_path_in_json([function_str], curr_json)
             else:
                 return None  # cant find "keys" in a string
         else:  # len is 2
             func_name = first_split[0]
             func_values_string = first_split[1].split(")")[0]
-            func_values = [x for x in func_values_string.split(",")]
+            func_values = list(func_values_string.split(","))
             curr_json = evaluate_function(curr_json, func_name, func_values)
 
     return curr_json
@@ -137,7 +138,8 @@ def parse_raw_message_old(
     while i < len(first_break):
         second_break = first_break[i].split(close_ph)
         if len(second_break) < 2:
-            raise Exception(f"Missing close PH: '{close_ph}'")
+            msg = f"Missing close PH: '{close_ph}'"
+            raise Exception(msg)
         message_shard = parse_placeholder(curr_json, second_break[0], pipe)
         new_message += str(message_shard) + close_ph.join(second_break[1:])
         i += 1

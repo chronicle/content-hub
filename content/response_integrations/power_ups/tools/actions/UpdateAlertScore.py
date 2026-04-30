@@ -25,15 +25,12 @@ ALERT_SCORE = "ALERT_SCORE"
 def main():
     siemplify = SiemplifyAction()
 
-    _input = siemplify.extract_action_param("Input")
+    input_ = siemplify.extract_action_param("Input")
     current_score = siemplify.get_alert_context_property(ALERT_SCORE)
-    if current_score is not None:
-        current_score = current_score.strip('"')
-    else:
-        current_score = 0
+    current_score = current_score.strip('"') if current_score is not None else 0
 
-    new_score = str(int(current_score) + int(_input))
-    updated_score = siemplify.set_alert_context_property(ALERT_SCORE, new_score)
+    new_score = str(int(current_score) + int(input_))
+    siemplify.set_alert_context_property(ALERT_SCORE, new_score)
 
     result_value = new_score
     output_message = f"The Alert Score has been updated to: {new_score}"

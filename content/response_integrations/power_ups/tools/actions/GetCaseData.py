@@ -59,17 +59,13 @@ def get_insight_content(
 ) -> dict | list:
     content_uri = re.match(INSIGHT_CONTENT_RE, insight["content"])
     if content_uri is None:
-        siemplify.LOGGER.info(
-            f"Not passed insight regex to retrieve data: {insight['content']}"
-        )
+        siemplify.LOGGER.info(f"Not passed insight regex to retrieve data: {insight['content']}")
         return insight
 
     content_uri = content_uri.group(1)
 
     url = f"{get_sdk_api_uri(siemplify)}/{content_uri}"
-    insight_content_res = siemplify.session.get(
-        url
-    )
+    insight_content_res = siemplify.session.get(url)
     insight_content_res.raise_for_status()
 
     return lowercase(
@@ -146,16 +142,15 @@ def main() -> None:
 
     try:
         if nested_keys_delimiter == ",":
-            raise ValueError(
+            msg = (
                 '"Nested Keys Delimiter" cannot be a comma as this value is '
-                'saved as the delimiter for the "Fields to Return" parameter',
+                'saved as the delimiter for the "Fields to Return" parameter'
+            )
+            raise ValueError(
+                msg,
             )
 
-        fields_list = (
-            {s.strip() for s in fields_to_return.split(",") if s}
-            if fields_to_return
-            else set()
-        )
+        fields_list = {s.strip() for s in fields_to_return.split(",") if s} if fields_to_return else set()
 
         siemplify.LOGGER.info("Fetching case data")
         case_data = get_all_case_overview_details(siemplify, case_id, case_expand=["tags"])
@@ -170,7 +165,8 @@ def main() -> None:
         siemplify.LOGGER.info("Filtering by fields")
 
         if not result:
-            raise ValueError("None of the provided fields were found in the response.")
+            msg = "None of the provided fields were found in the response."
+            raise ValueError(msg)
 
         insights = get_case_insights(siemplify, case_id)
         if len(insights) > 0:
@@ -183,11 +179,10 @@ def main() -> None:
                         content_to_add = get_insight_content(siemplify, insight)
 
                     except (requests.exceptions.HTTPError, json.JSONDecodeError) as e:
-                        siemplify.LOGGER.error(
-                            "Failed to get the insight content for the insight: "
-                            f'{insight.get("title")}'
+                        siemplify.LOGGER.exception(
+                            f"Failed to get the insight content for the insight: {insight.get('title')}"
                         )
-                        siemplify.LOGGER.error(e)
+                        siemplify.LOGGER.exception(e)
 
                 parsed_insights.append(content_to_add)
 
@@ -203,15 +198,15 @@ def main() -> None:
 
     except Exception as e:
         output_message = f"Error executing {ACTION_NAME}. Reason: {e}"
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(e)
         result_value = False
         action_status = EXECUTION_STATE_FAILED
 
     siemplify.LOGGER.info("---------------- Main - Finished ----------------")
-    siemplify.LOGGER.info(f"Output Message: {output_message}")
-    siemplify.LOGGER.info(f"Result: {result_value}")
-    siemplify.LOGGER.info(f"Execution Status: {action_status}")
+    siemplify.LOGGER.info("Output Message: %s", output_message)
+    siemplify.LOGGER.info("Result: %s", result_value)
+    siemplify.LOGGER.info("Execution Status: %s", action_status)
     siemplify.end(output_message, result_value, action_status)
 
 

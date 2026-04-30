@@ -31,13 +31,12 @@ SCORING_THRESHOLDS = {"Low": 5, "Medium": 3, "High": 2}
 
 
 def category_exists(category, current_scores):
-    for score_category in current_scores:
-        if score_category["category"].lower() == category.lower():
-            return True
-    return False
+    return any(score_category["category"].lower() == category.lower() for score_category in current_scores)
 
 
-def create_category_object(category, score=None, score_data=[]):
+def create_category_object(category, score=None, score_data=None):
+    if score_data is None:
+        score_data = []
     if score:
         score_data.append(score)
 
@@ -107,19 +106,19 @@ def main():
             "Critical": 0,
         }
         updated_scores = []
-        for _category in current_scoring:
-            if _category["category"].lower() == category.lower():
+        for category_ in current_scoring:
+            if category_["category"].lower() == category.lower():
                 cat_obj = create_category_object(
                     category,
                     score=new_score,
-                    score_data=_category["score_data"],
+                    score_data=category_["score_data"],
                 )
                 updated_scores.append(cat_obj)
                 found = 1
                 continue
             cat_obj = create_category_object(
-                _category["category"],
-                score_data=_category["score_data"],
+                category_["category"],
+                score_data=category_["score_data"],
             )
             updated_scores.append(cat_obj)
         if len(current_scoring) == 0 or found == 0:
@@ -171,7 +170,7 @@ def main():
         siemplify.set_alert_context_property(ALERT_SEVERITY, SEV_LIST[alert_score])
 
     except Exception as exception:
-        siemplify.LOGGER.error("Unable to set alert score!")
+        siemplify.LOGGER.exception("Unable to set alert score!")
         output_message = "Unable to set alert score.\n"
         output_message += f"Exception: {type(exception).__name__}.\n"
         output_message += f"Exception message: {exception}.\n"

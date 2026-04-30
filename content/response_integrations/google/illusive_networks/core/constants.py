@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 INTEGRATION_NAME = "IllusiveNetworks"
 PRODUCT_NAME = "Illusive Networks"
 PING_ACTION = f"{INTEGRATION_NAME} - Ping"

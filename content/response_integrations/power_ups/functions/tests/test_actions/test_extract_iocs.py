@@ -14,11 +14,15 @@
 
 from __future__ import annotations
 
-from integration_testing.platform.script_output import MockActionOutput
+from typing import TYPE_CHECKING
+
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from ...actions import ExtractIocs
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
 
 
 @set_metadata(
@@ -39,6 +43,6 @@ def test_extract_iocs_json_result(action_output: MockActionOutput) -> None:
         "domains": ["micr0soft.com"],
         "emails": ["security.alert@micr0soft.com"],
         "ips": ["1.2.3.4"],
-        "urls": ["https://micr0soft.com/me/keep-data"]
+        "urls": ["https://micr0soft.com/me/keep-data"],
     }
     assert action_output.results.execution_state == ExecutionState.COMPLETED

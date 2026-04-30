@@ -26,12 +26,8 @@ from spellchecker import SpellChecker
 def main():
     siemplify = SiemplifyAction()
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
-    )
-    result_value = (
-        None  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    output_message = "output message :"  # human readable message, showed in UI as the action result
+    result_value = None  # Set a simple result value, used for playbook if\else and placeholders.
     json_result = {}
     spell = SpellChecker()
     input_string = siemplify.extract_action_param(
@@ -62,9 +58,7 @@ def main():
                 json_result["misspelled_words"].append(correct)
                 corrected = re.sub(rf"\b{word}\b", correct["correction"], corrected)
         json_result["accuracy"] = int(
-            (len(input_words) - json_result["total_misspelled_words"])
-            / len(input_words)
-            * 100,
+            (len(input_words) - json_result["total_misspelled_words"]) / len(input_words) * 100,
         )
         json_result["corrected_string"] = corrected
         result_value = json_result["accuracy"]

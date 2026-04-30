@@ -29,10 +29,7 @@ def check_if_entity_exists(target_entities, entity_identifier):
     :param entity_identifier: identifier of entity, which we're checking
     :return: True if entity with such identier exists already within case; False - otherwise
     """
-    for entity in target_entities:
-        if entity.identifier.strip() == entity_identifier:
-            return True
-    return False
+    return any(entity.identifier.strip() == entity_identifier for entity in target_entities)
 
 
 def get_alert_entities(siemplify):
@@ -67,7 +64,7 @@ def main():
     status = EXECUTION_STATE_COMPLETED
 
     separator = siemplify.parameters.get("Entities Separator", ",") or ","
-    siemplify.LOGGER.info(f"Splitting entities by {separator}")
+    siemplify.LOGGER.info("Splitting entities by %s", separator)
     entities_identifiers_list = entities_identifiers.split(separator)
     alert_entities = get_alert_entities(siemplify)
     error_messages = []
@@ -92,7 +89,7 @@ def main():
                     properties["is_new_entity"] = True
                     if entity_type == "ADDRESS":
                         try:
-                            test_ip = ipaddress.ip_address(entity_identifier)
+                            ipaddress.ip_address(entity_identifier)
                             siemplify.add_entity_to_case(
                                 entity_identifier,
                                 entity_type,
@@ -108,7 +105,7 @@ def main():
                                 json_result["enriched"].append(entity_identifier)
                         except Exception as e:
                             message = f"Entity {entity_identifier} Creation failed. Not a valid IP Address: {e}"
-                            siemplify.LOGGER.error(message)
+                            siemplify.LOGGER.exception(message)
                             error_messages.append(message)
                     else:
                         siemplify.add_entity_to_case(
@@ -127,10 +124,8 @@ def main():
                             json_result["enriched"].append(entity_identifier)
 
             except Exception as e:
-                error_message = (
-                    f"Entity {entity_identifier} Creation failed. error: {e}"
-                )
-                siemplify.LOGGER.error(error_message)
+                error_message = f"Entity {entity_identifier} Creation failed. error: {e}"
+                siemplify.LOGGER.exception(error_message)
                 siemplify.LOGGER.exception(e)
                 error_messages.append(error_message)
                 json_result["failed"].append(entity_identifier)
@@ -152,13 +147,13 @@ def main():
         output_message += "No entities were created."
 
     if warning_messages:
-        output_message += "{0} \n WARNINGS: \n {1}".format(
+        output_message += "{} \n WARNINGS: \n {}".format(
             output_message,
             "\n".join(warning_messages),
         )
 
     if error_messages:
-        output_message = "{0} \n ERRORS: \n {1}".format(
+        output_message = "{} \n ERRORS: \n {}".format(
             output_message,
             "\n".join(error_messages),
         )

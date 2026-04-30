@@ -14,13 +14,16 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import ANY, MagicMock, patch
 
-from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from ...actions import GetCaseData
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
 
 
 @set_metadata(
@@ -45,18 +48,11 @@ def test_get_case_data_success(
         "case_name": "Test Case",
         "status": "Open",
         "priority": "High",
-        "tags": [
-            {
-                "displayName": "Simulated Case",
-                "priority": 0
-            }
-        ]
+        "tags": [{"displayName": "Simulated Case", "priority": 0}],
     }
     mock_get_case_details.return_value = mock_case_data
 
-    mock_get_case_insights.return_value = [
-        {"title": "Test Insight", "content": "<% insight_url %>"}
-    ]
+    mock_get_case_insights.return_value = [{"title": "Test Insight", "content": "<% insight_url %>"}]
 
     mock_get_insight_content.return_value = {"key": "value"}
 

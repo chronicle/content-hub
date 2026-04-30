@@ -16,9 +16,11 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
-import requests
+
 import copy
 import urllib.parse
+
+import requests
 
 # =====================================
 #             CONSTANTS               #
@@ -95,8 +97,7 @@ class MicroFocusITSMAManager:
         external_id="20123",
         verify_ssl=False,
     ):
-        """
-        :param api_root: api root url {string}
+        """:param api_root: api root url {string}
         :param username: access username {string}
         :param password: username's password {string}
         :param tenant_id: current tenant id {string}
@@ -121,8 +122,7 @@ class MicroFocusITSMAManager:
 
     @staticmethod
     def validate_api_root(api_root):
-        """
-        Validate API root string contains '/' at the end because 'urlparse' lib is used.
+        """Validate API root string contains '/' at the end because 'urlparse' lib is used.
         :param api_root: api root url {string}
         :return: valid api root {string}
         """
@@ -132,8 +132,7 @@ class MicroFocusITSMAManager:
 
     @staticmethod
     def validate_response(http_response):
-        """
-        Validated an HTTP response.
+        """Validated an HTTP response.
         :param http_response: HTTP response object.
         :return: {void}
         """
@@ -141,13 +140,13 @@ class MicroFocusITSMAManager:
             http_response.raise_for_status()
 
         except requests.HTTPError as err:
+            msg = f"Status Code: {http_response.status_code}, Content: {http_response.content}, Error: {err}"
             raise MicroFocusITSMAManagerError(
-                f"Status Code: {http_response.status_code}, Content: {http_response.content}, Error: {err}"
+                msg
             )
 
     def get_token(self):
-        """
-        Get connection token.
+        """Get connection token.
         :return: connection token {string}
         """
         request_url = urllib.parse.urljoin(
@@ -172,8 +171,7 @@ class MicroFocusITSMAManager:
         urgency="",
         service_id="",
     ):
-        """
-        Create a new incident.
+        """Create a new incident.
         :param display_label: incident's summery {string}
         :param description: incident's description {string}
         :param impact_scope: impact scope {string}
@@ -214,8 +212,7 @@ class MicroFocusITSMAManager:
         urgency=None,
         service_id=None,
     ):
-        """
-        Update an incident.
+        """Update an incident.
         :param incident_id: id of the incident to update {string}
         :param display_label: incident's summery {string}
         :param description: incident's description {string}
@@ -224,7 +221,6 @@ class MicroFocusITSMAManager:
         :param service_id: service id {string}
         :return: is succeed {bool}
         """
-
         request_url = urllib.parse.urljoin(
             self.api_root, INCIDENTS_ACTIONS_URL.format(self.tenant_id)
         )
@@ -259,8 +255,7 @@ class MicroFocusITSMAManager:
         return True
 
     def update_external_incident_status(self, incident_id, status):
-        """
-        Update external incident status.
+        """Update external incident status.
         :param incident_id: id of the incident to update {string}
         :param status: status to update {string}
         :return: is succeed {bool}
@@ -288,4 +283,3 @@ class MicroFocusITSMAManager:
         return True
 
 
-#

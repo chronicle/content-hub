@@ -105,9 +105,7 @@ class ConvertFileAction(Action):
         output_path: str = self._build_output_path()
 
         converter: Callable[[str], str | None] = (
-            self._convert_pdf_to_png
-            if self.params.output_file_format == PNG_FORMAT
-            else self._convert_png_to_pdf
+            self._convert_pdf_to_png if self.params.output_file_format == PNG_FORMAT else self._convert_png_to_pdf
         )
 
         result_path: str | None = converter(output_path)

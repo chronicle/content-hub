@@ -13,12 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import utc_now, unix_now
+
 import datetime
 import json
 import os
 
-from .ObserveITConstants import LIMIT_IDS_IN_IDS_FILE, ALERT_ID_FIELD, TIMEOUT_THRESHOLD
+from soar_sdk.SiemplifyUtils import unix_now, utc_now
+
+from .ObserveITConstants import ALERT_ID_FIELD, LIMIT_IDS_IN_IDS_FILE, TIMEOUT_THRESHOLD
 
 
 class ObserveITCommon:
@@ -27,8 +29,7 @@ class ObserveITCommon:
 
     @staticmethod
     def is_approaching_timeout(connector_starting_time, python_process_timeout):
-        """
-        Check if a timeout is approaching.
+        """Check if a timeout is approaching.
         :return: {bool} True if timeout is close, False otherwise
         """
         processing_time_ms = unix_now() - connector_starting_time
@@ -36,8 +37,7 @@ class ObserveITCommon:
 
     @staticmethod
     def validate_timestamp(last_run_timestamp, offset_in_hours):
-        """
-        Validate timestamp in range
+        """Validate timestamp in range
         :param last_run_timestamp: {datetime} last run timestamp
         :param offset_in_hours: {datetime} last run timestamp
         :return: {datetime} if first run, return current time minus offset time, else return timestamp from file
@@ -48,12 +48,10 @@ class ObserveITCommon:
             hours=offset_in_hours
         ):
             return current_time - datetime.timedelta(hours=offset_in_hours)
-        else:
-            return last_run_timestamp
+        return last_run_timestamp
 
     def read_ids(self, ids_file_path):
-        """
-        Read existing alerts IDs from ids file (from last 24h only)
+        """Read existing alerts IDs from ids file (from last 24h only)
         :param ids_file_path: {unicode} Path to the IDS file.
         :return: {list} List of ids
         """
@@ -61,7 +59,7 @@ class ObserveITCommon:
             return []
 
         try:
-            with open(ids_file_path, "r") as f:
+            with open(ids_file_path, encoding="utf-8") as f:
                 return json.loads(f.read())
         except Exception as e:
             self.siemplify_logger.error(f"Unable to read ids file: {e}")
@@ -69,8 +67,7 @@ class ObserveITCommon:
             return []
 
     def write_ids(self, ids_file_path, ids):
-        """
-        Write ids to the ids file
+        """Write ids to the ids file
         :param ids_file_path: {unicode} Path to the IDS file.
         :param ids: {list} The ids to write to the file
         :return: {None}
@@ -80,7 +77,7 @@ class ObserveITCommon:
             if not os.path.exists(os.path.dirname(ids_file_path)):
                 os.makedirs(os.path.dirname(ids_file_path))
 
-            with open(ids_file_path, "w") as f:
+            with open(ids_file_path, "w", encoding="utf-8") as f:
                 try:
                     for chunk in json.JSONEncoder().iterencode(ids):
                         f.write(chunk)
@@ -91,32 +88,24 @@ class ObserveITCommon:
                     raise
         except Exception as e:
             self.siemplify_logger.error(
-                f"Failed writing IDs to IDs file, ERROR: {str(e)}"
+                f"Failed writing IDs to IDs file, ERROR: {e!s}"
             )
             self.siemplify_logger.exception(e)
 
     @staticmethod
     def filter_old_ids(alerts, existing_ids, id_field=ALERT_ID_FIELD):
-        """
-        Filter ids that were already processed
+        """Filter ids that were already processed
         :param alerts: {list} The objects to filter
         :param existing_ids: {list} The ids to filter
         :param id_field: {str or unicode} Id filed to get from alert
         :return: {list} The filtered alerts
         """
-        new_alerts = []
-
-        for alert in alerts:
-            if getattr(alert, id_field) not in existing_ids:
-                new_alerts.append(alert)
-
-        return new_alerts
+        return [alert for alert in alerts if getattr(alert, id_field) not in existing_ids]
 
     @staticmethod
     def convert_comma_separated_to_list(comma_separated):
         # type: (unicode or str) -> list
-        """
-        Convert comma-separated string to list
+        """Convert comma-separated string to list
         @param comma_separated: String with comma-separated values
         @return: List of values
         """
@@ -129,8 +118,7 @@ class ObserveITCommon:
     @staticmethod
     def convert_list_to_comma_separated_string(iterable):
         # type: (list or set) -> unicode
-        """
-        Convert list to comma separated string
+        """Convert list to comma separated string
         @param iterable: List or Set to covert
         """
         return ", ".join(iterable)

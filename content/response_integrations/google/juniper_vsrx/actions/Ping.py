@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.JuniperVSRXManager import JuniperVSRXManager
 
 PROVIDER_NAME = "JuniperVSRX"
@@ -35,10 +37,10 @@ def main():
     result_value = False
 
     if juniper_manager.ping():
-        output_message = "Connection Established."
+        output_message = "Successfully connected to the Juniper VSRX server."
         result_value = True
     else:
-        output_message = "Connection Failed."
+        output_message = "Failed to connect to the Juniper VSRX server."
 
     juniper_manager.close_session()
 

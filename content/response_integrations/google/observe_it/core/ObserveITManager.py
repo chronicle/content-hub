@@ -13,18 +13,19 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import requests
 
-from .ObserveITEndpoints import ObserveITEndpoints
-from .ObserveITPayload import ObserveITPayload
 from .ObserveITBuilder import ObserveITBuilder
+from .ObserveITConstants import ALERTS_LIMIT, SEVERITIES
+from .ObserveITEndpoints import ObserveITEndpoints
 from .ObserveITExceptions import (
-    ObserveITException,
+    ObserveITAlertsException,
     ObserveITAuthorizationException,
     ObserveITConnectivityException,
-    ObserveITAlertsException,
+    ObserveITException,
 )
-from .ObserveITConstants import ALERTS_LIMIT, SEVERITIES
+from .ObserveITPayload import ObserveITPayload
 
 
 class ObserveITManager:
@@ -41,8 +42,7 @@ class ObserveITManager:
 
     def _get_authorization_token(self, client_id, client_secret):
         # type: (str or unicode, str or unicode) -> str or unicode
-        """
-        Get Authorization token
+        """Get Authorization token
         @param client_id: Client ID to authorize with
         @param client_secret: Client Secret to authorize with
         @return: Access token
@@ -57,8 +57,7 @@ class ObserveITManager:
 
     def test_connectivity(self):
         # type: () -> bool
-        """
-        Test connectivity
+        """Test connectivity
         @return: Is connected successfully or not
         """
         method, url = ObserveITEndpoints.get_test_connectivity_endpoint(self.api_root)
@@ -71,8 +70,7 @@ class ObserveITManager:
 
     def get_alerts(self, severity, timestamp, limit=ALERTS_LIMIT):
         # type: (str or unicode, int, int) -> [Alert]
-        """
-        Get alerts with filtering.
+        """Get alerts with filtering.
         @param severity: Lowest severity to start from
         @param timestamp: Timestamp to start from
         @param limit: How many alerts to take
@@ -94,8 +92,7 @@ class ObserveITManager:
     @staticmethod
     def _get_severities_from(lowest_severity):
         # type: (str or unicode) -> list
-        """
-        Get the highest severities started from the lowest.
+        """Get the highest severities started from the lowest.
         Ex. Low -> [Low, Medium, High, Critical]
         Ex. High -> [High, Critical]
         Ex. Unknown -> []
@@ -111,8 +108,7 @@ class ObserveITManager:
     @staticmethod
     def _validate_response(response, custom_exception=ObserveITException):
         # type: (requests.Response, type(ObserveITException)) -> None or ObserveITException
-        """
-        Validate Response
+        """Validate Response
         @param response: Response
         @param custom_exception: Exception with which to raise
         """
@@ -120,6 +116,7 @@ class ObserveITManager:
             response.raise_for_status()
         except requests.HTTPError as e:
             response_json = response.json()
+            msg = f'{response_json.get("_status", {}).get("message")}. \n{e}'
             raise custom_exception(
-                f'{response_json.get("_status", {}).get("message")}. \n{e}'
+                msg
             )

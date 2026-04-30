@@ -37,7 +37,7 @@ def main():
     siemplify.LOGGER.info("================= Main - Param Init =================")
 
     # INIT ACTION PARAMETERS:
-    arrayInput = siemplify.extract_action_param(
+    array_input = siemplify.extract_action_param(
         param_name="Array input",
         is_mandatory=False,
         print_value=False,
@@ -73,10 +73,10 @@ def main():
         output_message = "output message :"  # Human-readable message for the UI.
         result_value = None  # Simple result value for playbook logic.
         try:
-            input_json = json.loads(arrayInput)
+            input_json = json.loads(array_input)
 
         except Exception as e:
-            siemplify.LOGGER.error(f"Error parsing JSON Object: {arrayInput}")
+            siemplify.LOGGER.exception(f"Error parsing JSON Object: {array_input}")
             siemplify.LOGGER.exception(e)
             raise
             status = EXECUTION_STATE_FAILED
@@ -93,21 +93,13 @@ def main():
             trim_blocks=True,
             lstrip_blocks=True,
         )
-        filters = {
-            name: function
-            for name, function in getmembers(JinjaFilters)
-            if isfunction(function)
-        }
+        filters = {name: function for name, function in getmembers(JinjaFilters) if isfunction(function)}
 
         jinja_env.filters.update(filters)
         try:
             import CustomFilters
 
-            custom_filters = {
-                name: function
-                for name, function in getmembers(CustomFilters)
-                if isfunction(function)
-            }
+            custom_filters = {name: function for name, function in getmembers(CustomFilters) if isfunction(function)}
             jinja_env.filters.update(custom_filters)
         except Exception as e:
             siemplify.LOGGER.info("Unable to load CustomFilters")
@@ -117,18 +109,18 @@ def main():
 
         template = jinja_env.from_string(jinja)
 
-        outputArray = []
+        output_array = []
 
         for entry in input_json:
             siemplify.LOGGER.info(entry)
-            outputArray.append(template.render(entry, row=entry))
+            output_array.append(template.render(entry, row=entry))
 
-        result_value = prefix + join.join(outputArray) + suffix
+        result_value = prefix + join.join(output_array) + suffix
 
         output_message = "Successfully rendered the template."
 
     except Exception as e:
-        siemplify.LOGGER.error(f"General error performing action {SCRIPT_NAME}")
+        siemplify.LOGGER.exception(f"General error performing action {SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
         raise  # Return full error details to the client UI. Best for most use cases.
         # For manual error handling, comment out raise and use the lines below:

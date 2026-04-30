@@ -30,11 +30,7 @@ def main():
 
     commit_msg = siemplify.extract_job_param("Commit")
     connector_names = [
-        _f
-        for _f in [
-            x.strip() for x in siemplify.extract_job_param("Connectors", " ").split(",")
-        ]
-        if _f
+        _f for _f in [x.strip() for x in siemplify.extract_job_param("Connectors", " ").split(",")] if _f
     ]
     include_vf = siemplify.extract_job_param("Include Visual Families", input_type=bool)
     include_mappings = siemplify.extract_job_param("Include Mappings", input_type=bool)
@@ -63,11 +59,7 @@ def main():
 
                 if include_mappings or include_vf:
                     integration_name = connector.get("integration")
-                    records = [
-                        x
-                        for x in gitsync.api.get_ontology_records()
-                        if x.get("source") == integration_name
-                    ]
+                    records = [x for x in gitsync.api.get_ontology_records() if x.get("source") == integration_name]
                     visual_families = set([x.get("familyName") for x in records])
                     if include_mappings:
                         rules = []
@@ -82,8 +74,7 @@ def main():
                                 # remove bad rules with no source
                                 if (
                                     r["mappingRule"]["source"]
-                                    and r["mappingRule"]["source"].lower()
-                                    == integration_name.lower()
+                                    and r["mappingRule"]["source"].lower() == integration_name.lower()
                                 ):
                                     rules.append(rule)
                                     break
@@ -100,15 +91,15 @@ def main():
                             )
 
                     if include_vf:
-                        for visualFamily in gitsync.api.get_custom_families():
-                            if visualFamily["family"] in visual_families:
+                        for visual_family in gitsync.api.get_custom_families():
+                            if visual_family["family"] in visual_families:
                                 siemplify.LOGGER.info(
-                                    f"Pushing Visual Family - {visualFamily['family']}",
+                                    f"Pushing Visual Family - {visual_family['family']}",
                                 )
                                 gitsync.content.push_visual_family(
                                     VisualFamily(
                                         gitsync.api.get_custom_family(
-                                            visualFamily["id"],
+                                            visual_family["id"],
                                         ),
                                     ),
                                 )

@@ -34,8 +34,7 @@ class Ping(Action):
     def __init__(self) -> None:
         super().__init__(PING_SCRIPT_NAME)
         self.output_message = (
-            "Successfully connected to the Image Utilities server with the provided "
-            "connection parameters!"
+            "Successfully connected to the Image Utilities server with the provided connection parameters!"
         )
 
     def _init_api_clients(self) -> None:
@@ -75,7 +74,7 @@ class Ping(Action):
                 browser.close()
 
         except Exception as e:
-            raise ActionSetupError(
+            msg = (
                 "Playwright browser binaries not found.\n\n"
                 "To fix this, please install Playwright inside your Debian-based "
                 "Remote Agent container:\n\n"
@@ -89,6 +88,9 @@ class Ping(Action):
                 "   chown -R siemplify_agent:siemplify_agent /home/siemplify_agent/"
                 ".cache/ms-playwright\n\n"
                 "After completing these steps, re-run the action."
+            )
+            raise ActionSetupError(
+                msg
             ) from e
 
 

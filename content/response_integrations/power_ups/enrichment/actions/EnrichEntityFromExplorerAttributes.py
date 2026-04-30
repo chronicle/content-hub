@@ -22,7 +22,6 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
 from TIPCommon.rest.soar_api import get_entity_data
 
-
 SCRIPT_NAME = "Enrich Entity from Explorer"
 SYSTEM_FIELDS = [
     "Type",
@@ -79,12 +78,7 @@ def main():
             == "true"
         )
         field_name = siemplify.parameters.get("Field Name")
-        if field_name:
-            entity_fields = list(
-                filter(None, [x.strip() for x in field_name.split(",")]),
-            )
-        else:
-            entity_fields = []
+        entity_fields = list(filter(None, [x.strip() for x in field_name.split(",")])) if field_name else []
         # Loop through all targeted entities
         for entity in siemplify.target_entities:
             res = get_entity_data(
@@ -120,8 +114,7 @@ def main():
                 if (
                     entity_field
                     and entity_field not in SYSTEM_FIELDS
-                    and entity_field
-                    not in [pascal_to_snake(field) for field in SYSTEM_FIELDS]
+                    and entity_field not in [pascal_to_snake(field) for field in SYSTEM_FIELDS]
                 ):  # Check to see if field is in SYSTEM_FIELDS, skip if it is.
                     if hasattr(entity, entity_field):
                         setattr(entity, entity_field, property_value)
@@ -150,8 +143,8 @@ def main():
                 convert_dict_to_json_result_dict(json_results),
             )
 
-    except requests.exceptions.RequestException as e:  # This is the correct syntax
-        print(e)
+    except requests.exceptions.RequestException:  # This is the correct syntax
+        pass
 
     siemplify.end(output_message, json.dumps(json_results), status)
 

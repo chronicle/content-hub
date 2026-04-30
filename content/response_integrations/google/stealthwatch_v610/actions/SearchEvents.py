@@ -13,13 +13,15 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import utc_now, dict_to_flat, construct_csv
-from ..core.Stealthwatch610Manager import StealthwatchManager
+
 import datetime
 import json
+
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import construct_csv, dict_to_flat, output_handler, utc_now
+
+from ..core.Stealthwatch610Manager import StealthwatchManager
 
 
 @output_handler

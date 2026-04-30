@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from typing import TYPE_CHECKING
 
 import requests
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
@@ -23,7 +24,9 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.data_models import CaseWallAttachment
 from TIPCommon.rest.soar_api import save_attachment_to_case_wall
-from TIPCommon.types import SingleJson
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 SCRIPT_NAME = "Add Attachment"
 
@@ -43,12 +46,8 @@ class AttachmentResult:
         id_ = self.raw_data.pop("id", None)
         case_id = self.raw_data.pop("case", self.raw_data.pop("caseId", -1))
         is_favorite = self.raw_data.pop("isFavorite", False)
-        update_time = self.raw_data.pop(
-            "updateTime", self.raw_data.pop("modificationTimeUnixTimeInMs", -1)
-        )
-        create_time = self.raw_data.pop(
-            "createTime", self.raw_data.pop("creationTimeUnixTimeInMs", -1)
-        )
+        update_time = self.raw_data.pop("updateTime", self.raw_data.pop("modificationTimeUnixTimeInMs", -1))
+        create_time = self.raw_data.pop("createTime", self.raw_data.pop("creationTimeUnixTimeInMs", -1))
         alert_identifier = self.raw_data.pop("alertIdentifier", None)
         return {
             "evidenceName": evidence_name,
@@ -93,7 +92,7 @@ def main():
         )
 
     except requests.HTTPError as e:
-        siemplify.LOGGER.error(f"Error occurred while adding attachment. Error: {e}")
+        siemplify.LOGGER.exception("Error occurred while adding attachment. Error: %s", e)
         siemplify.LOGGER.exception(e)
         output_message = f'Error executing action "{SCRIPT_NAME}": {e}'
         siemplify.end(output_message, False, EXECUTION_STATE_FAILED)

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import contextlib
 import datetime
 import email.errors
 import email.header
@@ -30,7 +31,6 @@ import urllib
 import uuid
 from base64 import urlsafe_b64decode
 from collections import Counter
-from email.message import Message
 from email.utils import parseaddr
 from html import unescape
 from json import JSONEncoder
@@ -47,7 +47,6 @@ import requests
 from html2text import HTML2Text
 from msg_parser import MsOxMessage
 from soar_sdk.SiemplifyDataModel import Attachment, EntityTypes
-from soar_sdk.SiemplifyLogger import SiemplifyLogger
 from soar_sdk.SiemplifyUtils import dict_to_flat
 from TIPCommon.data_models import CreateEntity
 from TIPCommon.rest.soar_api import add_attachment_to_case_wall, create_entity
@@ -62,6 +61,9 @@ from .EmailUtilitiesManager import (
 
 if typing.TYPE_CHECKING:
     from collections.abc import Iterable
+    from email.message import Message
+
+    from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
 """ Regexes used by the parser """
 IPV4_REGEX = re.compile(r"""(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})""")
@@ -169,13 +171,9 @@ class URLDefenseDecoder:
             re.IGNORECASE,
         )
         URLDefenseDecoder.v3_run_mapping = {}
-        run_values = (
-            string.ascii_uppercase + string.ascii_lowercase + string.digits + "-" + "_"
-        )
-        run_length = 2
-        for value in run_values:
+        run_values = string.ascii_uppercase + string.ascii_lowercase + string.digits + "-" + "_"
+        for run_length, value in enumerate(run_values, 2):
             URLDefenseDecoder.v3_run_mapping[value] = run_length
-            run_length += 1
 
     def decode(self, rewritten_url):
         match = self.ud_pattern.search(rewritten_url)
@@ -186,7 +184,8 @@ class URLDefenseDecoder:
                 return self.decode_v2(rewritten_url)
             if match.group(1) == "v3":
                 return self.decode_v3(rewritten_url)
-            raise ValueError("Unrecognized version in: ", rewritten_url)
+            msg = "Unrecognized version in: "
+            raise ValueError(msg, rewritten_url)
         return rewritten_url
 
     def decode_v1(self, rewritten_url):
@@ -194,9 +193,9 @@ class URLDefenseDecoder:
         if match:
             url_encoded_url = match.group("url")
             html_encoded_url = unquote(url_encoded_url)
-            url = unescape(html_encoded_url)
-            return url
-        raise ValueError("Error parsing URL")
+            return unescape(html_encoded_url)
+        msg = "Error parsing URL"
+        raise ValueError(msg)
 
     def decode_v2(self, rewritten_url):
         match = self.v2_pattern.search(rewritten_url)
@@ -205,9 +204,9 @@ class URLDefenseDecoder:
             trans = maketrans("-_", "%/")
             url_encoded_url = special_encoded_url.translate(trans)
             html_encoded_url = unquote(url_encoded_url)
-            url = unescape(html_encoded_url)
-            return url
-        raise ValueError("Error parsing URL")
+            return unescape(html_encoded_url)
+        msg = "Error parsing URL"
+        raise ValueError(msg)
 
     def decode_v3(self, rewritten_url):
         def replace_token(token):
@@ -217,11 +216,10 @@ class URLDefenseDecoder:
                 return character
             if token.startswith("**"):
                 run_length = self.v3_run_mapping[token[-1]]
-                run = self.dec_bytes[
-                    self.current_marker : self.current_marker + run_length
-                ]
+                run = self.dec_bytes[self.current_marker : self.current_marker + run_length]
                 self.current_marker += run_length
                 return run
+            return None
 
         def substitute_tokens(text, start_pos=0):
             match = self.v3_token_pattern.search(text, start_pos)
@@ -237,9 +235,9 @@ class URLDefenseDecoder:
         match = self.v3_pattern.search(rewritten_url)
         if match:
             url = match.group("url")
-            singleSlash = self.v3_single_slash.findall(url)
-            if singleSlash and len(singleSlash[0]) == 2:
-                url = singleSlash[0][0] + "/" + singleSlash[0][1]
+            single_slash = self.v3_single_slash.findall(url)
+            if single_slash and len(single_slash[0]) == 2:
+                url = single_slash[0][0] + "/" + single_slash[0][1]
             encoded_url = unquote(url)
             if match.group("enc_bytes"):
                 enc_bytes = match.group("enc_bytes")
@@ -249,7 +247,8 @@ class URLDefenseDecoder:
                 return substitute_tokens(encoded_url)
             return encoded_url
 
-        raise ValueError("Error parsing URL")
+        msg = "Error parsing URL"
+        raise ValueError(msg)
 
 
 class EmailUtils:
@@ -274,14 +273,12 @@ class EmailUtils:
             r"(?:\/(?:[\w\-._~%!$&'()*+,;=:@\/#]|\[[\]\w\.:]+\])*)?",
         )
 
-        matched_urls = [match.group() for match in url_regex.finditer(body)]
-
-        return matched_urls
+        return [match.group() for match in url_regex.finditer(body)]
 
     @staticmethod
     def attachment(filename, content):
         mime_type, mime_type_short = EmailUtils.get_mime_type(content)
-        attachment_json = {
+        return {
             "filename": filename,
             "size": len(content),
             "extension": os.path.splitext(filename)[1][1:],
@@ -295,7 +292,6 @@ class EmailUtils:
             "mime_type_short": mime_type_short,
             "raw": base64.b64encode(content).decode(),
         }
-        return attachment_json
 
     @staticmethod
     def clean_found_url(url):
@@ -305,27 +301,20 @@ class EmailUtils:
             return None
 
         try:
-            url = (
-                url.lstrip("\"'\t \r\n").replace("\r", "").replace("\n", "").rstrip("/")
-            )
+            url = url.lstrip("\"'\t \r\n").replace("\r", "").replace("\n", "").rstrip("/")
             url = re.sub(r"[^\w\s:/?.=&%-]", "", url).rstrip(" .]")
             url = urllib.parse.urlparse(url).geturl()
             no_schema = "noscheme://"
-            if ":/" in url[:10]:
-                scheme_url = re.sub(r":/{1,3}", "://", url, count=1)
-            else:
-                scheme_url = f"{no_schema}{url}"
+            scheme_url = re.sub(r":/{1,3}", "://", url, count=1) if ":/" in url[:10] else f"{no_schema}{url}"
 
             parsed_url = urllib.parse.urlparse(scheme_url)
-            if (
-                parsed_url.hostname is None
-                or no_schema in scheme_url
-                and extract_valid_ips_from_body(parsed_url.hostname)
+            if parsed_url.hostname is None or (
+                no_schema in scheme_url and extract_valid_ips_from_body(parsed_url.hostname)
             ):
                 return None
 
             tld = parsed_url.hostname.rstrip(".").rsplit(".", 1)[-1].lower()
-            if tld in (
+            if tld in {
                 "aspx",
                 "css",
                 "gif",
@@ -336,7 +325,7 @@ class EmailUtils:
                 "jpeg",
                 "php",
                 "png",
-            ):
+            }:
                 # print('returning clean with no url')
                 return None
         except ValueError:
@@ -344,7 +333,7 @@ class EmailUtils:
             return None
 
         # let's try to be smart by stripping of noisy bogus parts
-        url = re.split(r"""[', ")}\\]""", url, 1)[0]
+        url = re.split(r"""[', ")}\\]""", url, maxsplit=1)[0]
 
         # filter bogus URLs
         if url.endswith("://"):
@@ -430,31 +419,22 @@ class EmailUtils:
                 else:
                     break
 
-            if text == "":
-                value = string.decode("ascii", "ignore")
-            else:
-                value = text
+            value = string.decode("ascii", "ignore") if text == "" else text
 
         return value
 
-    def json_serial(obj):
+    def json_serial(self):
         """JSON serializer for objects not serializable by default json code."""
-        if isinstance(obj, datetime.datetime):
-            if obj.tzinfo is not None:
-                serial = obj.astimezone(datetime.UTC).isoformat()
-            else:
-                serial = obj.isoformat()
+        if isinstance(self, datetime.datetime):
+            return self.astimezone(datetime.UTC).isoformat() if self.tzinfo is not None else self.isoformat()
 
-            return serial
+        msg = f"Type not serializable - {type(self)!s}"
+        raise TypeError(msg)
 
-        raise TypeError(f"Type not serializable - {type(obj)!s}")
-
-    def export_to_json(parsed_msg, sort_keys=False):
+    def export_to_json(self, sort_keys=False):
         """Function to convert a parsed e-mail dict to a JSON string.
 
         Args:
-            parsed_msg (dict): The parsed e-mail dict which is the result of
-                               one of the decode_email functions.
             sort_keys (bool, optional): If True, sorts the keys in the JSON output.
                                         Default: False.
 
@@ -463,7 +443,7 @@ class EmailUtils:
 
         """
         return json.dumps(
-            parsed_msg,
+            self,
             default=EmailUtils.json_serial,
             cls=EmailEncoder,
             sort_keys=sort_keys,
@@ -473,19 +453,19 @@ class EmailUtils:
     @staticmethod
     def decode_field(field):
         try:
-            _decoded = email.header.decode_header(field)
+            decoded = email.header.decode_header(field)
         except email.errors.HeaderParseError:
             return field
 
         string = ""
 
-        for _text, charset in _decoded:
+        for text, charset in decoded:
             if charset:
-                string += EmailUtils.decode_string(_text, charset)
-            elif isinstance(_text, bytes):
-                string += _text.decode("utf-8", "ignore")
+                string += EmailUtils.decode_string(text, charset)
+            elif isinstance(text, bytes):
+                string += text.decode("utf-8", "ignore")
             else:
-                string += _text
+                string += text
         return string
 
     @staticmethod
@@ -517,13 +497,15 @@ class EmailUtils:
 
     @staticmethod
     def extract_ips(body, include_internal=False) -> list[str]:
-        """extract ips from email body.
+        """Extract ips from email body.
 
         Args:
+            body (str): The email body to extract IPs from.
             include_internal (bool): include internal ips.
 
         Returns:
             list[str] : list of valid ips.
+
         """
         ips: typing.Counter[str] = Counter()
         for ip in extract_valid_ips_from_body(body):
@@ -534,13 +516,9 @@ class EmailUtils:
                 continue
 
             else:
-                if not (ipaddress_match.is_private) or (
-                    include_internal and ip != "::"
-                ):
+                if not (ipaddress_match.is_private) or (include_internal and ip != "::"):
                     ips[ip] = 1
-        ips = list(ips)
-
-        return ips
+        return list(ips)
 
     @staticmethod
     def extract_domains_from_urls(urls):
@@ -670,10 +648,7 @@ class EmailUtils:
                                 entity["identifier"] = EmailUtils.clean_found_url(
                                     m.group(0),
                                 )
-                            elif (
-                                entity_type == "ADDRESS"
-                                and not extract_valid_ips_from_body(m.group(0))
-                            ):
+                            elif entity_type == "ADDRESS" and not extract_valid_ips_from_body(m.group(0)):
                                 continue
                             else:
                                 entity["identifier"] = m.group(0)
@@ -735,6 +710,7 @@ class EmailUtils:
 
         Returns:
             The processed HTML string.
+
         """
         return EmailUtils._HTML_TAGS_TO_REMOVE.sub("", html_body)
 
@@ -770,7 +746,9 @@ class EmailUtils:
 
 
 class ParsedEmail:
-    def __init__(self, body=None, header=None, attachments=[]):
+    def __init__(self, body=None, header=None, attachments=None):
+        if attachments is None:
+            attachments = []
         self.body = body
         self.header = header
         self.attachments = attachments
@@ -843,7 +821,7 @@ class EmailBody:
         return body_json
 
     def parse_body(self, body):
-        """This will parse a body and observed IOCs"""
+        """Parse a body and observed IOCs."""
         parsed = []
         _parsed = {}
         entity_list = []
@@ -852,10 +830,10 @@ class EmailBody:
             parsed = self.email_utils.parsed_entities(body_slice)
             for parsed_entity in parsed:
                 found = 0
-                for _entity in entity_list:
+                for entity in entity_list:
                     if (
-                        _entity["identifier"] == parsed_entity["identifier"]
-                        and _entity["entity_type"] == parsed_entity["entity_type"]
+                        entity["identifier"] == parsed_entity["identifier"]
+                        and entity["entity_type"] == parsed_entity["entity_type"]
                     ):
                         found = 1
                         break
@@ -877,8 +855,8 @@ class EmailBody:
             body: Body to slice into smaller pieces.
             slice_step: Slice this number or characters.
 
-        Returns:
-            typing.Iterator[str]: Sliced body string.
+        Yields:
+            str: Sliced body string.
 
         """
         body_length = len(body)
@@ -889,10 +867,7 @@ class EmailBody:
             ptr_start = 0
             for ptr_end in range(slice_step, body_length, slice_step):
                 if " " in body[ptr_end - 1 : ptr_end]:
-                    while not (
-                        WINDOW_SLICE_REGEX.match(body[ptr_end - 1 : ptr_end])
-                        or ptr_end > body_length
-                    ):
+                    while not (WINDOW_SLICE_REGEX.match(body[ptr_end - 1 : ptr_end]) or ptr_end > body_length):
                         if ptr_end > body_length:
                             ptr_end = body_length
                             break
@@ -908,15 +883,13 @@ class MSGParser:
         self.email_utils = email_utils
 
     def parse_headers(self):
-        _headers = {}
+        headers_ = {}
         transport_stopped = False
 
         headers = Headers()
 
         headers.subject = (
-            self.msg_parser["Subject"]
-            if "Subject" in self.msg_parser
-            else self.msg_extractor.subject
+            self.msg_parser.get("Subject", self.msg_extractor.subject)
         )  # use the value from parser over extractor
         headers.parsed_entities = self.email_utils.parsed_entities(headers.subject)
         headers.to = self.to()
@@ -968,10 +941,10 @@ class MSGParser:
             if header.lower() == "in-reply-to":
                 headers.in_reply_to = value
 
-            if header.lower() not in _headers:
-                _headers[header.lower()] = []
-            _headers[header.lower()].append(value)
-        headers.header = _headers
+            if header.lower() not in headers_:
+                headers_[header.lower()] = []
+            headers_[header.lower()].append(value)
+        headers.header = headers_
         return headers
 
     def from_header(self):
@@ -981,12 +954,9 @@ class MSGParser:
                 from_smtp = "SenderSmtpAddress"
             else:
                 from_smtp = "SenderEmailAddress"
-        if from_smtp in self.msg_parser:
-            _from = self.msg_parser.get(from_smtp)
-        else:
-            _from = self.msg_extractor.sender
+        from_ = self.msg_parser.get(from_smtp) if from_smtp in self.msg_parser else self.msg_extractor.sender
 
-        display_name, from_email = parseaddr(_from)
+        _display_name, from_email = parseaddr(from_)
         return from_email
 
     def to(self):
@@ -997,12 +967,9 @@ class MSGParser:
                 to_smtp = "ReceivedBySmtpAddress"
             else:
                 to_smtp = "ReceivedByEmailAddress"
-        if to_smtp in self.msg_parser:
-            to = self.msg_parser.get(to_smtp)
-        else:
-            to = self.msg_extractor.to
+        to = self.msg_parser.get(to_smtp) if to_smtp in self.msg_parser else self.msg_extractor.to
 
-        display_name, to_email = parseaddr(to)
+        _display_name, to_email = parseaddr(to)
         return [to_email]
 
     def parse(self):
@@ -1025,18 +992,15 @@ class MSGParser:
                     email_body.body(self.msg_extractor.htmlBody, "text/html"),
                 )
 
-        for _attachment in self.msg_extractor.attachments:
+        for attachment in self.msg_extractor.attachments:
             msox_obj = None
 
             for msox_attachments in self.msg_parser["attachments"]:
-                if (
-                    self.msg_parser["attachments"][msox_attachments]["AttachFilename"]
-                    == _attachment.shortFilename
-                ):
+                if self.msg_parser["attachments"][msox_attachments]["AttachFilename"] == attachment.shortFilename:
                     msox_obj = self.msg_parser["attachments"][msox_attachments]
-            if _attachment.type == "msg":
+            if attachment.type == "msg":
                 parser = MSGParser(
-                    _attachment.data,
+                    attachment.data,
                     msox_obj,
                     email_utils=self.email_utils,
                 )
@@ -1052,7 +1016,7 @@ class MSGParser:
                 parsed_msg["attachments"].append(
                     EmailUtils.attachment(
                         filename=msox_obj["AttachLongFilename"],
-                        content=_attachment.data,
+                        content=attachment.data,
                     ),
                 )
 
@@ -1097,21 +1061,21 @@ class EMLParser:
                 self.header_email_list("reply-to")[0],
             )[1]
         except Exception as e:
-            self.logger.warn(f"Error parsing field reply-to due to {e}")
+            self.logger.warning("Error parsing field reply-to due to %s", e)
 
         try:
             headers.in_reply_to = email.utils.parseaddr(
                 self.header_email_list("in-reply-to")[0],
             )[1]
         except Exception as e:
-            self.logger.warn(f"Error parsing field in-reply-to due to {e}")
+            self.logger.warning("Error parsing field in-reply-to due to %s", e)
 
         try:
             headers.return_path = email.utils.parseaddr(
                 self.header_email_list("return-path")[0],
             )[1]
         except Exception as e:
-            self.logger.warn(f"Error parsing field return-path due to {e}")
+            self.logger.warning("Error parsing field return-path due to %s", e)
 
         # parse and decode delivered-to
         headers.delivered_to = self.header_email_list("delivered-to")
@@ -1162,7 +1126,7 @@ class EMLParser:
                     headers.receiving.append(receiving_route)
 
         except TypeError:  # Ready to parse email without received headers.
-            print("Exception occurred while parsing received lines.")
+            pass
 
         # Get the all the remaining header values.
         header = {}
@@ -1179,13 +1143,9 @@ class EMLParser:
                 # We have hit a field value parsing error.
                 # Try to work around this by using a relaxed policy, if possible.
                 # Parsing might not give meaningful results in this case!
-                print("ERROR: Field value parsing error, trying to work around this!")
-                if self.msg.policy == email.policy.compat32:  # type: ignore
-                    new_policy = None
-                else:
-                    new_policy = self.msg.policy  # type: ignore
+                new_policy = None if self.msg.policy == email.policy.compat32 else self.msg.policy  # type: ignore[attr-defined]
 
-                self.msg.policy = email.policy.compat32  # type: ignore
+                self.msg.policy = email.policy.compat32  # type: ignore[attr-defined]
 
                 for value in self.msg.get_all(header, []):
                     if k == "from":
@@ -1228,10 +1188,7 @@ class EMLParser:
         body = []
 
         # the body is multi part if more than 1.
-        if len(raw_bodies) == 1:
-            multipart = False
-        else:
-            multipart = True
+        multipart = len(raw_bodies) != 1
 
         html_body = ""
         for raw_body in raw_bodies:
@@ -1303,17 +1260,16 @@ class EMLParser:
 
         # In case we hit bug 27257, try to downgrade the used policy
         try:
-            lower_keys = [k.lower() for k in msg.keys()]
+            lower_keys = [k.lower() for k in msg]
 
         except AttributeError:
-            former_policy: email.policy.Policy = msg.policy  # type: ignore
-            msg.policy = email.policy.compat32  # type: ignore
-            lower_keys = [k.lower() for k in msg.keys()]
-            msg.policy = former_policy  # type: ignore
+            former_policy: email.policy.Policy = msg.policy  # type: ignore[attr-defined]
+            msg.policy = email.policy.compat32  # type: ignore[attr-defined]
+            lower_keys = [k.lower() for k in msg]
+            msg.policy = former_policy  # type: ignore[attr-defined]
 
         if (
-            "content-disposition" in lower_keys
-            and msg.get_content_disposition() != "inline"
+            "content-disposition" in lower_keys and msg.get_content_disposition() != "inline"
         ) or msg.get_content_maintype() != "text":
             # if it's an attachment-type, pull out the filename
             # and calculate the size in bytes
@@ -1337,12 +1293,9 @@ class EMLParser:
                 data = msg.get_payload(decode=True)
                 file_size = len(data)
 
-            if filename == "":
-                filename = f"part-{counter:03d}"
-            else:
-                filename = EmailUtils.decode_field(filename)
+            filename = f"part-{counter:03d}" if filename == "" else EmailUtils.decode_field(filename)
 
-            file_id = str(uuid.uuid1())
+            str(uuid.uuid1())
             attachment["filename"] = filename
             attachment["size"] = file_size
 
@@ -1361,7 +1314,7 @@ class EMLParser:
                     attachment["mime_type"] = mime_type
                     attachment["mime_type_short"] = mime_type_short
                 elif magic is not None:
-                    print(f'Error determining attachment mime-type - "{file_id}"')
+                    pass
 
                 try:
                     oid = OleId.OleID(data=data)
@@ -1377,10 +1330,8 @@ class EMLParser:
                         ole_indicator["hide_if_false"] = i.hide_if_false
                         attachment["ole_data"].append(ole_indicator)
 
-                except Exception as e:
-                    print(f" failed in ole data: {e}")
-            else:
-                print("No data in attachment")
+                except Exception:
+                    pass
 
             attachment["raw"] = (base64.b64encode(data)).decode("utf-8")
 
@@ -1397,6 +1348,7 @@ class EMLParser:
             attachment["content_header"] = ch
             counter += 1
             return attachment
+        return None
 
     @staticmethod
     def get_content_type(headers, multipart=False):
@@ -1419,7 +1371,7 @@ class EMLParser:
 
     def get_raw_body_text(self, msg):
         # TODO: This might cause some dupe bodys due to the multiparty .html stuff.
-        """This method recursively retrieves all e-mail body parts and returns them
+        """Recursively retrieve all e-mail body parts and return them
         as a list.
 
         Args:
@@ -1443,18 +1395,11 @@ class EMLParser:
             try:
                 filename = msg.get_filename("").lower()
             except (binascii.Error, AssertionError):
-                print(
-                    "Exception occurred while trying to parse the "
-                    "content-disposition header. Collected data will not be complete.",
-                )
                 filename = ""
 
             if (
-                (
-                    "content-disposition" not in msg
-                    and msg.get_content_maintype() == "text"
-                )
-                or (filename.endswith(".html") or filename.endswith(".htm"))
+                ("content-disposition" not in msg and msg.get_content_maintype() == "text")
+                or (filename.endswith((".html", ".htm")))
                 or (
                     "content-disposition" in msg
                     and msg.get_content_disposition() == "inline"
@@ -1474,9 +1419,6 @@ class EMLParser:
                             "ignore",
                         )
                     except (LookupError, ValueError):
-                        print(
-                            f"lookup error: {LookupError}, value error: {ValueError}.",
-                        )
 
                         raw_body_str = msg.get_payload(decode=True).decode(
                             "ascii",
@@ -1488,10 +1430,10 @@ class EMLParser:
                 try:
                     raw_body.append((encoding, raw_body_str, msg.items()))
                 except (AttributeError, TypeError):
-                    former_policy: email.policy.Policy = msg.policy  # type: ignore
-                    msg.policy = email.policy.compat32  # type: ignore
+                    former_policy: email.policy.Policy = msg.policy  # type: ignore[attr-defined]
+                    msg.policy = email.policy.compat32  # type: ignore[attr-defined]
                     raw_body.append((encoding, raw_body_str, msg.items()))
-                    msg.policy = former_policy  # type: ignore
+                    msg.policy = former_policy  # type: ignore[attr-defined]
 
         return raw_body
 
@@ -1500,14 +1442,15 @@ class EMLParser:
         of e-mail addresses.
         """
         if self.msg is None:
-            raise ValueError("msg is not set.")
+            msg = "msg is not set."
+            raise ValueError(msg)
 
         field = email.utils.getaddresses(self.msg.get_all(header, []))
 
         return_field = []
 
         for m in field:
-            if not m[1] == "":
+            if m[1] != "":
                 if EMAIL_TLD_REGEX.match(m[1]):
                     return_field.append(m[1].lower())
 
@@ -1547,7 +1490,7 @@ class EmailManager:
         if "attached_emails" in parsed:
             nl = nested_level
             for attached_eml in parsed["attached_emails"]:
-                nl = nl + 1
+                nl += 1
                 attached_eml["level"] = nl
                 self.attached_emails.append(attached_eml)
             del parsed["attached_emails"]
@@ -1589,16 +1532,16 @@ class EmailManager:
         parsed = self.traverse_attachments(attachment_name, content_bytes, nested_level)
         if not parsed:
             return None
-        _email = {}
-        _email["result"] = parsed
-        _email["attachments"] = self.attachments
-        _parsed = parsed.copy()
-        for nested_attach in _parsed["attachments"]:
+        email_ = {}
+        email_["result"] = parsed
+        email_["attachments"] = self.attachments
+        parsed_ = parsed.copy()
+        for nested_attach in parsed_["attachments"]:
             if "parsed_email" in nested_attach:
                 del nested_attach["parsed_email"]
-        self.attached_emails.append(_parsed)
-        _email["attached_emails"] = self.attached_emails
-        return _email
+        self.attached_emails.append(parsed_)
+        email_["attached_emails"] = self.attached_emails
+        return email_
 
     def parse_msg(self, message):
         msg_extractor = extract_msg.openMsg(message)
@@ -1659,9 +1602,7 @@ class EmailManager:
 
     def get_alert_entities(self):
         self.siemplify.load_case_data()
-        return [
-            entity for alert in self.siemplify.case.alerts for entity in alert.entities
-        ]
+        return [entity for alert in self.siemplify.case.alerts for entity in alert.entities]
 
     def create_entity_with_relation(
         self,
@@ -1675,34 +1616,33 @@ class EmailManager:
     ):
         if not new_entity or not linked_entity:
             self.logger.info(
-                f"Skipping entity creation: 'new_entity' ({new_entity}) or "
-                f"'linked_entity' ({linked_entity}) is empty",
+                "Skipping entity creation: 'new_entity' (%s) or 'linked_entity' (%s) is empty", new_entity, linked_entity,
             )
             return
 
         if len(new_entity) > ENTITY_MAX_LENGTH:
             self.logger.info(
-                f"Trimming long entity: {new_entity[:ENTITY_MAX_LENGTH]}",
+                "Trimming long entity: %s",
+                new_entity[:ENTITY_MAX_LENGTH],
             )
             new_entity = new_entity[:ENTITY_MAX_LENGTH]
         new_entity = new_entity.strip()
         linked_entity = linked_entity.strip()
         self.siemplify.LOGGER.info(
-            f"New entity: {new_entity}, linked_entity: {linked_entity}.",
+            "New entity: %s, linked_entity: %s.", new_entity, linked_entity,
         )
         current_entities = self.get_alert_entity_identifiers()
-        self.siemplify.LOGGER.info(f"current entities: {current_entities}.")
+        self.siemplify.LOGGER.info("current entities: %s.", current_entities)
 
         if linked_entity not in current_entities:
             if exclude_regex and re.search(exclude_regex, linked_entity):
                 self.logger.info(
-                    "Exclude pattern found. "
-                    f"skipping linked entity {linked_entity} creation.",
+                    "Exclude pattern found. skipping linked entity %s creation.", linked_entity,
                 )
 
             else:
                 self.siemplify.LOGGER.info(
-                    f"linked_entity {linked_entity} is not in case, adding it.",
+                    "linked_entity %s is not in case, adding it.", linked_entity,
                 )
                 self.siemplify.add_entity_to_case(
                     linked_entity,
@@ -1725,64 +1665,55 @@ class EmailManager:
         )
         if exclude_regex and re.search(exclude_regex, new_entity):
             self.logger.info(
-                f"Exclude pattern found. skipping entity {new_entity} creation.",
+                "Exclude pattern found. skipping entity %s creation.", new_entity,
             )
         else:
             self.siemplify.LOGGER.info(
-                f"Creating {new_entity}:{entity_type} and linking it to {linked_entity}.",
+                "Creating %s:%s and linking it to %s.", new_entity, entity_type, linked_entity,
             )
             create_entity(self.siemplify, entity_to_create)
 
     def build_entity_list(self, email, entity_type, exclude_regex=None):
         entities_list = []
-        _found_entities = {}
+        found_entities = {}
         current_entities = self.get_alert_entity_identifiers_with_entity_type()
         for body in email["body"]:
-            for _entity in body["parsed_entities"]:
-                if (
-                    _entity["entity_type"] == entity_type
-                    and _entity["identifier"] not in _found_entities
-                ):
+            for entity_ in body["parsed_entities"]:
+                if entity_["entity_type"] == entity_type and entity_["identifier"] not in found_entities:
                     if exclude_regex:
-                        if not re.search(exclude_regex, _entity["identifier"]):
-                            entities_list.append(_entity["identifier"])
+                        if not re.search(exclude_regex, entity_["identifier"]):
+                            entities_list.append(entity_["identifier"])
                     else:
-                        entities_list.append(_entity["identifier"])
-                    _found_entities[_entity["identifier"]] = 1
+                        entities_list.append(entity_["identifier"])
+                    found_entities[entity_["identifier"]] = 1
 
         if "parsed_entities" in email["header"]:
-            for _entity in email["header"]["parsed_entities"]:
-                if (
-                    _entity["entity_type"] == entity_type
-                    and _entity["identifier"] not in _found_entities
-                ):
+            for entity_ in email["header"]["parsed_entities"]:
+                if entity_["entity_type"] == entity_type and entity_["identifier"] not in found_entities:
                     if exclude_regex:
-                        if not re.search(exclude_regex, _entity["identifier"]):
-                            entities_list.append(_entity["identifier"])
+                        if not re.search(exclude_regex, entity_["identifier"]):
+                            entities_list.append(entity_["identifier"])
                     else:
-                        entities_list.append(_entity["identifier"])
-                    _found_entities[_entity["identifier"]] = 1
+                        entities_list.append(entity_["identifier"])
+                    found_entities[entity_["identifier"]] = 1
 
         # remove any urls that match a url with http(s)://
         if entity_type == "DestinationURL":
             # _entities_list = entities_list.copy()
-            _entities_list = {x: x for x in entities_list}
+            entities_list_ = {x: x for x in entities_list}
             for entity in entities_list:
                 if entity:
-                    if not re.search("^https?", entity):
-                        if (
-                            f"https://{entity}" in _entities_list
-                            or f"http://{entity}" in _entities_list
-                        ):
-                            del _entities_list[entity]
+                    if not re.search(r"^https?", entity):
+                        if f"https://{entity}" in entities_list_ or f"http://{entity}" in entities_list_:
+                            del entities_list_[entity]
                 else:
-                    del _entities_list[entity]
+                    del entities_list_[entity]
 
-            entities_list = [key for key in _entities_list]
+            entities_list = list(entities_list_)
 
         # Remove any URLs that end in / and already exist in the case without the slash.
-        _entities_list = entities_list.copy()
-        for new_entity in _entities_list:
+        entities_list_ = entities_list.copy()
+        for new_entity in entities_list_:
             if (
                 f"{entity_type}:{new_entity.rstrip('/')}" in current_entities
                 or f"{entity_type}:{new_entity}/" in current_entities
@@ -1810,11 +1741,11 @@ class EmailManager:
             else:
                 email["header"]["subject"] = "MISSING SUBJECT"
         if create_base_entities:
-            for _to in email["header"]["to"]:
-                if _to != "":
+            for to in email["header"]["to"]:
+                if to != "":
                     self.create_entity_with_relation(
                         email["header"]["from"],
-                        _to,
+                        to,
                         "USERUNIQNAME",
                         "USERUNIQNAME",
                         True,
@@ -1824,7 +1755,7 @@ class EmailManager:
                     if email["header"]["subject"]:
                         self.create_entity_with_relation(
                             email["header"]["subject"],
-                            _to,
+                            to,
                             "EMAILSUBJECT",
                             "USERUNIQNAME",
                             False,
@@ -1843,11 +1774,11 @@ class EmailManager:
                         exclude_regex=exclude_regex,
                     )
             if isinstance(email["header"]["cc"], list):
-                for _to in email["header"]["cc"]:
-                    if _to != "":
+                for to in email["header"]["cc"]:
+                    if to != "":
                         self.create_entity_with_relation(
                             email["header"]["from"],
-                            _to,
+                            to,
                             "USERUNIQNAME",
                             "USERUNIQNAME",
                             True,
@@ -1857,7 +1788,7 @@ class EmailManager:
                         if email["header"]["subject"]:
                             self.create_entity_with_relation(
                                 email["header"]["subject"],
-                                _to,
+                                to,
                                 "EMAILSUBJECT",
                                 "USERUNIQNAME",
                                 False,
@@ -1897,11 +1828,11 @@ class EmailManager:
                     )
 
             if isinstance(email["header"]["bcc"], list):
-                for _to in email["header"]["bcc"]:
-                    if _to != "":
+                for to in email["header"]["bcc"]:
+                    if to != "":
                         self.create_entity_with_relation(
                             email["header"]["from"],
-                            _to,
+                            to,
                             "USERUNIQNAME",
                             "USERUNIQNAME",
                             True,
@@ -1911,7 +1842,7 @@ class EmailManager:
                         if email["header"]["subject"]:
                             self.create_entity_with_relation(
                                 email["header"]["subject"],
-                                _to,
+                                to,
                                 "EMAILSUBJECT",
                                 "USERUNIQNAME",
                                 False,
@@ -1950,22 +1881,17 @@ class EmailManager:
                         exclude_regex=exclude_regex,
                     )
 
-        entity_types = [
-            getattr(EntityTypes, a) for a in dir(EntityTypes) if not a.startswith("__")
-        ]
+        entity_types = [getattr(EntityTypes, a) for a in dir(EntityTypes) if not a.startswith("__")]
 
         for entity_type in entity_types:
             # self.siemplify.LOGGER.info(f"Checking if {ioc_type} is enabled.")
 
-            if (
-                entity_type in create_observed_entity_types.lower()
-                or "all" in create_observed_entity_types.lower()
-            ):
+            if entity_type in create_observed_entity_types.lower() or "all" in create_observed_entity_types.lower():
                 # self.siemplify.LOGGER.info(f"Creating any {ioc_type} IOCs from
                 # {email['header']['subject']}")
                 entities = self.build_entity_list(email, entity_type, exclude_regex)
                 self.siemplify.LOGGER.info(
-                    f"Got these {entity_type} entities to create: {entities}.",
+                    "Got these %s entities to create: %s.", entity_type, entities,
                 )
                 for entity in entities:
                     # If the fang_entities option is set,  attempt to fang, decode url
@@ -1973,27 +1899,17 @@ class EmailManager:
                     if fang_entities:
                         entity = ioc_fanger.fang(entity)
                         if (
-                            ("urldefense" in entity.lower())
-                            or ("proofpoint" in entity.lower())
+                            ("urldefense" in entity.lower()) or ("proofpoint" in entity.lower())
                         ) and entity_type == "DestinationURL":
                             # decode any URLDefense URLs
                             urldefense_decoder = URLDefenseDecoder()
-                            try:
+                            with contextlib.suppress(Exception):
                                 entity = urldefense_decoder.decode(entity)
-                            except Exception:
-                                pass
-                        if (
-                            "safelinks.protection.outlook.com" in entity.lower()
-                            and entity_type == "DestinationURL"
-                        ):
+                        if "safelinks.protection.outlook.com" in entity.lower() and entity_type == "DestinationURL":
                             # if the URL contains safelinks, use urlparse and parse_qs to
                             # extract to the correct URL
-                            try:
-                                entity = parse_qs(urlparse(entity.lower()).query)[
-                                    "url"
-                                ][0]
-                            except Exception:
-                                pass
+                            with contextlib.suppress(Exception):
+                                entity = parse_qs(urlparse(entity.lower()).query)["url"][0]
 
                     self.create_entity_with_relation(
                         entity,
@@ -2030,7 +1946,7 @@ class EmailManager:
 
                 # This is because the ETL layer removes the extension from the filename
                 # when its attached.  DUMB
-                name, attachment_type = os.path.splitext(entity_identifier)
+                name, _attachment_type = os.path.splitext(entity_identifier)
                 for a in alert_entities:
                     if a.identifier == name and a.entity_type == "FILENAME":
                         entity_identifier = name
@@ -2038,7 +1954,7 @@ class EmailManager:
 
                 if subject_entity:
                     self.logger.info(
-                        f"creating with relation: {entity_identifier} to {subject_entity}",
+                        "creating with relation: %s to %s", entity_identifier, subject_entity,
                     )
                     # self.logger.info(f"No subject entity. Linking {entity_identifier} to
                     # {subject_entity}  ")
@@ -2066,19 +1982,19 @@ class EmailManager:
                 new_entities_w_rel[file_entity["hash"]["md5"]] = source_props
 
             except Exception as e:
-                self.logger.error(e)
+                self.logger.exception(e)
                 raise
         if new_entities_w_rel:
             self.siemplify.load_case_data()
-            for new_entity in new_entities_w_rel:
+            for new_entity, properties in new_entities_w_rel.items():
                 for entity in self.get_alert_entities():
                     if new_entity.strip() == entity.identifier.strip():
                         entity.additional_properties.update(
-                            new_entities_w_rel[new_entity],
+                            properties,
                         )
                         updated_entities.append(entity)
                         break
-            self.logger.info(f"updating file entity properties: {updated_entities}")
+            self.logger.info("updating file entity properties: %s", updated_entities)
             self.siemplify.update_entities(updated_entities)
 
     def add_attachment(

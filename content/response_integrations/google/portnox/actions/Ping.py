@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.PortnoxManager import PortnoxManager
 
 
@@ -27,10 +29,13 @@ def main():
     password = conf["Password"]
     use_ssl = conf.get("Verify SSL", "False").lower() == "true"
     portnox_manager = PortnoxManager(api_root, username, password, use_ssl)
-    portnox_manager.test_conectivity()
-
-    output_message = "Connection Established"
-    result_value = "true"
+    try:
+        portnox_manager.test_conectivity()
+        output_message = "Successfully connected to the Portnox server."
+        result_value = True
+    except Exception:
+        output_message = "Failed to connect to the Portnox server."
+        result_value = False
 
     siemplify.end(output_message, result_value)
 

@@ -14,11 +14,15 @@
 
 from __future__ import annotations
 
-from integration_testing.platform.script_output import MockActionOutput
+from typing import TYPE_CHECKING
+
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from ...actions import DefangText
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
 
 
 @set_metadata(
@@ -28,9 +32,7 @@ from ...actions import DefangText
 def test_defang_http(action_output: MockActionOutput) -> None:
     DefangText.main()
 
-    assert action_output.results.json_output.json_result == {
-        "converted_text": "hxxp://example[.]com"
-    }
+    assert action_output.results.json_output.json_result == {"converted_text": "hxxp://example[.]com"}
     assert action_output.results.output_message == "Successfully defanged the input."
     assert action_output.results.result_value
     assert action_output.results.execution_state == ExecutionState.COMPLETED
@@ -42,9 +44,7 @@ def test_defang_http(action_output: MockActionOutput) -> None:
 )
 def test_defang_https(action_output: MockActionOutput) -> None:
     DefangText.main()
-    assert action_output.results.json_output.json_result == {
-        "converted_text": "hxxps://example[.]com"
-    }
+    assert action_output.results.json_output.json_result == {"converted_text": "hxxps://example[.]com"}
 
 
 @set_metadata(
@@ -63,23 +63,17 @@ def test_defang_ip(action_output: MockActionOutput) -> None:
 def test_defang_email(action_output: MockActionOutput) -> None:
     DefangText.main()
     # Note: Our regex defangs domain too if it matches the pattern
-    assert action_output.results.json_output.json_result == {
-        "converted_text": "user[at]example[.]com"
-    }
+    assert action_output.results.json_output.json_result == {"converted_text": "user[at]example[.]com"}
 
 
 @set_metadata(
     integration_config={},
-    parameters={
-        "Input": "Check https://example.com/path?query=1 and 192.168.1.1 or "
-        "user.name+tag@sub.example.co.uk"
-    },
+    parameters={"Input": "Check https://example.com/path?query=1 and 192.168.1.1 or user.name+tag@sub.example.co.uk"},
 )
 def test_defang_mixed(action_output: MockActionOutput) -> None:
     DefangText.main()
     expected = (
-        "Check hxxps://example[.]com/path?query=1 and 192[.]168[.]1[.]1 or "
-        "user.name+tag[at]sub[.]example[.]co[.]uk"
+        "Check hxxps://example[.]com/path?query=1 and 192[.]168[.]1[.]1 or user.name+tag[at]sub[.]example[.]co[.]uk"
     )
     assert action_output.results.json_output.json_result == {"converted_text": expected}
 

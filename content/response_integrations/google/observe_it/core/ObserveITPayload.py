@@ -13,12 +13,13 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+
 class ObserveITPayload:
     @staticmethod
     def get_authorization_payload(client_id, client_secret):
         # type: (str or unicode, str or unicode) -> dict
-        """
-        Get payload dict to make request with
+        """Get payload dict to make request with
         @param client_id: Client ID to authorize with
         @param client_secret: Client Secret to authorize with
         @return: Payload for request
@@ -36,8 +37,7 @@ class ObserveITPayload:
     @staticmethod
     def get_test_connectivity_payload():
         # type: () -> dict
-        """
-        Get payload dict to make request with
+        """Get payload dict to make request with
         @return: Payload for request
         """
         return {}
@@ -45,8 +45,7 @@ class ObserveITPayload:
     @staticmethod
     def get_alerts_payload(severities, timestamp, limit):
         # type: (str or unicode, int, int) -> dict
-        """
-        Get payload dict to make request with
+        """Get payload dict to make request with
         @param severities: Severities to start from
         @param timestamp: Timestamp to start from
         @param limit: How many alerts to take

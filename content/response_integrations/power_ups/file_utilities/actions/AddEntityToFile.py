@@ -51,19 +51,17 @@ def main():
             for entity in siemplify.target_entities:
                 if entity.identifier not in efm.entities:
                     siemplify.LOGGER.info(f"Adding entity: {entity.identifier}")
-                    efm.addEntity(entity.identifier)
+                    efm.add_entity(entity.identifier)
                     output_message += f"Added Entity: {entity.identifier}\n"
                 else:
                     siemplify.LOGGER.info(
                         f"Entity is already in file: {entity.identifier}",
                     )
-                    output_message += (
-                        f"Entity is already in file: {entity.identifier}\n"
-                    )
+                    output_message += f"Entity is already in file: {entity.identifier}\n"
                     result_value = False
 
     except Exception as e:
-        siemplify.LOGGER.error(f"General error performing action {SCRIPT_NAME}")
+        siemplify.LOGGER.exception("General error performing action %s", SCRIPT_NAME)
         siemplify.LOGGER.exception(e)
         raise
 

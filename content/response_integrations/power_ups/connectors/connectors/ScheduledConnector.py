@@ -39,21 +39,19 @@ def generate_alert(product_name, alert_name, alert_type, alert_fields):
     else:
         case_info.rule_generator = "Scheduled Alert"
 
-    print(alert_name)
     if alert_name:
         case_info.name = alert_name
     else:
         case_info.name = "Scheduled Alert - " + alert_id
 
     case_info.device_product = product_name
-    print("product_name - " + product_name)
     for alert_field in alert_fields:
         case_info.extensions[alert_field.strip()] = alert_fields[alert_field]
 
-    case_info.priority = (
-        60  # Informative = -1,Low = 40,Medium = 60,High = 80,Critical = 100.
-    )
-    case_info.start_time = SiemplifyUtils.unix_now()  # Times should be saved in UnixTime. You may use SiemplifyUtils DateTime conversions
+    case_info.priority = 60  # Informative = -1,Low = 40,Medium = 60,High = 80,Critical = 100.
+    case_info.start_time = (
+        SiemplifyUtils.unix_now()
+    )  # Times should be saved in UnixTime. You may use SiemplifyUtils DateTime conversions
     case_info.end_time = SiemplifyUtils.unix_now()
 
     case_info.device_vendor = VENDOR
@@ -79,7 +77,6 @@ def generate_event(case_info):
 @output_handler
 def main():
     siemplify = SiemplifyConnectorExecution()  # Siemplify main SDK wrapper
-    env_list = []
 
     product_name = siemplify.extract_connector_param("Product name")
     alert_name = siemplify.extract_connector_param("Alert name")
@@ -94,7 +91,6 @@ def main():
 
     alert_obj = generate_alert(product_name, alert_name, alert_type, alert_fields)
     cases.append(alert_obj)
-    print(json.dumps(cases[0].__dict__))
     siemplify.return_package(cases, output_variables, log_items)
 
 

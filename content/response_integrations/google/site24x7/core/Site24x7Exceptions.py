@@ -13,9 +13,8 @@
 # limitations under the License.
 
 from __future__ import annotations
-class Site24x7Exception(Exception):
-    """
-    General exception for Site24x7
-    """
 
-    pass
+
+class Site24x7Exception(Exception):
+    """General exception for Site24x7"""
+

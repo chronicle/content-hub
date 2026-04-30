@@ -31,10 +31,8 @@ NOT_FOR_TABLE = "NO_TABLE"
 
 
 def GetIdentifiersAsString(target_entities):
-    entitiesIdentifiers = []
-    for entity in target_entities:
-        entitiesIdentifiers.append(entity.identifier)
-    return ", ".join(entitiesIdentifiers)
+    entities_identifiers = [entity.identifier for entity in target_entities]
+    return ", ".join(entities_identifiers)
 
 
 def GetEntityByString(identifier, entities):
@@ -57,7 +55,8 @@ def process_trios(trio_list, ph_separator):
                     ph_separator,
                 )
             except Exception as e:
-                raise Exception(f"Syntax error. Error message is: {e}")
+                msg = f"Syntax error. Error message is: {e}"
+                raise Exception(msg)
             try:
                 data_obj["json"] = json.loads(trio.get("json"))
             except:
@@ -132,6 +131,7 @@ def find_key_path_recursive(key_list, current_json):
             return ",".join(current_json)
 
         return f"{current_json}"  # Found val, return it. Format to make everything into string
+    return None
 
 
 @output_handler
@@ -140,23 +140,17 @@ def main():
 
     added_insights = []
 
-    input_trios = []
-
-    for i in range(1, 8):
-        input_trios.append(
-            {
+    input_trios = [{
                 "title": siemplify.parameters.get(f"Title{i}"),
                 "fields": siemplify.parameters.get(f"Fields{i}"),
                 "json": siemplify.parameters.get(f"JSON{i}"),
-            },
-        )
+            } for i in range(1, 8)]
     ph_separator = siemplify.parameters.get("Placeholder Separator")
 
-    processed_trios, bad_trios = process_trios(input_trios, ph_separator)
+    processed_trios, _bad_trios = process_trios(input_trios, ph_separator)
 
     for ent in siemplify.target_entities:
         insight_message_list = []
-        insight_message = ""
         for trio in processed_trios:
             trio_message_list = []
             not_for_tables = []
@@ -213,7 +207,7 @@ def main():
                 )
 
         if insight_message_list:
-            insight_message = "<br><br>".join(insight_message_list)
+            "<br><br>".join(insight_message_list)
 
         # if bad_trios:
         #     insight_message += u"<br><br>"

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 ALERTS_CONNECTOR_NAME = "FireEye EX - Alerts Connector"
 TIMEOUT_THRESHOLD = 0.9
 HOURS_LIMIT_IN_IDS_FILE = 72

@@ -13,25 +13,26 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import requests
+
 from .SplashExceptions import SplashException
 
 
 def validate_response(response, error_msg="An error occurred"):
-    """
-    Validate response
+    """Validate response
     :param response: {requests.Response} The response to validate
     :param error_msg: {str} Default message to display on error
     """
     try:
         response.raise_for_status()
     except requests.HTTPError as error:
-        raise SplashException(f"{error_msg}: {error} {error.response.content}")
+        msg = f"{error_msg}: {error} {error.response.content}"
+        raise SplashException(msg)
 
 
 def convert_comma_separated_to_list(comma_separated):
-    """
-    Convert comma-separated string to list
+    """Convert comma-separated string to list
     :param comma_separated: String with comma-separated values
     :return: List of values
     """
@@ -41,8 +42,7 @@ def convert_comma_separated_to_list(comma_separated):
 
 
 def convert_list_to_comma_string(values_list):
-    """
-    Convert list to comma-separated string
+    """Convert list to comma-separated string
     :param values_list: List of values
     :return: String with comma-separated values
     """
