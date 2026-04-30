@@ -18,8 +18,21 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+from mp.core.data_models.abc import RepresentableEnum
+
 
 class AiCategories(BaseModel):
+    reasoning: Annotated[
+        str,
+        Field(
+            title="Categorization Reasoning",
+            description=(
+                "Step-by-step reasoning evaluating the action against all available AI "
+                "categories (e.g. enrichment). Explicitly state why the action matches or "
+                "does not match the criteria before setting their boolean flags."
+            ),
+        ),
+    ]
     enrichment: Annotated[
         bool,
         Field(
@@ -88,3 +101,12 @@ def is_enrichment_action(action):
             )
         ),
     ]
+
+
+class ActionAiCategory(RepresentableEnum):
+    ENRICHMENT = "Enrichment"
+
+
+AI_CATEGORY_TO_DEF_AI_CATEGORY: dict[str, ActionAiCategory] = {
+    "enrichment": ActionAiCategory.ENRICHMENT,
+}
