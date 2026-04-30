@@ -60,7 +60,8 @@ def _is_pydantic_valid_url(url: str, adapter: TypeAdapter) -> bool:
 
 st_json_serializable = st.recursive(
     st.none() | st.booleans() | st.floats(allow_nan=False) | st.text(),
-    lambda children: st.lists(children) | st.dictionaries(st.text(), children),
+    lambda children: st.lists(children, max_size=5) | st.dictionaries(st.text(), children, max_size=5),
+    max_leaves=10,
 )
 
 st_pydantic_valid_https_url = urls().filter(

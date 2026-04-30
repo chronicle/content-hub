@@ -17,16 +17,20 @@ from __future__ import annotations
 import base64
 import json
 import pathlib
-from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
+from typing import TYPE_CHECKING, Annotated, Any, NamedTuple, NotRequired, Self, TypedDict, cast
 
 import pydantic
-import yaml
 
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.utils
 from mp.core import exclusions
 from mp.core.data_models.abc import RepresentableEnum, SingularComponentMetadata
+from mp.core.data_models.integrations.integration_meta.ai.metadata import IntegrationAiMetadata
+from mp.core.data_models.integrations.integration_meta.ai.product_categories import (
+    PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY,
+    IntegrationProductCategory,
+)
 
 from .feature_tags import BuiltFeatureTags, FeatureTags, NonBuiltFeatureTags
 from .parameter import BuiltIntegrationParameter, IntegrationParameter, NonBuiltIntegrationParameter
@@ -35,6 +39,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 MINIMUM_SYSTEM_VERSION: float = 5.3
+
+
+class AiFields(NamedTuple):
+    product_categories: list[IntegrationProductCategory]
 
 
 class PythonVersion(RepresentableEnum):
@@ -118,6 +126,7 @@ class BuiltIntegrationMetadata(TypedDict):
     IsCustom: bool
     IsPowerUp: bool
     IsCertified: bool
+    ProductCategories: NotRequired[list[str] | None]
     GoogleSecOpsProduct: NotRequired[bool]
 
 
@@ -137,6 +146,7 @@ class NonBuiltIntegrationMetadata(TypedDict):
     is_custom: NotRequired[bool]
     is_available_for_community: NotRequired[bool]
     is_powerup: NotRequired[bool]
+    product_categories: NotRequired[list[str] | None]
     google_secops_product: NotRequired[bool]
 
 
@@ -181,6 +191,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
         pydantic.PositiveFloat,
         pydantic.Field(ge=MINIMUM_SYSTEM_VERSION),
     ] = MINIMUM_SYSTEM_VERSION
+    product_categories: list[IntegrationProductCategory]
     google_secops_product: bool = False
 
     @classmethod
@@ -218,24 +229,23 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             path: the path to the integration's "non-built" version
 
         Returns:
-            An IntegrationMetadata object
-
-        Raises:
-            ValueError: when the "non-built" is failed to be loaded
+            An IntegrationMetadata object\
 
         """
         metadata_path: Path = path / mp.core.constants.DEFINITION_FILE
-        built: str = metadata_path.read_text(encoding="utf-8")
-        try:
-            metadata_content: NonBuiltIntegrationMetadata = yaml.safe_load(built)
-            _read_image_files(metadata_content, path)
-            metadata: Self = cls.from_non_built(metadata_path.name, metadata_content)
-            metadata.is_certified = mp.core.file_utils.is_certified_integration(path)
-        except (ValueError, json.JSONDecodeError) as e:
-            msg: str = f"Failed to load json from {metadata_path}\n{built}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
-        else:
-            return metadata
+        metadata_content: NonBuiltIntegrationMetadata = cast(
+            "NonBuiltIntegrationMetadata",
+            cast("object", mp.core.file_utils.load_yaml_file(metadata_path)),
+        )
+        _read_image_files(metadata_content, path)
+
+        ai_fields: AiFields = _get_ai_fields(path)
+        _update_non_built_with_ai_fields(metadata_content, ai_fields)
+
+        metadata: Self = cls.from_non_built(metadata_path.name, metadata_content)
+        metadata.is_certified = mp.core.file_utils.is_certified_integration(path)
+
+        return metadata
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltIntegrationMetadata) -> Self:  # noqa: ARG003
@@ -268,6 +278,9 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             is_custom=built.get("IsCustom", False),
             is_available_for_community=built.get("IsAvailableForCommunity", True),
             is_powerup=built.get("IsPowerUp", False),
+            product_categories=[
+                IntegrationProductCategory(category) for category in (built.get("ProductCategories") or [])
+            ],
             google_secops_product=built.get("GoogleSecOpsProduct", False),
         )
 
@@ -298,6 +311,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
                 True,
             ),
             is_powerup=non_built.get("is_powerup", False),
+            product_categories=[IntegrationProductCategory(c) for c in (non_built.get("product_categories") or [])],
             google_secops_product=non_built.get("google_secops_product", False),
         )
 
@@ -350,6 +364,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             categories=self.categories,
             svg_logo_path=svg_path.as_posix() if self.svg_logo is not None else None,
             image_path=image.as_posix() if self.image_base64 is not None else None,
+            product_categories=[c.value for c in self.product_categories] or None,
         )
 
         if self.feature_tags is not None:
@@ -363,6 +378,8 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
 
         if self.is_powerup is True:
             non_built["is_powerup"] = self.is_powerup
+
+        del non_built["product_categories"]
 
         if self.google_secops_product is True:
             non_built["google_secops_product"] = self.google_secops_product
@@ -386,3 +403,35 @@ def _read_image_files(metadata_content: NonBuiltIntegrationMetadata, path: Path)
     if svg_path_str := metadata_content.get("svg_logo_path"):
         full_path = path / svg_path_str
         metadata_content["svg_logo_path"] = mp.core.file_utils.svg_path_to_text(full_path)
+
+
+def _get_ai_fields(integration_path: Path) -> AiFields:
+    empty_results: AiFields = AiFields(product_categories=[])
+    if not integration_path.exists():
+        return empty_results
+
+    integration_desc: Path = (
+        integration_path
+        / mp.core.constants.RESOURCES_DIR
+        / mp.core.constants.AI_DIR
+        / mp.core.constants.INTEGRATIONS_AI_DESCRIPTION_FILE
+    )
+    if not integration_desc.exists():
+        return empty_results
+
+    integration_content: dict[str, Any] = mp.core.file_utils.load_yaml_file(integration_desc)
+    if integration_content is None:
+        return empty_results
+
+    ai_meta: IntegrationAiMetadata = IntegrationAiMetadata.model_validate(integration_content)
+    return AiFields(
+        product_categories=[
+            PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]
+            for category, val in ai_meta.product_categories.model_dump().items()
+            if category != "reasoning" and val is True
+        ],
+    )
+
+
+def _update_non_built_with_ai_fields(non_built: NonBuiltIntegrationMetadata, ai_fields: AiFields) -> None:
+    non_built["product_categories"] = [c.value for c in ai_fields.product_categories]

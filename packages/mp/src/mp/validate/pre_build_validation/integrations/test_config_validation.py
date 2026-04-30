@@ -30,6 +30,8 @@ if TYPE_CHECKING:
 class TestConfigValidation:
     """Validate that tests/config.json exists and is well-formed."""
 
+    __test__ = False
+
     name: str = "Test Config Validation"
 
     @staticmethod

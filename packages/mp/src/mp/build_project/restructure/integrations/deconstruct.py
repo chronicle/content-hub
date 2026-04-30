@@ -43,6 +43,11 @@ from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNot
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
 from mp.core.data_models.integrations.action_widget.metadata import ActionWidgetMetadata
 from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
+from mp.core.data_models.integrations.integration_meta.ai.metadata import IntegrationAiMetadata
+from mp.core.data_models.integrations.integration_meta.ai.product_categories import (
+    PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY,
+    IntegrationProductCategories,
+)
 from mp.core.data_models.integrations.job.metadata import JobMetadata
 
 if TYPE_CHECKING:
@@ -54,9 +59,7 @@ if TYPE_CHECKING:
     from mp.core.data_models.integrations.action.dynamic_results_metadata import DynamicResultsMetadata
     from mp.core.data_models.integrations.custom_families.metadata import NonBuiltCustomFamily
     from mp.core.data_models.integrations.integration import Integration
-    from mp.core.data_models.integrations.integration_meta.metadata import (
-        IntegrationMetadata,
-    )
+    from mp.core.data_models.integrations.integration_meta.metadata import IntegrationMetadata
     from mp.core.data_models.integrations.mapping_rules.metadata import NonBuiltMappingRule
 
 _ValidMetadata: TypeAlias = ActionMetadata | ConnectorMetadata | JobMetadata | ActionWidgetMetadata
@@ -162,6 +165,29 @@ class DeconstructIntegration:
 
         self._create_png_image(resources_dir)
         self._create_svg_logo(resources_dir)
+        self._create_ai_description_file(resources_dir)
+
+    def _create_ai_description_file(self, resources_dir: Path) -> None:
+        ai_dir: Path = resources_dir / mp.core.constants.AI_DIR
+        ai_dir.mkdir(exist_ok=True, parents=True)
+
+        for file_name, content in self.integration.ai_metadata.items():
+            if file_name == mp.core.constants.INTEGRATIONS_AI_DESCRIPTION_FILE:
+                continue
+
+            ai_file: Path = ai_dir / file_name
+            mp.core.file_utils.write_yaml_to_file(content, ai_file)
+
+        categories_dict: dict[str, bool | str] = {
+            category: value in self.integration.metadata.product_categories
+            for category, value in PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY.items()
+        }
+        categories_dict["reasoning"] = ""
+
+        ai_meta = IntegrationAiMetadata(product_categories=IntegrationProductCategories.model_validate(categories_dict))
+
+        ai_file: Path = ai_dir / mp.core.constants.INTEGRATIONS_AI_DESCRIPTION_FILE
+        mp.core.file_utils.write_yaml_to_file(ai_meta.model_dump(), ai_file)
 
     def _create_png_image(self, resources_dir: Path) -> None:
         if self.integration.metadata.image_base64:
