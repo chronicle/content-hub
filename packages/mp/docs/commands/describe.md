@@ -18,7 +18,11 @@ mp describe action [ACTIONS]... [OPTIONS]
 |:----------------|:----------|:---------------------------------------------------------------------------------------------|:-------|:--------|
 | `--integration` | `-i`      | The name of the integration containing the actions.                                          | `str`  | `None`  |
 | `--all`         | `-a`      | Describe all integrations in the marketplace, or all actions if an integration is specified. | `bool` | `False` |
-| `--override`    |           | Rewrite actions that already have a description.                                             | `bool` | `False` |
+| `--src`         |           | Customize source folder to describe from.                                                    | `path` | `None`  |
+| `--dst`         |           | Customize destination folder to save the AI descriptions.                                    | `path` | `None`  |
+| `--quiet`       | `-q`      | Log less on runtime.                                                                         | `bool` | `False` |
+| `--verbose`     | `-v`      | Log more on runtime.                                                                         | `bool` | `False` |
+| `--override`    | `-o`      | Rewrite actions that already have a description.                                             | `bool` | `False` |
 
 ## `mp describe connector`
 
@@ -36,6 +40,10 @@ mp describe connector [CONNECTORS]... [OPTIONS]
 |:----------------|:----------|:-----------------------------------------------------------------------------------------------|:-------|:--------|
 | `--integration` | `-i`      | The name of the integration to describe connectors for.                                        | `str`  | `None`  |
 | `--all`         | `-a`      | Describe all integrations in the marketplace, or all connectors if an integration is specified | `bool` | `False` |
+| `--src`         |           | The path to the marketplace. If not provided, the configured path will be used.                | `path` | `None`  |
+| `--dst`         |           | The path to save the descriptions to. If not provided, they will be saved in the marketplace.  | `path` | `None`  |
+| `--quiet`       | `-q`      | Log less on runtime.                                                                           | `bool` | `False` |
+| `--verbose`     | `-v`      | Log more on runtime.                                                                           | `bool` | `False` |
 | `--override`    | `-o`      | Rewrite connectors that already have a description.                                            | `bool` | `False` |
 
 ## `mp describe job`
@@ -50,11 +58,15 @@ mp describe job [JOBS]... [OPTIONS]
 
 ### Options
 
-| Option          | Shorthand | Description                                                                               | Type   | Default |
-|:----------------|:----------|:------------------------------------------------------------------------------------------|:-------|:--------|
-| `--integration` | `-i`      | The name of the integration to describe jobs for.                                         | `str`  | `None`  |
-| `--all`         | `-a`      | Describe all integrations in the marketplace, or all jobs if an integration is specified. | `bool` | `False` |
-| `--override`    | `-o`      | Rewrite jobs that already have a description.                                             | `bool` | `False` |
+| Option          | Shorthand | Description                                                                                   | Type   | Default |
+|:----------------|:----------|:----------------------------------------------------------------------------------------------|:-------|:--------|
+| `--integration` | `-i`      | The name of the integration to describe jobs for.                                             | `str`  | `None`  |
+| `--all`         | `-a`      | Describe all integrations in the marketplace, or all jobs if an integration is specified.     | `bool` | `False` |
+| `--src`         |           | The path to the marketplace. If not provided, the configured path will be used.               | `path` | `None`  |
+| `--dst`         |           | The path to save the descriptions to. If not provided, they will be saved in the marketplace. | `path` | `None`  |
+| `--quiet`       | `-q`      | Log less on runtime.                                                                          | `bool` | `False` |
+| `--verbose`     | `-v`      | Log more on runtime.                                                                          | `bool` | `False` |
+| `--override`    | `-o`      | Rewrite jobs that already have a description.                                                 | `bool` | `False` |
 
 ## `mp describe integration`
 
@@ -68,10 +80,14 @@ mp describe integration [INTEGRATIONS]... [OPTIONS]
 
 ### Options
 
-| Option       | Shorthand | Description                                           | Type   | Default |
-|:-------------|:----------|:------------------------------------------------------|:-------|:--------|
-| `--all`      | `-a`      | Describe all integrations in the marketplace.         | `bool` | `False` |
-| `--override` | `-o`      | Rewrite integrations that already have a description. | `bool` | `False` |
+| Option       | Shorthand | Description                                               | Type   | Default |
+|:-------------|:----------|:----------------------------------------------------------|:-------|:--------|
+| `--all`      | `-a`      | Describe all integrations in the marketplace.             | `bool` | `False` |
+| `--src`      |           | Customize source folder to describe from.                 | `path` | `None`  |
+| `--dst`      |           | Customize destination folder to save the AI descriptions. | `path` | `None`  |
+| `--quiet`    | `-q`      | Log less on runtime.                                      | `bool` | `False` |
+| `--verbose`  | `-v`      | Log more on runtime.                                      | `bool` | `False` |
+| `--override` | `-o`      | Rewrite integrations that already have a description.     | `bool` | `False` |
 
 ## `mp describe all-content`
 
@@ -85,9 +101,11 @@ mp describe all-content [INTEGRATIONS]... [OPTIONS]
 
 ### Options
 
-| Option       | Shorthand | Description                                          | Type   | Default |
-|:-------------|:----------|:-----------------------------------------------------|:-------|:--------|
-| `--all`      | `-a`      | Describe all content for all integrations.           | `bool` | `False` |
-| `--override` | `-o`      | Rewrite content that already have their description. | `bool` | `False` |
-| `--quiet`    | `-q`      | Log less on runtime.                                 | `bool` | `False` |
-| `--verbose`  | `-v`      | Log more on runtime.                                 | `bool` | `False` |
+| Option       | Shorthand | Description                                               | Type   | Default |
+|:-------------|:----------|:----------------------------------------------------------|:-------|:--------|
+| `--all`      | `-a`      | Describe all content for all integrations.                | `bool` | `False` |
+| `--src`      |           | Customize source folder to describe from.                 | `path` | `None`  |
+| `--dst`      |           | Customize destination folder to save the AI descriptions. | `path` | `None`  |
+| `--quiet`    | `-q`      | Log less on runtime.                                      | `bool` | `False` |
+| `--verbose`  | `-v`      | Log more on runtime.                                      | `bool` | `False` |
+| `--override` | `-o`      | Rewrite content that already have their description.      | `bool` | `False` |
