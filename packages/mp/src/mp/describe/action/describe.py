@@ -34,7 +34,7 @@ from .utils import llm, paths
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import AsyncIterator, Callable
+    from collections.abc import AsyncGenerator, Callable
 
     from rich.progress import Progress
 
@@ -445,7 +445,7 @@ class DescribeAction:
 
         await save_dir.mkdir(parents=True, exist_ok=True)
         metadata_file: anyio.Path = save_dir / constants.ACTIONS_AI_DESCRIPTION_FILE
-        yaml.add_representer(str, folded_string_representer, Dumper=yaml.SafeDumper)
+        yaml.SafeDumper.add_representer(str, folded_string_representer)
         await metadata_file.write_text(yaml.safe_dump(metadata))
 
 
@@ -476,7 +476,7 @@ def _create_prompt_constructor(
 
 
 @contextlib.asynccontextmanager
-async def _maybe_use_semaphore(sem: asyncio.Semaphore | None) -> AsyncIterator[None]:
+async def _maybe_use_semaphore(sem: asyncio.Semaphore | None) -> AsyncGenerator[None, None]:
     """Use a context manager that optionally uses semaphore.
 
     Args:

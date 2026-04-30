@@ -33,7 +33,7 @@ class NonBuiltStepDebugEnrichmentData(TypedDict):
     is_custom: bool
 
 
-class DebugStepEnrichmentData(Buildable[BuiltStepDebugEnrichmentData, NonBuiltStepDebugEnrichmentData]):
+class StepDebugEnrichmentData(Buildable[BuiltStepDebugEnrichmentData, NonBuiltStepDebugEnrichmentData]):
     field: str
     value: str
     use_in_playbook: bool

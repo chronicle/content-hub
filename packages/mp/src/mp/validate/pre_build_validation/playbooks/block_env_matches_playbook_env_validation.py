@@ -32,25 +32,25 @@ class BlockEnvMatchesPlaybookEnvValidation:
     name: str = "Blocks Includes All Playbook Environments Validation"
 
     @staticmethod
-    def run(playbook_path: Path) -> None:
+    def run(path: Path) -> None:
         """Validate that dependent blocks support all environments defined in the main playbook.
 
         Args:
-            playbook_path: The path to the playbook directory.
+            path: The path to the playbook directory.
 
         Raises:
             NonFatalValidationError: If a dependent block is missing environments
                 required by the playbook.
 
         """
-        dependent_blocks_ids: set[str] = mp.core.utils.get_playbook_dependent_blocks_ids(playbook_path)
+        dependent_blocks_ids: set[str] = mp.core.utils.get_playbook_dependent_blocks_ids(path)
         if not dependent_blocks_ids:
             return
 
-        playbook: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
+        playbook: PlaybookMetadata = PlaybookMetadata.from_non_built_path(path)
         playbook_env: set[str] = set(playbook.environments)
         error_msg: list[str] = []
-        for block_file in playbook_path.parent.iterdir():
+        for block_file in path.parent.iterdir():
             if not block_file.is_dir():
                 continue
 

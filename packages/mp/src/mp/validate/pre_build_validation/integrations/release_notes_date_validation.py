@@ -69,6 +69,52 @@ def _versions_on_main(rn_path: Path) -> set[str]:
     return set()
 
 
+def _load_release_notes(rn_path: Path) -> list[dict] | None:
+    """Load and basic-validate the release notes file.
+
+    Returns:
+        The release notes content if valid, otherwise None.
+
+    """
+    if not rn_path.exists():
+        return None
+
+    content = yaml.safe_load(rn_path.read_text(encoding="utf-8"))
+    if not content or not isinstance(content, list):
+        return None
+
+    return content
+
+
+def _perform_validation(content: list[dict], head_sha: str | None, existing_versions: set[str]) -> None:
+    """Check each note for a valid publish date, skipping existing ones in PRs.
+
+    Args:
+        content: The release notes content.
+        head_sha: The head SHA if in PR context.
+        existing_versions: Versions already on main.
+
+    Raises:
+        NonFatalValidationError: If any publish_time is invalid.
+
+    """
+    date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+    invalid: list[str] = []
+    for note in content:
+        version = _normalize_version(note.get("integration_version", "?"))
+        if head_sha and version in existing_versions:
+            continue  # Pre-existing entry — skip
+
+        publish_time = str(note.get("publish_time", ""))
+        if not date_pattern.match(publish_time):
+            invalid.append(f"v{version}: '{publish_time}'")
+
+    if invalid:
+        entries = ", ".join(invalid)
+        msg = f"Release notes have invalid publish_time values (expected YYYY-MM-DD): {entries}"
+        raise NonFatalValidationError(msg)
+
+
 @dataclasses.dataclass(slots=True, frozen=True)
 class ReleaseNotesDateValidation:
     """Validate that release notes have valid publish dates."""
@@ -76,45 +122,25 @@ class ReleaseNotesDateValidation:
     name: str = "Release Notes Date Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check that all publish_time entries are valid YYYY-MM-DD dates.
 
         Args:
-            validation_path: The path of the integration to validate.
-
-        Raises:
-            NonFatalValidationError: If any publish_time is invalid.
+            path: The path of the integration to validate.
 
         """
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
 
-        rn_path = validation_path / constants.RELEASE_NOTES_FILE
-        if not rn_path.exists():
-            return
-
-        content = yaml.safe_load(rn_path.read_text(encoding="utf-8"))
-        if not content or not isinstance(content, list):
-            return
-
-        # In PR context, only validate entries that are new (not present on main).
-        # This avoids penalising pre-existing entries that predate the requirement.
-        existing_versions: set[str] = set()
         if head_sha:
-            if not mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path):
+            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, path)
+            # In PR context, skip if no files in integration changed or RN itself didn't change.
+            if not changed or not any(p.name == constants.RELEASE_NOTES_FILE for p in changed):
                 return
-            existing_versions = _versions_on_main(rn_path)
 
-        date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-        invalid: list[str] = []
-        for note in content:
-            version = _normalize_version(note.get("integration_version", "?"))
-            if head_sha and version in existing_versions:
-                continue  # Pre-existing entry — skip
-            publish_time = str(note.get("publish_time", ""))
-            if not date_pattern.match(publish_time):
-                invalid.append(f"v{version}: '{publish_time}'")
+        rn_path = path / constants.RELEASE_NOTES_FILE
+        content = _load_release_notes(rn_path)
+        if not content:
+            return
 
-        if invalid:
-            entries = ", ".join(invalid)
-            msg = f"Release notes have invalid publish_time values (expected YYYY-MM-DD): {entries}"
-            raise NonFatalValidationError(msg)
+        existing_versions = _versions_on_main(rn_path) if head_sha else set()
+        _perform_validation(content, head_sha, existing_versions)

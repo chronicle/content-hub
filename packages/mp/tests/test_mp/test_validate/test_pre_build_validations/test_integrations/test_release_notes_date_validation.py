@@ -158,6 +158,21 @@ class TestReleaseNotesDateValidationCI:
         ):
             VALIDATOR.run(temp_integration)  # skipped entirely — no error
 
+    def test_integration_changed_but_rn_not_changed_skips(self, temp_integration: Path) -> None:
+        """If some files in integration changed but release_notes.yaml didn't, validation is skipped."""
+        rn = temp_integration / "release_notes.yaml"
+        rn.write_text(INVALID_RN, encoding="utf-8")
+        other_file = temp_integration / "integration.py"
+
+        with (
+            mock.patch.dict("os.environ", {"GITHUB_PR_SHA": "abc123"}),
+            mock.patch(
+                "mp.core.unix.get_files_unmerged_to_main_branch",
+                return_value=[other_file],
+            ),
+        ):
+            VALIDATOR.run(temp_integration)  # skipped — no error
+
     def test_new_integration_not_on_main_all_entries_validated(self, temp_integration: Path) -> None:
         """When file doesn't exist on main, NonFatalCommandError is caught and all entries checked."""
         rn = temp_integration / "release_notes.yaml"
