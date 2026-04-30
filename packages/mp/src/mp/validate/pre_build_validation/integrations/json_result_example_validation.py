@@ -55,10 +55,12 @@ class JsonResultExampleValidation:
         """
         # Only validate integrations with changes in the current PR
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
+        changed_files: set[str] | None = None
         if head_sha:
             changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
             if not changed:
                 return
+            changed_files = {p.name for p in changed}
 
         actions_dir = validation_path / constants.ACTIONS_DIR
         resources_dir = validation_path / "resources"
@@ -70,6 +72,10 @@ class JsonResultExampleValidation:
 
         for py_file in actions_dir.glob("*.py"):
             if py_file.name.startswith("_"):
+                continue
+
+            # In PR context, only check actions that were actually changed
+            if changed_files is not None and py_file.name not in changed_files:
                 continue
 
             # Check only non-comment lines for JSON result patterns
