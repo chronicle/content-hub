@@ -28,6 +28,7 @@ I have provided the following files for a Google SecOps action:
 
 **Action Product Categories Definitions:**
 Review these categories carefully. An action can belong to one or more categories if it matches the expected outcome.
+
 - **Enrich IOC**: Returns reputation, prevalence, and threat intelligence for the indicator.
 - **Enrich Asset**: Returns contextual metadata (e.g., OS version, owner, department, MAC address) for a user or resource.
 - **Update Alert**: Changes the status, severity, or assignee of the alert within the SecOps platform.
@@ -386,19 +387,5 @@ ${manager_files_content}
 Based strictly on the provided "Current Task Input" and the guidelines defined in the System Prompt:
 
 1. Analyze the code flow and settings.
-2. Construct the Capability Summary JSON.
-3. Ensure valid JSON syntax.
-
-3. Ensure valid JSON syntax.
-ttings.
-2. Construct the Capability Summary JSON.
-3. Ensure valid JSON syntax.
- settings.
-2. Construct the Capability Summary JSON.
-3. Ensure valid JSON syntax.
-ttings.
-2. Construct the Capability Summary JSON.
-3. Ensure valid JSON syntax.
- settings.
 2. Construct the Capability Summary JSON.
 3. Ensure valid JSON syntax.
