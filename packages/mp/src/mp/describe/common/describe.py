@@ -32,7 +32,7 @@ from .utils import llm, paths
 
 if TYPE_CHECKING:
     import pathlib
-    from collections.abc import AsyncIterator, Callable
+    from collections.abc import AsyncGenerator, Callable
 
     from rich.progress import Progress
 
@@ -84,8 +84,8 @@ def _create_notifier(rich_params: RichParams) -> Callable[[], None]:
 
 
 @contextlib.asynccontextmanager
-async def _maybe_use_semaphore(sem: asyncio.Semaphore | None) -> AsyncIterator[None]:
-    """Context manager to optionally use a semaphore.
+async def _maybe_use_semaphore(sem: asyncio.Semaphore | None) -> AsyncGenerator[None]:
+    """Context manager to optionally use semaphore.
 
     Args:
         sem: The semaphore to use, or None.
@@ -380,7 +380,7 @@ class DescribeBase(abc.ABC, Generic[T_Metadata]):
                 and hasattr(result, "categories")
             ):
                 res_any: Any = result
-                res_any.categories.enrichment = False  # ty: ignore[unresolved-attribute]
+                res_any.categories.enrichment = False
 
             final_results[i] = DescriptionResult(resource_name, result)
 

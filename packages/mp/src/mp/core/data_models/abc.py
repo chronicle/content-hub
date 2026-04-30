@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import abc
 import enum
-import json
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Generic, Self, TypeVar
 
