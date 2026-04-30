@@ -32,17 +32,17 @@ class OverviewContainsOnlyAllowedRolesValidation:
     name: str = "Roles Validation"
 
     @staticmethod
-    def run(playbook_path: Path) -> None:
+    def run(path: Path) -> None:
         """Validate playbook roles in the overviews section.
 
         Args:
-            playbook_path: The path to the playbook directory.
+            path: The path to the playbook directory.
 
         Raises:
             NonFatalValidationError: If invalid roles are found in playbook overviews.
 
         """
-        overviews: list[Overview] = Overview.from_non_built_path(playbook_path)
+        overviews: list[Overview] = Overview.from_non_built_path(path)
         for ov in overviews:
             if invalid_roles := set(ov.role_names).difference(ALLOWED_ROLES):
                 msg: str = (

@@ -30,11 +30,11 @@ class UvLockValidation:
     name: str = "Uv Lock"
 
     @staticmethod
-    def run(integration_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check if the 'uv.lock' file is consistent with the 'pyproject.toml' file.
 
         Args:
-            integration_path (Path): Path to the integration directory.
+            path (Path): Path to the integration directory.
 
         Raises:
         NonFatalCommandError: If the 'uv lock --check' command indicates that the
@@ -42,8 +42,8 @@ class UvLockValidation:
                       occurs during the check.
 
         """
-        if not mp.core.file_utils.is_built(integration_path):
+        if not mp.core.file_utils.is_built(path):
             try:
-                mp.core.unix.check_lock_file(integration_path)
+                mp.core.unix.check_lock_file(path)
             except NonFatalCommandError as e:
                 raise NonFatalCommandError(str(e)) from e

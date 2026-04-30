@@ -33,11 +33,11 @@ class TestConfigValidation:
     name: str = "Test Config Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check that tests/config.json exists and contains valid JSON.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If config.json is missing or invalid.
@@ -45,17 +45,17 @@ class TestConfigValidation:
         """
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
         if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
+            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, path)
             if not changed:
                 return
 
-        tests_dir = validation_path / "tests"
+        tests_dir = path / "tests"
         if not tests_dir.is_dir():
             return  # No tests directory — other validators handle this
 
         config_file = tests_dir / "config.json"
         if not config_file.exists():
-            msg = f"'{validation_path.name}' is missing tests/config.json"
+            msg = f"'{path.name}' is missing tests/config.json"
             raise NonFatalValidationError(msg)
 
         try:

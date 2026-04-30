@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import tomllib
-from typing import TYPE_CHECKING, Self, TypedDict
+from typing import TYPE_CHECKING, Self, TypedDict, cast
 
 import mp.core.constants
 import mp.core.file_utils
@@ -169,7 +169,7 @@ class Integration:
         """
         project_file_path: Path = path / mp.core.constants.PROJECT_FILE
         file_content: str = project_file_path.read_text(encoding="utf-8")
-        pyproject_toml: PyProjectTomlFile = tomllib.loads(file_content)  # ty: ignore[invalid-assignment]
+        pyproject_toml: PyProjectTomlFile = cast("PyProjectTomlFile", cast("object", tomllib.loads(file_content)))
         try:
             integration_meta: IntegrationMetadata = IntegrationMetadata.from_non_built_path(path)
             _update_integration_meta_form_pyproject(
@@ -252,7 +252,7 @@ class Integration:
             DocumentationLink=(
                 str(self.metadata.documentation_link) if self.metadata.documentation_link is not None else None
             ),
-            MinimumSystemVersion=float(self.metadata.minimum_system_version),
+            MinimumSystemVersion=self.metadata.minimum_system_version,
             IntegrationProperties=[p.to_built() for p in self.metadata.parameters],
             Actions=[am.name for am in self.actions_metadata.values()],
             Jobs=[jm.name for jm in self.jobs_metadata.values()],
@@ -261,7 +261,7 @@ class Integration:
             CustomFamilies=[cf.family for cf in self.custom_families],
             MappingRules=["Default mapping rules"] if self.mapping_rules else [],
             Widgets=[wm.action_identifier for wm in self.widgets_metadata.values()],
-            Version=float(self.metadata.version),
+            Version=self.metadata.version,
             IsCustom=False,
             ExampleUseCases=[],
             ReleaseNotes=self._get_full_details_release_notes(),

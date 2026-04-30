@@ -34,23 +34,23 @@ class NoCustomComponentsInIntegrationValidation:
     name: str = "Custom Components Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check if the integration or its components are marked as custom.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If the integration or its components are marked as custom.
 
         """
-        integration_def: YamlFileContent = load_integration_def(validation_path)
+        integration_def: YamlFileContent = load_integration_def(path)
         components: list[str] = [
             constants.ACTIONS_DIR,
             constants.JOBS_DIR,
             constants.CONNECTORS_DIR,
         ]
-        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(validation_path, *components)
+        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(path, *components)
 
         is_integration_custom: bool = _is_custom(integration_def)
 
@@ -66,7 +66,7 @@ class NoCustomComponentsInIntegrationValidation:
 
         if is_integration_custom or custom_actions or custom_connectors or custom_jobs:
             msg = (
-                f"Integration '{validation_path.name}' contains custom components:"
+                f"Integration '{path.name}' contains custom components:"
                 f"\n  - Is integration custom: {is_integration_custom}"
                 f"\n  - Custom actions: {', '.join(custom_actions) or 'None'}"
                 f"\n  - Custom connectors: {', '.join(custom_connectors) or 'None'}"

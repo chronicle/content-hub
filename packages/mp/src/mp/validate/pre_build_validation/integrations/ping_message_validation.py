@@ -47,11 +47,11 @@ def _find_ping_file(actions_dir: Path) -> Path | None:
     return None
 
 
-def _is_ping_changed_in_pr(validation_path: Path) -> bool:
+def _is_ping_changed_in_pr(path: Path) -> bool:
     """Check if the Ping file was modified in the current PR.
 
     Args:
-        validation_path: The path of the integration to validate.
+        path: The path of the integration to validate.
 
     Returns:
         True if Ping was changed or if not running in CI.
@@ -60,7 +60,7 @@ def _is_ping_changed_in_pr(validation_path: Path) -> bool:
     head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
     if not head_sha:
         return True
-    changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
+    changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, path)
     return any(p.name in {"Ping.py", "ping.py"} for p in changed)
 
 
@@ -76,25 +76,25 @@ class PingMessageFormatValidation:
     name: str = "Ping Message Format Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check that Ping action messages match the required format.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If Ping messages don't match the format.
 
         """
-        actions_dir = validation_path / constants.ACTIONS_DIR
+        actions_dir = path / constants.ACTIONS_DIR
         if not actions_dir.is_dir():
             return
 
-        if validation_path.name in exclusions.get_excluded_names_without_ping_message_format():
+        if path.name in exclusions.get_excluded_names_without_ping_message_format():
             return
 
         ping_file = _find_ping_file(actions_dir)
-        if ping_file is None or not _is_ping_changed_in_pr(validation_path):
+        if ping_file is None or not _is_ping_changed_in_pr(path):
             return
 
         content = ping_file.read_text(encoding="utf-8")
@@ -107,5 +107,5 @@ class PingMessageFormatValidation:
             issues.append(f"Ping failure message must contain: '{_FAILURE_PATTERN}'")
 
         if issues:
-            msg = f"{validation_path.name}: " + "; ".join(issues)
+            msg = f"{path.name}: " + "; ".join(issues)
             raise NonFatalValidationError(msg)
