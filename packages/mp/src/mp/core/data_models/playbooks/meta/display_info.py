@@ -82,7 +82,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
     content_hub_display_name: str = ""
     author: str = ""
     contact_email: str = ""
-    tags: Annotated[list[str], pydantic.Field(default_factory=list)]
+    tags: list[str] = pydantic.Field(default_factory=list)
     contribution_type: PlaybookContributionType = PlaybookContributionType.THIRD_PARTY
     is_google_verified: bool = False
     should_display_in_content_hub: bool = False

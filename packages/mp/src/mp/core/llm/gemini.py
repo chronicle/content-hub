@@ -19,7 +19,7 @@ import io
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Annotated, Any, Literal, Self, cast, overload
+from typing import TYPE_CHECKING, Annotated, Any, Literal, Self, overload
 
 from google import genai
 from google.genai.errors import ClientError
@@ -329,7 +329,7 @@ class Gemini(LlmSdk[GeminiConfig]):
             inlined_requests.append(
                 InlinedRequest(
                     model=self.config.model_name,
-                    contents=cast("Any", [Content(role="user", parts=parts)]),
+                    contents=Content(role="user", parts=parts),
                     config=config,
                 )
             )

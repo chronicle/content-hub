@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Annotated, Any, NotRequired, Self, TypedDict, cast
+from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 
@@ -141,7 +141,7 @@ class Playbook:
             trigger=Trigger.from_built_path(path),
             release_notes=[EMPTY_RN],
             meta_data=PlaybookMetadata.from_built_path(path),
-            display_info=PlaybookDisplayInfo.from_built(cast("Any", {})),
+            display_info=PlaybookDisplayInfo(),
         )
 
     @classmethod

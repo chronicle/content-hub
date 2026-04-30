@@ -20,15 +20,16 @@ import os
 import platform
 import re
 import sys
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from mp.core.constants import WINDOWS_PLATFORM
 from mp.core.custom_types import RepositoryType
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Mapping
 
     import yaml
+    import yaml.representer
 
     from mp.core.custom_types import YamlFileContent
 
@@ -41,7 +42,9 @@ TRIM_CHARS: str = " ... "
 _T = TypeVar("_T")
 
 
-def folded_string_representer(dumper: yaml.SafeDumper, data: str, min_str_len: int = 40) -> yaml.ScalarNode:
+def folded_string_representer(
+    dumper: yaml.representer.BaseRepresenter, data: str, min_str_len: int = 40
+) -> yaml.ScalarNode:
     """Apply folded style if the string is long or has newlines in YAML.
 
     Examples:
@@ -82,19 +85,18 @@ def get_python_version_from_version_string(version: str) -> str:
     return ".".join(map(str, lowest_version))
 
 
-def remove_none_entries_from_mapping(d: Any, /) -> None:  # noqa: ANN401
+def remove_none_entries_from_mapping(d: Mapping[str, Any], /) -> None:
     """Remove all the keys that have `None` value in place.
 
     Args:
         d: the mapping to remove keys that have `None` as the value
 
     """
-    if not isinstance(d, dict):
-        return
-
     keys_to_remove: list[str] = [k for k, v in d.items() if v is None]
-    for k in keys_to_remove:
-        del d[k]
+    if isinstance(d, dict):
+        d_mut: dict[str, Any] = cast("dict", d)
+        for k in keys_to_remove:
+            del d_mut[k]
 
 
 def str_to_snake_case(s: str) -> str:
