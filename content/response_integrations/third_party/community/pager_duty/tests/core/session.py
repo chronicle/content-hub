@@ -13,17 +13,24 @@ from .product import PagerDuty
 
 
 class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
+    """Mock session for PagerDuty integration tests, handling routing."""
+
     def get_routed_functions(self) -> Iterable[RouteFunction[Response]]:
+        """Get the list of routed functions."""
         return [
             self.list_incidents,
             self.test_connectivity,
             self.get_incident_by_key,
             self.list_users,
             self.snooze_incident,
+            self.get_incident_by_id,
+            self.resolve_incident_by_id,
+            self.add_incident_note,
         ]
 
     @router.get(r"/incidents")
     def list_incidents(self, request: MockRequest) -> MockResponse:
+        """Mock for listing incidents."""
         auth_header = request.headers.get("Authorization", "")
         if "invalid_key" in auth_header:
             return MockResponse(
@@ -96,3 +103,30 @@ class PagerDutySession(MockSession[MockRequest, MockResponse, PagerDuty]):
                 )
 
         return MockResponse(content=self._product.snooze_incident(incident_id))
+
+    @router.get(r"/incidents/(?P<incident_id>[^/]+)")
+    def get_incident_by_id(self, request: MockRequest) -> MockResponse:
+        """Mock for getting a single incident by ID."""
+        incident_id = request.url.path.split("/")[-1]
+        incident = self._product.get_incident(incident_id)
+        if incident:
+            return MockResponse(content={"incident": incident})
+        return MockResponse(status_code=404, content={"error": {"message": "Incident not found"}})
+
+    @router.put(r"/incidents/(?P<incident_id>[^/]+)")
+    def resolve_incident_by_id(self, request: MockRequest) -> MockResponse:
+        """Mock for resolving an incident."""
+        incident_id = request.url.path.split("/")[-1]
+        res = self._product.resolve_incident(incident_id)
+        if res:
+            return MockResponse(content=res)
+        return MockResponse(status_code=404, content={"error": {"message": "Incident not found"}})
+
+    @router.post(r"/incidents/(?P<incident_id>[^/]+)/notes")
+    def add_incident_note(self, request: MockRequest) -> MockResponse:
+        """Mock for adding a note to an incident."""
+        incident_id = request.url.path.split("/")[-2]
+        payload = get_request_payload(request)
+        content = payload.get("note", {}).get("content", "")
+        res = self._product.add_incident_note(incident_id, content)
+        return MockResponse(content=res)
