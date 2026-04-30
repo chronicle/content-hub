@@ -67,8 +67,8 @@ from mp.core.data_models.playbooks.step.step_debug_data import (
 )
 from mp.core.data_models.playbooks.step.step_debug_enrichment_data import (
     BuiltStepDebugEnrichmentData,
-    DebugStepEnrichmentData,
     NonBuiltStepDebugEnrichmentData,
+    StepDebugEnrichmentData,
 )
 from mp.core.data_models.playbooks.step.step_parameter import (
     BuiltStepParameter,
@@ -101,7 +101,7 @@ NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA: NonBuiltStepDebugEnrichmentData = {
     "is_custom": False,
 }
 
-DEBUG_STEP_ENRICHMENT_DATA = DebugStepEnrichmentData(
+DEBUG_STEP_ENRICHMENT_DATA = StepDebugEnrichmentData(
     field="field",
     value="value",
     use_in_playbook=True,

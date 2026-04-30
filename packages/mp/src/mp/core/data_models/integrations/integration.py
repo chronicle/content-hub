@@ -261,7 +261,7 @@ class Integration:
             DocumentationLink=(
                 str(self.metadata.documentation_link) if self.metadata.documentation_link is not None else None
             ),
-            MinimumSystemVersion=float(self.metadata.minimum_system_version),
+            MinimumSystemVersion=self.metadata.minimum_system_version,
             IntegrationProperties=[p.to_built() for p in self.metadata.parameters],
             Actions=[am.name for am in self.actions_metadata.values()],
             Jobs=[jm.name for jm in self.jobs_metadata.values()],
@@ -270,7 +270,7 @@ class Integration:
             CustomFamilies=[cf.family for cf in self.custom_families],
             MappingRules=["Default mapping rules"] if self.mapping_rules else [],
             Widgets=[wm.action_identifier for wm in self.widgets_metadata.values()],
-            Version=float(self.metadata.version),
+            Version=self.metadata.version,
             IsCustom=False,
             ExampleUseCases=[],
             ReleaseNotes=self._get_full_details_release_notes(),

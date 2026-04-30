@@ -35,14 +35,14 @@ class EmptyInitFilesValidation:
     name: str = "Empty Init Files Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check that __init__.py files in actions/, core/, etc. are empty.
 
         License headers and comments are allowed. Only actual Python code
         is flagged.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If an __init__.py contains code.
@@ -50,14 +50,14 @@ class EmptyInitFilesValidation:
         """
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
         if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
+            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, path)
             if not changed:
                 return
 
         non_empty: list[str] = []
 
         for dir_name in _CHECKED_DIRS:
-            init_file = validation_path / dir_name / "__init__.py"
+            init_file = path / dir_name / "__init__.py"
             if not init_file.exists():
                 continue
 

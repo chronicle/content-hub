@@ -43,17 +43,17 @@ class FieldsValidation:
     name: str = "Fields Validation"
 
     @staticmethod
-    def run(integration_path: Path) -> None:
+    def run(path: Path) -> None:
         """Strict integration fields names.
 
         Args:
-            integration_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If the integration doesn't have a documentation link.
 
         """
-        integration: Integration = Integration.from_non_built_path(integration_path)
+        integration: Integration = Integration.from_non_built_path(path)
 
         result: list[str] = []
         result.extend(_validate_action_metadata(list(integration.actions_metadata.values())))

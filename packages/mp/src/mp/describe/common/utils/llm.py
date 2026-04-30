@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from mp.core.llm.gemini import Gemini, GeminiConfig
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator
 
     from mp.core.llm.sdk import LlmConfig, LlmSdk
 
@@ -53,7 +53,7 @@ async def call_gemini_bulk(prompts: list[str], response_json_schema: type[T_Sche
 
 
 @contextlib.asynccontextmanager
-async def create_llm_session() -> AsyncIterator[LlmSdk[LlmConfig]]:
+async def create_llm_session() -> AsyncGenerator[LlmSdk[LlmConfig], None]:
     """Create an LLM session with the system prompt configured.
 
     Yields:

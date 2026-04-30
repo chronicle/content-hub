@@ -64,7 +64,7 @@ class PythonVersion(RepresentableEnum):
             "3.11": cls.PY_3_11,
         }
         try:
-            return str_to_enum[str(s)]
+            return str_to_enum[s]
         except KeyError:
             msg: str = (
                 f"Invalid python version for integrations: {s}\nSupported versions: {', '.join(str_to_enum.keys())}"
@@ -248,7 +248,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
         return metadata
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltIntegrationMetadata) -> Self:  # ty:ignore[invalid-method-override]
+    def _from_built(cls, file_name: str, built: BuiltIntegrationMetadata) -> Self:  # noqa: ARG003
         feature_tags: FeatureTags | None = None
         raw_feature_tags: BuiltFeatureTags | None = built.get("FeatureTags")
         if raw_feature_tags is not None:
@@ -285,7 +285,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltIntegrationMetadata) -> Self:  # ty:ignore[invalid-method-override]
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltIntegrationMetadata) -> Self:  # noqa: ARG003
         feature_tags: FeatureTags | None = None
         raw_feature_tags: NonBuiltFeatureTags | None = non_built.get("feature_tags")
         if raw_feature_tags is not None:
@@ -333,7 +333,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             IntegrationProperties=[p.to_built() for p in self.parameters],
             IsAvailableForCommunity=True,
             MarketingDisplayName=self.name,
-            MinimumSystemVersion=float(self.minimum_system_version),
+            MinimumSystemVersion=self.minimum_system_version,
             PythonVersion=self.python_version.value,
             SVGImage=self.svg_logo,
             ShouldInstalledInSystem=self.should_install_in_system,

@@ -34,17 +34,17 @@ class StepParamsValidation:
     name: str = "Step Parameters Validation"
 
     @staticmethod
-    def run(playbook_path: Path) -> None:
+    def run(path: Path) -> None:
         """Run validation on all steps parameters within a playbook.
 
         Args:
-            playbook_path: The path to the non-built playbook directory.
+            path: The path to the non-built playbook directory.
 
         Raises:
             NonFatalValidationError: If any step parameter validation fails.
 
         """
-        steps: list[Step] = Step.from_non_built_path(playbook_path)
+        steps: list[Step] = Step.from_non_built_path(path)
         validation_result: list[dict[str, list[str]]] = [
             step_result for step in steps if (step_result := _process_step(step)) is not None
         ]

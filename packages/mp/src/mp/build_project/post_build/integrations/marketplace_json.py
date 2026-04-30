@@ -32,8 +32,6 @@ import mp.core.utils
 from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
 
-from .data_models import FullDetailsExtraAttrs
-
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from pathlib import Path
@@ -126,14 +124,16 @@ class MarketplaceJsonDefinition:
         release_times: ReleaseTimes = self._get_integration_release_time()
         has_connectors: bool = self._has_connectors()
         supported_actions: list[BuiltSupportedAction] = self._get_supported_actions()
-        extra_attrs: FullDetailsExtraAttrs = FullDetailsExtraAttrs(
-            HasConnectors=has_connectors,
-            SupportedActions=supported_actions,
-            LatestReleasePublishTimeUnixTime=release_times.latest_release,
-            UpdateNotificationExpired=release_times.update_notification,
-            NewNotificationExpired=release_times.new_notification,
-        )
-        metadata.update(extra_attrs)  # ty: ignore[invalid-argument-type]
+        metadata["HasConnectors"] = has_connectors
+        metadata["SupportedActions"] = supported_actions
+        if release_times.latest_release is not None:
+            metadata["LatestReleasePublishTimeUnixTime"] = release_times.latest_release
+
+        if release_times.update_notification is not None:
+            metadata["UpdateNotificationExpired"] = release_times.update_notification
+
+        if release_times.new_notification is not None:
+            metadata["NewNotificationExpired"] = release_times.new_notification
         mp.core.utils.remove_none_entries_from_mapping(metadata)
 
     def _get_integration_release_time(self) -> ReleaseTimes:
@@ -171,7 +171,7 @@ def _get_latest_release_time(release_notes: Iterable[ReleaseNote]) -> int | None
     if not release_notes:
         return 0
 
-    latest_version: float = max(float(rn.version) for rn in release_notes)
+    latest_version: float = max(rn.version for rn in release_notes)
     latest_version_rn: list[ReleaseNote] = [rn for rn in release_notes if rn.version == latest_version]
     if not latest_version:
         return None

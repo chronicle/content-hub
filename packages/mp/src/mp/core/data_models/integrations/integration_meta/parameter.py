@@ -31,7 +31,7 @@ class BuiltIntegrationParameter(TypedDict):
     Value: str | bool | float | int | None
     PropertyDescription: NotRequired[str]
     IsMandatory: bool
-    PropertyType: int
+    PropertyType: int | str
     IntegrationIdentifier: str
 
 

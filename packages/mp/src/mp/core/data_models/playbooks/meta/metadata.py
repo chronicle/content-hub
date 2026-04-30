@@ -46,13 +46,13 @@ class BuiltPlaybookMetadata(TypedDict):
     IsEnable: bool
     Version: float
     Description: str
-    CreationSource: NotRequired[int | None]
-    DefaultAccessLevel: NotRequired[int | None]
+    CreationSource: NotRequired[int | str | None]
+    DefaultAccessLevel: NotRequired[int | str | None]
     SimulationClone: NotRequired[bool | None]
     DebugAlertIdentifier: str | None
     DebugBaseAlertIdentifier: str | None
     IsDebugMode: bool
-    PlaybookType: int
+    PlaybookType: int | str
     TemplateName: str | None
     OriginalWorkflowIdentifier: str
     VersionComment: str | None
@@ -166,9 +166,9 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
         return cls._from_non_built_path(definition_path)
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltPlaybookMetadata) -> Self:  # ty:ignore[invalid-method-override]
-        access_level: int | None = built.get("DefaultAccessLevel")
-        creation_source: int | None = built.get("CreationSource")
+    def _from_built(cls, file_name: str, built: BuiltPlaybookMetadata) -> Self:  # noqa: ARG003
+        access_level: int | str | None = built.get("DefaultAccessLevel")
+        creation_source: int | str | None = built.get("CreationSource")
         return cls(
             identifier=built["Identifier"],
             is_enable=built["IsEnable"],
@@ -197,7 +197,7 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltPlaybookMetadata) -> Self:  # ty:ignore[invalid-method-override]
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltPlaybookMetadata) -> Self:  # noqa: ARG003
         access_level: str | None = non_built.get("default_access_level")
         creation_source: str | None = non_built.get("creation_source")
         return cls(
