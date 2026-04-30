@@ -29,21 +29,19 @@ class IntegrationFileStructureValidation:
     name: str = "Integration Structure Check"
 
     @staticmethod
-    def run(integration_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check basic integration structure, including file presence and parity.
 
         Args:
-            integration_path: Path to the integration directory.
+            path: Path to the integration directory.
 
         Raises:
             FatalValidationError: If the structure is invalid (missing files, parity error).
 
         """
         try:
-            if not mp.core.file_utils.is_integration(integration_path):
-                msg = (
-                    "Integration is in an invalid dir or is missing essential pyproject.toml file."
-                )
+            if not mp.core.file_utils.is_integration(path):
+                msg = "Integration is in an invalid dir or is missing essential pyproject.toml file."
                 raise FatalValidationError(msg)
         except RuntimeError as e:
             raise FatalValidationError(e) from e

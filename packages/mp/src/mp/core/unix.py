@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import subprocess as sp  # noqa: S404
 import sys
 from typing import IO, TYPE_CHECKING
@@ -55,9 +56,7 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
         FatalCommandError: if a project is already initialized
 
     """
-    python_version: str = (
-        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    )
+    python_version: str = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     command: list[str] = [
         sys.executable,
         "-m",
@@ -83,12 +82,8 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
 
 def _get_safe_to_ignore_packages(e: sp.CalledProcessError, /) -> list[str]:
     full_msg: str = f"{e.stdout or ''}\n{e.stderr or ''}"
-    ignored_packages: list[str] = [
-        pkg for pkg in constants.SAFE_TO_IGNORE_PACKAGES if pkg in full_msg
-    ]
-    ignored_messages: list[bool] = [
-        msg in full_msg for msg in constants.SAFE_TO_IGNORE_ERROR_MESSAGES
-    ]
+    ignored_packages: list[str] = [pkg for pkg in constants.SAFE_TO_IGNORE_PACKAGES if pkg in full_msg]
+    ignored_messages: list[bool] = [msg in full_msg for msg in constants.SAFE_TO_IGNORE_ERROR_MESSAGES]
     if ignored_messages and ignored_packages:
         return ignored_packages
     return []
@@ -112,7 +107,33 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
             )
             rich.print(message)
             return
+
+        _handle_pip_no_matching_distribution_error(e)
         raise FatalCommandError from e
+
+
+def _handle_pip_no_matching_distribution_error(e: sp.CalledProcessError) -> None:
+    """Handle pip/uv errors for missing binary wheels.
+
+    This is a targeted error handler for when pip/uv fails to find a binary wheel
+    and a source distribution is the only option.
+
+    Raises:
+        FatalCommandError: If a "No matching distribution found" error is detected.
+
+    """
+    if "No matching distribution found for" in e.stderr:
+        match = re.search(r"No matching distribution found for (.*?)$", e.stderr, re.MULTILINE)
+        package_info = match.group(1) if match else "unknown package"
+        package_name = package_info.split("==")[0]
+        error_message = (
+            f"Failed to download a binary wheel for '{package_info}'. "
+            f"This is likely because the package is only available as a source "
+            f"distribution.\n"
+            f"To fix this, find the source distribution URL on PyPI "
+            f'and run:\n  uv add "{package_name} @ <URL>"'
+        )
+        raise FatalCommandError(error_message) from e
 
 
 def download_wheels_from_requirements(
@@ -167,35 +188,85 @@ def download_wheels_from_requirements(
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def add_dependencies_to_toml(project_path: Path, requirements_path: Path) -> None:
-    """Add dependencies from requirements to a python project's TOML file.
+def add_dependencies_to_toml(
+    project_path: Path,
+    deps_to_add: list[str],
+    dev_deps_to_add: list[str],
+) -> None:
+    """Add dependencies to a python project's TOML file.
+
+    This function distinguishes between remote dependencies (fetched from PyPI)
+    and local dependencies (found in the path specified in the config).
 
     Args:
-        project_path: the path to the project
-        requirements_path: the path to the requirements to add
-
-    Raises:
-        FatalCommandError: if a project is already initialized
+        project_path: the path to the project.
+        deps_to_add: A list of dependency specifiers for `uv add`.
+        dev_deps_to_add: A list of dev dependency specifiers for `uv add`.
 
     """
     python_version: str = _get_python_version()
-    command: list[str] = [
+    base_command: list[str] = [
         sys.executable,
         "-m",
         "uv",
         "add",
-        "-r",
-        str(requirements_path),
         "--python",
         python_version,
     ]
     runtime_config: list[str] = _get_runtime_config()
-    command.extend(runtime_config)
+    base_command.extend(runtime_config)
+    _add_regular_dependencies_to_toml(deps_to_add, base_command, project_path)
+    _add_dev_dependencies_to_toml(dev_deps_to_add, base_command, project_path)
 
+
+def _add_regular_dependencies_to_toml(deps_to_add: list[str], base_command: list[str], project_path: Path) -> None:
+    """Add regular dependencies to the pyproject.toml file using pypi index.
+
+    Raises:
+        FatalCommandError: if uv add fails.
+
+    """
+    if not deps_to_add:
+        return
+    deps_command: list[str] = base_command.copy()
+    deps_command.extend(deps_to_add)
+    deps_command.extend([
+        "--default-index",
+        "https://pypi.org/simple",
+    ])
     try:
-        sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
+        sp.run(deps_command, cwd=project_path, check=True, text=True)  # noqa: S603
+
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
+
+
+def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list[str], project_path: Path) -> None:
+    """Add development dependencies to the pyproject.toml file.
+
+    Raises:
+        FatalCommandError: if uv add fails.
+
+    """
+    dev_base_command = base_command.copy()
+    dev_base_command.extend(["--group", "dev"])
+
+    dev_base_command.extend(_get_base_dev_dependencies())
+    dev_base_command.extend(dev_deps_to_add)
+    try:
+        sp.run(  # noqa: S603
+            dev_base_command, cwd=project_path, check=True, text=True
+        )
+    except sp.CalledProcessError as e:
+        raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
+
+
+def _get_base_dev_dependencies() -> list[str]:
+    return [
+        "git+https://github.com/chronicle/soar-sdk.git",
+        "pytest",
+        "pytest-json-report",
+    ]
 
 
 def init_python_project_if_not_exists(project_path: Path) -> None:
@@ -313,9 +384,7 @@ def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
     return result.returncode
 
 
-def execute_command_and_get_output(
-    command: list[str], paths: Iterable[Path], **flags: bool | str
-) -> int:
+def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **flags: bool | str) -> int:
     """Execute a command and capture its output and status code.
 
     Args:
@@ -511,11 +580,7 @@ def get_files_unmerged_to_main_branch(
         results: sp.CompletedProcess[str] = sp.run(  # noqa: S603
             command, check=True, text=True, capture_output=True
         )
-        return [
-            p
-            for path in results.stdout.strip().splitlines()
-            if path and (p := pathlib.Path(path)).exists()
-        ]
+        return [p for path in results.stdout.strip().splitlines() if path and (p := pathlib.Path(path)).exists()]
 
     except sp.CalledProcessError as error:
         error_output: str = f"{COMMAND_ERR_MSG.format('git diff')}: {error.stderr.strip()}"
@@ -535,7 +600,20 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
         NonFatalCommandError: If the git command fails (e.g., file not found on main).
 
     """
-    git_path_arg: str = f"origin/main:{file_path.as_posix()}"
+    # git show requires a repo-root-relative path; convert absolute paths.
+    try:
+        rev_parse_command: list[str] = ["git", "rev-parse", "--show-toplevel"]
+        repo_root_result = sp.run(  # noqa: S603
+            rev_parse_command,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        relative_path: pathlib.Path = file_path.relative_to(repo_root_result.stdout.strip())
+    except (sp.CalledProcessError, ValueError):
+        relative_path = file_path
+
+    git_path_arg: str = f"origin/main:{relative_path.as_posix()}"
     command: list[str] = ["git", "show", git_path_arg]
 
     try:
@@ -544,9 +622,7 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
         )
 
     except sp.CalledProcessError as error:
-        error_output: str = (
-            f"Failed to get content of '{file_path}' from main branch: {error.stderr.strip()}"
-        )
+        error_output: str = f"Failed to get content of '{file_path}' from main branch: {error.stderr.strip()}"
         raise NonFatalCommandError(error_output) from error
 
     else:

@@ -18,10 +18,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple, Protocol, TypeAlias
-
-if TYPE_CHECKING:
-    from typing import TypeAlias
+from typing import Any, NamedTuple, Protocol, TypeAlias
 
 PRE_BUILD: str = "Pre-Build"
 BUILD: str = "Build"
@@ -77,9 +74,7 @@ class ValidationReport:
             info: Detailed information regarding the non-fatal issue.
 
         """
-        self.failed_non_fatal_validations.append(
-            ValidationIssue(validation_name=validation_name, info=info)
-        )
+        self.failed_non_fatal_validations.append(ValidationIssue(validation_name=validation_name, info=info))
 
     def add_fatal_validation(self, validation_name: str, info: str) -> None:
         """Add a fatal validation issue to the report.
@@ -89,9 +84,7 @@ class ValidationReport:
             info: Detailed information regarding the fatal issue.
 
         """
-        self.failed_fatal_validations.append(
-            ValidationIssue(validation_name=validation_name, info=info)
-        )
+        self.failed_fatal_validations.append(ValidationIssue(validation_name=validation_name, info=info))
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the ValidationReport object into a dictionary.
@@ -114,14 +107,16 @@ class ValidationReport:
 
 
 class Validator(Protocol):
-    name: str
+    @property
+    def name(self) -> str:
+        """The name of the validation."""
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Execute the validation process on the specified path.
 
         Args:
-            validation_path: A `Path` object pointing to the directory
+            path: A `Path` object pointing to the directory
                 or file that needs to be validated.
 
         """

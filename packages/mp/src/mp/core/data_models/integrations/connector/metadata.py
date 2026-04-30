@@ -19,13 +19,10 @@ from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
+from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata
 
-from .parameter import (
-    BuiltConnectorParameter,
-    ConnectorParameter,
-    NonBuiltConnectorParameter,
-)
+from .parameter import BuiltConnectorParameter, ConnectorParameter, NonBuiltConnectorParameter
 from .rule import BuiltConnectorRule, ConnectorRule, NonBuiltConnectorRule
 
 if TYPE_CHECKING:
@@ -35,7 +32,7 @@ if TYPE_CHECKING:
 class BuiltConnectorMetadata(TypedDict):
     Creator: str
     Description: str
-    DocumentationLink: str | None
+    DocumentationLink: NotRequired[str | None]
     Integration: str
     IsConnectorRulesSupported: bool
     IsCustom: bool
@@ -79,7 +76,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
+            pattern=exclusions.get_script_display_name_regex(),
         ),
     ]
     parameters: Annotated[
@@ -104,10 +101,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.CONNECTORS_META_SUFFIX}")
-        ]
+        return [cls._from_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.CONNECTORS_META_SUFFIX}")]
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
@@ -124,10 +118,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_non_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
-        ]
+        return [cls._from_non_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}")]
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltConnectorMetadata) -> Self:
@@ -135,7 +126,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
             file_name=file_name,
             creator=built["Creator"],
             description=built["Description"],
-            documentation_link=built["DocumentationLink"],  # ty:ignore[invalid-argument-type]
+            documentation_link=built.get("DocumentationLink"),  # ty:ignore[invalid-argument-type]
             integration=built["Integration"],
             is_connector_rules_supported=built["IsConnectorRulesSupported"],
             is_custom=built["IsCustom"],
@@ -158,9 +149,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
             is_custom=non_built.get("is_custom", False),
             is_enabled=non_built.get("is_enabled", True),
             name=non_built["name"],
-            parameters=[
-                ConnectorParameter.from_non_built(param) for param in non_built["parameters"]
-            ],
+            parameters=[ConnectorParameter.from_non_built(param) for param in non_built["parameters"]],
             rules=[ConnectorRule.from_non_built(rule) for rule in non_built["rules"]],
             version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
         )
@@ -175,11 +164,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
         return BuiltConnectorMetadata(
             Creator=self.creator,
             Description=self.description,
-            DocumentationLink=(
-                str(self.documentation_link) or None
-                if self.documentation_link is not None
-                else None
-            ),
+            DocumentationLink=(str(self.documentation_link) or None if self.documentation_link is not None else None),
             Integration=self.integration,
             IsConnectorRulesSupported=self.is_connector_rules_supported,
             IsCustom=self.is_custom,
@@ -202,11 +187,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
             parameters=[param.to_non_built() for param in self.parameters],
             description=self.description,
             integration=self.integration,
-            documentation_link=(
-                str(self.documentation_link) or None
-                if self.documentation_link is not None
-                else None
-            ),
+            documentation_link=(str(self.documentation_link) or None if self.documentation_link is not None else None),
             rules=[rule.to_non_built() for rule in self.rules],
             is_connector_rules_supported=self.is_connector_rules_supported,
             creator=self.creator,

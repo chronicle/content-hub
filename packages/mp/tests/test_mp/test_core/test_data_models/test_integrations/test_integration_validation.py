@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 from unittest import mock
 
 import pydantic
@@ -56,20 +56,21 @@ class TestPydanticValidations:
             ActionWidgetMetadata(
                 file_name="test_widget",
                 title="Invalid@Title",  # @ is likely not allowed in the pattern
-                type_=mock.MagicMock(),
-                scope=mock.MagicMock(),
+                type_=cast("Any", mock.MagicMock()),
+                scope=cast("Any", mock.MagicMock()),
                 action_identifier=None,
                 description="Test widget description",
-                data_definition=mock.MagicMock(),
-                condition_group=mock.MagicMock(),
-                default_size=mock.MagicMock(),
+                data_definition=cast("Any", mock.MagicMock()),
+                condition_group=cast("Any", mock.MagicMock()),
+                default_size=cast("Any", mock.MagicMock()),
             )
 
     def test_job_parameter_list_too_long(self) -> None:
         """Test that a parameter list that's too long fails validation."""
-        mock_params: list[JobParameter] = [
-            mock.MagicMock() for _ in range(mp.core.constants.MAX_PARAMETERS_LENGTH + 1)
-        ]
+        mock_params: list[JobParameter] = cast(
+            "list[JobParameter]",
+            [mock.MagicMock() for _ in range(mp.core.constants.MAX_PARAMETERS_LENGTH + 1)],
+        )
         with pytest.raises(pydantic.ValidationError):
             JobMetadata(
                 file_name="test_job",

@@ -84,23 +84,18 @@ class TestIntegrationHasDocumentationLinkValidation:
         integration_def_file = temp_integration / constants.DEFINITION_FILE
         _remove_key_from_yaml(integration_def_file, "documentation_link")
 
-        with mock.patch.object(
-            constants,
-            "EXCLUDED_INTEGRATIONS_WITHOUT_DOCUMENTATION_LINK",
-            {"mock_integration"},
+        with mock.patch(
+            "mp.core.exclusions.get_excluded_integrations_without_documentation_link",
+            return_value={"mock_integration"},
         ):
             self.integration_validator_runner.run(temp_integration)
 
-    def test_failure_on_missing_documentation_link_connectors(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_failure_on_missing_documentation_link_connectors(self, temp_integration: pathlib.Path) -> None:
         """Test failure when an integration's connector is missing a documentation link."""
         connector_def_file = temp_integration / constants.CONNECTORS_DIR / "connector.yaml"
         _remove_key_from_yaml(connector_def_file, "documentation_link")
 
-        with pytest.raises(
-            NonFatalValidationError, match="contains connectors with missing documentation link"
-        ):
+        with pytest.raises(NonFatalValidationError, match="contains connectors with missing documentation link"):
             self.connectors_validator_runner.run(temp_integration)
 
     def test_excluded_integrations_feature_connectors(self, temp_integration: pathlib.Path) -> None:
@@ -108,9 +103,8 @@ class TestIntegrationHasDocumentationLinkValidation:
         connector_def_file = temp_integration / constants.CONNECTORS_DIR / "connector.yaml"
         _remove_key_from_yaml(connector_def_file, "documentation_link")
 
-        with mock.patch.object(
-            constants,
-            "EXCLUDED_CONNECTOR_NAMES_WITHOUT_DOCUMENTATION_LINK",
-            {"Mock Integration Connector"},
+        with mock.patch(
+            "mp.core.exclusions.get_excluded_connector_names_without_documentation_link",
+            return_value={"Mock Integration Connector"},
         ):
             self.connectors_validator_runner.run(temp_integration)

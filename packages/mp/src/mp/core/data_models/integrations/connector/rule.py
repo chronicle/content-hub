@@ -19,6 +19,7 @@ from typing import Annotated, TypedDict
 import pydantic
 
 import mp.core.constants
+from mp.core import exclusions
 from mp.core.data_models.abc import Buildable, RepresentableEnum
 
 
@@ -42,7 +43,7 @@ class ConnectorRule(Buildable[BuiltConnectorRule, NonBuiltConnectorRule]):
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
+            pattern=exclusions.get_script_display_name_regex(),
         ),
     ]
     rule_type: ConnectorRuleType

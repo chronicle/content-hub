@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import tomllib
-from typing import TYPE_CHECKING, Self, TypedDict
+from typing import TYPE_CHECKING, Self, TypedDict, cast
 
 import mp.core.constants
 import mp.core.file_utils
@@ -37,10 +37,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, ManagerName, WidgetName
-    from mp.core.data_models.common.release_notes.metadata import (
-        BuiltReleaseNote,
-        NonBuiltReleaseNote,
-    )
+    from mp.core.data_models.common.release_notes.metadata import BuiltReleaseNote, NonBuiltReleaseNote
 
     from .action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
     from .action_widget.metadata import BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata
@@ -118,10 +115,6 @@ class Integration:
     jobs_metadata: Mapping[JobName, JobMetadata]
     widgets_metadata: Mapping[WidgetName, ActionWidgetMetadata]
 
-    def __post_init__(self) -> None:
-        """Perform post-init logic."""
-        self._validate_python_version()
-
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
         """Create the integration from a built integration's path.
@@ -152,13 +145,9 @@ class Integration:
                 mapping_rules=MappingRule.from_built_path(path),
                 common_modules=mp.core.file_utils.discover_core_modules(path),
                 actions_metadata={a.file_name: a for a in ActionMetadata.from_built_path(path)},
-                connectors_metadata={
-                    c.file_name: c for c in ConnectorMetadata.from_built_path(path)
-                },
+                connectors_metadata={c.file_name: c for c in ConnectorMetadata.from_built_path(path)},
                 jobs_metadata={j.file_name: j for j in JobMetadata.from_built_path(path)},
-                widgets_metadata={
-                    w.file_name: w for w in ActionWidgetMetadata.from_built_path(path)
-                },
+                widgets_metadata={w.file_name: w for w in ActionWidgetMetadata.from_built_path(path)},
             )
         except ValueError as e:
             msg: str = f"Failed to load integration {path.name}"
@@ -180,7 +169,7 @@ class Integration:
         """
         project_file_path: Path = path / mp.core.constants.PROJECT_FILE
         file_content: str = project_file_path.read_text(encoding="utf-8")
-        pyproject_toml: PyProjectTomlFile = tomllib.loads(file_content)  # type: ignore[assignment]
+        pyproject_toml: PyProjectTomlFile = cast("PyProjectTomlFile", cast("object", tomllib.loads(file_content)))
         try:
             integration_meta: IntegrationMetadata = IntegrationMetadata.from_non_built_path(path)
             _update_integration_meta_form_pyproject(
@@ -201,39 +190,14 @@ class Integration:
                 mapping_rules=MappingRule.from_non_built_path(path),
                 common_modules=mp.core.file_utils.discover_core_modules(path),
                 actions_metadata={a.file_name: a for a in ActionMetadata.from_non_built_path(path)},
-                connectors_metadata={
-                    c.file_name: c for c in ConnectorMetadata.from_non_built_path(path)
-                },
+                connectors_metadata={c.file_name: c for c in ConnectorMetadata.from_non_built_path(path)},
                 jobs_metadata={j.file_name: j for j in JobMetadata.from_non_built_path(path)},
-                widgets_metadata={
-                    w.file_name: w for w in ActionWidgetMetadata.from_non_built_path(path)
-                },
+                widgets_metadata={w.file_name: w for w in ActionWidgetMetadata.from_non_built_path(path)},
             )
 
         except (KeyError, ValueError, tomllib.TOMLDecodeError) as e:
             msg: str = f"Failed to load integration {path.name}"
             raise ValueError(msg) from e
-
-    def _validate_python_version(self) -> None:
-        """Validate the integration's python version in the '.python-version' file.
-
-        Raises:
-            ValueError: When the version inside ".python-version" doesn't match the
-                version in "pyproject.toml"
-
-        """
-        msg: str
-        if not self.python_version:
-            msg = f"Missing {mp.core.constants.PYTHON_VERSION_FILE} file or the file is empty"
-            raise ValueError(msg)
-
-        metadata_version: str = self.metadata.python_version.to_string()
-        if self.python_version != metadata_version:
-            msg = (
-                f"Make sure the version in the {mp.core.constants.PYTHON_VERSION_FILE} matches"
-                f" the lowest supported version configured in {mp.core.constants.PROJECT_FILE}"
-            )
-            raise ValueError(msg)
 
     def to_built(self) -> BuiltIntegration:
         """Turn the buildable object into a "built" typed dict.
@@ -249,9 +213,7 @@ class Integration:
             mapping_rules=[mr.to_built() for mr in self.mapping_rules],
             common_modules=self.common_modules,
             actions={name: metadata.to_built() for name, metadata in self.actions_metadata.items()},
-            connectors={
-                name: metadata.to_built() for name, metadata in self.connectors_metadata.items()
-            },
+            connectors={name: metadata.to_built() for name, metadata in self.connectors_metadata.items()},
             jobs={name: metadata.to_built() for name, metadata in self.jobs_metadata.items()},
             widgets={name: metadata.to_built() for name, metadata in self.widgets_metadata.items()},
         )
@@ -269,16 +231,10 @@ class Integration:
             custom_families=[cf.to_non_built() for cf in self.custom_families],
             mapping_rules=[mr.to_non_built() for mr in self.mapping_rules],
             common_modules=self.common_modules,
-            actions={
-                name: metadata.to_non_built() for name, metadata in self.actions_metadata.items()
-            },
-            connectors={
-                name: metadata.to_non_built() for name, metadata in self.connectors_metadata.items()
-            },
+            actions={name: metadata.to_non_built() for name, metadata in self.actions_metadata.items()},
+            connectors={name: metadata.to_non_built() for name, metadata in self.connectors_metadata.items()},
             jobs={name: metadata.to_non_built() for name, metadata in self.jobs_metadata.items()},
-            widgets={
-                name: metadata.to_non_built() for name, metadata in self.widgets_metadata.items()
-            },
+            widgets={name: metadata.to_non_built() for name, metadata in self.widgets_metadata.items()},
         )
 
     def to_built_full_details(self) -> BuiltFullDetails:
@@ -294,11 +250,9 @@ class Integration:
             DisplayName=self.metadata.name,
             Description=self.metadata.description,
             DocumentationLink=(
-                str(self.metadata.documentation_link)
-                if self.metadata.documentation_link is not None
-                else None
+                str(self.metadata.documentation_link) if self.metadata.documentation_link is not None else None
             ),
-            MinimumSystemVersion=float(self.metadata.minimum_system_version),
+            MinimumSystemVersion=self.metadata.minimum_system_version,
             IntegrationProperties=[p.to_built() for p in self.metadata.parameters],
             Actions=[am.name for am in self.actions_metadata.values()],
             Jobs=[jm.name for jm in self.jobs_metadata.values()],
@@ -307,7 +261,7 @@ class Integration:
             CustomFamilies=[cf.family for cf in self.custom_families],
             MappingRules=["Default mapping rules"] if self.mapping_rules else [],
             Widgets=[wm.action_identifier for wm in self.widgets_metadata.values()],
-            Version=float(self.metadata.version),
+            Version=self.metadata.version,
             IsCustom=False,
             ExampleUseCases=[],
             ReleaseNotes=self._get_full_details_release_notes(),
@@ -322,9 +276,7 @@ class Integration:
         for version, items in version_to_rns:
             # casting done to prevent generator exhaustion after the first iteration
             rns: list[ReleaseNote] = list(items)
-            max_publish_time: int = max(
-                rn.publish_time if rn.publish_time is not None else 0 for rn in rns
-            )
+            max_publish_time: int = max(rn.publish_time if rn.publish_time is not None else 0 for rn in rns)
             rn_object: FullDetailsReleaseNoteJson = {
                 "Version": version,
                 "Items": [rn.description for rn in rns],

@@ -18,7 +18,7 @@ from typing import Annotated, NotRequired, Self, TypedDict
 
 import pydantic
 
-import mp.core.constants
+from mp.core import exclusions
 from mp.core.data_models.abc import Buildable, RepresentableEnum
 
 
@@ -46,7 +46,7 @@ class PlaybookContributionType(RepresentableEnum):
 
 
 class BuiltPlaybookDisplayInfo(TypedDict):
-    Identifier: Annotated[str, pydantic.Field(pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX)]
+    Identifier: Annotated[str, pydantic.Field(pattern=exclusions.get_script_identifier_regex())]
     FileName: str
     Type: int
     DisplayName: str
@@ -68,7 +68,6 @@ class BuiltPlaybookDisplayInfo(TypedDict):
 class NonBuiltPlaybookDisplayInfo(TypedDict):
     type: str
     content_hub_display_name: str
-    description: str
     author: str
     contact_email: str
     tags: list[str]
@@ -81,31 +80,27 @@ class NonBuiltPlaybookDisplayInfo(TypedDict):
 class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDisplayInfo]):
     type: PlaybookType = PlaybookType.PLAYBOOK
     content_hub_display_name: str = ""
-    description: str = ""
     author: str = ""
     contact_email: str = ""
-    tags: Annotated[list[str], pydantic.Field(default_factory=list)]
+    tags: list[str] = pydantic.Field(default_factory=list)
     contribution_type: PlaybookContributionType = PlaybookContributionType.THIRD_PARTY
     is_google_verified: bool = False
     should_display_in_content_hub: bool = False
     allowed_debug_data: bool = False
 
     @classmethod
-    def _from_built(cls, _: BuiltPlaybookDisplayInfo) -> Self:  # ty:ignore[invalid-method-override]
-        return cls()  # ty:ignore[missing-argument]
+    def _from_built(cls, built: BuiltPlaybookDisplayInfo) -> Self:  # noqa: ARG003
+        return cls(tags=[])
 
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltPlaybookDisplayInfo) -> Self:
         return cls(
             type=PlaybookType.from_string(non_built["type"]),
             content_hub_display_name=non_built["content_hub_display_name"],
-            description=non_built["description"],
             author=non_built["author"],
             contact_email=non_built["contact_email"],
             tags=non_built["tags"],
-            contribution_type=PlaybookContributionType.from_string(
-                non_built["contribution_type"].upper()
-            ),
+            contribution_type=PlaybookContributionType.from_string(non_built["contribution_type"].upper()),
             is_google_verified=non_built.get("is_google_verified", False),
             should_display_in_content_hub=non_built["should_display_in_content_hub"],
             allowed_debug_data=non_built["acknowledge_debug_data_included"],
@@ -123,7 +118,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             FileName=self.content_hub_display_name,
             Type=self.type.value,
             DisplayName=self.content_hub_display_name,
-            Description=self.description,
+            Description="",
             Author=self.author,
             CreateTime=0,
             ContactEmail=self.contact_email,
@@ -148,7 +143,6 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
         non_built: NonBuiltPlaybookDisplayInfo = NonBuiltPlaybookDisplayInfo(
             type=self.type.to_string(),
             content_hub_display_name=self.content_hub_display_name,
-            description=self.description,
             author=self.author,
             contact_email=self.contact_email,
             tags=self.tags,

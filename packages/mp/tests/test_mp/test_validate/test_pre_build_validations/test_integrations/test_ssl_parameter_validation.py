@@ -73,10 +73,9 @@ class TestSSLParameterValidation:
 
         integration_file = temp_integration / constants.DEFINITION_FILE
         _update_yaml_file(integration_file, {"parameters": []})
-        with mock.patch.object(
-            constants,
-            "EXCLUDED_NAMES_WITHOUT_VERIFY_SSL",
-            {"Mock Integration"},
+        with mock.patch(
+            "mp.core.exclusions.get_excluded_names_without_verify_ssl",
+            return_value={"Mock Integration"},
         ):
             self.integration_runner.run(temp_integration)
 
@@ -109,9 +108,7 @@ class TestSSLParameterValidation:
         with pytest.raises(NonFatalValidationError, match="must be a boolean true"):
             self.integration_runner.run(temp_integration)
 
-    def test_ssl_parameter_excluded_from_default_value_check(
-        self, temp_integration: pathlib.Path
-    ) -> None:
+    def test_ssl_parameter_excluded_from_default_value_check(self, temp_integration: pathlib.Path) -> None:
         """Test that an excluded integration can have SSL default as False."""
         integration_file = temp_integration / constants.DEFINITION_FILE
         params = [
@@ -122,17 +119,14 @@ class TestSSLParameterValidation:
             }
         ]
         _update_yaml_file(integration_file, {"parameters": params})
-        with mock.patch.object(
-            constants,
-            "EXCLUDED_NAMES_WHERE_SSL_DEFAULT_IS_NOT_TRUE",
-            {"Mock Integration"},
+        with mock.patch(
+            "mp.core.exclusions.get_excluded_names_where_ssl_default_is_not_true",
+            return_value={"Mock Integration"},
         ):
             self.integration_runner.run(temp_integration)  # Should not raise
 
     @pytest.mark.parametrize("ssl_param_name", sorted(constants.VALID_SSL_PARAM_NAMES))
-    def test_valid_ssl_parameter_names(
-        self, temp_integration: pathlib.Path, ssl_param_name: str
-    ) -> None:
+    def test_valid_ssl_parameter_names(self, temp_integration: pathlib.Path, ssl_param_name: str) -> None:
         """Test that various valid SSL parameter names are accepted."""
         integration_file = temp_integration / constants.DEFINITION_FILE
         params = [

@@ -96,5 +96,5 @@ class Scripts(Restructurable):
         if out_dir.exists():
             mp.core.file_utils.remove_files_by_suffix_from_dir(
                 out_dir,
-                suffix=mp.core.constants.DEF_FILE_SUFFIX,
+                suffix=mp.core.constants.YAML_SUFFIX,
             )

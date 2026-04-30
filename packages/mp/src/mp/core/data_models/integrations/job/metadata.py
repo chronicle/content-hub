@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
+from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata
 
 from .parameter import BuiltJobParameter, JobParameter, NonBuiltJobParameter
@@ -64,7 +65,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX,
+            pattern=exclusions.get_script_identifier_regex(),
         ),
     ]
     is_custom: bool = False
@@ -73,7 +74,6 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
         ),
     ]
     parameters: Annotated[
@@ -101,10 +101,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.JOBS_META_SUFFIX}")
-        ]
+        return [cls._from_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.JOBS_META_SUFFIX}")]
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
@@ -121,13 +118,13 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_non_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
-        ]
+        return [cls._from_non_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}")]
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltJobMetadata) -> Self:
+        version: float = built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION)
+        version = max(version, mp.core.constants.MINIMUM_SCRIPT_VERSION)
+
         return cls(
             file_name=file_name,
             creator=built["Creator"],
@@ -138,7 +135,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
             name=built["Name"],
             parameters=[JobParameter.from_built(param) for param in built["Parameters"]],
             run_interval_in_seconds=built["RunIntervalInSeconds"],
-            version=built.get("Version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
+            version=version,
         )
 
     @classmethod
@@ -175,7 +172,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
             Name=self.name,
             Parameters=[param.to_built() for param in self.parameters],
             RunIntervalInSeconds=self.run_interval_in_seconds,
-            Version=float(self.version),
+            Version=self.version,
         )
 
     def to_non_built(self) -> NonBuiltJobMetadata:

@@ -26,17 +26,15 @@ from typing import TYPE_CHECKING, Any
 
 import yaml
 
-import mp.core.constants
 import mp.core.file_utils.common.utils
 from mp.core import constants
-from mp.core.custom_types import JsonString, ManagerName, Products
 from mp.core.validators import validate_png_content, validate_svg_content
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
 
-    from mp.core.custom_types import RepositoryType
+    from mp.core.custom_types import JsonString, ManagerName, RepositoryType
 
 
 def get_integrations_repo_base_path(integrations_classification: RepositoryType) -> Path:
@@ -68,9 +66,7 @@ def get_integration_base_folders_paths(integrations_classification: str) -> list
     base_path: Path = create_or_get_integrations_path()
     match integrations_classification:
         case constants.COMMERCIAL_REPO_NAME:
-            return mp.core.file_utils.common.create_dirs_if_not_exists(
-                base_path / constants.COMMERCIAL_REPO_NAME
-            )
+            return mp.core.file_utils.common.create_dirs_if_not_exists(base_path / constants.COMMERCIAL_REPO_NAME)
 
         case constants.THIRD_PARTY_REPO_NAME:
             third_party = base_path / constants.THIRD_PARTY_REPO_NAME
@@ -82,9 +78,7 @@ def get_integration_base_folders_paths(integrations_classification: str) -> list
             )
 
         case constants.CUSTOM_REPO_NAME:
-            return mp.core.file_utils.common.create_dirs_if_not_exists(
-                base_path / constants.CUSTOM_REPO_NAME
-            )
+            return mp.core.file_utils.common.create_dirs_if_not_exists(base_path / constants.CUSTOM_REPO_NAME)
 
         case _:
             msg: str = f"Received unknown integration classification: {integrations_classification}"
@@ -99,8 +93,7 @@ def create_or_get_integrations_path() -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_content_dir()
-        / constants.INTEGRATIONS_DIR_NAME
+        mp.core.file_utils.common.utils.create_or_get_content_dir() / constants.INTEGRATIONS_DIR_NAME
     )
 
 
@@ -114,8 +107,7 @@ def create_or_get_integrations_dir() -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_content_dir()
-        / constants.INTEGRATIONS_DIR_NAME
+        mp.core.file_utils.common.utils.create_or_get_content_dir() / constants.INTEGRATIONS_DIR_NAME
     )
 
 
@@ -129,8 +121,7 @@ def create_or_get_out_integrations_dir() -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_out_contents_dir()
-        / constants.OUT_INTEGRATIONS_DIR_NAME
+        mp.core.file_utils.common.utils.create_or_get_out_contents_dir() / constants.OUT_INTEGRATIONS_DIR_NAME
     )
 
 
@@ -162,8 +153,8 @@ def discover_core_modules(path: Path) -> list[ManagerName]:
     )
 
 
-def get_integrations_and_groups_from_paths(*paths: Path) -> Products[set[Path]]:
-    """Get all integrations and integration groups paths from the provided paths.
+def get_integrations_from_paths(*paths: Path) -> set[Path]:
+    """Get all integrations paths from the provided paths.
 
     Args:
         *paths: The paths to search integrations and groups in
@@ -174,19 +165,15 @@ def get_integrations_and_groups_from_paths(*paths: Path) -> Products[set[Path]]:
 
     """
     integrations: set[Path] = set()
-    groups: set[Path] = set()
     for path in paths:
         if not path.exists():
             continue
 
         for dir_ in path.iterdir():
-            if is_group(dir_):
-                groups.add(dir_)
-
-            elif is_integration(dir_):
+            if is_integration(dir_):
                 integrations.add(dir_)
 
-    return Products(integrations=integrations, groups=groups)
+    return integrations
 
 
 def is_python_file(path: Path) -> bool:
@@ -199,23 +186,13 @@ def is_python_file(path: Path) -> bool:
     return path.exists() and path.is_file() and path.suffix == ".py"
 
 
-def is_integration(path: Path, *, group: str = "") -> bool:
+def is_integration(path: Path) -> bool:
     """Check whether a path is an integration.
 
     Returns:
         Whether the provided path is an integration
 
     """
-    parents: set[str] = {p.name for p in (path, *path.parents)}
-    valid_base_dirs: set[str] = set(mp.core.constants.INTEGRATIONS_TYPES)
-
-    if group:
-        valid_base_dirs.add(group)
-
-    return bool(parents.intersection(valid_base_dirs) and _is_integration(path))
-
-
-def _is_integration(path: Path) -> bool:
     if not path.exists() or not path.is_dir():
         return False
 
@@ -225,26 +202,6 @@ def _is_integration(path: Path) -> bool:
     pyproject_toml: Path = path / constants.PROJECT_FILE
     def_: Path = path / constants.INTEGRATION_DEF_FILE.format(path.name)
     return pyproject_toml.exists() or def_.exists()
-
-
-def is_group(path: Path) -> bool:
-    """Check whether a path is an integration group.
-
-    Returns:
-        Whether the provided path is an integration group
-
-    """
-    parents: set[str] = {p.name for p in (path, *path.parents)}
-    return bool(parents.intersection(constants.INTEGRATIONS_TYPES) and _is_group(path))
-
-
-def _is_group(path: Path) -> bool:
-    if not path.exists() or not path.is_dir():
-        return False
-
-    return not is_integration(path) and all(
-        is_integration(p, group=path.name) for p in path.iterdir() if p.is_dir()
-    )
 
 
 def replace_file_content(file: Path, replace_fn: Callable[[str], str]) -> None:
@@ -338,7 +295,7 @@ class IntegrationParityValidator:
     def _validate_actions(self) -> None:
         actions: Path = self.path / constants.ACTIONS_DIR
         if actions.exists():
-            _validate_script_metadata_parity(actions, ".py", constants.DEF_FILE_SUFFIX)
+            _validate_script_metadata_parity(actions, ".py", constants.YAML_SUFFIX)
 
     def _validate_connectors(self) -> None:
         connectors: Path = self.path / constants.CONNECTORS_DIR
@@ -346,13 +303,13 @@ class IntegrationParityValidator:
             _validate_script_metadata_parity(
                 directory=connectors,
                 script_suffix=".py",
-                metadata_suffix=constants.DEF_FILE_SUFFIX,
+                metadata_suffix=constants.YAML_SUFFIX,
             )
 
     def _validate_jobs(self) -> None:
         jobs: Path = self.path / constants.JOBS_DIR
         if jobs.exists():
-            _validate_script_metadata_parity(jobs, ".py", constants.DEF_FILE_SUFFIX)
+            _validate_script_metadata_parity(jobs, ".py", constants.YAML_SUFFIX)
 
     def _validate_widgets(self) -> None:
         widgets: Path = self.path / constants.WIDGETS_DIR
@@ -360,7 +317,7 @@ class IntegrationParityValidator:
             _validate_script_metadata_parity(
                 directory=widgets,
                 script_suffix=".html",
-                metadata_suffix=constants.DEF_FILE_SUFFIX,
+                metadata_suffix=constants.YAML_SUFFIX,
             )
 
 
@@ -381,17 +338,16 @@ def _validate_matching_files(directory: Path, primary_suffix: str, secondary_suf
         expected_file: Path = file.with_suffix(secondary_suffix)
         if not expected_file.exists():
             msg: str = (
-                f"The {directory.name} directory has a file '{file.name}' without a"
-                f"  matching '{secondary_suffix}' file"
+                f"The {directory.name} directory has a file '{file.name}' without a  matching '{secondary_suffix}' file"
             )
             raise RuntimeError(msg)
 
 
-def is_commercial_integration(path: Path) -> bool:
-    """Check if the given integration path corresponds to a commercial integration.
+def is_certified_integration(path: Path) -> bool:
+    """Check if the given integration path corresponds to a certified integration.
 
     This function evaluates whether the provided integration path belongs to the
-    directory designated for commercial integrations.
+    directory designated for certified integrations, i.e., the `commercial` directory or `powerups`.
 
     Args:
         path: The path to the integration directory.
@@ -401,10 +357,9 @@ def is_commercial_integration(path: Path) -> bool:
             otherwise.
 
     """
-    return (
-        is_integration(path)
-        and path.parent.name
-        in constants.INTEGRATIONS_DIRS_NAMES_DICT[constants.COMMERCIAL_REPO_NAME]
+    return is_integration(path) and (
+        path.parent.name in constants.INTEGRATIONS_DIRS_NAMES_DICT[constants.COMMERCIAL_REPO_NAME]
+        or path.parent.name == constants.POWERUPS_DIR_NAME
     )
 
 
@@ -470,11 +425,11 @@ def png_path_to_bytes(file_path: Path) -> str | None:
 def read_and_validate_json_file(json_path: Path) -> JsonString:
     """Read the text content of a file and validates that it's valid JSON.
 
-    Raises:
-        ValueError: If the file doesn't exist or is an invalid JSON.
-
     Returns:
         The decoded text content of the JSON file if exists.
+
+    Raises:
+        ValueError: If the file doesn't exist or is an invalid JSON.
 
     """
     try:
@@ -499,11 +454,11 @@ def write_str_to_json_file(json_path: Path, json_content: JsonString) -> None:
 def load_yaml_file(path: Path) -> dict[str, Any]:
     """Read a file and loads its content as YAML.
 
-    Raises:
-        ValueError: If the file doesn't exist or is an invalid YAML.
-
     Returns:
         The decoded YAML content of the YAML file if it exists.
+
+    Raises:
+        ValueError: If the file doesn't exist or is an invalid YAML.
 
     """
     try:

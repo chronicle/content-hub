@@ -12,13 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import cast
+
 import pytest
 
 from mp.core.data_models.common.condition.condition import (
+    BuiltCondition,
     Condition,
+    NonBuiltCondition,
 )
 from mp.core.data_models.common.condition.condition_group import (
+    BuiltConditionGroup,
     ConditionGroup,
+    NonBuiltConditionGroup,
 )
 
 from .constants import (
@@ -49,11 +55,11 @@ class TestConditionDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            Condition.from_built({})
+            Condition.from_built(cast("BuiltCondition", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            Condition.from_non_built({})
+            Condition.from_non_built(cast("NonBuiltCondition", cast("object", {})))
 
     def test_from_built_to_built_is_idempotent(self) -> None:
         assert Condition.from_built(BUILT_CONDITION).to_built() == BUILT_CONDITION
@@ -77,22 +83,17 @@ class TestConditionGroupDataModel:
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            ConditionGroup.from_built({})
+            ConditionGroup.from_built(cast("BuiltConditionGroup", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
         with pytest.raises(ValueError):  # noqa: PT011
-            ConditionGroup.from_non_built({})
+            ConditionGroup.from_non_built(cast("NonBuiltConditionGroup", cast("object", {})))
 
     def test_from_built_with_none_values(self) -> None:
-        assert (
-            ConditionGroup.from_built(BUILT_CONDITION_GROUP_WITH_NONE) == CONDITION_GROUP_WITH_NONE
-        )
+        assert ConditionGroup.from_built(BUILT_CONDITION_GROUP_WITH_NONE) == CONDITION_GROUP_WITH_NONE
 
     def test_from_non_built_with_none_values(self) -> None:
-        assert (
-            ConditionGroup.from_non_built(NON_BUILT_CONDITION_GROUP_WITH_NONE)
-            == CONDITION_GROUP_WITH_NONE
-        )
+        assert ConditionGroup.from_non_built(NON_BUILT_CONDITION_GROUP_WITH_NONE) == CONDITION_GROUP_WITH_NONE
 
     def test_to_built_with_none_values(self) -> None:
         assert CONDITION_GROUP_WITH_NONE.to_built() == BUILT_CONDITION_GROUP_WITH_NONE
@@ -104,7 +105,4 @@ class TestConditionGroupDataModel:
         assert ConditionGroup.from_built(BUILT_CONDITION_GROUP).to_built() == BUILT_CONDITION_GROUP
 
     def test_from_non_built_to_non_built_is_idempotent(self) -> None:
-        assert (
-            ConditionGroup.from_non_built(NON_BUILT_CONDITION_GROUP).to_non_built()
-            == NON_BUILT_CONDITION_GROUP
-        )
+        assert ConditionGroup.from_non_built(NON_BUILT_CONDITION_GROUP).to_non_built() == NON_BUILT_CONDITION_GROUP

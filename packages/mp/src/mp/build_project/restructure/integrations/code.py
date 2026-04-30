@@ -67,8 +67,5 @@ class Code(Restructurable):
         if not out_dir.exists():
             return
 
-        files: set[Path] = {
-            file for file in out_dir.iterdir() if mp.core.file_utils.is_python_file(file)
-        }
+        files: set[Path] = {file for file in out_dir.iterdir() if mp.core.file_utils.is_python_file(file)}
         mp.core.code_manipulation.restructure_scripts_imports(files)
-        mp.core.code_manipulation.format_python_files(files)

@@ -50,7 +50,7 @@ class TestPingValidation:
 
     def test_success_on_valid_integration_lower_case(self, temp_integration: pathlib.Path) -> None:
         """Test that a valid integration (has a ping action) passes."""
-        ping_def = temp_integration / constants.ACTIONS_DIR / f"ping{constants.DEF_FILE_SUFFIX}"
+        ping_def = temp_integration / constants.ACTIONS_DIR / f"ping{constants.YAML_SUFFIX}"
         _update_yaml_file(ping_def, {"name": "PING"})
 
         self.validator_runner.run(temp_integration)
@@ -61,7 +61,7 @@ class TestPingValidation:
 
     def test_failure_on_missing_ping(self, temp_integration: pathlib.Path) -> None:
         """Test failure when the ping action is missing."""
-        ping_def = temp_integration / constants.ACTIONS_DIR / f"ping{constants.DEF_FILE_SUFFIX}"
+        ping_def = temp_integration / constants.ACTIONS_DIR / f"ping{constants.YAML_SUFFIX}"
         ping_script = temp_integration / constants.ACTIONS_DIR / "ping.py"
 
         _remove_file(ping_script)
@@ -72,7 +72,7 @@ class TestPingValidation:
 
     def test_excluded_integrations_feature(self, temp_integration: pathlib.Path) -> None:
         """Test the excluded integrations feature works correctly."""
-        ping_def = temp_integration / constants.ACTIONS_DIR / f"ping{constants.DEF_FILE_SUFFIX}"
+        ping_def = temp_integration / constants.ACTIONS_DIR / f"ping{constants.YAML_SUFFIX}"
         ping_script = temp_integration / constants.ACTIONS_DIR / "ping.py"
 
         _remove_file(ping_script)

@@ -17,13 +17,11 @@ from __future__ import annotations
 import abc
 import enum
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Generic, Self, TypeVar
 
 import pydantic
 import yaml
-
-import mp.core.utils
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -54,14 +52,6 @@ class RepresentableEnum(enum.Enum):
         return self.name.casefold()
 
 
-T_Buildable = TypeVar("T_Buildable", bound="Buildable")
-T_BuildableComponent = TypeVar("T_BuildableComponent", bound="BuildableComponent")
-T_SingularComponentMetadata = TypeVar(
-    "T_SingularComponentMetadata", bound="SingularComponentMetadata"
-)
-T_ComponentMetadata = TypeVar("T_ComponentMetadata", bound="ComponentMetadata")
-T_SequentialMetadata = TypeVar("T_SequentialMetadata", bound="SequentialMetadata")
-
 _BT = TypeVar("_BT", bound=Mapping[str, Any])
 _NBT = TypeVar("_NBT", bound=Mapping[str, Any])
 
@@ -69,7 +59,7 @@ _NBT = TypeVar("_NBT", bound=Mapping[str, Any])
 class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
     @classmethod
     @abc.abstractmethod
-    def _from_built(cls, built: _BT) -> T_Buildable:
+    def _from_built(cls, built: _BT) -> Self:
         """Create the object from a "built" typed dict.
 
         Args:
@@ -82,7 +72,7 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
 
     @classmethod
     @abc.abstractmethod
-    def _from_non_built(cls, non_built: _NBT) -> T_Buildable:
+    def _from_non_built(cls, non_built: _NBT) -> Self:
         """Create the object from a "non-built" typed dict.
 
         Args:
@@ -112,7 +102,7 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
         """
 
     @classmethod
-    def from_built(cls, built: _BT) -> T_Buildable:
+    def from_built(cls, built: _BT) -> Self:
         """Create the object from a "built" typed dict.
 
         Args:
@@ -125,16 +115,18 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
-            metadata: T_Buildable = cls._from_built(built)
+            metadata: Self = cls._from_built(built)
         except (KeyError, ValueError) as e:
             msg: str = f"Failed to load built\n{built}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return metadata
 
     @classmethod
-    def from_non_built(cls, non_built: _NBT) -> T_Buildable:
+    def from_non_built(cls, non_built: _NBT) -> Self:
         """Create the object from a "non-built" typed dict.
 
         Args:
@@ -147,11 +139,13 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the non-built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
-            metadata: T_Buildable = cls._from_non_built(non_built)
+            metadata: Self = cls._from_non_built(non_built)
         except (KeyError, ValueError) as e:
             msg: str = f"Failed to load non-built\n{non_built}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return metadata
 
@@ -161,7 +155,7 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
 
     @classmethod
     @abc.abstractmethod
-    def _from_built(cls, file_name: str, built: _BT) -> T_BuildableComponent:
+    def _from_built(cls, file_name: str, built: _BT) -> Self:
         """Create the object from a "built" typed dict.
 
         Args:
@@ -175,7 +169,7 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
 
     @classmethod
     @abc.abstractmethod
-    def _from_non_built(cls, file_name: str, non_built: _NBT) -> T_BuildableComponent:
+    def _from_non_built(cls, file_name: str, non_built: _NBT) -> Self:
         """Create the object from a "non-built" typed dict.
 
         Args:
@@ -206,7 +200,7 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
         """
 
     @classmethod
-    def from_built(cls, file_name: str, built: _BT) -> T_BuildableComponent:
+    def from_built(cls, file_name: str, built: _BT) -> Self:
         """Create the object from a "built" typed dict.
 
         Args:
@@ -220,16 +214,18 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
-            metadata: T_BuildableComponent = cls._from_built(file_name, built)
+            metadata: Self = cls._from_built(file_name, built)
         except (KeyError, ValueError) as e:
             msg: str = f"Failed to load built\n{built}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return metadata
 
     @classmethod
-    def from_non_built(cls, file_name: str, non_built: _NBT) -> T_BuildableComponent:
+    def from_non_built(cls, file_name: str, non_built: _NBT) -> Self:
         """Create the object from a "non-built" typed dict.
 
         Args:
@@ -243,11 +239,13 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the non-built object failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
-            metadata: T_BuildableComponent = cls._from_non_built(file_name, non_built)
+            metadata: Self = cls._from_non_built(file_name, non_built)
         except (KeyError, ValueError) as e:
             msg: str = f"Failed to load non-built\n{non_built}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return metadata
 
@@ -262,7 +260,7 @@ class SingularComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT])
 
     @classmethod
     @abc.abstractmethod
-    def from_built_path(cls, path: Path) -> T_SingularComponentMetadata:
+    def from_built_path(cls, path: Path) -> Self:
         """Create the script's metadata object from the built path.
 
         Args:
@@ -275,7 +273,7 @@ class SingularComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT])
 
     @classmethod
     @abc.abstractmethod
-    def from_non_built_path(cls, path: Path) -> T_SingularComponentMetadata:
+    def from_non_built_path(cls, path: Path) -> Self:
         """Create the script's metadata object from the non-built path.
 
         Args:
@@ -287,7 +285,7 @@ class SingularComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT])
         """
 
     @classmethod
-    def _from_built_path(cls, metadata_path: Path) -> T_SingularComponentMetadata:
+    def _from_built_path(cls, metadata_path: Path) -> Self:
         """Create the script's metadata object from the built path.
 
         Args:
@@ -300,18 +298,20 @@ class SingularComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT])
             ValueError: when the built JSON failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         built_content: str = metadata_path.read_text(encoding="utf-8")
         try:
             metadata_json: _BT = json.loads(built_content)
-            built: T_SingularComponentMetadata = cls.from_built(metadata_path.stem, metadata_json)
+            built: Self = cls.from_built(metadata_path.stem, metadata_json)
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {metadata_path}\n{built_content}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return built
 
     @classmethod
-    def _from_non_built_path(cls, metadata_path: Path) -> T_SingularComponentMetadata:
+    def _from_non_built_path(cls, metadata_path: Path) -> Self:
         """Create the script's metadata object from the non-built path.
 
         Args:
@@ -324,13 +324,15 @@ class SingularComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT])
             ValueError: when the non-built YAML failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         non_built_content: str = metadata_path.read_text(encoding="utf-8")
         try:
             metadata_json: _NBT = yaml.safe_load(non_built_content)
             non_built: Self = cls.from_non_built(metadata_path.stem, metadata_json)
         except (ValueError, yaml.YAMLError) as e:
             msg: str = f"Failed to load yaml from {metadata_path}\n{non_built_content}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return non_built
 
@@ -345,7 +347,7 @@ class ComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
 
     @classmethod
     @abc.abstractmethod
-    def from_built_path(cls, path: Path) -> list[T_ComponentMetadata]:
+    def from_built_path(cls, path: Path) -> Sequence[Self]:
         """Create the script's metadata object from the built path.
 
         Args:
@@ -358,7 +360,7 @@ class ComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
 
     @classmethod
     @abc.abstractmethod
-    def from_non_built_path(cls, path: Path) -> list[T_ComponentMetadata]:
+    def from_non_built_path(cls, path: Path) -> Sequence[Self]:
         """Create the script's metadata object from the non-built path.
 
         Args:
@@ -370,7 +372,7 @@ class ComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
         """
 
     @classmethod
-    def _from_built_path(cls, metadata_path: Path) -> T_ComponentMetadata:
+    def _from_built_path(cls, metadata_path: Path) -> Self:
         """Create the script's metadata object from the built path.
 
         Args:
@@ -383,18 +385,20 @@ class ComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built JSON failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         built_content: str = metadata_path.read_text(encoding="utf-8")
         try:
             metadata_json: _BT = json.loads(built_content)
-            built: T_ComponentMetadata = cls.from_built(metadata_path.stem, metadata_json)
+            built: Self = cls.from_built(metadata_path.stem, metadata_json)
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {metadata_path}\n{built_content}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return built
 
     @classmethod
-    def _from_non_built_path(cls, metadata_path: Path) -> T_ComponentMetadata:
+    def _from_non_built_path(cls, metadata_path: Path) -> Self:
         """Create the script's metadata object from the non-built path.
 
         Args:
@@ -407,13 +411,15 @@ class ComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the non-built YAML failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         non_built_content: str = metadata_path.read_text(encoding="utf-8")
         try:
             metadata_json: _NBT = yaml.safe_load(non_built_content)
             non_built: Self = cls.from_non_built(metadata_path.stem, metadata_json)
         except (ValueError, yaml.YAMLError) as e:
             msg: str = f"Failed to load yaml from {metadata_path}\n{non_built_content}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return non_built
 
@@ -429,7 +435,7 @@ class SequentialMetadata(Buildable, abc.ABC, Generic[_BT, _NBT]):
 
     @classmethod
     @abc.abstractmethod
-    def from_built_path(cls, path: Path) -> list[T_SequentialMetadata]:
+    def from_built_path(cls, path: Path) -> Sequence[Self]:
         """Create the script's metadata object from the built path.
 
         Args:
@@ -442,7 +448,7 @@ class SequentialMetadata(Buildable, abc.ABC, Generic[_BT, _NBT]):
 
     @classmethod
     @abc.abstractmethod
-    def from_non_built_path(cls, path: Path) -> list[T_SequentialMetadata]:
+    def from_non_built_path(cls, path: Path) -> Sequence[Self]:
         """Create the script's metadata object from the non-built path.
 
         Args:
@@ -454,7 +460,7 @@ class SequentialMetadata(Buildable, abc.ABC, Generic[_BT, _NBT]):
         """
 
     @classmethod
-    def _from_built_path(cls, meta_path: Path) -> list[T_SequentialMetadata]:
+    def _from_built_path(cls, meta_path: Path) -> list[Self]:
         """Create the script's metadata object from the built path.
 
         Args:
@@ -467,18 +473,20 @@ class SequentialMetadata(Buildable, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built JSON failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         built: str = meta_path.read_text(encoding="utf-8")
         try:
             content: list[_BT] = json.loads(built)
-            results: list[T_SequentialMetadata] = [cls.from_built(c) for c in content]
+            results: list[Self] = [cls.from_built(c) for c in content]
         except (ValueError, json.JSONDecodeError) as e:
             msg: str = f"Failed to load json from {meta_path}\n{built}"
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return results
 
     @classmethod
-    def _from_non_built_path(cls, meta_path: Path) -> list[T_SequentialMetadata]:
+    def _from_non_built_path(cls, meta_path: Path) -> list[Self]:
         """Create the script's metadata object from the non-built path.
 
         Args:
@@ -492,7 +500,7 @@ class SequentialMetadata(Buildable, abc.ABC, Generic[_BT, _NBT]):
         return cls.from_non_built_str(non_built)
 
     @classmethod
-    def from_non_built_str(cls, raw_text: str) -> list[T_SequentialMetadata]:
+    def from_non_built_str(cls, raw_text: str) -> list[Self]:
         """Create the script's metadata object from the non-built raw text.
 
         Args:
@@ -505,11 +513,13 @@ class SequentialMetadata(Buildable, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built JSON failed to be loaded
 
         """
+        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
+
         try:
             content: list[_NBT] = yaml.safe_load(raw_text)
-            results: list[T_SequentialMetadata] = [cls.from_non_built(c) for c in content]
+            results: list[Self] = [cls.from_non_built(c) for c in content]
         except (ValueError, yaml.YAMLError) as e:
             msg: str = "Failed to load yaml."
-            raise ValueError(mp.core.utils.trim_values(msg)) from e
+            raise ValueError(trim_values(msg)) from e
         else:
             return results

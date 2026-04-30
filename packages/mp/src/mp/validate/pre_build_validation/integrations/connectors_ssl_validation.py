@@ -20,10 +20,7 @@ from pydantic import dataclasses
 
 from mp.core import constants
 from mp.core.exceptions import NonFatalValidationError
-from mp.validate.utils import (
-    load_components_defs,
-    validate_ssl_parameter_from_yaml,
-)
+from mp.validate.utils import load_components_defs, validate_ssl_parameter_from_yaml
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -36,20 +33,18 @@ class SslParameterExistsInConnectorsValidation:
     name: str = "SSL Connectors Validation"
 
     @staticmethod
-    def run(integration_path: Path) -> None:
+    def run(path: Path) -> None:
         """Run validation for SSL parameters in the integration's connectors.
 
         Args:
-            integration_path: The path to the integration directory.
+            path: The path to the integration directory.
 
         Raises:
             NonFatalValidationError: If there are any SSL parameter validation errors
                 in the integration's connectors.
 
         """
-        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(
-            integration_path, constants.CONNECTORS_DIR
-        )
+        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(path, constants.CONNECTORS_DIR)
 
         invalid_connectors_outputs: list[str] = []
         for connector in component_defs.get(constants.CONNECTORS_DIR, []):

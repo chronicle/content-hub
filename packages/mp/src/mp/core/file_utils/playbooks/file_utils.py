@@ -28,6 +28,18 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+def create_or_get_playbooks_root_dir() -> Path:
+    """Get a content-hub playbooks root folder path (playbooks dir).
+
+    Returns:
+        root "playbooks" folder path.
+
+    """
+    return mp.core.file_utils.common.utils.create_dir_if_not_exists(
+        mp.core.file_utils.common.utils.create_or_get_content_dir() / mp.core.constants.PLAYBOOKS_DIR_NAME
+    )
+
+
 def get_or_create_playbook_repo_base_path(playbooks_classification: str) -> Path:
     """Get a content-hub playbook-specific repository path.
 
@@ -39,15 +51,11 @@ def get_or_create_playbook_repo_base_path(playbooks_classification: str) -> Path
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_content_dir()
-        / mp.core.constants.PLAYBOOKS_REPO_NAME
-        / playbooks_classification
+        create_or_get_playbooks_root_dir() / playbooks_classification
     )
 
 
-def get_playbook_base_folders_paths(
-    repository_classification: str, repo_base_path: Path
-) -> list[Path]:
+def get_playbook_base_folders_paths(repository_classification: str, repo_base_path: Path) -> list[Path]:
     """Get the root folder for the playbooks' repositories.
 
     Returns:
@@ -92,8 +100,7 @@ def get_playbook_out_base_dir() -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_out_contents_dir()
-        / mp.core.constants.PLAYBOOK_BASE_OUT_DIR_NAME
+        mp.core.file_utils.common.utils.create_or_get_out_contents_dir() / mp.core.constants.PLAYBOOK_BASE_OUT_DIR_NAME
     )
 
 
@@ -109,7 +116,7 @@ def is_non_built_playbook(playbook_path: Path) -> bool:
 
     steps_dir: Path = playbook_path / mp.core.constants.STEPS_DIR
     def_file: Path = playbook_path / mp.core.constants.DEFINITION_FILE
-    display_info: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
+    display_info: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME
     overviews_file: Path = playbook_path / mp.core.constants.OVERVIEWS_FILE_NAME
     trigger_file: Path = playbook_path / mp.core.constants.TRIGGER_FILE_NAME
 
@@ -163,7 +170,5 @@ def get_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
         A PlaybookDisplayInfo object.
 
     """
-    display_info_path: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME
-    return PlaybookDisplayInfo.from_non_built(
-        yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
-    )
+    display_info_path: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME
+    return PlaybookDisplayInfo.from_non_built(yaml.safe_load(display_info_path.read_text(encoding="utf-8")))

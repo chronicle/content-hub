@@ -172,18 +172,20 @@ def main():
                 failure_ids.append(entity_id)
 
         if success_ids:
-            output_message = f'Successfully added tag(s) to {entity_type}(s): "{", ".join(success_ids)}".'
+            output_message = (
+                f'Successfully added tag(s) to {entity_type}(s): "{", ".join(success_ids)}".'
+            )
             if failure_ids:
-                output_message += f' Failed to add tag(s) to {entity_type}(s): "{", ".join(failure_ids)}". Check logs for more details.'
+                failure_msg = f" Failed to add tag(s) to {entity_type}(s): "
+                failure_msg += f'"{", ".join(failure_ids)}". Check logs for more details.'
+                output_message += failure_msg
             siemplify.result.add_result_json(json.dumps(result_table))
             siemplify.result.add_data_table(
                 title="Tag Update Status",
                 data_table=construct_csv(result_table),
             )
         else:
-            output_message = (
-                f'Failed to add tag(s) to {entity_type}(s): "{", ".join(failure_ids)}"'
-            )
+            output_message = f'Failed to add tag(s) to {entity_type}(s): "{", ".join(failure_ids)}"'
             status = EXECUTION_STATE_FAILED
             result_value = RESULT_VALUE_FALSE
 

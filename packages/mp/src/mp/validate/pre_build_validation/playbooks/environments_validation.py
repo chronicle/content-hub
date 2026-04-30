@@ -30,22 +30,20 @@ class EnvironmentsValidation:
     name: str = "Environments Validation"
 
     @staticmethod
-    def run(playbook_path: Path) -> None:
+    def run(path: Path) -> None:
         """Validate the environments of a playbook.
 
         Args:
-            playbook_path: The path to the non-built playbook directory.
+            path: The path to the non-built playbook directory.
 
         Raises:
             NonFatalValidationError: If an invalid environment is found.
 
         """
-        meta: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
+        meta: PlaybookMetadata = PlaybookMetadata.from_non_built_path(path)
         invalid_environments = set(meta.environments).difference(VALID_ENVIRONMENTS)
         if invalid_environments:
             invalid_str = ", ".join(sorted(invalid_environments))
             valid_str = ", ".join(sorted(VALID_ENVIRONMENTS))
-            msg = (
-                f"Invalid environment(s) found: {invalid_str}. Valid environments are: {valid_str}."
-            )
+            msg = f"Invalid environment(s) found: {invalid_str}. Valid environments are: {valid_str}."
             raise NonFatalValidationError(msg)

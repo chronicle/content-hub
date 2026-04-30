@@ -44,9 +44,7 @@ class TestMappingRulesValidation:
     def test_success_on_no_connector(self, temp_integration: pathlib.Path) -> None:
         """Test that a valid integration (no connector) passes."""
         connector_def_file = (
-            temp_integration
-            / mp.core.constants.ACTIONS_DIR
-            / f"connector{mp.core.constants.DEF_FILE_SUFFIX}"
+            temp_integration / mp.core.constants.ACTIONS_DIR / f"connector{mp.core.constants.YAML_SUFFIX}"
         )
         _remove_file(connector_def_file)
 
@@ -61,7 +59,5 @@ class TestMappingRulesValidation:
         mapping_rules_def_file = temp_integration / constants.MAPPING_RULES_FILE
         _remove_file(mapping_rules_def_file)
 
-        with pytest.raises(
-            NonFatalValidationError, match="has connectors but doesn't have default mapping rules"
-        ):
+        with pytest.raises(NonFatalValidationError, match="has connectors but doesn't have default mapping rules"):
             self.validator_runner.run(temp_integration)

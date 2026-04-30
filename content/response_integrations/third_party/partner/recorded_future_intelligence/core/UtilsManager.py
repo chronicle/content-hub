@@ -16,6 +16,8 @@ import requests
 from .constants import (
     CONNECTOR_DATETIME_FORMAT,
     DATETIME_READABLE_FORMAT,
+    ENTITY_CHANGE_CASES,
+    ENTITY_PREFIX_TYPE_MAP_LIST_OPS,
     PBA_SEVERITY_MAP_INTEGER,
     SANDBOX_TIMEOUT_THRESHOLD_IN_MIN,
 )
@@ -155,7 +157,7 @@ def is_priority_increase(playbook_alert_logs: list) -> bool:
         changes = [change for change in changes if change["type"] == "priority_change"]
     old = PBA_SEVERITY_MAP_INTEGER[changes[0]["old"]]
     new = PBA_SEVERITY_MAP_INTEGER[changes[0]["new"]]
-    return old <= new
+    return old < new
 
 
 def is_new_assessment(playbook_alert_logs: list) -> bool:
@@ -190,40 +192,38 @@ def is_new_assessment(playbook_alert_logs: list) -> bool:
     return bool(changes)
 
 
-def is_entity_change(playbook_alert_logs: list) -> bool:
-    """Helper function to check if Playbook Alert Entities changed
+def is_entity_added(playbook_alert_logs: list) -> bool:
+    """Helper function to check if Playbook Alert Entities were added.
     :param playbook_alert_logs: Playbook Alert panel_log_v2
-    :return: {bool} If Playbook Alert Entities changed.
+    :return: {bool} If Playbook Alert Entities were added.
     """
     if not playbook_alert_logs:
         return False
-    entity_changes = [
-        "dns_change",
-        "screenshot_mentions_change",
-        "entities_change",
-        "related_entities_change",
-    ]
-    entity_change_logs = [
+    entity_added_logs = [
         log
         for log in playbook_alert_logs
         for change in log["changes"]
-        if change["type"] in entity_changes
+        if change["type"] in ENTITY_CHANGE_CASES and change.get("added")
     ]
-    if not entity_change_logs:
+    if not entity_added_logs:
         return False
-    if len(entity_change_logs) > 1:
-        entity_change_logs = sorted(
-            entity_change_logs,
+    if len(entity_added_logs) > 1:
+        entity_added_logs = sorted(
+            entity_added_logs,
             key=lambda log: datetime.strptime(
                 log["created"],
                 CONNECTOR_DATETIME_FORMAT + "Z",
             ),
             reverse=True,
         )
-    playbook_alert_log = entity_change_logs[0]
+    playbook_alert_log = entity_added_logs[0]
     changes = playbook_alert_log["changes"]
     if len(changes) > 1:
-        changes = [change for change in changes if change["type"] in entity_changes]
+        changes = [
+            change
+            for change in changes
+            if change["type"] in ENTITY_CHANGE_CASES and change.get("added")
+        ]
     return bool(changes)
 
 
@@ -239,7 +239,7 @@ def is_create_new_case(playbook_alert_logs, active_filters) -> bool:
         "reopened": is_reopened,
         "priority_increase": is_priority_increase,
         "new_assessment": is_new_assessment,
-        "entity_change": is_entity_change,
+        "entity_added": is_entity_added,
     }
     enabled_filters = [k for k, v in active_filters.items() if v and k in func_map]
     for update_use_case in enabled_filters:
@@ -253,3 +253,17 @@ def is_async_action_global_timeout_approaching(siemplify, start_time):
         siemplify.execution_deadline_unix_time_ms - start_time
         < SANDBOX_TIMEOUT_THRESHOLD_IN_MIN * 60
     )
+
+
+def map_secops_entities_to_rf(entities: list) -> list[str]:
+    """
+    Maps the SecOps entity to the Recorded Future ID format with entity prefix.
+    Ignores entities that are not included in the default mapping. For entities that
+    do not follow the Recorded Future prefix syntax, run the action with 'Entity Name'
+    and 'Entity Type' parameters instead.
+    """
+    return [
+        f"{ENTITY_PREFIX_TYPE_MAP_LIST_OPS.get(entity.entity_type)}:{entity.identifier}"
+        for entity in entities
+        if entity.entity_type in ENTITY_PREFIX_TYPE_MAP_LIST_OPS
+    ]

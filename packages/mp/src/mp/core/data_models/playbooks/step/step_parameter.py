@@ -19,6 +19,7 @@ from typing import Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
+from mp.core import exclusions
 from mp.core.data_models.abc import Buildable
 
 
@@ -43,7 +44,7 @@ class StepParameter(Buildable[BuiltStepParameter, NonBuiltStepParameter]):
         str,
         pydantic.Field(
             max_length=mp.core.constants.PARAM_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.PARAM_DISPLAY_NAME_REGEX,
+            pattern=exclusions.get_param_display_name_regex(),
         ),
     ]
     value: str | None = None

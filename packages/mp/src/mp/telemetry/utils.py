@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import hashlib
 import typing
 import uuid
@@ -98,9 +100,7 @@ def _create_config_yaml() -> ConfigYaml:
     base_dir: Path = Path("~").expanduser()
     platform_name = get_current_platform()[0]
     unique_id: str = str(uuid.uuid4())
-    hashed_id: str = hashlib.sha256(
-        f"{base_dir}{platform_name}{unique_id}".encode(), usedforsecurity=False
-    ).hexdigest()
+    hashed_id: str = hashlib.sha256(f"{base_dir}{platform_name}{unique_id}".encode(), usedforsecurity=False).hexdigest()
     return ConfigYaml(
         install_id=hashed_id,
         uuid4=unique_id,

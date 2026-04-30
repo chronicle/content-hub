@@ -32,9 +32,7 @@ def create_or_get_content_dir() -> Path:
         The root/content/integrations directory path
 
     """
-    return create_dir_if_not_exists(
-        mp.core.config.get_marketplace_path() / mp.core.constants.CONTENT_DIR_NAME
-    )
+    return create_dir_if_not_exists(mp.core.config.get_marketplace_path() / mp.core.constants.CONTENT_DIR_NAME)
 
 
 def create_or_get_out_contents_dir() -> Path:
@@ -58,9 +56,7 @@ def create_or_get_out_dir() -> Path:
         The out/ directory path
 
     """
-    return create_dir_if_not_exists(
-        mp.core.config.get_marketplace_path() / mp.core.constants.OUT_DIR_NAME
-    )
+    return create_dir_if_not_exists(mp.core.config.get_marketplace_path() / mp.core.constants.OUT_DIR_NAME)
 
 
 def create_dirs_if_not_exists(*paths: Path) -> list[Path]:
@@ -91,3 +87,15 @@ def create_dir_if_not_exists(p: Path, /) -> Path:
     """
     p.mkdir(parents=True, exist_ok=True)
     return p
+
+
+def create_or_get_download_dir() -> Path:
+    """Get the download path.
+
+    If the directory doesn't exist, it creates it
+
+    Returns:
+        The root/download directory path
+
+    """
+    return create_dir_if_not_exists(mp.core.config.get_marketplace_path() / mp.core.constants.DOWNLOAD_DIR)

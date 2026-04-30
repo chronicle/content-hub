@@ -14,35 +14,6 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from .display import display_test_reports
 
-from mp.core.display_utils import DisplayReport, display_reports
-from mp.core.utils import is_github_actions
-
-from .cli import CliDisplay
-from .html.html import HtmlFormat
-from .markdown_format import MarkdownFormat
-
-if TYPE_CHECKING:
-    from mp.run_pre_build_tests.process_test_output import IntegrationTestResults
-
-
-def display_test_reports(test_results: list[IntegrationTestResults]) -> None:
-    """Display integrations test results in various formats.
-
-    This function determines the appropriate display formats (CLI, Markdown, or HTML)
-    based on the environment (e.g., GitHub Actions) and then renders the test reports.
-
-    Args:
-        test_results: A list of `IntegrationTestResults` objects containing the
-            outcomes of the integration tests.
-
-    """
-    display_types_list: list[DisplayReport] = [CliDisplay(test_results)]
-
-    if is_github_actions():
-        display_types_list.append(MarkdownFormat(test_results))
-    else:
-        display_types_list.append(HtmlFormat(test_results))
-
-    display_reports(*display_types_list)
+__all__: list[str] = ["display_test_reports"]

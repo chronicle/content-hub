@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import base64
+import shutil
 import unittest.mock
 from typing import TYPE_CHECKING
 
@@ -23,8 +24,6 @@ import mp.core.file_utils
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from mp.core.custom_types import Products
 
 
 def test_discover_managers_built(tmp_path: Path) -> None:
@@ -55,14 +54,11 @@ def test_discover_managers_not_built(tmp_path: Path) -> None:
     assert set(managers) == {"manager1", "manager2"}
 
 
-def test_get_integrations_and_groups_from_paths(tmp_path: Path) -> None:
+def test_get_integrations_from_paths(tmp_path: Path) -> None:
     commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_REPO_NAME
     commercial_dir.mkdir()
     (commercial_dir / "integration1").mkdir()
     (commercial_dir / "integration1" / mp.core.constants.PROJECT_FILE).touch()
-    (commercial_dir / "group1").mkdir()
-    (commercial_dir / "group1" / "integration2").mkdir()
-    (commercial_dir / "group1" / "integration2" / mp.core.constants.PROJECT_FILE).touch()
 
     third_party_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
     third_party_dir.mkdir()
@@ -70,31 +66,20 @@ def test_get_integrations_and_groups_from_paths(tmp_path: Path) -> None:
     community_dir.mkdir()
     (community_dir / "integration3").mkdir()
     (community_dir / "integration3" / mp.core.constants.PROJECT_FILE).touch()
-    (community_dir / "group2").mkdir()
-    (community_dir / "group2" / "integration4").mkdir()
-    (community_dir / "group2" / "integration4" / mp.core.constants.PROJECT_FILE).touch()
 
     powerups_dir: Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
     powerups_dir.mkdir()
     (powerups_dir / "integration5").mkdir()
     (powerups_dir / "integration5" / mp.core.constants.PROJECT_FILE).touch()
-    (powerups_dir / "group3").mkdir()
-    (powerups_dir / "group3" / "integration6").mkdir()
-    (powerups_dir / "group3" / "integration6" / mp.core.constants.PROJECT_FILE).touch()
 
-    products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(
+    integrations: set[Path] = mp.core.file_utils.get_integrations_from_paths(
         commercial_dir, community_dir, powerups_dir
     )
 
-    assert products.integrations == {
+    assert integrations == {
         commercial_dir / "integration1",
         community_dir / "integration3",
         powerups_dir / "integration5",
-    }
-    assert products.groups == {
-        commercial_dir / "group1",
-        community_dir / "group2",
-        powerups_dir / "group3",
     }
 
 
@@ -136,37 +121,6 @@ def test_is_integration(tmp_path: Path) -> None:
     assert not mp.core.file_utils.is_integration(tmp_path)
 
 
-def test_is_group(tmp_path: Path) -> None:
-    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_REPO_NAME
-    third_party_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
-    community_dir: Path = third_party_dir / mp.core.constants.COMMUNITY_DIR_NAME
-    powerups_dir: Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
-
-    commercial_dir.mkdir()
-    third_party_dir.mkdir()
-    community_dir.mkdir()
-    powerups_dir.mkdir()
-
-    group_dir_commercial: Path = commercial_dir / "group"
-    group_dir_community: Path = community_dir / "group"
-    group_dir_power: Path = powerups_dir / "group"
-    group_dir_commercial.mkdir()
-    group_dir_community.mkdir()
-    group_dir_power.mkdir()
-
-    (group_dir_community / "integration1").mkdir()
-    (group_dir_community / "integration1" / mp.core.constants.PROJECT_FILE).touch()
-    (group_dir_commercial / "integration2").mkdir()
-    (group_dir_commercial / "integration2" / mp.core.constants.PROJECT_FILE).touch()
-    (group_dir_power / "integration3").mkdir()
-    (group_dir_power / "integration3" / mp.core.constants.PROJECT_FILE).touch()
-
-    assert mp.core.file_utils.is_group(group_dir_commercial)
-    assert mp.core.file_utils.is_group(group_dir_community)
-    assert mp.core.file_utils.is_group(group_dir_power)
-    assert not mp.core.file_utils.is_group(tmp_path)
-
-
 def test_get_integration_base_folders_paths(tmp_path: Path) -> None:
     with unittest.mock.patch(
         "mp.core.file_utils.integrations.file_utils.create_or_get_integrations_path",
@@ -175,9 +129,7 @@ def test_get_integration_base_folders_paths(tmp_path: Path) -> None:
         third_party_paths = mp.core.file_utils.get_integration_base_folders_paths(
             mp.core.constants.THIRD_PARTY_REPO_NAME
         )
-        commercial_paths = mp.core.file_utils.get_integration_base_folders_paths(
-            mp.core.constants.COMMERCIAL_REPO_NAME
-        )
+        commercial_paths = mp.core.file_utils.get_integration_base_folders_paths(mp.core.constants.COMMERCIAL_REPO_NAME)
 
         third_party = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
         expected_third_party_paths = [
@@ -336,3 +288,22 @@ def test_png_path_to_bytes(tmp_path: Path) -> None:
 
         assert mp.core.file_utils.png_path_to_bytes(input_file) == expected_b64_string
         assert mp.core.file_utils.png_path_to_bytes(non_existent_file) is None
+
+
+def test_is_commercial_integration(tmp_path: Path, non_built_integration: Path) -> None:
+    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_REPO_NAME
+    powerups_dir: Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
+    third_party_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
+    community_dir: Path = third_party_dir / mp.core.constants.COMMUNITY_DIR_NAME
+    partner_dir: Path = third_party_dir / mp.core.constants.PARTNER_DIR_NAME
+
+    shutil.copytree(non_built_integration.parent, commercial_dir)
+    shutil.copytree(non_built_integration.parent, powerups_dir)
+    shutil.copytree(non_built_integration.parent, community_dir)
+    shutil.copytree(non_built_integration.parent, partner_dir)
+
+    name: str = non_built_integration.name
+    assert mp.core.file_utils.is_certified_integration(commercial_dir / name) is True
+    assert mp.core.file_utils.is_certified_integration(powerups_dir / name) is True
+    assert mp.core.file_utils.is_certified_integration(partner_dir / name) is False
+    assert mp.core.file_utils.is_certified_integration(community_dir / name) is False

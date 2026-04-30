@@ -55,11 +55,11 @@ class VersionBumpValidation:
     name: str = "Playbook Version Bump"
 
     @staticmethod
-    def run(playbook_path: Path) -> None:
+    def run(path: Path) -> None:
         """Validate that `release_notes.yml` files are correctly versioned.
 
         Args:
-            playbook_path (Path): Path to the playbook directory.
+            path (Path): Path to the playbook directory.
 
         Raises:
             NonFatalValidationError: If versioning rules are violated.
@@ -69,16 +69,12 @@ class VersionBumpValidation:
         if not head_sha:
             return
 
-        changed_files: list[Path] = mp.core.unix.get_files_unmerged_to_main_branch(
-            "main", head_sha, playbook_path
-        )
+        changed_files: list[Path] = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, path)
 
         if not changed_files:
             return
 
-        rn_path: Path | None = next(
-            (p for p in changed_files if p.name == RELEASE_NOTES_FILE), None
-        )
+        rn_path: Path | None = next((p for p in changed_files if p.name == RELEASE_NOTES_FILE), None)
 
         if not rn_path:
             msg = "release_notes.yml file must be updated before PR"
@@ -88,9 +84,7 @@ class VersionBumpValidation:
         _version_bump_validation_run_checks(existing_files, new_files)
 
 
-def _create_data_for_version_bump_validation(
-    rn_path: Path,
-) -> VersionBumpValidationData:
+def _create_data_for_version_bump_validation(rn_path: Path) -> VersionBumpValidationData:
     existing_files: ExistingPlaybookFiles = {
         "rn": ReleaseNoteFileVersions(),
     }
@@ -99,9 +93,7 @@ def _create_data_for_version_bump_validation(
     try:
         old_rn_content = mp.core.unix.get_file_content_from_main_branch(rn_path)
         existing_files["rn"]["old"] = utils.get_last_release_note(old_rn_content)
-        existing_files["rn"]["new"] = utils.get_new_release_notes(
-            rn_path.read_text(encoding="utf-8"), old_rn_content
-        )
+        existing_files["rn"]["new"] = utils.get_new_release_notes(rn_path.read_text(encoding="utf-8"), old_rn_content)
 
     except mp.core.unix.NonFatalCommandError:
         new_files["rn"] = ReleaseNote.from_non_built_str(rn_path.read_text(encoding="utf-8"))

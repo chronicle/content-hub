@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any, cast
 
 from hypothesis import strategies as st
 
@@ -86,9 +87,7 @@ ST_VALID_BUILT_ACTION_METADATA_DICT = st.fixed_dictionaries(
         "DynamicResultsMetadata": st.lists(ST_VALID_BUILT_DYNAMIC_RESULTS_DICT),
         "IntegrationIdentifier": st_valid_identifier_name,
         "Name": st_valid_display_name,
-        "Parameters": st.lists(
-            ST_VALID_BUILT_PARAM_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
-        ),
+        "Parameters": st.lists(ST_VALID_BUILT_PARAM_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH),
         "Creator": st.text(),
     },
     optional={
@@ -108,18 +107,19 @@ ST_VALID_NON_BUILT_ACTION_METADATA_DICT = st.fixed_dictionaries(
         "dynamic_results_metadata": st.lists(ST_VALID_NON_BUILT_DYNAMIC_RESULTS_DICT),
         "integration_identifier": st_valid_identifier_name,
         "name": st_valid_display_name,
-        "parameters": st.lists(
-            ST_VALID_NON_BUILT_PARAM_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
-        ),
+        "parameters": st.lists(ST_VALID_NON_BUILT_PARAM_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH),
     },
-    optional={
-        "is_async": st.booleans(),
-        "is_custom": st.booleans(),
-        "is_enabled": st.booleans(),
-        "creator": st.text(),
-        "script_result_name": st.text(),
-        "simulation_data_json": st_json_serializable.map(json.dumps),
-        "default_result_value": st.text() | st.none(),
-        "version": st_valid_version,
-    },
+    optional=cast(
+        "Any",
+        {
+            "is_async": st.booleans(),
+            "is_custom": st.booleans(),
+            "is_enabled": st.booleans(),
+            "creator": st.text(),
+            "script_result_name": st.text(),
+            "simulation_data_json": st_json_serializable.map(json.dumps),
+            "default_result_value": st.text() | st.none(),
+            "version": st_valid_version,
+        },
+    ),
 )

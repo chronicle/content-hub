@@ -16,21 +16,13 @@
 
 from __future__ import annotations
 
-import dataclasses
 import enum
-from collections.abc import Iterable, Mapping
-from typing import Any, Generic, NamedTuple, ParamSpec, TypeAlias, TypeVar
+from collections.abc import Mapping
+from typing import Any, NamedTuple, ParamSpec, TypeAlias
 
 from . import constants
 
-_T = TypeVar("_T", bound=Iterable[Any])
 P = ParamSpec("P")
-
-
-@dataclasses.dataclass(slots=True)
-class Products(Generic[_T]):
-    integrations: _T
-    groups: _T
 
 
 ActionName: TypeAlias = str
@@ -45,7 +37,7 @@ YamlFileContent: TypeAlias = Mapping[str, Any]
 class RepositoryType(enum.Enum):
     THIRD_PARTY = constants.THIRD_PARTY_REPO_NAME
     COMMERCIAL = constants.COMMERCIAL_REPO_NAME
-    PLAYBOOKS = constants.PLAYBOOKS_REPO_NAME
+    PLAYBOOKS = constants.PLAYBOOKS_DIR_NAME
     ALL_CONTENT = "all_content"
     CUSTOM = "custom"
 

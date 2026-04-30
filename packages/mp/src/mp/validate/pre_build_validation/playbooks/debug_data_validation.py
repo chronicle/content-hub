@@ -33,19 +33,19 @@ class DebugDataValidation:
     name: str = "Debug Data Validation"
 
     @staticmethod
-    def run(playbook_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check for inconsistencies in playbook debug data.
 
         Args:
-            playbook_path: The path to the playbook directory.
+            path: The path to the playbook directory.
 
         Raises:
             NonFatalValidationError: If any debug data inconsistencies are found.
 
         """
-        display_info: PlaybookDisplayInfo = mp.core.file_utils.get_display_info(playbook_path)
-        playbook_metadata: PlaybookMetadata = PlaybookMetadata.from_non_built_path(playbook_path)
-        steps: list[Step] = Step.from_non_built_path(playbook_path)
+        display_info: PlaybookDisplayInfo = mp.core.file_utils.get_display_info(path)
+        playbook_metadata: PlaybookMetadata = PlaybookMetadata.from_non_built_path(path)
+        steps: list[Step] = Step.from_non_built_path(path)
         steps_with_debug_data: list[Step] = [step for step in steps if step.step_debug_data]
 
         if not steps_with_debug_data:
@@ -59,20 +59,20 @@ class DebugDataValidation:
                 "is set to False in the display info file. "
                 "Set 'acknowledge_debug_data_included' to True to allow this data."
             )
-            for step in steps_with_debug_data:
-                error_messages.append(f"Step <{step.instance_name}> contains debug data.")  # noqa: PERF401
+            error_messages.extend([
+                f"Step <{step.instance_name}> contains debug data." for step in steps_with_debug_data
+            ])
 
         if playbook_metadata.is_debug_mode:
             error_messages.append(
-                "Playbook Simulator (definition.yaml/'is_debug_mode') cannot be "
-                "enabled. Please disable it."
+                "Playbook Simulator (definition.yaml/'is_debug_mode') cannot be enabled. Please disable it."
             )
 
-        for step in steps_with_debug_data:
-            if step.is_debug_mock_data:
-                error_messages.append(  # noqa: PERF401
-                    f"Step <{step.instance_name}> debug mode cannot be enabled. Please disable it."
-                )
+        error_messages.extend([
+            f"Step <{step.instance_name}> debug mode cannot be enabled. Please disable it."
+            for step in steps_with_debug_data
+            if step.is_debug_mock_data
+        ])
 
         if error_messages:
             raise NonFatalValidationError("\n".join(error_messages))

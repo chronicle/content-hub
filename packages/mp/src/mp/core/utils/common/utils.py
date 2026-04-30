@@ -20,23 +20,42 @@ import os
 import platform
 import re
 import sys
-from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from mp.core.constants import WINDOWS_PLATFORM
 from mp.core.custom_types import RepositoryType
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Mapping
+
+    import yaml
+    import yaml.representer
 
     from mp.core.custom_types import YamlFileContent
 
-SNAKE_PATTERN_1 = re.compile(r"(.)([A-Z][a-z]+)")
-SNAKE_PATTERN_2 = re.compile(r"([a-z0-9])([A-Z])")
+SNAKE_PATTERN_1: re.Pattern[str] = re.compile(r"(.)([A-Z][a-z]+)")
+SNAKE_PATTERN_2: re.Pattern[str] = re.compile(r"([a-z0-9])([A-Z])")
 GIT_STATUS_REGEXP: re.Pattern[str] = re.compile(r"^[ A-Z?!]{2} ")
 ERR_MSG_STRING_LIMIT: int = 256
 TRIM_CHARS: str = " ... "
 
 _T = TypeVar("_T")
+
+
+def folded_string_representer(
+    dumper: yaml.representer.BaseRepresenter, data: str, min_str_len: int = 40
+) -> yaml.ScalarNode:
+    """Apply folded style if the string is long or has newlines in YAML.
+
+    Examples:
+        >>> yaml.add_representer(str, folded_string_representer, Dumper=yaml.SafeDumper)
+
+    Returns:
+        The folded string representation for YAML serialization.
+
+    """
+    style: str | None = ">" if len(data) > min_str_len else None
+    return dumper.represent_scalar(tag="tag:yaml.org,2002:str", value=data.strip(), style=style)
 
 
 def get_python_version_from_version_string(version: str) -> str:
@@ -66,11 +85,7 @@ def get_python_version_from_version_string(version: str) -> str:
     return ".".join(map(str, lowest_version))
 
 
-class _TypedDictType(TypedDict):
-    """Wrapper for TypedDicts to allow for attribute access."""
-
-
-def remove_none_entries_from_mapping(d: _TypedDictType, /) -> None:
+def remove_none_entries_from_mapping(d: Mapping[str, Any], /) -> None:
     """Remove all the keys that have `None` value in place.
 
     Args:
@@ -78,8 +93,10 @@ def remove_none_entries_from_mapping(d: _TypedDictType, /) -> None:
 
     """
     keys_to_remove: list[str] = [k for k, v in d.items() if v is None]
-    for k in keys_to_remove:
-        del d[k]  # type: ignore[misc]
+    if isinstance(d, dict):
+        d_mut: dict[str, Any] = cast("dict", d)
+        for k in keys_to_remove:
+            del d_mut[k]
 
 
 def str_to_snake_case(s: str) -> str:
@@ -227,16 +244,35 @@ def to_snake_case(s: str, /) -> str:
         The string converted to snake_case.
 
     """
+    return re.sub(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z\d]", " ", s).strip().replace(" ", "_").replace("-", "_").lower()
+
+
+def is_integration_repo(repositories: list[RepositoryType]) -> bool:
+    """Decide if needed to build integrations or not.
+
+    Returns:
+        True if yes overwise False
+
+    """
     return (
-        re
-        .sub(r"(?<=[a-z])(?=[A-Z])|[^a-zA-Z\d]", " ", s)
-        .strip()
-        .replace(" ", "_")
-        .replace("-", "_")
-        .lower()
+        RepositoryType.ALL_CONTENT in repositories
+        or RepositoryType.COMMERCIAL in repositories
+        or RepositoryType.THIRD_PARTY in repositories
+        or RepositoryType.CUSTOM in repositories
     )
 
 
+def is_playbook_repo(repositories: list[RepositoryType]) -> bool:
+    """Decide if needed to build integrations or not.
+
+    Returns:
+        True if yes overwise False
+
+    """
+    return RepositoryType.ALL_CONTENT in repositories or RepositoryType.PLAYBOOKS in repositories
+
+
+# Deprecated
 def should_preform_integration_logic(
     integrations: Iterable[str],
     repos: Iterable[RepositoryType],
@@ -255,9 +291,8 @@ def should_preform_integration_logic(
     )
 
 
-def should_preform_playbook_logic(
-    playbooks: Iterable[str], repos: Iterable[RepositoryType]
-) -> bool:
+# Deprecated
+def should_preform_playbook_logic(playbooks: Iterable[str], repos: Iterable[RepositoryType]) -> bool:
     """Decide if needed to build playbooks or not.
 
     Returns:

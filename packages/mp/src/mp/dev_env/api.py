@@ -26,6 +26,8 @@ import urllib3
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from requests.models import Response
+
 
 class BackendAPI:
     """Handles backend API operations for the dev environment."""
@@ -156,5 +158,69 @@ class BackendAPI:
             "isCustom": False,
         }
         resp = self.session.post(upload_url, json=upload_payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    def download_integration(self, integration_name: str) -> Response:
+        """Download an integration package from the SOAR backend.
+
+        Args:
+            integration_name: The name of the integration to download.
+
+        Returns:
+            Response object containing the integration package.
+
+        """
+        url: str = f"{self.api_root}/api/external/v1/ide/ExportPackage/{integration_name}?format=camel"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        return resp
+
+    def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
+        """Upload a zipped playbook package to the backend.
+
+        Args:
+            zip_path: Path to the zipped integration package.
+
+        Returns:
+            dict: The backend response after uploading the playbook.
+
+        """
+        upload_url: str = f"{self.api_root}/api/external/v1/playbooks/ImportDefinitions?format=camel"
+        data = base64.b64encode(zip_path.read_bytes()).decode()
+        upload_payload = {"blob": data, "fileName": zip_path.name}
+        resp = self.session.post(upload_url, json=upload_payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    def list_playbooks(self) -> list[dict[str, Any]]:
+        """Get all installed playbook's meta-data from the SOAR platform.
+
+        Returns:
+            list: Contains all playbooks meta-data.
+
+        """
+        url: str = f"{self.api_root}/api/external/v1/playbooks/GetWorkflowMenuCardsWithEnvFilter?format=camel"
+        resp = self.session.post(url, json=[1, 0])
+        resp.raise_for_status()
+        return resp.json()
+
+    def download_playbook(
+        self,
+        playbook_identifier: str,
+    ) -> dict[str, Any]:
+        """Download a playbook from the SOAR platform.
+
+        Args:
+            playbook_identifier: The identifier of the playbook to download.
+
+        Returns:
+            The response JSON containing playbook data.
+
+        """
+        url: str = f"{self.api_root}/api/external/v1/playbooks/ExportDefinitions?format=camel"
+        payload = {"identifiers": [playbook_identifier]}
+
+        resp = self.session.post(url, json=payload)
         resp.raise_for_status()
         return resp.json()

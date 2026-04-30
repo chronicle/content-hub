@@ -24,7 +24,7 @@ import typer
 import yaml
 
 from mp.core.config import get_marketplace_path
-from mp.dev_env.minor_version_bump import minor_version_bump
+from mp.dev_env.sub_commands.integration.minor_version_bump import minor_version_bump
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -69,9 +69,7 @@ def sandbox(
     def_path: Path = built_dst / f"Integration-{integration_name}.def"
     shutil.move(built_dst / "Integration-mock_integration.def", def_path)
 
-    version_cache_path: Path = (
-        INTEGRATIONS_CACHE_FOLDER_PATH / integration_name / "version_cache.yaml"
-    )
+    version_cache_path: Path = INTEGRATIONS_CACHE_FOLDER_PATH / integration_name / "version_cache.yaml"
 
     try:
         yield {

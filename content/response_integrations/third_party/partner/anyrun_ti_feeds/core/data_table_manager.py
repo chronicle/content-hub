@@ -27,7 +27,7 @@ class DataTableManager:
         token = extract_configuration_param(
             siemplify,
             Config.INTEGRATION_NAME,
-            param_name="ANYRUN TI Feeds Basic token",
+            param_name="ANYRUN TI Feeds API key",
             is_mandatory=True,
         )
 

@@ -19,8 +19,8 @@ from typing import Annotated, NotRequired, Self, TypedDict
 import pydantic
 
 import mp.core.constants
-import mp.core.utils
 import mp.core.validators
+from mp.core import exclusions
 from mp.core.data_models.abc import Buildable
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 
@@ -31,12 +31,13 @@ class BuiltIntegrationParameter(TypedDict):
     Value: str | bool | float | int | None
     PropertyDescription: NotRequired[str]
     IsMandatory: bool
-    PropertyType: int
+    PropertyType: int | str
     IntegrationIdentifier: str
 
 
 class NonBuiltIntegrationParameter(TypedDict):
     name: str
+    display_name: NotRequired[str]
     default_value: NotRequired[str | bool | float | int | None]
     description: str
     is_mandatory: bool
@@ -49,12 +50,19 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
         str,
         pydantic.Field(
             max_length=mp.core.constants.PARAM_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.PARAM_DISPLAY_NAME_REGEX,
         ),
         pydantic.AfterValidator(mp.core.validators.validate_param_name),
     ]
+    display_name: Annotated[
+        str | None,
+        pydantic.Field(
+            default=None,
+            max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
+        ),
+    ] = None
     description: Annotated[
-        str, pydantic.Field(max_length=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH)
+        str,
+        pydantic.AfterValidator(mp.core.validators.validate_param_short_description),
     ]
     is_mandatory: bool
     type_: ScriptParamType
@@ -62,17 +70,23 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_IDENTIFIER_REGEX,
+            pattern=exclusions.get_script_identifier_regex(),
         ),
     ]
     default_value: str | bool | float | int | None
 
     @classmethod
     def _from_built(cls, built: BuiltIntegrationParameter) -> Self:
+        property_name = built["PropertyName"]
+        property_display_name = built.get("PropertyDisplayName")
+        display_name = (
+            property_display_name if property_display_name and property_display_name != property_name else None
+        )
         return cls(
-            name=built["PropertyName"],
+            name=property_name,
+            display_name=display_name,
             default_value=built["Value"],
-            description=built.get("PropertyDescription", ""),
+            description=v if (v := built.get("PropertyDescription")) is not None else "",
             is_mandatory=built.get("IsMandatory", False),
             type_=ScriptParamType(int(built["PropertyType"])),
             integration_identifier=built["IntegrationIdentifier"],
@@ -82,6 +96,7 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
     def _from_non_built(cls, non_built: NonBuiltIntegrationParameter) -> Self:
         return cls(
             name=non_built["name"],
+            display_name=non_built.get("display_name"),
             default_value=non_built.get("default_value"),
             description=non_built["description"],
             is_mandatory=non_built["is_mandatory"],
@@ -100,7 +115,7 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
             IntegrationIdentifier=self.integration_identifier,
             IsMandatory=self.is_mandatory,
             PropertyDescription=self.description,
-            PropertyDisplayName=self.name,
+            PropertyDisplayName=self.display_name or self.name,
             PropertyName=self.name,
             PropertyType=self.type_.value,
             Value=self.default_value,
@@ -121,5 +136,6 @@ class IntegrationParameter(Buildable[BuiltIntegrationParameter, NonBuiltIntegrat
             is_mandatory=self.is_mandatory,
             integration_identifier=self.integration_identifier,
         )
-        mp.core.utils.remove_none_entries_from_mapping(non_built)
+        if self.display_name is not None:
+            non_built["display_name"] = self.display_name
         return non_built

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import rich
 
@@ -30,47 +30,63 @@ if TYPE_CHECKING:
     from mp.core.custom_types import RepositoryType
 
 
+class Repos(NamedTuple):
+    commercial: PlaybooksRepo
+    community: PlaybooksRepo
+    custom: PlaybooksRepo | None = None
+
+
 def build_playbooks(
     playbooks: Iterable[str],
     repositories: Iterable[RepositoryType],
+    src: Path | None,
+    dst: Path | None,
     *,
     deconstruct: bool = False,
 ) -> None:
     """Entry point of the build or deconstruct playbook operation."""
-    commercial_playbooks: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_or_create_playbook_repo_base_path(
-            mp.core.constants.COMMERCIAL_REPO_NAME
-        )
-    )
-    community_playbooks: PlaybooksRepo = PlaybooksRepo(
-        mp.core.file_utils.get_or_create_playbook_repo_base_path(
-            mp.core.constants.THIRD_PARTY_REPO_NAME
-        )
-    )
+    repos: Repos = _create_repos(src, dst)
 
     if playbooks:
-        commercial_not_found: set[str] = _build_playbooks(
-            set(playbooks), commercial_playbooks, deconstruct=deconstruct
-        )
-        community_not_found: set[str] = _build_playbooks(
-            set(playbooks), community_playbooks, deconstruct=deconstruct
-        )
+        if repos.custom is not None:
+            _build_playbooks(set(playbooks), repos.custom, deconstruct=deconstruct)
 
-        if commercial_not_found.intersection(community_not_found):
-            rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
+        else:
+            commercial_not_found: set[str] = _build_playbooks(set(playbooks), repos.commercial, deconstruct=deconstruct)
+            community_not_found: set[str] = _build_playbooks(set(playbooks), repos.community, deconstruct=deconstruct)
+
+            if commercial_not_found.intersection(community_not_found):
+                rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
 
     elif repositories:
-        _build_playbooks_repositories(commercial_playbooks, community_playbooks)
-        write_playbooks_json(commercial_playbooks, community_playbooks)
+        _build_playbooks_repositories([repos.commercial, repos.community])
+        write_playbooks_json(repos.commercial, repos.community)
 
 
-def _build_playbooks_repositories(
-    commercial_playbooks: PlaybooksRepo,
-    community_playbooks: PlaybooksRepo,
-) -> None:
+def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos:
+    commercial: PlaybooksRepo = PlaybooksRepo(
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(
+            mp.core.constants.COMMERCIAL_REPO_NAME,
+        ),
+        dst=modified_dst,
+    )
+    community: PlaybooksRepo = PlaybooksRepo(
+        mp.core.file_utils.get_or_create_playbook_repo_base_path(
+            mp.core.constants.THIRD_PARTY_REPO_NAME,
+        ),
+        dst=modified_dst,
+    )
+    custom: PlaybooksRepo | None = None
+    if modified_src is not None:
+        custom = PlaybooksRepo(modified_src, modified_dst, default_src=False)
+
+    return Repos(commercial, community, custom)
+
+
+def _build_playbooks_repositories(repos: list[PlaybooksRepo]) -> None:
     rich.print("[blue]Building all playbooks in repository...[/blue]")
-    _build_single_repo_folder(commercial_playbooks)
-    _build_single_repo_folder(community_playbooks)
+    for repository in repos:
+        _build_single_repo_folder(repository)
     rich.print("[blue]Done repository playbook build.[/blue]")
 
 
@@ -93,9 +109,7 @@ def _build_playbooks(
         playbooks, repository.base_folders, deconstruct=deconstruct
     )
     valid_playbooks_names: set[str] = {i.name for i in valid_playbooks_paths}
-    normalized_playbooks: set[str] = {
-        _normalize_name_to_json(name, deconstruct=deconstruct) for name in playbooks
-    }
+    normalized_playbooks: set[str] = {_normalize_name_to_json(name, deconstruct=deconstruct) for name in playbooks}
     not_found_playbooks: set[str] = normalized_playbooks.difference(valid_playbooks_names)
     if not_found_playbooks:
         rich.print(
@@ -104,9 +118,7 @@ def _build_playbooks(
         )
 
     if valid_playbooks_paths:
-        rich.print(
-            f"[blue]Building the following playbooks: {', '.join(valid_playbooks_names)}[/blue]"
-        )
+        rich.print(f"[blue]Building the following playbooks: {', '.join(valid_playbooks_names)}[/blue]")
 
         if deconstruct:
             repository.deconstruct_playbooks(valid_playbooks_paths)
@@ -120,9 +132,7 @@ def _get_playbooks_paths_from_repository(
     playbooks_names: Iterable[str], repositories_paths: list[Path], *, deconstruct: bool = False
 ) -> set[Path]:
     result: set[Path] = set()
-    normalized_names = [
-        _normalize_name_to_json(n, deconstruct=deconstruct) for n in playbooks_names
-    ]
+    normalized_names = [_normalize_name_to_json(n, deconstruct=deconstruct) for n in playbooks_names]
     for path in repositories_paths:
         result.update(p for n in normalized_names if (p := path / n).exists())
     return result

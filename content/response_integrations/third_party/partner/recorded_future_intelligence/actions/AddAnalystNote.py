@@ -9,48 +9,22 @@
 
 from __future__ import annotations
 
-import json
-import sys
-from typing import NoReturn
-
+from psengine.analyst_notes import AnalystNoteMgr, AnalystNotePublishError
+from psengine.config import Config
+from pydantic import ValidationError
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyUtils import output_handler, resume_stdout
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
-from ..core.constants import ADD_ANALYST_NOTE_SCRIPT_NAME, PROVIDER_NAME, TOPIC_MAP
-from ..core.exceptions import RecordedFutureUnauthorizedError
-from ..core.RecordedFutureManager import RecordedFutureManager
-
-SUITABLE_ENTITY_TYPES = [
-    EntityTypes.HOSTNAME,
-    EntityTypes.CVE,
-    EntityTypes.FILEHASH,
-    EntityTypes.ADDRESS,
-    EntityTypes.URL,
-]
+from ..core.constants import PROVIDER_NAME, TOPIC_MAP
+from ..core.version import __version__ as version
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
 
-    def end_script() -> NoReturn:
-        output_object = siemplify._build_output_object()
-        resume_stdout()
-        sys.stdout.write(json.dumps(output_object))
-        sys.exit()
-
-    siemplify.end_script = end_script
-
-    siemplify.script_name = ADD_ANALYST_NOTE_SCRIPT_NAME
-
-    api_url = extract_configuration_param(
-        siemplify,
-        provider_name=PROVIDER_NAME,
-        param_name="ApiUrl",
-    )
     api_key = extract_configuration_param(
         siemplify,
         provider_name=PROVIDER_NAME,
@@ -80,46 +54,57 @@ def main():
         default_value=TOPIC_MAP["None"],
     )
 
-    entities = "\n".join([entity.identifier for entity in siemplify.target_entities])
-    note_text = note_text + f"\n\nEntities collected from case: {entities}"
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
-    success = True
-    output_message = "Note uploaded successfully"
+    is_success = True
+    output_message = ""
     status = EXECUTION_STATE_COMPLETED
-    note_id = ""
+
+    entities = "\n".join([entity.identifier for entity in siemplify.target_entities])
+    note_text = note_text + f"\n\nEntities collected from case: {entities}"
 
     try:
-        manager = RecordedFutureManager(
-            api_url=api_url,
-            api_key=api_key,
-            verify_ssl=verify_ssl,
+        siemplify.LOGGER.info("Initializing psengine configuration")
+        Config.init(
+            client_verify_ssl=verify_ssl,
+            rf_token=api_key,
+            app_id=f"ps-google-soar/{version}",
+        )
+        siemplify.LOGGER.info("Initializing psengine AnalystNoteMgr")
+        note_mgr = AnalystNoteMgr()
+        siemplify.LOGGER.info("Publishing Analyst Note")
+        analyst_note_resp = note_mgr.publish(title=note_title, text=note_text, topic=topic)
+        data = analyst_note_resp.json()
+        siemplify.result.add_result_json(data)
+        output_message += (
+            f"Successfully published Analyst Note {analyst_note_resp.note_id} in Recorded Future."
         )
 
-        note_id = manager.get_analyst_notes(
-            title=note_title,
-            text=note_text,
-            topic=TOPIC_MAP[topic],
-        ).document_id
-
-    except Exception as err:
-        output_message = (
-            f"Error executing action {ADD_ANALYST_NOTE_SCRIPT_NAME}. Reason: {err}"
-        )
-        if isinstance(err, RecordedFutureUnauthorizedError):
-            output_message = (
-                "Unauthorized - please check your API token and try again. {}"
-            )
-        success = False
-        status = EXECUTION_STATE_FAILED
+    except ValueError as err:
+        output_message = f"Analyst Note Manager ValueError: {err}"
         siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(err)
+        is_success = False
+        status = EXECUTION_STATE_FAILED
+    except ValidationError as err:
+        output_message = f"Error with Analyst Note Manager publish parameters: {err}"
+        siemplify.LOGGER.error(output_message)
+        is_success = False
+        status = EXECUTION_STATE_FAILED
+    except AnalystNotePublishError as err:
+        output_message = f"Error publishing Analyst Note: {err}"
+        siemplify.LOGGER.error(output_message)
+        is_success = False
+        status = EXECUTION_STATE_FAILED
+    except Exception as err:
+        output_message = f"Error executing Add Analyst Note action: {err}"
+        is_success = False
+        status = EXECUTION_STATE_FAILED
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(
-        f"\n  status: {status}\n  succeded: {success}\n  note_id: {note_id}",
+        f"\n  status: {status}\n  is_success: {is_success}\n  output_message: {output_message}",
     )
-    siemplify.end(output_message, note_id, status)
+    siemplify.end(output_message, is_success, status)
 
 
 if __name__ == "__main__":

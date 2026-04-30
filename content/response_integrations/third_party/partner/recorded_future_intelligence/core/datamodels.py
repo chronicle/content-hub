@@ -70,9 +70,7 @@ class RFIndicator(BaseModel):
         self.intelCard = intelCard
         self.criticality = criticality
         self.links = links
-        self.rule_names = [
-            evidence_detail.get("rule") for evidence_detail in evidence_details
-        ]
+        self.rule_names = [evidence_detail.get("rule") for evidence_detail in evidence_details]
         self.evidence_details = evidence_details
 
     def to_csv(self):
@@ -111,8 +109,8 @@ class RFIndicator(BaseModel):
         """Returns Links Details in table format."""
         return [
             {
-                "Entity": entity["name"],
-                "Type": entity["type"],
+                "Entity": entity.name,
+                "Type": entity.type_,
                 "Relationship": section_name,
             }
             for section_name, entities in self.links.items()
@@ -130,9 +128,7 @@ class RFIndicator(BaseModel):
 
     def to_enrichment_data(self):
         """Returns indicator enrichment data with prefix."""
-        clean_enrichment_data = {
-            k: v for k, v in self.get_enrichment_data().items() if v
-        }
+        clean_enrichment_data = {k: v for k, v in self.get_enrichment_data().items() if v}
         return add_prefix_to_dict(clean_enrichment_data, "RF")
 
     def to_json(self):
@@ -282,6 +278,18 @@ class HASH(RFIndicator):
                 "Hash Algorithm": self.hashAlgorithm,
             },
         ]
+
+
+class HashReport(BaseModel):
+    """Hash from Malware Report."""
+
+    def __init__(self, raw_data, sha256, found, reports_summary, start_date, end_date):
+        super(HashReport, self).__init__(raw_data)
+        self.id = sha256
+        self.found = found
+        self.reports_summary = reports_summary
+        self.start_date = start_date
+        self.end_date = end_date
 
 
 class Alert(BaseModel):
@@ -455,6 +463,8 @@ class PlaybookAlert(BaseModel):
         elif self.category == "third_party_risk":
             self.add_targets_html(event)
             self.add_assessment_html_tpr(event)
+        elif self.category == "malware_report":
+            self.add_matched_hashes_html(event)
         return event
 
     def add_assessment_html_tpr(self, event):
@@ -480,10 +490,7 @@ class PlaybookAlert(BaseModel):
         ):
             try:
                 rules = " | ".join(
-                    [
-                        rule["name"]
-                        for rule in assessment.get("evidence", {}).get("data", [])
-                    ],
+                    [rule["name"] for rule in assessment.get("evidence", {}).get("data", [])],
                 )
                 new_chunk = chunk.format(
                     assessment["risk_rule"],
@@ -547,9 +554,7 @@ class PlaybookAlert(BaseModel):
         """
         hashes_html = []
         for hash_ in (
-            event.get("panel_evidence_summary", {})
-            .get("exposed_secret", {})
-            .get("hashes", [])
+            event.get("panel_evidence_summary", {}).get("exposed_secret", {}).get("hashes", [])
         ):
             try:
                 hashes_html.append(chunk.format(hash_["algorithm"], hash_["hash"]))
@@ -567,7 +572,8 @@ class PlaybookAlert(BaseModel):
         """
         secrets_html = []
         for prop in (
-            event.get("panel_evidence_summary", {})
+            event
+            .get("panel_evidence_summary", {})
             .get("exposed_secret", {})
             .get("details", {})
             .get("properties", [])
@@ -588,9 +594,7 @@ class PlaybookAlert(BaseModel):
         """
         av_html = []
         for prop in (
-            event.get("panel_evidence_summary", {})
-            .get("compromised_host", {})
-            .get("antivirus", [])
+            event.get("panel_evidence_summary", {}).get("compromised_host", {}).get("antivirus", [])
         ):
             try:
                 av_html.append(chunk.format(prop))
@@ -740,6 +744,56 @@ class PlaybookAlert(BaseModel):
                     ns_html,
                     value.get("privateRegistration"),
                 )
+
+    def add_matched_hashes_html(self, event: dict) -> None:
+        """Adds HTML for Whois records.
+
+        :param event {dict}: raw event object to append html chunks to"
+        """
+
+        malwares_chunk = """
+        <div class="assessment">
+            <p><span class="label">Detected Malwares:</span> {}</p>
+        </div>
+        """
+        header_chunk = """
+        <hr>
+        <h4><span class="label">Hash:</span> {} ({})</h4>
+        """
+        report_chunk = """
+        <div class="assessment">
+            <p><span class="label">Sandbox Report:</span> {}</p>
+            <p><span class="label">Sandbox Score:</span> {}</p>
+            <p><span class="label">Tags:</span>  {}</p>
+        </div>
+        """
+
+        matched_hashes_html = []
+        try:
+            detected_malwares = ", ".join([
+                f"{m['name'].upper()} ({m['count']})"
+                for m in event.get("panel_evidence_summary", {}).get("detected_malwares", [])
+            ])
+            if detected_malwares:
+                matched_hashes_html.append(malwares_chunk.format(detected_malwares))
+        except KeyError:
+            pass
+
+        matched_hashes = event.get("panel_evidence_summary", {}).get("matched_hashes", [])
+        sorted_hashes = sorted(matched_hashes, key=lambda h: h["risk_score"], reverse=True)
+        for matched_hash in sorted_hashes:
+            try:
+                hash_value = matched_hash["sha256"]
+                hash_risk_score = matched_hash["risk_score"]
+                matched_hashes_html.append(header_chunk.format(hash_value, hash_risk_score))
+                for report in matched_hash.get("report_overviews"):
+                    report_id = report["report_id"].split("-", 1)[1]
+                    score = report["sandbox_score"]
+                    tags = ", ".join(report["tags"]).upper()
+                    matched_hashes_html.append(report_chunk.format(report_id, score, tags))
+            except (KeyError, IndexError):
+                continue
+        event["matched_hashes_html"] = "\n".join(matched_hashes_html)
 
 
 @dataclass

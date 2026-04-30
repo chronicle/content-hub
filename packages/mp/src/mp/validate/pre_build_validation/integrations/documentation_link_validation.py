@@ -17,11 +17,9 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING
 
-import mp.core.constants
+from mp.core import exclusions
 from mp.core.exceptions import NonFatalValidationError
-from mp.validate.utils import (
-    load_integration_def,
-)
+from mp.validate.utils import load_integration_def
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -34,22 +32,19 @@ class IntegrationHasDocumentationLinkValidation:
     name: str = "Documentation Link Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check if the integration has a documentation link.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If the integration doesn't have a documentation link.
 
         """
-        if (
-            validation_path.name
-            in mp.core.constants.EXCLUDED_INTEGRATIONS_WITHOUT_DOCUMENTATION_LINK
-        ):
+        if path.name in exclusions.get_excluded_integrations_without_documentation_link():
             return
-        integration_def: YamlFileContent = load_integration_def(validation_path)
+        integration_def: YamlFileContent = load_integration_def(path)
         if not integration_def.get("documentation_link"):
-            msg: str = f"'{validation_path.name}' is missing a documentation link"
+            msg: str = f"'{path.name}' is missing a documentation link"
             raise NonFatalValidationError(msg)

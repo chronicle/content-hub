@@ -18,6 +18,9 @@ from typing import TYPE_CHECKING
 
 import mp.core.constants
 import mp.core.file_utils
+from mp.build_project.restructure.playbooks.deconstruct import (
+    _sanitize_step_filename,  # noqa: PLC2701
+)
 from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.data_models.playbooks.step.metadata import Step
@@ -68,9 +71,7 @@ def update_single_overview_roles(playbook_path: Path, new_roles: list[str]) -> N
     overview: Overview = overviews[0]
     overview.role_names = new_roles
 
-    mp.core.file_utils.save_yaml(
-        [overview.to_non_built()], playbook_path / mp.core.constants.OVERVIEWS_FILE_NAME
-    )
+    mp.core.file_utils.save_yaml([overview.to_non_built()], playbook_path / mp.core.constants.OVERVIEWS_FILE_NAME)
 
 
 def ingest_new_steps(playbook_path: Path, steps: list[Step]) -> None:
@@ -94,9 +95,7 @@ def update_playbook_definition(playbook_path: Path, updates: dict[str, Any]) -> 
     for key, value in updates.items():
         setattr(def_file, key, value)
 
-    mp.core.file_utils.save_yaml(
-        def_file.to_non_built(), playbook_path / mp.core.constants.DEFINITION_FILE
-    )
+    mp.core.file_utils.save_yaml(def_file.to_non_built(), playbook_path / mp.core.constants.DEFINITION_FILE)
 
 
 def update_display_info(playbook_path: Path, updates: dict) -> None:
@@ -106,13 +105,11 @@ def update_display_info(playbook_path: Path, updates: dict) -> None:
         setattr(display_info, key, value)
     mp.core.file_utils.save_yaml(
         display_info.to_non_built(),
-        playbook_path / mp.core.constants.DISPLAY_INFO_FILE_MAME,
+        playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME,
     )
 
 
-def update_step_with_debug_data(
-    playbook_path: Path, is_debug_mock_data: bool, has_debug_data: bool
-) -> None:
+def update_step_with_debug_data(playbook_path: Path, is_debug_mock_data: bool, has_debug_data: bool) -> None:
     """Update step with debug data."""
     for step in Step.from_non_built_path(playbook_path):
         step.is_debug_mock_data = is_debug_mock_data
@@ -131,5 +128,7 @@ def update_step_with_debug_data(
 
         mp.core.file_utils.save_yaml(
             step.to_non_built(),
-            playbook_path / mp.core.constants.STEPS_DIR / f"{step.instance_name}.yaml",
+            playbook_path
+            / mp.core.constants.STEPS_DIR
+            / f"{_sanitize_step_filename(step.instance_name, step.identifier)}.yaml",
         )

@@ -20,6 +20,7 @@ import pydantic
 
 import mp.core.constants
 import mp.core.utils
+from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata, RepresentableEnum
 from mp.core.data_models.common.condition.condition_group import (
     BuiltConditionGroup,
@@ -65,15 +66,13 @@ class NonBuiltActionWidgetMetadata(TypedDict):
     default_size: str
 
 
-class ActionWidgetMetadata(
-    ComponentMetadata[BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata]
-):
+class ActionWidgetMetadata(ComponentMetadata[BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata]):
     file_name: str
     title: Annotated[
         str,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
+            pattern=exclusions.get_script_display_name_regex(),
         ),
     ]
     type_: WidgetType
@@ -82,7 +81,7 @@ class ActionWidgetMetadata(
         str | None,
         pydantic.Field(
             max_length=mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.SCRIPT_DISPLAY_NAME_REGEX,
+            pattern=exclusions.get_script_display_name_regex(),
         ),
     ]
     description: Annotated[
@@ -108,9 +107,7 @@ class ActionWidgetMetadata(
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.JSON_SUFFIX}")
-        ]
+        return [cls._from_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.JSON_SUFFIX}")]
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
@@ -127,10 +124,7 @@ class ActionWidgetMetadata(
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_non_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.DEF_FILE_SUFFIX}")
-        ]
+        return [cls._from_non_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}")]
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltActionWidgetMetadata) -> Self:

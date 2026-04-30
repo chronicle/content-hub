@@ -18,12 +18,10 @@ import dataclasses
 from typing import TYPE_CHECKING
 
 import mp.core.constants
+from mp.core import exclusions
 from mp.core.exceptions import NonFatalValidationError
 from mp.core.utils import filter_and_map_yaml_files
-from mp.validate.utils import (
-    extract_name,
-    load_components_defs,
-)
+from mp.validate.utils import extract_name, load_components_defs
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -36,20 +34,18 @@ class ConnectorsHasDocumentationLinkValidation:
     name: str = "Connectors Documentation Link Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check if the integration's connectors has a documentation link.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If any of the integration's connectors doesn't have a
             documentation link.
 
         """
-        components_defs: dict[str, list[YamlFileContent]] = load_components_defs(
-            validation_path, mp.core.constants.CONNECTORS_DIR
-        )
+        components_defs: dict[str, list[YamlFileContent]] = load_components_defs(path, mp.core.constants.CONNECTORS_DIR)
         connectors_without_documentation_link: list[ConnectorName] = filter_and_map_yaml_files(
             components_defs.get(mp.core.constants.CONNECTORS_DIR, []),
             _missing_documentation_link,
@@ -58,7 +54,7 @@ class ConnectorsHasDocumentationLinkValidation:
         if connectors_without_documentation_link:
             formatted_connectors: str = "\n- ".join(connectors_without_documentation_link)
             msg: str = (
-                f"Integration '{validation_path.name}' contains connectors with missing "
+                f"Integration '{path.name}' contains connectors with missing "
                 f"documentation link:\n- {formatted_connectors}"
             )
             raise NonFatalValidationError(msg)
@@ -73,6 +69,5 @@ def _missing_documentation_link(yaml_content: YamlFileContent) -> bool:
     """
     return (
         not yaml_content.get("documentation_link")
-        and yaml_content.get("name")
-        not in mp.core.constants.EXCLUDED_CONNECTOR_NAMES_WITHOUT_DOCUMENTATION_LINK
+        and yaml_content.get("name") not in exclusions.get_excluded_connector_names_without_documentation_link()
     )

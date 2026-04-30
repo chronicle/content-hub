@@ -1,178 +1,334 @@
 name: Windows Workflows
 permissions:
   contents: read
+  pull-requests: read
 on:
   push:
     branches:
-    - '**'
+      - '**'
+    paths:
+      - 'content/**'
+      - 'packages/**'
+      - '.github/workflows/**'
   pull_request:
     branches:
-    - '**'
+      - '**'
+    paths:
+      - 'content/**'
+      - 'packages/**'
+      - '.github/workflows/**'
 
 jobs:
-  mp-build-integrations-windows:
-    name: Build Integrations on windows
-    runs-on: windows-latest
-
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      mp: ${{ steps.filter.outputs.mp }}
+      ci: ${{ steps.filter.outputs.ci }}
+      integration_packages: ${{ steps.filter.outputs.integration_packages }}
+      response_integrations_google: ${{ steps.filter.outputs.response_integrations_google }}
+      response_integrations_third_party: ${{ steps.filter.outputs.response_integrations_third_party }}
+      playbooks: ${{ steps.filter.outputs.playbooks }}
+      # New outputs for targeted runs
+      google_integrations: ${{ steps.compute.outputs.google_integrations }}
+      third_party_integrations: ${{ steps.compute.outputs.third_party_integrations }}
+      playbooks_list: ${{ steps.compute.outputs.playbooks_list }}
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: ${{ github.event.pull_request.base.sha || github.event.before }}
+          # language=yaml
+          filters: |
+            mp:
+              - 'packages/mp/**'
+            ci:
+              - '.github/workflows/**'
+            integration_packages:
+              - 'packages/envcommon/**'
+              - 'packages/tipcommon/**'
+              - 'packages/integration_testing/**'
+              - 'packages/integration_testing_whls/**'
+            response_integrations_google:
+              - 'content/response_integrations/google/**'
+            response_integrations_third_party:
+              - 'content/response_integrations/third_party/**'
+              - 'content/response_integrations/power_ups/**'
+            playbooks:
+              - 'content/playbooks/**'
 
-    - name: Install mp package
-      run: |
-        pip install --upgrade pip
-        pip install -e ./packages/mp
+      - name: Get all changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
 
-    - name: Build all integrations
-      shell: pwsh
-      run: |
-        wmp config --root-path . --processes 10 --display-config
-        wmp build --repository third_party --repository google
+      - name: Compute targets
+        id: compute
+        shell: bash
+        # language=bash
+        run: |
+          FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+          
+          G_INTS=()
+          TP_INTS=()
+          PBs=()
+
+          for file in $FILES; do
+            IFS='/' read -ra ADDR <<< "$file"
+            
+            # Integration names
+            if [[ $file == content/response_integrations/google/* ]]; then
+              [[ -n "${ADDR[3]}" ]] && G_INTS+=("${ADDR[3]}")
+            elif [[ $file == content/response_integrations/third_party/* ]]; then
+              # content/response_integrations/third_party/[community|partner]/NAME
+              [[ -n "${ADDR[4]}" ]] && TP_INTS+=("${ADDR[4]}")
+            elif [[ $file == content/response_integrations/power_ups/* ]]; then
+              # content/response_integrations/power_ups/NAME
+              [[ -n "${ADDR[3]}" ]] && TP_INTS+=("${ADDR[3]}")
+            elif [[ $file == content/playbooks/* ]]; then
+              if [[ ${ADDR[2]} == "third_party" ]]; then
+                 [[ -n "${ADDR[4]}" ]] && PBs+=("${ADDR[4]}")
+              else
+                 NAME="${ADDR[3]%.json}"
+                 [[ -n "$NAME" ]] && PBs+=("$NAME")
+              fi
+            fi
+          done
+
+          # Deduplicate and format
+          echo "google_integrations=$(echo "${G_INTS[@]}" | tr ' ' '\n' | sort -u | xargs)" >> $GITHUB_OUTPUT
+          echo "third_party_integrations=$(echo "${TP_INTS[@]}" | tr ' ' '\n' | sort -u | xargs)" >> $GITHUB_OUTPUT
+          echo "playbooks_list=$(echo "${PBs[@]}" | tr ' ' '\n' | sort -u | xargs)" >> $GITHUB_OUTPUT
 
   test-mp-windows:
-    name: Test mp Package on windows
+    name: 1. Test mp Package
+    needs: changes
+    if: ${{ needs.changes.outputs.mp == 'true' || needs.changes.outputs.ci == 'true' }}
     runs-on: windows-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        # language=bash
+        run: |
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
+          uv pip install --system pytest pytest-cov pytest-xdist hypothesis
+      - name: Run pytest
+        working-directory: packages/mp
+        run: python -m pytest tests -n 7 --cov
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
 
-    - name: Install mp package and required test dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install -e ./packages/mp
-        python -m pip install pytest pytest-cov pytest-xdist hypothesis
-
-    - name: Run pytest
-      working-directory: packages/mp
-      run: |
-        python -m pytest tests -n 10 --cov
-
-  validate-integrations-windows:
-    name: Run Integrations Validations on windows
+  validate-google-integrations-windows:
+    name: 2a. Validate Google Integrations
+    needs: changes
+    if: >-
+      (needs.changes.outputs.mp == 'true' ||
+       needs.changes.outputs.integration_packages == 'true' ||
+       needs.changes.outputs.response_integrations_google == 'true') &&
+      (github.event_name != 'pull_request' ||
+       (!contains(github.event.pull_request.labels.*.name, 'skip-windows') &&
+        !contains(github.event.pull_request.labels.*.name, 'ci-minimal')))
     runs-on: windows-latest
-
     steps:
-    - name: Checkout PR code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        persist-credentials: false
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install mp
+        # language=bash
+        run: |
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
+      - name: Run Validations
+        shell: pwsh
+        env:
+          PYTHONIOENCODING: utf-8
+          GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
+          IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
+          GOOGLE_INTEGRATIONS: ${{ needs.changes.outputs.google_integrations }}
+        # language=bash
+        run: |
+          wmp config --root-path . --processes 7 --display-config
+          if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
+            wmp validate repository google --only-pre-build
+          } else {
+            $integrations = $env:GOOGLE_INTEGRATIONS.Trim()
+            if ($integrations) {
+              $integrationList = $integrations.Split(" ")
+              wmp validate integration $integrationList --only-pre-build
+            }
+          }
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Install mp package
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install -e ./packages/mp
-
-    - name: Run Validations
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
-        PYTHONIOENCODING: "utf-8"
-      shell: pwsh
-      run: |
-        wmp config --root-path . --processes 10 --display-config
-        wmp validate --repository third_party --only-pre-build
+  validate-third-party-integrations-windows:
+    name: 2a. Validate Third Party Integrations
+    needs: changes
+    if: >-
+      (needs.changes.outputs.mp == 'true' ||
+       needs.changes.outputs.integration_packages == 'true' ||
+       needs.changes.outputs.response_integrations_third_party == 'true') &&
+      (github.event_name != 'pull_request' ||
+       (!contains(github.event.pull_request.labels.*.name, 'skip-windows') &&
+        !contains(github.event.pull_request.labels.*.name, 'ci-minimal')))
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install mp
+        # language=bash
+        run: |
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
+      - name: Run Validations
+        shell: pwsh
+        env:
+          PYTHONIOENCODING: utf-8
+          GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
+          IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
+          THIRD_PARTY_INTEGRATIONS: ${{ needs.changes.outputs.third_party_integrations }}
+        # language=bash
+        run: |
+          wmp config --root-path . --processes 7 --display-config
+          if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
+            wmp validate repository third_party --only-pre-build
+          } else {
+            $integrations = $env:THIRD_PARTY_INTEGRATIONS.Trim()
+            if ($integrations) {
+              $integrationList = $integrations.Split(" ")
+              wmp validate integration $integrationList --only-pre-build
+            }
+          }
 
   run-integrations-tests-windows:
-    name: Run Inegrations Tests on windows
+    name: 2b. Test Integrations
+    needs: [ validate-third-party-integrations-windows, validate-google-integrations-windows ]
     runs-on: windows-latest
-
     steps:
-    - name: Checkout PR code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        persist-credentials: false
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install mp
+        # language=bash
+        run: |
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
+      - name: Run integration tests
+        shell: pwsh
+        # language=powershell
+        run: |
+          wmp config --root-path . --processes 7 --display-config
+          wmp test --repository third_party --repository google --raise-error-on-violations
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Install mp package
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install -e ./packages/mp
-
-    - name: Run integration tests
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
-      shell: pwsh
-      run: |
-        wmp config --root-path . --processes 10 --display-config
-        wmp test --repository third_party --repository google --raise-error-on-violations
-
-  mp-build-playbooks-windows:
-    name: Build Playbooks on windows
+  mp-build-integrations-windows:
+    name: 2c. Build Integrations
+    needs: run-integrations-tests-windows
     runs-on: windows-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install mp
+        # language=bash
+        run: |
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
+      - name: Build
+        shell: pwsh
+        # language=bash
+        run: |
+          wmp config --root-path . --processes 7 --display-config
+          wmp build repository google third_party 
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
 
-    - name: Install mp package
-      run: |
-        pip install --upgrade pip
-        pip install -e ./packages/mp
-
-    - name: Build all integrations
-      shell: pwsh
-      run: |
-        wmp config --root-path . --processes 10 --display-config
-        wmp build --repository playbooks
 
   validate-playbooks-windows:
-    name: Run Playbooks Validations on windows
+    name: 3a. Validate Playbooks
+    needs: changes
+    if: >-
+      (needs.changes.outputs.mp == 'true' ||
+       needs.changes.outputs.playbooks == 'true') &&
+      (github.event_name != 'pull_request' ||
+       (!contains(github.event.pull_request.labels.*.name, 'skip-windows') &&
+        !contains(github.event.pull_request.labels.*.name, 'ci-minimal')))
     runs-on: windows-latest
-
     steps:
-    - name: Checkout PR code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        persist-credentials: false
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install mp
+        # language=bash
+        run: |
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
+      - name: Run Validations
+        shell: pwsh
+        env:
+          IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
+          IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
+          PLAYBOOKS_LIST: ${{ needs.changes.outputs.playbooks_list }}
+        # language=bash
+        run: |
+          wmp config --root-path . --processes 7 --display-config
+          if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
+            wmp validate repository playbooks --only-pre-build
+          } else {
+            $playbooks = $env:PLAYBOOKS_LIST.Trim()
+            if ($playbooks) {
+              $playbookList = $playbooks.Split(" ")
+              wmp validate playbook $playbookList --only-pre-build
+            }
+          }
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Install mp package
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install -e ./packages/mp
-
-    - name: Run Validations
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha }}
-        PYTHONIOENCODING: "utf-8"
-      shell: pwsh
-      run: |
-        wmp config --root-path . --processes 10 --display-config
-        wmp validate --repository playbooks --only-pre-build
+  mp-build-playbooks-windows:
+    name: 3b. Build Playbooks
+    needs: validate-playbooks-windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install mp
+        # language=bash
+        run: |
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
+      - name: Build
+        shell: pwsh
+        # language=bash
+        run: |
+          wmp config --root-path . --processes 7 --display-config
+          wmp build repository playbooks

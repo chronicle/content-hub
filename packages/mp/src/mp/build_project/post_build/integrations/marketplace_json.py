@@ -32,13 +32,10 @@ import mp.core.utils
 from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
 
-from .data_models import FullDetailsExtraAttrs
-
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from pathlib import Path
 
-    from mp.core.custom_types import Products
     from mp.core.data_models.integrations.action.metadata import BuiltActionMetadata
 
     from .data_models import BuiltFullDetailsIntegrationMetadata, BuiltSupportedAction
@@ -77,11 +74,11 @@ def write_marketplace_json(dst: Path) -> None:
             `marketplace.json` file
 
     """
-    products: Products[set[Path]] = mp.core.file_utils.get_integrations_and_groups_from_paths(dst)
+    integrations: set[Path] = mp.core.file_utils.get_integrations_from_paths(dst)
     identifiers: set[str] = set()
     duplicates: list[tuple[str, str]] = []
     def_files: list[BuiltFullDetailsIntegrationMetadata] = []
-    for i in products.integrations:
+    for i in integrations:
         mjd: MarketplaceJsonDefinition = MarketplaceJsonDefinition(i)
         def_file_path: Path = i / mp.core.constants.INTEGRATION_DEF_FILE.format(i.name)
         def_file: BuiltFullDetailsIntegrationMetadata = mjd.get_def_file(def_file_path)
@@ -116,9 +113,7 @@ class MarketplaceJsonDefinition:
             An integrations built version of the marketplace JSON definition
 
         """
-        metadata: BuiltFullDetailsIntegrationMetadata = json.loads(
-            def_file_path.read_text(encoding="utf-8")
-        )
+        metadata: BuiltFullDetailsIntegrationMetadata = json.loads(def_file_path.read_text(encoding="utf-8"))
         self._update_full_details_with_extra_attrs(metadata)
         return metadata
 
@@ -129,14 +124,16 @@ class MarketplaceJsonDefinition:
         release_times: ReleaseTimes = self._get_integration_release_time()
         has_connectors: bool = self._has_connectors()
         supported_actions: list[BuiltSupportedAction] = self._get_supported_actions()
-        extra_attrs: FullDetailsExtraAttrs = FullDetailsExtraAttrs(
-            HasConnectors=has_connectors,
-            SupportedActions=supported_actions,
-            LatestReleasePublishTimeUnixTime=release_times.latest_release,
-            UpdateNotificationExpired=release_times.update_notification,
-            NewNotificationExpired=release_times.new_notification,
-        )
-        metadata.update(extra_attrs)  # type: ignore[typeddict-item]
+        metadata["HasConnectors"] = has_connectors
+        metadata["SupportedActions"] = supported_actions
+        if release_times.latest_release is not None:
+            metadata["LatestReleasePublishTimeUnixTime"] = release_times.latest_release
+
+        if release_times.update_notification is not None:
+            metadata["UpdateNotificationExpired"] = release_times.update_notification
+
+        if release_times.new_notification is not None:
+            metadata["NewNotificationExpired"] = release_times.new_notification
         mp.core.utils.remove_none_entries_from_mapping(metadata)
 
     def _get_integration_release_time(self) -> ReleaseTimes:
@@ -159,9 +156,7 @@ class MarketplaceJsonDefinition:
 
         supported_action: list[BuiltSupportedAction] = []
         for action_meta_path in actions_definitions.iterdir():
-            action_meta: BuiltActionMetadata = json.loads(
-                action_meta_path.read_text(encoding="utf-8")
-            )
+            action_meta: BuiltActionMetadata = json.loads(action_meta_path.read_text(encoding="utf-8"))
             supported_action.append(
                 {
                     "Name": action_meta["Name"],
@@ -176,10 +171,8 @@ def _get_latest_release_time(release_notes: Iterable[ReleaseNote]) -> int | None
     if not release_notes:
         return 0
 
-    latest_version: float = max(float(rn.version) for rn in release_notes)
-    latest_version_rn: list[ReleaseNote] = [
-        rn for rn in release_notes if rn.version == latest_version
-    ]
+    latest_version: float = max(rn.version for rn in release_notes)
+    latest_version_rn: list[ReleaseNote] = [rn for rn in release_notes if rn.version == latest_version]
     if not latest_version:
         return None
 

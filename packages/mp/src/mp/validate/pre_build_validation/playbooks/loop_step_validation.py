@@ -29,17 +29,17 @@ class LoopStepValidation:
     name: str = "Loop Step Validation"
 
     @staticmethod
-    def run(playbook_path: Path) -> None:
+    def run(path: Path) -> None:
         """Validate that all loops in a playbook are properly opened and closed.
 
         Args:
-            playbook_path: The path to the playbook file.
+            path: The path to the playbook file.
 
         Raises:
             FatalValidationError: If there are any loop validation errors.
 
         """
-        steps: list[Step] = Step.from_non_built_path(playbook_path)
+        steps: list[Step] = Step.from_non_built_path(path)
         balance: int = 0
         error_msgs: list[str] = []
 
@@ -52,9 +52,7 @@ class LoopStepValidation:
         for step in steps:
             if step.type_ is StepType.FOR_EACH_START_LOOP:
                 if step.start_loop_step_id not in end_loop_start_ids:
-                    error_msgs.append(
-                        f"Step <{step.instance_name}> is missing a matching end loop step"
-                    )
+                    error_msgs.append(f"Step <{step.instance_name}> is missing a matching end loop step")
                 balance += 1
             elif step.type_ is StepType.FOR_EACH_END_LOOP:
                 balance -= 1

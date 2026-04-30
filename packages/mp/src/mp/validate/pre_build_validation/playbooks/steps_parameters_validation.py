@@ -34,17 +34,17 @@ class StepParamsValidation:
     name: str = "Step Parameters Validation"
 
     @staticmethod
-    def run(playbook_path: Path) -> None:
+    def run(path: Path) -> None:
         """Run validation on all steps parameters within a playbook.
 
         Args:
-            playbook_path: The path to the non-built playbook directory.
+            path: The path to the non-built playbook directory.
 
         Raises:
             NonFatalValidationError: If any step parameter validation fails.
 
         """
-        steps: list[Step] = Step.from_non_built_path(playbook_path)
+        steps: list[Step] = Step.from_non_built_path(path)
         validation_result: list[dict[str, list[str]]] = [
             step_result for step in steps if (step_result := _process_step(step)) is not None
         ]
@@ -72,9 +72,7 @@ def _process_step(step: Step) -> dict[str, list[str]] | None:  # noqa: C901
 
             case "AsyncActionTimeout":
                 if param.value and not (0 < int(param.value) <= MAX_ASYNC_ACTION_TIMEOUT):
-                    step_result.append(
-                        "AsyncActionTimeout must positive number less than 14 days (in seconds)."
-                    )
+                    step_result.append("AsyncActionTimeout must positive number less than 14 days (in seconds).")
                 async_action_timeout = param.value
 
             case "AsyncPollingInterval":
@@ -82,11 +80,7 @@ def _process_step(step: Step) -> dict[str, list[str]] | None:  # noqa: C901
                     step_result.append("AsyncPollingInterval must be at least 30 seconds.")
                 async_polling_interval = param.value
 
-    if (
-        async_action_timeout
-        and async_polling_interval
-        and int(async_polling_interval) > int(async_action_timeout)
-    ):
+    if async_action_timeout and async_polling_interval and int(async_polling_interval) > int(async_action_timeout):
         step_result.append("AsyncPollingInterval must be less than AsyncActionTimeout.")
 
     return {step.instance_name: step_result} if step_result else None

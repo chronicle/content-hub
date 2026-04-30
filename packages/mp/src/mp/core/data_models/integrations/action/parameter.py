@@ -54,11 +54,11 @@ OPT_TYPES: set[ActionParamType] = {
 
 
 class BuiltActionParameter(TypedDict):
-    Description: str
+    Description: NotRequired[str]
     IsMandatory: bool
     Name: str
     OptionalValues: list[str] | None
-    Type: int
+    Type: int | str
     Value: str | bool | int | float | None
     DefaultValue: str | bool | int | float | None
 
@@ -77,14 +77,13 @@ class ActionParameter(
 ):
     description: Annotated[
         str,
-        pydantic.Field(max_length=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH),
+        pydantic.AfterValidator(mp.core.validators.validate_param_short_description),
     ]
     is_mandatory: bool
     name: Annotated[
         str,
         pydantic.Field(
             max_length=mp.core.constants.PARAM_NAME_MAX_LENGTH,
-            pattern=mp.core.constants.PARAM_DISPLAY_NAME_REGEX,
         ),
         pydantic.AfterValidator(mp.core.validators.validate_param_name),
     ]
@@ -104,7 +103,7 @@ class ActionParameter(
 
         """
         return cls(
-            description=built["Description"],
+            description=built.get("Description") or "",
             is_mandatory=built["IsMandatory"],
             name=built["Name"],
             optional_values=built.get("OptionalValues"),
