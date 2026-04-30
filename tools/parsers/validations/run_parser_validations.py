@@ -296,10 +296,20 @@ def main(argv: list[str]) -> None:
             for result in validation_results.get("runParserResults", []):
                 parsed_events = result.get("parsedEvents", {}).get("events", [])
                 
+                def make_hashable(obj):
+                    if isinstance(obj, dict):
+                        return tuple(sorted((k, make_hashable(v)) for k, v in obj.items()))
+                    if isinstance(obj, list):
+                        return tuple(make_hashable(e) for e in obj)
+                    return obj
+
+                seen_hashes = set()
                 unique_parsed_events = []
                 for ev in parsed_events:
-                    if ev not in unique_parsed_events:
+                    ev_hash = make_hashable(ev)
+                    if ev_hash not in seen_hashes:
                         unique_parsed_events.append(ev)
+                        seen_hashes.add(ev_hash)
 
                 for event_wrapper in unique_parsed_events:
                     if "entity" in event_wrapper:
@@ -355,8 +365,7 @@ def main(argv: list[str]) -> None:
 
                 if event_diff:
                     diff_lines = get_diff_str(event_diff)
-                    if diff_lines:
-                        event_failures.append({"index": i, "diff": "\n".join(diff_lines)})
+                    event_failures.append({"index": i, "diff": "\n".join(diff_lines)})
 
             usecase_res = {
                 "test_file": log_file.name,
