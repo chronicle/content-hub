@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 from TIPCommon.rest.custom_types import HttpMethod
 
 from ...consts import DATAPLANE_1P_HEADER, DEFAULT_1P_PAGE_SIZE
+from ...exceptions import EmptyMandatoryValues, ParameterValidationError
 from ...utils import escape_odata_literal, safe_json_for_204, temporarily_remove_header
 from .base_soar_api import BaseSoarApi
 
@@ -538,6 +539,84 @@ class OnePlatformSoarApi(BaseSoarApi):
         if self.params.job_instance_id:
             endpoint += f"{self.params.job_instance_id}"
         return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def save_or_update_job(self) -> requests.Response:
+        """Save or update job data using 1P API.
+
+        The ``job_data`` dict must contain at least:
+
+        - **name** (``str``): The full GCP resource path of
+          the job instance, e.g.::
+
+              projects/{project}/locations/{location}/
+              instances/{instance}/integrations/{integrationId}/
+              jobs/{jobId}/jobInstances/{instanceId}
+
+        - **parameters** (``list[dict]``): A list of parameter
+          dicts, each containing at minimum ``name`` (or
+          ``displayName``) and ``value`` keys.
+
+        Example ``job_data``::
+
+            {
+                "name": "projects/my-proj/locations/us/"
+                        "instances/abc/integrations/MyInt/"
+                        "jobs/j1/jobInstances/ji1",
+                "parameters": [
+                    {
+                        "displayName": "API Key",
+                        "value": "new-value"
+                    }
+                ]
+            }
+
+        Raises:
+            EmptyMandatoryValues: If ``job_data`` is missing
+                required fields (``name``, ``parameters``).
+            ParameterValidationError: If the resource path
+                cannot be parsed.
+        """
+        job_data = self.params.job_data
+
+        resource_path = job_data.get("name")
+        if resource_path is None:
+            raise EmptyMandatoryValues(
+                "Job data must include a 'name' field with the resource path. "
+                "Example (1P resource path): "
+                "projects/{project}/locations/{location}/instances/{instance}/"
+                "integrations/{integrationId}/jobs/{jobId}/"
+                "jobInstances/{instanceId}. "
+                "Cannot determine the PATCH endpoint without the resource path."
+            )
+
+        parameters = job_data.get("parameters")
+        if parameters is None:
+            raise EmptyMandatoryValues(
+                "Job data is missing 'parameters' field, Nothing to update."
+            )
+        # The resource path is a full GCP resource name, e.g.:
+        # projects/X/locations/Y/instances/Z/integrations/.../jobInstances/{id}
+        # The API base URL already includes up to instances/Z, so we need
+        # just the relative path starting from /integrations/...
+        segment_pos = resource_path.find("integrations/")
+        if segment_pos == -1:
+            raise ParameterValidationError(
+                param_name="name",
+                value=resource_path,
+                message=(
+                    "Cannot parse resource path. "
+                    "Expected path to contain 'integrations/'"
+                ),
+            )
+        endpoint = f"/{resource_path[segment_pos:]}"
+
+        return self._make_request(
+            HttpMethod.PATCH,
+            endpoint,
+            params={"updateMask": "parameters"},
+            json_payload={"parameters": parameters},
+        )
 
     def get_case_wall_records(self) -> requests.Response:
         """Get case wall records using 1P API.
