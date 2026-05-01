@@ -121,6 +121,18 @@ def assert_build_integration(
         )
         assert actual == expected
 
+        # Check action definitions
+        expected_actions_dir: Path = built_integration / mp.core.constants.OUT_ACTIONS_META_DIR
+        actual_actions_dir: Path = out_integration / mp.core.constants.OUT_ACTIONS_META_DIR
+        if expected_actions_dir.exists():
+            for expected_action_file in expected_actions_dir.rglob(f"*{mp.core.constants.ACTIONS_META_SUFFIX}"):
+                actual_action_file = actual_actions_dir / expected_action_file.name
+                actual_action, expected_action = test_mp.common.get_json_content(
+                    expected=expected_action_file,
+                    actual=actual_action_file,
+                )
+                assert actual_action == expected_action
+
         actual, expected = test_mp.common.get_json_content(
             expected=(
                 built_integration

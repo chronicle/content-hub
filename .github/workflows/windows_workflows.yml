@@ -29,6 +29,10 @@ jobs:
       response_integrations_google: ${{ steps.filter.outputs.response_integrations_google }}
       response_integrations_third_party: ${{ steps.filter.outputs.response_integrations_third_party }}
       playbooks: ${{ steps.filter.outputs.playbooks }}
+      # New outputs for targeted runs
+      google_integrations: ${{ steps.compute.outputs.google_integrations }}
+      third_party_integrations: ${{ steps.compute.outputs.third_party_integrations }}
+      playbooks_list: ${{ steps.compute.outputs.playbooks_list }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -58,6 +62,48 @@ jobs:
               - 'content/response_integrations/power_ups/**'
             playbooks:
               - 'content/playbooks/**'
+
+      - name: Get all changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+
+      - name: Compute targets
+        id: compute
+        shell: bash
+        # language=bash
+        run: |
+          FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+          
+          G_INTS=()
+          TP_INTS=()
+          PBs=()
+
+          for file in $FILES; do
+            IFS='/' read -ra ADDR <<< "$file"
+            
+            # Integration names
+            if [[ $file == content/response_integrations/google/* ]]; then
+              [[ -n "${ADDR[3]}" ]] && G_INTS+=("${ADDR[3]}")
+            elif [[ $file == content/response_integrations/third_party/* ]]; then
+              # content/response_integrations/third_party/[community|partner]/NAME
+              [[ -n "${ADDR[4]}" ]] && TP_INTS+=("${ADDR[4]}")
+            elif [[ $file == content/response_integrations/power_ups/* ]]; then
+              # content/response_integrations/power_ups/NAME
+              [[ -n "${ADDR[3]}" ]] && TP_INTS+=("${ADDR[3]}")
+            elif [[ $file == content/playbooks/* ]]; then
+              if [[ ${ADDR[2]} == "third_party" ]]; then
+                 [[ -n "${ADDR[4]}" ]] && PBs+=("${ADDR[4]}")
+              else
+                 NAME="${ADDR[3]%.json}"
+                 [[ -n "$NAME" ]] && PBs+=("$NAME")
+              fi
+            fi
+          done
+
+          # Deduplicate and format
+          echo "google_integrations=$(echo "${G_INTS[@]}" | tr ' ' '\n' | sort -u | xargs)" >> $GITHUB_OUTPUT
+          echo "third_party_integrations=$(echo "${TP_INTS[@]}" | tr ' ' '\n' | sort -u | xargs)" >> $GITHUB_OUTPUT
+          echo "playbooks_list=$(echo "${PBs[@]}" | tr ' ' '\n' | sort -u | xargs)" >> $GITHUB_OUTPUT
 
   test-mp-windows:
     name: 1. Test mp Package
@@ -113,10 +159,21 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
           GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
+          IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
+          GOOGLE_INTEGRATIONS: ${{ needs.changes.outputs.google_integrations }}
         # language=bash
         run: |
           wmp config --root-path . --processes 7 --display-config
-          wmp validate repository google --only-pre-build
+          if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
+            wmp validate repository google --only-pre-build
+          } else {
+            $integrations = $env:GOOGLE_INTEGRATIONS.Trim()
+            if ($integrations) {
+              $integrationList = $integrations.Split(" ")
+              wmp validate integration $integrationList --only-pre-build
+            }
+          }
 
   validate-third-party-integrations-windows:
     name: 2a. Validate Third Party Integrations
@@ -148,10 +205,21 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
           GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
+          IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
+          THIRD_PARTY_INTEGRATIONS: ${{ needs.changes.outputs.third_party_integrations }}
         # language=bash
         run: |
           wmp config --root-path . --processes 7 --display-config
-          wmp validate repository third_party --only-pre-build
+          if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
+            wmp validate repository third_party --only-pre-build
+          } else {
+            $integrations = $env:THIRD_PARTY_INTEGRATIONS.Trim()
+            if ($integrations) {
+              $integrationList = $integrations.Split(" ")
+              wmp validate integration $integrationList --only-pre-build
+            }
+          }
 
   run-integrations-tests-windows:
     name: 2b. Test Integrations
@@ -225,10 +293,22 @@ jobs:
           uv pip install --system -e ./packages/mp
       - name: Run Validations
         shell: pwsh
+        env:
+          IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
+          IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
+          PLAYBOOKS_LIST: ${{ needs.changes.outputs.playbooks_list }}
         # language=bash
         run: |
           wmp config --root-path . --processes 7 --display-config
-          wmp validate repository playbooks --only-pre-build
+          if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
+            wmp validate repository playbooks --only-pre-build
+          } else {
+            $playbooks = $env:PLAYBOOKS_LIST.Trim()
+            if ($playbooks) {
+              $playbookList = $playbooks.Split(" ")
+              wmp validate playbook $playbookList --only-pre-build
+            }
+          }
 
   mp-build-playbooks-windows:
     name: 3b. Build Playbooks

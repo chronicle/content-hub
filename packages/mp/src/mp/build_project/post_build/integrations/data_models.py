@@ -36,14 +36,6 @@ class BuiltSupportedAction(TypedDict):
     Description: str
 
 
-class FullDetailsExtraAttrs(TypedDict):
-    LatestReleasePublishTimeUnixTime: NotRequired[int | None]
-    UpdateNotificationExpired: NotRequired[int | None]
-    NewNotificationExpired: NotRequired[int | None]
-    HasConnectors: bool
-    SupportedActions: Sequence[BuiltSupportedAction]
-
-
 class BuiltFullDetailsIntegrationMetadata(TypedDict):
     Categories: Sequence[str]
     Description: str

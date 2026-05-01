@@ -14,7 +14,7 @@
 import shutil
 from pathlib import Path
 
-from hypothesis.extra.cli import pytest
+import pytest
 
 import mp.core.constants
 import mp.core.file_utils

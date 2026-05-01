@@ -20,8 +20,10 @@ Used for things such as path manipulation and file content operations.
 from __future__ import annotations
 
 import base64
+import contextlib
 import dataclasses
 import json
+import pathlib
 from typing import TYPE_CHECKING, Any
 
 import yaml
@@ -72,6 +74,7 @@ def get_integration_base_folders_paths(integrations_classification: str) -> list
             third_party = base_path / constants.THIRD_PARTY_REPO_NAME
 
             return mp.core.file_utils.common.create_dirs_if_not_exists(
+                third_party,
                 base_path / constants.POWERUPS_DIR_NAME,
                 third_party / constants.COMMUNITY_DIR_NAME,
                 third_party / constants.PARTNER_DIR_NAME,
@@ -125,6 +128,55 @@ def create_or_get_out_integrations_dir() -> Path:
     )
 
 
+def get_marketplace_integration_base_paths() -> list[Path]:
+    """Get all integration base paths across all relevant repository types.
+
+    Returns:
+        list[Path]: All integration base directories.
+
+    """
+    base_paths: list[Path] = []
+    for repo_type_name in [
+        constants.COMMERCIAL_REPO_NAME,
+        constants.THIRD_PARTY_REPO_NAME,
+        constants.CUSTOM_REPO_NAME,
+    ]:
+        base_paths.extend(get_integration_base_folders_paths(repo_type_name))
+
+    return base_paths
+
+
+def get_marketplace_integration_path(name: str) -> Path | None:
+    """Find the path to an integration in the marketplace.
+
+    Args:
+        name: The name or path of the integration.
+
+    Returns:
+        Path | None: The path to the integration if found, None otherwise.
+
+    """
+    p = pathlib.Path(name)
+    if p.exists() and is_integration(p):
+        return p
+
+    for base_path in get_marketplace_integration_base_paths():
+        if (p := base_path / name).exists() and is_integration(p):
+            return p
+
+    return None
+
+
+def get_all_marketplace_integrations_paths() -> list[Path]:
+    """Get all integration paths from the marketplace.
+
+    Returns:
+        list[Path]: All integration paths found in the marketplace.
+
+    """
+    return sorted(get_integrations_from_paths(*get_marketplace_integration_base_paths()))
+
+
 def discover_core_modules(path: Path) -> list[ManagerName]:
     """Discover core/manager modules in an integration.
 
@@ -170,8 +222,9 @@ def get_integrations_from_paths(*paths: Path) -> set[Path]:
             continue
 
         for dir_ in path.iterdir():
-            if is_integration(dir_):
-                integrations.add(dir_)
+            with contextlib.suppress(Exception):
+                if is_integration(dir_):
+                    integrations.add(dir_)
 
     return integrations
 
@@ -200,8 +253,7 @@ def is_integration(path: Path) -> bool:
     validator.validate_integration_components_parity()
 
     pyproject_toml: Path = path / constants.PROJECT_FILE
-    def_: Path = path / constants.INTEGRATION_DEF_FILE.format(path.name)
-    return pyproject_toml.exists() or def_.exists()
+    return pyproject_toml.exists() or _has_def_file(path)
 
 
 def replace_file_content(file: Path, replace_fn: Callable[[str], str]) -> None:
@@ -226,9 +278,7 @@ def is_built(integration: Path) -> bool:
 
     """
     pyproject: Path = integration / constants.PROJECT_FILE
-    def_file: Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
-    definition_file: Path = integration / constants.DEFINITION_FILE
-    return not pyproject.exists() and def_file.exists() and not definition_file.exists()
+    return not pyproject.exists() and _has_def_file(integration)
 
 
 def is_half_built(integration: Path) -> bool:
@@ -239,8 +289,7 @@ def is_half_built(integration: Path) -> bool:
 
     """
     pyproject: Path = integration / constants.PROJECT_FILE
-    def_file: Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
-    return pyproject.exists() and def_file.exists()
+    return pyproject.exists() and _has_def_file(integration)
 
 
 def is_non_built_integration(integration: Path) -> bool:
@@ -251,9 +300,18 @@ def is_non_built_integration(integration: Path) -> bool:
 
     """
     pyproject: Path = integration / constants.PROJECT_FILE
-    def_file: Path = integration / constants.INTEGRATION_DEF_FILE.format(integration.name)
     definition_file: Path = integration / constants.DEFINITION_FILE
-    return pyproject.exists() and definition_file.exists() and not def_file.exists()
+    return pyproject.exists() and definition_file.exists() and not _has_def_file(integration)
+
+
+def _has_def_file(path: Path) -> bool:
+    """Check if the path contains an Integration-*.def file.
+
+    Returns:
+        True if it has a def file, False otherwise.
+
+    """
+    return any(path.glob("Integration-*.def"))
 
 
 def write_yaml_to_file(content: Mapping[str, Any] | Sequence[Any], path: Path) -> None:
@@ -451,7 +509,7 @@ def write_str_to_json_file(json_path: Path, json_content: JsonString) -> None:
         json.dump(json_content, f_json, indent=4)
 
 
-def load_yaml_file(path: Path) -> dict[str, Any]:
+def load_yaml_file(path: Path) -> Any:  # noqa: ANN401
     """Read a file and loads its content as YAML.
 
     Returns:
@@ -462,10 +520,31 @@ def load_yaml_file(path: Path) -> dict[str, Any]:
 
     """
     try:
-        content = path.read_text(encoding="utf-8")
+        content: str = path.read_text(encoding="utf-8")
         return yaml.safe_load(content)
     except yaml.YAMLError as e:
         msg = f"Failed to load or parse YAML from file: {path}"
+        raise ValueError(msg) from e
+    except FileNotFoundError as e:
+        msg = f"File {path} does not exist"
+        raise ValueError(msg) from e
+
+
+def load_json_file(path: Path) -> Any:  # noqa: ANN401
+    """Read a file and loads its content as JSON.
+
+    Returns:
+        The decoded JSON content of the JSON file if it exists.
+
+    Raises:
+        ValueError: If the file doesn't exist or is an invalid JSON.
+
+    """
+    try:
+        content: str = path.read_text(encoding="utf-8")
+        return json.loads(content)
+    except json.JSONDecodeError as e:
+        msg = f"Failed to load or parse JSON from file: {path}"
         raise ValueError(msg) from e
     except FileNotFoundError as e:
         msg = f"File {path} does not exist"

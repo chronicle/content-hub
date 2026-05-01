@@ -18,10 +18,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple, Protocol, TypeAlias
-
-if TYPE_CHECKING:
-    from typing import TypeAlias
+from typing import Any, NamedTuple, Protocol, TypeAlias
 
 PRE_BUILD: str = "Pre-Build"
 BUILD: str = "Build"
@@ -110,14 +107,16 @@ class ValidationReport:
 
 
 class Validator(Protocol):
-    name: str
+    @property
+    def name(self) -> str:
+        """The name of the validation."""
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Execute the validation process on the specified path.
 
         Args:
-            validation_path: A `Path` object pointing to the directory
+            path: A `Path` object pointing to the directory
                 or file that needs to be validated.
 
         """

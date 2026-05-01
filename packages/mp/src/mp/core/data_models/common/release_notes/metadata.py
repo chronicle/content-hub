@@ -186,7 +186,7 @@ class ReleaseNote(SequentialMetadata[BuiltReleaseNote, NonBuiltReleaseNote]):
         return BuiltReleaseNote(
             ChangeDescription=self.description,
             Deprecated=self.deprecated,
-            IntroducedInIntegrationVersion=float(self.version),
+            IntroducedInIntegrationVersion=self.version,
             ItemName=self.item_name,
             ItemType=self.item_type,
             New=self.new,
@@ -205,7 +205,7 @@ class ReleaseNote(SequentialMetadata[BuiltReleaseNote, NonBuiltReleaseNote]):
         """
         non_built: NonBuiltReleaseNote = NonBuiltReleaseNote(
             description=self.description,
-            integration_version=float(self.version),
+            integration_version=self.version,
             item_name=self.item_name,
             item_type=self.item_type,
             publish_time=convert_epoch_to_iso(self.publish_time) if self.publish_time is not None else None,

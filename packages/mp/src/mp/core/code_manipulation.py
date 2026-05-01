@@ -428,6 +428,8 @@ class ImportTransformer(cst.CSTTransformer):
                 ),
                 names=names,
             ):
+                if isinstance(names, cst.ImportStar):
+                    return updated_node
                 return cst.Import(names=names)
 
             # `from .module import ...` => `from module import ...`
@@ -448,9 +450,11 @@ def _is_reserved_node(node: cst.Attribute) -> bool:
 
 def _get_attribute_list(node: cst.ImportFrom) -> list[cst.Attribute]:
     nodes: list[cst.Attribute] = []
-    current_node: cst.Name | cst.Attribute | None = node.module
+    current_node: cst.BaseExpression | cst.Name | cst.Attribute | None = node.module
     while isinstance(current_node, cst.Attribute):
         nodes.append(current_node)
-        current_node = current_node.value  # ty: ignore[invalid-assignment]
+        current_node = current_node.value
+        if not isinstance(current_node, cst.Name | cst.Attribute):
+            break
 
     return nodes

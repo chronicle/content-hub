@@ -34,28 +34,28 @@ class DependencyProviderValidation:
     name: str = "Dependency Provider Validation"
 
     @staticmethod
-    def run(integration_path: Path) -> None:
+    def run(path: Path) -> None:
         """Run validation for dependency provider in the uv.lock file.
 
         Args:
-            integration_path: The path to the integration directory.
+            path: The path to the integration directory.
 
         Raises:
             FatalValidationError: If the `uv.lock` file is not found, or if an
                 unsupported dependency provider is found in `uv.lock`.
 
         """
-        uv_lock_path: Path = integration_path / "uv.lock"
+        uv_lock_path: Path = path / "uv.lock"
 
         if not uv_lock_path.exists():
             msg: str = f"uv.lock file not found at {uv_lock_path}"
             raise FatalValidationError(msg)
 
-        uv_lock_data: dict[str, dict[str, str]] = tomllib.loads(uv_lock_path.read_text(encoding="utf-8"))
+        uv_lock_data: dict[str, list[dict[str, Any]]] = tomllib.loads(uv_lock_path.read_text(encoding="utf-8"))
 
         packages: list[dict[str, Any]] = uv_lock_data.get("package", [])
         for pkg in packages:
-            pkg_source: dict[str, str] = pkg.get("source")
+            pkg_source: dict[str, str] | None = pkg.get("source")
             if not pkg_source:
                 continue
 
