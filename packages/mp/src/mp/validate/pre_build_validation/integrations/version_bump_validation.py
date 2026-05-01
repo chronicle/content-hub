@@ -65,11 +65,11 @@ class VersionBumpValidation:
     name: str = "Integration Version Bump"
 
     @staticmethod
-    def run(integration_path: Path) -> None:
+    def run(path: Path) -> None:
         """Validate that `project.toml` and `release_notes.yml` files are correctly versioned.
 
         Args:
-            integration_path (Path): Path to the integration directory.
+            path (Path): Path to the integration directory.
 
         Raises:
             NonFatalValidationError: If versioning rules are violated.
@@ -79,7 +79,7 @@ class VersionBumpValidation:
         if not head_sha:
             return
 
-        changed_files: list[Path] = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, integration_path)
+        changed_files: list[Path] = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, path)
 
         if not changed_files:
             return

@@ -31,18 +31,18 @@ class SslParameterExistsInIntegrationValidation:
     name: str = "SSL Integration Validation"
 
     @staticmethod
-    def run(integration_path: Path) -> None:
+    def run(path: Path) -> None:
         """Run validation for SSL parameters in the integration.
 
         Args:
-            integration_path: The path to the integration directory.
+            path: The path to the integration directory.
 
         Raises:
             NonFatalValidationError: If there are any SSL parameter validation errors
                 in the integration.
 
         """
-        integration_def: YamlFileContent = load_integration_def(integration_path)
+        integration_def: YamlFileContent = load_integration_def(path)
         validation_output_msg: str | None = validate_ssl_parameter_from_yaml(integration_def)
         if validation_output_msg is not None:
             raise NonFatalValidationError(validation_output_msg)

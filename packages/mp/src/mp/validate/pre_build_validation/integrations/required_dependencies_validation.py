@@ -30,11 +30,11 @@ class RequiredDevDependenciesValidation:
     name: str = "Required Dev Dependencies"
 
     @staticmethod
-    def run(integration_path: Path) -> None:
+    def run(path: Path) -> None:
         """Run the validation against the specified project.
 
         Args:
-            integration_path: The root path of the project to validate.
+            path: The root path of the project to validate.
 
         Raises:
             NonFatalCommandError: If the `pyproject.toml` file is not found,
@@ -42,7 +42,7 @@ class RequiredDevDependenciesValidation:
 
         """
         error_msg: str
-        pyproject_path: Path = integration_path / "pyproject.toml"
+        pyproject_path: Path = path / "pyproject.toml"
 
         with pyproject_path.open("rb") as f:
             pyproject_toml: dict[str, Any] = tomllib.load(f)

@@ -123,7 +123,7 @@ def _extract_skipped_test_issue(test_item: dict) -> TestIssue:
 
     if not skip_reason or skip_reason == "Unknown reason":
         call_info: dict[str, Any] = test_item.get("call", {})
-        longrepr: str = call_info.get("longrepr")
+        longrepr: str | None = call_info.get("longrepr")
         if isinstance(longrepr, str):
             skip_reason = longrepr.splitlines()[0] if longrepr else "No specific reason found."
 
@@ -139,10 +139,7 @@ def _extract_skipped_test_issue(test_item: dict) -> TestIssue:
     return TestIssue(test_name=test_name, stack_trace=skip_reason)
 
 
-def _get_fnf_test_results(
-    integration_name: str,
-    json_report_path: Path,
-) -> IntegrationTestResults | None:
+def _get_fnf_test_results(integration_name: str, json_report_path: Path) -> IntegrationTestResults | None:
     rich.print(f"[bold red]Error:[/bold red] JSON report not found at {json_report_path}")
     try:
         RequiredDevDependenciesValidation.run(json_report_path.parent)

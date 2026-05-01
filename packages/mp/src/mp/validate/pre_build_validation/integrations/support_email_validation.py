@@ -34,29 +34,29 @@ class SupportEmailValidation:
     name: str = "Support Email Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check that partner integrations have a support email in pyproject.toml.
 
         Only applies to integrations under third_party/partner/.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If a partner integration is missing a
                 support email in its pyproject.toml description.
 
         """
-        if "partner" not in validation_path.parts:
+        if "partner" not in path.parts:
             return
 
         head_sha: str | None = os.environ.get("GITHUB_PR_SHA")
         if head_sha:
-            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, validation_path)
+            changed = mp.core.unix.get_files_unmerged_to_main_branch("main", head_sha, path)
             if not changed:
                 return
 
-        pyproject = validation_path / "pyproject.toml"
+        pyproject = path / "pyproject.toml"
         if not pyproject.exists():
             return
 
@@ -65,8 +65,5 @@ class SupportEmailValidation:
 
         description = data.get("project", {}).get("description", "")
         if not re.search(r"[\w.-]+@[\w.-]+\.\w+", description):
-            msg = (
-                f"Partner integration '{validation_path.name}' must include a "
-                f"support email in pyproject.toml description"
-            )
+            msg = f"Partner integration '{path.name}' must include a support email in pyproject.toml description"
             raise NonFatalValidationError(msg)

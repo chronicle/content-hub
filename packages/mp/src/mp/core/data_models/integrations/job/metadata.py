@@ -172,7 +172,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
             Name=self.name,
             Parameters=[param.to_built() for param in self.parameters],
             RunIntervalInSeconds=self.run_interval_in_seconds,
-            Version=float(self.version),
+            Version=self.version,
         )
 
     def to_non_built(self) -> NonBuiltJobMetadata:

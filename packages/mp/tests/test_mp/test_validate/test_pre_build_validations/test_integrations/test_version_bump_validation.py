@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# type: ignore  # noqa: PGH003
-
 from __future__ import annotations
 
 import unittest.mock
@@ -88,8 +86,12 @@ class TestVersionBumpValidationFlow:
             mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
+            assert existing_files["toml"]["old"] is not None
+            assert existing_files["toml"]["new"] is not None
             assert existing_files["toml"]["old"].project.version == 1.0
             assert existing_files["toml"]["new"].project.version == 2.0
+            assert existing_files["rn"]["old"] is not None
+            assert existing_files["rn"]["new"] is not None
             assert existing_files["rn"]["old"].version == 1.0
             assert existing_files["rn"]["new"][0].version == 2.0
 
@@ -106,6 +108,8 @@ class TestVersionBumpValidationFlow:
             mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
+            assert existing_files["toml"]["old"] is not None
+            assert existing_files["toml"]["new"] is not None
             assert existing_files["toml"]["old"].project.version == 1.0
             assert existing_files["toml"]["new"].project.version == 3.0
 
@@ -126,8 +130,12 @@ class TestVersionBumpValidationFlow:
             mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
+            assert existing_files["toml"]["old"] is not None
+            assert existing_files["toml"]["new"] is not None
             assert existing_files["toml"]["old"].project.version == 1.0
             assert existing_files["toml"]["new"].project.version == 1.5
+            assert existing_files["rn"]["old"] is not None
+            assert existing_files["rn"]["new"] is not None
             assert existing_files["rn"]["old"].version == 1.0
             assert existing_files["rn"]["new"][0].version == 1.5
 
@@ -145,8 +153,12 @@ class TestVersionBumpValidationFlow:
             mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
+            assert existing_files["toml"]["old"] is not None
+            assert existing_files["toml"]["new"] is not None
             assert existing_files["toml"]["old"].project.version == 1.0
             assert existing_files["toml"]["new"].project.version == 2.0
+            assert existing_files["rn"]["old"] is not None
+            assert existing_files["rn"]["new"] is not None
             assert existing_files["rn"]["old"].version == 1.0
             assert existing_files["rn"]["new"][0].version == 4.0
 
@@ -163,7 +175,9 @@ class TestVersionBumpValidationFlow:
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
             assert not existing_files["toml"].get("old")
+            assert new_files["toml"] is not None
             assert new_files["toml"].project.version == 1.0
+            assert new_files["rn"] is not None
             assert len(new_files["rn"]) == 1
             assert new_files["rn"][0].version == 1.0
 
@@ -178,7 +192,11 @@ class TestVersionBumpValidationFlow:
             mock_git.side_effect = mp.core.unix.NonFatalCommandError("File not found on main branch")
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
+            assert existing_files["toml"] is not None
+            assert new_files["toml"] is not None
             assert new_files["toml"].project.version == 2.0
+            assert existing_files["rn"] is not None
+            assert new_files["rn"] is not None
             assert new_files["rn"][0].version == 2.0
 
             with pytest.raises(NonFatalValidationError, match=r"must be initialize to 1\.0"):
@@ -196,7 +214,9 @@ class TestVersionBumpValidationFlow:
             mock_git.side_effect = mp.core.unix.NonFatalCommandError("File not found on main branch")
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
+            assert new_files["toml"] is not None
             assert new_files["toml"].project.version == 1.0
+            assert new_files["rn"] is not None
             assert new_files["rn"][0].version == 2.0
 
             with pytest.raises(NonFatalValidationError, match=r"must be initialize to 1\.0"):
@@ -217,7 +237,9 @@ class TestVersionBumpValidationFlow:
             mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
+            assert existing_files["toml"]["old"] is not None
             assert existing_files["toml"]["old"].project.version == 1.0
+            assert existing_files["toml"]["new"] is not None
             assert existing_files["toml"]["new"].project.version == 2.0
             new_notes = existing_files["rn"]["new"]
             assert new_notes is not None
@@ -241,7 +263,10 @@ class TestVersionBumpValidationFlow:
             mock_git.side_effect = lambda path: old_toml_content if path.name == "pyproject.toml" else OLD_RN_CONTENT
             existing_files, new_files = _create_data_for_version_bump_validation(rn_path, toml_path)
 
+            assert existing_files["toml"] is not None
+            assert existing_files["toml"]["old"] is not None
             assert existing_files["toml"]["old"].project.version == 1.0
+            assert existing_files["toml"]["new"] is not None
             assert existing_files["toml"]["new"].project.version == 2.0
             new_notes = existing_files["rn"]["new"]
             assert new_notes is not None

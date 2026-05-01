@@ -32,27 +32,25 @@ class IntegrationHasMappingRulesIfHasConnectorValidation:
     name: str = "Mapping Rules Validation"
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check if the integration has mapping rules if it has a connector.
 
         Args:
-            validation_path: The path of the integration to validate.
+            path: The path of the integration to validate.
 
         Raises:
             NonFatalValidationError: If the integration has a connector but doesn't
             have mapping rules.
 
         """
-        if validation_path.name in exclusions.get_excluded_integrations_with_connectors_and_no_mapping():
+        if path.name in exclusions.get_excluded_integrations_with_connectors_and_no_mapping():
             return
 
-        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(
-            validation_path, constants.CONNECTORS_DIR
-        )
+        component_defs: dict[str, list[YamlFileContent]] = load_components_defs(path, constants.CONNECTORS_DIR)
 
         has_connectors: bool = bool(component_defs.get(constants.CONNECTORS_DIR))
-        has_mapping: bool = (validation_path / constants.MAPPING_RULES_FILE).is_file()
+        has_mapping: bool = (path / constants.MAPPING_RULES_FILE).is_file()
 
         if has_connectors and not has_mapping:
-            msg: str = f"'{validation_path.name}' has connectors but doesn't have default mapping rules"
+            msg: str = f"'{path.name}' has connectors but doesn't have default mapping rules"
             raise NonFatalValidationError(msg)

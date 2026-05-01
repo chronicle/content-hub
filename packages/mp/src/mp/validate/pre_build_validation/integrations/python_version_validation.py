@@ -34,7 +34,7 @@ class PythonVersionValidation:
     name: str = "Python Version Validation"
 
     @staticmethod
-    def run(integration_path: Path) -> None:
+    def run(path: Path) -> None:
         """Check python version file existence, content, and consistency.
 
         This validation checks:
@@ -44,13 +44,13 @@ class PythonVersionValidation:
            supported versions and expected range format.
 
         Args:
-            integration_path: Path to the integration directory.
+            path: Path to the integration directory.
 
         Raises:
             FatalValidationError: If any of the checks fail.
 
         """
-        python_version_path: Path = integration_path / mp.core.constants.PYTHON_VERSION_FILE
+        python_version_path: Path = path / mp.core.constants.PYTHON_VERSION_FILE
         if not python_version_path.exists():
             msg = f"Integration is missing a `{mp.core.constants.PYTHON_VERSION_FILE}` file."
             raise FatalValidationError(msg)
@@ -60,7 +60,7 @@ class PythonVersionValidation:
             msg = f"The `{mp.core.constants.PYTHON_VERSION_FILE}` file is empty."
             raise FatalValidationError(msg)
 
-        integration_def: YamlFileContent = load_integration_def(integration_path)
+        integration_def: YamlFileContent = load_integration_def(path)
 
         metadata_version: str | None = integration_def.get("python_version", PythonVersion.PY_3_11.to_string())
 
@@ -72,7 +72,7 @@ class PythonVersionValidation:
             )
             raise FatalValidationError(msg)
 
-        pyproject_path: Path = integration_path / mp.core.constants.PROJECT_FILE
+        pyproject_path: Path = path / mp.core.constants.PROJECT_FILE
         if pyproject_path.exists():
             pyproject: dict = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
             requires_python: str = pyproject.get("project", {}).get("requires-python", "")
