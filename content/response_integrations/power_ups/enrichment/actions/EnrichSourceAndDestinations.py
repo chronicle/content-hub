@@ -14,42 +14,60 @@
 
 from __future__ import annotations
 
+from enum import Enum
+from typing import Any
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.data_models import Entity
 from TIPCommon.rest.soar_api import get_investigator_data
 from TIPCommon.types import SingleJson
 
+ACTION_NAME: str = "Enrich Source and Destinations"
 
-ACTION_NAME = "Enrich Source and Destinations"
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
 
 
-def get_alert_entities(siemplify):
+def get_alert_entities(
+    siemplify: SiemplifyAction,
+    alert_identifier: str,
+    execution_scope: Any,
+) -> list[Entity]:
+    """Retrieve entities associated with a specific alert.
+
+    Args:
+        siemplify: The Siemplify action instance.
+        alert_identifier: The identifier of the alert.
+        execution_scope: The current execution scope.
+
+    Returns:
+        A list of entities associated with the alert.
+    """
+    if execution_scope.value == ExecutionScope.Alert.value:
+        return siemplify.target_entities
     return [
-        entity
-        for alert in siemplify.case.alerts
-        for entity in alert.entities
-        if alert.identifier == siemplify.current_alert.identifier
+        e for e in siemplify.target_entities if e.alert_identifier == alert_identifier
     ]
 
 
-def get_ip_entities(siemplify):
-    return [
-        entity.identifier
-        for entity in get_alert_entities(siemplify)
-        if entity.entity_type == "ADDRESS"
-    ]
+def get_current_alert(
+    alerts: list[SingleJson],
+    current_alert: str,
+) -> SingleJson | None:
+    """Retrieve the alert data matching the current alert identifier from the list.
 
+    Args:
+        alerts: The list of alerts to search in.
+        current_alert: The specific alert identifier to match.
 
-def get_host_entities(siemplify):
-    return [
-        entity.identifier
-        for entity in get_alert_entities(siemplify)
-        if entity.entity_type == "HOSTNAME"
-    ]
-
-
-def get_current_alert(alerts, current_alert):
+    Returns:
+        The matching alert dictionary if found, else None.
+    """
     for alert in alerts:
         if alert["identifier"] == current_alert:
             return alert
@@ -66,7 +84,7 @@ def get_sources_and_dest(
     Returns:
         tuple[list[str], list[str]]: Tuple containing list of sources and destinations.
     """
-    target_lists = {
+    target_lists: dict[str, list[str]] = {
         "sources": [],
         "destinations": [],
     }
@@ -83,7 +101,7 @@ def get_sources_and_dest(
                 ]
 
     else:
-        key_map = {"source": "sources", "destination": "destinations"}
+        key_map: dict[str, str] = {"source": "sources", "destination": "destinations"}
         for event_card in alert:
             for group in event_card.get("fields", []):
                 group_name = group.get("groupName", "").lower()
@@ -98,43 +116,130 @@ def get_sources_and_dest(
     return target_lists["sources"], target_lists["destinations"]
 
 
-@output_handler
-def main():
-    siemplify = SiemplifyAction()
-    siemplify.script_name = ACTION_NAME
-    investigator_res = get_investigator_data(
+def get_investigator_alert(
+    siemplify: SiemplifyAction,
+    target_alert: Any,
+) -> SingleJson | None:
+    """Retrieve the investigator alert data for a specific alert.
+
+    Args:
+        siemplify: The Siemplify action instance.
+        target_alert: The alert to retrieve data for.
+
+    Returns:
+        The alert data if found, else None.
+    """
+    investigator_res: SingleJson = get_investigator_data(
         chronicle_soar=siemplify,
         case_id=siemplify.case_id,
-        alert_identifier=siemplify.current_alert.identifier,
+        alert_identifier=target_alert.identifier,
     )
-    alert = None
     if "alerts" in investigator_res:
-        alert = get_current_alert(
+        return get_current_alert(
             investigator_res["alerts"],
-            siemplify.current_alert.identifier,
+            target_alert.identifier,
         )
-    else:
-        alert = investigator_res
-    (sources, dests) = get_sources_and_dest(alert)
-    updated_entities = []
+    return investigator_res
+
+
+def enrich_entities_with_sources_and_dests(
+    entities: list[Entity],
+    sources: list[str],
+    dests: list[str],
+) -> list[Entity]:
+    """Enrich entities with source and destination properties based on matches.
+
+    Args:
+        entities: List of entities to process.
+        sources: List of source identifiers.
+        dests: List of destination identifiers.
+
+    Returns:
+        A list of updated entities.
+    """
+    updated_entities_map: dict[str, Entity] = {}
 
     for source in sources:
-        for entity in get_alert_entities(siemplify):
+        for entity in entities:
             if entity.identifier.casefold() == source.casefold():
                 entity.additional_properties.update({"isSource": "true"})
-                updated_entities.append(entity)
-                break
-    for dest in dests:
-        for entity in get_alert_entities(siemplify):
-            if entity.identifier.casefold() == dest.casefold():
-                entity.additional_properties.update({"isDest": "true"})
-                updated_entities.append(entity)
+                updated_entities_map[entity.identifier] = entity
                 break
 
+    for dest in dests:
+        for entity in entities:
+            if entity.identifier.casefold() == dest.casefold():
+                entity.additional_properties.update({"isDest": "true"})
+                updated_entities_map[entity.identifier] = entity
+                break
+
+    return list(updated_entities_map.values())
+
+
+def process_alert(
+    siemplify: SiemplifyAction,
+    target_alert: Any,
+    execution_scope: Any,
+) -> list[Entity]:
+    """Process a single alert to enrich its source and destination entities.
+
+    Args:
+        siemplify: The Siemplify action instance.
+        target_alert: The alert to process.
+        execution_scope: The current execution scope.
+
+    Returns:
+        A list of updated entities.
+    """
+    updated_entities: list[Entity] = []
+    alert_data: SingleJson | None = get_investigator_alert(siemplify, target_alert)
+
+    if alert_data:
+        extracted_tuples = get_sources_and_dest(alert_data)
+        sources: list[str] = extracted_tuples[0]
+        dests: list[str] = extracted_tuples[1]
+        if sources or dests:
+            current_alert_entities: list[Entity] = get_alert_entities(
+                siemplify,
+                target_alert.identifier,
+                execution_scope,
+            )
+            if current_alert_entities:
+                updated_entities = enrich_entities_with_sources_and_dests(
+                    current_alert_entities,
+                    sources,
+                    dests,
+                )
+
+    return updated_entities
+
+
+@output_handler
+def main() -> None:
+    siemplify: SiemplifyAction = SiemplifyAction()
+    siemplify.script_name = ACTION_NAME
+
+    execution_scope: Any = getattr(
+        siemplify,
+        "execution_scope",
+        ExecutionScope.Alert,
+    )
+
+    if execution_scope.value == ExecutionScope.Alert.value:
+        target_alerts: list[Any] = [siemplify.current_alert]
+    else:
+        target_alerts: list[Any] = getattr(siemplify.case, "alerts", [])
+
+    updated_entities: list[Entity] = []
+
+    for target_alert in target_alerts:
+        updated: list[Entity] = process_alert(siemplify, target_alert, execution_scope)
+        updated_entities.extend(updated)
+
     siemplify.update_entities(updated_entities)
-    status = EXECUTION_STATE_COMPLETED
-    output_message = "output message : Enrichment added."
-    result_value = None
+    status: int = EXECUTION_STATE_COMPLETED
+    output_message: str = "output message : Enrichment added."
+    result_value: str | None = None
 
     siemplify.LOGGER.info(
         f"\n  status: {status}\n  result_value: {result_value}\n"
