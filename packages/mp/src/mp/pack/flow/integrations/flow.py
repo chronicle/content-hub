@@ -23,7 +23,6 @@ import subprocess  # noqa: S404
 import sys
 import tempfile
 import zipfile
-from typing import Any
 
 import questionary
 import typer
@@ -467,7 +466,7 @@ def _discover_components(
         "Widget": (constants.OUT_WIDGETS_META_DIR, constants.OUT_WIDGET_SCRIPTS_DIR),
     }
 
-    choices: list[dict[str, Any]] = []
+    choices: list[Choice] = []
     ping_components: list[tuple[str, pathlib.Path, pathlib.Path | None]] = []
     other_components: list[tuple[str, pathlib.Path, pathlib.Path | None]] = []
 
