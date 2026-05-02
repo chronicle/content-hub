@@ -139,7 +139,7 @@ if get_system_python_major_version() == PYTHON_2:
 #################
 
 
-class DataStreamFactory(object):
+class DataStreamFactory:
     """A factory class for creating data streams.
 
     Factory class that returns a specific DataStream object that can handle the
@@ -253,7 +253,7 @@ class JobFileStream(AbstractDataStream):
             return default_value_to_return
 
         try:
-            with open(self.file_path, "r") as f:
+            with open(self.file_path) as f:
                 return json.loads(f.read())
 
         except Exception as e:
@@ -385,7 +385,7 @@ class ConnectorFileStream(AbstractDataStream):
             return default_value_to_return
 
         try:
-            with open(self.file_path, "r") as f:
+            with open(self.file_path) as f:
                 return json.loads(f.read())
 
         except Exception as e:

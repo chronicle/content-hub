@@ -96,8 +96,6 @@ def extract_script_param(
         result = float(value)
     elif input_type == str:
         result = str(value)
-    elif input_type == unicode:
-        result = value
     else:
         msg = f"input_type {input_type.__name__} isn't not supported for conversion"
         raise Exception(msg)

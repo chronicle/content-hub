@@ -92,13 +92,13 @@ def validate_response(
 
     except HTTPError as he:
         msg = f"An error happened while requesting API, {he}"
-        raise HTTPError(msg, response=he.response)
+        raise HTTPError(msg, response=he.response) from he
 
     except json.JSONDecodeError as je:
         msg = f"Failed to parse response as JSON.\nError: {je}\nRaw response: {response.text}"
         raise InternalJSONDecoderError(
             msg,
-        )
+        ) from je
 
 
 # ==== GET ==== #

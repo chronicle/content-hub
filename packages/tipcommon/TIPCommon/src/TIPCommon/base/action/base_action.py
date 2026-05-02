@@ -60,7 +60,7 @@ if TYPE_CHECKING:
     from TIPCommon.data_models import Container
     from TIPCommon.types import JSON, Contains, Entity, SingleJson
 
-PerformAction = Callable[[Entity | None], None]
+    PerformAction = Callable[[Entity | None], None]
 
 
 class Action(ABC, Generic[ApiClient]):

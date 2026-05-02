@@ -151,14 +151,12 @@ def dict_to_flat(target_dict: SingleJson) -> SingleJson:
 
         if isinstance(value, list):
             items: list[tuple[str, str]] = []
-            count: int = 1
-            for item in value:
+            for count, item in enumerate(value, start=1):
                 new_key: str = f"{key}_{count}"
                 if isinstance(item, (dict, list)):
                     items.extend(_expand(new_key, item))
                 else:
                     items.append((new_key, to_string(item)))
-                count += 1
 
             return items
 

@@ -30,7 +30,7 @@ from TIPCommon.base.utils import (
 )
 from TIPCommon.consts import DATETIME_FORMAT, NONE_VALS, UNIX_FORMAT
 from TIPCommon.data_models import BaseAlert, ConnectorParamTypes, Container
-from TIPCommon.EnvironmentHandle import EnvironmentHandle, GetEnvironmentCommonFactory
+from TIPCommon.envcommon import EnvironmentHandle, GetEnvironmentCommonFactory
 from TIPCommon.exceptions import ConnectorSetupError
 from TIPCommon.smp_time import get_last_success_time
 from TIPCommon.utils import camel_to_snake_case, is_overflowed, none_to_default_value, platform_supports_db

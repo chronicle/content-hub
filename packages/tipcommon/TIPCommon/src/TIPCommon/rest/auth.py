@@ -295,6 +295,7 @@ def build_credentials_from_sa_attr(
     )
     raise EmptyMandatoryValues(msg)
 
+
 def get_impersonated_credentials(
     target_principal,
     source_credentials=None,

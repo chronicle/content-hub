@@ -177,9 +177,9 @@ class PubSubAdapter:
         for field in fields:
             try:
                 mask.append(consts.PUBSUB_FIELD_MASK_MAPPING[field])
-            except Exception:
+            except Exception as e:
                 msg = f'"{field}" is not a valid field for pubsub resource'
-                raise NotFoundError(msg)
+                raise NotFoundError(msg) from e
         return convert_list_to_comma_string(mask)
 
     def create_topic(self, topic_name):

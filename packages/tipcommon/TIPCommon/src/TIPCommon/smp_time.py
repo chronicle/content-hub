@@ -197,19 +197,21 @@ def siemplify_fetch_timestamp(siemplify, datetime_format=False, timezone=False):
     return last_time
 
 
-def siemplify_save_timestamp(siemplify, datetime_format=False, timezone=False, new_timestamp=unix_now()) -> None:
+def siemplify_save_timestamp(siemplify, datetime_format=False, timezone=False, new_timestamp=None) -> None:
     """Saves timestamp to Siemplify.
 
     Args:
         siemplify (obj): An instance of the SDK `SiemplifyConnectorExecution` class.
         datetime_format (bool, optional): Whether to save the timestamp in datetime format. Defaults to False.
         timezone (bool, optional): Whether to save the timestamp in UTC timezone. Defaults to False.
-        new_timestamp (int): The new timestamp to save.
+        new_timestamp (int, optional): The new timestamp to save. Defaults to None (uses current time).
 
     Returns:
         None
 
     """
+    if new_timestamp is None:
+        new_timestamp = unix_now()
     siemplify.save_timestamp(datetime_format=datetime_format, timezone=timezone, new_timestamp=new_timestamp)
 
 

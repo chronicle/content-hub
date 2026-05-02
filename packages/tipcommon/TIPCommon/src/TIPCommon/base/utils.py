@@ -126,6 +126,7 @@ class NewLineLogger(Logger):
     def exception(self, ex: Exception, *args, **kwargs) -> None:
         self.logger.exception(ex, *args, **kwargs)
 
+
 def coros_to_tasks_with_limit(coros: Iterable[Coroutine], limit: int) -> list[asyncio.Task]:
     """Rate limit number of coroutines that can be executed simultaneously.
 

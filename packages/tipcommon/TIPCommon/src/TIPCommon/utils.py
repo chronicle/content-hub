@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import functools
 import inspect
 import os
@@ -257,14 +258,7 @@ def get_function_arg_names(func):
         list: All of the argument keys defined in the given fucntion
 
     """
-    if is_python_37():
-        method_args = inspect.getfullargspec(func)[0]
-    else:
-        # Python 2.7 as it is the only other python version supported in
-        # SOAR integrations virtual envs.
-
-        method_args = inspect.getargspec(func)[0]
-    return method_args
+    return inspect.getfullargspec(func)[0]
 
 
 def safe_cast_bool_value_from_str(default_value):
@@ -307,12 +301,8 @@ def safe_cast_int_value_from_str(default_value):
     if not isinstance(default_value, str):
         return default_value
 
-    try:
+    with contextlib.suppress(ValueError):
         default_value = int(default_value)
-    except ValueError:
-        # If it's not an int then an error will be raised in the extract
-        # method
-        pass
 
     return default_value
 
