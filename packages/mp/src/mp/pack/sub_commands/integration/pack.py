@@ -34,13 +34,14 @@ def pack_integration(
     ],
     *,
     version: Annotated[
-        float | None,
+        str | None,
         typer.Option(
             "--version",
             "-v",
             help="Old version to fetch from the repo and create the ZIP.",
         ),
     ] = None,
+
     beta: Annotated[
         str | None,
         typer.Option(

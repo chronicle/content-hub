@@ -85,11 +85,43 @@ def _set_is_custom(def_path: pathlib.Path) -> None:
         typer.echo(f"Warning: Failed to set IsCustom in {def_path}: {e}", err=True)
 
 
+def _build_integration_for_pack(
+    integration_name: str,
+    version: str | None,
+    build_src: pathlib.Path,
+    temp_build_path: pathlib.Path,
+) -> None:
+    """Build the integration for packing.
+
+    Args:
+        integration_name: The name of the integration.
+        version: The version number.
+        build_src: The source path to build from.
+        temp_build_path: The destination path to build to.
+
+    """
+    if version is not None:
+        build_integrations(
+            integrations=[integration_name],
+            repositories=[],
+            src=build_src.parent,
+            dst=temp_build_path,
+            custom_integration=True,
+        )
+    else:
+        build_integrations(
+            integrations=[integration_name],
+            repositories=[],
+            dst=temp_build_path,
+        )
+
+
 def pack_integration(
+
 
     integration_name: str,
     *,
-    version: float | None = None,
+    version: str | None = None,
     beta_name: str | None = None,
     zip_dir: pathlib.Path | None = None,
     interactive: bool = True,
@@ -112,11 +144,14 @@ def pack_integration(
     repo_root = _get_git_repo_root(src_path)
 
     # 2. Handle Git Checkout if version provided
+    temp_worktree_context = None
     temp_worktree: pathlib.Path | None = None
     build_src = src_path
     if version is not None:
         typer.echo(f"Fetching version {version} via Git...")
-        temp_worktree = _create_git_worktree(src_path, version)
+        temp_worktree_context = tempfile.TemporaryDirectory(prefix=f"mp_worktree_{integration_name}_{version}_")
+        temp_worktree = pathlib.Path(temp_worktree_context.name)
+        _create_git_worktree(src_path, version, temp_worktree)
         rel_path = src_path.relative_to(repo_root)
         build_src = temp_worktree / rel_path
         typer.echo(f"Checked out version {version} to temporary worktree.")
@@ -127,22 +162,8 @@ def pack_integration(
         with tempfile.TemporaryDirectory(prefix=f"mp_pack_{integration_name}_") as temp_build_dir:
             temp_build_path = pathlib.Path(temp_build_dir)
 
-            if version is not None:
-                # Build from worktree
-                build_integrations(
-                    integrations=[integration_name],
-                    repositories=[],
-                    src=build_src.parent,
-                    dst=temp_build_path,
-                    custom_integration=True,
-                )
-            else:
-                # Build current version
-                build_integrations(
-                    integrations=[integration_name],
-                    repositories=[],
-                    dst=temp_build_path,
-                )
+            # Build the integration
+            _build_integration_for_pack(integration_name, version, build_src, temp_build_path)
 
             # Find the built integration directory
             def_files = list(temp_build_path.rglob("Integration-*.def"))
@@ -185,6 +206,8 @@ def pack_integration(
         if temp_worktree:
             typer.echo("Cleaning up temporary Git worktree...")
             _remove_git_worktree(temp_worktree, repo_root)
+        if temp_worktree_context:
+            temp_worktree_context.cleanup()
 
 
 def _get_git_repo_root(path: pathlib.Path) -> pathlib.Path:
@@ -218,7 +241,7 @@ def _get_git_repo_root(path: pathlib.Path) -> pathlib.Path:
         raise RuntimeError(msg) from e
 
 
-def _find_commit_sha(src_path: pathlib.Path, version: float) -> str:
+def _find_commit_sha(src_path: pathlib.Path, version: str) -> str:
     """Find the Git commit SHA for a specific version.
 
     Args:
@@ -304,15 +327,13 @@ def _find_commit_sha(src_path: pathlib.Path, version: float) -> str:
     return commit_sha
 
 
-def _create_git_worktree(src_path: pathlib.Path, version: float) -> pathlib.Path:
+def _create_git_worktree(src_path: pathlib.Path, version: str, temp_dir: pathlib.Path) -> None:
     """Create a temporary Git worktree for a specific version.
 
     Args:
         src_path: The source path of the integration.
         version: The version to checkout.
-
-    Returns:
-        pathlib.Path: The path to the temporary worktree.
+        temp_dir: The path to the temporary worktree.
 
     Raises:
         RuntimeError: If the Git command fails.
@@ -323,8 +344,6 @@ def _create_git_worktree(src_path: pathlib.Path, version: float) -> pathlib.Path
 
     commit_sha = _find_commit_sha(src_path, version)
 
-    # Create temp worktree
-    temp_dir = pathlib.Path(tempfile.mkdtemp(prefix=f"mp_worktree_{src_path.name}_{version}_"))
     try:
         subprocess.run(  # noqa: S603
             [git_path, "worktree", "add", str(temp_dir), commit_sha],
@@ -333,11 +352,8 @@ def _create_git_worktree(src_path: pathlib.Path, version: float) -> pathlib.Path
             capture_output=True,
         )
     except subprocess.CalledProcessError as e:
-        shutil.rmtree(temp_dir, ignore_errors=True)
         msg = f"Failed to create Git worktree: {e.stderr.decode()}"
         raise RuntimeError(msg) from e
-    else:
-        return temp_dir
 
 
 def _remove_git_worktree(temp_dir: pathlib.Path, repo_root: pathlib.Path) -> None:
@@ -362,7 +378,7 @@ def _remove_git_worktree(temp_dir: pathlib.Path, repo_root: pathlib.Path) -> Non
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def _apply_beta_modifications(built_dir: pathlib.Path, old_id: str, beta_name: str, version: float | None) -> None:
+def _apply_beta_modifications(built_dir: pathlib.Path, old_id: str, beta_name: str, version: str | None) -> None:
     """Modify built integration files for a custom beta identifier.
 
     Args:
@@ -566,7 +582,7 @@ def _create_zip(built_dir: pathlib.Path, identifier: str, zip_dir: pathlib.Path)
         pathlib.Path: The path to the created ZIP file.
 
     """
-    date = datetime.datetime.now(datetime.UTC).strftime("%-d%b%y")
+    date = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d")
     zip_name = f"{identifier}{date}.zip"
     zip_path = zip_dir / zip_name
 
@@ -588,7 +604,7 @@ def _split_camel_case(text: str) -> str:
         str: The split string.
 
     """
-    return re.sub(r"(?<!^)(?=[A-Z])", " ", text)
+    return re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ", text)
 
 
 def _is_tty() -> bool:

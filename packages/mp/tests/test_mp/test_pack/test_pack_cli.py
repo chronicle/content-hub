@@ -56,7 +56,7 @@ def test_pack_integration_options_cli(tmp_path: pathlib.Path) -> None:
         assert result.exit_code == 0
         mock_flow.assert_called_once_with(
             integration_name="cyber_x",
-            version=5.0,
+            version="5.0",
             beta_name="CyberXBeta",
             zip_dir=tmp_path,
             interactive=False,
