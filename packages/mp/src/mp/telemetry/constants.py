@@ -54,6 +54,7 @@ NAME_MAPPER: dict[str, str] = {
     "push_custom_integration_repository": "dev-env push custom integration repository",
     "describe_action_with_ai": "describe action",
     "update": "self update",
+    "pack_integration": "pack integration",
 }
 
 ALLOWED_COMMAND_ARGUMENTS: set[str] = {
@@ -84,4 +85,6 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "override",
     "--version",
     "-V",
+    "beta",
+    "interactive",
 }
