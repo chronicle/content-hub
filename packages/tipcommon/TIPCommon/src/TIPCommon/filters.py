@@ -108,7 +108,7 @@ def filter_old_alerts(siemplify, alerts, existing_ids, id_key="alert_id"):
         if ids not in existing_ids:
             filtered_alerts.append(alert)
         else:
-            siemplify.LOGGER.info("The alert %s skipped since it has been fetched before", ids)
+            siemplify.LOGGER.info(f"The alert {ids} skipped since it has been fetched before")
 
     return filtered_alerts
 
@@ -140,11 +140,11 @@ def pass_whitelist_filter(siemplify, whitelist_as_a_blacklist, model, model_key,
     if allowlist:
         for value in model_values:
             if allowlist_filter_type == BLOCKLIST_FILTER and value in allowlist:
-                siemplify.LOGGER.info("'%s' did not pass blocklist filter.", value)
+                siemplify.LOGGER.info(f"'{value}' did not pass blocklist filter.")
                 return False
 
             if allowlist_filter_type == ALLOWLIST_FILTER and value not in allowlist:
-                siemplify.LOGGER.info("'%s' did not pass allowlist filter.", value)
+                siemplify.LOGGER.info(f"'{value}' did not pass allowlist filter.")
                 return False
 
     return True

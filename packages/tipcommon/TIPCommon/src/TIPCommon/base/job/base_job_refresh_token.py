@@ -327,7 +327,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
         for integration_payload in integrations:
             instance_name = integration_payload.instance_name
             identifier = integration_payload.identifier
-            self.logger.info('Processing integration instance "%s" - "%s"', instance_name, identifier)
+            self.logger.info(f'Processing integration instance "{instance_name}" - "{identifier}"')
 
             parameters = self._get_integration_configuration_params(identifier)
             self.api_client = self._build_manager_for_instance(parameters)
@@ -353,7 +353,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
         for connector_card in connector_cards:
             connector_name = connector_card.display_name
             identifier = connector_card.identifier
-            self.logger.info('Processing connector "%s" instance - "%s"', connector_name, identifier)
+            self.logger.info(f'Processing connector "{connector_name}" instance - "{identifier}"')
 
             parameters = self._get_connector_configuration_params(identifier)
             self.api_client = self._build_manager_for_instance(parameters)
@@ -401,7 +401,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
                 (e.g., 'integration' or 'connector').
 
         """
-        self.logger.info('New refresh token is set for %s instance "%s".', instance_key, instance_name)
+        self.logger.info(f'New refresh token is set for {instance_key} instance "{instance_name}".')
 
     def _init_api_clients(self) -> None:
         return

@@ -280,7 +280,7 @@ def _get_smime_type(
 
     """
     content_type: str = msg.get("Content-Type", "").lower()
-    logger.info('Message Content-Type: "%s"', content_type)
+    logger.info(f'Message Content-Type: "{content_type}"')
 
     is_encrypted = "application/pkcs7-mime" in content_type
     is_signed = "multipart/signed" in content_type or "signed-data" in content_type

@@ -17,7 +17,6 @@ from __future__ import annotations
 import asyncio
 import operator
 import sys
-from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 import requests
@@ -104,7 +103,7 @@ def validate_manager(manager: Any) -> None:
 
 def validate_entity(entity: Entity) -> None:
     if entity is None:
-        msg = "Cannot run this action on null entity! (entity is None\n"
+        msg = "Cannot run this action on null entity! (entity is None)\n"
         raise ActionSetupError(msg)
 
 
@@ -119,14 +118,13 @@ class NewLineLogger(Logger):
         self.logger.info(f"{msg}\n", *args, **kwargs)
 
     def warn(self, warning_msg: str, *args, **kwargs) -> None:
-        self.logger.warning(f"{warning_msg}\n", *args, **kwargs)
+        self.logger.warn(f"{warning_msg}\n", *args, **kwargs)
 
     def error(self, error_msg: str, *args, **kwargs) -> None:
         self.logger.error(f"{error_msg}\n", *args, **kwargs)
 
     def exception(self, ex: Exception, *args, **kwargs) -> None:
-        self.logger.error(ex, *args, **kwargs)
-
+        self.logger.exception(ex, *args, **kwargs)
 
 def coros_to_tasks_with_limit(coros: Iterable[Coroutine], limit: int) -> list[asyncio.Task]:
     """Rate limit number of coroutines that can be executed simultaneously.

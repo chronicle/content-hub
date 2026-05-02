@@ -33,7 +33,6 @@ from TIPCommon.exceptions import (
 from TIPCommon.filters import filter_list_by_type
 from TIPCommon.smp_time import is_approaching_action_timeout
 from TIPCommon.transformation import convert_dict_to_json_result_dict
-from TIPCommon.types import JSON, Contains, Entity, SingleJson
 from TIPCommon.utils import get_entity_original_identifier, is_first_run
 
 from . import consts
@@ -59,12 +58,13 @@ if TYPE_CHECKING:
     from SiemplifyDataModel import CustomList
 
     from TIPCommon.data_models import Container
+    from TIPCommon.types import JSON, Contains, Entity, SingleJson
 
 PerformAction = Callable[[Entity | None], None]
 
 
 class Action(ABC, Generic[ApiClient]):
-    r"""A Unified Generic infrastructure implementation for Chronicle SOAR
+    """A Unified Generic infrastructure implementation for Chronicle SOAR
     (Formerly known as 'Siemplify') Action development.
 
     The `Action` base class provides template abstract methods to override
@@ -533,7 +533,7 @@ class Action(ABC, Generic[ApiClient]):
             self.logger.info("Checking timeout")
             approaching_timeout = is_approaching_action_timeout(self.soar_action.execution_deadline_unix_time_ms)
             if approaching_timeout:
-                self.logger.info("Action %s is approaching time out. Stopping execution gracefully", action_name)
+                self.logger.info(f"Action {action_name} is approaching time out. Stopping execution gracefully")
                 if not is_native(self._handle_entity_loop_timeout):
                     self.logger.info("Handling time out")
                     self._handle_entity_loop_timeout(entity)
@@ -585,7 +585,7 @@ class Action(ABC, Generic[ApiClient]):
 
                 self.logger.info("Continuing to the next entity")
 
-            self.logger.info("Sending script result items for entity %s", entity)
+            self.logger.info(f"Sending script result items for entity {entity}")
             self.__send_case_wall_results(entity)
 
             self.logger.info(f"Finished processing {i} out of {len(entities)} entities <==")
@@ -995,7 +995,7 @@ class Action(ABC, Generic[ApiClient]):
 
         """
         try:
-            self.logger.info("Adding an attachment from %s", file_path)
+            self.logger.info(f"Adding an attachment from {file_path}")
             return self.soar_action.add_attachment(file_path)
 
         except Exception as e:
@@ -1043,7 +1043,7 @@ class Action(ABC, Generic[ApiClient]):
 
         """
         try:
-            self.logger.info('Adding a comment "%s" to case %s', comment, case_id)
+            self.logger.info(f"Adding a comment '{comment}' to case {case_id}")
             self.soar_action.add_comment(comment, case_id, alert_identifier)
 
         except Exception as e:
@@ -1091,7 +1091,7 @@ class Action(ABC, Generic[ApiClient]):
 
         """
         try:
-            self.logger.info("Assigning case %s to %s", case_id, user)
+            self.logger.info(f"Assigning case {case_id} to {user}")
             self.soar_action.assign_case(user, case_id, alert_identifier)
 
         except Exception as e:
@@ -1120,7 +1120,7 @@ class Action(ABC, Generic[ApiClient]):
 
         """
         try:
-            self.logger.info('Adding a tag "%s" to case %s', tag, case_id)
+            self.logger.info(f"Adding a tag '{tag}' to case {case_id}")
             self.soar_action.add_tag(tag, case_id, alert_identifier)
 
         except Exception as e:
@@ -1141,7 +1141,7 @@ class Action(ABC, Generic[ApiClient]):
 
         """
         try:
-            self.logger.info("Attaching playbook %s to alert", playbook_name)
+            self.logger.info(f"Attaching playbook {playbook_name} to alert")
             return self.soar_action.attach_workflow_to_case(playbook_name)
 
         except Exception as e:
@@ -1243,7 +1243,7 @@ class Action(ABC, Generic[ApiClient]):
 
         """
         try:
-            self.logger.info("Changing the case's stage to %s", stage)
+            self.logger.info(f"Changing the case's stage to {stage}")
             return self.soar_action.change_case_stage(stage)
 
         except Exception as e:
@@ -1261,7 +1261,7 @@ class Action(ABC, Generic[ApiClient]):
 
         """
         try:
-            self.logger.info("Changing the case priority to %s", priority)
+            self.logger.info(f"Changing the case priority to {priority}")
             return self.soar_action.change_case_priority(priority.value)
 
         except Exception as e:
@@ -1415,7 +1415,7 @@ class Action(ABC, Generic[ApiClient]):
 
         """
         try:
-            self.logger.info("Adding entity %s to the case", entity_identifier)
+            self.logger.info(f"Adding entity {entity_identifier} to the case")
             self.soar_action.add_entity_to_case(
                 entity_identifier,
                 entity_type.value,
@@ -1496,7 +1496,7 @@ class Action(ABC, Generic[ApiClient]):
 
         """
         try:
-            self.logger.info("Checking if any alerts entities in custom list %s", category_name)
+            self.logger.info(f"Checking if any alerts entities in custom list {category_name}")
             return self.soar_action.any_alert_entities_in_custom_list(category_name)
 
         except Exception as e:
@@ -1520,7 +1520,7 @@ class Action(ABC, Generic[ApiClient]):
 
         """
         try:
-            self.logger.info("Adding entities of alert to custom list %s", category_name)
+            self.logger.info(f"Adding entities of alert to custom list {category_name}")
             return self.soar_action.add_alert_entities_to_custom_list(category_name)
 
         except Exception as e:
@@ -1544,7 +1544,7 @@ class Action(ABC, Generic[ApiClient]):
 
         """
         try:
-            self.logger.info("Removing entities of alerts to custom list %s", category_name)
+            self.logger.info(f"Removing entities of alerts from custom list {category_name}")
             return self.soar_action.remove_alert_entities_from_custom_list(category_name)
 
         except Exception as e:

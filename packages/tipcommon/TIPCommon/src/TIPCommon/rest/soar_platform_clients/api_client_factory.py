@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from TIPCommon.utils import platform_supports_1p_api
 
@@ -27,8 +27,6 @@ if TYPE_CHECKING:
     import requests
 
     from TIPCommon.types import ChronicleSOAR
-
-from typing import Protocol
 
 
 class SoarApiClient(Protocol):

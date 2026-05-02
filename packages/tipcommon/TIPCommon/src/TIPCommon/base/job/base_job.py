@@ -200,7 +200,7 @@ class Job(ABC, Generic[ApiClient]):
                 if isinstance(e, requests.HTTPError)
                 else JOB_INSTANCES_PARSE_ERROR_MSG.format(error=e)
             )
-            self.logger.exception(error_msg)
+            self.logger.error(error_msg)
             self.logger.exception(e)
             raise ParameterExtractionError(error_msg) from e
 
@@ -219,7 +219,7 @@ class Job(ABC, Generic[ApiClient]):
 
         except Exception as error:
             self.logger.info("-------------------- Main - Failed --------------------")
-            self.logger.exception(f"{self.error_msg}")
+            self.logger.error(f"{self.error_msg}")
             self.logger.exception(error)
             # Fix this behavior of job status in SDK/Python service
             raise RuntimeError from error
@@ -450,7 +450,7 @@ class Job(ABC, Generic[ApiClient]):
             unix_result //= NUM_OF_MILLI_IN_SEC
 
         if print_value:
-            self.logger.info("Last success time. Date time:%s. Unix:%s", datetime_result, unix_result)
+            self.logger.info(f"Last success time. Date time:{datetime_result}. Unix:{unix_result}")
 
         return unix_result if time_format == UNIX_FORMAT else datetime_result
 
@@ -472,7 +472,7 @@ class Job(ABC, Generic[ApiClient]):
         """
         job_id = self.soar_job.unique_identifier
 
-        self.logger.info("Searching for the job instance of %s", job_id)
+        self.logger.info(f"Searching for the job instance of {job_id}")
         installed_jobs_response = get_installed_jobs(self.soar_job)
         if isinstance(installed_jobs_response, dict) and "job_instances" in installed_jobs_response:
             job_instances = installed_jobs_response["job_instances"]

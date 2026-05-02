@@ -179,7 +179,7 @@ class CacheChunk(MutableMapping[_KT, _VT], Generic[_KT, _VT]):
     def split(self) -> CacheChunk:
         """Splits current chunk in two approximately equal sized chunks."""
         cut_result = self.cut(len(self) // 2)
-        warnings.warn(f"Chunk with key {self.cache_chunk_metadata.key} was split", ResourceWarning, stacklevel=2)
+        warnings.warn(f"Chunk with key {self.cache_chunk_metadata.key} was split", ResourceWarning)
         return CacheChunk(
             context_handler=self._context,
             cache_chunk_metadata=CacheChunkMetadata(

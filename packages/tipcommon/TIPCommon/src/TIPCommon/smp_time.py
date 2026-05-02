@@ -143,7 +143,7 @@ def save_timestamp(
 
     last_timestamp = last_timestamp * NUM_OF_MILLI_IN_SEC if convert_timestamp_to_micro_time else last_timestamp
     if log_timestamp:
-        siemplify.LOGGER.info("Last timestamp is: %s", last_timestamp)
+        siemplify.LOGGER.info(f"Last timestamp is: {last_timestamp}")
 
     siemplify.save_timestamp(new_timestamp=last_timestamp)
     return True
@@ -174,7 +174,8 @@ def get_last_success_time(
     unix_result = unix_result if not microtime else int(unix_result / NUM_OF_MILLI_IN_SEC)
 
     if print_value:
-        siemplify.LOGGER.info("Last success time. Date time: %s. Unix: %s", datetime_result, unix_result)
+        siemplify.LOGGER.info(f"Last success time. Date time: {datetime_result}. Unix: {unix_result}")
+
     return unix_result if time_format == UNIX_FORMAT else datetime_result
 
 

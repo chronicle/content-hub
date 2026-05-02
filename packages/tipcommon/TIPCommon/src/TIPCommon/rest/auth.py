@@ -293,11 +293,7 @@ def build_credentials_from_sa_attr(
     msg = "Missing mandatory fields for service account creation: {}".format(
         ", ".join({param for param, value in sa_dict.items() if is_empty_string_or_none(value)})
     )
-    raise EmptyMandatoryValues(
-        # pylint:  disable=consider-using-f-string
-        msg
-    )
-
+    raise EmptyMandatoryValues(msg)
 
 def get_impersonated_credentials(
     target_principal,

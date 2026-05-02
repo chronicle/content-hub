@@ -219,10 +219,10 @@ class JobFileStream(AbstractDataStream):
             if not os.path.exists(self.file_path):
                 with open(self.file_path, "w+") as map_file:
                     map_file.write(json.dumps(default_value_to_set))
-                    self.siemplify.LOGGER.info("File was created at {}".format(self.file_path))
+                    self.siemplify.LOGGER.info(f"File was created at {self.file_path}")
 
         except Exception as e:
-            self.siemplify.LOGGER.error("Unable to create file: {}".format(e))
+            self.siemplify.LOGGER.error(f"Unable to create file: {e}")
             self.siemplify.LOGGER.exception(e)
 
     def read_content(self, default_value_to_return):
@@ -248,9 +248,7 @@ class JobFileStream(AbstractDataStream):
         """
         if not os.path.exists(self.file_path):
             self.siemplify.LOGGER.info(
-                'file: "{}" does not exist. Returning default value instead: {}'.format(
-                    self.file_path, default_value_to_return
-                )
+                f'file: "{self.file_path}" does not exist. Returning default value instead: {default_value_to_return}'
             )
             return default_value_to_return
 
@@ -259,7 +257,7 @@ class JobFileStream(AbstractDataStream):
                 return json.loads(f.read())
 
         except Exception as e:
-            self.siemplify.LOGGER.error("Unable to read from file: {}".format(e))
+            self.siemplify.LOGGER.error(f"Unable to read from file: {e}")
             self.siemplify.LOGGER.exception(e)
             return default_value_to_return
 
@@ -290,7 +288,7 @@ class JobFileStream(AbstractDataStream):
                         f.write(chunk)
 
                 except Exception as e:
-                    self.siemplify.LOGGER.error("Failed writing to file: {}".format(e))
+                    self.siemplify.LOGGER.error(f"Failed writing to file: {e}")
                     self.siemplify.LOGGER.exception(e)
                     # Move seeker to start of the file
                     f.seek(0)
@@ -303,7 +301,7 @@ class JobFileStream(AbstractDataStream):
                 return True
 
         except Exception as err:
-            self.siemplify.LOGGER.error("Failed writing to file, ERROR: {}".format(err))
+            self.siemplify.LOGGER.error(f"Failed writing to file, ERROR: {err}")
             self.siemplify.LOGGER.exception(err)
             return False
 
@@ -352,10 +350,10 @@ class ConnectorFileStream(AbstractDataStream):
             if not os.path.exists(self.file_path):
                 with open(self.file_path, "w+") as map_file:
                     map_file.write(json.dumps(default_value_to_set))
-                    self.siemplify.LOGGER.info("File was created at {}".format(self.file_path))
+                    self.siemplify.LOGGER.info(f"File was created at {self.file_path}")
 
         except Exception as e:
-            self.siemplify.LOGGER.error("Unable to create file: {}".format(e))
+            self.siemplify.LOGGER.error(f"Unable to create file: {e}")
             self.siemplify.LOGGER.exception(e)
 
     def read_content(self, default_value_to_return):
@@ -382,9 +380,7 @@ class ConnectorFileStream(AbstractDataStream):
 
         if not os.path.exists(self.file_path):
             self.siemplify.LOGGER.info(
-                'file: "{}" does not exist. Returning default value instead: {}'.format(
-                    self.file_path, default_value_to_return
-                )
+                f'file: "{self.file_path}" does not exist. Returning default value instead: {default_value_to_return}'
             )
             return default_value_to_return
 
@@ -393,7 +389,7 @@ class ConnectorFileStream(AbstractDataStream):
                 return json.loads(f.read())
 
         except Exception as e:
-            self.siemplify.LOGGER.error("Unable to read from file: {}".format(e))
+            self.siemplify.LOGGER.error(f"Unable to read from file: {e}")
             self.siemplify.LOGGER.exception(e)
             return default_value_to_return
 
@@ -421,7 +417,7 @@ class ConnectorFileStream(AbstractDataStream):
                         f.write(chunk)
 
                 except Exception as e:
-                    self.siemplify.LOGGER.error("Failed writing to file: {}".format(e))
+                    self.siemplify.LOGGER.error(f"Failed writing to file: {e}")
                     self.siemplify.LOGGER.exception(e)
                     # Move seeker to start of the file
                     f.seek(0)
@@ -434,7 +430,7 @@ class ConnectorFileStream(AbstractDataStream):
                 return True
 
         except Exception as err:
-            self.siemplify.LOGGER.error("Failed writing to file, ERROR: {}".format(err))
+            self.siemplify.LOGGER.error(f"Failed writing to file, ERROR: {err}")
             self.siemplify.LOGGER.exception(err)
             return False
 
@@ -472,10 +468,7 @@ class JobDBStream(AbstractDataStream):
         self.db_key = db_key
         self.identifier = none_to_default_value(
             value_to_check=identifier,
-            value_to_return_if_none="{0}_{1}".format(
-                self.siemplify.script_name,
-                self.siemplify.unique_identifier,
-            ),
+            value_to_return_if_none=f"{self.siemplify.script_name}_{self.siemplify.unique_identifier}",
         )
 
     def validate_existence(self, default_value_to_set):
@@ -497,17 +490,17 @@ class JobDBStream(AbstractDataStream):
             if is_empty_string_or_none(existing_data):
                 str_data = json.dumps(default_value_to_set, separators=(",", ":"))
                 self.siemplify.set_job_context_property(self.identifier, self.db_key, str_data)
-                self.siemplify.LOGGER.info("Created key: '{}' in the database".format(self.db_key))
+                self.siemplify.LOGGER.info(f"Created key: '{self.db_key}' in the database")
 
         # If an error happened in the json.dumps methods
         except TypeError as err:
-            self.siemplify.LOGGER.error("Failed to parse the default value as JSON. ERROR: {}".format(err))
+            self.siemplify.LOGGER.error(f"Failed to parse the default value as JSON. ERROR: {err}")
             self.siemplify.LOGGER.exception(err)
             raise
 
         # If there is a connection problem with the DB
         except Exception as e:
-            self.siemplify.LOGGER.error("Exception was raised from the database. ERROR: {}".format(e))
+            self.siemplify.LOGGER.error(f"Exception was raised from the database. ERROR: {e}")
             self.siemplify.LOGGER.exception(e)
             raise
 
@@ -539,9 +532,8 @@ class JobDBStream(AbstractDataStream):
             # Check if the db key exists
             if is_empty_string_or_none(str_data):
                 self.siemplify.LOGGER.info(
-                    'Key: "{}" does not exist in the database. Returning default value instead: {}'.format(
-                        self.db_key, default_value_to_return
-                    )
+                    f'Key: "{self.db_key}" does not exist in the database. '
+                    f"Returning default value instead: {default_value_to_return}"
                 )
                 return default_value_to_return
 
@@ -551,16 +543,15 @@ class JobDBStream(AbstractDataStream):
         # If an error happened in the json.loads methods
         except TypeError as err:
             self.siemplify.LOGGER.error(
-                'Failed to parse data as JSON. Returning default value instead: "{0}". \nERROR: {1}'.format(
-                    default_value_to_return, err
-                )
+                f"Failed to parse data as JSON. "
+                f'Returning default value instead: "{default_value_to_return}". \nERROR: {err}'
             )
             self.siemplify.LOGGER.exception(err)
             return default_value_to_return
 
         # If there is a connection problem with the DB
         except Exception as error:
-            self.siemplify.LOGGER.error("Exception was raised from the database.  ERROR: {}.".format(error))
+            self.siemplify.LOGGER.error(f"Exception was raised from the database.  ERROR: {error}.")
             self.siemplify.LOGGER.exception(error)
             raise
 
@@ -589,9 +580,8 @@ class JobDBStream(AbstractDataStream):
         # If an error happened in the json.dumps methods
         except TypeError as err:
             self.siemplify.LOGGER.error(
-                'Failed parsing JSON to string. Writing default value instead: "{}". \nERROR: {}'.format(
-                    default_value_to_set, err
-                )
+                f"Failed parsing JSON to string. Writing default value "
+                f'instead: "{default_value_to_set}". \nERROR: {err}'
             )
             self.siemplify.LOGGER.exception(err)
             self.siemplify.set_job_context_property(
@@ -601,7 +591,7 @@ class JobDBStream(AbstractDataStream):
             )
         # If there is a connection problem with the DB
         except Exception as err:
-            self.siemplify.LOGGER.error("Exception was raised from the database.  ERROR: {}".format(err))
+            self.siemplify.LOGGER.error(f"Exception was raised from the database.  ERROR: {err}")
             self.siemplify.LOGGER.exception(err)
             raise
 
@@ -657,17 +647,17 @@ class ConnectorDBStream(AbstractDataStream):
             if is_empty_string_or_none(existing_data):
                 str_data = json.dumps(default_value_to_set, separators=(",", ":"))
                 self.siemplify.set_connector_context_property(self.identifier, self.db_key, str_data)
-                self.siemplify.LOGGER.info("Created key: '{}' in the database".format(self.db_key))
+                self.siemplify.LOGGER.info(f"Created key: '{self.db_key}' in the database")
 
         # If an error happened in the json.dumps methods
         except TypeError as err:
-            self.siemplify.LOGGER.error("Failed to parse the default value as JSON. ERROR: {}".format(err))
+            self.siemplify.LOGGER.error(f"Failed to parse the default value as JSON. ERROR: {err}")
             self.siemplify.LOGGER.exception(err)
             raise
 
         # If there is a connection problem with the DB
         except Exception as e:
-            self.siemplify.LOGGER.error("Exception was raised from the database. ERROR: {}".format(e))
+            self.siemplify.LOGGER.error(f"Exception was raised from the database. ERROR: {e}")
             self.siemplify.LOGGER.exception(e)
             raise
 
@@ -698,9 +688,8 @@ class ConnectorDBStream(AbstractDataStream):
             # Check if the db key exists
             if is_empty_string_or_none(str_data):
                 self.siemplify.LOGGER.info(
-                    'Key: "{}" does not exist in the database. Returning default value instead: {}'.format(
-                        self.db_key, default_value_to_return
-                    )
+                    f'Key: "{self.db_key}" does not exist in the database. '
+                    f"Returning default value instead: {default_value_to_return}"
                 )
                 return default_value_to_return
 
@@ -710,16 +699,15 @@ class ConnectorDBStream(AbstractDataStream):
         # If an error happened in the json.loads methods
         except TypeError as err:
             self.siemplify.LOGGER.error(
-                'Failed to parse data as JSON. Returning default value instead: "{0}". \nERROR: {1}'.format(
-                    default_value_to_return, err
-                )
+                f"Failed to parse data as JSON. "
+                f'Returning default value instead: "{default_value_to_return}". \nERROR: {err}'
             )
             self.siemplify.LOGGER.exception(err)
             return default_value_to_return
 
         # If there is a connection problem with the DB
         except Exception as error:
-            self.siemplify.LOGGER.error("Exception was raised from the database.  ERROR: {}.".format(error))
+            self.siemplify.LOGGER.error(f"Exception was raised from the database.  ERROR: {error}.")
             self.siemplify.LOGGER.exception(error)
             raise
 
@@ -747,9 +735,8 @@ class ConnectorDBStream(AbstractDataStream):
         # If an error happened in the json.dumps methods
         except TypeError as err:
             self.siemplify.LOGGER.error(
-                'Failed parsing JSON to string. Writing default value instead: "{}". \nERROR: {}'.format(
-                    default_value_to_set, err
-                )
+                f"Failed parsing JSON to string. "
+                f'Writing default value instead: "{default_value_to_set}". \nERROR: {err}'
             )
             self.siemplify.LOGGER.exception(err)
             self.siemplify.set_connector_context_property(
@@ -759,7 +746,7 @@ class ConnectorDBStream(AbstractDataStream):
             )
         # If there is a connection problem with the DB
         except Exception as err:
-            self.siemplify.LOGGER.error("Exception was raised from the database.  ERROR: {}".format(err))
+            self.siemplify.LOGGER.error(f"Exception was raised from the database.  ERROR: {err}")
             self.siemplify.LOGGER.exception(err)
             raise
 

@@ -223,7 +223,7 @@ def create_slo_message(slo: int, interval_days: Iterable[int], existing_comments
     """
     for interval in interval_days:
         if interval < 0:
-            msg = "Dy intervals must be positive!"
+            msg = "Days intervals must be positive!"
             raise ValueError(msg)
 
     unique_comments = set(existing_comments)

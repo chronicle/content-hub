@@ -15,13 +15,15 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from TIPCommon.exceptions import EnrichActionError
 
 from .base_action import Action
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from TIPCommon.types import Entity
 
     from .data_models import EntityTypesEnum

@@ -230,7 +230,7 @@ def is_overflowed(siemplify, alert_info, is_test_run):
             params[SIEM_ID_ATTR_KEY] = getattr(alert_info, SIEM_ID_ATTR_KEY, None)
 
     except Exception as e:
-        siemplify.LOGGER.exception(
+        siemplify.LOGGER.error(
             f"Error {e}. {SIEM_ID_ATTR_KEY} argument will not be used in Overflow check"
             f" for alert {alert_info.ticket_id}."
         )
@@ -239,7 +239,7 @@ def is_overflowed(siemplify, alert_info, is_test_run):
         return siemplify.is_overflowed_alert(**params)
 
     except Exception as err:
-        siemplify.LOGGER.exception("Error validation connector overflow, ERROR: %s", err)
+        siemplify.LOGGER.error(f"Error validation connector overflow, ERROR: {err}")
         siemplify.LOGGER.exception(err)
         if is_test_run:
             raise

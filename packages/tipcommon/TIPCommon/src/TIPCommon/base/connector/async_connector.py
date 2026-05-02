@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import SiemplifyUtils
 
@@ -28,6 +28,8 @@ from TIPCommon.smp_time import save_timestamp
 from .base_connector import BaseConnector
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from SiemplifyConnectorsDataModel import AlertInfo
 
     from TIPCommon.data_models import BaseAlert
@@ -409,7 +411,7 @@ class AsyncConnector(BaseConnector, ABC):
                     raise
 
                 except Exception as e:
-                    self.logger.exception("Failed to process alert. Error is: %s", e)
+                    self.logger.error(f"Failed to process alert. Error is: {e}")
                     self.logger.exception(e)
 
                     if self.is_test_run:
@@ -508,8 +510,8 @@ class AsyncConnector(BaseConnector, ABC):
                 self.write_context_wrapper(filtered_alerts, unprocessed_alerts)
 
         except Exception as e:
-            self.logger.exception(f"{self.error_msg}")
-            self.logger.exception("Error: %s", e)
+            self.logger.error(f"{self.error_msg}")
+            self.logger.error(f"Error: {e}")
             self.logger.exception(e)
 
             if self.is_test_run:
@@ -518,8 +520,8 @@ class AsyncConnector(BaseConnector, ABC):
         try:
             await self.finalize()
         except Exception as e:
-            self.logger.exception(f"{self.error_msg}")
-            self.logger.exception("Error: %s", e)
+            self.logger.error(f"{self.error_msg}")
+            self.logger.error(f"Error: {e}")
             self.logger.exception(e)
 
             if self.is_test_run:

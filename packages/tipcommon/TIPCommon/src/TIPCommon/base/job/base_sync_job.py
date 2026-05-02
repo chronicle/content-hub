@@ -394,7 +394,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                     final_prepared_ids.append((case_id, modification_time))
 
             except (HTTPError, JSONDecodeError) as e:
-                self.logger.info("Could not retrieve details for new case %s. Skipping. Error: %s", case_id, e)
+                self.logger.info(f"Could not retrieve details for new case {case_id}. Skipping. Error: {e}")
         self.sorted_modified_ids = final_prepared_ids
 
         return final_prepared_cases
@@ -472,7 +472,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                 comment=comment,
                 alert_identifier=alert_identifier,
             )
-            self.logger.info("Successfully synced comments to case %s.", case_id)
+            self.logger.info(f"Successfully synced comments to case {case_id}.")
 
     def get_tags_to_sync(
         self,
@@ -514,7 +514,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         """
         if tags.tags_to_add:
             add_tags_to_case_in_bulk(self.soar_job, [case_id], tags.tags_to_add)
-            self.logger.info("Successfully added tags to case %s.", case_id)
+            self.logger.info(f"Successfully added tags to case {case_id}.")
 
         if tags.tags_to_remove:
             for tag in tags.tags_to_remove:
@@ -523,7 +523,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
                     case_id=case_id,
                     tag=tag,
                 )
-            self.logger.info("Successfully removed tags from case %s.", case_id)
+            self.logger.info(f"Successfully removed tags from case {case_id}.")
 
     def get_secops_assignee(self, job_case: JobCase) -> SingleJson:
         """Get assignee from secops case.
@@ -557,12 +557,12 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         """
         try:
             self.soar_job.close_alert(root_cause, comment, reason, case_id, alert_id)
-            self.logger.info("Successfully closed alert %s in case %s.", alert_id, case_id)
+            self.logger.info(f"Successfully closed alert {alert_id} in case {case_id}.")
 
         except Exception as e:
             error_message = str(e)
             if "You can not perform this action on a closed alert" in error_message:
-                self.logger.warning("Alert %s in case %s was already closed on the platform. ", alert_id, case_id)
+                self.logger.warn(f"Alert {alert_id} in case {case_id} was already closed on the platform. ")
 
     def get_assignee_to_sync(self, job_case: JobCase) -> JobAssigneeResult:
         """Fetches assignee from the product item.
@@ -595,7 +595,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
 
         """
         self.soar_job.assign_case(user_display_name, case_id, alert_id)
-        self.logger.info("Successfully synced assignee to case %s.", case_id)
+        self.logger.info(f"Successfully synced assignee to case {case_id}.")
 
     def sync_severity_to_case(
         self,
@@ -615,10 +615,10 @@ class BaseSyncJob(Job, Generic[ApiClient]):
         """
         try:
             set_alert_priority(self.soar_job, case_id, alert_identifier, alert_name, new_priority)
-            self.logger.info("Successfully updated alert %s priority to %s.", alert_identifier, new_priority)
+            self.logger.info(f"Successfully updated alert {alert_identifier} priority to {new_priority}.")
 
         except Exception as e:
-            self.logger.exception("Failed to update priority for alert %s: %s", alert_identifier, e)
+            self.logger.exception(f"Failed to update priority for alert {alert_identifier}: {e}")
 
     def get_secops_closure_comment(self, job_case: JobCase, sync_info: dict) -> str:
         """Fetches the closure comment for the Case/Alert.
@@ -670,7 +670,7 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             self.job_completed_successfully = True
 
         except Exception as e:
-            self.logger.exception("An unexpected error occurred during the sync cycle: %s", e)
+            self.logger.exception(f"An unexpected error occurred during the sync cycle: {e}")
             msg = f"An unexpected error occurred during the sync cycle: {e}"
             raise BaseSyncJobException(msg) from e
 

@@ -66,12 +66,12 @@ def extract_script_param(
             raise Exception(msg)
         value = default_value
         siemplify.LOGGER.info(
-            "Parameter %s was not found or was empty, used default_value %s instead", param_name, default_value
+            f"Parameter {param_name} was not found or was empty, used default_value {default_value} instead"
         )
         return value
 
     if print_value:
-        siemplify.LOGGER.info("%s: %s", param_name, value)
+        siemplify.LOGGER.info(f"{param_name}: {value}")
 
     # None values should not be converted.
     if value is None:
@@ -289,5 +289,5 @@ def get_connector_detailed_params(siemplify):
         return [p for p in detailed_params if p.type != ConnectorParamTypes.SCRIPT]
 
     except AttributeError as e:
-        siemplify.LOGGER.exception("could not fetch connector detailed parameters: %s", e)
+        siemplify.LOGGER.error(f"could not fetch connector detailed parameters: {e}")
         raise

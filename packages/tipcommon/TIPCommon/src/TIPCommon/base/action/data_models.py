@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -27,6 +27,8 @@ from ScriptResult import (
 from SiemplifyDataModel import EntityTypes, InsightSeverity, InsightType
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from TIPCommon.types import Entity
 
 

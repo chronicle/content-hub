@@ -291,7 +291,7 @@ class Connector(BaseConnector, ABC):
 
     @nativemethod
     def process_alerts(
-        self, filtered_alerts: list[BaseAlert], timeout_threshold: float = TIMEOUT_THRESHOLD
+        self, filtered_alerts: list[BaseAlert], timeout_threshold: float = TIMEOUT_THRESHOLD,
     ) -> tuple[list[AlertInfo], list[BaseAlert]]:
         """Main alert processing loop.
         Steps for each alert object:
@@ -374,7 +374,7 @@ class Connector(BaseConnector, ABC):
                 self.logger.info(f"Finished processing {alert.alert_id}")
 
             except Exception as e:
-                self.logger.exception(f"Failed to process alert with id {alert.alert_id}")
+                self.logger.error(f"Failed to process alert with id {alert.alert_id}")
                 self.logger.exception(e)
 
                 if self.is_test_run:
@@ -449,8 +449,8 @@ class Connector(BaseConnector, ABC):
                 self.write_context_wrapper(all_alerts)
 
         except Exception as e:
-            self.logger.exception(f"{self.error_msg}")
-            self.logger.exception("Error: %s", e)
+            self.logger.error(f"{self.error_msg}")
+            self.logger.error(f"Error: {e}")
             self.logger.exception(e)
 
             if self.is_test_run:
@@ -459,8 +459,8 @@ class Connector(BaseConnector, ABC):
         try:
             self.finalize()
         except Exception as e:
-            self.logger.exception(f"{self.error_msg}")
-            self.logger.exception("Error: %s", e)
+            self.logger.error(f"{self.error_msg}")
+            self.logger.error(f"Error: {e}")
             self.logger.exception(e)
 
             if self.is_test_run:

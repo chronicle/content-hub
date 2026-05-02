@@ -233,7 +233,7 @@ def list_custom_fields(
         try:
             validate_response(response, validate_json=True)
         except InternalJSONDecoderError as e:
-            chronicle_soar.LOGGER.exception("Failed to parse response as JSON: %s", e)
+            chronicle_soar.LOGGER.error(f"Failed to parse response as JSON: {e}")
             return []
 
         res_json = response.json()
@@ -425,7 +425,7 @@ def get_alert_events(
     """Get specific alert's events.
 
     Args:
-        chronicle_soar (ChronicleSOAR): _description_
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
         case_id (str | int): Case ID. Example: 13, "41"
         alert_identifier (str):
             The alert's identifier (='{alert.name}_{alert.id}'). Example:
@@ -448,10 +448,7 @@ def get_alert_events(
         "alertIdentifier": alert_identifier,
     }
 
-    chronicle_soar.LOGGER.info(
-        "Calling endpoint %s to user profile cards",
-        endpoint,
-    )
+    chronicle_soar.LOGGER.info(f"Calling endpoint {endpoint} to get alert events")
     response = chronicle_soar.session.post(url, json=payload)
     validate_response(response)
 
@@ -479,10 +476,7 @@ def get_env_action_def_files(
     url = urljoin(chronicle_soar.API_ROOT, endpoint)
     payload = [chronicle_soar.environment]
 
-    chronicle_soar.LOGGER.info(
-        "Calling endpoint %s to get all actions def files",
-        endpoint,
-    )
+    chronicle_soar.LOGGER.info(f"Calling endpoint {endpoint} to get all actions def files")
     response = chronicle_soar.session.post(url, json=payload)
     validate_response(response, validate_json=True)
 

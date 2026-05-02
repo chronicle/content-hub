@@ -116,7 +116,7 @@ def read_ids_by_timestamp(
         return filtered_ids
 
     except Exception as e:
-        siemplify.LOGGER.exception("Unable to read ids file: %s", e)
+        siemplify.LOGGER.error(f"Unable to read ids file: {e}")
         siemplify.LOGGER.exception(e)
 
         return none_to_default_value(default_value_to_return, {})
