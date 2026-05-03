@@ -58,7 +58,7 @@ class HtmlFormat:
             self.console.print(f"📂 Report available at 👉: {resolved_temp_path.as_uri()}")
             webbrowser.open(resolved_temp_path.as_uri())
 
-        except Exception as e:
+        except Exception:
             logger.exception("❌ Error generating report")
 
     def _generate_validation_report_html(self, template_name: str = "html_report/report.html") -> str:
