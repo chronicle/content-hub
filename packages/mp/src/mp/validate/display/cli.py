@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 from __future__ import annotations
 
 import logging
@@ -20,6 +21,8 @@ from rich import box
 from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
+
+from .constants import ICON_MAP
 
 if TYPE_CHECKING:
     from mp.validate.data_models import ContentType, FullReport, ValidationResults
@@ -39,13 +42,12 @@ class CliDisplay:
             return
 
         display_categories: list[str] = ["Pre-Build", "Build", "Post-Build"]
-        icon_map: dict[str, str] = {"Integrations": "🧩", "Playbooks": "▶️"}
 
         for content_type, full_report in self.validation_results.items():
             if not any(full_report.values()):
                 continue
 
-            icon = icon_map[content_type.value]
+            icon: str = ICON_MAP[content_type.value]
 
             self.console.print(Rule(f"[bold magenta]{icon} {content_type.value} Validations"))
 
@@ -56,7 +58,7 @@ class CliDisplay:
 
                 self.console.print(f"[bold underline blue]\n{category} Stage[/bold underline blue]")
                 for integration_result in stage_results:
-                    self.console.print(_build_table(integration_result))
+                    self.console.print(_build_table(integration_result), "\n")
 
             self.console.print("\n")
 
