@@ -1,0 +1,375 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Advanced ES Search:
+  ai_description: >-
+    ### General Description
+
+    The **Advanced ES Search** action enables users to perform complex, time-bounded
+    searches against an Elasticsearch cluster using Lucene query syntax. This action
+    is specifically designed for scenarios where time-range filtering is required,
+    allowing for precise data retrieval from specific indices. It is ideal for log
+    analysis, forensic investigations, and threat hunting within a defined temporal
+    window.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Index** | String | No | The Elasticsearch index or index pattern to search
+    (e.g., `smp_logs-*`). Defaults to `*`. |
+
+    | **Query** | String | No | The search query in Lucene syntax (e.g., `level:error
+    AND user:admin`). Defaults to `*`. |
+
+    | **Limit** | Integer | No | The maximum number of documents to return. Default
+    is `100`. |
+
+    | **Display Field** | String | No | A comma-separated list of specific fields
+    to include in the results. Defaults to `*` (all fields). |
+
+    | **Search Field** | String | No | The default field to search if the query doesn't
+    specify one. Defaults to `_all`. |
+
+    | **Timestamp Field** | String | No | The field name used for time-based filtering.
+    Defaults to `@timestamp`. |
+
+    | **Oldest Date** | String | No | The start of the time range. Supports ISO 8601
+    strings or Elasticsearch date-math (e.g., `now-1d`). |
+
+    | **Earliest Date** | String | No | The end of the time range. Supports ISO 8601
+    strings or Elasticsearch date-math (e.g., `now`). |
+
+
+    ### Additional Notes
+
+    - This action does not operate on specific entities within a case; it performs
+    a global search based on the provided parameters.
+
+    - If both **Oldest Date** and **Earliest Date** are left empty, no time-based
+    filtering will be applied to the query.
+
+    - Results are automatically flattened and presented as a Data Table for easier
+    visualization.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Establishes a connection to the Elasticsearch server using
+    the provided Server Address, credentials (API Token or Username/Password), and
+    SSL/TLS settings.
+
+    2. **Parameter Extraction**: Retrieves search parameters including the index pattern,
+    Lucene query, and time-range constraints from the action configuration.
+
+    3. **Query Construction**: Builds a search request using the `elasticsearch-dsl`
+    library, incorporating the Lucene query string and specifying the target fields.
+
+    4. **Time Range Application**: If provided, applies a range filter to the specified
+    `Timestamp Field` using the `Oldest Date` (greater-than-or-equal) and `Earliest
+    Date` (less-than-or-equal) values.
+
+    5. **Execution**: Executes the search against the Elasticsearch instance and retrieves
+    the hits up to the defined `Limit`.
+
+    6. **Data Processing**: Flattens the nested JSON results and formats them into
+    a CSV-compatible structure.
+
+    7. **Output**: Adds a Data Table to the case results and provides the raw JSON
+    data for downstream playbook tasks.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds a data table containing the search results to the action output in the
+      Google SecOps case.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+DSL Search:
+  ai_description: >-
+    ### General Description
+
+    The **DSL Search** action allows users to execute complex queries against an ElasticSearch
+    cluster using the ElasticSearch Domain Specific Language (DSL). It is primarily
+    used for threat hunting, log retrieval, or data correlation within a SOAR workflow.
+    The action retrieves documents based on the provided query and index pattern,
+    supporting both authenticated and unauthenticated connections.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Index** | String | No | The specific index or wildcard pattern (e.g., `smp_logs-*`)
+    to search within. Defaults to `*` (all indices). |
+
+    | **Query** | String | No | A valid JSON-formatted DSL query. If set to `*`, the
+    action performs a default search for documents from the last 24 hours using a
+    predefined boolean range filter. |
+
+    | **Limit** | Integer | No | The maximum number of documents to retrieve from
+    the search results. Defaults to 100. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts connection details (Server Address,
+    Credentials, SSL settings) and search parameters (Index, Query, Limit).
+
+    2. **Authentication**: It establishes a connection to the ElasticSearch server
+    using either an API Token or Username/Password credentials.
+
+    3. **Query Execution**: The action sends the DSL query to the specified ElasticSearch
+    index. If the query is `*`, it applies a default 24-hour lookback. It handles
+    pagination to ensure the requested `Limit` of results is reached.
+
+    4. **Data Processing**: Retrieved documents are parsed and flattened into a simplified
+    dictionary format.
+
+    5. **Output Generation**: The action constructs a CSV-formatted data table from
+    the results and attaches it to the case wall. It also returns the raw JSON results
+    for use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - The action defaults to a 24-hour search window only when the `Query` parameter
+    is exactly `*`.
+
+    - SSL verification and CA certificate files are supported for secure environments.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds a data table containing the flattened search results to the Google SecOps
+      case wall.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Verifies connectivity to an Elasticsearch server. This action is used to ensure
+    that the Google SecOps platform can successfully communicate with the target Elasticsearch
+    instance using the provided configuration, including authentication and SSL settings.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Server Address | String | Yes | The URL of the Elasticsearch server (e.g., `https://10.0.0.1:9200`).
+    |
+
+    | Username | String | No | The username used for basic authentication. |
+
+    | Password | String | No | The password used for basic authentication. |
+
+    | API Token | String | No | The API Key used for authentication as an alternative
+    to username/password. |
+
+    | Authenticate | Boolean | Yes | If set to `True`, the action will attempt to
+    authenticate using the provided credentials. |
+
+    | Verify SSL | Boolean | Yes | If set to `True`, the action will verify the SSL
+    certificate of the Elasticsearch server. |
+
+    | CA Certificate File | String | No | A base64 encoded CA certificate file used
+    for SSL verification. |
+
+
+    ### Additional Notes
+
+    - This action is a diagnostic tool and does not process or enrich entities.
+
+    - Either a combination of `Username`/`Password` or an `API Token` should be provided
+    if `Authenticate` is enabled.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the server address, authentication
+    credentials, and SSL configuration from the integration settings.
+
+    2. **Manager Initialization**: It initializes the `ElasticsearchManager` with
+    the provided connection details.
+
+    3. **Connectivity Test**: The manager executes a `test_connectivity` call, which
+    internally performs an `info()` request to the Elasticsearch API to verify the
+    service is reachable and responding.
+
+    4. **Result Reporting**: The action returns a success message and a boolean status
+    (`True`/`False`) indicating whether the connection was successful.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Simple ES Search:
+  ai_description: >-
+    ### General Description
+
+    Searches through Elasticsearch indices using Lucene query syntax. This action
+    allows for broad data retrieval from an Elasticsearch cluster without time range
+    constraints. It is designed for general-purpose querying where the user specifies
+    the index pattern, the query string, and a result limit. The retrieved documents
+    are flattened and presented as a data table within the case and as a raw JSON
+    result for downstream processing.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Index | String | No | The index name or pattern (e.g., 'logs-*') to search.
+    Defaults to '*' (all indices). |
+
+    | Query | String | No | The Lucene query string (e.g., 'status:error'). Defaults
+    to '*' (all records). |
+
+    | Limit | Integer | No | The maximum number of documents to return. Defaults to
+    100. |
+
+
+    ### Additional Notes
+
+    - This action does not support time-range filtering. For time-sensitive searches,
+    use the 'Advanced ES Search' action.
+
+    - The action does not process specific entities from the case; it performs a global
+    search based on the provided parameters.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the Elasticsearch server using the provided
+    configuration (API Token or Username/Password) and validates SSL settings.
+
+    2. **Parameter Retrieval**: Extracts the 'Index', 'Query', and 'Limit' parameters
+    from the action input.
+
+    3. **Execution**: Executes the Lucene query against the specified Elasticsearch
+    indices using the `simple_es_search` method.
+
+    4. **Data Processing**: Flattens the resulting JSON documents into a flat dictionary
+    structure for better readability.
+
+    5. **Output Generation**: Constructs a CSV-formatted data table from the flattened
+    results and attaches it to the action.
+
+    6. **Completion**: Returns the raw JSON results and a success message indicating
+    the number of hits found.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table containing the search results to the Google SecOps
+      case.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
