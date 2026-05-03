@@ -74,5 +74,5 @@ def minor_version_bump(
         update_built_def_file(integration_dir_built, updated_version_cache)
 
     except FileNotFoundError as e:
-        logger.exception("Error happened")
+        logger.exception("Failed to perform minor version bump for integration")
         raise typer.Exit(1) from e
