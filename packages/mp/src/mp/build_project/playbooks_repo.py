@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 import logging
-import multiprocessing
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import mp.core.config
@@ -62,8 +62,8 @@ class PlaybooksRepo:
         """
         paths: Iterator[Path] = (p for p in playbook_paths if p.exists())
         processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.build_playbook, paths)
+        with ThreadPoolExecutor(max_workers=processes) as pool:
+            list(pool.map(self.build_playbook, paths))
 
     def build_playbook(self, playbook_path: Path) -> None:
         """Build a single playbook provided by `playbook_path`.
@@ -103,8 +103,8 @@ class PlaybooksRepo:
         """
         paths: Iterator[Path] = (p for p in playbooks_paths if p.exists())
         processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.deconstruct_playbook, paths)
+        with ThreadPoolExecutor(max_workers=processes) as pool:
+            list(pool.map(self.deconstruct_playbook, paths))
 
     def deconstruct_playbook(self, playbook_path: Path) -> None:
         """Deconstruct a single playbook provided by `playbook_path`.

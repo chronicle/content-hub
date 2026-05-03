@@ -17,9 +17,9 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
-import multiprocessing
 import pathlib
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -221,8 +221,8 @@ def _run_script_on_paths(script_path: Path, paths: Iterable[Path]) -> list[Integ
 
     processes: int = mp.core.config.get_processes_number()
     tasks_arguments = [(script_path, p) for p in paths]
-    with multiprocessing.Pool(processes=processes) as pool:
-        results_iterator = pool.starmap(_run_tests_for_single_integration, tasks_arguments)
+    with ThreadPoolExecutor(max_workers=processes) as pool:
+        results_iterator = pool.map(lambda args: _run_tests_for_single_integration(*args), tasks_arguments)
 
         for result in results_iterator:
             if result is not None:

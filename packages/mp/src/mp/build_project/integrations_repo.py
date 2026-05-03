@@ -25,8 +25,8 @@ built integrations back into their source structure.
 from __future__ import annotations
 
 import logging
-import multiprocessing
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import mp.core.config
@@ -93,8 +93,8 @@ class IntegrationsRepo:
         """
         paths: Iterator[Path] = (p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p))
         processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.build_integration, paths)
+        with ThreadPoolExecutor(max_workers=processes) as pool:
+            list(pool.map(self.build_integration, paths))
 
     def build_integration(self, integration_path: Path) -> None:
         """Build a single integration provided by `integration_path`.
@@ -173,8 +173,8 @@ class IntegrationsRepo:
         """
         paths: Iterator[Path] = (p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p))
         processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.deconstruct_integration, paths)
+        with ThreadPoolExecutor(max_workers=processes) as pool:
+            list(pool.map(self.deconstruct_integration, paths))
 
     def deconstruct_integration(self, integration_path: Path) -> None:
         """Deconstruct a single integration provided by `integration_path`.
