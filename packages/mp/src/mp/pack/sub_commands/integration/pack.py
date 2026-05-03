@@ -41,7 +41,6 @@ def pack_integration(
             help="Old version to fetch from the repo and create the ZIP.",
         ),
     ] = None,
-
     beta: Annotated[
         str | None,
         typer.Option(

@@ -51,16 +51,15 @@ class BackendAPI:
             typer.Exit: Validations error.
 
         """
-        self.api_root = api_root.rstrip("/")
-        self.username = username
-        self.password = password
-        self.api_key = api_key
-        self.session = requests.Session()
-        self.token = None
+        self.api_root: str = api_root.rstrip("/")
+        self.username: str | None = username
+        self.password: str | None = password
+        self.api_key: str | None = api_key
+        self.session: requests.Session = requests.Session()
+        self.token: str | None = None
 
         if self._is_localhost():
-            rich.print("[yellow]Localhost deployment detected. "
-                       "TLS verification disabled.[/yellow]")
+            rich.print("[yellow]Localhost deployment detected. TLS verification disabled.[/yellow]")
             self._disable_tls()
 
         if api_key is not None:

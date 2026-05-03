@@ -14,12 +14,15 @@
 
 from __future__ import annotations
 
-import pathlib  # noqa: TC003
+from typing import TYPE_CHECKING
 from unittest import mock
 
 from typer.testing import CliRunner
 
 from mp.pack.typer_app import pack_app
+
+if TYPE_CHECKING:
+    import pathlib
 
 runner = CliRunner()
 

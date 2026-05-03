@@ -23,6 +23,7 @@ import subprocess  # noqa: S404
 import sys
 import tempfile
 import zipfile
+from typing import Any
 
 import questionary
 import typer
@@ -30,11 +31,100 @@ from questionary import Choice
 
 from mp.build_project.flow.integrations.flow import build_integrations
 from mp.core import constants
-from mp.core.file_utils import (
-    create_or_get_out_dir,
-    get_marketplace_integration_path,
-)
+from mp.core.file_utils import create_or_get_out_dir, get_marketplace_integration_path
 from mp.core.utils import str_to_snake_case
+
+
+def pack_integration(
+    integration_name: str,
+    *,
+    version: str | None = None,
+    beta_name: str | None = None,
+    zip_dir: pathlib.Path | None = None,
+    interactive: bool = True,
+) -> None:
+    """Flow for packing an integration into a SOAR-supported ZIP.
+
+    Args:
+        integration_name: The name of the integration to pack.
+        version: Old version to fetch from the repo and create the ZIP.
+        beta_name: Name of the custom beta integration.
+        zip_dir: Directory to save the ZIP file.
+        interactive: Enable or disable interactive component selection.
+
+    Raises:
+        RuntimeError: If Git operations or build process fails.
+
+    """
+    # 1. Find an integration source path
+    src_path, integration_name = _find_integration_src_path(integration_name)
+    repo_root: pathlib.Path = _get_git_repo_root(src_path)
+
+    # 2. Handle Git Checkout if a version is provided
+    temp_worktree_context: tempfile.TemporaryDirectory | None = None
+    temp_worktree: pathlib.Path | None = None
+    build_src: pathlib.Path = src_path
+    if version is not None:
+        typer.echo(f"Fetching version {version} via Git...")
+        temp_worktree_context = tempfile.TemporaryDirectory(prefix=f"mp_worktree_{integration_name}_{version}_")
+        temp_worktree = pathlib.Path(temp_worktree_context.name)
+        _create_git_worktree(src_path, version, temp_worktree)
+        rel_path: pathlib.Path = src_path.relative_to(repo_root)
+        build_src: pathlib.Path = temp_worktree / rel_path
+        typer.echo(f"Checked out version {version} to temporary worktree.")
+
+    try:
+        # 3. Build integration
+        typer.echo(f"Building integration '{integration_name}'...")
+        with tempfile.TemporaryDirectory(prefix=f"mp_pack_{integration_name}_") as temp_build_dir:
+            temp_build_path: pathlib.Path = pathlib.Path(temp_build_dir)
+
+            # Build the integration
+            _build_integration_for_pack(integration_name, version, build_src, temp_build_path)
+
+            # Find the built integration directory
+            def_files: list[pathlib.Path] = list(temp_build_path.rglob("Integration-*.def"))
+            if not def_files:
+                msg: str = f"Build failed: No Integration-*.def found in {temp_build_path}"
+                raise RuntimeError(msg)
+
+            built_dir: pathlib.Path = def_files[0].parent
+            identifier: str = built_dir.name
+
+            # Set IsCustom = True (required for importing via SOAR UI)
+            _set_is_custom(def_files[0])
+
+            # 4. Apply Beta / Custom Identifier modifications
+
+            if beta_name:
+                typer.echo(f"Applying custom beta identifier '{beta_name}'...")
+                _apply_beta_modifications(built_dir, identifier, beta_name, version)
+                identifier: str = beta_name
+
+            # 5. Interactive Component Selection
+            if interactive and _is_tty():
+                _interactive_component_selection(built_dir)
+            elif interactive:
+                typer.echo("Non-TTY environment detected. Skipping interactive component selection (including all).")
+
+            # 6. ZIP the output
+            if zip_dir is None:
+                zip_dir = create_or_get_out_dir() / "pack"
+                zip_dir.mkdir(parents=True, exist_ok=True)
+            else:
+                zip_dir = pathlib.Path(zip_dir)
+                zip_dir.mkdir(parents=True, exist_ok=True)
+
+            zip_path: pathlib.Path = _create_zip(built_dir, identifier, zip_dir)
+            typer.echo(f"Successfully created integration zip: {zip_path}")
+
+    finally:
+        # 7. Clean up Git Worktree
+        if temp_worktree:
+            typer.echo("Cleaning up temporary Git worktree...")
+            _remove_git_worktree(temp_worktree, repo_root)
+        if temp_worktree_context:
+            temp_worktree_context.cleanup()
 
 
 def _find_integration_src_path(integration_name: str) -> tuple[pathlib.Path, str]:
@@ -50,46 +140,25 @@ def _find_integration_src_path(integration_name: str) -> tuple[pathlib.Path, str
         typer.BadParameter: If the integration is not found.
 
     """
-    src_path = get_marketplace_integration_path(integration_name)
-    resolved_name = integration_name
+    src_path: pathlib.Path | None = get_marketplace_integration_path(integration_name)
+    resolved_name: str = integration_name
 
-    if not src_path:
+    if src_path is None:
         # Try snake_case version
-        snake_name = str_to_snake_case(integration_name)
-        src_path = get_marketplace_integration_path(snake_name)
-        if src_path:
+        snake_name: str = str_to_snake_case(integration_name)
+        src_path: pathlib.Path | None = get_marketplace_integration_path(snake_name)
+        if src_path is not None:
             resolved_name = snake_name
 
-    if not src_path:
-        msg = f"Integration '{integration_name}' not found."
+    if src_path is None:
+        msg: str = f"Integration '{integration_name}' not found."
         raise typer.BadParameter(msg)
 
     return src_path, resolved_name
 
 
-def _set_is_custom(def_path: pathlib.Path) -> None:
-    """Set IsCustom=True in the integration definition file.
-
-    Args:
-        def_path: The path to the integration definition file.
-
-    """
-    try:
-        with def_path.open("r+", encoding="utf-8") as f:
-            def_data = json.load(f)
-            def_data["IsCustom"] = True
-            f.seek(0)
-            json.dump(def_data, f, indent=4)
-            f.truncate()
-    except (OSError, json.JSONDecodeError) as e:
-        typer.echo(f"Warning: Failed to set IsCustom in {def_path}: {e}", err=True)
-
-
 def _build_integration_for_pack(
-    integration_name: str,
-    version: str | None,
-    build_src: pathlib.Path,
-    temp_build_path: pathlib.Path,
+    integration_name: str, version: str | None, build_src: pathlib.Path, temp_build_path: pathlib.Path
 ) -> None:
     """Build the integration for packing.
 
@@ -116,98 +185,22 @@ def _build_integration_for_pack(
         )
 
 
-def pack_integration(
-
-
-    integration_name: str,
-    *,
-    version: str | None = None,
-    beta_name: str | None = None,
-    zip_dir: pathlib.Path | None = None,
-    interactive: bool = True,
-) -> None:
-    """Flow for packing an integration into a SOAR supported ZIP.
+def _set_is_custom(def_path: pathlib.Path) -> None:
+    """Set IsCustom=True in the integration definition file.
 
     Args:
-        integration_name: The name of the integration to pack.
-        version: Old version to fetch from the repo and create the ZIP.
-        beta_name: Name of the custom beta integration.
-        zip_dir: Directory to save the ZIP file.
-        interactive: Enable or disable interactive component selection.
-
-    Raises:
-        RuntimeError: If Git operations or build process fails.
+        def_path: The path to the integration definition file.
 
     """
-    # 1. Find integration source path
-    src_path, integration_name = _find_integration_src_path(integration_name)
-    repo_root = _get_git_repo_root(src_path)
-
-    # 2. Handle Git Checkout if version provided
-    temp_worktree_context = None
-    temp_worktree: pathlib.Path | None = None
-    build_src = src_path
-    if version is not None:
-        typer.echo(f"Fetching version {version} via Git...")
-        temp_worktree_context = tempfile.TemporaryDirectory(prefix=f"mp_worktree_{integration_name}_{version}_")
-        temp_worktree = pathlib.Path(temp_worktree_context.name)
-        _create_git_worktree(src_path, version, temp_worktree)
-        rel_path = src_path.relative_to(repo_root)
-        build_src = temp_worktree / rel_path
-        typer.echo(f"Checked out version {version} to temporary worktree.")
-
     try:
-        # 3. Build integration
-        typer.echo(f"Building integration '{integration_name}'...")
-        with tempfile.TemporaryDirectory(prefix=f"mp_pack_{integration_name}_") as temp_build_dir:
-            temp_build_path = pathlib.Path(temp_build_dir)
-
-            # Build the integration
-            _build_integration_for_pack(integration_name, version, build_src, temp_build_path)
-
-            # Find the built integration directory
-            def_files = list(temp_build_path.rglob("Integration-*.def"))
-            if not def_files:
-                msg = f"Build failed: No Integration-*.def found in {temp_build_path}"
-                raise RuntimeError(msg)
-
-            built_dir = def_files[0].parent
-            identifier = built_dir.name
-
-            # Set IsCustom = True (required for importing via SOAR UI)
-            _set_is_custom(def_files[0])
-
-            # 4. Apply Beta / Custom Identifier modifications
-
-            if beta_name:
-                typer.echo(f"Applying custom beta identifier '{beta_name}'...")
-                _apply_beta_modifications(built_dir, identifier, beta_name, version)
-                identifier = beta_name
-
-            # 5. Interactive Component Selection
-            if interactive and _is_tty():
-                _interactive_component_selection(built_dir)
-            elif interactive:
-                typer.echo("Non-TTY environment detected. Skipping interactive component selection (including all).")
-
-            # 6. ZIP the output
-            if zip_dir is None:
-                zip_dir = create_or_get_out_dir() / "pack"
-                zip_dir.mkdir(parents=True, exist_ok=True)
-            else:
-                zip_dir = pathlib.Path(zip_dir)
-                zip_dir.mkdir(parents=True, exist_ok=True)
-
-            zip_path = _create_zip(built_dir, identifier, zip_dir)
-            typer.echo(f"Successfully created integration zip: {zip_path}")
-
-    finally:
-        # 7. Clean up Git Worktree
-        if temp_worktree:
-            typer.echo("Cleaning up temporary Git worktree...")
-            _remove_git_worktree(temp_worktree, repo_root)
-        if temp_worktree_context:
-            temp_worktree_context.cleanup()
+        with def_path.open("r+", encoding="utf-8") as f:
+            def_data: dict[str, Any] = json.load(f)
+            def_data["IsCustom"] = True
+            f.seek(0)
+            json.dump(def_data, f, indent=4)
+            f.truncate()
+    except (OSError, json.JSONDecodeError) as e:
+        typer.echo(f"Warning: Failed to set IsCustom in {def_path}: {e}", err=True)
 
 
 def _get_git_repo_root(path: pathlib.Path) -> pathlib.Path:
@@ -223,9 +216,9 @@ def _get_git_repo_root(path: pathlib.Path) -> pathlib.Path:
         RuntimeError: If the Git command fails.
 
     """
-    git_path = shutil.which("git") or "git"
+    git_path: str = shutil.which("git") or "git"
     try:
-        output = (
+        output: str = (
             subprocess  # noqa: S603
             .check_output(
                 [git_path, "rev-parse", "--show-toplevel"],
@@ -237,7 +230,7 @@ def _get_git_repo_root(path: pathlib.Path) -> pathlib.Path:
         )
         return pathlib.Path(output)
     except subprocess.CalledProcessError as e:
-        msg = f"Failed to find Git repo root: {e.output.decode()}"
+        msg: str = f"Failed to find Git repo root: {e.output.decode()}"
         raise RuntimeError(msg) from e
 
 
@@ -255,12 +248,12 @@ def _find_commit_sha(src_path: pathlib.Path, version: str) -> str:
         typer.BadParameter: If the version commit cannot be found.
 
     """
-    rel_notes_path = src_path / constants.RELEASE_NOTES_FILE
-    commit_sha = None
-    git_path = shutil.which("git") or "git"
+    rel_notes_path: pathlib.Path = src_path / constants.RELEASE_NOTES_FILE
+    commit_sha: str | None = None
+    git_path: str = shutil.which("git") or "git"
 
     if rel_notes_path.exists():
-        cmd = [
+        cmd: list[str] = [
             git_path,
             "log",
             "-S",
@@ -273,7 +266,7 @@ def _find_commit_sha(src_path: pathlib.Path, version: str) -> str:
             rel_notes_path.name,
         ]
         try:
-            output = (
+            output: str = (
                 subprocess  # noqa: S603
                 .check_output(
                     cmd,
@@ -290,9 +283,9 @@ def _find_commit_sha(src_path: pathlib.Path, version: str) -> str:
 
     # Try pyproject.toml if not found
     if not commit_sha:
-        pyproject_path = src_path / constants.PROJECT_FILE
+        pyproject_path: pathlib.Path = src_path / constants.PROJECT_FILE
         if pyproject_path.exists():
-            cmd = [
+            cmd: list[str] = [
                 git_path,
                 "log",
                 "-S",
@@ -305,7 +298,7 @@ def _find_commit_sha(src_path: pathlib.Path, version: str) -> str:
                 pyproject_path.name,
             ]
             try:
-                output = (
+                output: str = (
                     subprocess  # noqa: S603
                     .check_output(
                         cmd,
@@ -321,7 +314,7 @@ def _find_commit_sha(src_path: pathlib.Path, version: str) -> str:
                 pass
 
     if not commit_sha:
-        msg = f"Could not find Git commit for version {version} of integration '{src_path.name}'."
+        msg: str = f"Could not find Git commit for version {version} of integration '{src_path.name}'."
         raise typer.BadParameter(msg)
 
     return commit_sha
@@ -332,17 +325,17 @@ def _create_git_worktree(src_path: pathlib.Path, version: str, temp_dir: pathlib
 
     Args:
         src_path: The source path of the integration.
-        version: The version to checkout.
+        version: The version to check out.
         temp_dir: The path to the temporary worktree.
 
     Raises:
         RuntimeError: If the Git command fails.
 
     """
-    repo_root = _get_git_repo_root(src_path)
-    git_path = shutil.which("git") or "git"
+    repo_root: pathlib.Path = _get_git_repo_root(src_path)
+    git_path: str = shutil.which("git") or "git"
 
-    commit_sha = _find_commit_sha(src_path, version)
+    commit_sha: str = _find_commit_sha(src_path, version)
 
     try:
         subprocess.run(  # noqa: S603
@@ -352,7 +345,7 @@ def _create_git_worktree(src_path: pathlib.Path, version: str, temp_dir: pathlib
             capture_output=True,
         )
     except subprocess.CalledProcessError as e:
-        msg = f"Failed to create Git worktree: {e.stderr.decode()}"
+        msg: str = f"Failed to create Git worktree: {e.stderr.decode()}"
         raise RuntimeError(msg) from e
 
 
@@ -364,7 +357,7 @@ def _remove_git_worktree(temp_dir: pathlib.Path, repo_root: pathlib.Path) -> Non
         repo_root: The Git repository root path.
 
     """
-    git_path = shutil.which("git") or "git"
+    git_path: str = shutil.which("git") or "git"
     try:
         subprocess.run(  # noqa: S603
             [git_path, "worktree", "remove", "--force", str(temp_dir)],
@@ -388,17 +381,17 @@ def _apply_beta_modifications(built_dir: pathlib.Path, old_id: str, beta_name: s
         version: The version number.
 
     """
-    new_id = beta_name
+    new_id: str = beta_name
 
-    # 1. Rename and update main .def file
-    old_def_path = built_dir / constants.INTEGRATION_DEF_FILE.format(old_id)
-    new_def_path = built_dir / constants.INTEGRATION_DEF_FILE.format(new_id)
+    # 1. Rename and update the main .def file
+    old_def_path: pathlib.Path = built_dir / constants.INTEGRATION_DEF_FILE.format(old_id)
+    new_def_path: pathlib.Path = built_dir / constants.INTEGRATION_DEF_FILE.format(new_id)
 
     if old_def_path.exists():
         shutil.move(old_def_path, new_def_path)
 
         with new_def_path.open("r+", encoding="utf-8") as f:
-            def_data = json.load(f)
+            def_data: dict[str, Any] = json.load(f)
             def_data["Identifier"] = new_id
 
             # Update Display Name
@@ -415,7 +408,7 @@ def _apply_beta_modifications(built_dir: pathlib.Path, old_id: str, beta_name: s
             f.truncate()
 
     # 2. Update component definitions
-    component_dirs = [
+    component_dirs: list[tuple[str, bool]] = [
         (constants.OUT_ACTIONS_META_DIR, False),
         (constants.OUT_CONNECTORS_META_DIR, True),  # Is Connector
         (constants.OUT_JOBS_META_DIR, False),
@@ -423,7 +416,7 @@ def _apply_beta_modifications(built_dir: pathlib.Path, old_id: str, beta_name: s
     ]
 
     for dir_name, is_connector in component_dirs:
-        meta_dir = built_dir / dir_name
+        meta_dir: pathlib.Path = built_dir / dir_name
         if meta_dir.exists():
             for file_path in meta_dir.glob("*"):
                 if file_path.is_file():
@@ -462,7 +455,6 @@ def _discover_components(
     built_dir: pathlib.Path,
 ) -> tuple[
     list[Choice],
-
     list[tuple[str, pathlib.Path, pathlib.Path | None]],
     list[tuple[str, pathlib.Path, pathlib.Path | None]],
 ]:
@@ -475,7 +467,7 @@ def _discover_components(
         tuple: (choices, ping_components, other_components)
 
     """
-    components_map = {
+    components_map: dict[str, tuple[str, str]] = {
         "Action": (constants.OUT_ACTIONS_META_DIR, constants.OUT_ACTION_SCRIPTS_DIR),
         "Connector": (constants.OUT_CONNECTORS_META_DIR, constants.OUT_CONNECTOR_SCRIPTS_DIR),
         "Job": (constants.OUT_JOBS_META_DIR, constants.OUT_JOB_SCRIPTS_DIR),
@@ -487,8 +479,8 @@ def _discover_components(
     other_components: list[tuple[str, pathlib.Path, pathlib.Path | None]] = []
 
     for comp_type, (meta_dir_name, script_dir_name) in components_map.items():
-        meta_dir = built_dir / meta_dir_name
-        script_dir = built_dir / script_dir_name
+        meta_dir: pathlib.Path = built_dir / meta_dir_name
+        script_dir: pathlib.Path = built_dir / script_dir_name
 
         if not meta_dir.exists():
             continue
@@ -497,10 +489,10 @@ def _discover_components(
             if not meta_file.is_file():
                 continue
 
-            name = meta_file.stem
-            script_file = None
+            name: str = meta_file.stem
+            script_file: pathlib.Path | None = None
             if script_dir.exists():
-                scripts = list(script_dir.glob(f"{name}.*"))
+                scripts: list[pathlib.Path] = list(script_dir.glob(f"{name}.*"))
                 if scripts:
                     script_file = scripts[0]
 
@@ -529,6 +521,7 @@ def _delete_unselected_components(
             meta.unlink(missing_ok=True)
             if script and script.exists():
                 script.unlink(missing_ok=True)
+
             typer.echo(f"Removed unselected component: {meta.stem}")
 
 
@@ -547,7 +540,7 @@ def _interactive_component_selection(built_dir: pathlib.Path) -> None:
     if not choices:
         return
 
-    selected_values = questionary.checkbox(
+    selected_values: list[tuple[pathlib.Path, pathlib.Path | None]] = questionary.checkbox(
         "Select Actions/Connectors/Jobs/Widgets to include (Hit <Enter> to select all):",
         choices=choices,
     ).ask()
@@ -556,7 +549,7 @@ def _interactive_component_selection(built_dir: pathlib.Path) -> None:
         typer.echo("No components selected or cancelled. Including all components.")
         return
 
-    selected_files = set()
+    selected_files: set[pathlib.Path] = set()
     for meta, script in selected_values:
         selected_files.add(meta)
         if script:
@@ -582,9 +575,9 @@ def _create_zip(built_dir: pathlib.Path, identifier: str, zip_dir: pathlib.Path)
         pathlib.Path: The path to the created ZIP file.
 
     """
-    date = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d")
-    zip_name = f"{identifier}{date}.zip"
-    zip_path = zip_dir / zip_name
+    date: str = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d")
+    zip_name: str = f"{identifier}{date}.zip"
+    zip_path: pathlib.Path = zip_dir / zip_name
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         for file_path in built_dir.rglob("*"):
@@ -595,7 +588,7 @@ def _create_zip(built_dir: pathlib.Path, identifier: str, zip_dir: pathlib.Path)
 
 
 def _split_camel_case(text: str) -> str:
-    """Split CamelCase string with spaces.
+    """Split the CamelCase string with spaces.
 
     Args:
         text: The string to split.
