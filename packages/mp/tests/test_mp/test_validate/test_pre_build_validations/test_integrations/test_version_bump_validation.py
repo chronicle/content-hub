@@ -41,7 +41,7 @@ dependencies = [
 OLD_RN_CONTENT = """
 -   deprecated: true
     description: New Integration Added - Mock Integration.
-    integration_version: 1.0
+    version: 1.0
     item_name: Connector Name
     item_type: Connector
     new: true
@@ -52,7 +52,7 @@ OLD_RN_CONTENT = """
 RN_ENTRY_TEMPLATE = """
 -   deprecated: true
     description: New Integration Added - Mock Integration.
-    integration_version: {version}
+    version: {version}
     item_name: Connector Name
     item_type: Connector
     new: true
@@ -75,7 +75,7 @@ def _setup_test_files(
 
 
 class TestVersionBumpValidationFlow:
-    def test_valid_existing_integration_version_bump_success(self, temp_integration: Path) -> None:
+    def test_valid_existing_version_bump_success(self, temp_integration: Path) -> None:
         old_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="1.0")
         new_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="2.0")
         new_rn_entry = RN_ENTRY_TEMPLATE.format(version="2.0")
@@ -97,7 +97,7 @@ class TestVersionBumpValidationFlow:
 
             _version_bump_validation_run_checks(existing_files, new_files)
 
-    def test_invalid_existing_integration_version_bump_fail(self, temp_integration: Path) -> None:
+    def test_invalid_existing_version_bump_fail(self, temp_integration: Path) -> None:
         old_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="1.0")
         new_toml_content = PYPROJECT_TOML_TEMPLATE.format(version="3.0")
         new_rn_entry = RN_ENTRY_TEMPLATE.format(version="3.0")
@@ -116,7 +116,7 @@ class TestVersionBumpValidationFlow:
             with pytest.raises(NonFatalValidationError, match=r"must be incremented by exactly 1\.0"):
                 _version_bump_validation_run_checks(existing_files, new_files)
 
-    def test_invalid_existing_integration_version_bump_float_fail(
+    def test_invalid_existing_version_bump_float_fail(
         self,
         temp_integration: Path,
     ) -> None:

@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 OLD_RN_CONTENT = """
 -   deprecated: true
     description: New Playbook Added - Mock Playbook.
-    integration_version: 1.0
+    version: 1.0
     item_name: Playbook Name
     item_type: Playbook
     new: true
@@ -45,7 +45,7 @@ OLD_RN_CONTENT = """
 RN_ENTRY_TEMPLATE = """
 -   deprecated: true
     description: New Playbook Added - Mock Playbook.
-    integration_version: {version}
+    version: {version}
     item_name: Playbook Name
     item_type: Playbook
     new: true

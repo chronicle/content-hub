@@ -47,7 +47,7 @@ def _write_release_notes(integration_path: Path, versions: list[str]) -> None:
     """Write a release_notes.yaml with entries for the given versions."""
     entries = [
         {
-            "integration_version": v,
+            "version": v,
             "description": f"Release {v}",
             "publish_time": "2024-01-01",
             "item_name": "Integration Name",
