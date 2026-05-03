@@ -178,4 +178,3 @@ def build_integration(  # noqa: PLR0913
     finally:
         mp.core.config.clear_custom_src()
         mp.core.config.clear_custom_dst()
-        mp.core.config.clear_custom_dst()
