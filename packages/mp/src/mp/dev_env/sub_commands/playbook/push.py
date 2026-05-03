@@ -84,7 +84,7 @@ def push_playbook(
 
     except Exception as e:
         error_message = f"Upload failed for {zip_path.stem}: {e}"
-        logger.info("%s", error_message)
+        logger.error("%s", error_message)
         raise typer.Exit(1) from e
 
     finally:

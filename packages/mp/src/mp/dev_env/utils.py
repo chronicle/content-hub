@@ -39,7 +39,7 @@ def load_dev_env_config() -> dict[str, str]:
 
     """
     if not CONFIG_PATH.exists():
-        logger.info(" Not logged in. Please run 'mp dev-env login' first. ")
+        logger.error(" Not logged in. Please run 'mp dev-env login' first. ")
         raise typer.Exit(1)
     with CONFIG_PATH.open(encoding="utf-8") as f:
         return json.load(f)

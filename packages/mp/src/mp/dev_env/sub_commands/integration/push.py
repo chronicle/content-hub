@@ -84,7 +84,7 @@ def push_integration(
 
     except Exception as e:
         error_message = f"Upload failed for {zip_path.stem}: {e}"
-        logger.info("%s", error_message)
+        logger.error("%s", error_message)
         raise typer.Exit(1) from e
 
     finally:
@@ -134,5 +134,5 @@ def _push_custom_integrations(zipped_paths: list[Path]) -> None:
     if results:
         logger.error("\nUpload errors detected:")
         for error in results:
-            logger.info("  - %s", error)
+            logger.error("  - %s", error)
         raise typer.Exit(1)

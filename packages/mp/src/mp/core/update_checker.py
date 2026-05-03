@@ -89,7 +89,7 @@ def _print_version_warning(remote_version: str) -> None:
         f"({current_version} -> {remote_version}) is available.\n"
         f"Run 'mp self update' to update.\n"
     )
-    logger.info(message)
+    logger.warning(message)
 
 
 def print_mp_version(*, value: bool) -> None:

@@ -77,7 +77,7 @@ def get_integration_path(integration: str, src: Path | None = None, *, custom: b
             if candidate.exists():
                 return candidate
 
-    logger.info("Could not find source integration at %s/.../%s", integrations_root, integration)
+    logger.error("Could not find source integration at %s/.../%s", integrations_root, integration)
     raise typer.Exit(1)
 
 
@@ -97,7 +97,7 @@ def get_integration_identifier(source_path: Path) -> str:
     try:
         integration_obj = Integration.from_non_built_path(source_path)
     except ValueError as e:
-        logger.info("Could not determine integration identifier: %s", e)
+        logger.error("Could not determine integration identifier: %s", e)
         raise typer.Exit(1) from e
     else:
         return integration_obj.identifier
@@ -247,7 +247,7 @@ def _modify_def_file_to_custom(file: Path) -> None:
             json.dump(data, f, indent=4, sort_keys=True)
 
     except (OSError, json.JSONDecodeError):
-        logger.exception("Failed to process %s:", file)
+        logger.exception("Failed to process %s", file)
 
 
 def save_integration_as_zip(integration_name: str, resp: Response, dst: Path) -> Path:

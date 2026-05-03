@@ -63,7 +63,7 @@ def get_playbook_path_by_name(playbook: str, src: Path | None = None) -> Path:
             if candidate.exists():
                 return candidate
 
-    logger.info("Could not find source playbook at %s/.../%s", playbooks_root, playbook)
+    logger.error("Could not find source playbook at %s/.../%s", playbooks_root, playbook)
     raise typer.Exit(1)
 
 
@@ -85,7 +85,7 @@ def get_block_names_by_ids(ids_to_find: set[str], src: Path | None = None) -> se
 
     if remaining_ids:
         missing_str = ", ".join(remaining_ids)
-        logger.info("Could not find the following blocks: %s", missing_str)
+        logger.error("Could not find the following blocks: %s", missing_str)
 
     return found_blocks
 
