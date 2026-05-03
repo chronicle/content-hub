@@ -46,7 +46,7 @@ class PreBuildValidations:
         count: int = 0
         for validator in validations:
             try:
-                logger.debug("Running validator: %s", validator.name)
+                logger.info("Running validator: %s", validator.name)
                 validator.run(self.validation_path)
                 count += 1
             except NonFatalValidationError as e:
