@@ -174,9 +174,10 @@ def _build_integrations(
     valid_integration_names: set[str] = {i.name for i in valid_integrations_}
     not_found: set[str] = set(integrations).difference(valid_integration_names)
     if not_found:
-        rich.print(
-            "The following integrations could not be found in"
-            f" the {marketplace_.name} marketplace: {', '.join(not_found)}\n"
+        logger.error(
+            "The following integrations could not be found in the %s marketplace: %s\n",
+            marketplace_.name,
+            ", ".join(not_found),
         )
 
     if valid_integrations_:
