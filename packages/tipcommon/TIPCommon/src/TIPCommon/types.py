@@ -15,11 +15,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Collection, MutableMapping
-from typing import (
-    Any,
-    TypeVar,
-    Union,
-)
+from typing import Any, TypeVar
 
 from SiemplifyAction import SiemplifyAction
 from SiemplifyConnectors import SiemplifyConnectorExecution
@@ -35,11 +31,11 @@ ChronicleSOAR = SiemplifyAction | SiemplifyConnectorExecution | SiemplifyJob
 Entity = TypeVar("Entity", bound=DomainEntityInfo)
 
 SingleJson = MutableMapping[str, Any]
-JSON = Union[SingleJson, list[SingleJson]]
+JSON = SingleJson | list[SingleJson]
 JsonString = TypeVar("JsonString", bound=str)
 
 GeneralFunction = Callable[..., Any]
-Contains = Union[_T, Collection[_T], type[tuple[_T, ...]], None]
+Contains = _T | Collection[_T] | type[tuple[_T, ...]] | None
 
 AuthParams = TypeVar("AuthParams")
 ApiParams = TypeVar("ApiParams")

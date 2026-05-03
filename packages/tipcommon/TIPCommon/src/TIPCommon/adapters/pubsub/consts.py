@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ...exceptions import (
+from TIPCommon.exceptions import (
     AlreadyExistsError,
     BadGatewayError,
     DeadlineExceededError,

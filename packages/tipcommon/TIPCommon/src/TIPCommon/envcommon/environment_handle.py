@@ -37,6 +37,12 @@ def platform_supports_db(siemplify: object) -> bool:
 
 
 def validate_map_file_exists(map_file_path: str, logger: Any) -> None:
+    """Validate that the map file exists, and if not, create it with instructions.
+
+    Args:
+        map_file_path (str): The path to the map file.
+        logger (ScriptLogger): The logger to use for logging.
+    """
     try:
         if not pathlib.Path(map_file_path).exists():
             with pathlib.Path(map_file_path).open("w+", encoding="utf-8") as map_file:
@@ -60,13 +66,22 @@ class GetEnvironmentCommonFactory:
         environment_regex_pattern: str,
         map_file: str = "map.json",
     ) -> EnvironmentHandle:
-        """Get environment common
-        :param siemplify: {siemplify} Siemplify object
-        :param environment_field_name: {string} The environment field name
-        :param environment_regex_pattern: {string} The environment regex pattern
-        :param map_file: {string} The map file
-        :return: {EnvironmentHandle}
-        """
+        """Factory method to create an instance of EnvironmentHandle based on platform capabilities.
+
+         The method checks if the platform supports using a database for storing environment mappings.
+         If it does, it returns an instance of EnvironmentHandleForDBSystem. Otherwise, it returns an
+         instance of EnvironmentHandleForFileSystem which uses a file to store environment mappings.
+        The method also ensures that the mapping file exists if the file system approach is used.
+        Args:
+            siemplify (SiemplifyAction | SiemplifyJob | SiemplifyConnectorExecution): The SOAR SDK object instance.
+            environment_field_name (str): The name of the field from which to extract the environment information.
+            environment_regex_pattern (str): The regex pattern to apply to the extracted environment information for
+            further extraction.
+            map_file (str): The name of the map file to use for environment mappings when using the file system
+            approach. Defaults to "map.json".
+        Returns:
+            EnvironmentHandle: An instance of EnvironmentHandle appropriate for the platform's capabilities.
+         """
         if platform_supports_db(siemplify):
             return EnvironmentHandleForDBSystem(
                 logger=siemplify.LOGGER,
@@ -108,15 +123,18 @@ class EnvironmentHandle(ABC):
         Then, if regex pattern given - extract environment
         In the end, try to resolve the found environment to its mapped alias - using the map file
         If nothing supply, return the default connector environment
-        :param data: {dict} fetch the environment value from this data field (can be the alert or the event)
-        :return: {string} environment
+
+        Args:
+            data (dict[str, str]): The data dictionary from which to extract the environment information.
+            This can be an alert or an event.
+
+        Returns:
+            str: The determined environment based on the provided data and the logic defined in the method.
         """
 
 
 class EnvironmentHandleForFileSystem(EnvironmentHandle):
-    """handle environment logic
-    environment_field_name + environment_regex + environment map.json
-    """
+    """handle environment logic environment_field_name + environment_regex + environment map.json."""
 
     def __init__(
         self,
@@ -136,10 +154,14 @@ class EnvironmentHandleForFileSystem(EnvironmentHandle):
         Then, if regex pattern given - extract environment
         In the end, try to resolve the found environment to its mapped alias - using the map file
         If nothing supply, return the default connector environment
-        :param data: {dict} fetch the environment value from this data field (can be the alert or the event)
-        :return: {string} environment
+
+        Args:
+            data (dict[str, str]): The data dictionary from which to extract the environment information.
+            This can be an alert or an event.
+
+        Returns:
+            str: The determined environment based on the provided data and the logic defined in the method.
         """
-        # Check first if map.json exists, and if not, create it.
 
         if self.environment_field_name and data.get(self.environment_field_name):
             # Get the environment from the given field
@@ -156,18 +178,19 @@ class EnvironmentHandleForFileSystem(EnvironmentHandle):
             # Try to resolve the found environment to its mapped alias.
             # If the found environment / extracted environment is empty
             # use the default environment
-            return (
-                self._get_mapped_environment(environment)
-                if environment
-                else self.default_environment
-            )
+            return self._get_mapped_environment(environment) if environment else self.default_environment
 
         return self.default_environment
 
     def _get_mapped_environment(self, original_env: str) -> str:
-        """Get mapped environment alias from mapping file
-        :param original_env: {str} The environment to try to resolve
-        :return: {str} The resolved alias (if no alias - returns the original env)
+        """Get mapped environment alias from mapping file.
+
+        Args:
+            original_env (str): The original environment name to look up in the mapping file.
+
+        Returns:
+            str: The mapped environment alias if found in the mapping file; otherwise, returns the original
+            environment name.
         """
         try:
             with pathlib.Path(self.map_file_path).open("r+", encoding="utf-8") as map_file:
@@ -177,9 +200,7 @@ class EnvironmentHandleForFileSystem(EnvironmentHandle):
             mappings = {}
 
         if not isinstance(mappings, dict):
-            self.logger.LOGGER.error(
-                "Mappings are not in valid format. Environment will not be mapped."
-            )
+            self.logger.LOGGER.error("Mappings are not in valid format. Environment will not be mapped.")
             return original_env
 
         return mappings.get(original_env, original_env)
@@ -187,7 +208,7 @@ class EnvironmentHandleForFileSystem(EnvironmentHandle):
 
 class EnvironmentHandleForDBSystem(EnvironmentHandle):
     """handle environment logic
-    environment_field_name + environment_regex + environment map.json
+    environment_field_name + environment_regex + environment map.json.
     """
 
     def __init__(
@@ -206,9 +227,15 @@ class EnvironmentHandleForDBSystem(EnvironmentHandle):
         Then, if regex pattern given - extract environment
         In the end, try to resolve the found environment to its mapped alias - using the map file
         If nothing supply, return the default connector environment
-        :param data: {dict} fetch the environment value from this data field (can be the alert or the event)
-        :return: {string} environment
+
+        Args:
+            data (dict[str, str]): The data dictionary from which to extract the environment information.
+            This can be an alert or an event.
+
+        Returns:
+            str: The determined environment based on the provided data and the logic defined in the method.
         """
+
         if self.environment_field_name and data.get(self.environment_field_name):
             # Get the environment from the given field
             environment = data.get(self.environment_field_name, "")

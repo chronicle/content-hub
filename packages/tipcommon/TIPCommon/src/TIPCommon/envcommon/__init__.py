@@ -12,20 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .EnvironmentHandle import (
-    EnvironmentHandle,
-    EnvironmentHandleForDBSystem,
-    EnvironmentHandleForFileSystem,
-    GetEnvironmentCommonFactory,
-    platform_supports_db,
-    validate_map_file_exists,
+from .environment_handle import (
+    EnvironmentHandle as EnvironmentHandle,
 )
-
-__all__: list[str] = [
-    "EnvironmentHandle",
-    "EnvironmentHandleForDBSystem",
-    "EnvironmentHandleForFileSystem",
-    "GetEnvironmentCommonFactory",
-    "platform_supports_db",
-    "validate_map_file_exists",
-]
+from .environment_handle import (
+    EnvironmentHandleForDBSystem as EnvironmentHandleForDBSystem,
+)
+from .environment_handle import (
+    EnvironmentHandleForFileSystem as EnvironmentHandleForFileSystem,
+)
+from .environment_handle import (
+    GetEnvironmentCommonFactory as GetEnvironmentCommonFactory,
+)
+from .environment_handle import (
+    platform_supports_db as platform_supports_db,
+)
+from .environment_handle import (
+    validate_map_file_exists as validate_map_file_exists,
+)
