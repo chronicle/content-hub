@@ -37,7 +37,7 @@ class CliDisplay:
             logger.info("[bold green]All Tests Passed\n[/bold green]")
 
         for integration_report in self.tests_report:
-            logger.info(_build_table(integration_report), "\n")
+            logger.info(_build_table(integration_report))
 
 
 def _build_table(integration_report: IntegrationTestResults) -> Table:

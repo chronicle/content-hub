@@ -423,7 +423,7 @@ def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **
     try:
         process: sp.Popen[bytes] = sp.Popen(command)  # noqa: S603
         for line in _stream_process_output(process):
-            logger.info(str(line))
+            logger.info(line)
         return process.wait()
 
     except sp.CalledProcessError as e:

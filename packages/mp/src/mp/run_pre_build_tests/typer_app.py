@@ -261,7 +261,7 @@ def _print_report_summary(pytest_json_report_path: Path, integration_name: str) 
     ran_tests: int = summary.get("total", 0)
     collected_test: int = summary.get("collected", 0)
 
-    logger.warning(
+    logger.info(
         "[yellow]Integration: %s | Passed: [bold]%s[/bold] | Executed: %s / %s collected[/yellow]",
         integration_name,
         passed_test,

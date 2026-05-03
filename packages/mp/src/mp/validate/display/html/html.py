@@ -57,7 +57,7 @@ class HtmlFormat:
             webbrowser.open(resolved_temp_path.as_uri())
 
         except Exception as e:
-            logger.exception("❌  Error generating report: %s", e.args)
+            logger.exception("❌ Error generating report")
 
     def _generate_validation_report_html(self, template_name: str = "html_report/report.html") -> str:
         template_dir = pathlib.Path(__file__).parent.resolve() / "templates"
