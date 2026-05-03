@@ -18,7 +18,6 @@ import atexit
 import logging
 import logging.config
 import queue
-from logging import Handler, Logger
 from logging.handlers import QueueHandler, QueueListener
 from typing import Any
 
@@ -65,8 +64,8 @@ def _get_logger_level(*, quiet: bool, verbose: bool) -> int:
     return logging.INFO
 
 
-def _configure_queue_logging(root: Logger) -> None:
-    existing_handlers: list[Handler] = list(root.handlers)
+def _configure_queue_logging(root: logging.Logger) -> None:
+    existing_handlers: list[logging.Handler] = list(root.handlers)
     for handler in existing_handlers:
         root.removeHandler(handler)
 
