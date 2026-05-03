@@ -211,11 +211,7 @@ class TestReleaseNotesDateValidationCI:
         old_main_rn_unquoted = "- version: 1.0\n  description: Initial\n"
         # Current file has new entry (2.0) plus pre-existing (1.0, no publish_time)
         current_rn = (
-            "- version: 2.0\n"
-            "  publish_time: '2026-04-28'\n"
-            "  description: New\n"
-            "- version: 1.0\n"
-            "  description: Initial\n"
+            "- version: 2.0\n  publish_time: '2026-04-28'\n  description: New\n- version: 1.0\n  description: Initial\n"
         )
         rn = temp_integration / "release_notes.yaml"
         rn.write_text(current_rn, encoding="utf-8")
