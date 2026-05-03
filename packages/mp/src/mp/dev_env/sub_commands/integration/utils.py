@@ -97,7 +97,7 @@ def get_integration_identifier(source_path: Path) -> str:
     try:
         integration_obj = Integration.from_non_built_path(source_path)
     except ValueError as e:
-        logger.error("Could not determine integration identifier: %s", e)
+        logger.exception("Could not determine integration identifier")
         raise typer.Exit(1) from e
     else:
         return integration_obj.identifier

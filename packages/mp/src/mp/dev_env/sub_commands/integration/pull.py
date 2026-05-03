@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from rich.markup import escape
 
 import mp.core.file_utils
 from mp.dev_env.sub_commands.integration import utils
@@ -71,8 +70,7 @@ def pull_integration(
         logger.info("✅ Integration %s pulled successfully to %s.", integration, deconstruct_integration)
 
     except Exception as e:
-        error_message = f"Pull failed for {integration}: {escape(str(e))}"
-        logger.exception("%s", error_message)
+        logger.exception("Pull failed for %s", integration)
         raise typer.Exit(1) from e
 
     finally:

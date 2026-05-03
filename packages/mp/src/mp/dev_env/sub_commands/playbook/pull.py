@@ -80,8 +80,7 @@ def pull_playbook(
         logger.info("✅ Playbook %s pulled successfully.", playbook)
 
     except Exception as e:
-        error_message = f"Download failed for {playbook}: {e}"
-        logger.error("%s", error_message)
+        logger.exception("Download failed for %s", playbook)
         raise typer.Exit(1) from e
 
     finally:

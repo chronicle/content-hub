@@ -83,8 +83,7 @@ def push_integration(
         logger.info("✅ Integration pushed successfully.")
 
     except Exception as e:
-        error_message = f"Upload failed for {zip_path.stem}: {e}"
-        logger.error("%s", error_message)
+        logger.exception("Upload failed for %s", zip_path.stem)
         raise typer.Exit(1) from e
 
     finally:
