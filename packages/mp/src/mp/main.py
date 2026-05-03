@@ -29,7 +29,6 @@ from typing import Annotated
 import typer
 
 from mp.core import config as mp_config
-from mp.core.logger.setup import setup_logging
 from mp.core.update_checker import UpdateChecker, get_mp_version, print_mp_version
 
 from . import describe
@@ -47,8 +46,6 @@ app: typer.Typer = typer.Typer()
 
 def main() -> None:
     """Entry point for the `mp` CLI tool, initializing all sub-applications."""
-    setup_logging(verbose=mp_config.is_verbose(), quiet=mp_config.is_quiet())
-
     app.add_typer(build_app, name="build")
     app.add_typer(check_app)
     app.add_typer(config_app, name="config")
@@ -62,7 +59,7 @@ def main() -> None:
 
 
 @app.callback(invoke_without_command=True)
-def version_check(
+def global_options(
     *,
     _version: Annotated[
         bool,
@@ -74,8 +71,25 @@ def version_check(
             help="Show the version of the mp tool.",
         ),
     ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose output.",
+        ),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option(
+            "--quiet",
+            "-q",
+            help="Disable all output except errors.",
+        ),
+    ] = False,
 ) -> None:
     """Set up mp tool and initialize background tasks."""
+    mp_config.RuntimeParams(quiet=quiet, verbose=verbose).set_in_config()
     checker: UpdateChecker = UpdateChecker()
     checker.start_background_check(get_mp_version())
     atexit.register(checker.print_warning_if_needed)

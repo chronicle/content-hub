@@ -11,53 +11,52 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from rich import box
-from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
 
-from .constants import ICON_MAP
-
 if TYPE_CHECKING:
     from mp.validate.data_models import ContentType, FullReport, ValidationResults
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class CliDisplay:
     def __init__(self, validation_results: dict[ContentType, FullReport]) -> None:
         self.validation_results: dict[ContentType, FullReport] = validation_results
-        self.console: Console = Console()
 
     def display(self) -> None:
         """Display the validation results in the CLI."""
         if self._is_all_empty():
-            self.console.print("[bold green]All Validations Passed\n[/bold green]")
+            logger.info("[bold green]All Validations Passed\n[/bold green]")
             return
 
         display_categories: list[str] = ["Pre-Build", "Build", "Post-Build"]
+        icon_map: dict[str, str] = {"Integrations": "🧩", "Playbooks": "▶️"}
 
         for content_type, full_report in self.validation_results.items():
             if not any(full_report.values()):
                 continue
 
-            icon = ICON_MAP[content_type.value]
+            icon = icon_map[content_type.value]
 
-            self.console.print(Rule(f"[bold magenta]{icon} {content_type.value} Validations"))
+            logger.info(Rule(f"[bold magenta]{icon} {content_type.value} Validations"))
 
             for category in display_categories:
                 stage_results: list[ValidationResults] | None = full_report.get(category)
                 if not stage_results:
                     continue
 
-                self.console.print(f"[bold underline blue]\n{category} Stage[/bold underline blue]")
+                logger.info("[bold underline blue]\n%s Stage[/bold underline blue]", category)
                 for integration_result in stage_results:
-                    self.console.print(_build_table(integration_result), "\n")
+                    logger.info(_build_table(integration_result))
 
-            self.console.print("\n")
+            logger.info("\n")
 
     def _is_all_empty(self) -> bool:
         return all(not any(full_report.values()) for full_report in self.validation_results.values())

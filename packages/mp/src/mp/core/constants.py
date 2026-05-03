@@ -19,6 +19,8 @@ from __future__ import annotations
 # ------------------ Common ------------------
 
 REPO_NAME: str = "marketplace"
+APP_NAME: str = "mp-cli-tool"
+APP_AUTHOR: str = "Google"
 
 CONTENT_DIR_NAME: str = "content"
 COMMERCIAL_REPO_NAME: str = "google"

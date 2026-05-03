@@ -26,6 +26,10 @@ from mp.validate.pre_build_validation.playbooks import get_playbooks_pre_build_v
 if TYPE_CHECKING:
     from pathlib import Path
 
+import logging
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 class PreBuildValidations:
     def __init__(self, validation_path: Path, content_type: ContentType) -> None:
@@ -44,6 +48,7 @@ class PreBuildValidations:
         count: int = 0
         for validator in validations:
             try:
+                logger.debug("Running validator: %s", validator.name)
                 validator.run(self.validation_path)
                 count += 1
             except NonFatalValidationError as e:
@@ -51,10 +56,10 @@ class PreBuildValidations:
 
             except FatalValidationError as e:
                 self._handle_fatal_error(validator.name, str(e))
-                rich.print(
-                    f"[bold red]STOPPED | "
-                    f"Integration: {integration_name} | "
-                    f"Reason: Fatal validation failed {validator.name}[/bold red] "
+                logger.exception(
+                    "[bold red]STOPPED | Integration: %s | Reason: Fatal validation failed %s[/bold red] ",
+                    integration_name,
+                    validator.name,
                 )
                 return
 

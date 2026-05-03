@@ -15,18 +15,20 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import pathlib
 import tempfile
 import webbrowser
 from typing import TYPE_CHECKING, Any, NamedTuple
 
 import jinja2
-from rich.console import Console
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.validate.data_models import ContentType, FullReport
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ReportStatistics(NamedTuple):
@@ -39,7 +41,6 @@ class ReportStatistics(NamedTuple):
 class HtmlFormat:
     def __init__(self, validation_results: dict[ContentType, FullReport]) -> None:
         self.validation_results: dict[ContentType, FullReport] = validation_results
-        self.console: Console = Console()
 
     def display(self) -> None:
         """Generate an HTML report for validation results."""
@@ -49,14 +50,14 @@ class HtmlFormat:
             temp_report_path: Path
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html", encoding="utf-8") as temp_file:
                 temp_file.write(html_content)
-                temp_report_path: Path = pathlib.Path(temp_file.name)
+                temp_report_path = pathlib.Path(temp_file.name)
 
             resolved_temp_path: Path = temp_report_path.resolve()
-            self.console.print(f"📂 Report available at 👉: {resolved_temp_path.as_uri()}")
+            logger.info("📂 Report available at 👉: %s", resolved_temp_path.as_uri())
             webbrowser.open(resolved_temp_path.as_uri())
 
-        except Exception as e:  # noqa: BLE001
-            self.console.print(f"❌  Error generating report: {e.args}")
+        except Exception as e:
+            logger.exception("❌  Error generating report: %s", e.args)
 
     def _generate_validation_report_html(self, template_name: str = "html_report/report.html") -> str:
         template_dir = pathlib.Path(__file__).parent.resolve() / "templates"

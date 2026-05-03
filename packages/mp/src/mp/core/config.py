@@ -19,18 +19,23 @@ from __future__ import annotations
 import configparser
 import dataclasses
 import functools
+import logging
 import typing
 import warnings
 from pathlib import Path
 from typing import TypeVar
 
 import typer
+from platformdirs import user_config_dir
 
 import mp.core.constants
 from mp.core.logger.setup import setup_logging
 
+logger = logging.getLogger(__name__)
+
 CONFIG_FILE_NAME: str = ".mp_config"
-CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
+CONFIG_DIR: Path = Path(user_config_dir(mp.core.constants.APP_NAME, mp.core.constants.APP_AUTHOR))
+CONFIG_PATH: Path = CONFIG_DIR / CONFIG_FILE_NAME
 
 
 MARKETPLACE_PATH_KEY: str = "marketplace_path"
@@ -260,6 +265,7 @@ _T = TypeVar("_T", int, bool, float, Path, str)
 
 @functools.lru_cache
 def _get_config_key(section: str, key: str, val_type: type[_T], /) -> _T | None:
+    logger.debug("Getting config key: [%s] %s", section, key)
     config: configparser.ConfigParser = _read_config_if_exists_or_create_defaults()
     try:
         if val_type is bool:
@@ -303,7 +309,8 @@ def _remove_config_key(section: str, key: str) -> None:
 
 def _read_config_if_exists_or_create_defaults() -> configparser.ConfigParser:
     config: configparser.ConfigParser = configparser.ConfigParser()
-    CONFIG_PATH.touch()
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.touch(exist_ok=True)
     config.read(CONFIG_PATH)
     _add_defaults_to_config(config)
     return config

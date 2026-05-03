@@ -59,8 +59,7 @@ class BackendAPI:
         self.token = None
 
         if self._is_localhost():
-            rich.print("[yellow]Localhost deployment detected. "
-                       "TLS verification disabled.[/yellow]")
+            rich.print("[yellow]Localhost deployment detected. TLS verification disabled.[/yellow]")
             self._disable_tls()
 
         if api_key is not None:

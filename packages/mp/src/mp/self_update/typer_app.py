@@ -37,7 +37,7 @@ def update() -> None:
         typer.Exit: If the update fails.
 
     """
-    typer.echo("Updating mp...")
+    logger.info("Updating mp...")
     command: list[str] = [
         sys.executable,
         "-m",

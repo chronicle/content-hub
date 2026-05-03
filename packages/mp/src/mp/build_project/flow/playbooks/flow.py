@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, NamedTuple
 
 import rich
@@ -28,6 +29,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.custom_types import RepositoryType
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class Repos(NamedTuple):
@@ -56,7 +60,7 @@ def build_playbooks(
             community_not_found: set[str] = _build_playbooks(set(playbooks), repos.community, deconstruct=deconstruct)
 
             if commercial_not_found.intersection(community_not_found):
-                rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
+                logger.info(mp.core.constants.RECONFIGURE_MP_MSG)
 
     elif repositories:
         _build_playbooks_repositories([repos.commercial, repos.community])
@@ -84,10 +88,10 @@ def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos
 
 
 def _build_playbooks_repositories(repos: list[PlaybooksRepo]) -> None:
-    rich.print("[blue]Building all playbooks in repository...[/blue]")
+    logger.info("[blue]Building all playbooks in repository...[/blue]")
     for repository in repos:
         _build_single_repo_folder(repository)
-    rich.print("[blue]Done repository playbook build.[/blue]")
+    logger.info("[blue]Done repository playbook build.[/blue]")
 
 
 def _build_single_repo_folder(repository: PlaybooksRepo) -> None:
@@ -118,7 +122,7 @@ def _build_playbooks(
         )
 
     if valid_playbooks_paths:
-        rich.print(f"[blue]Building the following playbooks: {', '.join(valid_playbooks_names)}[/blue]")
+        logger.info("[blue]Building the following playbooks: %s[/blue]", ", ".join(valid_playbooks_names))
 
         if deconstruct:
             repository.deconstruct_playbooks(valid_playbooks_paths)

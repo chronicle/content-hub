@@ -16,12 +16,12 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import logging
 import multiprocessing
 import pathlib
 import warnings
 from typing import TYPE_CHECKING, Annotated
 
-import rich
 import typer
 
 import mp.core.config
@@ -48,6 +48,9 @@ SUCCESS_STATUS_CODES: set[int] = {0, 2}
 
 __all__: list[str] = ["TestIssue", "TestWarning", "run_pre_build_tests", "test_app"]
 test_app: typer.Typer = typer.Typer()
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -233,8 +236,10 @@ def _run_tests_for_single_integration(
     integration_path: Path,
 ) -> IntegrationTestResults | None:
 
-    rich.print(f"[bold blue]Running tests:[/bold blue] [cyan]{integration_path.name}[/cyan]...")
+    logger.debug("Starting tests for %s using script %s", integration_path.name, script_path)
+    logger.info("[bold blue]Running tests:[/bold blue] [cyan]%s[/cyan]...", integration_path.name)
     status_code: int = mp.core.unix.run_script_on_paths(script_path, integration_path)
+    logger.debug("Test script for %s finished with status code %s", integration_path.name, status_code)
 
     json_report_path = integration_path / ".report.json"
     _print_report_summary(json_report_path, integration_path.name)
@@ -256,10 +261,12 @@ def _print_report_summary(pytest_json_report_path: Path, integration_name: str) 
     ran_tests: int = summary.get("total", 0)
     collected_test: int = summary.get("collected", 0)
 
-    rich.print(
-        f"[yellow]Integration: {integration_name} | "
-        f"Passed: [bold]{passed_test}[/bold] | "
-        f"Executed: {ran_tests} / {collected_test} collected[/yellow]"
+    logger.warning(
+        "[yellow]Integration: %s | Passed: [bold]%s[/bold] | Executed: %s / %s collected[/yellow]",
+        integration_name,
+        passed_test,
+        ran_tests,
+        collected_test,
     )
 
 

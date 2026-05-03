@@ -14,11 +14,10 @@
 
 from __future__ import annotations
 
+import logging
 import multiprocessing
 import shutil
 from typing import TYPE_CHECKING
-
-import rich
 
 import mp.core.config
 import mp.core.file_utils
@@ -30,6 +29,9 @@ from .restructure.playbooks.deconstruct import PlaybookDeconstructor
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from pathlib import Path
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class PlaybooksRepo:
@@ -81,16 +83,16 @@ class PlaybooksRepo:
 
     def _build_playbook(self, playbook_path: Path) -> None:
         if mp.core.file_utils.is_built_playbook(playbook_path):
-            rich.print(f"[green]---------- Playbook {playbook_path.name} is already built ----------[/green]")
+            logger.info("[green]---------- Playbook %s is already built ----------[/green]", playbook_path.name)
             self.out_dir.mkdir(exist_ok=True)
             shutil.copy(playbook_path, self.out_dir / playbook_path.name)
             return
 
-        rich.print(f"[green]---------- Building {playbook_path.stem} ----------[/green]")
+        logger.info("[green]---------- Building %s ----------[/green]", playbook_path.stem)
         playbook: Playbook = Playbook.from_non_built_path(playbook_path)
         build_playbook: PlaybookBuilder = PlaybookBuilder(playbook, playbook_path, self.out_dir)
         build_playbook.build()
-        rich.print(f"[green]----------Done Building {playbook_path.stem} ----------[/green]")
+        logger.info("[green]----------Done Building %s ----------[/green]", playbook_path.stem)
 
     def deconstruct_playbooks(self, playbooks_paths: Iterable[Path]) -> None:
         """Deconstruct all playbooks provided by `integration_paths`.
@@ -125,13 +127,13 @@ class PlaybooksRepo:
 
 def _deconstruct_playbook(playbook_path: Path, playbook_out_path: Path) -> None:
     if mp.core.file_utils.is_non_built_playbook(playbook_path):
-        rich.print(f"[green]---------- Playbook {playbook_path.name} is already deconstructed ----------[/green]")
+        logger.info("[green]---------- Playbook %s is already deconstructed ----------[/green]", playbook_path.name)
         mp.core.file_utils.recreate_dir(playbook_out_path)
         shutil.copytree(playbook_path, playbook_out_path, dirs_exist_ok=True)
         return
 
-    rich.print(f"[green]---------- Deconstructing {playbook_path.stem} ----------[/green]")
+    logger.info("[green]---------- Deconstructing %s ----------[/green]", playbook_path.stem)
     playbook: Playbook = Playbook.from_built_path(playbook_path)
     deconstruct_playbook: PlaybookDeconstructor = PlaybookDeconstructor(playbook, playbook_out_path)
     deconstruct_playbook.deconstruct()
-    rich.print(f"[green]----------Done Deconstructing {playbook_path.stem} ----------[/green]")
+    logger.info("[green]----------Done Deconstructing %s ----------[/green]", playbook_path.stem)
