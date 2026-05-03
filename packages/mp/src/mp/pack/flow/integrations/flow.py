@@ -164,7 +164,6 @@ def pack_integration(
         version: Old version to fetch from the repo and create the ZIP.
         beta_name: Name of the custom beta integration.
         zip_dst: Destination directory to save the ZIP file.
-
         interactive: Enable or disable interactive component selection.
 
     """
