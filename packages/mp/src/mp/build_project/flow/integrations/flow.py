@@ -173,7 +173,7 @@ def _build_integrations(
     not_found: set[str] = set(integrations).difference(valid_integration_names)
     if not_found:
         logger.error(
-            "The following integrations could not be found in the %s marketplace: %s\n",
+            "The following integrations could not be found in the %s marketplace: %s",
             marketplace_.name,
             ", ".join(not_found),
         )
