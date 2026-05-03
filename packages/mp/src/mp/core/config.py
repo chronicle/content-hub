@@ -265,7 +265,6 @@ _T = TypeVar("_T", int, bool, float, Path, str)
 
 @functools.lru_cache
 def _get_config_key(section: str, key: str, val_type: type[_T], /) -> _T | None:
-    logger.debug("Getting config key: [%s] %s", section, key)
     config: configparser.ConfigParser = _read_config_if_exists_or_create_defaults()
     try:
         if val_type is bool:
