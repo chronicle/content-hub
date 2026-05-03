@@ -51,8 +51,8 @@ class HtmlFormat:
             logger.info("📂 Report available at 👉: %s", resolved_path.as_uri())
             webbrowser.open(resolved_path.as_uri())
 
-        except Exception as e:  # noqa: BLE001
-            logger.error("❌ Error generating report: %s", e)
+        except Exception:
+            logger.exception("❌ Error generating report")
 
     def _generate_validation_report_html(
         self,

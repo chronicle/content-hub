@@ -24,7 +24,7 @@ from typing import Any
 
 
 def setup_logging(*, verbose: bool = False, quiet: bool = False) -> None:
-    """Set up logging for the mp CLI using a queue for async-safe logging."""
+    """Set up logging for the mp CLI."""
     level: int = _get_logger_level(quiet=quiet, verbose=verbose)
 
     config: dict[str, Any] = {

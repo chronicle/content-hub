@@ -85,7 +85,7 @@ class UpdateChecker:
 def _print_version_warning(remote_version: str) -> None:
     current_version: str | None = get_mp_version()
     message: str = (
-        f"\nWARNING: A newer version of mp "
+        f"WARNING: A newer version of mp "
         f"({current_version} -> {remote_version}) is available.\n"
         f"Run 'mp self update' to update.\n"
     )
