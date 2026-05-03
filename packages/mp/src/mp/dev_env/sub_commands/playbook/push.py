@@ -77,11 +77,11 @@ def push_playbook(
     try:
         result = _push_playbook_zip_to_soar(zip_path)
         rich.print(f"Upload result for {zip_path.stem}: {result}")
-        rich.print(f"[green]✅ Playbook {zip_path.stem} pushed successfully.[/green]")
+        rich.print(f"✅ Playbook {zip_path.stem} pushed successfully.")
 
     except Exception as e:
         error_message = f"Upload failed for {zip_path.stem}: {e}"
-        rich.print(f"[red]{error_message}[/red]")
+        rich.print(f"{error_message}")
         raise typer.Exit(1) from e
 
     finally:

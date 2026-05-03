@@ -59,16 +59,16 @@ class BackendAPI:
         self.token = None
 
         if self._is_localhost():
-            rich.print("[yellow]Localhost deployment detected. TLS verification disabled.[/yellow]")
+            rich.print("Localhost deployment detected. TLS verification disabled.")
             self._disable_tls()
 
         if api_key is not None:
             if username is not None or password is not None:
-                rich.print("[red]Cannot use both API key and username/password[/red]")
+                rich.print("Cannot use both API key and username/password")
                 raise typer.Exit(1)
 
         elif username is None or password is None:
-            rich.print("[red]You must provide username and password or api key[/red]")
+            rich.print("You must provide username and password or api key")
             raise typer.Exit(1)
 
     def _disable_tls(self) -> None:

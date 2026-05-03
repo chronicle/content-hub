@@ -117,7 +117,7 @@ class DeconstructIntegration:
             )
 
         except mp.core.unix.FatalCommandError as e:
-            logger.info("Failed to install dependencies: %s", e)
+            logger.warning("Failed to install dependencies: %s", e)
 
     def update_pyproject(self, placeholders: Dependencies | None = None) -> None:
         """Update an integration's pyproject.toml file from its definition file."""

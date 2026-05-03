@@ -22,6 +22,7 @@ import webbrowser
 from typing import TYPE_CHECKING, Any, NamedTuple
 
 import jinja2
+from rich.console import Console
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -41,6 +42,7 @@ class ReportStatistics(NamedTuple):
 class HtmlFormat:
     def __init__(self, validation_results: dict[ContentType, FullReport]) -> None:
         self.validation_results: dict[ContentType, FullReport] = validation_results
+        self.console: Console = Console()
 
     def display(self) -> None:
         """Generate an HTML report for validation results."""
@@ -53,7 +55,7 @@ class HtmlFormat:
                 temp_report_path = pathlib.Path(temp_file.name)
 
             resolved_temp_path: Path = temp_report_path.resolve()
-            logger.info("📂 Report available at 👉: %s", resolved_temp_path.as_uri())
+            self.console.print(f"📂 Report available at 👉: {resolved_temp_path.as_uri()}")
             webbrowser.open(resolved_temp_path.as_uri())
 
         except Exception as e:

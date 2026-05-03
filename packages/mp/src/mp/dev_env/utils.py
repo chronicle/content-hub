@@ -36,7 +36,7 @@ def load_dev_env_config() -> dict[str, str]:
 
     """
     if not CONFIG_PATH.exists():
-        rich.print("[red] Not logged in. Please run 'mp dev-env login' first. [/red]")
+        rich.print(" Not logged in. Please run 'mp dev-env login' first. ")
         raise typer.Exit(1)
     with CONFIG_PATH.open(encoding="utf-8") as f:
         return json.load(f)
@@ -70,5 +70,5 @@ def get_backend_api(config: dict[str, str]) -> api.BackendAPI:
         return backend_api  # noqa: TRY300
 
     except Exception as e:
-        rich.print(f"[red]Authentication failed: {e}[/red]")
+        rich.print(f"Authentication failed: {e}")
         raise typer.Exit(1) from e

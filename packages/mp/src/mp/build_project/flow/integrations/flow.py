@@ -181,9 +181,9 @@ def _build_integrations(
 
     if valid_integrations_:
         rich.print(
-            "[blue]Building the following integrations in the"
+            "Building the following integrations in the"
             f" the {marketplace_.name} marketplace:"
-            f" {', '.join(valid_integration_names)}[/blue]"
+            f" {', '.join(valid_integration_names)}"
         )
         if deconstruct:
             marketplace_.deconstruct_integrations(valid_integrations_)

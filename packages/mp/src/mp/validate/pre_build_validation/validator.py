@@ -43,7 +43,7 @@ class PreBuildValidations:
         total_validations = len(validations)
         integration_name = self.validation_path.name
 
-        rich.print(f"[bold blue]Running pre-build validations:[/bold blue] [cyan]{integration_name}[/cyan]...")
+        rich.print(f"Running pre-build validations: {integration_name}...")
 
         count: int = 0
         for validator in validations:
@@ -56,17 +56,15 @@ class PreBuildValidations:
 
             except FatalValidationError as e:
                 self._handle_fatal_error(validator.name, str(e))
-                logger.exception(
-                    "[bold red]STOPPED | Integration: %s | Reason: Fatal validation failed %s[/bold red] ",
+                logger.info(
+                    "STOPPED | Integration: %s | Reason: Fatal validation failed %s ",
                     integration_name,
                     validator.name,
                 )
                 return
 
         rich.print(
-            f"[yellow]Integration: {integration_name}[/yellow] | "
-            f"Passed: {count} | "
-            f"Executed: {count} / {total_validations} validations"
+            f"Integration: {integration_name} | Passed: {count} | Executed: {count} / {total_validations} validations"
         )
 
     def _handle_fatal_error(self, validation_name: str, error_msg: str) -> None:

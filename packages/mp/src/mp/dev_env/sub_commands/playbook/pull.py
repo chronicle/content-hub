@@ -74,11 +74,11 @@ def pull_playbook(
         if include_blocks:
             _deconstruct_blocks(zip_path, dst, playbook)
 
-        rich.print(f"[green]✅ Playbook {playbook} pulled successfully.[/green]")
+        rich.print(f"✅ Playbook {playbook} pulled successfully.")
 
     except Exception as e:
         error_message = f"Download failed for {playbook}: {e}"
-        rich.print(f"[red]{error_message}[/red]")
+        rich.print(f"{error_message}")
         raise typer.Exit(1) from e
 
     finally:

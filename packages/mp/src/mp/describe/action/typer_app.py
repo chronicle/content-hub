@@ -96,5 +96,5 @@ def describe(  # noqa: PLR0913
     elif all_marketplace:
         asyncio.run(describe_all_actions(src=src, dst=dst, override=override))
     else:
-        rich.print("[red]Please specify either --integration or --all[/red]")
+        rich.print("Please specify either --integration or --all")
         raise typer.Exit(code=1)

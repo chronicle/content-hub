@@ -61,7 +61,7 @@ def get_playbook_path_by_name(playbook: str, src: Path | None = None) -> Path:
             if candidate.exists():
                 return candidate
 
-    rich.print(f"[red]Could not find source playbook at {playbooks_root}/.../{playbook}[/red]")
+    rich.print(f"Could not find source playbook at {playbooks_root}/.../{playbook}")
     raise typer.Exit(1)
 
 
@@ -83,7 +83,7 @@ def get_block_names_by_ids(ids_to_find: set[str], src: Path | None = None) -> se
 
     if remaining_ids:
         missing_str = ", ".join(remaining_ids)
-        rich.print(f"[red]Could not find the following blocks: {missing_str}[/red]")
+        rich.print(f"Could not find the following blocks: {missing_str}")
 
     return found_blocks
 
@@ -156,10 +156,10 @@ def build_playbook(playbooks_names: set[str], src: Path | None = None) -> None:
     """
     try:
         build_playbook_(list(playbooks_names), src=src, quiet=True)
-        rich.print(f"[green]Build successful for {', '.join(playbooks_names)}[/green]")
+        rich.print(f"Build successful for {', '.join(playbooks_names)}")
 
     except typer.Exit as e:
-        rich.print(f"[red]Build failed: {e}[/red]")
+        rich.print(f"Build failed: {e}")
         raise typer.Exit(1) from e
 
 
@@ -183,7 +183,7 @@ def get_built_playbook_path(playbook_name: str) -> Path:
     if built_playbook.exists():
         return built_playbook
 
-    rich.print(f"[red]Built playbook '{playbook_name}' not found in {root}")
+    rich.print(f"Built playbook '{playbook_name}' not found in {root}")
     raise typer.Exit(1)
 
 
@@ -232,7 +232,7 @@ def find_playbook_identifier(playbook_name: str, installed_playbook: list[dict[s
         if playbook_meta["name"] == playbook_name:
             return playbook_meta["identifier"]
 
-    rich.print(f"[red]Playbook '{playbook_name}' not found in installed playbooks in SOAR platform.")
+    rich.print(f"Playbook '{playbook_name}' not found in installed playbooks in SOAR platform.")
     raise typer.Exit(1)
 
 
@@ -255,7 +255,7 @@ def deconstruct_playbook(built_playbook: Path, dst: Path) -> Path:
         return dst / to_snake_case(built_playbook.stem)
 
     except typer.Exit as e:
-        rich.print(f"[red]Deconstruct failed: {e}[/red]")
+        rich.print(f"Deconstruct failed: {e}")
         raise typer.Exit(1) from e
 
 

@@ -72,5 +72,5 @@ def minor_version_bump(
         update_built_def_file(integration_dir_built, updated_version_cache)
 
     except FileNotFoundError as e:
-        rich.print(f"[red]Error: {e}[/red]")
+        rich.print(f"Error: {e}")
         raise typer.Exit(1) from e

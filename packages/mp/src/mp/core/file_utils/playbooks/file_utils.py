@@ -145,16 +145,16 @@ def is_built_playbook(path: Path) -> bool:
 
         if not mp.core.constants.PLAYBOOK_MUST_HAVE_KEYS.issubset(data.keys()):
             rich.print(
-                f"[red]Playbook is invalid, File {path.name} is missing one or more required keys:"
-                f" {mp.core.constants.PLAYBOOK_MUST_HAVE_KEYS - data.keys()}[/red]"
+                f"Playbook is invalid, File {path.name} is missing one or more required keys:"
+                f" {mp.core.constants.PLAYBOOK_MUST_HAVE_KEYS - data.keys()}"
             )
             return False
 
     except json.JSONDecodeError:
-        rich.print(f"[red]Playbook is invalid,File {path.name} is not a valid JSON file.[/red]")
+        rich.print(f"Playbook is invalid,File {path.name} is not a valid JSON file.")
         return False
     except OSError as e:
-        rich.print(f"[red]Error reading file {path.name}: {e}[/red]")
+        rich.print(f"Error reading file {path.name}: {e}")
         return False
 
     return True

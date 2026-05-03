@@ -20,6 +20,7 @@ import configparser
 import dataclasses
 import functools
 import logging
+import shutil
 import typing
 import warnings
 from pathlib import Path
@@ -306,7 +307,17 @@ def _remove_config_key(section: str, key: str) -> None:
         _get_config_key.cache_clear()
 
 
+def _migrate_old_config_if_needed() -> None:
+    old_config_path = Path.home() / CONFIG_FILE_NAME
+    if old_config_path.exists() and not CONFIG_PATH.exists():
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+
+        shutil.copy(old_config_path, CONFIG_PATH)
+
+
 def _read_config_if_exists_or_create_defaults() -> configparser.ConfigParser:
+    _migrate_old_config_if_needed()
+
     config: configparser.ConfigParser = configparser.ConfigParser()
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     CONFIG_PATH.touch(exist_ok=True)

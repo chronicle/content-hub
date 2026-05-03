@@ -77,11 +77,11 @@ def push_integration(
     try:
         result = _push_zip_to_soar(zip_path, is_staging=is_staging)
         rich.print(f"Upload result: {result}")
-        rich.print("[green]✅ Integration pushed successfully.[/green]")
+        rich.print("✅ Integration pushed successfully.")
 
     except Exception as e:
         error_message = f"Upload failed for {zip_path.stem}: {e}"
-        rich.print(f"[red]{error_message}[/red]")
+        rich.print(f"{error_message}")
         raise typer.Exit(1) from e
 
     finally:
@@ -123,13 +123,13 @@ def _push_custom_integrations(zipped_paths: list[Path]) -> None:
         try:
             details = backend_api.get_integration_details(zip_path)
             backend_api.upload_integration(zip_path, details["identifier"])
-            rich.print(f"[green]Successfully pushed: {zip_path.name}[/green]")
+            rich.print(f"Successfully pushed: {zip_path.name}")
 
         except Exception as e:  # noqa: BLE001
             results.append(f"{zip_path.name}: {e}")
 
     if results:
-        rich.print("\n[bold red]Upload errors detected:[/bold red]")
+        rich.print("\nUpload errors detected:")
         for error in results:
             rich.print(f"  - {error}")
         raise typer.Exit(1)

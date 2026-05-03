@@ -74,7 +74,7 @@ def get_integration_path(integration: str, src: Path | None = None, *, custom: b
             if candidate.exists():
                 return candidate
 
-    rich.print(f"[red]Could not find source integration at {integrations_root}/.../{integration}[/red]")
+    rich.print(f"Could not find source integration at {integrations_root}/.../{integration}")
     raise typer.Exit(1)
 
 
@@ -94,7 +94,7 @@ def get_integration_identifier(source_path: Path) -> str:
     try:
         integration_obj = Integration.from_non_built_path(source_path)
     except ValueError as e:
-        rich.print(f"[red]Could not determine integration identifier: {e}[/red]")
+        rich.print(f"Could not determine integration identifier: {e}")
         raise typer.Exit(1) from e
     else:
         return integration_obj.identifier
@@ -114,10 +114,10 @@ def build_integration(integration: str, src: Path | None = None, *, custom: bool
     """
     try:
         build_integration_([integration], src=src, custom_integration=custom, quiet=True)
-        rich.print(f"[green]Build successful for {integration}[/green]")
+        rich.print(f"Build successful for {integration}")
 
     except typer.Exit as e:
-        rich.print(f"[red]Build failed: {e}[/red]")
+        rich.print(f"Build failed: {e}")
         raise typer.Exit(1) from e
 
 
@@ -150,7 +150,7 @@ def find_built_integration_dir(identifier: str, src: Path | None = None, *, cust
         if (candidate := root / repo / identifier).exists():
             return candidate
 
-    rich.print(f"[red]Built integration not found for identifier '{identifier}' in {root}.[/red]")
+    rich.print(f"Built integration not found for identifier '{identifier}' in {root}.")
     raise typer.Exit(1)
 
 
@@ -182,7 +182,7 @@ def build_integrations_custom_repository() -> None:
         build_repository([RepositoryType.CUSTOM])
 
     except typer.Exit as e:
-        rich.print(f"[red]Build failed: {e}[/red]")
+        rich.print(f"Build failed: {e}")
         raise typer.Exit(1) from e
 
 
@@ -307,5 +307,5 @@ def deconstruct_integration(built_integration: Path, dst: Path) -> Path:
         return dst / to_snake_case(built_integration.stem)
 
     except typer.Exit as e:
-        rich.print(f"[red]Deconstruct failed: {e}[/red]")
+        rich.print(f"Deconstruct failed: {e}")
         raise typer.Exit(1) from e

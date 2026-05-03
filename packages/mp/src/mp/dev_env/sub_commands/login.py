@@ -68,7 +68,7 @@ def login(
             password = typer.prompt("Password", hide_input=True)
 
     if api_root is None:
-        rich.print("[red]API root is required.[/red]")
+        rich.print("API root is required.")
         raise typer.Exit(1)
 
     if api_key is None and (username is None or password is None):
@@ -89,4 +89,4 @@ def login(
 
     if not no_verify:
         utils.get_backend_api(config)
-        rich.print("[green]✅ Credentials verified successfully.[/green]")
+        rich.print("✅ Credentials verified successfully.")

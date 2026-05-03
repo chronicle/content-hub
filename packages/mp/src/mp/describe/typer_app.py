@@ -72,5 +72,5 @@ def all_content(  # noqa: PLR0913
     elif all_marketplace:
         asyncio.run(describe_all_content(src=src, dst=dst, override=override))
     else:
-        rich.print("[red]Please specify either an integration or --all[/red]")
+        rich.print("Please specify either an integration or --all")
         raise typer.Exit(code=1)

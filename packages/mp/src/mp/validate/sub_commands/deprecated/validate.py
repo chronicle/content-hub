@@ -159,9 +159,9 @@ def validate(  # noqa: PLR0913
         raise typer.Exit
 
     logger.warning(
-        "[yellow]Note: 'validate' flags are deprecated. "
+        "Note: 'validate' flags are deprecated. "
         "Use 'mp validate integration' or 'mp validate playbook' or mp validate repository "
-        "instead.[/yellow]"
+        "instead."
     )
 
     repositories = ensure_valid_list(repository)

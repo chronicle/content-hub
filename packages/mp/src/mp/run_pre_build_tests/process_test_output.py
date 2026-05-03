@@ -72,7 +72,7 @@ def process_pytest_json_report(
         return _get_fnf_test_results(integration_name, json_report_path)
 
     except json.JSONDecodeError:
-        logger.exception("[bold red]Error:[/bold red] Failed to decode JSON report at: %s", json_report_path)
+        logger.exception("Error: Failed to decode JSON report at: %s", json_report_path)
         json_report_path.unlink(missing_ok=True)
         return None
 
@@ -142,7 +142,7 @@ def _extract_skipped_test_issue(test_item: dict) -> TestIssue:
 
 
 def _get_fnf_test_results(integration_name: str, json_report_path: Path) -> IntegrationTestResults | None:
-    logger.error("[bold red]Error:[/bold red] JSON report not found at %s", json_report_path)
+    logger.error("Error: JSON report not found at %s", json_report_path)
     try:
         RequiredDevDependenciesValidation.run(json_report_path.parent)
     except NonFatalCommandError as e:

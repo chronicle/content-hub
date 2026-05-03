@@ -237,7 +237,7 @@ def _run_tests_for_single_integration(
 ) -> IntegrationTestResults | None:
 
     logger.debug("Starting tests for %s using script %s", integration_path.name, script_path)
-    logger.info("[bold blue]Running tests:[/bold blue] [cyan]%s[/cyan]...", integration_path.name)
+    logger.info("Running tests: %s...", integration_path.name)
     status_code: int = mp.core.unix.run_script_on_paths(script_path, integration_path)
     logger.debug("Test script for %s finished with status code %s", integration_path.name, status_code)
 
@@ -262,7 +262,7 @@ def _print_report_summary(pytest_json_report_path: Path, integration_name: str) 
     collected_test: int = summary.get("collected", 0)
 
     logger.info(
-        "[yellow]Integration: %s | Passed: [bold]%s[/bold] | Executed: %s / %s collected[/yellow]",
+        "Integration: %s | Passed: %s | Executed: %s / %s collected",
         integration_name,
         passed_test,
         ran_tests,

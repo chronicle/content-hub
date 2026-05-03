@@ -104,9 +104,9 @@ def config(
             display_k = f"{k[:4]}{'*' * (len(k) - 4)} (from config)"
             if env_k and k != env_k:
                 display_k += (
-                    f"\n[yellow]Warning: GEMINI_API_KEY environment variable is also set "
+                    f"\nWarning: GEMINI_API_KEY environment variable is also set "
                     f"({env_k[:4]}{'*' * (len(env_k) - 4)}), but the configuration above "
-                    "takes priority.[/yellow]"
+                    "takes priority."
                 )
         elif env_k:
             display_k = f"{env_k[:4]}{'*' * (len(env_k) - 4)} (from GEMINI_API_KEY env var)"

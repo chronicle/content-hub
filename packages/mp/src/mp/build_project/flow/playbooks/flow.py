@@ -88,10 +88,10 @@ def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos
 
 
 def _build_playbooks_repositories(repos: list[PlaybooksRepo]) -> None:
-    logger.info("[blue]Building all playbooks in repository...[/blue]")
+    logger.info("Building all playbooks in repository...")
     for repository in repos:
         _build_single_repo_folder(repository)
-    logger.info("[blue]Done repository playbook build.[/blue]")
+    logger.info("Done repository playbook build.")
 
 
 def _build_single_repo_folder(repository: PlaybooksRepo) -> None:
@@ -122,7 +122,7 @@ def _build_playbooks(
         )
 
     if valid_playbooks_paths:
-        logger.info("[blue]Building the following playbooks: %s[/blue]", ", ".join(valid_playbooks_names))
+        logger.info("Building the following playbooks: %s", ", ".join(valid_playbooks_names))
 
         if deconstruct:
             repository.deconstruct_playbooks(valid_playbooks_paths)

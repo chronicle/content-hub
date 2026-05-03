@@ -83,16 +83,16 @@ class PlaybooksRepo:
 
     def _build_playbook(self, playbook_path: Path) -> None:
         if mp.core.file_utils.is_built_playbook(playbook_path):
-            logger.info("[green]---------- Playbook %s is already built ----------[/green]", playbook_path.name)
+            logger.info("---------- Playbook %s is already built ----------", playbook_path.name)
             self.out_dir.mkdir(exist_ok=True)
             shutil.copy(playbook_path, self.out_dir / playbook_path.name)
             return
 
-        logger.info("[green]---------- Building %s ----------[/green]", playbook_path.stem)
+        logger.info("---------- Building %s ----------", playbook_path.stem)
         playbook: Playbook = Playbook.from_non_built_path(playbook_path)
         build_playbook: PlaybookBuilder = PlaybookBuilder(playbook, playbook_path, self.out_dir)
         build_playbook.build()
-        logger.info("[green]----------Done Building %s ----------[/green]", playbook_path.stem)
+        logger.info("----------Done Building %s ----------", playbook_path.stem)
 
     def deconstruct_playbooks(self, playbooks_paths: Iterable[Path]) -> None:
         """Deconstruct all playbooks provided by `integration_paths`.
@@ -127,13 +127,13 @@ class PlaybooksRepo:
 
 def _deconstruct_playbook(playbook_path: Path, playbook_out_path: Path) -> None:
     if mp.core.file_utils.is_non_built_playbook(playbook_path):
-        logger.info("[green]---------- Playbook %s is already deconstructed ----------[/green]", playbook_path.name)
+        logger.info("---------- Playbook %s is already deconstructed ----------", playbook_path.name)
         mp.core.file_utils.recreate_dir(playbook_out_path)
         shutil.copytree(playbook_path, playbook_out_path, dirs_exist_ok=True)
         return
 
-    logger.info("[green]---------- Deconstructing %s ----------[/green]", playbook_path.stem)
+    logger.info("---------- Deconstructing %s ----------", playbook_path.stem)
     playbook: Playbook = Playbook.from_built_path(playbook_path)
     deconstruct_playbook: PlaybookDeconstructor = PlaybookDeconstructor(playbook, playbook_out_path)
     deconstruct_playbook.deconstruct()
-    logger.info("[green]----------Done Deconstructing %s ----------[/green]", playbook_path.stem)
+    logger.info("----------Done Deconstructing %s ----------", playbook_path.stem)

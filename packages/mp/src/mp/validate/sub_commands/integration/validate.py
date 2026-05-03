@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import dataclasses
-import logging
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -29,8 +28,6 @@ from mp.validate.flow.integrations.flow import validate_integrations
 
 if TYPE_CHECKING:
     from mp.core.config import RuntimeParams
-
-logger = logging.getLogger(__name__)
 
 app: typer.Typer = typer.Typer()
 

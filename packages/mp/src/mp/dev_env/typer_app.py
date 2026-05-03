@@ -45,5 +45,5 @@ def deploy(
     is_staging: bool = False,
 ) -> None:
     """Deprecated."""  # noqa: D401
-    rich.print("[yellow]Note: 'deploy' is deprecated. Use 'push integration' instead.[/yellow]")
+    rich.print("Note: 'deploy' is deprecated. Use 'push integration' instead.")
     push_integration(integration, is_staging=is_staging)
