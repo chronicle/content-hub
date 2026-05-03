@@ -29,6 +29,7 @@ from typing import Annotated
 import typer
 
 from mp.core import config as mp_config
+from mp.core.logger.setup import setup_logging
 from mp.core.update_checker import UpdateChecker, get_mp_version, print_mp_version
 
 from . import describe
@@ -90,6 +91,7 @@ def global_options(
 ) -> None:
     """Set up mp tool and initialize background tasks."""
     mp_config.RuntimeParams(quiet=quiet, verbose=verbose).set_in_config()
+    setup_logging(verbose=verbose, quiet=quiet)
     checker: UpdateChecker = UpdateChecker()
     checker.start_background_check(get_mp_version())
     atexit.register(checker.print_warning_if_needed)
