@@ -92,8 +92,10 @@ def global_options(
     """Set up mp tool and initialize background tasks."""
     mp_config.RuntimeParams(quiet=quiet, verbose=verbose).set_in_config()
     setup_logging(verbose=verbose, quiet=quiet)
+
     checker: UpdateChecker = UpdateChecker()
     checker.start_background_check(get_mp_version())
+
     atexit.register(checker.print_warning_if_needed)
 
 

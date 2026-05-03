@@ -30,7 +30,6 @@ import typer
 from platformdirs import user_config_dir
 
 import mp.core.constants
-from mp.core.logger.setup import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -367,7 +366,6 @@ class RuntimeParams:
         self.validate()
         set_is_quiet(value=self.quiet)
         set_is_verbose(value=self.verbose)
-        setup_logging(verbose=self.verbose, quiet=self.quiet)
 
     def validate(self) -> None:
         """Validate the runtime parameters.
