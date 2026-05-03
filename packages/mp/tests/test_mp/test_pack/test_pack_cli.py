@@ -35,7 +35,7 @@ def test_pack_integration_cli() -> None:
             integration_name="cyber_x",
             version=None,
             beta_name=None,
-            zip_dir=None,
+            zip_dst=None,
             interactive=True,
         )
 
@@ -51,7 +51,7 @@ def test_pack_integration_options_cli(tmp_path: pathlib.Path) -> None:
                 "5.0",
                 "--beta",
                 "CyberXBeta",
-                "--dir",
+                "--dst",
                 str(tmp_path),
                 "--non-interactive",
             ],
@@ -61,6 +61,6 @@ def test_pack_integration_options_cli(tmp_path: pathlib.Path) -> None:
             integration_name="cyber_x",
             version="5.0",
             beta_name="CyberXBeta",
-            zip_dir=tmp_path,
+            zip_dst=tmp_path,
             interactive=False,
         )

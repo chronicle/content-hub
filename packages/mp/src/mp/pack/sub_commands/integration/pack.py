@@ -49,12 +49,12 @@ def pack_integration(
             help="Name of the custom beta integration.",
         ),
     ] = None,
-    zip_dir: Annotated[
+    zip_dst: Annotated[
         Path | None,
         typer.Option(
-            "--dir",
+            "--dst",
             "-d",
-            help="Directory to save the ZIP file. Defaults to 'out' directory.",
+            help="Destination directory to save the ZIP file. Defaults to 'out' directory.",
         ),
     ] = None,
     interactive: Annotated[
@@ -71,7 +71,7 @@ def pack_integration(
         integration: The name of the integration to pack.
         version: Old version to fetch from the repo.
         beta: Name of the custom beta integration.
-        zip_dir: Directory to save the ZIP file.
+        zip_dst: Destination directory to save the ZIP file.
         interactive: Enable or disable interactive component selection.
 
     Raises:
@@ -83,7 +83,7 @@ def pack_integration(
             integration_name=integration,
             version=version,
             beta_name=beta,
-            zip_dir=zip_dir,
+            zip_dst=zip_dst,
             interactive=interactive,
         )
     except Exception as e:

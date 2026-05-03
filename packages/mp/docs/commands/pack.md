@@ -20,7 +20,7 @@ Pack an integration into a SOAR-supported ZIP file.
 **Options**:
 - `-v, --version FLOAT`: Old version to fetch from the repo (via Git) and create the ZIP.
 - `-b, --beta TEXT`: Name of the custom beta integration (renames identifier and display name).
-- `-d, --dir PATH`: Directory to save the ZIP file. Defaults to the configured `out` directory.
+- `-d, --dst PATH`: Destination directory to save the ZIP file. Defaults to the configured `out` directory.
 - `--interactive / --non-interactive`: Enable or disable interactive component selection. [default: interactive]
 
 ## Examples

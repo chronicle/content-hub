@@ -42,7 +42,7 @@ class PackConfig(NamedTuple):
 
     version: str | None = None
     beta_name: str | None = None
-    zip_dir: pathlib.Path | None = None
+    zip_dst: pathlib.Path | None = None
     interactive: bool = True
 
 
@@ -140,12 +140,12 @@ class IntegrationPacker:
             elif self.config.interactive:
                 typer.echo("Non-TTY environment detected. Skipping interactive component selection (including all).")
 
-            zip_dir = self.config.zip_dir
-            if zip_dir is None:
-                zip_dir = create_or_get_out_dir() / "pack"
-            zip_dir.mkdir(parents=True, exist_ok=True)
+            zip_dst = self.config.zip_dst
+            if zip_dst is None:
+                zip_dst = create_or_get_out_dir() / "pack"
+            zip_dst.mkdir(parents=True, exist_ok=True)
 
-            zip_path: pathlib.Path = create_zip(built_dir, identifier, zip_dir)
+            zip_path: pathlib.Path = create_zip(built_dir, identifier, zip_dst)
             typer.echo(f"Successfully created integration zip: {zip_path}")
 
 
@@ -154,7 +154,7 @@ def pack_integration(
     *,
     version: str | None = None,
     beta_name: str | None = None,
-    zip_dir: pathlib.Path | None = None,
+    zip_dst: pathlib.Path | None = None,
     interactive: bool = True,
 ) -> None:
     """Flow for packing an integration into a SOAR-supported ZIP.
@@ -163,14 +163,15 @@ def pack_integration(
         integration_name: The name of the integration to pack.
         version: Old version to fetch from the repo and create the ZIP.
         beta_name: Name of the custom beta integration.
-        zip_dir: Directory to save the ZIP file.
+        zip_dst: Destination directory to save the ZIP file.
+
         interactive: Enable or disable interactive component selection.
 
     """
     config = PackConfig(
         version=version,
         beta_name=beta_name,
-        zip_dir=zip_dir,
+        zip_dst=zip_dst,
         interactive=interactive,
     )
     packer = IntegrationPacker(integration_name, config)
