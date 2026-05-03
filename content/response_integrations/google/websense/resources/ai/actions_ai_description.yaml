@@ -1,0 +1,307 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Block Url API:
+  ai_description: >-
+    Blocks URLs in Websense by adding them to a specified API-managed category. This
+    action interacts with the Websense Content Gateway API to perform a transactional
+    update, ensuring that URLs are correctly categorized for blocking. It can process
+    URLs provided directly as a parameter or automatically target URL entities present
+    in the current Google SecOps context.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | CategoryName | String | Yes | The name of the API-managed category in Websense
+    where the URLs should be added. |
+
+    | Urls | String | No | A comma-separated list of URLs to block. If this parameter
+    is left empty, the action will attempt to process all URL entities found in the
+    context. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves Websense configuration (API Root, Credentials,
+    SSL verification) and action parameters.
+
+    2. **URL Identification**: Determines the list of URLs to process. It prioritizes
+    the 'Urls' input parameter; if empty, it filters the case's target entities for
+    those of type URL.
+
+    3. **Transaction Management**: For each URL, the action communicates with the
+    Websense API to obtain a unique Transaction ID.
+
+    4. **Category Update**: Sends a request to add the specific URL to the designated
+    category using the active Transaction ID.
+
+    5. **Commitment**: Finalizes the change by committing the transaction. If the
+    update fails at any stage, it attempts to roll back the transaction to maintain
+    system integrity.
+
+    6. **Reporting**: Summarizes the results, listing all successfully blocked URLs
+    or indicating if no actions were taken.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds URLs to a specific category within the Websense Content Gateway, which
+      changes the filtering policy and blocks access to those URLs.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Category Urls API:
+  ai_description: >-
+    ### General Description
+
+    The **Get Category Urls API** action retrieves a list of URLs associated with
+    a specific API-managed category in Websense. This action is used to audit or verify
+    the contents of custom categories created via the API, providing visibility into
+    the specific web addresses assigned to them.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **CategoryName** | String | Yes | The name of the API-managed category for which
+    you want to retrieve the URL list. |
+
+
+    ### Additional Notes
+
+    - This action does not run on entities; it is a standalone utility action.
+
+    - It specifically targets categories that are managed via the Websense API.
+
+
+    ### Flow Description
+
+    1. **Configuration Initialization:** The action retrieves the Websense API root,
+    credentials, and SSL verification settings from the integration configuration.
+
+    2. **Parameter Extraction:** It captures the `CategoryName` provided by the user.
+
+    3. **API Request:** The action calls the Websense API using a GET request to fetch
+    the list of URLs associated with the specified category name.
+
+    4. **Data Formatting:** The retrieved list of URLs is processed and a header is
+    added for display purposes.
+
+    5. **Output Generation:** The resulting list is added to the Google SecOps action
+    results as a data table named 'Siemplify Websense Category URls'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is used to verify the connectivity between Google SecOps and
+    the **Websense** API. It ensures that the integration configuration, including
+    the API Root and credentials, is valid and that the service is reachable over
+    the network.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
+    of the Websense server. Default is `False`. |
+
+
+    ### Additional Notes
+
+    This action does not process any entities and is strictly used for system health
+    and configuration validation. It does not retrieve or modify any business data.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches the integration configuration
+    (API Root, Username, Password) and the 'Verify SSL' parameter.
+
+    2. **Manager Initialization**: Initializes the `WebsenseAPIManager` with the retrieved
+    credentials and SSL settings.
+
+    3. **Connectivity Test**: Calls the `test_connectivity` method, which attempts
+    to start a transaction (`_obtain_transaction_id`) and then immediately commits
+    it (`_commit_changes`). This sequence verifies both authentication and write-permissions/API
+    responsiveness.
+
+    4. **Result Reporting**: Returns 'Connection Established' if the transaction cycle
+    completes successfully, otherwise reports an error.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Unblock Url API:
+  ai_description: >-
+    Unblocks one or more URLs by removing them from a specified API-managed category
+    in Websense. This action allows for targeted unblocking via a parameter or bulk
+    unblocking of URL entities present in the alert context. It interacts with the
+    Websense Content Gateway API using a transaction-based approach (start, remove,
+    commit).
+
+
+    ### Parameters
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | CategoryName | String | Yes | The name of the API-managed category in Websense
+    from which the URL(s) should be removed. |
+
+    | URL | String | No | A specific URL to unblock. If provided, this takes precedence
+    over entity processing. If omitted, the action processes all URL entities in the
+    scope. |
+
+
+    ### Additional Notes
+
+    - This action only works with categories that are 'API managed' within Websense.
+
+    - If the `URL` parameter is provided, the action will ignore any URL entities
+    in the case and only process that specific URL.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Connects to the Websense API using the provided root URL
+    and credentials.
+
+    2. **Target Identification**: Determines the list of URLs to unblock. It uses
+    the `URL` parameter if provided; otherwise, it collects all entities of type `DestinationURL`
+    from the current context.
+
+    3. **Transaction Management**: For each URL, it obtains a unique Transaction ID
+    from Websense to begin the modification process.
+
+    4. **Removal Request**: Sends a request to Websense to delete the specific URL
+    from the designated `CategoryName`.
+
+    5. **Commit/Rollback**: If the removal request is successful, it commits the transaction
+    to apply the changes. If any step fails, it attempts to roll back the transaction
+    to maintain system integrity.
+
+    6. **Final Reporting**: Returns a success status and a message listing the URLs
+    that were successfully removed from the category.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes specified URLs from a managed category in Websense, which changes the
+      filtering policy and effectively unblocks the URLs in the external system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
