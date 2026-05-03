@@ -17,8 +17,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, NamedTuple
 
-import rich
-
 import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.integrations_repo import IntegrationsRepo
@@ -61,8 +59,8 @@ def build_integrations(  # noqa: PLR0913
                 end_msg="Done building custom integrations.",
             )
             if custom_not_found := not_founds[0]:
-                rich.print(
-                    f"The following integrations could not be found in the custom repo: {', '.join(custom_not_found)}"
+                logger.info(
+                    "The following integrations could not be found in the custom repo: %s", ", ".join(custom_not_found)
                 )
 
         else:
@@ -181,10 +179,10 @@ def _build_integrations(
         )
 
     if valid_integrations_:
-        rich.print(
-            "Building the following integrations in the"
-            f" the {marketplace_.name} marketplace:"
-            f" {', '.join(valid_integration_names)}"
+        logger.info(
+            "Building the following integrations in the %s marketplace: %s",
+            marketplace_.name,
+            ", ".join(valid_integration_names),
         )
         if deconstruct:
             marketplace_.deconstruct_integrations(valid_integrations_)

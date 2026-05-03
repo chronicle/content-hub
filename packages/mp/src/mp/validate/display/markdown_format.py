@@ -56,7 +56,7 @@ class MarkdownFormat:
             _save_report_file(markdown_content, output_filename="validation_report.md")
 
         except Exception:
-            logger.exception("❌ Error generating report:")
+            logger.exception("❌ Error generating report")
 
 
 def _has_issues_to_display(full_report: FullReport) -> bool:

@@ -18,6 +18,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from rich import box
+from rich.console import Console
 from rich.table import Table
 
 if TYPE_CHECKING:
@@ -30,14 +31,15 @@ logger: logging.Logger = logging.getLogger(__name__)
 class CliDisplay:
     def __init__(self, tests_report: list[IntegrationTestResults]) -> None:
         self.tests_report: list[IntegrationTestResults] = tests_report
+        self.console: Console = Console()
 
     def display(self) -> None:
         """Display the test results in the cli."""
         if not self.tests_report:
-            logger.info("[bold green]All Tests Passed\n[/bold green]")
+            self.console.print("[bold green]All Tests Passed\n[/bold green]")
 
         for integration_report in self.tests_report:
-            logger.info(_build_table(integration_report))
+            self.console.print(_build_table(integration_report), "\n")
 
 
 def _build_table(integration_report: IntegrationTestResults) -> Table:

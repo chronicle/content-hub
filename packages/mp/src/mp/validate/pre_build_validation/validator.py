@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
-
-import rich
 
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.validate.data_models import ContentType, ValidationResults, ValidationTypes, Validator
@@ -26,7 +25,6 @@ from mp.validate.pre_build_validation.playbooks import get_playbooks_pre_build_v
 if TYPE_CHECKING:
     from pathlib import Path
 
-import logging
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -43,7 +41,7 @@ class PreBuildValidations:
         total_validations = len(validations)
         integration_name = self.validation_path.name
 
-        rich.print(f"Running pre-build validations: {integration_name}...")
+        logger.info("Running pre-build validations: %s...", integration_name)
 
         count: int = 0
         for validator in validations:
@@ -63,8 +61,12 @@ class PreBuildValidations:
                 )
                 return
 
-        rich.print(
-            f"Integration: {integration_name} | Passed: {count} | Executed: {count} / {total_validations} validations"
+        logger.info(
+            "Integration: %s | Passed: %s | Executed: %s / %s validations",
+            integration_name,
+            count,
+            count,
+            total_validations,
         )
 
     def _handle_fatal_error(self, validation_name: str, error_msg: str) -> None:

@@ -17,8 +17,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, NamedTuple
 
-import rich
-
 import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.playbooks_repo import PlaybooksRepo
@@ -116,9 +114,10 @@ def _build_playbooks(
     normalized_playbooks: set[str] = {_normalize_name_to_json(name, deconstruct=deconstruct) for name in playbooks}
     not_found_playbooks: set[str] = normalized_playbooks.difference(valid_playbooks_names)
     if not_found_playbooks:
-        rich.print(
-            f"The following playbooks could not be found in the {repository.name} "
-            f"repository: {', '.join(not_found_playbooks)}"
+        logger.error(
+            "The following playbooks could not be found in the %s repository: %s",
+            repository.name,
+            ", ".join(not_found_playbooks),
         )
 
     if valid_playbooks_paths:
