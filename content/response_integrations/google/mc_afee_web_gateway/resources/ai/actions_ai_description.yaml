@@ -1,0 +1,318 @@
+Block IP:
+  ai_description: "Blocks IP addresses by adding them to a specific 'IP range' group\
+    \ within McAfee Web Gateway. This action is typically used to update blocklists\
+    \ that are referenced by active security rules on the gateway. \n\n### Parameters\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | Group Name | String | Yes | The name of the group in McAfee Web Gateway where\
+    \ the IP addresses will be added. |\n| Description | String | No | A description\
+    \ for the new list entry. Defaults to 'Added by Siemplify' if not provided. |\n\
+    \n### Flow Description\n1. **Authentication**: Connects to the McAfee Web Gateway\
+    \ using the provided server address and credentials.\n2. **Group Identification**:\
+    \ Retrieves the internal ID for the specified 'Group Name'.\n3. **Entity Processing**:\
+    \ Iterates through all provided IP Address entities.\n4. **Entry Insertion**:\
+    \ For each IP, it formats the address as a /32 CIDR and sends a request to insert\
+    \ it into the target group.\n5. **Commitment**: Executes a commit command on the\
+    \ gateway to finalize and apply the changes.\n6. **Cleanup**: Logs out of the\
+    \ McAfee Web Gateway session."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds new entries (IP addresses) to existing lists/groups within the McAfee Web
+      Gateway configuration and performs a commit operation to apply these changes.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Insert Item To Group:
+  ai_description: >-
+    ### General Description
+
+    This action inserts a network object (such as an IP address, CIDR block, or URL)
+    into a specific group or list within the McAfee Web Gateway. It is used to manage
+    policy-based lists, such as blacklists or whitelists, by programmatically adding
+    entries. The action ensures that the item is correctly formatted for the target
+    group's type and commits the changes to the gateway to ensure they take effect.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Group Name | String | Yes | The exact name of the group/list in McAfee Web Gateway
+    where the item should be added (e.g., 'Siemplify-Blacklist'). |
+
+    | Item To Insert | String | Yes | The network object to be added to the group.
+    This could be an IP (e.g., 1.1.1.1), a CIDR (e.g., 1.1.1.0/24), or a URL, depending
+    on the group's configuration. |
+
+    | Description | String | No | A descriptive comment for the new entry. If not
+    provided, it defaults to 'Added by Siemplify'. |
+
+
+    ### Additional Notes
+
+    * **Type Strictness:** Each group in McAfee Web Gateway is type-restricted. If
+    you attempt to insert a URL into an IP-based list, the action will fail with a
+    format error.
+
+    * **Commit Logic:** This action automatically performs a 'commit' operation after
+    a successful insertion to ensure the changes are applied to the appliance configuration.
+
+
+    ### Flow Description
+
+    1. **Authentication:** Connects to the McAfee Web Gateway using the provided credentials
+    and establishes a session.
+
+    2. **Group Resolution:** Fetches all available lists from the gateway to find
+    the internal ID associated with the provided 'Group Name'.
+
+    3. **Item Insertion:** Sends a POST request containing an XML payload with the
+    item value and description to the specific group's insertion endpoint.
+
+    4. **Validation:** Checks the response for success. If the item is a duplicate
+    or in an invalid format, the action handles the error and logs out.
+
+    5. **Commit:** Executes a commit command to the gateway to finalize the configuration
+    change.
+
+    6. **Cleanup:** Logs out of the McAfee Web Gateway session.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Inserts a new entry into a network group/list on the McAfee Web Gateway and
+      performs a configuration commit to apply the changes.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the McAfee Web Gateway instance. It ensures that the provided
+    integration parameters (Server Address, Username, and Password) are valid and
+    that the service is reachable.
+
+
+    ### Parameters Description
+
+    This action does not require any input parameters.
+
+
+    ### Additional Notes
+
+    * This action is primarily used during the initial setup or troubleshooting of
+    the McAfee Web Gateway integration to confirm that the API credentials and network
+    path are functional.
+
+    * It performs a login followed by an immediate logout to minimize session overhead
+    on the target system.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action fetches the 'Server Address', 'Username',
+    and 'Password' from the integration's configuration settings.
+
+    2. **Authentication Attempt**: It initializes the `McAfeeWebGatewayManager`, which
+    automatically attempts to authenticate by sending a POST request to the `/login`
+    endpoint of the gateway.
+
+    3. **Session Validation**: The manager validates the response to ensure a valid
+    session cookie (`JSESSIONID`) is received.
+
+    4. **Session Termination**: Upon successful authentication, the action explicitly
+    calls the `logout` method to terminate the session via a POST request to the `/logout`
+    endpoint.
+
+    5. **Result Reporting**: If the entire sequence completes without exceptions,
+    the action returns a 'Connected successfully' message and a result value of 'true'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove Item From Group:
+  ai_description: "Removes a specific network object (such as an IP address, URL,\
+    \ or host) from a designated group within McAfee Web Gateway. This action is primarily\
+    \ used to manage blocklists or allowlists by programmatically deleting entries.\
+    \ \n\n### Flow Description:\n1. **Authentication**: Establishes a session with\
+    \ the McAfee Web Gateway API.\n2. **Group Identification**: Retrieves the internal\
+    \ ID for the group specified in the 'Group Name' parameter.\n3. **Item Search**:\
+    \ Searches the identified group for the specific item provided in 'Item To Delete'\
+    \ to obtain its unique entry ID.\n4. **Deletion**: Sends a DELETE request to the\
+    \ gateway to remove the specific entry.\n5. **Commit**: Executes a commit operation\
+    \ to ensure the changes are saved and applied to the gateway configuration.\n\n\
+    ### Parameters Description:\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| Group Name | String | Yes | The exact name of\
+    \ the group/list in McAfee Web Gateway where the item resides. |\n| Item To Delete\
+    \ | String | Yes | The value of the network object to be removed (e.g., '1.1.1.1/32'\
+    \ or 'malicious.com'). |\n\n### Additional Notes:\n* The action requires the 'Server\
+    \ Address', 'Username', and 'Password' to be configured in the McAfee Web Gateway\
+    \ integration settings.\n* Each group in McAfee Web Gateway is type-strict; ensure\
+    \ the item format matches the group's expected type."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes an entry from a list/group in the McAfee Web Gateway configuration and
+      performs a 'commit' operation to apply the changes.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Unblock IP:
+  ai_description: >-
+    Removes IP Address entities from a specified 'IP range' group in McAfee Web Gateway.
+    This action is primarily used to unblock previously restricted IP addresses by
+    deleting their entries from a management group and committing the changes to the
+    appliance.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Group Name | String | Yes | The name of the group in McAfee Web Gateway from
+    which the IP address should be removed. |
+
+
+    ### Flow Description
+
+    1. **Authentication:** Connects to the McAfee Web Gateway using provided credentials
+    and establishes a session.
+
+    2. **Group Identification:** Retrieves the internal ID of the group specified
+    in the 'Group Name' parameter.
+
+    3. **Entity Processing:** Iterates through the provided IP Address entities.
+
+    4. **Entry Lookup:** For each IP, it searches the target group to find the specific
+    entry ID associated with that IP (formatted as a /32 CIDR).
+
+    5. **Deletion:** If the entry is found, it sends a DELETE request to remove the
+    IP from the group.
+
+    6. **Commit:** Executes a commit operation to apply and save the changes on the
+    McAfee Web Gateway appliance.
+
+    7. **Cleanup:** Logs out of the session and reports the success or failure for
+    each entity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes IP entries from a specific group in McAfee Web Gateway and performs
+      a commit operation to finalize the changes on the appliance.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

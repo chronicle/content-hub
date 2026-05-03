@@ -1,0 +1,145 @@
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the Unshorten.me service. It ensures that the integration is
+    correctly configured and that the external API is reachable.
+
+
+    ### Parameters
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    This action uses a hardcoded sample URL to test the API response and respects
+    the 'Use SSL' configuration setting defined in the integration's general settings.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval**: The action retrieves the 'Use SSL' setting from
+    the UnshortenMe integration configuration.
+
+    2. **Manager Initialization**: It initializes the `UnshortenMeManager` with the
+    specified SSL verification preference.
+
+    3. **Connectivity Test**: The manager executes a GET request to a predefined test
+    URL on the Unshorten.me API.
+
+    4. **Response Validation**: The action validates the HTTP response status and
+    checks for API-specific error messages or rate-limiting flags.
+
+    5. **Completion**: If the request is successful, the action concludes with a 'Connected
+    successfully' message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Unshorten URL:
+  ai_description: >-
+    ### General Description
+
+    Resolves shortened URLs into their original, long-form destinations using the
+    Unshorten.me service. This action is useful for security analysts to uncover the
+    actual destination of suspicious links found in alerts, providing better context
+    for phishing or malware investigations.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Use SSL | This is an integration-level configuration parameter. If set to 'true',
+    the action will verify SSL certificates when connecting to the Unshorten.me API.
+    | Boolean | No (Defaults to False) |
+
+
+    ### Additional Notes
+
+    * **Rate Limiting:** The action is subject to a hardcoded limit of 10 requests
+    per hour as defined in the integration manager. If this limit is reached, the
+    action will raise an error.
+
+    * **Entity Enrichment:** Successfully resolved URLs will have a new property `long_url`
+    added to their additional properties and will be marked as 'Enriched' within the
+    platform.
+
+
+    ### Flow Description
+
+    1. **Configuration Retrieval:** The action fetches the 'Use SSL' setting from
+    the UnshortenMe integration configuration.
+
+    2. **Entity Filtering:** It iterates through all target entities in the current
+    context and identifies those of type `URL` (`DestinationURL`).
+
+    3. **External API Interaction:** For each identified URL, the action sends a GET
+    request to the Unshorten.me API to retrieve the resolved (long) URL.
+
+    4. **Data Processing:** The action parses the JSON response, unquotes the resolved
+    URL, and checks against the hourly usage limit.
+
+    5. **Internal Updates:** If a long URL is found, the action updates the entity's
+    `additional_properties` with the `long_url` key and sets the `is_enriched` flag
+    to true.
+
+    6. **Completion:** Finally, it updates the entities in the case, adds a JSON result
+    mapping short URLs to long URLs, and provides a summary message to the case wall.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity attributes by adding the 'long_url' property and marking the
+      entity as enriched.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

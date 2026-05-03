@@ -1,0 +1,395 @@
+Enrich Assets:
+  ai_description: >-
+    Enriches IP Address and Hostname entities with asset information retrieved from
+    the AlienVault USM Appliance. The action searches for assets by their IP or Hostname,
+    retrieves detailed metadata such as Operating System, Device Type, and Asset Value,
+    and maps this data back to the entity's additional properties in Google SecOps.
+
+
+    ### Parameters
+
+    There are no user-configurable parameters for this action.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Initializes a connection to the AlienVault USM Appliance
+    using the integration's configuration (API Root, Username, and Password).
+
+    2. **Entity Identification**: Iterates through the target entities in the current
+    context, filtering for IP Addresses and Hostnames.
+
+    3. **Asset Lookup**: For each supported entity, it queries the AlienVault API
+    to find a matching Asset ID based on the IP or Hostname.
+
+    4. **Data Retrieval**: If an Asset ID is found, the action fetches the full asset
+    details from AlienVault.
+
+    5. **Internal Enrichment**: The retrieved asset data is flattened, prefixed with
+    'AlientVault', and added to the entity's 'additional_properties' attribute.
+
+    6. **Update**: Updates the entities within Google SecOps to reflect the new enrichment
+    data and returns a JSON result of all retrieved information.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the 'additional_properties' field of entities with asset metadata retrieved
+      from AlienVault.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Enrich Vulnerabilities:
+  ai_description: "### General Description\nThe **Enrich Vulnerabilities** action\
+    \ retrieves detailed security vulnerability information for **HOSTNAME** and **ADDRESS**\
+    \ entities from an AlienVault USM Appliance. This action is designed to provide\
+    \ security analysts with immediate context regarding the vulnerability posture\
+    \ of assets involved in an incident, helping to prioritize response efforts based\
+    \ on known weaknesses.\n\n### Parameters\nThis action does not require any user-defined\
+    \ input parameters. It relies on the integration's global configuration (Api Root,\
+    \ Username, and Password) to communicate with the AlienVault USM Appliance.\n\n\
+    ### Flow Description\n1. **Authentication**: The action establishes a session\
+    \ with the AlienVault USM Appliance using the provided credentials.\n2. **Asset\
+    \ Mapping**: It iterates through the target entities in the current context. For\
+    \ each entity, it attempts to find a corresponding Asset ID in AlienVault:\n \
+    \   *   **ADDRESS** entities are searched by IP address.\n    *   **HOSTNAME**\
+    \ entities are searched by hostname.\n3. **Vulnerability Fetching**: If a matching\
+    \ asset is identified, the action queries AlienVault for all vulnerabilities associated\
+    \ with that specific Asset ID.\n4. **Data Enrichment**: \n    *   Retrieved vulnerabilities\
+    \ are flattened and added to the entity's `additional_properties` under the prefix\
+    \ `AlientVault_Vulnerabilities`.\n    *   A CSV-formatted table containing the\
+    \ vulnerability details (Scan Time, Asset, Vulnerability, ID, Service, Severity)\
+    \ is attached to the entity in the SOAR interface.\n5. **Internal Update**: The\
+    \ action updates the entities within Google SecOps to reflect the newly acquired\
+    \ enrichment data and concludes with a summary of enriched entities."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with vulnerability metadata and attaches
+      a data table to the entity within the SOAR platform.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Fetch Last PCAP Files:
+  ai_description: >-
+    ### General Description
+
+    This action fetches the most recent PCAP (Packet Capture) files from an AlienVault
+    Appliance. It is designed to retrieve network traffic data for forensic analysis
+    by identifying available capture files and downloading them directly into the
+    Google SecOps environment.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Description | Type | Mandatory | Notes |
+
+    | :--- | :--- | :--- | :--- | :--- |
+
+    | Number Of Files To Fetch | Specifies the maximum number of recent PCAP files
+    to retrieve and attach to the case. | Integer | Yes | Defaults to 1 if not explicitly
+    provided in the script logic, though marked as mandatory in configuration. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on specific entities (like IPs or Hostnames) but
+    rather queries the AlienVault system for the latest available captures globally.
+
+    - Downloaded files are added as attachments to the case, and a summary table of
+    the records is created.
+
+    - According to standard classification, actions that download files are not categorized
+    as enrichment actions.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the AlienVault Appliance using the configured
+    API Root, Username, and Password.
+
+    2. **Metadata Retrieval**: Queries the AlienVault traffic capture interface to
+    get a list of the most recent PCAP file records, including scan names, sensor
+    IPs, and creation times.
+
+    3. **Filtering**: Limits the list of files to the count specified in the 'Number
+    Of Files To Fetch' parameter.
+
+    4. **File Download**: For each identified record, the action performs a secondary
+    request to download the raw byte content of the PCAP file.
+
+    5. **Attachment**: Encodes the file content in Base64 and attaches it to the Google
+    SecOps case using the scan name as the filename.
+
+    6. **Reporting**: Constructs a data table named 'PCAP Records' containing the
+    metadata of the fetched files and provides a JSON result of the processed records.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds downloaded PCAP files as attachments to the case and creates
+      a data table containing the file metadata.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get PCAP Files For Events:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves PCAP (Packet Capture) files associated with security events
+    within a Google SecOps alert from an AlienVault Appliance. It is designed to automate
+    the collection of forensic network data for investigation purposes. The action
+    identifies events within the alert, checks for available PCAP data on the AlienVault
+    server, and attaches any found files directly to the case.
+
+
+    ### Parameters Description
+
+    There are no user-defined parameters for this action. It automatically processes
+    all security events associated with the current alert.
+
+
+    ### Additional Notes
+
+    * The action relies on the presence of an 'Id' field within the `additional_properties`
+    of the security events in the alert.
+
+    * PCAP files are attached to the case and also returned as base64-encoded strings
+    in the JSON result.
+
+
+    ### Flow Description
+
+    1. **Authentication**: Connects to the AlienVault Appliance using the configured
+    API Root, Username, and Password.
+
+    2. **Event Iteration**: Iterates through every security event associated with
+    the current Google SecOps alert.
+
+    3. **ID Extraction**: For each event, it attempts to retrieve the unique event
+    identifier from the event's metadata.
+
+    4. **Data Retrieval**: Queries the AlienVault server for the specific event's
+    details to locate associated PCAP data.
+
+    5. **Download and Attachment**: If a PCAP file is found, the action downloads
+    the raw content, encodes it in base64, and attaches it to the Google SecOps case
+    as a file.
+
+    6. **Result Compilation**: Aggregates all retrieved PCAP data into a JSON result
+    and provides a summary message of the findings.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds PCAP files as attachments to the Google SecOps case.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Vulnerability Reports:
+  ai_description: >-
+    ### General Description
+
+    The **Get Vulnerability Reports** action retrieves vulnerability report files
+    from an AlienVault Appliance. It scans the environment's vulnerability overview,
+    identifies available reports, and downloads the specified number of files to attach
+    them directly to the Google SecOps case for further analysis. This action is useful
+    for gathering historical or current vulnerability data across the managed environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Number Of Files To Fetch | Integer | Yes | Specifies the maximum number of vulnerability
+    report files to retrieve and attach to the case. Defaults to 1 if not specified.
+    |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Establishes a session with the AlienVault Appliance using
+    the provided API Root, Username, and Password.
+
+    2. **Metadata Retrieval**: Fetches a list of available vulnerability reports from
+    the AlienVault environment vulnerability overview page.
+
+    3. **Selection**: Limits the list of reports based on the user-defined `Number
+    Of Files To Fetch` parameter.
+
+    4. **File Processing**: For each selected report, the action downloads the file
+    content (typically .xlsx) from the internal download link.
+
+    5. **Case Enrichment**: Attaches the downloaded files to the case and creates
+    a data table named 'Vulnerability Report Files' containing metadata such as the
+    target address and creation time.
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities (like IP or Hostname) within
+    the case; instead, it fetches general environment reports based on the appliance's
+    global state.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds downloaded vulnerability report files as attachments to the
+      case and creates a data table containing report metadata.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ used to verify the connectivity between Google SecOps and the AlienVault Appliance.\
+    \ Its primary purpose is to ensure that the integration configuration\u2014specifically\
+    \ the API Root, Username, and Password\u2014is correct and that the AlienVault\
+    \ server is responding to requests.\n\n### Parameters Description\n| Parameter\
+    \ Name | Description | Type | Mandatory |\n| :--- | :--- | :--- | :--- |\n| None\
+    \ | This action does not require any input parameters. | N/A | N/A |\n\n### Additional\
+    \ Notes\nThis action is a standard connectivity test. It does not interact with\
+    \ any entities in the case, nor does it fetch or modify any security data. It\
+    \ strictly validates the communication channel and authentication credentials.\n\
+    \n### Flow Description\n1. **Configuration Retrieval**: The action starts by retrieving\
+    \ the integration's configuration parameters, including the server address and\
+    \ user credentials.\n2. **Manager Initialization**: It instantiates the `AlienVaultManager`,\
+    \ which sets up the connection session.\n3. **Authentication**: The manager performs\
+    \ a POST request to the AlienVault login endpoint using the provided username\
+    \ and password.\n4. **Token Validation**: To ensure full connectivity, the manager\
+    \ attempts to retrieve a session token from the AlienVault SIEM.\n5. **Success\
+    \ Confirmation**: If no exceptions occur during the login or token retrieval process,\
+    \ the action concludes with a 'Connected successfully' message."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

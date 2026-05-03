@@ -1,0 +1,567 @@
+A Record Lookup:
+  ai_description: >-
+    ### General Description
+
+    The **A Record Lookup** action performs a DNS A record query for specific domain
+    names using the MXToolBox service. Its primary purpose is to resolve Hostname,
+    URL, or User entities into their corresponding IPv4 addresses, providing essential
+    network context for security investigations.
+
+
+    ### Parameters Description
+
+    This action does not have any specific action-level parameters. It relies on the
+    global integration configuration for the MXToolBox API Root and API Key.
+
+
+    ### Additional Notes
+
+    - The action automatically extracts the domain component from URL and User entities
+    before performing the lookup.
+
+    - It updates the entity's additional properties with the key `MX_IP Addresses`.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering:** The action identifies supported entities (Hostname, URL,
+    and User) from the current context.
+
+    2. **Domain Extraction:** For each entity, it extracts the relevant domain name.
+
+    3. **External Lookup:** It queries the MXToolBox API's A record endpoint for the
+    extracted domain.
+
+    4. **Data Enrichment:** If records are found, it updates the entity's `additional_properties`
+    with the resolved IP addresses and marks the entity as enriched.
+
+    5. **Reporting:** It generates a data table summarizing the resolutions and attaches
+    the raw JSON response to the action results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with resolved IP addresses and sets the
+      'is_enriched' flag to true.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DestinationURL
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Blacklist Check:
+  ai_description: "### General Description\nThe **Blacklist Check** action queries\
+    \ the MXToolBox API to determine if specific Hostname or Address entities are\
+    \ listed on various global blacklists. It provides detailed information about\
+    \ which engines flagged the entity and why, helping security analysts identify\
+    \ potentially malicious infrastructure.\n\n### Parameters Description\n| Parameter\
+    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Blacklist\
+    \ Threshold** | Integer | Yes | The threshold used to determine if an entity should\
+    \ be marked as suspicious. If the number of blacklists an entity appears on is\
+    \ less than or equal to this value, the entity is marked as suspicious in Google\
+    \ SecOps. |\n\n### Flow Description\n1. **Entity Filtering**: The action identifies\
+    \ all `HOSTNAME` and `ADDRESS` entities within the current context.\n2. **External\
+    \ Lookup**: For each entity, it performs a blacklist lookup via the MXToolBox\
+    \ API using the entity's identifier.\n3. **Data Processing**: \n    * It parses\
+    \ the API response to identify \"Failed\" checks (engines that have blacklisted\
+    \ the entity).\n    * It generates a data table for each entity containing the\
+    \ engine name and the specific reason for the blacklisting.\n4. **Threshold Evaluation**:\
+    \ It compares the count of blacklists found against the user-provided **Blacklist\
+    \ Threshold**. If the count is within the threshold (less than or equal to), the\
+    \ entity's `is_suspicious` attribute is set to `True`.\n5. **Enrichment**: \n\
+    \    * Updates the entities in Google SecOps with the new suspicious status.\n\
+    \    * Adds an entity insight summarizing the number of blacklists found.\n  \
+    \  * Attaches the raw JSON results to the action output for further analysis."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the 'is_suspicious' attribute of entities and adds insights and data
+      tables to the case context.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+HTTPS Information Lookup:
+  ai_description: >-
+    ### General Description
+
+    The **HTTPS Information Lookup** action queries the MXToolBox API to verify if
+    a website URL responds securely via SSL encryption. It retrieves details about
+    the SSL certificate, specifically identifying the certificate authorities associated
+    with the domain.
+
+
+    ### Parameters Description
+
+    This action does not have any input parameters. It relies on the integration's
+    global configuration (API Root, API Key, and Verify SSL).
+
+
+    ### Additional Notes
+
+    The action uses the `get_domain_from_entity` utility to ensure the API receives
+    a domain string rather than a full URL. If an error occurs for a specific entity,
+    the action logs the error and continues processing the remaining entities.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies all `URL` entities within the current
+    context.
+
+    2. **Domain Extraction**: For each URL, it extracts the base domain name.
+
+    3. **API Query**: It sends a request to the MXToolBox HTTPS lookup endpoint for
+    each domain.
+
+    4. **Data Processing**: It parses the response to extract the names of the certificate
+    authorities.
+
+    5. **Reporting**: It creates a data table named 'HTTPS Information Lookup Result'
+    and attaches the raw JSON response to the action results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action adds a data table to the case wall containing HTTPS lookup results
+      and certificate authority information. It also attaches the raw JSON response
+      to the action results.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+MX Record Lookup:
+  ai_description: "### General Description\nThe **MX Record Lookup** action retrieves\
+    \ Mail Exchange (MX) records for domain-related entities using the MXToolBox service.\
+    \ Its primary purpose is to identify the mail servers responsible for accepting\
+    \ email messages on behalf of a domain. This information is crucial for verifying\
+    \ mail flow configurations, identifying potential mail redirection, and enriching\
+    \ domain intelligence during security investigations.\n\n### Parameters Description\n\
+    There are no action-specific parameters for this action. It relies on the global\
+    \ integration configuration (API Root, API Key, and SSL Verification).\n\n###\
+    \ Additional Notes\n- The action automatically extracts the base domain from Hostname,\
+    \ URL, and User entities before performing the lookup.\n- It updates the entity's\
+    \ `additional_properties` with a pipe-separated list of discovered MX hostnames.\n\
+    - It marks the entity as enriched within the Google SecOps environment.\n\n###\
+    \ Flow Description\n1. **Entity Filtering:** The action identifies supported entities\
+    \ (Hostname, URL, and User) from the current context.\n2. **Domain Extraction:**\
+    \ For each valid entity, it extracts the domain name using internal utility functions.\n\
+    3. **External Lookup:** It queries the MXToolBox API to fetch MX record details,\
+    \ including hostnames, preferences (priority), IP addresses, and TTL values.\n\
+    4. **Data Enrichment:** \n    - Discovered MX hostnames are added to the entity's\
+    \ metadata (`MX_Hostnames`).\n    - The entity is flagged as enriched (`is_enriched\
+    \ = True`).\n5. **Result Visualization:** \n    - A detailed CSV-formatted table\
+    \ containing all MX record fields is attached to each processed entity.\n    -\
+    \ A global JSON result containing the raw API response is added to the action\
+    \ output.\n6. **Finalization:** The action updates the entities in the case and\
+    \ provides a summary message of resolved domains."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with discovered MX hostnames, sets the
+      'is_enriched' flag to true, and attaches data tables to entities.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DestinationURL
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description The Ping action is designed to verify the connectivity
+    between Google SecOps and the MXToolBox API. It ensures that the provided configuration,
+    including the API Root and API Key, is valid and that the network environment
+    allows for successful communication with the external service. ### Parameters
+    Description There are no parameters for this action. ### Additional Notes This
+    action is primarily used for health checks and troubleshooting connectivity issues
+    during the initial setup or maintenance of the MXToolBox integration. It does
+    not process any entities or modify any data. ### Flow Description 1. **Initialize
+    Manager**: The action starts by initializing the MXToolBox manager using the API
+    Root, API Key, and SSL verification settings retrieved from the integration configuration.
+    2. **Connectivity Test**: It executes a test API call by performing a standard
+    MX lookup for a placeholder domain ('example.com') to verify the API's responsiveness.
+    3. **Validate Response**: The action checks the HTTP response status to ensure
+    the request was successful. 4. **Finalize**: It concludes by returning a success
+    message ('Connection Established') if the test passes, or a failure message ('Connection
+    Failed') if the test fails.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping External IP:
+  ai_description: >-
+    ### General Description
+
+    The **Ping External IP** action performs ICMP ping lookups against external IP
+    addresses, hostnames, URLs, or user-associated domains using the MXToolBox service.
+    This action is used for network diagnostics to verify the reachability of external
+    assets from the MXToolBox infrastructure's perspective. ### Parameters Description
+
+    There are no parameters for this action. ### Additional Notes
+
+    - The action automatically extracts domains from URL and User entities before
+    performing the lookup.
+
+    - Results include the total number of packets sent and the number of successful
+    replies received. ### Flow Description
+
+    1. **Configuration Retrieval:** Fetches MXToolBox API credentials and SSL settings
+    from the integration configuration.
+
+    2. **Entity Filtering:** Identifies relevant entities from the case, specifically
+    targeting IP Addresses, Hostnames, URLs, and User entities.
+
+    3. **External Lookup:** For each valid entity, sends a GET request to the MXToolBox
+    'ping' endpoint.
+
+    4. **Data Processing:** Parses the ICMP response data to count successful 'Reply'
+    messages.
+
+    5. **Reporting:** Generates a data table summarizing ping statistics and attaches
+    the raw JSON response to the action results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds a data table named 'Ping Results' to the case wall summarizing packet statistics
+      for each entity.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - DestinationURL
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Reverse DNS Lookup:
+  ai_description: "### General Description\nPerforms a reverse DNS (PTR) lookup for\
+    \ IP Address entities using the MXToolBox API. This action identifies the domain\
+    \ names associated with a given IP address, providing essential context for network\
+    \ investigations and attribution.\n\n### Parameters\nThere are no action-specific\
+    \ parameters for this action. It utilizes the global integration configuration\
+    \ for connectivity and authentication.\n\n### Flow Description\n1. **Filter Entities**:\
+    \ The action identifies and processes only entities of type ADDRESS (IP Addresses).\n\
+    2. **External Lookup**: For each identified IP, it calls the MXToolBox API's PTR\
+    \ lookup endpoint to retrieve associated domain records.\n3. **Data Extraction**:\
+    \ It extracts the 'Domain Name' from the API response for each record found.\n\
+    4. **Internal Enrichment**: \n    * Updates the entity's 'additional_properties'\
+    \ with a semicolon-separated list of resolved domains under the key 'MX_Reverse\
+    \ Lookup Domains'.\n    * Sets the entity's 'is_enriched' status to true.\n  \
+    \  * Attaches a data table to the entity containing the detailed lookup results\
+    \ (IP, Type, Domain Name, TTL).\n5. **Finalization**: Updates the entities within\
+    \ Google SecOps and returns a summary of resolved IPs and domain names.\n\n###\
+    \ Additional Notes\nIf the API returns no data for a specific entity, the action\
+    \ logs the result and continues processing other entities. Errors encountered\
+    \ during individual lookups are captured and displayed in the final output message\
+    \ without halting the entire action."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with resolved domain names, sets the enriched
+      flag to true, and adds data tables to the entities in the SOAR case.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+SPF Lookup:
+  ai_description: >-
+    ### General Description
+
+    Performs a Sender Policy Framework (SPF) lookup for domain-related entities using
+    the MXToolBox service. This action identifies the authorized IP addresses and
+    subnets allowed to send emails on behalf of a domain and validates a specific
+    sender IP against these records to detect potential spoofing.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | IP Address | String | Yes | The specific IP address to verify against the domain's
+    SPF record to determine if it is an authorized sender. |
+
+
+    ### Flow Description
+
+    1. **Domain Extraction**: Extracts the domain name from the target entities (Hostnames,
+    URLs, or Users).
+
+    2. **SPF Record Retrieval**: Queries MXToolBox to fetch SPF records, recursively
+    resolving 'include' mechanisms to compile a complete list of authorized IP ranges
+    for the domain.
+
+    3. **Authorization Check**: Validates the provided 'IP Address' parameter against
+    the compiled list of authorized network ranges.
+
+    4. **Entity Enrichment**: Updates the entity's additional properties with the
+    check result (e.g., 'IP is authorized, in range...' or 'IP is not authorized sender').
+
+    5. **Risk Assessment**: Marks the entity as suspicious if the provided IP address
+    is not found within the authorized SPF ranges.
+
+    6. **Data Visualization**: Attaches a data table containing the authorized ranges
+    to the entity and adds a summary table to the case wall.
+
+
+    ### Additional Notes
+
+    This action is primarily used in email security and phishing playbooks to verify
+    the legitimacy of a sender's infrastructure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with SPF authorization status and marks
+      entities as suspicious if the validation fails.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DestinationURL
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+TCP Port Status:
+  ai_description: >-
+    ### General Description
+
+    Checks the status of a specific TCP port on target entities using the MXToolBox
+    service. This action determines if a connection can be established to a specified
+    port for Hostname, Address, User, and URL entities. It enriches the entities with
+    the connectivity result and provides a summary table for the case.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Port Number | String/Integer | Yes | The TCP port number to check for connectivity
+    (e.g., 80, 443). |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the target port number from the action
+    parameters.
+
+    2. **Entity Filtering**: Identifies supported entities within the current context,
+    specifically Hostnames, IP Addresses, Users, and URLs.
+
+    3. **External Lookup**: For each valid entity, it calls the MXToolBox API to perform
+    a TCP port check. It resolves domains from User and URL entities where necessary.
+
+    4. **Internal Enrichment**: Updates the 'additional_properties' of each entity
+    with a new field (e.g., `MX_port_80`) containing the boolean status of the port.
+
+    5. **Reporting**: Generates a data table named 'TCP Port Status Results' summarizing
+    the Domain/IP, Port, and Status for all processed entities.
+
+    6. **Finalization**: Updates the entities in Google SecOps and returns a comma-separated
+    string of the port statuses.
+
+
+    ### Additional Notes
+
+    - This action is read-only regarding external systems; it only performs connectivity
+    checks and does not modify firewall rules or service states.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity 'additional_properties' with the status of the checked TCP port
+      (e.g., 'MX_port_443': True).
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - USERUNIQNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
