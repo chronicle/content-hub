@@ -54,7 +54,7 @@ class PreBuildValidations:
 
             except FatalValidationError as e:
                 self._handle_fatal_error(validator.name, str(e))
-                logger.error(  # noqa: TRY400
+                logger.exception(
                     "STOPPED | Integration: %s | Reason: Fatal validation failed %s ",
                     integration_name,
                     validator.name,
