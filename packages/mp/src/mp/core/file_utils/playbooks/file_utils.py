@@ -154,7 +154,7 @@ def is_built_playbook(path: Path) -> bool:
             return False
 
     except json.JSONDecodeError:
-        logger.exception("Playbook is invalid,File %s is not a valid JSON file.", path.name)
+        logger.exception("Playbook is invalid, File %s is not a valid JSON file.", path.name)
         return False
     except OSError:
         logger.exception("Error reading file %s", path.name)
