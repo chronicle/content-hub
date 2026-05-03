@@ -23,6 +23,8 @@ import typer
 
 from mp.core import constants
 
+GIT_PATH: str = shutil.which("git") or "git"
+
 
 def get_git_repo_root(path: pathlib.Path) -> pathlib.Path:
     """Get the Git repository root.
@@ -37,12 +39,11 @@ def get_git_repo_root(path: pathlib.Path) -> pathlib.Path:
         RuntimeError: If the Git command fails.
 
     """
-    git_path: str = shutil.which("git") or "git"
     try:
         output: str = (
             subprocess  # noqa: S603
             .check_output(
-                [git_path, "rev-parse", "--show-toplevel"],
+                [GIT_PATH, "rev-parse", "--show-toplevel"],
                 cwd=path,
                 stderr=subprocess.STDOUT,
             )
@@ -71,11 +72,10 @@ def find_commit_sha(src_path: pathlib.Path, version: str) -> str:
     """
     rel_notes_path: pathlib.Path = src_path / constants.RELEASE_NOTES_FILE
     commit_sha: str | None = None
-    git_path: str = shutil.which("git") or "git"
 
     if rel_notes_path.exists():
         cmd: list[str] = [
-            git_path,
+            GIT_PATH,
             "log",
             "-S",
             f"integration_version: {version}",
@@ -105,7 +105,7 @@ def find_commit_sha(src_path: pathlib.Path, version: str) -> str:
         pyproject_path: pathlib.Path = src_path / constants.PROJECT_FILE
         if pyproject_path.exists():
             cmd: list[str] = [
-                git_path,
+                GIT_PATH,
                 "log",
                 "-S",
                 f'version = "{version}"',
@@ -150,13 +150,10 @@ def create_git_worktree(src_path: pathlib.Path, version: str, temp_dir: pathlib.
 
     """
     repo_root: pathlib.Path = get_git_repo_root(src_path)
-    git_path: str = shutil.which("git") or "git"
-
     commit_sha: str = find_commit_sha(src_path, version)
-
     try:
         subprocess.run(  # noqa: S603
-            [git_path, "worktree", "add", str(temp_dir), commit_sha],
+            [GIT_PATH, "worktree", "add", str(temp_dir), commit_sha],
             cwd=repo_root,
             check=True,
             capture_output=True,
@@ -184,5 +181,4 @@ def remove_git_worktree(temp_dir: pathlib.Path, repo_root: pathlib.Path) -> None
         )
     except subprocess.CalledProcessError as e:
         typer.echo(f"Warning: Failed to remove Git worktree {temp_dir}: {e.stderr.decode()}", err=True)
-        # Try manual cleanup if git fails
         shutil.rmtree(temp_dir, ignore_errors=True)
