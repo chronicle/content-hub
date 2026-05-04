@@ -631,18 +631,18 @@ class SiemplifyParamikoSSHVendor:
 
     def run_command(
         self,
-        host,
-        command,
-        username=None,
-        port=None,
-        password=None,
-        key_filename=None,
-        protocol_version=None,
-        **kwargs,
-    ):
+        host: str,
+        command: str,
+        username: str | None = None,
+        port: int | None = None,
+        password: Any = None,
+        key_filename: str | None = None,
+        protocol_version: int | None = None,
+        **kwargs: Any,
+    ) -> _ParamikoWrapper:
         client = paramiko.SSHClient()
 
-        connection_kwargs = {"hostname": host}
+        connection_kwargs: dict[str, Any] = {"hostname": host}
         connection_kwargs.update(self.kwargs)
         if username:
             connection_kwargs["username"] = username
