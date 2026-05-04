@@ -14,13 +14,16 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Annotated, NamedTuple
 
-import rich
 import typer
 
 from mp.dev_env import utils
 from mp.telemetry import track_command
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 login_app: typer.Typer = typer.Typer()
 
@@ -68,11 +71,11 @@ def login(
             password = typer.prompt("Password", hide_input=True)
 
     if api_root is None:
-        rich.print("[red]API root is required.[/red]")
+        logger.error("API root is required.")
         raise typer.Exit(1)
 
     if api_key is None and (username is None or password is None):
-        rich.print(
+        logger.error(
             "Either API key or both username and password are required. "
             "Please provide them using the --api-key option or "
             "--username and --password options. "
@@ -85,8 +88,8 @@ def login(
 
     with utils.CONFIG_PATH.open("w", encoding="utf-8") as f:
         json.dump(config, f)
-    rich.print(f"Credentials saved to {utils.CONFIG_PATH}")
+    logger.info("Credentials saved to %s", utils.CONFIG_PATH)
 
     if not no_verify:
         utils.get_backend_api(config)
-        rich.print("[green]✅ Credentials verified successfully.[/green]")
+        logger.info("✅ Credentials verified successfully.")

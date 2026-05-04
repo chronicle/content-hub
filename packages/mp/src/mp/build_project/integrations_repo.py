@@ -24,11 +24,10 @@ built integrations back into their source structure.
 
 from __future__ import annotations
 
-import multiprocessing
+import logging
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
-
-import rich
 
 import mp.core.config
 import mp.core.constants
@@ -44,6 +43,9 @@ from .restructure.integrations.integration import restructure_integration
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from pathlib import Path
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class IntegrationsRepo:
@@ -91,8 +93,8 @@ class IntegrationsRepo:
         """
         paths: Iterator[Path] = (p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p))
         processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.build_integration, paths)
+        with ThreadPoolExecutor(max_workers=processes) as pool:
+            list(pool.map(self.build_integration, paths))
 
     def build_integration(self, integration_path: Path) -> None:
         """Build a single integration provided by `integration_path`.
@@ -114,11 +116,11 @@ class IntegrationsRepo:
 
     def _get_integration_to_build(self, integration_path: Path) -> Integration:
         if not mp.core.file_utils.is_non_built_integration(integration_path):
-            rich.print(f"Integration {integration_path.name} is built")
+            logger.info("Integration %s is built", integration_path.name)
             self._prepare_built_integration_for_build(integration_path)
             return Integration.from_built_path(integration_path)
 
-        rich.print(f"Integration {integration_path.name} is not built")
+        logger.info("Integration %s is not built", integration_path.name)
         integration: Integration = Integration.from_non_built_path(integration_path)
         mp.core.file_utils.recreate_dir(self.out_dir / integration.identifier)
         return integration
@@ -133,7 +135,7 @@ class IntegrationsRepo:
         integration: Integration,
         integration_path: Path,
     ) -> None:
-        rich.print(f"---------- Building {integration_path.stem} ----------")
+        logger.info("---------- Building %s ----------", integration_path.stem)
         integration_out_path: Path = self.out_dir / integration.identifier
         integration_out_path.mkdir(exist_ok=True)
 
@@ -145,7 +147,7 @@ class IntegrationsRepo:
         write_full_details(full_details, integration_out_path)
 
     def _remove_project_files_from_built_out_path(self, integration_id: str) -> None:
-        rich.print("Removing unneeded files from out path")
+        logger.info("Removing unneeded files from out path")
         self._remove_project_files_from_out_path(integration_id)
         integration: Path = self.out_dir / integration_id
         mp.core.file_utils.remove_paths_if_exists(
@@ -171,8 +173,8 @@ class IntegrationsRepo:
         """
         paths: Iterator[Path] = (p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p))
         processes: int = mp.core.config.get_processes_number()
-        with multiprocessing.Pool(processes=processes) as pool:
-            pool.map(self.deconstruct_integration, paths)
+        with ThreadPoolExecutor(max_workers=processes) as pool:
+            list(pool.map(self.deconstruct_integration, paths))
 
     def deconstruct_integration(self, integration_path: Path) -> None:
         """Deconstruct a single integration provided by `integration_path`.
@@ -195,15 +197,15 @@ class IntegrationsRepo:
         self._remove_project_files_from_out_path(out_name)
 
     def _deconstruct_integration(self, integration_path: Path, integration_out_path: Path) -> None:
-        rich.print(f"---------- Deconstructing {integration_path.stem} ----------")
+        logger.info("---------- Deconstructing %s ----------", integration_path.stem)
         if mp.core.file_utils.is_non_built_integration(integration_path):
-            rich.print(f"Integration {integration_path.name} is deconstructed")
+            logger.info("Integration %s is deconstructed", integration_path.name)
             mp.core.file_utils.recreate_dir(integration_out_path)
             shutil.copytree(integration_path, integration_out_path, dirs_exist_ok=True)
             Integration.from_non_built_path(integration_path)
             return
 
-        rich.print(f"Integration {integration_path.name} is built")
+        logger.info("Integration %s is built", integration_path.name)
         integration: Integration = Integration.from_built_path(integration_path)
         di: DeconstructIntegration = DeconstructIntegration(
             path=integration_path,
@@ -217,7 +219,7 @@ class IntegrationsRepo:
         integration_out_path: Path = self.out_dir / mp.core.utils.str_to_snake_case(di.path.name)
         proj: Path = di.path / mp.core.constants.PROJECT_FILE
         if proj.exists():
-            rich.print(f"Updating {mp.core.constants.PROJECT_FILE}")
+            logger.info("Updating %s", mp.core.constants.PROJECT_FILE)
             shutil.copyfile(proj, integration_out_path / mp.core.constants.PROJECT_FILE)
             di.update_pyproject()
 

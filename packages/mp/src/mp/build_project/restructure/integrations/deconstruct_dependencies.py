@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import ast
 import itertools
+import logging
 import re
 import sys
 import zipfile
@@ -30,11 +31,12 @@ from contextlib import suppress
 from pathlib import Path
 from typing import NamedTuple
 
-import rich
 from packaging.version import Version
 
 import mp.core.constants
 from mp.core import config
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class Dependencies(NamedTuple):
@@ -108,7 +110,7 @@ class DependencyDeconstructor:
                             imported_modules.add(module.split(".")[0])
 
             except SyntaxError:
-                rich.print(f"[yellow]Warning:[/] Could not parse {path}, skipping for dependency analysis.")
+                logger.warning("Warning: Could not parse %s, skipping for dependency analysis.", path)
 
         return {
             m
@@ -200,7 +202,7 @@ class DependencyDeconstructor:
             except FileNotFoundError as e:
                 # This dependency will be added as a placeholder comment
                 placeholder_deps.append(f"{package_install_name}=={version}")
-                rich.print(f"[yellow]Warning:[/] Could not resolve local dependency {package_install_name}: {e}")
+                logger.warning("Could not resolve local dependency %s: %s", package_install_name, e)
         else:
             deps_to_add.append(f"{package_install_name}=={version}")
         return ProcessedPackage(
@@ -238,9 +240,7 @@ class DependencyDeconstructor:
                 self.local_packages_base_path / mp.core.constants.REPO_PACKAGES_CONFIG[INTEGRATION_TESTING]
             )
             if not integration_testing_version_dir.is_dir():
-                rich.print(
-                    f"[yellow]Warning:[/] integration_testing directory not found at {integration_testing_version_dir}"
-                )
+                logger.warning("integration_testing directory not found at %s", integration_testing_version_dir)
             else:
                 it_package_file: Path = _find_package_file(
                     integration_testing_version_dir, f"{INTEGRATION_TESTING}-{version}"

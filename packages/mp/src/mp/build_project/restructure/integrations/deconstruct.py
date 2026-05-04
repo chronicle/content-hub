@@ -25,11 +25,11 @@ from __future__ import annotations
 import dataclasses
 import datetime
 import io
+import logging
 import shutil
 import tomllib
 from typing import TYPE_CHECKING, Any, TypeAlias
 
-import rich
 import toml
 
 import mp.core.constants
@@ -63,6 +63,9 @@ if TYPE_CHECKING:
     from mp.core.data_models.integrations.mapping_rules.metadata import NonBuiltMappingRule
 
 _ValidMetadata: TypeAlias = ActionMetadata | ConnectorMetadata | JobMetadata | ActionWidgetMetadata
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def _update_pyproject_from_integration_meta(
@@ -105,7 +108,7 @@ class DeconstructIntegration:
         mp.core.unix.init_python_project_if_not_exists(self.out_path)
         self.update_pyproject(placeholders=result.placeholders)
 
-        rich.print(f"Adding dependencies to {mp.core.constants.PROJECT_FILE}")
+        logger.info("Adding dependencies to %s", mp.core.constants.PROJECT_FILE)
         try:
             mp.core.unix.add_dependencies_to_toml(
                 project_path=self.out_path,
@@ -114,7 +117,7 @@ class DeconstructIntegration:
             )
 
         except mp.core.unix.FatalCommandError as e:
-            rich.print(f"Failed to install dependencies: {e}")
+            logger.warning("Failed to install dependencies: %s", e)
 
     def update_pyproject(self, placeholders: Dependencies | None = None) -> None:
         """Update an integration's pyproject.toml file from its definition file."""

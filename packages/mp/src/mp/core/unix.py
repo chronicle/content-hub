@@ -16,13 +16,12 @@
 
 from __future__ import annotations
 
+import logging
 import pathlib
 import re
 import subprocess as sp  # noqa: S404
 import sys
 from typing import IO, TYPE_CHECKING
-
-import rich
 
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.core.utils import is_windows
@@ -34,6 +33,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 COMMAND_ERR_MSG: str = "Error happened while executing a command: {0}"
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class FatalCommandError(FatalValidationError):
@@ -75,6 +77,8 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
     ]
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Compiling dependencies for project %s to %s", project_path, requirements_path)
+    logger.debug("Running command: %s", command)
 
     try:
         sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
@@ -98,6 +102,7 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
         FatalCommandError: if a pip command fails.
 
     """
+    logger.debug("Running pip command: %s in %s", command, cwd)
     try:
         sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # noqa: S603
     except sp.CalledProcessError as e:
@@ -107,7 +112,7 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
                 f"[INFO] Ignored safe-to-ignore packages due to Python version "
                 f"incompatibility: {', '.join(ignored_packages)}\n"
             )
-            rich.print(message)
+            logger.info(message)
             return
 
         _handle_pip_no_matching_distribution_error(e)
@@ -176,6 +181,8 @@ def download_wheels_from_requirements(
     ]
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Downloading wheels from %s to %s", requirements_path, dst_path)
+    logger.debug("Running command: %s", command)
 
     try:
         if is_windows():
@@ -321,6 +328,8 @@ def init_python_project(project_path: Path) -> None:
 
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Initializing python project in %s", project_path)
+    logger.debug("Running command: %s", command)
 
     try:
         sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
@@ -375,6 +384,7 @@ def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
         sp.run(chmod_command, check=True)  # noqa: S603
 
     command: list[str] = [script_full_path] + [str(p) for p in test_paths]
+    logger.debug("Running script on paths: %s", command)
 
     result = sp.run(  # noqa: S603
         command,
@@ -408,11 +418,13 @@ def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **
 
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Executing command and capturing output: %s", command)
 
     try:
         process: sp.Popen[bytes] = sp.Popen(command)  # noqa: S603
         for line in _stream_process_output(process):
-            rich.print(str(line))
+            logger.info("%s", line.decode(errors="replace").rstrip())
+
         return process.wait()
 
     except sp.CalledProcessError as e:
@@ -541,6 +553,7 @@ def check_lock_file(project_path: Path) -> None:
 
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Checking lock file consistency: %s", command)
 
     try:
         sp.run(  # noqa: S603

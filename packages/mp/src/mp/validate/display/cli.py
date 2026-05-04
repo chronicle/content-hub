@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from rich import box
@@ -25,6 +26,8 @@ from .constants import ICON_MAP
 
 if TYPE_CHECKING:
     from mp.validate.data_models import ContentType, FullReport, ValidationResults
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class CliDisplay:
@@ -44,7 +47,7 @@ class CliDisplay:
             if not any(full_report.values()):
                 continue
 
-            icon = ICON_MAP[content_type.value]
+            icon: str = ICON_MAP[content_type.value]
 
             self.console.print(Rule(f"[bold magenta]{icon} {content_type.value} Validations"))
 

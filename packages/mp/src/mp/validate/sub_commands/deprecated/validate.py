@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 from typing import TYPE_CHECKING, Annotated
 
-import rich
 import typer
 
 import mp.core.config
@@ -33,6 +33,9 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from mp.core.config import RuntimeParams
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -152,13 +155,13 @@ def validate(  # noqa: PLR0913
         return
 
     if not any([repository, integration, playbook]):
-        typer.echo(ctx.get_help())
+        logger.info(ctx.get_help())
         raise typer.Exit
 
-    rich.print(
-        "[yellow]Note: 'validate' flags are deprecated. "
+    logger.warning(
+        "Note: 'validate' flags are deprecated. "
         "Use 'mp validate integration' or 'mp validate playbook' or mp validate repository "
-        "instead.[/yellow]"
+        "instead."
     )
 
     repositories = ensure_valid_list(repository)

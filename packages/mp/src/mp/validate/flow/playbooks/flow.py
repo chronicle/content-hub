@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-import multiprocessing
+from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import mp.core.config
@@ -111,8 +111,8 @@ def _run_validations(playbooks: Iterable[Path], validation_function: ValidationF
 
     """
     processes: int = mp.core.config.get_processes_number()
-    with multiprocessing.Pool(processes=processes) as pool:
-        results = pool.imap_unordered(validation_function, playbooks)
+    with ThreadPoolExecutor(max_workers=processes) as pool:
+        results = pool.map(validation_function, playbooks)
         validation_outputs: list[ValidationResults] = [r for r in results if not r.is_success]
 
     return validation_outputs

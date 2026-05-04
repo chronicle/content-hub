@@ -14,17 +14,20 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import pathlib
 from typing import Annotated
 
-import rich
 import typer
 
 import mp.core.config
 
 __all__: list[str] = ["config", "config_app"]
 config_app: typer.Typer = typer.Typer(name="config", help="Configure the mp CLI tool.")
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @config_app.callback(invoke_without_command=True)
@@ -101,14 +104,16 @@ def config(
             display_k = f"{k[:4]}{'*' * (len(k) - 4)} (from config)"
             if env_k and k != env_k:
                 display_k += (
-                    f"\n[yellow]Warning: GEMINI_API_KEY environment variable is also set "
+                    f"\nWarning: GEMINI_API_KEY environment variable is also set "
                     f"({env_k[:4]}{'*' * (len(env_k) - 4)}), but the configuration above "
-                    "takes priority.[/yellow]"
+                    "takes priority."
                 )
         elif env_k:
             display_k = f"{env_k[:4]}{'*' * (len(env_k) - 4)} (from GEMINI_API_KEY env var)"
 
-        rich.print(f"Marketplace path: {p}\nNumber of processes: {n}\nGemini concurrency: {c}\nAPI Key: {display_k}")
+        logger.info(
+            "Marketplace path: %s\nNumber of processes: %s\nGemini concurrency: %s\nAPI Key: %s", p, n, c, display_k
+        )
 
 
 def _set_marketplace_path(marketplace_path: str) -> None:

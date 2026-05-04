@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
-
-import rich
 
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.validate.data_models import ContentType, ValidationResults, ValidationTypes, Validator
@@ -25,6 +24,9 @@ from mp.validate.pre_build_validation.playbooks import get_playbooks_pre_build_v
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class PreBuildValidations:
@@ -39,11 +41,12 @@ class PreBuildValidations:
         total_validations = len(validations)
         integration_name = self.validation_path.name
 
-        rich.print(f"[bold blue]Running pre-build validations:[/bold blue] [cyan]{integration_name}[/cyan]...")
+        logger.info("Running pre-build validations: %s...", integration_name)
 
         count: int = 0
         for validator in validations:
             try:
+                logger.debug("Running validator: %s", validator.name)
                 validator.run(self.validation_path)
                 count += 1
             except NonFatalValidationError as e:
@@ -51,17 +54,19 @@ class PreBuildValidations:
 
             except FatalValidationError as e:
                 self._handle_fatal_error(validator.name, str(e))
-                rich.print(
-                    f"[bold red]STOPPED | "
-                    f"Integration: {integration_name} | "
-                    f"Reason: Fatal validation failed {validator.name}[/bold red] "
+                logger.exception(
+                    "STOPPED | Integration: %s | Reason: Fatal validation failed %s ",
+                    integration_name,
+                    validator.name,
                 )
                 return
 
-        rich.print(
-            f"[yellow]Integration: {integration_name}[/yellow] | "
-            f"Passed: {count} | "
-            f"Executed: {count} / {total_validations} validations"
+        logger.info(
+            "Integration: %s | Passed: %s | Executed: %s / %s validations",
+            integration_name,
+            count,
+            count,
+            total_validations,
         )
 
     def _handle_fatal_error(self, validation_name: str, error_msg: str) -> None:

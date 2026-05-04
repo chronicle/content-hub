@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import pathlib
 import shutil
 import subprocess  # noqa: S404
@@ -24,6 +25,7 @@ import typer
 from mp.core import constants
 
 GIT_PATH: str = shutil.which("git") or "git"
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def get_git_repo_root(path: pathlib.Path) -> pathlib.Path:
@@ -179,6 +181,6 @@ def remove_git_worktree(temp_dir: pathlib.Path, repo_root: pathlib.Path) -> None
             check=True,
             capture_output=True,
         )
-    except subprocess.CalledProcessError as e:
-        typer.echo(f"Warning: Failed to remove Git worktree {temp_dir}: {e.stderr.decode()}", err=True)
+    except subprocess.CalledProcessError:
+        logger.exception("Failed to remove Git worktree %s", temp_dir)
         shutil.rmtree(temp_dir, ignore_errors=True)

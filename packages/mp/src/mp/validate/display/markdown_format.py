@@ -15,10 +15,9 @@
 from __future__ import annotations
 
 import itertools
+import logging
 import pathlib
 from typing import TYPE_CHECKING
-
-from rich.console import Console
 
 from .constants import ICON_MAP
 
@@ -27,11 +26,12 @@ if TYPE_CHECKING:
 
     from mp.validate.data_models import ContentType, FullReport, ValidationReport, ValidationResults
 
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 class MarkdownFormat:
     def __init__(self, validation_results: dict[ContentType, FullReport]) -> None:
         self.validation_results = validation_results
-        self.console: Console = Console()
 
     def display(self) -> None:
         """Generate a Markdown file with validation report tables."""
@@ -55,8 +55,8 @@ class MarkdownFormat:
             markdown_content: str = "".join(markdown_content_list)
             _save_report_file(markdown_content, output_filename="validation_report.md")
 
-        except Exception as e:  # noqa: BLE001
-            self.console.print(f"❌ Error generating report: {e}")
+        except Exception:
+            logger.exception("❌ Error generating report")
 
 
 def _has_issues_to_display(full_report: FullReport) -> bool:

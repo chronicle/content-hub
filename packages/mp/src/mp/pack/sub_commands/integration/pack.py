@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path  # noqa: TC003
 from typing import Annotated
 
@@ -21,6 +22,8 @@ import typer
 
 from mp.pack.flow.integrations.flow import pack_integration as flow_pack_integration
 from mp.telemetry import track_command
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 app: typer.Typer = typer.Typer()
 
@@ -87,5 +90,5 @@ def pack_integration(
             interactive=interactive,
         )
     except Exception as e:
-        typer.echo(f"Error: {e}", err=True)
+        logger.exception("Error occurred during integration packing")
         raise typer.Exit(code=1) from e

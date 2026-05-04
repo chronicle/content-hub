@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated
 
@@ -27,6 +28,8 @@ from mp.telemetry import track_command
 
 if TYPE_CHECKING:
     from mp.core.config import RuntimeParams
+
+logger = logging.getLogger(__name__)
 
 app: typer.Typer = typer.Typer()
 
@@ -117,6 +120,14 @@ def build_playbook(  # noqa: PLR0913
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
+    logger.debug(
+        "Starting build_playbook command with parameters: playbooks=%s, src=%s, dst=%s, deconstruct=%s",
+        playbooks,
+        src,
+        dst,
+        deconstruct,
+    )
+
     params: BuildParams = BuildParams(
         playbooks=playbooks,
         deconstruct=deconstruct,
@@ -131,6 +142,7 @@ def build_playbook(  # noqa: PLR0913
 
     try:
         if playbooks:
+            logger.debug("Dispatching to build_playbooks flow")
             build_playbooks(playbooks=playbooks, repositories=[], src=src, dst=dst, deconstruct=deconstruct)
     finally:
         mp.core.config.clear_custom_src()

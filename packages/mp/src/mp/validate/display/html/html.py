@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import pathlib
 import tempfile
 import webbrowser
@@ -27,6 +28,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.validate.data_models import ContentType, FullReport
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ReportStatistics(NamedTuple):
@@ -49,14 +52,14 @@ class HtmlFormat:
             temp_report_path: Path
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html", encoding="utf-8") as temp_file:
                 temp_file.write(html_content)
-                temp_report_path: Path = pathlib.Path(temp_file.name)
+                temp_report_path = pathlib.Path(temp_file.name)
 
             resolved_temp_path: Path = temp_report_path.resolve()
             self.console.print(f"📂 Report available at 👉: {resolved_temp_path.as_uri()}")
             webbrowser.open(resolved_temp_path.as_uri())
 
-        except Exception as e:  # noqa: BLE001
-            self.console.print(f"❌  Error generating report: {e.args}")
+        except Exception:
+            logger.exception("❌ Error generating report")
 
     def _generate_validation_report_html(self, template_name: str = "html_report/report.html") -> str:
         template_dir = pathlib.Path(__file__).parent.resolve() / "templates"

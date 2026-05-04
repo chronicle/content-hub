@@ -16,19 +16,22 @@ from __future__ import annotations
 
 import dataclasses
 import importlib.metadata
+import logging
 import threading
 import tomllib
 from contextlib import suppress
 from typing import Any
 
 import requests
-import rich
 import typer
 from packaging.version import InvalidVersion
 from packaging.version import parse as parse_version
 
 PYPROJECT_URL: str = "https://raw.githubusercontent.com/chronicle/content-hub/main/packages/mp/pyproject.toml"
 TIMEOUT_SECONDS: float = 2.0
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class UpdateChecker:
@@ -82,11 +85,11 @@ class UpdateChecker:
 def _print_version_warning(remote_version: str) -> None:
     current_version: str | None = get_mp_version()
     message: str = (
-        f"\n[bold yellow]WARNING:[/bold yellow] A newer version of mp "
+        f"WARNING: A newer version of mp "
         f"({current_version} -> {remote_version}) is available.\n"
         f"Run 'mp self update' to update.\n"
     )
-    rich.print(message)
+    logger.warning(message)
 
 
 def print_mp_version(*, value: bool) -> None:
@@ -98,7 +101,7 @@ def print_mp_version(*, value: bool) -> None:
     """
     if value:
         version: str | None = get_mp_version()
-        rich.print(f"mp {version}")
+        logger.info("mp %s", version)
         raise typer.Exit
 
 

@@ -14,16 +14,18 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import questionary
-import typer
 from questionary import Choice
 
 from mp.core import constants
 
 if TYPE_CHECKING:
     import pathlib
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def discover_components(
@@ -97,7 +99,7 @@ def delete_unselected_components(
             if script and script.exists():
                 script.unlink(missing_ok=True)
 
-            typer.echo(f"Removed unselected component: {meta.stem}")
+            logger.info("Removed unselected component: %s", meta.stem)
 
 
 def interactive_component_selection(built_dir: pathlib.Path) -> None:
@@ -121,7 +123,7 @@ def interactive_component_selection(built_dir: pathlib.Path) -> None:
     ).ask()
 
     if not selected_values:
-        typer.echo("No components selected or cancelled. Including all components.")
+        logger.info("No components selected or cancelled. Including all components.")
         return
 
     selected_files: set[pathlib.Path] = set()

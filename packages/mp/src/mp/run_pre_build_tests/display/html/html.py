@@ -15,13 +15,13 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import pathlib
 import tempfile
 import webbrowser
 from typing import TYPE_CHECKING
 
 import jinja2
-from rich.console import Console
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,10 +31,12 @@ if TYPE_CHECKING:
     from mp.run_pre_build_tests.process_test_output import IntegrationTestResults
 
 
+logger: logging.Logger = logging.getLogger(__name__)
+
+
 class HtmlFormat:
     def __init__(self, integration_results_list: list[IntegrationTestResults]) -> None:
         self.integration_results_list: list[IntegrationTestResults] = integration_results_list
-        self.console: Console = Console()
 
     def display(self) -> None:
         """Generate an HTML report for integration test results."""
@@ -46,11 +48,11 @@ class HtmlFormat:
                 report_path: Path = pathlib.Path(temp_file.name)
 
             resolved_path: Path = report_path.resolve()
-            self.console.print(f"📂 Report available at 👉: {resolved_path.as_uri()}")
+            logger.info("📂 Report available at 👉: %s", resolved_path.as_uri())
             webbrowser.open(resolved_path.as_uri())
 
-        except Exception as e:  # noqa: BLE001
-            self.console.print(f"❌ Error generating report: {e}")
+        except Exception:
+            logger.exception("❌ Error generating report")
 
     def _generate_validation_report_html(
         self,

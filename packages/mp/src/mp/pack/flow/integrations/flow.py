@@ -14,11 +14,10 @@
 
 from __future__ import annotations
 
+import logging
 import pathlib
 import tempfile
 from typing import NamedTuple
-
-import typer
 
 from mp.core.file_utils import create_or_get_out_dir
 
@@ -27,6 +26,8 @@ from .build import build_integration_for_pack, set_is_custom
 from .components import interactive_component_selection
 from .git import create_git_worktree, get_git_repo_root, remove_git_worktree
 from .utils import create_zip, find_integration_src_path, is_tty
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class GitWorktreeContext(NamedTuple):
@@ -77,7 +78,7 @@ class IntegrationPacker:
             self._build_and_process_integration(build_src)
         finally:
             if worktree_ctx:
-                typer.echo("Cleaning up temporary Git worktree...")
+                logger.debug("Cleaning up temporary Git worktree...")
                 remove_git_worktree(worktree_ctx.path, repo_root)
                 worktree_ctx.context.cleanup()
 
@@ -95,13 +96,13 @@ class IntegrationPacker:
             GitWorktreeContext: The worktree context, path, and build source path.
 
         """
-        typer.echo(f"Fetching version {version} via Git...")
+        logger.info("Fetching version %s via Git...", version)
         temp_ctx = tempfile.TemporaryDirectory(prefix=f"mp_worktree_{self.integration_name}_{version}_")
         temp_path = pathlib.Path(temp_ctx.name)
         create_git_worktree(src_path, version, temp_path)
         rel_path: pathlib.Path = src_path.relative_to(repo_root)
         build_src: pathlib.Path = temp_path / rel_path
-        typer.echo(f"Checked out version {version} to temporary worktree.")
+        logger.info("Checked out version %s to temporary worktree.", version)
         return GitWorktreeContext(temp_ctx, temp_path, build_src)
 
     def _build_and_process_integration(self, build_src: pathlib.Path) -> None:
@@ -114,7 +115,7 @@ class IntegrationPacker:
             RuntimeError: If an integration def file is not found.
 
         """
-        typer.echo(f"Building integration '{self.integration_name}'...")
+        logger.info("Building integration '%s'...", self.integration_name)
         with tempfile.TemporaryDirectory(prefix=f"mp_pack_{self.integration_name}_") as temp_build_dir:
             temp_build_path: pathlib.Path = pathlib.Path(temp_build_dir)
 
@@ -131,14 +132,14 @@ class IntegrationPacker:
             set_is_custom(def_files[0])
 
             if self.config.beta_name:
-                typer.echo(f"Applying custom beta identifier '{self.config.beta_name}'...")
+                logger.info("Applying custom beta identifier '%s'...", self.config.beta_name)
                 apply_beta_modifications(built_dir, identifier, self.config.beta_name, self.config.version)
                 identifier = self.config.beta_name
 
             if self.config.interactive and is_tty():
                 interactive_component_selection(built_dir)
             elif self.config.interactive:
-                typer.echo("Non-TTY environment detected. Skipping interactive component selection (including all).")
+                logger.info("Non-TTY environment detected. Skipping interactive component selection (including all).")
 
             zip_dst = self.config.zip_dst
             if zip_dst is None:
@@ -146,7 +147,7 @@ class IntegrationPacker:
             zip_dst.mkdir(parents=True, exist_ok=True)
 
             zip_path: pathlib.Path = create_zip(built_dir, identifier, zip_dst)
-            typer.echo(f"Successfully created integration zip: {zip_path}")
+            logger.info("Successfully created integration zip: %s", zip_path)
 
 
 def pack_integration(

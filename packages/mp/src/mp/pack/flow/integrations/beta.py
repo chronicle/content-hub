@@ -15,16 +15,17 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import shutil
 from typing import TYPE_CHECKING, Any
-
-import typer
 
 from mp.core import constants
 
 if TYPE_CHECKING:
     import pathlib
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def apply_beta_modifications(built_dir: pathlib.Path, old_id: str, beta_name: str, version: str | None) -> None:
@@ -103,8 +104,8 @@ def update_component_def(file_path: pathlib.Path, new_id: str, *, is_connector: 
             f.seek(0)
             json.dump(data, f, indent=4)
             f.truncate()
-    except (OSError, json.JSONDecodeError) as e:
-        typer.echo(f"Warning: Failed to update component def {file_path}: {e}", err=True)
+    except (OSError, json.JSONDecodeError):
+        logger.exception("Failed to update component def %s", file_path)
 
 
 def split_camel_case(text: str) -> str:

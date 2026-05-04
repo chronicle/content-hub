@@ -15,14 +15,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import TYPE_CHECKING, Any
-
-import typer
 
 from mp.build_project.flow.integrations.flow import build_integrations
 
 if TYPE_CHECKING:
     import pathlib
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def build_integration_for_pack(
@@ -68,4 +69,4 @@ def set_is_custom(def_path: pathlib.Path) -> None:
             json.dump(def_data, f, indent=4)
             f.truncate()
     except (OSError, json.JSONDecodeError) as e:
-        typer.echo(f"Warning: Failed to set IsCustom in {def_path}: {e}", err=True)
+        logger.warning("Failed to set IsCustom in %s: %s", def_path, e)
