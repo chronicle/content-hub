@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING
 import yaml
 
 from TIPCommon.base.job import Job
-from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.rest.soar_api import (
     get_connector_cards,
     get_installed_integrations_of_environment,
@@ -27,20 +26,17 @@ from TIPCommon.rest.soar_api import (
     save_or_update_job,
 )
 
-from ..core.GoogleSecretManagerClient import GoogleSecretManagerClient
-from ..core.GoogleSecretManagerConstants import (
+from ..core.auth import IntegrationParameters, build_auth_params
+from ..core.client import GoogleSecretManagerClient
+from ..core.constants import (
     ANY_INTEGRATION_FILTER_VALUE,
     CONNECTORS_KEY,
     DEFAULT_SECRET_VERSION,
     INTEGRATION_INSTANCES_KEY,
     JOBS_KEY,
-    PROJECT_ID_PARAM,
-    SERVICE_ACCOUNT_JSON_PARAM,
     SYNC_CREDENTIAL_JOB_SCRIPT_NAME,
-    VERIFY_SSL_PARAM,
-    WORKLOAD_IDENTITY_EMAIL_PARAM,
 )
-from ..core.GoogleSecretManagerExceptions import (
+from ..core.exceptions import (
     InvalidConfigurationError,
     JobFetchError,
     JobSaveError,
@@ -81,38 +77,12 @@ class SyncIntegrationCredentialJob(Job):
             GoogleSecretManagerClient: The initialized client.
 
         """
-        service_account_json = extract_configuration_param(
-            self.soar_job,
-            param_name=SERVICE_ACCOUNT_JSON_PARAM,
-            is_mandatory=False,
-            print_value=False,
-        )
-        project_id = extract_configuration_param(
-            self.soar_job,
-            param_name=PROJECT_ID_PARAM,
-            is_mandatory=False,
-            print_value=True,
-        )
-        workload_identity_email = extract_configuration_param(
-            self.soar_job,
-            param_name=WORKLOAD_IDENTITY_EMAIL_PARAM,
-            is_mandatory=False,
-            print_value=True,
-        )
-        verify_ssl = extract_configuration_param(
-            self.soar_job,
-            param_name=VERIFY_SSL_PARAM,
-            default_value=True,
-            input_type=bool,
-            is_mandatory=True,
-            print_value=True,
-        )
+        auth_params: IntegrationParameters = build_auth_params(self.soar_job)
 
         self.secret_manager_client = GoogleSecretManagerClient(
-            service_account_json=service_account_json,
-            project_id=project_id,
-            workload_identity_email=workload_identity_email,
-            verify_ssl=verify_ssl,
+            service_account_json=auth_params.service_account_json,
+            project_id=auth_params.project_id,
+            workload_identity_email=auth_params.workload_identity_email,
         )
 
         return self.secret_manager_client
@@ -157,15 +127,21 @@ class SyncIntegrationCredentialJob(Job):
 
         """
         if ":" in mapped_value:
+            secret_id: str
+            explicit_version: str
             secret_id, explicit_version = mapped_value.split(":", 1)
             self.logger.info(
                 f"Secret ID '{secret_id}': Using explicitly provided version '{explicit_version}'."
             )
             return secret_id, explicit_version
 
-        secret_id = mapped_value
+        secret_id: str = mapped_value
         if self.secret_manager_client:
-            resolved_version = self.secret_manager_client.resolve_latest_enabled_version(secret_id)
+            resolved_version: str = (
+                self.secret_manager_client.resolve_latest_enabled_version(
+                    secret_id,
+                )
+            )
         else:
             resolved_version = DEFAULT_SECRET_VERSION
 
@@ -306,7 +282,7 @@ class SyncIntegrationCredentialJob(Job):
 
         """
         for param_name, mapped_value in param_mapping.items():
-            secret_id = str(mapped_value)
+            secret_id: str = str(mapped_value)
             try:
                 secret_id, version_id = self._resolve_secret_and_version(mapped_value)
                 if self.secret_manager_client is not None:
@@ -437,7 +413,7 @@ class SyncIntegrationCredentialJob(Job):
 
         """
         for param_name, mapped_value in param_mapping.items():
-            secret_id = str(mapped_value)
+            secret_id: str = str(mapped_value)
             try:
                 secret_id, version_id = self._resolve_secret_and_version(mapped_value)
                 secret_value: str = self.secret_manager_client.get_secret_value(
@@ -560,6 +536,8 @@ class SyncIntegrationCredentialJob(Job):
         if resolved is None:
             return None
 
+        job_data: SingleJson
+        parameters: list[SingleJson]
         job_data, parameters = resolved
 
         param_index: SingleJson = self._build_param_index(parameters)
@@ -721,7 +699,7 @@ class SyncIntegrationCredentialJob(Job):
             The number of parameters successfully updated.
 
         """
-        updated_count = 0
+        updated_count: int = 0
         for param_name, mapped_value in param_mapping.items():
             if param_name not in param_index:
                 self.logger.error(
@@ -730,7 +708,7 @@ class SyncIntegrationCredentialJob(Job):
                 )
                 continue
 
-            secret_id = str(mapped_value)
+            secret_id: str = str(mapped_value)
             try:
                 secret_id, version_id = self._resolve_secret_and_version(mapped_value)
                 secret_value: str = self.secret_manager_client.get_secret_value(
@@ -741,7 +719,8 @@ class SyncIntegrationCredentialJob(Job):
                 parameters[idx]["value"] = secret_value
                 updated_count += 1
                 self.logger.info(
-                    f"Set '{param_name}' on job '{job_name}' from secret '{secret_id}' version '{version_id}'."
+                    f"Set '{param_name}' on job '{job_name}' "
+                    f"from secret '{secret_id}' version '{version_id}'."
                 )
             except SecretAccessError:
                 raise

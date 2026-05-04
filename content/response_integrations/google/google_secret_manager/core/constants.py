@@ -15,31 +15,31 @@
 """Constants for the Google Secret Manager integration."""
 
 # Integration identifier
-INTEGRATION_NAME = "Google Secret Manager"
+INTEGRATION_IDENTIFIER: str = "GoogleSecretManager"
+INTEGRATION_NAME: str = "Google Secret Manager"
 
 # Script names
-PING_SCRIPT_NAME = "Ping"
-SYNC_CREDENTIAL_JOB_SCRIPT_NAME = (
+PING_SCRIPT_NAME: str = "Ping"
+SYNC_CREDENTIAL_JOB_SCRIPT_NAME: str = (
     "Sync Integration Credential Job"
 )
 
 # Integration configuration parameter names
-SERVICE_ACCOUNT_JSON_PARAM = "Service Account JSON"
-PROJECT_ID_PARAM = "Project ID"
-WORKLOAD_IDENTITY_EMAIL_PARAM = "Workload Identity Email"
-VERIFY_SSL_PARAM = "Verify SSL"
+SERVICE_ACCOUNT_JSON_PARAM: str = "Service Account JSON"
+PROJECT_ID_PARAM: str = "Project ID"
+WORKLOAD_IDENTITY_EMAIL_PARAM: str = "Workload Identity Email"
 
 # Secret Manager API defaults
-DEFAULT_SECRET_VERSION = "latest"
+DEFAULT_SECRET_VERSION: str = "latest"
 
 # Job parameter names
-ENVIRONMENT_NAME_PARAM = "Environment Name"
-CREDENTIAL_MAPPING_PARAM = "Credential Mapping"
+ENVIRONMENT_NAME_PARAM: str = "Environment Name"
+CREDENTIAL_MAPPING_PARAM: str = "Credential Mapping"
 
 # Credential mapping JSON keys
-INTEGRATION_INSTANCES_KEY = "integration_instances"
-CONNECTORS_KEY = "connectors"
-JOBS_KEY = "jobs"
+INTEGRATION_INSTANCES_KEY: str = "integration_instances"
+CONNECTORS_KEY: str = "connectors"
+JOBS_KEY: str = "jobs"
 
 # API Filter Values
 ANY_INTEGRATION_FILTER_VALUE: str = "-"

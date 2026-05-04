@@ -11,20 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from __future__ import annotations
-
-import pathlib
-
-from integration_testing.common import get_def_file_content
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from TIPCommon.types import SingleJson
-
-INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
-CONFIG_PATH: pathlib.Path = pathlib.Path.joinpath(
-    INTEGRATION_PATH, "tests", "config.json",
-)
-CONFIG: SingleJson = get_def_file_content(CONFIG_PATH)

@@ -28,6 +28,7 @@ class InvalidConfigurationError(GoogleSecretManagerError):
         - Malformed Service Account JSON.
         - Missing or unresolvable Project ID.
         - Invalid Credential Mapping JSON supplied to the sync job.
+
     """
 
 

@@ -22,34 +22,34 @@ from google.cloud import secretmanager
 from google.oauth2 import service_account
 import yaml
 
-from .GoogleSecretManagerExceptions import (
+from .exceptions import (
     ConnectivityError,
     GoogleSecretManagerError,
     InvalidConfigurationError,
     SecretAccessError,
 )
-from .GoogleSecretManagerConstants import (
+from .constants import (
     DEFAULT_SECRET_VERSION,
 )
 
 if TYPE_CHECKING:
     from google.cloud.secretmanager_v1.services.secret_manager_service import (
-        SecretManagerServiceClient
+        SecretManagerServiceClient,
     )
+    from google.cloud.secretmanager_v1.types import AccessSecretVersionResponse
 
 
 class GoogleSecretManagerClient:
     """Client for interacting with Google Secret Manager."""
 
     # OAuth2 scope required to access the Secret Manager API.
-    _SECRET_MANAGER_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
+    _SECRET_MANAGER_SCOPE: str = "https://www.googleapis.com/auth/cloud-platform"
 
     def __init__(
         self,
         service_account_json: str | None = None,
         project_id: str | None = None,
         workload_identity_email: str | None = None,
-        verify_ssl: bool = True,
     ) -> None:
         """Initialize the Google Secret Manager Client.
 
@@ -64,11 +64,15 @@ class GoogleSecretManagerClient:
             project_id (str | None): The Google Cloud Project ID.
             workload_identity_email (str | None): The service account email to
                 impersonate when using Workload Identity / ADC authentication.
-            verify_ssl (bool): Whether to verify the SSL certificate of the API.
         """
-        self.verify_ssl = verify_ssl
+        self.project_id: str | None
         if workload_identity_email:
-            self.credentials = self._build_impersonated_credentials(workload_identity_email)
+            self.credentials: (
+                service_account.Credentials
+                | google.auth.impersonated_credentials.Credentials
+            ) = (
+                self._build_impersonated_credentials(workload_identity_email)
+            )
             self.project_id = project_id
         elif service_account_json:
             self.credentials, self.project_id = self._build_sa_credentials(
@@ -111,14 +115,16 @@ class GoogleSecretManagerClient:
             InvalidConfigurationError: If the JSON is malformed.
         """
         try:
-            info = yaml.safe_load(service_account_json)
+            info: dict = yaml.safe_load(service_account_json)
         except yaml.YAMLError as e:
             raise InvalidConfigurationError(
                 f"Invalid Service Account YAML/JSON provided: {e}"
             ) from e
 
-        credentials = service_account.Credentials.from_service_account_info(info)
-        resolved_project_id = project_id or info.get("project_id")
+        credentials: service_account.Credentials = (
+            service_account.Credentials.from_service_account_info(info)
+        )
+        resolved_project_id: str | None = project_id or info.get("project_id")
 
         return credentials, resolved_project_id
 
@@ -159,7 +165,7 @@ class GoogleSecretManagerClient:
         Returns:
             bool: True if connectivity is successful.
         """
-        parent = f"projects/{self.project_id}"
+        parent: str = f"projects/{self.project_id}"
 
         try:
             results = self._service_client.list_secrets(
@@ -178,27 +184,45 @@ class GoogleSecretManagerClient:
     def resolve_latest_enabled_version(self, secret_id: str) -> str:
         """Resolve the latest enabled version for a given secret.
 
+        The ``list_secret_versions`` API does not guarantee any particular
+        ordering, so we iterate **all** versions and pick the ENABLED one
+        with the highest numeric version ID (version numbers are
+        monotonically increasing integers in Secret Manager).
+
         Args:
             secret_id (str): The ID of the secret.
 
         Returns:
-            str: The version ID of the latest enabled version, or DEFAULT_SECRET_VERSION if none
-                enabled.
+            str: The version ID of the latest enabled version, or
+                DEFAULT_SECRET_VERSION if none are enabled.
         """
-        parent = f"projects/{self.project_id}/secrets/{secret_id}"
+        parent: str = f"projects/{self.project_id}/secrets/{secret_id}"
 
         try:
-            results = self._service_client.list_secret_versions(
+            latest_version_number: int = -1
+            latest_version_id: str | None = None
+
+            for version in self._service_client.list_secret_versions(
                 request={"parent": parent}
-            )
-            for version in results:
-                if version.state == secretmanager.SecretVersion.State.ENABLED:
-                    return version.name.split("/")[-1]
+            ):
+                if version.state != secretmanager.SecretVersion.State.ENABLED:
+                    continue
+                version_id: str = version.name.split("/")[-1]
+                try:
+                    version_number: int = int(version_id)
+                except ValueError:
+                    continue
+                if version_number > latest_version_number:
+                    latest_version_number = version_number
+                    latest_version_id = version_id
+
+            if latest_version_id is not None:
+                return latest_version_id
 
         except Exception:
-            # If we fail to list versions (e.g., permission issue), log or pass.
-            # We fallback to DEFAULT_SECRET_VERSION, and the subsequent
-            # get_secret_value call will crash with a proper SecretAccessError.
+            # If we fail to list versions (e.g., permission issue), fall
+            # through.  The subsequent get_secret_value call will raise a
+            # proper SecretAccessError.
             pass
 
         return DEFAULT_SECRET_VERSION
@@ -213,13 +237,23 @@ class GoogleSecretManagerClient:
         Returns:
             str: The secret payload data.
         """
-        name = f"projects/{self.project_id}/secrets/{secret_id}/versions/{version_id}"
+        name: str = f"projects/{self.project_id}/secrets/{secret_id}/versions/{version_id}"
 
         try:
-            response = self._service_client.access_secret_version(request={"name": name})
+            response: AccessSecretVersionResponse = (
+                self._service_client.access_secret_version(request={"name": name})
+            )
         except Exception as e:
             raise SecretAccessError(
                 f"Failed to access secret '{secret_id}' version '{version_id}': {e}"
             ) from e
 
-        return response.payload.data.decode("UTF-8")
+        payload: bytes = response.payload.data
+        try:
+            return payload.decode("UTF-8")
+        except UnicodeDecodeError as e:
+            raise SecretAccessError(
+                f"Secret '{secret_id}' version '{version_id}' contains non-UTF-8 "
+                f"data ({len(payload)} bytes). This integration only supports "
+                f"text-based secrets (UTF-8 encoded)."
+            ) from e
