@@ -672,7 +672,7 @@ class SiemplifyParamikoSSHVendor:
         if protocol_version is None or protocol_version == 2:
             channel.set_environment_variable(name="GIT_PROTOCOL", value="version=2")
 
-        self.siemplify_logger.error(f"Successfully connected to {host}")
+        self.siemplify_logger.info(f"Successfully connected to {host}")
 
         channel.exec_command(command)
 
