@@ -20,9 +20,7 @@ INTEGRATION_NAME: str = "Google Secret Manager"
 
 # Script names
 PING_SCRIPT_NAME: str = "Ping"
-SYNC_CREDENTIAL_JOB_SCRIPT_NAME: str = (
-    "Sync Integration Credential Job"
-)
+SYNC_CREDENTIAL_JOB_SCRIPT_NAME: str = "Sync Integration Credential Job"
 
 # Integration configuration parameter names
 SERVICE_ACCOUNT_JSON_PARAM: str = "Service Account JSON"

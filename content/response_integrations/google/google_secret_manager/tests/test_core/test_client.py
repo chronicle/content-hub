@@ -158,9 +158,7 @@ class TestConnectivity:
         mock_sa_credentials: MagicMock,
     ) -> None:
         """Raises ConnectivityError when API call fails."""
-        mock_sm_service_client.list_secrets.side_effect = (
-            Exception("Network error")
-        )
+        mock_sm_service_client.list_secrets.side_effect = Exception("Network error")
         sa_json: str = make_sa_json()
 
         client = GoogleSecretManagerClient(
@@ -195,8 +193,8 @@ class TestGetSecretValue:
         mock_sa_credentials: MagicMock,
     ) -> None:
         """Returns decoded UTF-8 payload."""
-        mock_sm_service_client.access_secret_version.return_value = (
-            make_access_response(b"my-password-123")
+        mock_sm_service_client.access_secret_version.return_value = make_access_response(
+            b"my-password-123"
         )
         client = self._make_client(mock_sa_credentials)
 
@@ -210,8 +208,8 @@ class TestGetSecretValue:
         mock_sa_credentials: MagicMock,
     ) -> None:
         """Raises SecretAccessError for binary / non-UTF-8 data."""
-        mock_sm_service_client.access_secret_version.return_value = (
-            make_access_response(b"\x80\x81\x82\xff")
+        mock_sm_service_client.access_secret_version.return_value = make_access_response(
+            b"\x80\x81\x82\xff"
         )
         client = self._make_client(mock_sa_credentials)
 
@@ -224,9 +222,7 @@ class TestGetSecretValue:
         mock_sa_credentials: MagicMock,
     ) -> None:
         """Raises SecretAccessError when the API call fails."""
-        mock_sm_service_client.access_secret_version.side_effect = (
-            Exception("Permission denied")
-        )
+        mock_sm_service_client.access_secret_version.side_effect = Exception("Permission denied")
         client = self._make_client(mock_sa_credentials)
 
         with pytest.raises(
@@ -269,9 +265,7 @@ class TestResolveLatestEnabledVersion:
             make_secret_version(version_id="1", state=_ENABLED),
             make_secret_version(version_id="5", state=_ENABLED),
         ]
-        mock_sm_service_client.list_secret_versions.return_value = (
-            iter(versions)
-        )
+        mock_sm_service_client.list_secret_versions.return_value = iter(versions)
         client = self._make_client(mock_sa_credentials)
 
         result: str = client.resolve_latest_enabled_version("my-secret")
@@ -290,9 +284,7 @@ class TestResolveLatestEnabledVersion:
             make_secret_version(version_id="5", state=_ENABLED),
             make_secret_version(version_id="2", state=_ENABLED),
         ]
-        mock_sm_service_client.list_secret_versions.return_value = (
-            iter(versions)
-        )
+        mock_sm_service_client.list_secret_versions.return_value = iter(versions)
         client = self._make_client(mock_sa_credentials)
 
         result: str = client.resolve_latest_enabled_version("my-secret")
@@ -309,9 +301,7 @@ class TestResolveLatestEnabledVersion:
             make_secret_version(version_id="1", state=_DISABLED),
             make_secret_version(version_id="2", state=_DESTROYED),
         ]
-        mock_sm_service_client.list_secret_versions.return_value = (
-            iter(versions)
-        )
+        mock_sm_service_client.list_secret_versions.return_value = iter(versions)
         client = self._make_client(mock_sa_credentials)
 
         result: str = client.resolve_latest_enabled_version("my-secret")
@@ -324,9 +314,7 @@ class TestResolveLatestEnabledVersion:
         mock_sa_credentials: MagicMock,
     ) -> None:
         """Falls back when the secret has no versions at all."""
-        mock_sm_service_client.list_secret_versions.return_value = (
-            iter([])
-        )
+        mock_sm_service_client.list_secret_versions.return_value = iter([])
         client = self._make_client(mock_sa_credentials)
 
         result: str = client.resolve_latest_enabled_version("my-secret")
@@ -339,9 +327,7 @@ class TestResolveLatestEnabledVersion:
         mock_sa_credentials: MagicMock,
     ) -> None:
         """Falls back to DEFAULT on API failure instead of crashing."""
-        mock_sm_service_client.list_secret_versions.side_effect = (
-            Exception("Permission denied")
-        )
+        mock_sm_service_client.list_secret_versions.side_effect = Exception("Permission denied")
         client = self._make_client(mock_sa_credentials)
 
         result: str = client.resolve_latest_enabled_version("my-secret")

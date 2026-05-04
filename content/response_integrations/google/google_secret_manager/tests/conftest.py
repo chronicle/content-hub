@@ -44,8 +44,7 @@ def mock_sa_credentials() -> MagicMock:
     Returns the mock credentials object.
     """
     with patch(
-        "google.oauth2.service_account.Credentials"
-        ".from_service_account_info",
+        "google.oauth2.service_account.Credentials.from_service_account_info",
     ) as mock_from_sa:
         mock_creds: MagicMock = MagicMock()
         mock_from_sa.return_value = mock_creds

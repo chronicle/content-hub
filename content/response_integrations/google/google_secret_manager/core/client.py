@@ -68,11 +68,8 @@ class GoogleSecretManagerClient:
         self.project_id: str | None
         if workload_identity_email:
             self.credentials: (
-                service_account.Credentials
-                | google.auth.impersonated_credentials.Credentials
-            ) = (
-                self._build_impersonated_credentials(workload_identity_email)
-            )
+                service_account.Credentials | google.auth.impersonated_credentials.Credentials
+            ) = self._build_impersonated_credentials(workload_identity_email)
             self.project_id = project_id
         elif service_account_json:
             self.credentials, self.project_id = self._build_sa_credentials(
@@ -93,8 +90,8 @@ class GoogleSecretManagerClient:
                 "must always be set explicitly as it cannot be inferred."
             )
 
-        self._service_client: SecretManagerServiceClient = (
-            secretmanager.SecretManagerServiceClient(credentials=self.credentials)
+        self._service_client: SecretManagerServiceClient = secretmanager.SecretManagerServiceClient(
+            credentials=self.credentials
         )
 
     def _build_sa_credentials(
@@ -144,9 +141,7 @@ class GoogleSecretManagerClient:
             InvalidConfigurationError: If ADC cannot be resolved.
         """
         try:
-            source_credentials, _ = google.auth.default(
-                scopes=[self._SECRET_MANAGER_SCOPE]
-            )
+            source_credentials, _ = google.auth.default(scopes=[self._SECRET_MANAGER_SCOPE])
         except google.auth.exceptions.DefaultCredentialsError as e:
             raise InvalidConfigurationError(
                 f"Could not resolve Application Default Credentials for Workload "
@@ -168,18 +163,15 @@ class GoogleSecretManagerClient:
         parent: str = f"projects/{self.project_id}"
 
         try:
-            results = self._service_client.list_secrets(
-                request={"parent": parent, "page_size": 1}
-            )
+            results = self._service_client.list_secrets(request={"parent": parent, "page_size": 1})
             # Attempt to iterate to trigger the API call
             next(iter(results), None)
+
             return True
         except GoogleSecretManagerError:
             raise
         except Exception as e:
-            raise ConnectivityError(
-                f"Failed to connect to Google Secret Manager: {e}"
-            ) from e
+            raise ConnectivityError(f"Failed to connect to Google Secret Manager: {e}") from e
 
     def resolve_latest_enabled_version(self, secret_id: str) -> str:
         """Resolve the latest enabled version for a given secret.
@@ -202,9 +194,7 @@ class GoogleSecretManagerClient:
             latest_version_number: int = -1
             latest_version_id: str | None = None
 
-            for version in self._service_client.list_secret_versions(
-                request={"parent": parent}
-            ):
+            for version in self._service_client.list_secret_versions(request={"parent": parent}):
                 if version.state != secretmanager.SecretVersion.State.ENABLED:
                     continue
                 version_id: str = version.name.split("/")[-1]
@@ -240,20 +230,19 @@ class GoogleSecretManagerClient:
         name: str = f"projects/{self.project_id}/secrets/{secret_id}/versions/{version_id}"
 
         try:
-            response: AccessSecretVersionResponse = (
-                self._service_client.access_secret_version(request={"name": name})
+            response: AccessSecretVersionResponse = self._service_client.access_secret_version(
+                request={"name": name}
             )
         except Exception as e:
-            raise SecretAccessError(
-                f"Failed to access secret '{secret_id}' version '{version_id}': {e}"
-            ) from e
+            raise SecretAccessError(f"Failed to access secret version '{version_id}': {e}") from e
 
         payload: bytes = response.payload.data
         try:
             return payload.decode("UTF-8")
         except UnicodeDecodeError as e:
             raise SecretAccessError(
-                f"Secret '{secret_id}' version '{version_id}' contains non-UTF-8 "
-                f"data ({len(payload)} bytes). This integration only supports "
+                f"Secret version '{version_id}' contains "
+                f"non-UTF-8 data ({len(payload)} bytes). "
+                f"This integration only supports "
                 f"text-based secrets (UTF-8 encoded)."
             ) from e

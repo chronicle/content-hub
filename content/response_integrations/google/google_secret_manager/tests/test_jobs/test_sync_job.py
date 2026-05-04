@@ -54,17 +54,15 @@ def _make_job() -> SyncIntegrationCredentialJob:
 # -------------------------------------------------------------------
 
 
-class TestParseCredentialMapping:
-    """Tests for _parse_credential_mapping."""
+class TestValidateParams:
+    """Tests for _validate_params."""
 
     def test_valid_json(self) -> None:
         """Parses valid JSON credential mapping."""
         job = _make_job()
-        job.params.credential_mapping = (
-            '{"integration_instances": {"inst1": {}}}'
-        )
+        job.params.credential_mapping = '{"integration_instances": {"inst1": {}}}'
 
-        job._parse_credential_mapping()
+        job._validate_params()
 
         assert "integration_instances" in job.credential_mapping
         assert job.credential_mapping["integration_instances"] == {
@@ -74,11 +72,9 @@ class TestParseCredentialMapping:
     def test_valid_yaml(self) -> None:
         """Parses valid YAML credential mapping."""
         job = _make_job()
-        job.params.credential_mapping = (
-            "integration_instances:\n  inst1: {}\n"
-        )
+        job.params.credential_mapping = "integration_instances:\n  inst1: {}\n"
 
-        job._parse_credential_mapping()
+        job._validate_params()
 
         assert "integration_instances" in job.credential_mapping
 
@@ -87,7 +83,7 @@ class TestParseCredentialMapping:
         job = _make_job()
         job.params.credential_mapping = ""
 
-        job._parse_credential_mapping()
+        job._validate_params()
 
         assert job.credential_mapping == {}
 
@@ -100,7 +96,7 @@ class TestParseCredentialMapping:
             InvalidConfigurationError,
             match="Invalid Credential Mapping",
         ):
-            job._parse_credential_mapping()
+            job._validate_params()
 
 
 # -------------------------------------------------------------------
@@ -173,33 +169,30 @@ class TestBuildJobNameLookup:
 
     def test_uses_display_name(self) -> None:
         """Prefers 'displayName' key (1P format)."""
+        job = _make_job()
         instances = [
             {"displayName": "Job A", "id": "1"},
             {"displayName": "Job B", "id": "2"},
         ]
 
-        lookup = SyncIntegrationCredentialJob._build_job_name_lookup(
-            instances,
-        )
+        lookup = job._build_job_name_lookup(instances)
 
         assert lookup["Job A"]["id"] == "1"
         assert lookup["Job B"]["id"] == "2"
 
     def test_falls_back_to_name(self) -> None:
         """Uses 'name' key when 'displayName' is missing (Legacy)."""
+        job = _make_job()
         instances = [{"name": "Legacy Job", "id": "3"}]
 
-        lookup = SyncIntegrationCredentialJob._build_job_name_lookup(
-            instances,
-        )
+        lookup = job._build_job_name_lookup(instances)
 
         assert "Legacy Job" in lookup
 
     def test_empty_list(self) -> None:
         """Returns empty dict for empty input."""
-        lookup = SyncIntegrationCredentialJob._build_job_name_lookup(
-            [],
-        )
+        job = _make_job()
+        lookup = job._build_job_name_lookup([])
 
         assert lookup == {}
 
@@ -209,26 +202,24 @@ class TestBuildParamIndex:
 
     def test_builds_index(self) -> None:
         """Maps param display names to their list indices."""
+        job = _make_job()
         params = [
             {"displayName": "API Key", "value": "x"},
             {"displayName": "Password", "value": "y"},
         ]
 
-        index = SyncIntegrationCredentialJob._build_param_index(
-            params,
-        )
+        index = job._build_param_index(params)
 
         assert index == {"API Key": 0, "Password": 1}
 
     def test_prefers_display_name_over_name(self) -> None:
         """Uses 'displayName' when both keys exist."""
+        job = _make_job()
         params = [
             {"displayName": "Display", "name": "legacy", "value": "v"},
         ]
 
-        index = SyncIntegrationCredentialJob._build_param_index(
-            params,
-        )
+        index = job._build_param_index(params)
 
         assert "Display" in index
         assert "legacy" not in index

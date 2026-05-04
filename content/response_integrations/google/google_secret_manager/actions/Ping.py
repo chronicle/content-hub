@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+from typing import Any
 
 from ..core.base_action import GoogleSecretManagerAction
 from ..core.constants import PING_SCRIPT_NAME
@@ -25,7 +26,7 @@ class PingAction(GoogleSecretManagerAction):
         super().__init__(PING_SCRIPT_NAME)
         self.error_output_message: str = "Failed to connect to the Google Secret Manager server!"
 
-    def _perform_action(self, _=None) -> None:
+    def _perform_action(self, _: Any = None) -> None:
         """Test connectivity to Google Secret Manager."""
         is_connected: bool = self.secret_manager_client.test_connectivity()
 

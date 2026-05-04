@@ -78,9 +78,7 @@ class TestBuildAuthParams:
     def test_connector_extracts_from_parameters(self) -> None:
         """For SiemplifyConnectorExecution, reads from .parameters."""
         mock_connector: MagicMock = MagicMock()
-        mock_connector.__class__.__name__ = (
-            "SiemplifyConnectorExecution"
-        )
+        mock_connector.__class__.__name__ = "SiemplifyConnectorExecution"
         mock_connector.parameters = {
             SERVICE_ACCOUNT_JSON_PARAM: "conn-sa",
             PROJECT_ID_PARAM: "conn-proj",

@@ -49,6 +49,7 @@ def make_sa_json(
 ) -> str:
     """Return a fake Service Account JSON string."""
     info: dict[str, str] = {**_FAKE_SA_INFO, "project_id": project_id}
+
     return json.dumps(info)
 
 
@@ -65,11 +66,9 @@ def make_secret_version(
 ) -> MagicMock:
     """Build a mock ``SecretVersion`` protobuf object."""
     version: MagicMock = MagicMock()
-    version.name = (
-        f"projects/{project_id}/secrets/{secret_id}"
-        f"/versions/{version_id}"
-    )
+    version.name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
     version.state = state
+
     return version
 
 
@@ -84,6 +83,7 @@ def make_access_response(
     """Build a mock ``AccessSecretVersionResponse``."""
     response: MagicMock = MagicMock()
     response.payload.data = payload_data
+
     return response
 
 
@@ -98,6 +98,7 @@ def make_config(
     workload_identity_email: str | None = None,
 ) -> dict[str, Any]:
     """Build an integration config dict for use with set_metadata."""
+
     return {
         "Service Account JSON": sa_json,
         "Project ID": project_id,

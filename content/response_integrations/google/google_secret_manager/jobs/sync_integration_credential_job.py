@@ -43,6 +43,7 @@ from ..core.exceptions import (
     ParameterUpdateError,
     SecretAccessError,
 )
+from ..core.utils import build_lookup_with_warnings, mask_id
 
 if TYPE_CHECKING:
     from TIPCommon.data_models import (
@@ -87,10 +88,24 @@ class SyncIntegrationCredentialJob(Job):
 
         return self.secret_manager_client
 
+    def _validate_params(self) -> None:
+        """Validate job parameters before execution.
+
+        Parses and validates the Credential Mapping YAML/JSON
+        string provided via the job configuration UI.
+
+        Raises:
+            InvalidConfigurationError: If the YAML/JSON string
+                is invalid.
+
+        """
+        try:
+            self.credential_mapping = yaml.safe_load(self.params.credential_mapping) or {}
+        except yaml.YAMLError as e:
+            raise InvalidConfigurationError(f"Invalid Credential Mapping syntax: {e}") from e
+
     def _perform_job(self) -> None:
         """Fetch secrets and sync to SOAR platform."""
-        self._parse_credential_mapping()
-
         env: str = self.params.environment_name
         self.logger.info(f"Starting credential sync for environment: {env}")
 
@@ -99,22 +114,6 @@ class SyncIntegrationCredentialJob(Job):
         self._sync_jobs()
 
         self.logger.info("Credential sync completed.")
-
-    def _parse_credential_mapping(self) -> None:
-        """Parse the Credential Mapping JSON/YAML string.
-
-        Raises:
-            InvalidConfigurationError: If the YAML/JSON string is invalid.
-
-        """
-        try:
-            self.credential_mapping = yaml.safe_load(
-                self.params.credential_mapping
-            ) or {}
-        except yaml.YAMLError as e:
-            raise InvalidConfigurationError(
-                f"Invalid Credential Mapping syntax: {e}"
-            ) from e
 
     def _resolve_secret_and_version(self, mapped_value: str) -> tuple[str, str]:
         """Parse the mapped string, resolving the version if not explicitly provided.
@@ -126,37 +125,82 @@ class SyncIntegrationCredentialJob(Job):
             tuple[str, str]: The (secret_id, resolved_version).
 
         """
+        mapped_value = str(mapped_value)
         if ":" in mapped_value:
             secret_id: str
             explicit_version: str
             secret_id, explicit_version = mapped_value.split(":", 1)
             self.logger.info(
-                f"Secret ID '{secret_id}': Using explicitly provided version '{explicit_version}'."
+                f"Secret '{mask_id(secret_id)}': Using explicit version '{explicit_version}'."
             )
+
             return secret_id, explicit_version
 
         secret_id: str = mapped_value
         if self.secret_manager_client:
-            resolved_version: str = (
-                self.secret_manager_client.resolve_latest_enabled_version(
-                    secret_id,
-                )
+            resolved_version: str = self.secret_manager_client.resolve_latest_enabled_version(
+                secret_id,
             )
         else:
             resolved_version = DEFAULT_SECRET_VERSION
 
+        masked: str = mask_id(secret_id)
         if resolved_version == DEFAULT_SECRET_VERSION:
             self.logger.info(
-                f"Secret ID '{secret_id}': No active versions discovered. "
-                f"Falling back to default alias '{DEFAULT_SECRET_VERSION}'."
+                f"Secret '{masked}': No active versions. "
+                f"Falling back to '{DEFAULT_SECRET_VERSION}'."
             )
         else:
             self.logger.info(
-                f"Secret ID '{secret_id}': Automatically resolved to latest "
-                f"enabled version '{resolved_version}'."
+                f"Secret '{masked}': Resolved to latest enabled version '{resolved_version}'."
             )
 
         return secret_id, resolved_version
+
+    def _fetch_secret_value(
+        self,
+        mapped_value: str,
+        *,
+        context_label: str,
+    ) -> tuple[str, str, str]:
+        """Resolve a mapping entry and fetch the secret value.
+
+        This is the shared logic used by integration instances,
+        connectors, and jobs to resolve a secret reference,
+        fetch the payload, and return all three pieces needed
+        by the caller.
+
+        Args:
+            mapped_value: Raw mapping value (e.g. ``"my-secret"``
+                or ``"my-secret:3"``).
+            context_label: Human-readable label for error messages
+                (e.g. ``"param 'API Key' on instance 'Foo'"``).
+
+        Returns:
+            Tuple of ``(secret_id, version_id, secret_value)``.
+
+        Raises:
+            SecretAccessError: If the secret cannot be fetched.
+
+        """
+        secret_id: str
+        version_id: str
+        secret_id, version_id = self._resolve_secret_and_version(
+            mapped_value,
+        )
+        try:
+            secret_value: str = self.secret_manager_client.get_secret_value(
+                secret_id=secret_id,
+                version_id=version_id,
+            )
+        except SecretAccessError:
+            raise
+        except Exception as e:
+            raise SecretAccessError(
+                f"Failed to fetch secret '{mask_id(secret_id)}' for {context_label}: {e}"
+            ) from e
+
+        return secret_id, version_id, secret_value
 
     def _sync_integration_instances(self) -> None:
         """Sync credentials for integration instances."""
@@ -166,9 +210,8 @@ class SyncIntegrationCredentialJob(Job):
         )
 
         if not instances:
-            self.logger.info(
-                "No integration instances in credential mapping. Skipping."
-            )
+            self.logger.info("No integration instances in credential mapping. Skipping.")
+
             return None
 
         self.logger.info(f"Processing {len(instances)} integration instance(s)...")
@@ -177,9 +220,8 @@ class SyncIntegrationCredentialJob(Job):
             self._fetch_integration_instances_for_environment()
         )
         if not instances_list:
-            self.logger.info(
-                "No integration instances found in environment. Skipping."
-            )
+            self.logger.info("No integration instances found in environment. Skipping.")
+
             return None
 
         self.instance_name_to_identifier = self._build_instance_name_lookup(
@@ -202,9 +244,7 @@ class SyncIntegrationCredentialJob(Job):
 
         """
         environment: str = self.params.environment_name
-        self.logger.info(
-            "Fetching integration instances for environment: %s", environment
-        )
+        self.logger.info("Fetching integration instances for environment: %s", environment)
 
         return get_installed_integrations_of_environment(
             chronicle_soar=self.soar_job,
@@ -212,12 +252,19 @@ class SyncIntegrationCredentialJob(Job):
             integration_identifier=ANY_INTEGRATION_FILTER_VALUE,
         )
 
-    @staticmethod
     def _build_instance_name_lookup(
-        instances: list[InstalledIntegrationInstance]
+        self,
+        instances: list[InstalledIntegrationInstance],
     ) -> NameIdentifierMap:
         """Build a name → identifier mapping for instances."""
-        return {inst.instance_name: inst.identifier for inst in instances}
+
+        return build_lookup_with_warnings(
+            items=instances,
+            get_key=lambda i: i.instance_name,
+            get_value=lambda i: i.identifier,
+            entity_type="instance name",
+            logger=self.logger,
+        )
 
     def _update_single_integration_instance(
         self,
@@ -235,9 +282,8 @@ class SyncIntegrationCredentialJob(Job):
 
         identifier: str | None = self._resolve_instance_identifier(name)
         if identifier is None:
-            self.logger.error(
-                f"Skipping instance '{name}' — could not resolve identifier."
-            )
+            self.logger.error(f"Skipping instance '{name}' — could not resolve identifier.")
+
             return None
 
         self._set_integration_params(name, identifier, param_mapping)
@@ -282,30 +328,25 @@ class SyncIntegrationCredentialJob(Job):
 
         """
         for param_name, mapped_value in param_mapping.items():
-            secret_id: str = str(mapped_value)
+            context: str = f"param '{param_name}' on instance '{name}' (id: {identifier})"
+            secret_id, version_id, secret_value = self._fetch_secret_value(
+                mapped_value,
+                context_label=context,
+            )
             try:
-                secret_id, version_id = self._resolve_secret_and_version(mapped_value)
-                if self.secret_manager_client is not None:
-                    secret_value: str = self.secret_manager_client.get_secret_value(
-                        secret_id=secret_id,
-                        version_id=version_id,
-                    )
-                    self.soar_job.set_configuration_property(
-                        integration_instance_identifier=identifier,
-                        property_name=param_name,
-                        property_value=secret_value,
-                    )
-                    self.logger.info(
-                        f"Updated '{param_name}' on instance '{name}' (id: {identifier}) "
-                        f"from secret '{secret_id}' version '{version_id}'."
-                    )
-            except (SecretAccessError, ParameterUpdateError):
-                raise
+                self.soar_job.set_configuration_property(
+                    integration_instance_identifier=identifier,
+                    property_name=param_name,
+                    property_value=secret_value,
+                )
             except Exception as e:
-                raise ParameterUpdateError(
-                    f"Failed to update '{param_name}' on instance '{name}' "
-                    f"(id: {identifier}) from secret '{secret_id}': {e}"
-                ) from e
+                raise ParameterUpdateError(f"Failed to set {context}: {e}") from e
+
+            self.logger.info(
+                f"Updated '{param_name}' on instance '{name}'"
+                f" from secret '{mask_id(secret_id)}'"
+                f" (version '{version_id}')."
+            )
 
     def _sync_connectors(self) -> None:
         """Sync credentials for connectors."""
@@ -313,6 +354,7 @@ class SyncIntegrationCredentialJob(Job):
 
         if not connectors:
             self.logger.info("No connectors in credential mapping. Skipping.")
+
             return
 
         self.logger.info(f"Processing {len(connectors)} connector(s)...")
@@ -320,11 +362,10 @@ class SyncIntegrationCredentialJob(Job):
         cards: list[ConnectorCard] = self._fetch_connector_cards()
         if not cards:
             self.logger.info("No connectors configured. Skipping.")
+
             return None
 
-        self.connector_name_to_identifier = (
-            self._build_connector_name_lookup(cards)
-        )
+        self.connector_name_to_identifier = self._build_connector_name_lookup(cards)
 
         self.logger.info(f"Found {len(self.connector_name_to_identifier)} connector(s).")
 
@@ -345,12 +386,19 @@ class SyncIntegrationCredentialJob(Job):
             integration_name=ANY_INTEGRATION_FILTER_VALUE,
         )
 
-    @staticmethod
     def _build_connector_name_lookup(
+        self,
         connector_cards: list[ConnectorCard],
     ) -> NameIdentifierMap:
-        """Build a display_name → identifier mapping for connectors."""
-        return {card.display_name: card.identifier for card in connector_cards}
+        """Build a display_name → identifier mapping."""
+
+        return build_lookup_with_warnings(
+            items=connector_cards,
+            get_key=lambda c: c.display_name,
+            get_value=lambda c: c.identifier,
+            entity_type="connector name",
+            logger=self.logger,
+        )
 
     def _update_single_connector(
         self,
@@ -368,9 +416,8 @@ class SyncIntegrationCredentialJob(Job):
 
         identifier: str | None = self._resolve_connector_identifier(name)
         if identifier is None:
-            self.logger.error(
-                f"Skipping connector '{name}' — could not resolve identifier."
-            )
+            self.logger.error(f"Skipping connector '{name}' — could not resolve identifier.")
+
             return None
 
         self._set_connector_params(name, identifier, param_mapping)
@@ -392,8 +439,7 @@ class SyncIntegrationCredentialJob(Job):
         if identifier is None:
             available: list[str] = list(self.connector_name_to_identifier.keys())
             self.logger.error(
-                f"Connector '{connector_name}' not found. "
-                f"Available connectors: {available}."
+                f"Connector '{connector_name}' not found. Available connectors: {available}."
             )
 
         return identifier
@@ -413,29 +459,25 @@ class SyncIntegrationCredentialJob(Job):
 
         """
         for param_name, mapped_value in param_mapping.items():
-            secret_id: str = str(mapped_value)
+            context: str = f"param '{param_name}' on connector '{name}' (id: {identifier})"
+            secret_id, version_id, secret_value = self._fetch_secret_value(
+                mapped_value,
+                context_label=context,
+            )
             try:
-                secret_id, version_id = self._resolve_secret_and_version(mapped_value)
-                secret_value: str = self.secret_manager_client.get_secret_value(
-                    secret_id=secret_id,
-                    version_id=version_id,
-                )
                 self.soar_job.set_connector_parameter(
                     connector_instance_identifier=identifier,
                     parameter_name=param_name,
                     parameter_value=secret_value,
                 )
-                self.logger.info(
-                    f"Updated '{param_name}' on connector '{name}' "
-                    f"(id: {identifier}) from secret '{secret_id}' version '{version_id}'."
-                )
-            except (SecretAccessError, ParameterUpdateError):
-                raise
             except Exception as e:
-                raise ParameterUpdateError(
-                    f"Failed to update '{param_name}' on connector '{name}' "
-                    f"(id: {identifier}) from secret '{secret_id}': {e}"
-                ) from e
+                raise ParameterUpdateError(f"Failed to set {context}: {e}") from e
+
+            self.logger.info(
+                f"Updated '{param_name}' on connector '{name}'"
+                f" from secret '{mask_id(secret_id)}'"
+                f" (version '{version_id}')."
+            )
 
     def _sync_jobs(self) -> None:
         """Sync credentials for jobs.
@@ -447,6 +489,7 @@ class SyncIntegrationCredentialJob(Job):
 
         if not jobs:
             self.logger.info("No jobs in credential mapping.")
+
             return None
 
         self.logger.info(f"Processing {len(jobs)} job(s)...")
@@ -474,10 +517,7 @@ class SyncIntegrationCredentialJob(Job):
         )
 
         # 1P wraps in {"job_instances": [...]}.
-        if (
-            isinstance(installed_jobs_response, dict)
-            and "job_instances" in installed_jobs_response
-        ):
+        if isinstance(installed_jobs_response, dict) and "job_instances" in installed_jobs_response:
             job_instances: list[SingleJson] = installed_jobs_response["job_instances"]
         elif isinstance(installed_jobs_response, list):
             job_instances = installed_jobs_response
@@ -487,16 +527,18 @@ class SyncIntegrationCredentialJob(Job):
                 "expected list or dict with 'job_instances', got "
                 f"{type(installed_jobs_response).__name__}."
             )
+
             return None
 
         if not job_instances:
             self.logger.warning("No jobs returned from platform.")
+
             return None
 
         return job_instances
 
-    @staticmethod
     def _build_job_name_lookup(
+        self,
         job_instances: list[SingleJson],
     ) -> SingleJson:
         """Build a display-name → job-dict lookup.
@@ -510,10 +552,14 @@ class SyncIntegrationCredentialJob(Job):
             Mapping of display name to job dict.
 
         """
-        return {
-            inst.get("displayName") or inst.get("name", ""): inst
-            for inst in job_instances
-        }
+
+        return build_lookup_with_warnings(
+            items=job_instances,
+            get_key=lambda j: j.get("displayName") or j.get("name", ""),
+            get_value=lambda j: j,
+            entity_type="job name",
+            logger=self.logger,
+        )
 
     def _update_single_job(
         self,
@@ -550,9 +596,8 @@ class SyncIntegrationCredentialJob(Job):
         )
 
         if updated_count == 0:
-            self.logger.warning(
-                f"No parameters updated for job '{job_name}' — skipping save."
-            )
+            self.logger.warning(f"No parameters updated for job '{job_name}' — skipping save.")
+
             return None
 
         job_data["parameters"] = parameters
@@ -578,9 +623,8 @@ class SyncIntegrationCredentialJob(Job):
         job_data: SingleJson | None = name_to_job.get(job_name)
         if job_data is None:
             available: list[str] = list(name_to_job.keys())
-            self.logger.error(
-                f"Job '{job_name}' not found. Available jobs: {available}."
-            )
+            self.logger.error(f"Job '{job_name}' not found. Available jobs: {available}.")
+
             return None
 
         # Shallow copy to avoid mutating the original dict in the lookup.
@@ -601,13 +645,14 @@ class SyncIntegrationCredentialJob(Job):
                 f"Expected   'parameters' field to be a list, "
                 f"got {type(parameters).__name__}."
             )
+
             return None
 
         if not parameters:
             self.logger.warning(
-                f"Job '{job_name}' has an empty parameters list — nothing to "
-                "update."
+                f"Job '{job_name}' has an empty parameters list — nothing to update."
             )
+
             return None
 
         return job_data, parameters
@@ -629,14 +674,11 @@ class SyncIntegrationCredentialJob(Job):
         """
         job_instance_id: str | None = job_data.get("id")
         if job_instance_id is None:
-            self.logger.error(
-                f"Job '{job_name}' has no id and no parameters — cannot update."
-            )
+            self.logger.error(f"Job '{job_name}' has no id and no parameters — cannot update.")
+
             return None
 
-        self.logger.info(
-            f"Fetching full details for job '{job_name}' (id: {job_instance_id})."
-        )
+        self.logger.info(f"Fetching full details for job '{job_name}' (id: {job_instance_id}).")
         try:
             full_job: SingleJson = get_installed_jobs(
                 chronicle_soar=self.soar_job,
@@ -646,8 +688,7 @@ class SyncIntegrationCredentialJob(Job):
             raise
         except Exception as e:
             raise JobFetchError(
-                f"Failed to fetch details for job '{job_name}' "
-                f"(id: {job_instance_id}): {e}"
+                f"Failed to fetch details for job '{job_name}' (id: {job_instance_id}): {e}"
             ) from e
 
         if not isinstance(full_job, dict):
@@ -656,12 +697,12 @@ class SyncIntegrationCredentialJob(Job):
                 f"'{job_name}': expected dict, got "
                 f"{type(full_job).__name__}."
             )
+
             return None
 
         return full_job, full_job.get("parameters", [])
 
-    @staticmethod
-    def _build_param_index(parameters: list[SingleJson]) -> dict[str, int]:
+    def _build_param_index(self, parameters: list[SingleJson]) -> dict[str, int]:
         """Build a parameter-name → list-index lookup.
 
         1P params use ``displayName``; Legacy use ``name``.
@@ -673,12 +714,17 @@ class SyncIntegrationCredentialJob(Job):
             Mapping of param display name to its index in the list.
 
         """
-        param_index: dict[str, int] = {}
-        for idx, p in enumerate(parameters):
-            p_name: str = p.get("displayName") or p.get("name", "")
-            param_index[p_name] = idx
+        # Since we need to keep track of the index, we zip the items with their index
+        # before passing to the generic lookup builder
+        indexed_params = list(enumerate(parameters))
 
-        return param_index
+        return build_lookup_with_warnings(
+            items=indexed_params,
+            get_key=lambda item: item[1].get("displayName") or item[1].get("name", ""),
+            get_value=lambda item: item[0],
+            entity_type="job parameter",
+            logger=self.logger,
+        )
 
     def _apply_secrets_to_params(
         self,
@@ -703,32 +749,25 @@ class SyncIntegrationCredentialJob(Job):
         for param_name, mapped_value in param_mapping.items():
             if param_name not in param_index:
                 self.logger.error(
-                    f"Parameter '{param_name}' not found on job '{job_name}'. "
-                    f"Available parameters: {list(param_index.keys())}."
+                    f"Parameter '{param_name}' not found on "
+                    f"job '{job_name}'. Available parameters: "
+                    f"{list(param_index.keys())}."
                 )
                 continue
 
-            secret_id: str = str(mapped_value)
-            try:
-                secret_id, version_id = self._resolve_secret_and_version(mapped_value)
-                secret_value: str = self.secret_manager_client.get_secret_value(
-                    secret_id=secret_id,
-                    version_id=version_id,
-                )
-                idx: int = param_index[param_name]
-                parameters[idx]["value"] = secret_value
-                updated_count += 1
-                self.logger.info(
-                    f"Set '{param_name}' on job '{job_name}' "
-                    f"from secret '{secret_id}' version '{version_id}'."
-                )
-            except SecretAccessError:
-                raise
-            except Exception as e:
-                raise SecretAccessError(
-                    f"Failed to fetch secret from location '{secret_id}' for param "
-                    f"'{param_name}' on job '{job_name}': {e}"
-                ) from e
+            context: str = f"param '{param_name}' on job '{job_name}'"
+            secret_id, version_id, secret_value = self._fetch_secret_value(
+                mapped_value,
+                context_label=context,
+            )
+            idx: int = param_index[param_name]
+            parameters[idx]["value"] = secret_value
+            updated_count += 1
+            self.logger.info(
+                f"Set '{param_name}' on job '{job_name}'"
+                f" from secret '{mask_id(secret_id)}'"
+                f" (version '{version_id}')."
+            )
 
         return updated_count
 
@@ -751,15 +790,11 @@ class SyncIntegrationCredentialJob(Job):
                 chronicle_soar=self.soar_job,
                 job_data=job_data,
             )
-            self.logger.info(
-                f"Saved job '{job_name}' with {updated_count} updated parameter(s)."
-            )
+            self.logger.info(f"Saved job '{job_name}' with {updated_count} updated parameter(s).")
         except JobSaveError:
             raise
         except Exception as e:
-            raise JobSaveError(
-                f"Failed to save job '{job_name}': {e}"
-            ) from e
+            raise JobSaveError(f"Failed to save job '{job_name}': {e}") from e
 
 
 def main() -> None:

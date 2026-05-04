@@ -32,12 +32,10 @@ class TestPing:
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
     @patch(
-        "google.oauth2.service_account.Credentials"
-        ".from_service_account_info",
+        "google.oauth2.service_account.Credentials.from_service_account_info",
     )
     @patch(
-        "google.cloud.secretmanager"
-        ".SecretManagerServiceClient",
+        "google.cloud.secretmanager.SecretManagerServiceClient",
     )
     def test_ping_success(
         self,
@@ -53,22 +51,15 @@ class TestPing:
         ping.main()
 
         mock_instance.list_secrets.assert_called_once()
-        assert (
-            action_output.results.execution_state
-            == ExecutionState.COMPLETED
-        )
-        assert "Successfully connected" in (
-            action_output.results.output_message
-        )
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert "Successfully connected" in (action_output.results.output_message)
 
     @set_metadata(integration_config_file_path=CONFIG_PATH)
     @patch(
-        "google.oauth2.service_account.Credentials"
-        ".from_service_account_info",
+        "google.oauth2.service_account.Credentials.from_service_account_info",
     )
     @patch(
-        "google.cloud.secretmanager"
-        ".SecretManagerServiceClient",
+        "google.cloud.secretmanager.SecretManagerServiceClient",
     )
     def test_ping_failure(
         self,
@@ -85,7 +76,4 @@ class TestPing:
 
         ping.main()
 
-        assert (
-            action_output.results.execution_state
-            == ExecutionState.FAILED
-        )
+        assert action_output.results.execution_state == ExecutionState.FAILED
