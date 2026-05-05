@@ -25,13 +25,15 @@ SCRIPT_NAME: str = "FindFirstAlert"
 def main():
     siemplify: SiemplifyAction = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
-    
-    execution_scope: ExecutionScope | None = getattr(siemplify, "execution_scope", None)
+
+    execution_scope: ExecutionScope = getattr(
+        siemplify, "execution_scope", ExecutionScope.Alert
+    )
     
     siemplify.case.alerts.sort(key=lambda x: x.creation_time)
     first_alert: Any = siemplify.case.alerts[0]
-    
-    if not execution_scope or execution_scope.value == ExecutionScope.Alert.value:
+
+    if execution_scope.value == ExecutionScope.Alert.value:
         output_message: str = (
             f"First alert is: {first_alert.identifier} "
             f"Created at: {first_alert.creation_time}\n"
@@ -46,15 +48,13 @@ def main():
         output_message += "This is NOT the first alert."
         siemplify.end(output_message, "false")
         
-    elif execution_scope.value == ExecutionScope.Case.value:
+    else:
         output_message: str = (
             f"First alert of the case is: {first_alert.identifier} "
             f"Created at: {first_alert.creation_time}\n"
         )
         siemplify.end(output_message, first_alert.identifier)
-        
-    else:
-        siemplify.end("Unsupported execution scope", "false")
+
 
 if __name__ == "__main__":
     main()
