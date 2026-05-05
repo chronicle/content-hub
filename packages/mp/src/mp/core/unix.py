@@ -81,7 +81,11 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
     logger.debug("Running command: %s", command)
 
     try:
-        sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
+        result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
+        if result.stdout:
+            logger.debug(result.stdout)
+        if result.stderr:
+            logger.debug(result.stderr)
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
@@ -104,7 +108,11 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
     """
     logger.debug("Running pip command: %s in %s", command, cwd)
     try:
-        sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # noqa: S603
+        result = sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # noqa: S603
+        if result.stdout:
+            logger.debug(result.stdout)
+        if result.stderr:
+            logger.debug(result.stderr)
     except sp.CalledProcessError as e:
         # Check if this is a safe-to-ignore error / marker issue
         if ignored_packages := _get_safe_to_ignore_packages(e):
@@ -244,7 +252,11 @@ def _add_regular_dependencies_to_toml(deps_to_add: list[str], base_command: list
     deps_command: list[str] = base_command.copy()
     deps_command.extend(deps_to_add)
     try:
-        sp.run(deps_command, cwd=project_path, check=True, text=True)  # noqa: S603
+        result = sp.run(deps_command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
+        if result.stdout:
+            logger.debug(result.stdout)
+        if result.stderr:
+            logger.debug(result.stderr)
 
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
@@ -263,9 +275,13 @@ def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list
     dev_base_command.extend(_get_base_dev_dependencies())
     dev_base_command.extend(dev_deps_to_add)
     try:
-        sp.run(  # noqa: S603
-            dev_base_command, cwd=project_path, check=True, text=True
+        result = sp.run(  # noqa: S603
+            dev_base_command, cwd=project_path, check=True, text=True, capture_output=True
         )
+        if result.stdout:
+            logger.debug(result.stdout)
+        if result.stderr:
+            logger.debug(result.stderr)
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
@@ -332,7 +348,11 @@ def init_python_project(project_path: Path) -> None:
     logger.debug("Running command: %s", command)
 
     try:
-        sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
+        result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
+        if result.stdout:
+            logger.debug(result.stdout)
+        if result.stderr:
+            logger.debug(result.stderr)
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
@@ -421,9 +441,9 @@ def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **
     logger.debug("Executing command and capturing output: %s", command)
 
     try:
-        process: sp.Popen[bytes] = sp.Popen(command)  # noqa: S603
+        process: sp.Popen[bytes] = sp.Popen(command, stdout=sp.PIPE, stderr=sp.STDOUT)  # noqa: S603
         for line in _stream_process_output(process):
-            logger.info("%s", line.decode(errors="replace").rstrip())
+            logger.debug("%s", line.decode(errors="replace").rstrip())
 
         return process.wait()
 
@@ -556,9 +576,13 @@ def check_lock_file(project_path: Path) -> None:
     logger.debug("Checking lock file consistency: %s", command)
 
     try:
-        sp.run(  # noqa: S603
+        result = sp.run(  # noqa: S603
             command, cwd=project_path, check=True, text=True, capture_output=True
         )
+        if result.stdout:
+            logger.debug(result.stdout)
+        if result.stderr:
+            logger.debug(result.stderr)
 
     except sp.CalledProcessError as e:
         error_output = e.stderr.strip()
