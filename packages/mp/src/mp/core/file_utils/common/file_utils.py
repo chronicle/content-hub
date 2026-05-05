@@ -100,9 +100,6 @@ def flatten_dir(path: Path, dest: Path) -> None:
 
     """
     if path.is_file() and is_valid_source_path(path):
-        if path.suffix == ".pyc":
-            return
-
         new_path: Path = dest / path.name
         if new_path.exists():
             if new_path.name in VALID_REPEATED_FILES:
@@ -114,9 +111,6 @@ def flatten_dir(path: Path, dest: Path) -> None:
         shutil.copyfile(path, new_path)
 
     elif path.is_dir() and is_valid_source_path(path):
-        if path.name == "__pycache__":
-            return
-
         for child in path.iterdir():
             flatten_dir(child, dest)
 
