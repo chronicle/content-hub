@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+from enum import Enum
 from typing import Any
 
 from tldextract import extract
@@ -232,3 +233,9 @@ def get_domain_from_string(identifier: str, extract_subdomain: bool) -> str | No
 
 def is_valid_label(label: str) -> bool:
     return bool(LABEL_REGEX.fullmatch(label))
+
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
