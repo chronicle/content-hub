@@ -20,6 +20,8 @@ import logging
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, TypeVar
 
+import mp.core.config
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
@@ -58,9 +60,25 @@ def run_in_parallel(func: Callable[[_T], _R], items: Iterable[_T], processes: in
                 errors.append((item, e))
 
     if errors:
+        try:
+            is_verbose: bool = mp.core.config.is_verbose()
+        except ValueError:
+            is_verbose = False
+
         for item, e in errors:
             item_name: str = getattr(item, "name", str(item))
-            logger.error(error_message_template, item_name, exc_info=e)
+            if is_verbose:
+                logger.error(error_message_template, item_name, exc_info=e)
+            else:
+                error_msgs: list[str] = []
+                curr: BaseException | None = e
+                while curr:
+                    error_msgs.append(f"{type(curr).__name__}: {curr}")
+                    curr = curr.__cause__ or curr.__context__
+
+                chain_str: str = " -> ".join(error_msgs)
+                formatted_msg: str = error_message_template % item_name
+                logger.error("%s:\n  %s", formatted_msg, chain_str)
 
         msg: str = f"Failed to process {len(errors)} item(s)."
         raise ParallelRunError(msg)
