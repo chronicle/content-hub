@@ -18,9 +18,9 @@ import logging
 from typing import TYPE_CHECKING
 
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
-from mp.validate.data_models import ContentType, ValidationResults, ValidationTypes, Validator
-from mp.validate.pre_build_validation.integrations import get_integration_pre_build_validations
-from mp.validate.pre_build_validation.playbooks import get_playbooks_pre_build_validations
+from mp.validate.data_models import ContentType, ValidationResults, Validator
+from mp.validate.validations.integrations import get_integration_validations
+from mp.validate.validations.playbooks import get_playbooks_validations
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -29,13 +29,13 @@ if TYPE_CHECKING:
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-class PreBuildValidations:
+class Validations:
     def __init__(self, validation_path: Path, content_type: ContentType) -> None:
         self.validation_path: Path = validation_path
         self.content_type: ContentType = content_type
-        self.results: ValidationResults = ValidationResults(validation_path.name, ValidationTypes.PRE_BUILD)
+        self.results: ValidationResults = ValidationResults(validation_path.name, )
 
-    def run_pre_build_validation(self) -> None:
+    def run_validation(self) -> None:
         """Run all the pre-build validations."""
         validations: list[Validator] = _get_content_validations(self.content_type)
         total_validations = len(validations)
@@ -80,9 +80,9 @@ class PreBuildValidations:
 
 def _get_content_validations(content_type: ContentType) -> list[Validator]:
     if content_type == ContentType.INTEGRATION:
-        return get_integration_pre_build_validations()
+        return get_integration_validations()
 
     if content_type == ContentType.PLAYBOOK:
-        return get_playbooks_pre_build_validations()
+        return get_playbooks_validations()
 
     return []

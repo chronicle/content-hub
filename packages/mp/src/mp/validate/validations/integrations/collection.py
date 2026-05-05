@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from mp.validate.data_models import Validator
 
 
-def get_integration_pre_build_validations() -> list[Validator]:
+def get_integration_validations() -> list[Validator]:
     """Get a list of all available pre-build validations.
 
     Returns:

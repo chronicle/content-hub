@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from .collection import get_integration_pre_build_validations
+from .collection import get_integration_validations
 from .connectors_documentation_link_validation import ConnectorsHasDocumentationLinkValidation
 from .connectors_ssl_validation import SslParameterExistsInConnectorsValidation
 from .custom_validation import NoCustomComponentsInIntegrationValidation
@@ -47,5 +47,5 @@ __all__: list[str] = [
     "SslParameterExistsInIntegrationValidation",
     "UvLockValidation",
     "VersionBumpValidation",
-    "get_integration_pre_build_validations",
+    "get_integration_validations",
 ]

@@ -48,6 +48,8 @@ class MarkdownFormat:
                 markdown_content_list.append(f"<details>\n{summary_header}\n\n")
 
                 for stage_name, results_list in full_report.items():
+                    if stage_name in ["Build", "Post-Build"]:
+                        continue
                     markdown_content_list.extend(_generate_stage_content(stage_name, results_list))
 
                 markdown_content_list.append("</details>\n\n")

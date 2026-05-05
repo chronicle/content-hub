@@ -87,19 +87,25 @@ class HtmlFormat:
         total_items = total_fatal = total_warn = total_passed = 0
 
         for content_type, full_report in self.validation_results.items():
-            all_reports = [report for reports in full_report.values() if reports for report in reports]
+            filtered_report = {k: v for k, v in full_report.items() if k not in ["Build", "Post-Build"]}
+            all_reports = [report for reports in filtered_report.values() if reports for report in reports]
 
             fatal = sum(len(r.validation_report.failed_fatal_validations) for r in all_reports)
             warn = sum(len(r.validation_report.failed_non_fatal_validations) for r in all_reports)
-            passed = sum(
-                1
-                for r in all_reports
-                if not r.validation_report.failed_fatal_validations
-                and not r.validation_report.failed_non_fatal_validations
-            )
+
+            failed_reports = []
+            passed_reports = []
+            for r in all_reports:
+                if not r.validation_report.failed_fatal_validations and not r.validation_report.failed_non_fatal_validations:
+                    passed_reports.append(r)
+                else:
+                    failed_reports.append(r)
+
+            passed = len(passed_reports)
 
             groups_data[content_type.value] = {
-                "reports_by_category": full_report,
+                "failed_reports": failed_reports,
+                "passed_reports": passed_reports,
                 "total_items": len(all_reports),
                 "total_fatal": fatal,
                 "total_warn": warn,
