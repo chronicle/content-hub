@@ -43,16 +43,17 @@ class MarkdownFormat:
                     continue
 
                 icon = ICON_MAP[content_type.value]
+                markdown_content_list.append(f"## {icon} {content_type.value.capitalize()}s\n\n")
 
-                summary_header = f"<summary><strong>{icon} {content_type.value}s</strong></summary>"
-                markdown_content_list.append(f"<details>\n{summary_header}\n\n")
+                for results_list in full_report.values():
+                    if results_list:
+                        for validation_result in results_list:
+                            table_data = _get_integration_validation_data(validation_result)
 
-                for stage_name, results_list in full_report.items():
-                    if stage_name in ["Build", "Post-Build"]:
-                        continue
-                    markdown_content_list.extend(_generate_stage_content(stage_name, results_list))
-
-                markdown_content_list.append("</details>\n\n")
+                            if table_data:
+                                markdown_content_list.extend(
+                                    _format_table(table_data, validation_result.validation_report.content_name)
+                                )
 
             markdown_content: str = "".join(markdown_content_list)
             _save_report_file(markdown_content, output_filename="validation_report.md")
@@ -75,24 +76,6 @@ def _should_display_stage(results_list: list[ValidationResults] | None) -> bool:
             return True
 
     return False
-
-
-def _generate_stage_content(stage_name: str, results_list: list[ValidationResults] | None) -> list[str]:
-    content: list[str] = []
-    if not _should_display_stage(results_list):
-        return content
-
-    content.append(f"<details>\n<summary>{stage_name} Stage</summary>\n\n")
-
-    if results_list:
-        for validation_result in results_list:
-            table_data = _get_integration_validation_data(validation_result)
-
-            if table_data:
-                content.extend(_format_table(table_data, validation_result.validation_report.content_name))
-
-    content.append("</details>\n\n")
-    return content
 
 
 def _get_integration_validation_data(validation_result: ValidationResults) -> list[list[str]]:
