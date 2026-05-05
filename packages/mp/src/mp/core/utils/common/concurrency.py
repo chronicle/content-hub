@@ -80,7 +80,7 @@ def run_in_parallel(
                 while curr:
                     error_msgs.append(f"{type(curr).__name__}: {curr}")
                     # Prioritize __cause__ over __context__ for 'raise X from Y' semantics
-                    curr = curr.__cause__ or curr.__context__
+                    curr: BaseException | None = curr.__cause__ or curr.__context__
 
                 chain_str: str = " -> ".join(error_msgs)
                 logger.error(f"{error_message_template}:\n  %s", item_name, chain_str)  # noqa: G004
