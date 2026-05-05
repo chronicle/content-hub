@@ -30,14 +30,14 @@ from typing import Annotated
 
 import typer
 
-from mp.core import config as mp_config
-from mp.core.logger.setup import setup_logging
-from mp.core.update_checker import UpdateChecker, get_mp_version, print_mp_version
+import mp.core.config
 
 from . import describe
 from .build_project.typer_app import build_app
 from .check.typer_app import check_app
 from .config.typer_app import config_app
+from .core.logger.setup import setup_logging
+from .core.update_checker import UpdateChecker, get_mp_version, print_mp_version
 from .dev_env.typer_app import dev_env_app
 from .format.typer_app import format_app
 from .pack.typer_app import pack_app
@@ -69,7 +69,7 @@ def main() -> None:
 
         logger: logging.Logger = logging.getLogger(__name__)
         try:
-            is_verbose: bool = mp_config.is_verbose()
+            is_verbose: bool = mp.core.config.is_verbose()
         except ValueError:
             is_verbose = False
 
@@ -113,7 +113,7 @@ def global_options(
     ] = False,
 ) -> None:
     """Set up mp tool and initialize background tasks."""
-    mp_config.RuntimeParams(quiet=quiet, verbose=verbose).set_in_config()
+    mp.core.config.RuntimeParams(quiet=quiet, verbose=verbose).set_in_config()
     setup_logging(verbose=verbose, quiet=quiet)
 
     checker: UpdateChecker = UpdateChecker()

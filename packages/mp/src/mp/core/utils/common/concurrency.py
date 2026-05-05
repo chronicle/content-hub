@@ -25,10 +25,10 @@ import mp.core.config
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
+logger: logging.Logger = logging.getLogger(__name__)
+
 _T = TypeVar("_T")
 _R = TypeVar("_R")
-
-logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ParallelRunError(Exception):
@@ -77,8 +77,7 @@ def run_in_parallel(func: Callable[[_T], _R], items: Iterable[_T], processes: in
                     curr = curr.__cause__ or curr.__context__
 
                 chain_str: str = " -> ".join(error_msgs)
-                formatted_msg: str = error_message_template % item_name
-                logger.error("%s:\n  %s", formatted_msg, chain_str)
+                logger.error(error_message_template + ":\n  %s", item_name, chain_str)  # noqa: G003
 
         msg: str = f"Failed to process {len(errors)} item(s)."
         raise ParallelRunError(msg)
