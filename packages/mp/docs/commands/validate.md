@@ -28,7 +28,6 @@ mp validate integration [INTEGRATIONS]... [OPTIONS]
 
 | Option | Shorthand | Description | Type | Default |
 | :--- | :--- | :--- | :--- | :--- |
-| `--only-pre-build` | | Execute only pre-build validations checks, skipping the full build process. | `bool` | `False` |
 | `--quiet` | `-q` | Suppress most logging output during runtime. | `bool` | `False` |
 | `--verbose` | `-v` | Enable verbose logging output during runtime. | `bool` | `False` |
 
@@ -50,7 +49,6 @@ mp validate playbook [PLAYBOOKS]... [OPTIONS]
 
 | Option | Shorthand | Description | Type | Default |
 | :--- | :--- | :--- | :--- | :--- |
-| `--only-pre-build` | | Execute only pre-build validations checks, skipping the full build process. | `bool` | `False` |
 | `--quiet` | `-q` | Suppress most logging output during runtime. | `bool` | `False` |
 | `--verbose` | `-v` | Enable verbose logging output during runtime. | `bool` | `False` |
 
@@ -75,7 +73,6 @@ mp validate repository [REPOSITORIES]... [OPTIONS]
 
 | Option | Shorthand | Description | Type | Default |
 | :--- | :--- | :--- | :--- | :--- |
-| `--only-pre-build` | | Execute only pre-build validations checks, skipping the full build process. | `bool` | `False` |
 | `--quiet` | `-q` | Suppress most logging output during runtime. | `bool` | `False` |
 | `--verbose` | `-v` | Enable verbose logging output during runtime. | `bool` | `False` |
 
@@ -86,9 +83,9 @@ mp validate repository [REPOSITORIES]... [OPTIONS]
 mp validate integration my_integration
 ```
 
-### Validate a playbook with only pre-build checks
+### Validate a playbook
 ```bash
-mp validate playbook my_playbook --only-pre-build
+mp validate playbook my_playbook
 ```
 
 ### Validate the third-party repository

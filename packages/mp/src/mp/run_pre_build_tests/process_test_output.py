@@ -21,7 +21,7 @@ import pathlib
 from typing import TYPE_CHECKING, Any, NamedTuple
 
 from mp.core.unix import NonFatalCommandError
-from mp.validate.pre_build_validation.integrations.required_dependencies_validation import (
+from mp.validate.validations.integrations.required_dependencies_validation import (
     RequiredDevDependenciesValidation,
 )
 

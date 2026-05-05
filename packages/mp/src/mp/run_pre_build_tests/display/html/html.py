@@ -76,6 +76,8 @@ class HtmlFormat:
         total_integrations: int = len(all_results)
         total_failed_tests: int = sum(r.failed_tests for r in all_results)
         total_skipped_tests: int = sum(r.skipped_tests for r in all_results)
+        total_passed_tests: int = sum(r.passed_tests for r in all_results)
+        total_passed_integrations: int = sum(1 for r in all_results if r.failed_tests == 0 and r.skipped_tests == 0)
 
         current_time_aware: datetime.datetime = datetime.datetime.now().astimezone()
 
@@ -84,6 +86,8 @@ class HtmlFormat:
             "total_integrations": total_integrations,
             "total_skipped_tests": total_skipped_tests,
             "total_failed_tests": total_failed_tests,
+            "total_passed_tests": total_passed_tests,
+            "total_passed_integrations": total_passed_integrations,
             "current_time": current_time_aware.strftime("%B %d, %Y at %I:%M %p %Z"),
             "css_content": css_content,
             "js_content": js_content,

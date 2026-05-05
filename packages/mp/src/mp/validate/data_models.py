@@ -18,15 +18,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, NamedTuple, Protocol, TypeAlias
-
-PRE_BUILD: str = "Pre-Build"
-BUILD: str = "Build"
-POST_BUILD: str = "Post-Build"
-
-
-class Configurations(NamedTuple):
-    only_pre_build: bool
+from typing import Any, Protocol, TypeAlias
 
 
 class ContentType(Enum):
@@ -34,18 +26,9 @@ class ContentType(Enum):
     PLAYBOOK = "Playbook"
 
 
-class ValidationTypes(Enum):
-    """Enum representing the various stages of a build process."""
-
-    PRE_BUILD = "Pre-Build"
-    BUILD = "Build"
-    POST_BUILD = "Post-Build"
-
-
 class ValidationResults:
-    def __init__(self, content_name: str, validation_type: ValidationTypes) -> None:
+    def __init__(self, content_name: str) -> None:
         self.integration_name: str = content_name
-        self.validation_type: ValidationTypes = validation_type
         self.validation_report: ValidationReport = ValidationReport(content_name)
         self.is_success: bool = True
 
