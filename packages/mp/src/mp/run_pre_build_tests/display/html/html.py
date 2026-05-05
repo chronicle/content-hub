@@ -77,9 +77,7 @@ class HtmlFormat:
         total_failed_tests: int = sum(r.failed_tests for r in all_results)
         total_skipped_tests: int = sum(r.skipped_tests for r in all_results)
         total_passed_tests: int = sum(r.passed_tests for r in all_results)
-        total_passed_integrations: int = sum(
-            1 for r in all_results if r.failed_tests == 0 and r.skipped_tests == 0
-        )
+        total_passed_integrations: int = sum(1 for r in all_results if r.failed_tests == 0 and r.skipped_tests == 0)
 
         current_time_aware: datetime.datetime = datetime.datetime.now().astimezone()
 

@@ -21,13 +21,13 @@ from mp.core import constants, exclusions, file_utils
 from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.exceptions import FatalValidationError
-from mp.validate.data_models import FullReport, ValidationResults
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, YamlFileContent
+    from mp.validate.data_models import FullReport
 
 
 DEF_FILE_NAME_KEY: str = "name"
@@ -245,7 +245,7 @@ def combine_results(*validations_outputs: FullReport) -> FullReport:
 
     if all_lists_are_none:
         return {}
-    
+
     return combined_output
 
 

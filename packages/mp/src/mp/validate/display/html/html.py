@@ -87,7 +87,7 @@ class HtmlFormat:
         total_items = total_fatal = total_warn = total_passed = 0
 
         for content_type, full_report in self.validation_results.items():
-            filtered_report = {k: v for k, v in full_report.items() if k not in ["Build", "Post-Build"]}
+            filtered_report = dict(full_report.items())
             all_reports = [report for reports in filtered_report.values() if reports for report in reports]
 
             fatal = sum(len(r.validation_report.failed_fatal_validations) for r in all_reports)
@@ -96,7 +96,10 @@ class HtmlFormat:
             failed_reports = []
             passed_reports = []
             for r in all_reports:
-                if not r.validation_report.failed_fatal_validations and not r.validation_report.failed_non_fatal_validations:
+                if (
+                    not r.validation_report.failed_fatal_validations
+                    and not r.validation_report.failed_non_fatal_validations
+                ):
                     passed_reports.append(r)
                 else:
                     failed_reports.append(r)

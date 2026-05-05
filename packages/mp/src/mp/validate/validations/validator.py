@@ -33,7 +33,7 @@ class Validations:
     def __init__(self, validation_path: Path, content_type: ContentType) -> None:
         self.validation_path: Path = validation_path
         self.content_type: ContentType = content_type
-        self.results: ValidationResults = ValidationResults(validation_path.name, )
+        self.results: ValidationResults = ValidationResults(validation_path.name)
 
     def run_validation(self) -> None:
         """Run all the pre-build validations."""

@@ -18,7 +18,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, NamedTuple, Protocol, TypeAlias
+from typing import Any, Protocol, TypeAlias
+
 
 class ContentType(Enum):
     INTEGRATION = "Integration"

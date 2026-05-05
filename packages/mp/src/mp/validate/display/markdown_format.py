@@ -35,7 +35,7 @@ class MarkdownFormat:
 
     def display(self) -> None:
         """Generate a Markdown file with validation report tables."""
-        try:
+        try:  # noqa: PLR1702
             markdown_content_list: list[str] = ["# Validation Report\n\n"]
 
             for content_type, full_report in self.validation_results.items():

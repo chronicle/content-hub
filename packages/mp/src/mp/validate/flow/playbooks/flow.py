@@ -22,8 +22,8 @@ import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.playbooks_repo import PlaybooksRepo
 from mp.validate.data_models import ContentType, FullReport, ValidationFn, ValidationResults
-from mp.validate.validations import Validations
 from mp.validate.utils import combine_results, should_fail_program
+from mp.validate.validations import Validations
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

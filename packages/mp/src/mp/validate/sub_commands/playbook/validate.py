@@ -108,9 +108,7 @@ def validate_playbook(
     should_fail: bool = False
 
     if playbooks:
-        full_report[ContentType.PLAYBOOK], should_fail = validate_playbooks(
-            playbooks=playbooks, repositories=[]
-        )
+        full_report[ContentType.PLAYBOOK], should_fail = validate_playbooks(playbooks=playbooks, repositories=[])
 
     display_validation_reports(full_report)
 

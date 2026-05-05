@@ -57,8 +57,10 @@ class CliDisplay:
                     continue
 
                 failed_integrations = [
-                    res for res in stage_results
-                    if res.validation_report.failed_fatal_validations or res.validation_report.failed_non_fatal_validations
+                    res
+                    for res in stage_results
+                    if res.validation_report.failed_fatal_validations
+                    or res.validation_report.failed_non_fatal_validations
                 ]
 
                 if not failed_integrations:
@@ -75,7 +77,10 @@ class CliDisplay:
             for stage_results in full_report.values():
                 if stage_results:
                     for res in stage_results:
-                        if res.validation_report.failed_fatal_validations or res.validation_report.failed_non_fatal_validations:
+                        if (
+                            res.validation_report.failed_fatal_validations
+                            or res.validation_report.failed_non_fatal_validations
+                        ):
                             return False
         return True
 

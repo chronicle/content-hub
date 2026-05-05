@@ -113,14 +113,10 @@ def validate_repository(
     full_report: dict[ContentType, FullReport] = {}
     f1, f2 = False, False
     if is_integration_repo(repositories):
-        full_report[ContentType.INTEGRATION], f1 = validate_integrations(
-            integrations=[], repositories=repositories
-        )
+        full_report[ContentType.INTEGRATION], f1 = validate_integrations(integrations=[], repositories=repositories)
 
     if is_playbook_repo(repositories):
-        full_report[ContentType.PLAYBOOK], f2 = validate_playbooks(
-            playbooks=[], repositories=repositories
-        )
+        full_report[ContentType.PLAYBOOK], f2 = validate_playbooks(playbooks=[], repositories=repositories)
 
     display_validation_reports(full_report)
 

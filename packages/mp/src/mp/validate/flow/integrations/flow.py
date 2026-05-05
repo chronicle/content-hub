@@ -22,8 +22,8 @@ import mp.core.file_utils
 from mp.build_project.integrations_repo import IntegrationsRepo
 from mp.core.custom_types import RepositoryType
 from mp.validate.data_models import ContentType, FullReport, ValidationFn, ValidationResults
-from mp.validate.validations import Validations
 from mp.validate.utils import combine_results, get_marketplace_paths_from_names, should_fail_program
+from mp.validate.validations import Validations
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
