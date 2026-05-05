@@ -14,20 +14,20 @@
 
 from __future__ import annotations
 
-import copy
 from typing import TYPE_CHECKING
 
-from integration_testing.platform.script_output import MockActionOutput
-from integration_testing.set_meta import set_metadata
-from tests.core.product import Wiz
-from tests.core.session import WizSession
+import copy
+
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionJsonOutput, ActionOutput
+from integration_testing.platform.script_output import MockActionOutput
+from integration_testing.set_meta import set_metadata
 
 from wiz.actions import get_issue_details
 from wiz.core import constants
-
 from .. import common
+from tests.core.product import Wiz
+from tests.core.session import WizSession
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -60,7 +60,6 @@ def test_get_issue_details_action_success(
 ) -> None:
     wiz.cleanup_issues()
     issue: datamodels.Issue = copy.deepcopy(ISSUE)
-
     wiz.add_issue(issue)
     get_issue_details.main()
     assert len(script_session.request_history) == 2

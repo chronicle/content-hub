@@ -18,8 +18,9 @@ from typing import TYPE_CHECKING
 
 from TIPCommon.base.action import Action
 
-from ..core import action_init, api_client
+from ..core import action_init
 from ..core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
+from ..core import api_client
 
 if TYPE_CHECKING:
     from typing import NoReturn
