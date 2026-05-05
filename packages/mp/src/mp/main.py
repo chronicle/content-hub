@@ -24,6 +24,8 @@ them onto the main Typer instance.
 from __future__ import annotations
 
 import atexit
+import logging
+import sys
 from typing import Annotated
 
 import typer
@@ -58,7 +60,26 @@ def main() -> None:
     app.add_typer(describe.app, name="describe")
     app.add_typer(pack_app, name="pack")
     app.add_typer(self_app, name="self")
-    app()
+
+    try:
+        app()
+    except Exception as e:
+        if isinstance(e, (typer.Exit, typer.Abort)):
+            raise
+
+        logger: logging.Logger = logging.getLogger(__name__)
+        try:
+            is_verbose: bool = mp_config.is_verbose()
+        except ValueError:
+            is_verbose = False
+
+        if is_verbose:
+            logger.exception("An unexpected error occurred.")
+        else:
+            logger.error("An error occurred: %s", e)  # noqa: TRY400
+            logger.error("Run with --verbose (-v) for a full stack trace.")  # noqa: TRY400
+
+        sys.exit(1)
 
 
 @app.callback(invoke_without_command=True)
