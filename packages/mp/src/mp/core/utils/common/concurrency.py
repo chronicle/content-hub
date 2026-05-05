@@ -77,7 +77,7 @@ def run_in_parallel(func: Callable[[_T], _R], items: Iterable[_T], processes: in
                     curr = curr.__cause__ or curr.__context__
 
                 chain_str: str = " -> ".join(error_msgs)
-                logger.error(error_message_template + ":\n  %s", item_name, chain_str)  # noqa: G003
+                logger.error(f"{error_message_template}:\n  %s", item_name, chain_str)  # noqa: G004
 
         msg: str = f"Failed to process {len(errors)} item(s)."
         raise ParallelRunError(msg)
