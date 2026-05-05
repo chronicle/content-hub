@@ -874,9 +874,9 @@ class OnePlatformSoarApi(BaseSoarApi):
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def save_integration_instance_settings(self) -> requests.Response:
         """Save integration instance settings"""
-        endpoint = f"/integrations/{self.params.identifier}/integrationInstances"
-        payload = {"environment": self.params.environment}
-        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+        endpoint = f"/integrations/{self.params.integration_identifier}/integrationInstances/{self.params.identifier}"
+        payload = self.params.integration_data
+        return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload) # QA fixes
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def import_simulated_case(self) -> requests.Response:

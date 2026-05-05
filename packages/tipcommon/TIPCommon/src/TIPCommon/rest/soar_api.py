@@ -1971,18 +1971,21 @@ def save_integration_instance_settings(
     identifier: str,
     environment: str,
     integration_data: SingleJson,
+    integration_identifier: str | None = None,
 ) -> bool:
     """Create integrations instance"""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.identifier = identifier
     api_client.params.environment = environment
     api_client.params.integration_data = integration_data
+    if integration_identifier:
+        api_client.params.integration_identifier = integration_identifier
     response = api_client.save_integration_instance_settings()
     try:
         validate_response(response, validate_json=False)
         return True
     except (HTTPError, InternalJSONDecoderError):
-        return False
+        return False # QA fixes
 
 
 def import_simulated_case(
