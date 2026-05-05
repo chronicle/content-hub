@@ -15,19 +15,135 @@
 from __future__ import annotations
 
 import json
+from enum import Enum
 from inspect import getmembers, isfunction
+from typing import Any
 
 from jinja2 import Environment
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.types import SingleJson
 
 from ..core import JinjaFilters
 
-# Example Consts:
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
+
 INTEGRATION_NAME = "TemplateEngine"
 
 SCRIPT_NAME = "RenderTemplate"
+
+
+def get_execution_scope(siemplify: SiemplifyAction) -> ExecutionScope:
+    """Parse the execution scope from the siemplify action context.
+
+    Args:
+        siemplify: The SiemplifyAction orchestration instance.
+
+    Returns:
+        The determined ExecutionScope enum value (defaults to Alert).
+    """
+    raw_scope = getattr(siemplify, "execution_scope", ExecutionScope.Alert.value)
+    execution_scope_value = ExecutionScope.Alert.value
+    try:
+        if hasattr(raw_scope, "value"):
+            raw_scope = raw_scope.value
+
+        str_scope = str(raw_scope).strip().title()
+        if str_scope.isdigit():
+            execution_scope_value = ExecutionScope(int(str_scope)).value
+        else:
+            execution_scope_value = ExecutionScope[str_scope].value
+    except Exception as e:
+        siemplify.LOGGER.error(f"Failed to parse execution scope: {e}.")
+
+    return ExecutionScope(execution_scope_value)
+
+
+def _extract_alert_data(
+    alert: Any,
+    entities_source: list[Any],
+    events: list[SingleJson],
+    entities: dict[str, SingleJson],
+) -> None:
+    """Extract security events and entities from a single alert context.
+
+    Args:
+        alert: The target alert SDK object instance.
+        entities_source: List of entity object contexts (alert entities or target entities).
+        events: List container to accumulate events additional properties dictionaries.
+        entities: Dictionary container to accumulate unique filename/address/etc. entities properties.
+    """
+    events.extend(
+        event.additional_properties
+        for event in getattr(alert, "security_events", [])
+    )
+    entities.update({
+        entity.additional_properties.get("Identifier")
+        or entity.identifier: entity.additional_properties
+        for entity in entities_source
+        if entity.additional_properties.get("Type") != "ALERT"
+    })
+
+
+def extract_context_data(
+    execution_scope: ExecutionScope,
+    current_alert: Any = None,
+    target_entities: list[Any] | None = None,
+    case_alerts: list[Any] | None = None,
+    logger: Any = None,
+) -> dict[str, list[SingleJson] | dict[str, SingleJson]]:
+    """Extract security events and entities based on execution scope.
+
+    Args:
+        execution_scope: The determined ExecutionScope for playbook run (Alert or Case).
+        current_alert: The current alert SDK instance (optional).
+        target_entities: List of target entities from Siemplify (optional).
+        case_alerts: List of alerts associated with the case (optional).
+
+    Returns:
+        A single dictionary containing lists of security events and
+        dictionaries of entities.
+    """
+    events: list[SingleJson] = []
+    entities: dict[str, SingleJson] = {}
+
+    if execution_scope == ExecutionScope.Alert:
+        if current_alert:
+            _extract_alert_data(
+                current_alert,
+                target_entities or [],
+                events,
+                entities,
+            )
+    else:
+        for alert in case_alerts or []:
+            try:
+                _extract_alert_data(
+                    alert,
+                    getattr(alert, "entities", []),
+                    events,
+                    entities,
+                )
+            except Exception as e:
+                if logger:
+                    identifier = getattr(alert, "identifier", "unknown")
+                    logger.warning(
+                        "Skipping alert %s extraction in case scope "
+                        "due to error: %s.",
+                        identifier,
+                        e,
+                    )
+
+    return {
+        "SiemplifyEvents": events,
+        "SiemplifyEntities": entities,
+    }
 
 
 @output_handler
@@ -36,15 +152,14 @@ def main():
     siemplify.script_name = SCRIPT_NAME
     siemplify.LOGGER.info("================= Main - Param Init =================")
 
-    events = []
-    for event in siemplify.current_alert.security_events:
-        events.append(event.additional_properties)
-    entities = {}
-    for entity in siemplify.target_entities:
-        if entity.additional_properties["Type"] != "ALERT":
-            entities[entity.additional_properties["Identifier"]] = (
-                entity.additional_properties
-            )
+    execution_scope = get_execution_scope(siemplify)
+    case_data = extract_context_data(
+        execution_scope=execution_scope,
+        current_alert=siemplify.current_alert,
+        target_entities=siemplify.target_entities,
+        case_alerts=getattr(siemplify.case, "alerts", []),
+        logger=siemplify.LOGGER,
+    )
 
     # INIT ACTION PARAMETERS:
     json_object = siemplify.extract_action_param(
@@ -124,15 +239,12 @@ def main():
                 template = jinja_env.from_string(template)
             for entry in input_json:
                 if include_case_data:
-                    entry.update({"SiemplifyEvents": events})
-                    entry.update({"SiemplifyEntities": entities})
+                    entry.update(case_data)
                 result_value += template.render(entry, input_json=entry)
                 output_message = "Successfully rendered the template."
         elif isinstance(input_json, dict):
             if include_case_data:
-                input_json.update({"SiemplifyEvents": events})
-                input_json.update({"SiemplifyEntities": entities})
-                print(input_json)
+                input_json.update(case_data)
             if jinja:
                 template = jinja_env.from_string(jinja)
             else:
