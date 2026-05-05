@@ -43,7 +43,9 @@ class MarkdownFormat:
                     continue
 
                 icon = ICON_MAP[content_type.value]
-                markdown_content_list.append(f"## {icon} {content_type.value.capitalize()}s\n\n")
+                markdown_content_list.append(
+                    f"<details>\n<summary><h2>{icon} {content_type.value.capitalize()}s</h2></summary>\n\n"
+                )
 
                 for results_list in full_report.values():
                     if results_list:
@@ -54,6 +56,8 @@ class MarkdownFormat:
                                 markdown_content_list.extend(
                                     _format_table(table_data, validation_result.validation_report.content_name)
                                 )
+
+                markdown_content_list.append("</details>\n\n")
 
             markdown_content: str = "".join(markdown_content_list)
             _save_report_file(markdown_content, output_filename="validation_report.md")
