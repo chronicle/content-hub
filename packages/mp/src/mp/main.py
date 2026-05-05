@@ -46,6 +46,7 @@ from .self_update.typer_app import self_app
 from .validate.typer_app import validate_app
 
 app: typer.Typer = typer.Typer()
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def main() -> None:
@@ -67,7 +68,6 @@ def main() -> None:
         if isinstance(e, (typer.Exit, typer.Abort)):
             raise
 
-        logger: logging.Logger = logging.getLogger(__name__)
         try:
             is_verbose: bool = mp.core.config.is_verbose()
         except ValueError:
