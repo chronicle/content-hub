@@ -96,7 +96,7 @@ class IntegrationsRepo:
         mp.core.utils.run_in_parallel(
             func=self.build_integration,
             items=paths,
-            processes=processes,
+            max_workers=processes,
             error_message_template="Failed to build '%s'",
         )
 
@@ -181,7 +181,7 @@ class IntegrationsRepo:
         mp.core.utils.run_in_parallel(
             func=self.deconstruct_integration,
             items=paths,
-            processes=processes,
+            max_workers=processes,
             error_message_template="Failed to deconstruct '%s'",
         )
 

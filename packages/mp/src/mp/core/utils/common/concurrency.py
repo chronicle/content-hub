@@ -28,20 +28,25 @@ if TYPE_CHECKING:
 logger: logging.Logger = logging.getLogger(__name__)
 
 _T = TypeVar("_T")
-_R = TypeVar("_R")
 
 
 class ParallelRunError(Exception):
     """Generic exception type for errors during parallel execution of a command."""
 
+    def __init__(self, message: str, errors: list[tuple] | None = None) -> None:
+        super().__init__(message)
+        self.errors = errors or []
 
-def run_in_parallel(func: Callable[[_T], _R], items: Iterable[_T], processes: int, error_message_template: str) -> None:
+
+def run_in_parallel(
+    func: Callable[[_T], object], items: Iterable[_T], max_workers: int, error_message_template: str
+) -> None:
     """Run a function in parallel over a list of items and aggregate errors.
 
     Args:
         func: The function to execute.
         items: The iterable of items to pass to the function.
-        processes: The number of worker threads to use.
+        max_workers: The number of worker threads to use.
         error_message_template: Template string for the error message (e.g. "Failed to process '%s'").
             It will be formatted with the item's name or string representation.
 
@@ -50,8 +55,8 @@ def run_in_parallel(func: Callable[[_T], _R], items: Iterable[_T], processes: in
 
     """
     errors: list[tuple[_T, Exception]] = []
-    with ThreadPoolExecutor(max_workers=processes) as pool:
-        futures: dict[Future[_R], _T] = {pool.submit(func, item): item for item in items}
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures: dict[Future[object], _T] = {pool.submit(func, item): item for item in items}
         for future in as_completed(futures):
             item: _T = futures[future]
             try:
@@ -74,10 +79,11 @@ def run_in_parallel(func: Callable[[_T], _R], items: Iterable[_T], processes: in
                 curr: BaseException | None = e
                 while curr:
                     error_msgs.append(f"{type(curr).__name__}: {curr}")
+                    # Prioritize __cause__ over __context__ for 'raise X from Y' semantics
                     curr = curr.__cause__ or curr.__context__
 
                 chain_str: str = " -> ".join(error_msgs)
                 logger.error(f"{error_message_template}:\n  %s", item_name, chain_str)  # noqa: G004
 
         msg: str = f"Failed to process {len(errors)} item(s)."
-        raise ParallelRunError(msg)
+        raise ParallelRunError(msg, errors)

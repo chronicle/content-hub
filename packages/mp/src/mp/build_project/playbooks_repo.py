@@ -66,7 +66,7 @@ class PlaybooksRepo:
         mp.core.utils.run_in_parallel(
             func=self.build_playbook,
             items=paths,
-            processes=processes,
+            max_workers=processes,
             error_message_template="Failed to build playbook '%s'",
         )
 
@@ -112,7 +112,7 @@ class PlaybooksRepo:
         mp.core.utils.run_in_parallel(
             func=self.deconstruct_playbook,
             items=paths,
-            processes=processes,
+            max_workers=processes,
             error_message_template="Failed to deconstruct playbook '%s'",
         )
 
