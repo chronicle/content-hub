@@ -16,13 +16,12 @@
 
 from __future__ import annotations
 
+import logging
 import pathlib
 import re
 import subprocess as sp  # noqa: S404
 import sys
 from typing import IO, TYPE_CHECKING
-
-import rich
 
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.core.utils import is_windows
@@ -34,6 +33,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 COMMAND_ERR_MSG: str = "Error happened while executing a command: {0}"
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class FatalCommandError(FatalValidationError):
@@ -56,9 +58,7 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
         FatalCommandError: if a project is already initialized
 
     """
-    python_version: str = (
-        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    )
+    python_version: str = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     command: list[str] = [
         sys.executable,
         "-m",
@@ -72,9 +72,13 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
         "--no-dev",
         "--python",
         python_version,
+        "--default-index",
+        "https://pypi.org/simple",
     ]
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Compiling dependencies for project %s to %s", project_path, requirements_path)
+    logger.debug("Running command: %s", command)
 
     try:
         sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
@@ -84,12 +88,8 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
 
 def _get_safe_to_ignore_packages(e: sp.CalledProcessError, /) -> list[str]:
     full_msg: str = f"{e.stdout or ''}\n{e.stderr or ''}"
-    ignored_packages: list[str] = [
-        pkg for pkg in constants.SAFE_TO_IGNORE_PACKAGES if pkg in full_msg
-    ]
-    ignored_messages: list[bool] = [
-        msg in full_msg for msg in constants.SAFE_TO_IGNORE_ERROR_MESSAGES
-    ]
+    ignored_packages: list[str] = [pkg for pkg in constants.SAFE_TO_IGNORE_PACKAGES if pkg in full_msg]
+    ignored_messages: list[bool] = [msg in full_msg for msg in constants.SAFE_TO_IGNORE_ERROR_MESSAGES]
     if ignored_messages and ignored_packages:
         return ignored_packages
     return []
@@ -102,6 +102,7 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
         FatalCommandError: if a pip command fails.
 
     """
+    logger.debug("Running pip command: %s in %s", command, cwd)
     try:
         sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # noqa: S603
     except sp.CalledProcessError as e:
@@ -111,7 +112,7 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
                 f"[INFO] Ignored safe-to-ignore packages due to Python version "
                 f"incompatibility: {', '.join(ignored_packages)}\n"
             )
-            rich.print(message)
+            logger.info(message)
             return
 
         _handle_pip_no_matching_distribution_error(e)
@@ -175,9 +176,13 @@ def download_wheels_from_requirements(
         "cp",
         "--platform",
         "none-any",
+        "--index-url",
+        "https://pypi.org/simple",
     ]
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Downloading wheels from %s to %s", requirements_path, dst_path)
+    logger.debug("Running command: %s", command)
 
     try:
         if is_windows():
@@ -218,6 +223,8 @@ def add_dependencies_to_toml(
         "add",
         "--python",
         python_version,
+        "--default-index",
+        "https://pypi.org/simple",
     ]
     runtime_config: list[str] = _get_runtime_config()
     base_command.extend(runtime_config)
@@ -225,9 +232,7 @@ def add_dependencies_to_toml(
     _add_dev_dependencies_to_toml(dev_deps_to_add, base_command, project_path)
 
 
-def _add_regular_dependencies_to_toml(
-    deps_to_add: list[str], base_command: list[str], project_path: Path
-) -> None:
+def _add_regular_dependencies_to_toml(deps_to_add: list[str], base_command: list[str], project_path: Path) -> None:
     """Add regular dependencies to the pyproject.toml file using pypi index.
 
     Raises:
@@ -238,10 +243,6 @@ def _add_regular_dependencies_to_toml(
         return
     deps_command: list[str] = base_command.copy()
     deps_command.extend(deps_to_add)
-    deps_command.extend([
-        "--default-index",
-        "https://pypi.org/simple",
-    ])
     try:
         sp.run(deps_command, cwd=project_path, check=True, text=True)  # noqa: S603
 
@@ -249,9 +250,7 @@ def _add_regular_dependencies_to_toml(
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def _add_dev_dependencies_to_toml(
-    dev_deps_to_add: list[str], base_command: list[str], project_path: Path
-) -> None:
+def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list[str], project_path: Path) -> None:
     """Add development dependencies to the pyproject.toml file.
 
     Raises:
@@ -329,6 +328,8 @@ def init_python_project(project_path: Path) -> None:
 
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Initializing python project in %s", project_path)
+    logger.debug("Running command: %s", command)
 
     try:
         sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
@@ -383,6 +384,7 @@ def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
         sp.run(chmod_command, check=True)  # noqa: S603
 
     command: list[str] = [script_full_path] + [str(p) for p in test_paths]
+    logger.debug("Running script on paths: %s", command)
 
     result = sp.run(  # noqa: S603
         command,
@@ -394,9 +396,7 @@ def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
     return result.returncode
 
 
-def execute_command_and_get_output(
-    command: list[str], paths: Iterable[Path], **flags: bool | str
-) -> int:
+def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **flags: bool | str) -> int:
     """Execute a command and capture its output and status code.
 
     Args:
@@ -418,11 +418,13 @@ def execute_command_and_get_output(
 
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Executing command and capturing output: %s", command)
 
     try:
         process: sp.Popen[bytes] = sp.Popen(command)  # noqa: S603
         for line in _stream_process_output(process):
-            rich.print(str(line))
+            logger.info("%s", line.decode(errors="replace").rstrip())
+
         return process.wait()
 
     except sp.CalledProcessError as e:
@@ -545,10 +547,13 @@ def check_lock_file(project_path: Path) -> None:
         str(project_path),
         "--python",
         python_version,
+        "--default-index",
+        "https://pypi.org/simple",
     ]
 
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Checking lock file consistency: %s", command)
 
     try:
         sp.run(  # noqa: S603
@@ -592,11 +597,7 @@ def get_files_unmerged_to_main_branch(
         results: sp.CompletedProcess[str] = sp.run(  # noqa: S603
             command, check=True, text=True, capture_output=True
         )
-        return [
-            p
-            for path in results.stdout.strip().splitlines()
-            if path and (p := pathlib.Path(path)).exists()
-        ]
+        return [p for path in results.stdout.strip().splitlines() if path and (p := pathlib.Path(path)).exists()]
 
     except sp.CalledProcessError as error:
         error_output: str = f"{COMMAND_ERR_MSG.format('git diff')}: {error.stderr.strip()}"
@@ -616,7 +617,20 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
         NonFatalCommandError: If the git command fails (e.g., file not found on main).
 
     """
-    git_path_arg: str = f"origin/main:{file_path.as_posix()}"
+    # git show requires a repo-root-relative path; convert absolute paths.
+    try:
+        rev_parse_command: list[str] = ["git", "rev-parse", "--show-toplevel"]
+        repo_root_result = sp.run(  # noqa: S603
+            rev_parse_command,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        relative_path: pathlib.Path = file_path.relative_to(repo_root_result.stdout.strip())
+    except (sp.CalledProcessError, ValueError):
+        relative_path = file_path
+
+    git_path_arg: str = f"origin/main:{relative_path.as_posix()}"
     command: list[str] = ["git", "show", git_path_arg]
 
     try:
@@ -625,9 +639,7 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
         )
 
     except sp.CalledProcessError as error:
-        error_output: str = (
-            f"Failed to get content of '{file_path}' from main branch: {error.stderr.strip()}"
-        )
+        error_output: str = f"Failed to get content of '{file_path}' from main branch: {error.stderr.strip()}"
         raise NonFatalCommandError(error_output) from error
 
     else:

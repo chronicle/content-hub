@@ -28,13 +28,15 @@ class TestInitiateRescan:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test successful rescan initiation for host."""
-        censys_manager.set_initiate_rescan_response({
-            "result": {
-                "tracked_scan_id": "scan_12345",
-                "tasks": [],
-                "create_time": "2024-01-15T10:30:00Z",
+        censys_manager.set_initiate_rescan_response(
+            {
+                "result": {
+                    "tracked_scan_id": "scan_12345",
+                    "tasks": [],
+                    "create_time": "2024-01-15T10:30:00Z",
+                }
             }
-        })
+        )
 
         initiate_rescan.main()
 
@@ -56,13 +58,15 @@ class TestInitiateRescan:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test successful rescan initiation for web properties."""
-        censys_manager.set_initiate_rescan_response({
-            "result": {
-                "tracked_scan_id": "scan_67890",
-                "tasks": [],
-                "create_time": "2024-01-15T10:30:00Z",
+        censys_manager.set_initiate_rescan_response(
+            {
+                "result": {
+                    "tracked_scan_id": "scan_67890",
+                    "tasks": [],
+                    "create_time": "2024-01-15T10:30:00Z",
+                }
             }
-        })
+        )
 
         initiate_rescan.main()
 
@@ -86,7 +90,9 @@ class TestInitiateRescan:
         censys_manager: CensysAPIManager,
     ) -> None:
         """Test rescan initiation with API failure."""
-        censys_manager.simulate_initiate_rescan_failure(should_fail=True, exception_type="generic")
+        censys_manager.simulate_initiate_rescan_failure(
+            should_fail=True, exception_type="generic"
+        )
 
         initiate_rescan.main()
 

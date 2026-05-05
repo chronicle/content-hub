@@ -101,10 +101,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.JOBS_META_SUFFIX}")
-        ]
+        return [cls._from_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.JOBS_META_SUFFIX}")]
 
     @classmethod
     def from_non_built_path(cls, path: Path) -> list[Self]:
@@ -121,10 +118,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
         if not meta_path.exists():
             return []
 
-        return [
-            cls._from_non_built_path(p)
-            for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}")
-        ]
+        return [cls._from_non_built_path(p) for p in meta_path.rglob(f"*{mp.core.constants.YAML_SUFFIX}")]
 
     @classmethod
     def _from_built(cls, file_name: str, built: BuiltJobMetadata) -> Self:
@@ -178,7 +172,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
             Name=self.name,
             Parameters=[param.to_built() for param in self.parameters],
             RunIntervalInSeconds=self.run_interval_in_seconds,
-            Version=float(self.version),
+            Version=self.version,
         )
 
     def to_non_built(self) -> NonBuiltJobMetadata:

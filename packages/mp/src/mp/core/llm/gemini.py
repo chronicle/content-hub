@@ -27,6 +27,7 @@ from google.genai.types import (
     BatchJob,
     Content,
     GenerateContentConfig,
+    GenerateContentResponse,
     GoogleSearch,
     HarmBlockThreshold,
     HarmCategory,
@@ -73,7 +74,7 @@ class ApiKeyNotFoundError(Exception):
 
 
 class GeminiConfig(LlmConfig):
-    model_name: str = "gemini-3-pro-preview"
+    model_name: str = "gemini-3.1-pro-preview"
     temperature: float = 0.0
     sexually_explicit: str = "OFF"
     dangerous_content: str = "OFF"
@@ -95,12 +96,12 @@ class GeminiConfig(LlmConfig):
             ApiKeyNotFoundError: If the API key is not found.
 
         """
+        if mp_api_key := mp.core.config.get_gemini_api_key():
+            return mp_api_key
+
         gemini_api_key: str | None = os.environ.get("GEMINI_API_KEY")
         if gemini_api_key:
             return gemini_api_key
-
-        if mp_api_key := mp.core.config.get_gemini_api_key():
-            return mp_api_key
 
         msg: str = (
             "Could not find a saved Gemini API key in the configuration. "
@@ -127,9 +128,7 @@ def _log_retry_attempt(retry_state: RetryCallState) -> None:
 
 
 def _should_retry_exception(e: BaseException) -> bool:
-    return isinstance(e, ClientError) and (
-        e.code == RATE_LIMIT_STATUS_CODE or e.code >= SERVER_ERROR_STATUS_CODE
-    )
+    return isinstance(e, ClientError) and (e.code == RATE_LIMIT_STATUS_CODE or e.code >= SERVER_ERROR_STATUS_CODE)
 
 
 class Gemini(LlmSdk[GeminiConfig]):
@@ -143,59 +142,34 @@ class Gemini(LlmSdk[GeminiConfig]):
         return self
 
     async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        traceback: TracebackType | None,
+        self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None
     ) -> None:
         await self.close()
 
     @overload
     async def send_message(
-        self,
-        prompt: str,
-        /,
-        *,
-        raise_error_if_empty_response: Literal[True],
-        response_json_schema: type[T_Schema],
+        self, prompt: str, /, *, raise_error_if_empty_response: Literal[True], response_json_schema: type[T_Schema]
     ) -> T_Schema: ...
 
     @overload
     async def send_message(
-        self,
-        prompt: str,
-        /,
-        *,
-        raise_error_if_empty_response: Literal[False],
-        response_json_schema: type[T_Schema],
+        self, prompt: str, /, *, raise_error_if_empty_response: Literal[False], response_json_schema: type[T_Schema]
     ) -> T_Schema | Literal[""]: ...
 
     @overload
     async def send_message(
-        self,
-        prompt: str,
-        /,
-        *,
-        raise_error_if_empty_response: bool,
-        response_json_schema: None = None,
+        self, prompt: str, /, *, raise_error_if_empty_response: bool, response_json_schema: None = None
     ) -> str: ...
 
     @retry(
-        retry=(
-            retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)
-        ),
+        retry=(retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),
         before_sleep=_log_retry_attempt,
     )
     async def send_message(
-        self,
-        prompt: str,
-        /,
-        *,
-        raise_error_if_empty_response: bool,
-        response_json_schema: type[T_Schema] | None = None,
+        self, prompt: str, /, *, raise_error_if_empty_response: bool, response_json_schema: type[T_Schema] | None = None
     ) -> T_Schema | str:
         """Send a message to the LLM and get a response.
 
@@ -214,7 +188,7 @@ class Gemini(LlmSdk[GeminiConfig]):
             ValueError: If the JSON schema is invalid.
 
         """
-        schema: str | None = None
+        schema: dict[str, Any] | None = None
         if response_json_schema is not None:
             schema = response_json_schema.model_json_schema()
 
@@ -258,11 +232,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         self.content = Content(role="user", parts=[])
 
     async def send_bulk_messages(
-        self,
-        prompts: list[str],
-        /,
-        *,
-        response_json_schema: type[T_Schema] | None = None,
+        self, prompts: list[str], /, *, response_json_schema: type[T_Schema] | None = None
     ) -> list[T_Schema | str]:
         """Send multiple messages to the LLM and get responses.
 
@@ -279,8 +249,7 @@ class Gemini(LlmSdk[GeminiConfig]):
 
         if len(prompts) <= self.bulk_threshold:
             return await asyncio.gather(*[
-                self._send_single_message_independent(prompt, response_json_schema)
-                for prompt in prompts
+                self._send_single_message_independent(prompt, response_json_schema) for prompt in prompts
             ])
 
         requests: list[InlinedRequest] = self._prepare_batch_requests(prompts, response_json_schema)
@@ -289,18 +258,14 @@ class Gemini(LlmSdk[GeminiConfig]):
         return await self._get_batch_results(batch_job, response_json_schema)
 
     @retry(
-        retry=(
-            retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)
-        ),
+        retry=(retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),
         before_sleep=_log_retry_attempt,
     )
     async def _send_single_message_independent(
-        self,
-        prompt: str,
-        response_json_schema: type[T_Schema] | None = None,
+        self, prompt: str, response_json_schema: type[T_Schema] | None = None
     ) -> T_Schema | str:
         """Send a single message independently of the session history.
 
@@ -323,9 +288,9 @@ class Gemini(LlmSdk[GeminiConfig]):
             parts.extend(self.content.parts)
         parts.append(Part.from_text(text=prompt))
 
-        response = await self.client.models.generate_content(
+        response: GenerateContentResponse = await self.client.models.generate_content(
             model=self.config.model_name,
-            contents=[Content(role="user", parts=parts)],  # type: ignore[invalid-argument-type]
+            contents=Content(role="user", parts=parts),
             config=config,
         )
 
@@ -336,9 +301,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         return text
 
     def _prepare_batch_requests(
-        self,
-        prompts: list[str],
-        response_json_schema: type[T_Schema] | None,
+        self, prompts: list[str], response_json_schema: type[T_Schema] | None
     ) -> list[InlinedRequest]:
         """Prepare inlined requests for a batch job.
 
@@ -366,7 +329,7 @@ class Gemini(LlmSdk[GeminiConfig]):
             inlined_requests.append(
                 InlinedRequest(
                     model=self.config.model_name,
-                    contents=[Content(role="user", parts=parts)],  # type: ignore[invalid-argument-type]
+                    contents=Content(role="user", parts=parts),
                     config=config,
                 )
             )
@@ -430,9 +393,7 @@ class Gemini(LlmSdk[GeminiConfig]):
             raise RuntimeError(msg)
 
     async def _get_batch_results(
-        self,
-        batch_job: BatchJob,
-        response_json_schema: type[T_Schema] | None,
+        self, batch_job: BatchJob, response_json_schema: type[T_Schema] | None
     ) -> list[T_Schema | str]:
         """Extract results from a completed batch job.
 
@@ -461,9 +422,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         raise RuntimeError(msg)
 
     async def _parse_file_responses(
-        self,
-        file_name: str,
-        response_json_schema: type[T_Schema] | None,
+        self, file_name: str, response_json_schema: type[T_Schema] | None
     ) -> list[T_Schema | str]:
         """Parse file-based responses from a batch job.
 
@@ -486,7 +445,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         return results
 
     def create_generate_content_config(
-        self, response_json_schema: str | None = None
+        self, response_json_schema: dict[str, Any] | None = None
     ) -> GenerateContentConfig:
         """Create a GenerateContentConfig object for the Gemini API.
 
@@ -562,14 +521,12 @@ class Gemini(LlmSdk[GeminiConfig]):
         return results
 
     def _get_thinking_config(self) -> ThinkingConfig | None:
-        return (
-            ThinkingConfig(thinking_level=ThinkingLevel.HIGH) if self.config.use_thinking else None
-        )
+        return ThinkingConfig(thinking_level=ThinkingLevel.HIGH) if self.config.use_thinking else None
 
 
 def _parse_response_line_to_text(line: str) -> str:
     data: dict[str, Any] = json.loads(line)
-    response_data: dict[str, Any] = data.get("response")
+    response_data: dict[str, Any] | None = data.get("response")
     text: str = ""
     if response_data and response_data.get("candidates"):
         resp_content: dict[str, Any] = response_data["candidates"][0].get("content", {})
@@ -581,8 +538,7 @@ def _parse_response_line_to_text(line: str) -> str:
 
 
 def _parse_inlined_responses(
-    inline_responses: list[InlinedResponse],
-    response_json_schema: type[T_Schema] | None,
+    inline_responses: list[InlinedResponse], response_json_schema: type[T_Schema] | None
 ) -> list[T_Schema | str]:
     """Parse inlined responses from a batch job.
 

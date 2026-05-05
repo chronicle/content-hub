@@ -31,7 +31,11 @@ BUILT_BLOCK: str = "mock_built_block/mock_built_block.json"
 
 
 @pytest.fixture(autouse=True)
-def set_runtime_params() -> None:
+def set_runtime_params(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Use a temporary config file for tests to avoid race conditions and home dir pollution
+    temp_config: Path = tmp_path / ".mp_config"
+    monkeypatch.setattr("mp.core.config.CONFIG_PATH", temp_config)
+
     params: RuntimeParams = RuntimeParams(quiet=True, verbose=False)
     params.set_in_config()
 
@@ -95,11 +99,7 @@ def full_details(built_integration: Path) -> Path:
 @pytest.fixture
 def marketplace_json(mock_response_integrations: Path) -> Path:
     """Path to a mock `marketplace.json` file."""
-    return (
-        mock_response_integrations
-        / BUILT_INTEGRATION_DIR_NAME
-        / mp.core.constants.MARKETPLACE_JSON_NAME
-    )
+    return mock_response_integrations / BUILT_INTEGRATION_DIR_NAME / mp.core.constants.MARKETPLACE_JSON_NAME
 
 
 @pytest.fixture

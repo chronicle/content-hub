@@ -14,16 +14,20 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import pathlib
 from typing import Annotated
 
-import rich
 import typer
 
 import mp.core.config
 
 __all__: list[str] = ["config", "config_app"]
 config_app: typer.Typer = typer.Typer(name="config", help="Configure the mp CLI tool.")
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @config_app.callback(invoke_without_command=True)
@@ -93,13 +97,22 @@ def config(
         n: int = mp.core.config.get_processes_number()
         c: int = mp.core.config.get_gemini_concurrency()
         k: str | None = mp.core.config.get_gemini_api_key()
+        env_k: str | None = os.environ.get("GEMINI_API_KEY")
+
+        display_k: str = "N/A"
         if k:
-            k = f"{k[:4]}{'*' * (len(k) - 4)}"
-        rich.print(
-            f"Marketplace path: {p}\n"
-            f"Number of processes: {n}\n"
-            f"Gemini concurrency: {c}\n"
-            f"API Key: {k}"
+            display_k = f"{k[:4]}{'*' * (len(k) - 4)} (from config)"
+            if env_k and k != env_k:
+                display_k += (
+                    f"\nWarning: GEMINI_API_KEY environment variable is also set "
+                    f"({env_k[:4]}{'*' * (len(env_k) - 4)}), but the configuration above "
+                    "takes priority."
+                )
+        elif env_k:
+            display_k = f"{env_k[:4]}{'*' * (len(env_k) - 4)} (from GEMINI_API_KEY env var)"
+
+        logger.info(
+            "Marketplace path: %s\nNumber of processes: %s\nGemini concurrency: %s\nAPI Key: %s", p, n, c, display_k
         )
 
 

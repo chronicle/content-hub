@@ -70,9 +70,7 @@ class BuiltPromptConstructor(PromptConstructor):
 
     async def _get_built_action_def_content(self) -> str:
         action_def: anyio.Path = (
-            self.out_path
-            / constants.OUT_ACTIONS_META_DIR
-            / f"{self.action_file_name}{constants.ACTIONS_META_SUFFIX}"
+            self.out_path / constants.OUT_ACTIONS_META_DIR / f"{self.action_file_name}{constants.ACTIONS_META_SUFFIX}"
         )
         if await action_def.exists():
             content: str = await action_def.read_text(encoding="utf-8")
@@ -86,9 +84,7 @@ class BuiltPromptConstructor(PromptConstructor):
         return DEFAULT_FILE_CONTENT
 
     async def _get_built_action_content(self) -> str:
-        action_script: anyio.Path = (
-            self.out_path / constants.OUT_ACTION_SCRIPTS_DIR / f"{self.action_file_name}.py"
-        )
+        action_script: anyio.Path = self.out_path / constants.OUT_ACTION_SCRIPTS_DIR / f"{self.action_file_name}.py"
         if await action_script.exists():
             return await action_script.read_text(encoding="utf-8")
 

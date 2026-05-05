@@ -20,9 +20,7 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
-from mp.core.utils import (
-    ensure_valid_list,
-)
+from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 from mp.validate.data_models import ContentType, FullReport
 from mp.validate.display import display_validation_reports
@@ -68,15 +66,6 @@ def validate_playbook(
         ),
     ],
     *,
-    only_pre_build: Annotated[
-        bool,
-        typer.Option(
-            help=(
-                "Execute only pre-build validations "
-                "checks on the playbooks, skipping the full build process."
-            ),
-        ),
-    ] = False,
     quiet: Annotated[
         bool,
         typer.Option(
@@ -100,8 +89,6 @@ def validate_playbook(
 
     Args:
         playbooks: A list of specific playbooks to validate.
-        only_pre_build: If set to True, only pre-build validation checks are
-                        performed.
         quiet: quiet log options
         verbose: Verbose log options
 
@@ -121,9 +108,7 @@ def validate_playbook(
     should_fail: bool = False
 
     if playbooks:
-        full_report[ContentType.PLAYBOOK], should_fail = validate_playbooks(
-            playbooks=playbooks, repositories=[], only_pre_build=only_pre_build
-        )
+        full_report[ContentType.PLAYBOOK], should_fail = validate_playbooks(playbooks=playbooks, repositories=[])
 
     display_validation_reports(full_report)
 

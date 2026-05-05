@@ -38,6 +38,7 @@ from .check.typer_app import check_app
 from .config.typer_app import config_app
 from .dev_env.typer_app import dev_env_app
 from .format.typer_app import format_app
+from .pack.typer_app import pack_app
 from .run_pre_build_tests.typer_app import test_app
 from .self_update.typer_app import self_app
 from .validate.typer_app import validate_app
@@ -47,8 +48,6 @@ app: typer.Typer = typer.Typer()
 
 def main() -> None:
     """Entry point for the `mp` CLI tool, initializing all sub-applications."""
-    setup_logging(verbose=mp_config.is_verbose(), quiet=mp_config.is_quiet())
-
     app.add_typer(build_app, name="build")
     app.add_typer(check_app)
     app.add_typer(config_app, name="config")
@@ -57,12 +56,13 @@ def main() -> None:
     app.add_typer(dev_env_app, name="dev-env")
     app.add_typer(validate_app, name="validate")
     app.add_typer(describe.app, name="describe")
+    app.add_typer(pack_app, name="pack")
     app.add_typer(self_app, name="self")
     app()
 
 
 @app.callback(invoke_without_command=True)
-def version_check(
+def global_options(
     *,
     _version: Annotated[
         bool,
@@ -74,10 +74,30 @@ def version_check(
             help="Show the version of the mp tool.",
         ),
     ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose output.",
+        ),
+    ] = False,
+    quiet: Annotated[
+        bool,
+        typer.Option(
+            "--quiet",
+            "-q",
+            help="Disable all output except errors.",
+        ),
+    ] = False,
 ) -> None:
     """Set up mp tool and initialize background tasks."""
+    mp_config.RuntimeParams(quiet=quiet, verbose=verbose).set_in_config()
+    setup_logging(verbose=verbose, quiet=quiet)
+
     checker: UpdateChecker = UpdateChecker()
     checker.start_background_check(get_mp_version())
+
     atexit.register(checker.print_warning_if_needed)
 
 

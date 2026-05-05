@@ -67,6 +67,4 @@ class TestTriggerDataModel:
         assert Trigger.from_built(FILE_NAME, BUILT_TRIGGER).to_built() == BUILT_TRIGGER
 
     def test_from_non_built_to_non_built_is_idempotent(self) -> None:
-        assert (
-            Trigger.from_non_built(FILE_NAME, NON_BUILT_TRIGGER).to_non_built() == NON_BUILT_TRIGGER
-        )
+        assert Trigger.from_non_built(FILE_NAME, NON_BUILT_TRIGGER).to_non_built() == NON_BUILT_TRIGGER

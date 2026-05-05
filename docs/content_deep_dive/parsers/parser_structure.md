@@ -17,20 +17,41 @@ content-hub/
         ├── third_party/
         │   ├── community/
         │   │   ├── VENDOR1_PRODUCT1/cbn/
-        │   │   └── VENDOR2_PRODUCT2/cbn/
-        │   ├── partnerA/
-        │   │   └── VENDOR1_PRODUCT1/cbn/
-        │   └── partnerB/
-        │        └── VENDOR1_PRODUCT1/cbn/
+        │   │   ├                     ├── <config>.conf
+        │   │   ├                     ├── metadata.json
+        │   │   ├                     └── testdata/
+        │   │   ├                           ├── raw_logs/
+        │   │   ├                           │   └── <usecase>_log.json
+        │   │   ├                           └── expected_events/
+        │   │   ├                               └── <usecase>_events.json
+        │   ├── partner/
+        │   │   ├── partnerA/
+        │   │   │     └── VENDOR1_PRODUCT1/cbn/
+        │   │   │                     ├── <config>.conf
+        │   │   │                     ├── metadata.json
+        │   │   │                     └── testdata/
+        │   │   │                           ├── raw_logs/
+        │   │   │                           │   └── <usecase>_log.json
+        │   │   │                           └── expected_events/
+        │   │   │                               └── <usecase>_events.json
+        │   │   └── partnerB/
+        │   │   │    └── VENDOR1_PRODUCT1/cbn/
+        │   │   │                     ├── <config>.conf
+        │   │   │                     ├── metadata.json
+        │   │   │                     └── testdata/
+        │   │   │                           ├── raw_logs/
+        │   │   │                           │   └── <usecase>_log.json
+        │   │   │                           └── expected_events/
+        │   │   │                               └── <usecase>_events.json
         ...
 ```
 
 ## Parser Folder Contents
 Each subdirectory under folder `cbn/` will contain the following files:
 
-**`parser.conf`**: This file contains the core parser logic using the Configuration Based Normalization (CBN) syntax. It defines the filters and mutations necessary to convert raw log data into the Unified Data Model (UDM) structure.
+**`<config>.conf`**: This file contains the core parser logic using the Configuration Based Normalization (CBN) syntax. It defines the filters and mutations necessary to convert raw log data into the Unified Data Model (UDM) structure. Name of the file is flexible, can be any valid name. 
 
-**`metadata.json`**: A JSON file providing essential metadata about the parser. This allows users and potential automation to quickly understand the parser's context and intended use. The structure will be as follows:
+**`metadata.json`**: A JSON file providing essential metadata about the parser. This allows users and potential automation to quickly understand the parser's context and intended use. Naming of the file fixed and has to be metadata.json. The structure will be as follows:
 ```json
 {
   "log_type": "AZURE_AD", // (Optional)
@@ -51,7 +72,9 @@ Each subdirectory under folder `cbn/` will contain the following files:
 * **references**: A public documentation link regarding the log source.
 
 **`testdata/` (Directory)**: This subdirectory houses files for testing the parser's correctness:
-* **`*.json` or `*.txt` files**: Sample raw log files (e.g., `sample_input.json`). These files contain representative log entries that the parser is expected to process.
-* **`*_expected.json` files**: JSON files representing the expected UDM output for each corresponding input log file (e.g., `sample_input_expected.json`). The JSON structure must conform to the publicly documented Google Security Operations UDM schema. This allows for validation without exposing internal proto definitions.
+* **`*_log.json` or `*.txt` files**: Sample raw log files (e.g., `sample_input_log.json`). These files contain representative log entries that the parser is expected to process. Naming of the file is flexible in the beginning but has to end with _log.json. 
+* **`*_events.json` files**: JSON files representing the expected UDM output for each corresponding input log file (e.g., `sample_input_events.json`). The JSON structure must conform to the publicly documented Google Security Operations UDM schema. This allows for validation without exposing internal proto definitions. Naming of the file is flexible but has to end with _events.json.
+
+**`Naming Convention for Logs and Events Files`**: For any log - event pair their prefixes are mandatariliy be same (e.g. `sample_input_log.json` and `sample_input_events.json`). There can be multiple such pairs of logs and events.
 
 **`README.md` (Optional)**: Any specific instructions, notes on log formats, common issues, or other documentation relevant to this particular parser.

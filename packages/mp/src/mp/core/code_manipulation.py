@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import logging
 import warnings
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
@@ -36,6 +37,8 @@ if TYPE_CHECKING:
 
 SDK_PREFIX: str = f"{constants.SDK_PACKAGE_NAME}."
 CORE_PREFIX: str = f"{constants.CORE_SCRIPTS_DIR}."
+
+logger = logging.getLogger(__name__)
 
 
 class LinterWarning(RuntimeWarning):
@@ -83,6 +86,7 @@ def static_type_check_python_files(paths: Iterable[Path]) -> None:
 def format_python_files(paths: Iterable[Path]) -> None:
     """Format python files."""
     paths = [p for p in paths if p.is_dir() or file_utils.is_python_file(p)]
+    logger.debug("Formatting python files")
     status_code: int = unix.ruff_format(paths)
     if status_code != 0:
         msg: str = "Found format issues"
@@ -241,20 +245,14 @@ class BaseCoreImportTransformer(cst.CSTTransformer, ABC):
         new_statements = []
         if non_core_aliases:
             # Preserve non-core imports
-            non_core_aliases[-1] = non_core_aliases[-1].with_changes(
-                comma=cst.MaybeSentinel.DEFAULT
-            )
+            non_core_aliases[-1] = non_core_aliases[-1].with_changes(comma=cst.MaybeSentinel.DEFAULT)
             new_statements.append(
-                cst.SimpleStatementLine(
-                    body=[import_statement.with_changes(names=tuple(non_core_aliases))]
-                )
+                cst.SimpleStatementLine(body=[import_statement.with_changes(names=tuple(non_core_aliases))])
             )
 
         # Transform core imports using the subclass-specific node creator
         core_aliases[-1] = core_aliases[-1].with_changes(comma=cst.MaybeSentinel.DEFAULT)
-        new_statements.append(
-            cst.SimpleStatementLine(body=[self._create_core_import_from(tuple(core_aliases))])
-        )
+        new_statements.append(cst.SimpleStatementLine(body=[self._create_core_import_from(tuple(core_aliases))]))
 
         return FlattenSentinel(new_statements)
 
@@ -273,9 +271,7 @@ class BaseCoreImportTransformer(cst.CSTTransformer, ABC):
         core_aliases = []
         non_core_aliases = []
         for alias in aliases:
-            if (full_module_name := get_full_name_for_node(alias.name)) and self._is_core_alias(
-                full_module_name
-            ):
+            if (full_module_name := get_full_name_for_node(alias.name)) and self._is_core_alias(full_module_name):
                 core_aliases.append(alias)
             else:
                 non_core_aliases.append(alias)
@@ -312,9 +308,7 @@ class CorePackageImportTransformer(BaseCoreImportTransformer):
 
         if full_module_name.split(".", maxsplit=1)[0] in self.core_module_names:
             prefixed_module = _create_prefixed_module(full_module_name, CORE_PREFIX)
-            return updated_node.with_changes(
-                module=prefixed_module, relative=(cst.Dot(), cst.Dot())
-            )
+            return updated_node.with_changes(module=prefixed_module, relative=(cst.Dot(), cst.Dot()))
 
         return updated_node
 
@@ -325,10 +319,7 @@ class CorePackageInternalImportTransformer(BaseCoreImportTransformer):
         self.current_module_name = current_module_name
 
     def _is_core_alias(self, full_module_name: str) -> bool:
-        return (
-            full_module_name in self.core_module_names
-            and full_module_name != self.current_module_name
-        )
+        return full_module_name in self.core_module_names and full_module_name != self.current_module_name
 
     @staticmethod
     def _create_core_import_from(aliases: tuple[cst.ImportAlias, ...]) -> cst.ImportFrom:
@@ -354,10 +345,7 @@ class CorePackageInternalImportTransformer(BaseCoreImportTransformer):
         if not (full_module_name := get_full_name_for_node(original_node.module)):
             return updated_node
 
-        if (
-            full_module_name in self.core_module_names
-            and full_module_name != self.current_module_name
-        ):
+        if full_module_name in self.core_module_names and full_module_name != self.current_module_name:
             return updated_node.with_changes(relative=(cst.Dot(),))
 
         return updated_node
@@ -407,9 +395,7 @@ class ImportTransformer(cst.CSTTransformer):
         changed = False
 
         for alias in updated_node.names:
-            if (
-                full_module_name := get_full_name_for_node(alias.name)
-            ) and full_module_name.startswith(SDK_PREFIX):
+            if (full_module_name := get_full_name_for_node(alias.name)) and full_module_name.startswith(SDK_PREFIX):
                 new_module_name = full_module_name.removeprefix(SDK_PREFIX)
                 expression = cst.parse_expression(new_module_name)
                 if not isinstance(expression, cst.Name | cst.Attribute):
@@ -441,15 +427,13 @@ class ImportTransformer(cst.CSTTransformer):
                 module=(
                     None
                     | cst.Name(
-                        value=(
-                            constants.CORE_SCRIPTS_DIR
-                            | constants.COMMON_SCRIPTS_DIR
-                            | constants.SDK_PACKAGE_NAME
-                        ),
+                        value=(constants.CORE_SCRIPTS_DIR | constants.COMMON_SCRIPTS_DIR | constants.SDK_PACKAGE_NAME),
                     )
                 ),
                 names=names,
             ):
+                if isinstance(names, cst.ImportStar):
+                    return updated_node
                 return cst.Import(names=names)
 
             # `from .module import ...` => `from module import ...`
@@ -470,9 +454,11 @@ def _is_reserved_node(node: cst.Attribute) -> bool:
 
 def _get_attribute_list(node: cst.ImportFrom) -> list[cst.Attribute]:
     nodes: list[cst.Attribute] = []
-    current_node: cst.Name | cst.Attribute | None = node.module
+    current_node: cst.BaseExpression | cst.Name | cst.Attribute | None = node.module
     while isinstance(current_node, cst.Attribute):
         nodes.append(current_node)
-        current_node = current_node.value  # ty: ignore[invalid-assignment]
+        current_node = current_node.value
+        if not isinstance(current_node, cst.Name | cst.Attribute):
+            break
 
     return nodes

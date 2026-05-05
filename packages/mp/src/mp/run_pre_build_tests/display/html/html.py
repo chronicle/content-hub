@@ -15,13 +15,13 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import pathlib
 import tempfile
 import webbrowser
 from typing import TYPE_CHECKING
 
 import jinja2
-from rich.console import Console
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,28 +31,28 @@ if TYPE_CHECKING:
     from mp.run_pre_build_tests.process_test_output import IntegrationTestResults
 
 
+logger: logging.Logger = logging.getLogger(__name__)
+
+
 class HtmlFormat:
     def __init__(self, integration_results_list: list[IntegrationTestResults]) -> None:
         self.integration_results_list: list[IntegrationTestResults] = integration_results_list
-        self.console: Console = Console()
 
     def display(self) -> None:
         """Generate an HTML report for integration test results."""
         try:
             html_content: str = self._generate_validation_report_html()
 
-            with tempfile.NamedTemporaryFile(
-                mode="w", delete=False, suffix=".html", encoding="utf-8"
-            ) as temp_file:
+            with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html", encoding="utf-8") as temp_file:
                 temp_file.write(html_content)
                 report_path: Path = pathlib.Path(temp_file.name)
 
             resolved_path: Path = report_path.resolve()
-            self.console.print(f"📂 Report available at 👉: {resolved_path.as_uri()}")
+            logger.info("📂 Report available at 👉: %s", resolved_path.as_uri())
             webbrowser.open(resolved_path.as_uri())
 
-        except Exception as e:  # noqa: BLE001
-            self.console.print(f"❌ Error generating report: {e}")
+        except Exception:
+            logger.exception("❌ Error generating report")
 
     def _generate_validation_report_html(
         self,
@@ -76,6 +76,8 @@ class HtmlFormat:
         total_integrations: int = len(all_results)
         total_failed_tests: int = sum(r.failed_tests for r in all_results)
         total_skipped_tests: int = sum(r.skipped_tests for r in all_results)
+        total_passed_tests: int = sum(r.passed_tests for r in all_results)
+        total_passed_integrations: int = sum(1 for r in all_results if r.failed_tests == 0 and r.skipped_tests == 0)
 
         current_time_aware: datetime.datetime = datetime.datetime.now().astimezone()
 
@@ -84,6 +86,8 @@ class HtmlFormat:
             "total_integrations": total_integrations,
             "total_skipped_tests": total_skipped_tests,
             "total_failed_tests": total_failed_tests,
+            "total_passed_tests": total_passed_tests,
+            "total_passed_integrations": total_passed_integrations,
             "current_time": current_time_aware.strftime("%B %d, %Y at %I:%M %p %Z"),
             "css_content": css_content,
             "js_content": js_content,

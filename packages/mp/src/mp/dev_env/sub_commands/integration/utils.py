@@ -15,12 +15,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import rich
 import typer
 
 import mp.core.constants
@@ -31,13 +31,14 @@ from mp.core.custom_types import RepositoryType
 from mp.core.data_models.integrations.integration import Integration
 from mp.core.utils import to_snake_case
 
+logger: logging.Logger = logging.getLogger(__name__)
+
+
 if TYPE_CHECKING:
     from requests.models import Response
 
 
-def get_integration_path(
-    integration: str, src: Path | None = None, *, custom: bool = False
-) -> Path:
+def get_integration_path(integration: str, src: Path | None = None, *, custom: bool = False) -> Path:
     """Find the source path for a given integration.
 
     Args:
@@ -76,9 +77,7 @@ def get_integration_path(
             if candidate.exists():
                 return candidate
 
-    rich.print(
-        f"[red]Could not find source integration at {integrations_root}/.../{integration}[/red]"
-    )
+    logger.error("Could not find source integration at %s/.../%s", integrations_root, integration)
     raise typer.Exit(1)
 
 
@@ -98,7 +97,7 @@ def get_integration_identifier(source_path: Path) -> str:
     try:
         integration_obj = Integration.from_non_built_path(source_path)
     except ValueError as e:
-        rich.print(f"[red]Could not determine integration identifier: {e}[/red]")
+        logger.exception("Could not determine integration identifier")
         raise typer.Exit(1) from e
     else:
         return integration_obj.identifier
@@ -118,16 +117,14 @@ def build_integration(integration: str, src: Path | None = None, *, custom: bool
     """
     try:
         build_integration_([integration], src=src, custom_integration=custom, quiet=True)
-        rich.print(f"[green]Build successful for {integration}[/green]")
+        logger.info("Build successful for %s", integration)
 
     except typer.Exit as e:
-        rich.print(f"[red]Build failed: {e}[/red]")
+        logger.exception("Build failed")
         raise typer.Exit(1) from e
 
 
-def find_built_integration_dir(
-    identifier: str, src: Path | None = None, *, custom: bool = False
-) -> Path:
+def find_built_integration_dir(identifier: str, src: Path | None = None, *, custom: bool = False) -> Path:
     """Find the built integration directory.
 
     Args:
@@ -156,7 +153,7 @@ def find_built_integration_dir(
         if (candidate := root / repo / identifier).exists():
             return candidate
 
-    rich.print(f"[red]Built integration not found for identifier '{identifier}' in {root}.[/red]")
+    logger.error("Built integration not found for identifier '%s' in %s.", identifier, root)
     raise typer.Exit(1)
 
 
@@ -188,7 +185,7 @@ def build_integrations_custom_repository() -> None:
         build_repository([RepositoryType.CUSTOM])
 
     except typer.Exit as e:
-        rich.print(f"[red]Build failed: {e}[/red]")
+        logger.exception("Build failed")
         raise typer.Exit(1) from e
 
 
@@ -216,9 +213,7 @@ def zip_integration_custom_repository() -> list[Path]:
 def _change_integration_to_custom(built_path: Path) -> None:
     for file in built_path.iterdir():
         if file.name == mp.core.constants.INTEGRATION_DEF_FILE.format(built_path.name):
-            _modify_def_file_to_custom(
-                built_path / mp.core.constants.INTEGRATION_DEF_FILE.format(built_path.name)
-            )
+            _modify_def_file_to_custom(built_path / mp.core.constants.INTEGRATION_DEF_FILE.format(built_path.name))
     if (built_path / mp.core.constants.OUT_ACTIONS_META_DIR).exists():
         _modify_def_files_to_custom(
             built_path / mp.core.constants.OUT_ACTIONS_META_DIR,
@@ -251,8 +246,8 @@ def _modify_def_file_to_custom(file: Path) -> None:
         with Path.open(file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, sort_keys=True)
 
-    except (OSError, json.JSONDecodeError) as e:
-        rich.print(f"Failed to process {file}: {e}")
+    except (OSError, json.JSONDecodeError):
+        logger.exception("Failed to process %s", file)
 
 
 def save_integration_as_zip(integration_name: str, resp: Response, dst: Path) -> Path:
@@ -315,5 +310,5 @@ def deconstruct_integration(built_integration: Path, dst: Path) -> Path:
         return dst / to_snake_case(built_integration.stem)
 
     except typer.Exit as e:
-        rich.print(f"[red]Deconstruct failed: {e}[/red]")
+        logger.exception("Deconstruct failed")
         raise typer.Exit(1) from e

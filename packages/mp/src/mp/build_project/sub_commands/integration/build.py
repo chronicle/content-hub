@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated
 
@@ -22,13 +23,13 @@ import typer
 
 import mp.core.config
 from mp.build_project.flow.integrations.flow import build_integrations
-from mp.core.utils import (
-    ensure_valid_list,
-)
+from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
 if TYPE_CHECKING:
     from mp.core.config import RuntimeParams
+
+logger = logging.getLogger(__name__)
 
 app: typer.Typer = typer.Typer()
 
@@ -139,6 +140,16 @@ def build_integration(  # noqa: PLR0913
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
+    logger.debug(
+        "Starting build_integration command with parameters: "
+        "integrations=%s, src=%s, dst=%s, deconstruct=%s, custom=%s",
+        integrations,
+        src,
+        dst,
+        deconstruct,
+        custom_integration,
+    )
+
     params: BuildParams = BuildParams(
         integrations=integrations,
         deconstruct=deconstruct,
@@ -154,6 +165,7 @@ def build_integration(  # noqa: PLR0913
 
     try:
         if integrations:
+            logger.debug("Dispatching to build_integrations flow")
             build_integrations(
                 integrations=integrations,
                 repositories=[],

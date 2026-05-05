@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import pathlib
 import tempfile
 import webbrowser
@@ -28,12 +29,15 @@ if TYPE_CHECKING:
 
     from mp.validate.data_models import ContentType, FullReport
 
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 class ReportStatistics(NamedTuple):
     groups_data: dict[str, Any]
     total_items: int
     total_fatal: int
     total_warn: int
+    total_passed: int
 
 
 class HtmlFormat:
@@ -47,22 +51,18 @@ class HtmlFormat:
             html_content: str = self._generate_validation_report_html()
 
             temp_report_path: Path
-            with tempfile.NamedTemporaryFile(
-                mode="w", delete=False, suffix=".html", encoding="utf-8"
-            ) as temp_file:
+            with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html", encoding="utf-8") as temp_file:
                 temp_file.write(html_content)
-                temp_report_path: Path = pathlib.Path(temp_file.name)
+                temp_report_path = pathlib.Path(temp_file.name)
 
             resolved_temp_path: Path = temp_report_path.resolve()
             self.console.print(f"📂 Report available at 👉: {resolved_temp_path.as_uri()}")
             webbrowser.open(resolved_temp_path.as_uri())
 
-        except Exception as e:  # noqa: BLE001
-            self.console.print(f"❌  Error generating report: {e.args}")
+        except Exception:
+            logger.exception("❌ Error generating report")
 
-    def _generate_validation_report_html(
-        self, template_name: str = "html_report/report.html"
-    ) -> str:
+    def _generate_validation_report_html(self, template_name: str = "html_report/report.html") -> str:
         template_dir = pathlib.Path(__file__).parent.resolve() / "templates"
         env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(template_dir),
@@ -76,34 +76,47 @@ class HtmlFormat:
             total_integrations=report_statistics.total_items,
             total_fatal_issues=report_statistics.total_fatal,
             total_non_fatal_issues=report_statistics.total_warn,
-            current_time=datetime.datetime
-            .now(datetime.UTC)
-            .astimezone()
-            .strftime("%B %d, %Y at %I:%M %p %Z"),
+            total_passed_issues=report_statistics.total_passed,
+            current_time=datetime.datetime.now(datetime.UTC).astimezone().strftime("%B %d, %Y at %I:%M %p %Z"),
             css_content=(template_dir / "static" / "style.css").read_text(encoding="utf-8-sig"),
             js_content=(template_dir / "static" / "script.js").read_text(encoding="utf-8-sig"),
         )
 
     def _get_report_statistics(self) -> ReportStatistics:
         groups_data = {}
-        total_items = total_fatal = total_warn = 0
+        total_items = total_fatal = total_warn = total_passed = 0
 
         for content_type, full_report in self.validation_results.items():
-            all_reports = [
-                report for reports in full_report.values() if reports for report in reports
-            ]
+            filtered_report = dict(full_report.items())
+            all_reports = [report for reports in filtered_report.values() if reports for report in reports]
 
             fatal = sum(len(r.validation_report.failed_fatal_validations) for r in all_reports)
             warn = sum(len(r.validation_report.failed_non_fatal_validations) for r in all_reports)
 
+            failed_reports = []
+            passed_reports = []
+            for r in all_reports:
+                if (
+                    not r.validation_report.failed_fatal_validations
+                    and not r.validation_report.failed_non_fatal_validations
+                ):
+                    passed_reports.append(r)
+                else:
+                    failed_reports.append(r)
+
+            passed = len(passed_reports)
+
             groups_data[content_type.value] = {
-                "reports_by_category": full_report,
+                "failed_reports": failed_reports,
+                "passed_reports": passed_reports,
                 "total_items": len(all_reports),
                 "total_fatal": fatal,
                 "total_warn": warn,
+                "total_passed": passed,
             }
             total_items += len(all_reports)
             total_fatal += fatal
             total_warn += warn
+            total_passed += passed
 
-        return ReportStatistics(groups_data, total_items, total_fatal, total_warn)
+        return ReportStatistics(groups_data, total_items, total_fatal, total_warn, total_passed)

@@ -7,6 +7,7 @@ from urllib.parse import quote
 from .constants import (
     CENSYS_HOSTS_URL_TEMPLATE,
     CENSYS_PLATFORM_BASE_URL,
+    CENSYS_SEARCH_BASE_URL,
     DEFAULT_VALUE_NA,
     ENRICHMENT_PREFIX,
     ENRICHMENT_PREFIX_CERT,
@@ -88,7 +89,10 @@ class PingDatamodel(BaseModel):
         Returns:
             Dictionary with success status
         """
-        return {"success": self.success, "status": "Connected" if self.success else "Failed"}
+        return {
+            "success": self.success,
+            "status": "Connected" if self.success else "Failed",
+        }
 
 
 class HostHistoryEventModel(BaseModel):
@@ -98,7 +102,11 @@ class HostHistoryEventModel(BaseModel):
     """
 
     def __init__(
-        self, raw_data: Dict[str, Any], index: int, host_id: str = None, organization_id: str = None
+        self,
+        raw_data: Dict[str, Any],
+        index: int,
+        host_id: str = None,
+        organization_id: str = None,
     ) -> None:
         super().__init__(raw_data)
         self.index = index
@@ -175,7 +183,11 @@ class HostHistoryEventModel(BaseModel):
 
     def _generate_historical_link(self) -> None:
         """Generate historical view link for the event."""
-        if self.host_id and self.organization_id and self.event_time != DEFAULT_VALUE_NA:
+        if (
+            self.host_id
+            and self.organization_id
+            and self.event_time != DEFAULT_VALUE_NA
+        ):
             try:
                 # URL encode the timestamp
                 encoded_time = quote(self.event_time, safe="")
@@ -244,37 +256,49 @@ class HostDatamodel(BaseModel):
 
         enrichment = {
             f"{ENRICHMENT_PREFIX}service_count": self.host_data.get("service_count"),
-            f"{ENRICHMENT_PREFIX}ports": self._get_top_values([
-                str(s.get("port")) for s in services if s.get("port")
-            ]),
-            f"{ENRICHMENT_PREFIX}protocols": self._get_top_values([
-                s.get("protocol") for s in services if s.get("protocol")
-            ]),
-            f"{ENRICHMENT_PREFIX}transport_protocols": self._get_top_values([
-                s.get("transport_protocol") for s in services if s.get("transport_protocol")
-            ]),
-            f"{ENRICHMENT_PREFIX}host_labels": self._get_top_values([
-                label.get("value")
-                for label in self.host_data.get("labels", [])
-                if label.get("value")
-            ]),
-            f"{ENRICHMENT_PREFIX}service_labels": self._get_top_values([
-                label.get("value")
-                for s in services
-                for label in s.get("labels", [])
-                if label.get("value")
-            ]),
-            f"{ENRICHMENT_PREFIX}threat_names": self._get_top_values([
-                threat.get("name")
-                for s in services
-                for threat in s.get("threats", [])
-                if threat.get("name")
-            ]),
-            f"{ENRICHMENT_PREFIX}vulnerabilities": self._get_top_values([
-                vuln for s in services for vuln in s.get("vulns", [])
-            ]),
+            f"{ENRICHMENT_PREFIX}ports": self._get_top_values(
+                [str(s.get("port")) for s in services if s.get("port")]
+            ),
+            f"{ENRICHMENT_PREFIX}protocols": self._get_top_values(
+                [s.get("protocol") for s in services if s.get("protocol")]
+            ),
+            f"{ENRICHMENT_PREFIX}transport_protocols": self._get_top_values(
+                [
+                    s.get("transport_protocol")
+                    for s in services
+                    if s.get("transport_protocol")
+                ]
+            ),
+            f"{ENRICHMENT_PREFIX}host_labels": self._get_top_values(
+                [
+                    label.get("value")
+                    for label in self.host_data.get("labels", [])
+                    if label.get("value")
+                ]
+            ),
+            f"{ENRICHMENT_PREFIX}service_labels": self._get_top_values(
+                [
+                    label.get("value")
+                    for s in services
+                    for label in s.get("labels", [])
+                    if label.get("value")
+                ]
+            ),
+            f"{ENRICHMENT_PREFIX}threat_names": self._get_top_values(
+                [
+                    threat.get("name")
+                    for s in services
+                    for threat in s.get("threats", [])
+                    if threat.get("name")
+                ]
+            ),
+            f"{ENRICHMENT_PREFIX}vulnerabilities": self._get_top_values(
+                [vuln for s in services for vuln in s.get("vulns", [])]
+            ),
             f"{ENRICHMENT_PREFIX}last_scan_time": self._get_latest_scan_time(services),
-            f"{ENRICHMENT_PREFIX}dns_names": self._get_top_values(dns_data.get("names", [])),
+            f"{ENRICHMENT_PREFIX}dns_names": self._get_top_values(
+                dns_data.get("names", [])
+            ),
             f"{ENRICHMENT_PREFIX}forward_dns": self._get_top_values(
                 dns_data.get("forward_dns", {}).get("names", [])
             ),
@@ -293,8 +317,12 @@ class HostDatamodel(BaseModel):
             f"{ENRICHMENT_PREFIX}location_country": location.get("country"),
             f"{ENRICHMENT_PREFIX}country_code": location.get("country_code"),
             f"{ENRICHMENT_PREFIX}continent": location.get("continent"),
-            f"{ENRICHMENT_PREFIX}geo_lat": location.get("coordinates", {}).get("latitude"),
-            f"{ENRICHMENT_PREFIX}geo_long": location.get("coordinates", {}).get("longitude"),
+            f"{ENRICHMENT_PREFIX}geo_lat": location.get("coordinates", {}).get(
+                "latitude"
+            ),
+            f"{ENRICHMENT_PREFIX}geo_long": location.get("coordinates", {}).get(
+                "longitude"
+            ),
         }
 
         return {k: v for k, v in enrichment.items() if v is not None}
@@ -398,33 +426,35 @@ class WebPropertyDatamodel(BaseModel):
         enrichment = {
             f"{port_prefix}web_hostname": self.web_data.get("hostname"),
             f"{port_prefix}web_port": self.web_data.get("port"),
-            f"{port_prefix}endpoint_type": self._get_top_values([
-                ep.get("endpoint_type") for ep in endpoints if ep.get("endpoint_type")
-            ]),
-            f"{port_prefix}endpoint_path": self._get_top_values([
-                ep.get("path") for ep in endpoints if ep.get("path")
-            ]),
-            f"{port_prefix}web_labels": self._get_top_values([
-                label.get("value") for label in labels if label.get("value")
-            ]),
-            f"{port_prefix}web_threats": self._get_top_values([
-                threat.get("name") for threat in threats if threat.get("name")
-            ]),
-            f"{port_prefix}web_vulns": self._get_top_values([
-                vuln.get("id") or vuln.get("name")
-                for vuln in vulns
-                if vuln.get("id") or vuln.get("name")
-            ]),
+            f"{port_prefix}endpoint_type": self._get_top_values(
+                [ep.get("endpoint_type") for ep in endpoints if ep.get("endpoint_type")]
+            ),
+            f"{port_prefix}endpoint_path": self._get_top_values(
+                [ep.get("path") for ep in endpoints if ep.get("path")]
+            ),
+            f"{port_prefix}web_labels": self._get_top_values(
+                [label.get("value") for label in labels if label.get("value")]
+            ),
+            f"{port_prefix}web_threats": self._get_top_values(
+                [threat.get("name") for threat in threats if threat.get("name")]
+            ),
+            f"{port_prefix}web_vulns": self._get_top_values(
+                [
+                    vuln.get("id") or vuln.get("name")
+                    for vuln in vulns
+                    if vuln.get("id") or vuln.get("name")
+                ]
+            ),
             f"{port_prefix}web_scan_time": self.web_data.get("scan_time"),
-            f"{port_prefix}software_vendor": self._get_top_values([
-                sw.get("vendor") for sw in software_list if sw.get("vendor")
-            ]),
-            f"{port_prefix}software_product": self._get_top_values([
-                sw.get("product") for sw in software_list if sw.get("product")
-            ]),
-            f"{port_prefix}software_version": self._get_top_values([
-                sw.get("version") for sw in software_list if sw.get("version")
-            ]),
+            f"{port_prefix}software_vendor": self._get_top_values(
+                [sw.get("vendor") for sw in software_list if sw.get("vendor")]
+            ),
+            f"{port_prefix}software_product": self._get_top_values(
+                [sw.get("product") for sw in software_list if sw.get("product")]
+            ),
+            f"{port_prefix}software_version": self._get_top_values(
+                [sw.get("version") for sw in software_list if sw.get("version")]
+            ),
             f"{port_prefix}last_enriched": (datetime.utcnow().isoformat() + "Z"),
         }
 
@@ -580,3 +610,138 @@ class CertificateDatamodel(BaseModel):
             return {}
 
         return self.cert_data
+
+
+class RelatedInfraResultModel(BaseModel):
+    """
+    Data model for CensEye Related Infrastructure pivot results.
+    Formats pivot data for table output and generates Censys search URLs.
+    """
+
+    def __init__(
+        self,
+        raw_data: Dict[str, Any],
+        index: int,
+    ) -> None:
+        """
+        Initialize RelatedInfraResultModel.
+
+        Args:
+            raw_data: Raw pivot result data from API
+            index: Sequential number for this result
+        """
+        super().__init__(raw_data)
+        self.index = index
+
+        self.count = raw_data.get("count", 0)
+        self.field_value_pairs = raw_data.get("field_value_pairs", [])
+
+        self.pivot_fields = self._format_fields()
+        self.pivot_values = self._format_values()
+        self.search_url = self._generate_search_url()
+
+    def _format_fields(self) -> str:
+        """
+        Format field names as comma-separated string.
+
+        Returns:
+            Comma-separated field names or N/A
+        """
+        fields = [pair.get("field", "") for pair in self.field_value_pairs]
+        return ", ".join(fields) if fields else DEFAULT_VALUE_NA
+
+    def _format_values(self) -> str:
+        """
+        Format field values as comma-separated string.
+
+        Returns:
+            Comma-separated field values or N/A
+        """
+        values = [str(pair.get("value", "")) for pair in self.field_value_pairs]
+        return ", ".join(values) if values else DEFAULT_VALUE_NA
+
+    def _generate_search_url(self) -> str:
+        """
+        Generate Censys search URL for this pivot.
+
+        Returns:
+            Clickable Censys search URL or N/A
+        """
+        if not self.field_value_pairs:
+            return DEFAULT_VALUE_NA
+        # Special header fields that need nested key-value syntax
+        # These fields appear as field.key and field.value in the API response
+        HEADER_FIELD_PATTERNS = [
+            "web.endpoints.http.headers",
+            "host.services.endpoints.http.headers",
+        ]
+
+        # Check if this is a header field pivot with key/value pairs
+        if len(self.field_value_pairs) == 2:
+            field1 = self.field_value_pairs[0].get("field", "")
+            field2 = self.field_value_pairs[1].get("field", "")
+
+            # Check if these are .key and .value variants of a header field
+            for header_pattern in HEADER_FIELD_PATTERNS:
+                key_field = f"{header_pattern}.key"
+                value_field = f"{header_pattern}.value"
+
+                # Check if we have both .key and .value fields
+                if (field1 == key_field and field2 == value_field) or (
+                    field1 == value_field and field2 == key_field
+                ):
+                    # Extract the key and value
+                    key_val = None
+                    value_val = None
+
+                    for pair in self.field_value_pairs:
+                        if pair.get("field", "").endswith(".key"):
+                            key_val = pair.get("value", "")
+                        elif pair.get("field", "").endswith(".value"):
+                            value_val = pair.get("value", "")
+
+                    if key_val and value_val:
+                        # Use nested syntax: field: (key = "X" and value = "Y")
+                        query = f"{header_pattern}: (key = '{key_val}' and value = '{value_val}')"
+                        encoded_query = quote(query, safe="")
+                        return f"{CENSYS_SEARCH_BASE_URL}?q={encoded_query}"
+
+        query_parts = []
+        for pair in self.field_value_pairs:
+            field = pair.get("field", "")
+            value = pair.get("value", "")
+
+            if field and value:
+                query_parts.append(f"{field}:'{value}'")
+
+        if not query_parts:
+            return DEFAULT_VALUE_NA
+
+        query = " AND ".join(query_parts)
+        encoded_query = quote(query, safe="")
+
+        return f"{CENSYS_SEARCH_BASE_URL}?q={encoded_query}"
+
+    def to_csv(self) -> Dict[str, Any]:
+        """
+        Convert to CSV-compatible dictionary for table output.
+
+        Returns:
+            Dict with 5 columns for data table
+        """
+        return {
+            "Sr. No.": self.index,
+            "Pivot Field(s)": self.pivot_fields,
+            "Pivot Value(s)": self.pivot_values,
+            "Asset Count": self.count,
+            "See results in Censys": self.search_url,
+        }
+
+    def to_json(self) -> Dict[str, Any]:
+        """
+        Convert to JSON format for case wall.
+
+        Returns:
+            Dict containing full raw data
+        """
+        return self.raw_data

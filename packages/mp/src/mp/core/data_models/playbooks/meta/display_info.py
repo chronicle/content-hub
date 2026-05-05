@@ -82,15 +82,15 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
     content_hub_display_name: str = ""
     author: str = ""
     contact_email: str = ""
-    tags: Annotated[list[str], pydantic.Field(default_factory=list)]
+    tags: list[str] = pydantic.Field(default_factory=list)
     contribution_type: PlaybookContributionType = PlaybookContributionType.THIRD_PARTY
     is_google_verified: bool = False
     should_display_in_content_hub: bool = False
     allowed_debug_data: bool = False
 
     @classmethod
-    def _from_built(cls, _: BuiltPlaybookDisplayInfo) -> Self:  # ty:ignore[invalid-method-override]
-        return cls()  # ty:ignore[missing-argument]
+    def _from_built(cls, built: BuiltPlaybookDisplayInfo) -> Self:  # noqa: ARG003
+        return cls(tags=[])
 
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltPlaybookDisplayInfo) -> Self:
@@ -100,9 +100,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
             author=non_built["author"],
             contact_email=non_built["contact_email"],
             tags=non_built["tags"],
-            contribution_type=PlaybookContributionType.from_string(
-                non_built["contribution_type"].upper()
-            ),
+            contribution_type=PlaybookContributionType.from_string(non_built["contribution_type"].upper()),
             is_google_verified=non_built.get("is_google_verified", False),
             should_display_in_content_hub=non_built["should_display_in_content_hub"],
             allowed_debug_data=non_built["acknowledge_debug_data_included"],

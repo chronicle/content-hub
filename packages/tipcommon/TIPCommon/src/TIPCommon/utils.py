@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import functools
 import inspect
 import os
@@ -25,10 +26,7 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import requests
 from SiemplifyAddressProvider import BASE_1P_SDK_CONTROLLER_VERSION
-
-from TIPCommon.types import ChronicleSOAR, SingleJson
 
 from .consts import (
     _CAMEL_TO_SNAKE_PATTERN1,
@@ -44,10 +42,14 @@ from .consts import (
 if TYPE_CHECKING:
     from typing import Any
 
+    import requests
+
+    from TIPCommon.types import ChronicleSOAR, SingleJson
+
 
 def get_unique_items_by_difference(item_pool, items_to_remove):
     # type: (Iterable, Iterable) -> list
-    """Get set difference items from two iterables (item_pool - items_to_remove)
+    """Get set difference items from two iterables (item_pool - items_to_remove).
 
     Args:
         item_pool (Iterable): The item pool to filter from
@@ -63,7 +65,7 @@ def get_unique_items_by_difference(item_pool, items_to_remove):
 
 
 def get_entity_original_identifier(entity) -> str:
-    """Helper function for getting entity original identifier
+    """Helper function for getting entity original identifier.
 
     Args:
         entity (Entity): The entity from which function will get original identifier
@@ -142,9 +144,7 @@ def platform_supports_db(siemplify: ChronicleSOAR) -> bool:
         "set_connector_context_property" or "set_job_context_property".
 
     """
-    return hasattr(siemplify, "set_job_context_property") or hasattr(
-        siemplify, "set_connector_context_property"
-    )
+    return hasattr(siemplify, "set_job_context_property") or hasattr(siemplify, "set_connector_context_property")
 
 
 def is_empty_string_or_none(data: Any) -> bool:
@@ -196,7 +196,7 @@ def none_to_default_value(value_to_check, value_to_return_if_none):
 def camel_to_snake_case(string):
     """Convert a camel case string to snake case
     :param string: (str) the string to convert
-    :return: (str) the converted string
+    :return: (str) the converted string.
     """
     string = string.replace(" ", "")
     string = _CAMEL_TO_SNAKE_PATTERN1.sub(r"\1_\2", string)
@@ -258,18 +258,11 @@ def get_function_arg_names(func):
         list: All of the argument keys defined in the given fucntion
 
     """
-    if is_python_37():
-        method_args = inspect.getfullargspec(func)[0]
-    else:
-        # Python 2.7 as it is the only other python version supported in
-        # SOAR integrations virtual envs.
-
-        method_args = inspect.getargspec(func)[0]
-    return method_args
+    return inspect.getfullargspec(func)[0]
 
 
 def safe_cast_bool_value_from_str(default_value):
-    """Check if a default value is a string containing boolean value
+    """Check if a default value is a string containing boolean value.
 
     If it is, convert it to boolean, else return it
 
@@ -294,7 +287,7 @@ def safe_cast_bool_value_from_str(default_value):
 
 
 def safe_cast_int_value_from_str(default_value):
-    """Check if a default value is a string containing integer value
+    """Check if a default value is a string containing integer value.
 
     If it is, convert it to boolean, else return it
 
@@ -308,12 +301,8 @@ def safe_cast_int_value_from_str(default_value):
     if not isinstance(default_value, str):
         return default_value
 
-    try:
+    with contextlib.suppress(ValueError):
         default_value = int(default_value)
-    except ValueError:
-        # If it's not an int then an error will be raised in the extract
-        # method
-        pass
 
     return default_value
 
@@ -334,7 +323,8 @@ def is_valid_email(email_addr: str) -> bool:
 @functools.singledispatch
 def create_and_write_to_tempfile(content: str | bytes) -> Path:
     """Generic function for writing content to a temporary file."""
-    raise TypeError(f"Unsupported type: {type(content)}")
+    msg = f"Unsupported type: {type(content)}"
+    raise TypeError(msg)
 
 
 @create_and_write_to_tempfile.register
@@ -384,7 +374,7 @@ def _create_and_write_to_tempfile(
             except (FileNotFoundError, OSError) as cleanup_error:
                 raise cleanup_error from error
 
-        raise error
+        raise
 
 
 def platform_supports_1p_api() -> bool:
@@ -427,7 +417,8 @@ def get_value_from_json(data: SingleJson, *keys: str, default: Any = None) -> An
 
     """
     if not keys:
-        raise TypeError("get_value_from_json() expected at least 1 key argument")
+        msg = "get_value_from_json() expected at least 1 key argument"
+        raise TypeError(msg)
 
     for key in keys:
         if key in data:
@@ -466,9 +457,7 @@ def get_sdk_api_uri(chronicle_soar: ChronicleSOAR) -> str:
 
     """
     if platform_supports_1p_api():
-        return chronicle_soar.sdk_config.one_platform_api_root_uri_format.format(
-            BASE_1P_SDK_CONTROLLER_VERSION
-        )
+        return chronicle_soar.sdk_config.one_platform_api_root_uri_format.format(BASE_1P_SDK_CONTROLLER_VERSION)
 
     return f"{chronicle_soar.API_ROOT}/external/v1"
 
