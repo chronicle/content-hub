@@ -26,10 +26,10 @@ def build_issue_object(issue_json: SingleJson) -> datamodels.Issue:
     """Build an Issue object from the provided JSON data.
 
     Args:
-        issue_json (SingleJson): The JSON data containing issue details.
+        issue_json: The JSON data containing issue details.
 
     Returns:
-        datamodels.Issue: An Issue object containing the details of the issue.
+        An Issue object containing the details of the issue.
     """
     return datamodels.Issue.from_json(issue_json.get("data", {}).get("issue", {}))
 
@@ -38,28 +38,24 @@ def build_update_issue_object(issue_json: SingleJson) -> datamodels.Issue:
     """Build an Update Issue object from the provided JSON data.
 
     Args:
-        issue_json (SingleJson): The JSON data containing updated issue details.
+        issue_json: The JSON data containing updated issue details.
 
     Returns:
-        datamodels.Issue: An Issue object containing the details of the updated issue.
+        An Issue object containing the details of the updated issue.
     """
-    return datamodels.Issue.from_json(
-        issue_json.get("data", {}).get("updateIssue", {}).get("issue", {})
-    )
+    return datamodels.Issue.from_json(issue_json.get("data", {}).get("updateIssue", {}).get("issue", {}))
 
 
 def build_issue_comment_object(issue_json: SingleJson) -> datamodels.IssueComment:
     """Build an Issue Comment object from the provided JSON data.
 
     Args:
-        issue_json (SingleJson): The JSON data containing commented issue details.
+        issue_json: The JSON data containing commented issue details.
 
     Returns:
-        datamodels.IssueComment: The commented issue details.
+        The commented issue details.
     """
-    return datamodels.IssueComment.from_json(
-        issue_json.get("data", {}).get("createIssueNote", {}).get("issueNote", {})
-    )
+    return datamodels.IssueComment.from_json(issue_json.get("data", {}).get("createIssueNote", {}).get("issueNote", {}))
 
 
 def build_vulnerability_finding_object(
@@ -68,9 +64,9 @@ def build_vulnerability_finding_object(
     """Build a VulnerabilityFinding object from the provided JSON data.
 
     Args:
-        finding_json (SingleJson): The JSON data containing finding details.
+        finding_json: The JSON data containing finding details.
 
     Returns:
-        datamodels.VulnerabilityFinding: A VulnerabilityFinding object.
+        A VulnerabilityFinding object.
     """
     return datamodels.VulnerabilityFinding.from_json(finding_json)

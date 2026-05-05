@@ -73,9 +73,7 @@ class WizApiClient(Apiable):
         Returns:
             datamodels.Issue: An Issue object containing the details of the issue.
         """
-        issue_query_builder: query_builder.IssueQueryBuilder = query_builder.IssueQueryBuilder(
-            issue_id=issue_id
-        )
+        issue_query_builder: query_builder.IssueQueryBuilder = query_builder.IssueQueryBuilder(issue_id=issue_id)
 
         url: str = api_utils.get_full_url(
             api_root=self.api_root,
@@ -104,11 +102,9 @@ class WizApiClient(Apiable):
             datamodels.IssueComment: An issue object containing details of the commented
             issue.
         """
-        mutation_query: query_builder.AddCommentThreadMutationBuilder = (
-            query_builder.AddCommentThreadMutationBuilder(
-                issue_id=issue_id,
-                comment=comment,
-            )
+        mutation_query: query_builder.AddCommentThreadMutationBuilder = query_builder.AddCommentThreadMutationBuilder(
+            issue_id=issue_id,
+            comment=comment,
         )
         url: str = api_utils.get_full_url(
             api_root=self.api_root,
@@ -132,13 +128,11 @@ class WizApiClient(Apiable):
             datamodels.Issue: An Issue object containing the details of the reopened
             issue.
         """
-        mutation_query: query_builder.UpdateIssueMutationBuilder = (
-            query_builder.UpdateIssueMutationBuilder(
-                issue_id=issue_id,
-                patch=query_builder.UpdateIssuePatch(
-                    status=constants.STATUS_REOPEN,
-                ),
-            )
+        mutation_query: query_builder.UpdateIssueMutationBuilder = query_builder.UpdateIssueMutationBuilder(
+            issue_id=issue_id,
+            patch=query_builder.UpdateIssuePatch(
+                status=constants.STATUS_REOPEN,
+            ),
         )
         url: str = api_utils.get_full_url(
             api_root=self.api_root,
@@ -169,15 +163,13 @@ class WizApiClient(Apiable):
             datamodels.Issue: An Issue object containing the details of the rejected
             issue.
         """
-        mutation_query: query_builder.UpdateIssueMutationBuilder = (
-            query_builder.UpdateIssueMutationBuilder(
-                issue_id=issue_id,
-                patch=query_builder.UpdateIssuePatch(
-                    status=constants.STATUS_REJECTED,
-                    resolution_reason=constants.IGNORE_ISSUE_RESOLUTION_REASONS[resolution_reason],
-                    note=note,
-                ),
-            )
+        mutation_query: query_builder.UpdateIssueMutationBuilder = query_builder.UpdateIssueMutationBuilder(
+            issue_id=issue_id,
+            patch=query_builder.UpdateIssuePatch(
+                status=constants.STATUS_REJECTED,
+                resolution_reason=constants.IGNORE_ISSUE_RESOLUTION_REASONS[resolution_reason],
+                note=note,
+            ),
         )
         url: str = api_utils.get_full_url(
             api_root=self.api_root,
@@ -208,16 +200,14 @@ class WizApiClient(Apiable):
             datamodels.Issue: An Issue object containing the details of the resolved
             issue.
         """
-        mutation_query: query_builder.UpdateIssueMutationBuilder = (
-            query_builder.UpdateIssueMutationBuilder(
-                issue_id=issue_id,
-                patch=query_builder.UpdateIssuePatch(
-                    status=constants.STATUS_RESOLVED,
-                    resolution_reason=constants.RESOLVE_ISSUE_RESOLUTION_REASONS[resolution_reason],
-                    resolution_note=resolution_note,
-                ),
-                return_note_field=True,
-            )
+        mutation_query: query_builder.UpdateIssueMutationBuilder = query_builder.UpdateIssueMutationBuilder(
+            issue_id=issue_id,
+            patch=query_builder.UpdateIssuePatch(
+                status=constants.STATUS_RESOLVED,
+                resolution_reason=constants.RESOLVE_ISSUE_RESOLUTION_REASONS[resolution_reason],
+                resolution_note=resolution_note,
+            ),
+            return_note_field=True,
         )
         url: str = api_utils.get_full_url(
             api_root=self.api_root,
@@ -244,16 +234,16 @@ class WizApiClient(Apiable):
         """Get vulnerability findings for a specific resource.
 
         Args:
-            resource_name (str): The name of the resource.
-            severity (list[str] | None): Filter by severity levels.
-            has_fix (bool | None): Filter by fix availability.
-            has_exploit (bool | None): Filter by exploit availability.
-            cve_ids (list[str] | None): Filter by CVE IDs.
-            related_issue_severity (list[str] | None): Filter by related issue severity.
-            first (int): Max findings to return.
+            resource_name: The name of the resource.
+            severity: Filter by severity levels.
+            has_fix: Filter by fix availability.
+            has_exploit: Filter by exploit availability.
+            cve_ids: Filter by CVE IDs.
+            related_issue_severity: Filter by related issue severity.
+            first: Max findings to return.
 
         Returns:
-            list[datamodels.VulnerabilityFinding]: A list of VulnerabilityFinding objects.
+            A list of VulnerabilityFinding objects.
         """
         query_builder_instance = query_builder.VulnerabilityFindingsQueryBuilder(
             resource_name=resource_name,
