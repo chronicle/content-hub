@@ -56,14 +56,33 @@ class CliDisplay:
                 if not stage_results:
                     continue
 
+                failed_integrations = [
+                    res
+                    for res in stage_results
+                    if res.validation_report.failed_fatal_validations
+                    or res.validation_report.failed_non_fatal_validations
+                ]
+
+                if not failed_integrations:
+                    continue
+
                 self.console.print(f"[bold underline blue]\n{category} Stage[/bold underline blue]")
-                for integration_result in stage_results:
+                for integration_result in failed_integrations:
                     self.console.print(_build_table(integration_result), "\n")
 
             self.console.print("\n")
 
     def _is_all_empty(self) -> bool:
-        return all(not any(full_report.values()) for full_report in self.validation_results.values())
+        for full_report in self.validation_results.values():
+            for stage_results in full_report.values():
+                if stage_results:
+                    for res in stage_results:
+                        if (
+                            res.validation_report.failed_fatal_validations
+                            or res.validation_report.failed_non_fatal_validations
+                        ):
+                            return False
+        return True
 
 
 def _build_table(integration_result: ValidationResults) -> Table:

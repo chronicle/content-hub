@@ -64,7 +64,6 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "playbook",
     "custom_integration",
     "deconstruct",
-    "only_pre_build",
     "is_staging",
     "custom",
     "include_blocks",

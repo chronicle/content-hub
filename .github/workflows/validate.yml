@@ -3,16 +3,16 @@ name: Validate Content-Hub
 on:
   push:
     branches:
-      - '**'
+    - '**'
     paths:
-      - 'content/**'
-      - 'packages/**'
+    - 'content/**'
+    - 'packages/**'
   pull_request:
     branches:
-      - '**'
+    - '**'
     paths:
-      - 'content/**'
-      - 'packages/**'
+    - 'content/**'
+    - 'packages/**'
 
 permissions:
   contents: read
@@ -26,92 +26,92 @@ jobs:
       validate_command: ${{ steps.compute.outputs.validate_command }}
       should_validate: ${{ steps.compute.outputs.should_validate }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Check for MP package changes
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            mp:
-              - 'packages/mp/**'
+    - name: Check for MP package changes
+      uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          mp:
+            - 'packages/mp/**'
 
-      - name: Get all changed content files
-        id: changed-files
-        uses: tj-actions/changed-files@v44
-        with:
-          files: content/**
+    - name: Get all changed content files
+      id: changed-files
+      uses: tj-actions/changed-files@v44
+      with:
+        files: content/**
 
-      - name: Compute validation targets
-        id: compute
-        shell: bash
-        # language=bash
-        run: |
-          # 1. If the mp CLI itself changed, validate everything
-          if [[ "${{ steps.filter.outputs.mp }}" == "true" ]]; then
-            echo "validate_command=mp validate repository google third_party playbooks --only-pre-build" >> $GITHUB_OUTPUT
-            echo "should_validate=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          FILES="${{ steps.changed-files.outputs.all_changed_files }}"
-          if [[ -z "$FILES" ]]; then
-            echo "should_validate=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          INTS=()
-          PLAYBOOKS=()
-          
-          for file in $FILES; do
-            IFS='/' read -ra ADDR <<< "$file"
-            if [[ $file == content/response_integrations/* ]]; then
-              # content/response_integrations/[google|third_party|power_ups]/...
-              if [[ ${ADDR[2]} == "third_party" ]]; then
-                # content/response_integrations/third_party/[community|partner]/NAME
-                [[ -n "${ADDR[4]}" ]] && INTS+=("${ADDR[4]}")
-              else
-                # content/response_integrations/[google|power_ups]/NAME
-                [[ -n "${ADDR[3]}" ]] && INTS+=("${ADDR[3]}")
-              fi
-            elif [[ $file == content/playbooks/* ]]; then
-              # content/playbooks/[commercial|third_party]/...
-              if [[ ${ADDR[2]} == "third_party" ]]; then
-                 # content/playbooks/third_party/[community|partner]/NAME
-                 [[ -n "${ADDR[4]}" ]] && PLAYBOOKS+=("${ADDR[4]}")
-              else
-                 # content/playbooks/commercial/NAME.json
-                 # Strip .json if present
-                 NAME="${ADDR[3]%.json}"
-                 [[ -n "$NAME" ]] && PLAYBOOKS+=("$NAME")
-              fi
+    - name: Compute validation targets
+      id: compute
+      shell: bash
+      # language=bash
+      run: |
+        # 1. If the mp CLI itself changed, validate everything
+        if [[ "${{ steps.filter.outputs.mp }}" == "true" ]]; then
+          echo "validate_command=mp validate repository google third_party playbooks"  >> $GITHUB_OUTPUT
+          echo "should_validate=true" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+        if [[ -z "$FILES" ]]; then
+          echo "should_validate=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        INTS=()
+        PLAYBOOKS=()
+        
+        for file in $FILES; do
+          IFS='/' read -ra ADDR <<< "$file"
+          if [[ $file == content/response_integrations/* ]]; then
+            # content/response_integrations/[google|third_party|power_ups]/...
+            if [[ ${ADDR[2]} == "third_party" ]]; then
+              # content/response_integrations/third_party/[community|partner]/NAME
+              [[ -n "${ADDR[4]}" ]] && INTS+=("${ADDR[4]}")
+            else
+              # content/response_integrations/[google|power_ups]/NAME
+              [[ -n "${ADDR[3]}" ]] && INTS+=("${ADDR[3]}")
             fi
-          done
-          
-          # Deduplicate lists
-          UNIQ_INTS=$(echo "${INTS[@]}" | tr ' ' '\n' | sort -u | xargs)
-          UNIQ_PBs=$(echo "${PLAYBOOKS[@]}" | tr ' ' '\n' | sort -u | xargs)
-          
-          # Build the commands
-          COMMAND=""
-          if [[ -n "$UNIQ_INTS" ]]; then
-            COMMAND="mp validate integration $UNIQ_INTS --only-pre-build"
+          elif [[ $file == content/playbooks/* ]]; then
+            # content/playbooks/[commercial|third_party]/...
+            if [[ ${ADDR[2]} == "third_party" ]]; then
+               # content/playbooks/third_party/[community|partner]/NAME
+               [[ -n "${ADDR[4]}" ]] && PLAYBOOKS+=("${ADDR[4]}")
+            else
+               # content/playbooks/commercial/NAME.json
+               # Strip .json if present
+               NAME="${ADDR[3]%.json}"
+               [[ -n "$NAME" ]] && PLAYBOOKS+=("$NAME")
+            fi
           fi
-          
-          if [[ -n "$UNIQ_PBs" ]]; then
-            [[ -n "$COMMAND" ]] && COMMAND="$COMMAND && "
-            COMMAND="${COMMAND}mp validate playbook $UNIQ_PBs --only-pre-build"
-          fi
-          
-          if [[ -n "$COMMAND" ]]; then
-            echo "validate_command=$COMMAND" >> $GITHUB_OUTPUT
-            echo "should_validate=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_validate=false" >> $GITHUB_OUTPUT
-          fi
+        done
+        
+        # Deduplicate lists
+        UNIQ_INTS=$(echo "${INTS[@]}" | tr ' ' '\n' | sort -u | xargs)
+        UNIQ_PBs=$(echo "${PLAYBOOKS[@]}" | tr ' ' '\n' | sort -u | xargs)
+        
+        # Build the commands
+        COMMAND=""
+        if [[ -n "$UNIQ_INTS" ]]; then
+          COMMAND="mp validate integration $UNIQ_INTS"
+        fi
+        
+        if [[ -n "$UNIQ_PBs" ]]; then
+          [[ -n "$COMMAND" ]] && COMMAND="$COMMAND && "
+          COMMAND="${COMMAND}mp validate playbook $UNIQ_PBs"
+        fi
+        
+        if [[ -n "$COMMAND" ]]; then
+          echo "validate_command=$COMMAND" >> $GITHUB_OUTPUT
+          echo "should_validate=true" >> $GITHUB_OUTPUT
+        else
+          echo "should_validate=false" >> $GITHUB_OUTPUT
+        fi
 
   validate:
     name: Validate Content
@@ -120,32 +120,32 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      - name: Install mp package
-        # language=bash
-        run: |
-          python -m pip install uv
-          uv pip install --system -e ./packages/mp
-      - name: Run Validation
-        env:
-          VALIDATE_COMMAND: ${{ needs.changes.outputs.validate_command }}
-          GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        # language=bash
-        run: |
-          mp config --root-path . --processes 10 --display-config
-          eval "$VALIDATE_COMMAND"
-      - name: Upload Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: validation-report
-          path: artifacts/validation_report.md
-          retention-days: 2
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    - name: Install mp package
+      # language=bash
+      run: |
+        python -m pip install uv
+        uv pip install --system -e ./packages/mp
+    - name: Run Validation
+      env:
+        VALIDATE_COMMAND: ${{ needs.changes.outputs.validate_command }}
+        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      # language=bash
+      run: |
+        mp config --root-path . --processes 10 --display-config
+        eval "$VALIDATE_COMMAND"
+    - name: Upload Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: validation-report
+        path: artifacts/validation_report.md
+        retention-days: 2
