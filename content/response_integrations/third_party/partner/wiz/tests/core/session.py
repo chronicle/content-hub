@@ -41,9 +41,7 @@ class WizSession(MockSession[MockRequest, MockResponse, Wiz]):
     def graphql_query(self, request: MockRequest) -> MockResponse:
         """Handle GET .*/1.0/alerts/ requests"""
         query: SingleJson = request.kwargs["json"]["query"]
-        status: str = (
-            request.kwargs.get("json", {}).get("variables", {}).get("patch", {}).get("status", "")
-        )
+        status: str = request.kwargs.get("json", {}).get("variables", {}).get("patch", {}).get("status", "")
         if common.GET_ISSUE_QUERY_NAME in query or "first: 1" in query:
             return self._get_issue_details()
         if common.ADD_COMMENT_QUERY_NAME in query:

@@ -132,9 +132,7 @@ class UpdateIssuePatch:
             "resolution_reason": "resolutionReason",
             "resolution_note": "resolutionNote",
         }
-        return {
-            field_map.get(k, k): v for k, v in dataclasses.asdict(self).items() if v is not None
-        }
+        return {field_map.get(k, k): v for k, v in dataclasses.asdict(self).items() if v is not None}
 
 
 @dataclasses.dataclass(slots=True)
@@ -246,9 +244,7 @@ class VulnerabilityFindingsQueryBuilder:
             queries=[query],
         )
 
-        filter_by = {
-            "assetName": {"equals": self.resource_name}
-        }
+        filter_by = {"assetName": {"equals": self.resource_name}}
         if self.severity:
             filter_by["severity"] = self.severity
         if self.has_fix is not None:

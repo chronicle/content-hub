@@ -38,8 +38,7 @@ if TYPE_CHECKING:
 ISSUE: datamodels.Issue = common.ISSUE
 
 SUCCESS_OUTPUT_MESSAGE: str = (
-    f"Successfully returned information about the issue {ISSUE.issue_id} in "
-    f"{constants.INTEGRATION_NAME}."
+    f"Successfully returned information about the issue {ISSUE.issue_id} in {constants.INTEGRATION_NAME}."
 )
 FAILED_OUTPUT_MESSAGE: str = (
     f'Error executing action "{constants.GET_ISSUE_DETAILS_SCRIPT_NAME}"\nReason: '

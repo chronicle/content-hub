@@ -36,8 +36,7 @@ if TYPE_CHECKING:
 ISSUE: datamodels.Issue = common.ISSUE
 
 PING_SUCCESS_MESSAGE: str = (
-    f"Successfully connected to the {constants.INTEGRATION_NAME} "
-    "server with the provided connection parameters!"
+    f"Successfully connected to the {constants.INTEGRATION_NAME} server with the provided connection parameters!"
 )
 FAILED_OUTPUT_MESSAGE: str = (
     "Failed to connect to the Wiz server!\nReason: Invalid credentials provided. "

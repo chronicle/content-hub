@@ -27,8 +27,7 @@ if TYPE_CHECKING:
 
 
 SUCCESS_MESSAGE: str = (
-    f"Successfully connected to the {INTEGRATION_NAME} server with "
-    "the provided connection parameters!"
+    f"Successfully connected to the {INTEGRATION_NAME} server with the provided connection parameters!"
 )
 ERROR_MESSAGE: str = f"Failed to connect to the {INTEGRATION_NAME} server!"
 

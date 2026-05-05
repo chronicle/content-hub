@@ -115,9 +115,7 @@ class TestApiManager:
 
         assert len(script_session.request_history) == 1
         assert script_session.request_history[0].response.status_code == 200
-        assert script_session.request_history[0].response.json() == {
-            "data": {"issue": issue.to_json()}
-        }
+        assert script_session.request_history[0].response.json() == {"data": {"issue": issue.to_json()}}
 
     def test_get_issue_details_failure(
         self,
