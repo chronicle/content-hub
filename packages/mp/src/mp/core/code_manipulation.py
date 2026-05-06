@@ -422,26 +422,60 @@ class ImportTransformer(cst.CSTTransformer):
                 return updated_node.with_changes(relative=[], module=attrs[0].attr)
 
         match original_node:
-            # `from (.)?(nothing | reserved) import ...` => `import ...`
-            case cst.ImportFrom(
-                module=(
-                    None
-                    | cst.Name(
-                        value=(constants.CORE_SCRIPTS_DIR | constants.COMMON_SCRIPTS_DIR | constants.SDK_PACKAGE_NAME),
-                    )
-                ),
-                names=names,
-            ):
-                if isinstance(names, cst.ImportStar):
-                    return updated_node
-                return cst.Import(names=names)
-
             # `from .module import ...` => `from module import ...`
-            case cst.ImportFrom(relative=[cst.Dot(), *_]):
+            case cst.ImportFrom(relative=[cst.Dot(), *_]) if original_node.module is not None:
                 return updated_node.with_changes(relative=[])
 
             case _:
                 return updated_node
+
+    def leave_SimpleStatementLine(  # noqa: N802, PLR6301
+        self,
+        original_node: cst.SimpleStatementLine,
+        updated_node: cst.SimpleStatementLine,
+    ) -> FlattenSentinel[cst.SimpleStatementLine] | cst.SimpleStatementLine:
+        """Transform a multi-import line from core/common/sdk into separate import lines.
+
+        This visitor method checks if a `SimpleStatementLine` contains a specific
+        `ImportFrom` statement (e.g., `from ..core import a, b`). If it matches,
+        it replaces that single line with multiple `SimpleStatementLine` nodes,
+        each containing a single `Import`.
+
+        Args:
+            original_node: The original `SimpleStatementLine` from the unmodified CST.
+            updated_node: The `SimpleStatementLine` with changes from child visitors.
+
+        Returns:
+            A `FlattenSentinel` containing a list of new `SimpleStatementLine` nodes
+            if the import was transformed, otherwise the `updated_node` is returned
+            unchanged.
+
+        """
+        if not isinstance(updated_node.body[0], cst.ImportFrom):
+            return updated_node
+
+        orig_import_from = original_node.body[0]
+        if not isinstance(orig_import_from, cst.ImportFrom):
+            return updated_node
+
+        if orig_import_from.module is None or (
+            isinstance(orig_import_from.module, cst.Name)
+            and orig_import_from.module.value
+            in {constants.CORE_SCRIPTS_DIR, constants.COMMON_SCRIPTS_DIR, constants.SDK_PACKAGE_NAME}
+        ):
+            import_from = updated_node.body[0]
+            if isinstance(import_from.names, cst.ImportStar):
+                return updated_node
+
+            new_statements = []
+            for alias in import_from.names:
+                clean_alias = alias.with_changes(comma=cst.MaybeSentinel.DEFAULT)
+                new_statements.append(
+                    cst.SimpleStatementLine(body=[cst.Import(names=[clean_alias])])
+                )
+            return FlattenSentinel(new_statements)
+
+        return updated_node
 
 
 def _is_reserved_node(node: cst.Attribute) -> bool:
