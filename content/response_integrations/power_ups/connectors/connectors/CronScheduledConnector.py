@@ -49,9 +49,7 @@ def generate_alert(product_name, alert_name, alert_type, alert_fields, environme
     for alert_field in alert_fields:
         case_info.extensions[alert_field.strip()] = alert_fields[alert_field]
 
-    case_info.priority = (
-        60  # Informative = -1,Low = 40,Medium = 60,High = 80,Critical = 100.
-    )
+    case_info.priority = 60  # Informative = -1,Low = 40,Medium = 60,High = 80,Critical = 100.
     case_info.start_time = unix_now()
     case_info.end_time = unix_now()
 
@@ -104,7 +102,6 @@ def main():
                 environment,
             )
             cases.append(alert_obj)
-            print(json.dumps(cases[0].__dict__))
     siemplify.return_package(cases, output_variables, log_items)
 
 

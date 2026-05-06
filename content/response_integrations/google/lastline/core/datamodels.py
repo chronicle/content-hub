@@ -13,22 +13,21 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import Dict, List
-from .consts import FILE, INTEGRATION_NAME, URL
+
 from TIPCommon import add_prefix_to_dict, dict_to_flat
+
+from .consts import FILE, INTEGRATION_NAME, URL
 
 
 class SubmissionTask:
-    """
-    SubmissionTask Data Model
-    """
+    """SubmissionTask Data Model"""
 
-    def __init__(self, raw_data, data, success: int = None):
+    def __init__(self, raw_data, data, success: int | None = None):
         self.raw_data = raw_data
         self.success = success
         self.data = data
 
-    def as_json(self) -> Dict:
+    def as_json(self) -> dict:
         return {"success": self.success, "data": self.data.as_json()}
 
     def as_csv(self):
@@ -46,22 +45,20 @@ class SubmissionTask:
 
 
 class SubmissionTaskData:
-    """
-    SubmissionTaskData Data Model
-    """
+    """SubmissionTaskData Data Model"""
 
     def __init__(
         self,
         raw_data,
-        submission: str = None,
-        expires: str = None,
-        task_uuid: str = None,
-        score: int = None,
+        submission: str | None = None,
+        expires: str | None = None,
+        task_uuid: str | None = None,
+        score: int | None = None,
         malicious_activity=None,
-        md5: str = None,
-        sha1: str = None,
-        sha256: str = None,
-        mime_type: str = None,
+        md5: str | None = None,
+        sha1: str | None = None,
+        sha256: str | None = None,
+        mime_type: str | None = None,
         analysis_subject=None,
     ):
         self.raw_data = raw_data
@@ -76,10 +73,10 @@ class SubmissionTaskData:
         self.sha256 = sha256
         self.mime_type = mime_type
 
-    def as_json(self) -> Dict:
+    def as_json(self) -> dict:
         return self.raw_data
 
-    def as_csv(self) -> Dict:
+    def as_csv(self) -> dict:
         malicious_activity_str = ",".join(self.malicious_activity)
         csv_dict = {
             "Submission_Timestamp": self.submission,
@@ -106,7 +103,7 @@ class SubmissionTaskData:
             Malicious Activity Observed:\n {f"{malicious_activity_str}" or 'N/A'}
             """
 
-    def as_table(self, entity_type: str = URL) -> Dict:
+    def as_table(self, entity_type: str = URL) -> dict:
         csv_dict = {
             "Submission_Timestamp": self.submission,
             "Latest_Submission_Timestamp": self.raw_data.get(
@@ -129,12 +126,10 @@ class SubmissionTaskData:
 
 
 class SubmissionTaskProcessData:
-    """
-    SubmissionTaskProcessData Data Model
-    """
+    """SubmissionTaskProcessData Data Model"""
 
     def __init__(
-        self, raw_data, progress: int = None, completed: int = None, score: int = None
+        self, raw_data, progress: int | None = None, completed: int | None = None, score: int | None = None
     ):
         self.raw_data = raw_data
         self.progress = progress
@@ -143,17 +138,15 @@ class SubmissionTaskProcessData:
 
 
 class SubmissionTaskAnalysisSubject:
-    """
-    Submission Task Analysis Subject Data Model
-    """
+    """Submission Task Analysis Subject Data Model"""
 
     def __init__(
         self,
         raw_data,
-        sha256: str = None,
-        sha1: str = None,
-        mime_type: str = None,
-        md5: str = None,
+        sha256: str | None = None,
+        sha1: str | None = None,
+        mime_type: str | None = None,
+        md5: str | None = None,
     ):
         self.raw_data = raw_data
         self.sha1 = sha1
@@ -171,11 +164,9 @@ class SubmissionTaskAnalysisSubject:
 
 
 class Analysis:
-    """
-    Analysis Model
-    """
+    """Analysis Model"""
 
-    def __init__(self, raw_data, success: int = None, data: List = None):
+    def __init__(self, raw_data, success: int | None = None, data: list | None = None):
         self.raw_data = raw_data
         self.success = success
         self.data = data
@@ -188,24 +179,22 @@ class Analysis:
 
 
 class AnalysisData:
-    """
-    Analysis Data Model
-    """
+    """Analysis Data Model"""
 
     def __init__(
         self,
         raw_data,
-        username: str = None,
-        status: str = None,
-        task_subject_filename: str = None,
-        task_subject_sha1: str = None,
-        task_uuid: str = None,
-        task_subject_md5: str = None,
-        task_subject_url: str = None,
-        task_start_time: str = None,
-        analysis_history_id: int = None,
-        title: str = None,
-        score: int = None,
+        username: str | None = None,
+        status: str | None = None,
+        task_subject_filename: str | None = None,
+        task_subject_sha1: str | None = None,
+        task_uuid: str | None = None,
+        task_subject_md5: str | None = None,
+        task_subject_url: str | None = None,
+        task_start_time: str | None = None,
+        analysis_history_id: int | None = None,
+        title: str | None = None,
+        score: int | None = None,
         **kwargs,
     ):
         self.raw_data = raw_data

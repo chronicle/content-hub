@@ -24,11 +24,13 @@
 #              IMPORTS               #
 # =====================================
 from __future__ import annotations
-import requests
-from base64 import b64encode
-from urllib.parse import urljoin
-from copy import deepcopy
+
 import urllib.parse
+from base64 import b64encode
+from copy import deepcopy
+from urllib.parse import urljoin
+
+import requests
 
 # =====================================
 #             CONSTANTS               #
@@ -64,17 +66,11 @@ CREATE_CATEGORY_FORMAT = {
 #              CLASSES                #
 # =====================================
 class WebsenseManagerError(Exception):
-    """
-    General Exception for websense manager
-    """
-
-    pass
+    """General Exception for websense manager"""
 
 
 class WebsenseAPIManager:
-    """
-    Responsible for all websense operations via API functionality
-    """
+    """Responsible for all websense operations via API functionality"""
 
     def __init__(self, api_root, username, password, verify_ssl=True):
         self.api_root = api_root
@@ -84,21 +80,20 @@ class WebsenseAPIManager:
         self.headers = {"Authorization": f"Basic {creds_b64}"}
 
     def _obtain_transaction_id(self):
-        """
-        Get transaction id from server in order to perform actions
+        """Get transaction id from server in order to perform actions
         :return: {string} transaction_id
         """
         url = urljoin(self.api_root, GET_TRANSACTION_ID_URL_SUFFIX)
         req = requests.post(url, headers=self.headers, verify=self.verify)
         if req.ok:
             return req.json()["Transaction ID"]
+        msg = f"Cannot obtain transactionID via API request error-{req.content}"
         raise WebsenseManagerError(
-            f"Cannot obtain transactionID via API request error-{req.content}"
+            msg
         )
 
     def _commit_changes(self, transaction_id):
-        """
-        Commit all changes and release transaction token
+        """Commit all changes and release transaction token
         :param transaction_id: {string}
         :return: {boolean} Success indicator
         """
@@ -109,18 +104,18 @@ class WebsenseAPIManager:
             req = requests.post(url, headers=self.headers, verify=self.verify)
             if req.ok:
                 return True
-            else:
-                self._discard(transaction_id)
-                raise WebsenseManagerError(
-                    f"Cannot commit changes via API, error-{req.content}"
-                )
+            self._discard(transaction_id)
+            msg = f"Cannot commit changes via API, error-{req.content}"
+            raise WebsenseManagerError(
+                msg
+            )
         except Exception as error:
             self._discard(transaction_id)
-            raise WebsenseManagerError(f"Error occurred: {error}, message:{error}")
+            msg = f"Error occurred: {error}, message:{error}"
+            raise WebsenseManagerError(msg)
 
     def _discard(self, transaction_id):
-        """
-        Discard all changes and release transaction token
+        """Discard all changes and release transaction token
         :param transaction_id: {string}
         :return: {boolean} Success indicator
         """
@@ -130,13 +125,13 @@ class WebsenseAPIManager:
         req = requests.post(url, headers=self.headers, verify=self.verify)
         if req.ok:
             return True
+        msg = f"Cannot discard changes via API, error-{req.content}"
         raise WebsenseManagerError(
-            f"Cannot discard changes via API, error-{req.content}"
+            msg
         )
 
     def test_connectivity(self):
-        """
-        Test connectivity to Websense API server
+        """Test connectivity to Websense API server
         :return: {boolean} Success indicator
         """
         transaction_id = self._obtain_transaction_id()
@@ -144,16 +139,15 @@ class WebsenseAPIManager:
             # Close the transaction
             try:
                 response = self._commit_changes(transaction_id)
-                if response:
-                    return True
-                return False
+                return bool(response)
             except Exception as error:
                 self._discard(transaction_id)
-                raise WebsenseManagerError(f"Error occurred: {error}, message:{error}")
+                msg = f"Error occurred: {error}, message:{error}"
+                raise WebsenseManagerError(msg)
+        return None
 
     def add_url_to_category(self, url, category_name):
-        """
-        Add url to API manage category in Websense content gateway (Only API created categories can be manipulate)
+        """Add url to API manage category in Websense content gateway (Only API created categories can be manipulate)
         :param url: {string} The url to block
         :param category_name: {string} The API manage category name
         :return: {boolean} Success indicator
@@ -173,20 +167,20 @@ class WebsenseAPIManager:
                 commit_status = self._commit_changes(transaction_id)
                 if commit_status:
                     return True
-                else:
-                    self._discard(transaction_id)
+                self._discard(transaction_id)
             else:
                 self._discard(transaction_id)
+            msg = f"Cannot add url-{url} to category-{category_name} via API, error-{req.content}"
             raise WebsenseManagerError(
-                f"Cannot add url-{url} to category-{category_name} via API, error-{req.content}"
+                msg
             )
         except Exception as error:
             self._discard(transaction_id)
-            raise WebsenseManagerError(f"Error occurred: {error}, message:{error}")
+            msg = f"Error occurred: {error}, message:{error}"
+            raise WebsenseManagerError(msg)
 
     def remove_url_form_category(self, url, category_name):
-        """
-        Remove url from API manage category in Websense content gateway(Only API created categories can be manipulate)
+        """Remove url from API manage category in Websense content gateway(Only API created categories can be manipulate)
         :param url: {string} The url to unblock
         :param category_name: {string} The API manage category name
         :return: {boolean} Success indicator
@@ -206,20 +200,20 @@ class WebsenseAPIManager:
                 commit_status = self._commit_changes(transaction_id)
                 if commit_status:
                     return True
-                else:
-                    self._discard(transaction_id)
+                self._discard(transaction_id)
             else:
                 self._discard(transaction_id)
+            msg = f"Cannot add url-{url} to category-{category_name} via API, error-{req.content}"
             raise WebsenseManagerError(
-                f"Cannot add url-{url} to category-{category_name} via API, error-{req.content}"
+                msg
             )
         except Exception as error:
             self._discard(transaction_id)
-            raise WebsenseManagerError(f"Error occurred: {error}, message:{error}")
+            msg = f"Error occurred: {error}, message:{error}"
+            raise WebsenseManagerError(msg)
 
     def get_category_urls_list(self, category_name):
-        """
-        Get urls list of a specific API manage category
+        """Get urls list of a specific API manage category
         :param category_name: {string} The API manage category name
         :return: {list of strings} Urls
         """
@@ -230,15 +224,15 @@ class WebsenseAPIManager:
         req = requests.get(url, headers=self.headers, verify=self.verify)
         if req.ok:
             return req.json()["URLs"]
+        msg = f"Cannot retrive category-{category_name} details, error-{req.content}"
         raise WebsenseManagerError(
-            f"Cannot retrive category-{category_name} details, error-{req.content}"
+            msg
         )
 
     def create_api_manage_policy(
         self, category_name, category_description, category_parent_id
     ):
-        """
-        Create new API managed category
+        """Create new API managed category
         :param category_name: {string}
         :param category_description: {string}
         :param category_parent_id: {int}
@@ -259,30 +253,27 @@ class WebsenseAPIManager:
                 commit_status = self._commit_changes(transaction_id)
                 if commit_status:
                     return True
-                else:
-                    self._discard(transaction_id)
+                self._discard(transaction_id)
             else:
                 self._discard(transaction_id)
+            msg = f"Cannot create category-{category_name} via API, error-{req.content}"
             raise WebsenseManagerError(
-                f"Cannot create category-{category_name} via API, error-{req.content}"
+                msg
             )
         except Exception as error:
             self._discard(transaction_id)
-            raise WebsenseManagerError(f"Error occurred: {error}, message:{error}")
+            msg = f"Error occurred: {error}, message:{error}"
+            raise WebsenseManagerError(msg)
 
     def get_all_categories(self):
-        """
-        Retrieve all exist categories
+        """Retrieve all exist categories
         :return: {dict} all categories
         """
         request_url = urljoin(self.api_root, GET_ALL_CATEGORIES_URL_SUFFIX)
         req = requests.get(request_url, headers=self.headers, verify=self.verify)
         if req.ok:
             return req.json()
+        msg = f"Cannot get all categories via API, error-{req.content}"
         raise WebsenseManagerError(
-            f"Cannot get all categories via API, error-{req.content}"
+            msg
         )
-
-
-if __name__ == "__main__":
-    pass

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import binascii
+import contextlib
 import datetime
 import ipaddress
 import json
@@ -48,7 +49,8 @@ def ip_in_subnetwork(ip_address, subnetwork):
     (ip_lower, ip_upper, version2) = subnetwork_to_ip_range(subnetwork)
 
     if version1 != version2:
-        raise ValueError("incompatible IP versions")
+        msg = "incompatible IP versions"
+        raise ValueError(msg)
 
     return ip_lower <= ip_integer <= ip_upper
 
@@ -72,7 +74,8 @@ def ip_to_integer(ip_address):
         except:
             pass
 
-    raise ValueError("invalid IP address")
+    msg = "invalid IP address"
+    raise ValueError(msg)
 
 
 def subnetwork_to_ip_range(subnetwork):
@@ -106,7 +109,8 @@ def subnetwork_to_ip_range(subnetwork):
     except:
         pass
 
-    raise ValueError("invalid subnetwork")
+    msg = "invalid subnetwork"
+    raise ValueError(msg)
 
 
 def dateParser(line):
@@ -153,14 +157,11 @@ def getAuthVal(a, data, rex=r"(\w+)\b"):
 
 
 def return_domain(email):
-    f_domain = re.search("<(.*?)>", email)
+    f_domain = re.search(r"<(.*?)>", email)
 
-    if f_domain:
-        domain = re.search("@(.*)", f_domain.group(1))
-    else:
-        domain = re.search("@(.*)", email)
+    domain = re.search(r"@(.*)", f_domain.group(1)) if f_domain else re.search(r"@(.*)", email)
 
-    if domain == None:
+    if domain is None:
         return None
     return domain.group(1)
 
@@ -178,10 +179,7 @@ def ip_check(ip, domain):
             [x.split(":")[1] for x in include_spf if x.startswith("include")],
         )
         ips.extend([x.split(":")[1] for x in include_spf if x.startswith("ip")])
-    for cidr in ips:
-        if ip_in_subnetwork(ip, cidr):
-            return True
-    return False
+    return any(ip_in_subnetwork(ip, cidr) for cidr in ips)
 
 
 def parseHops(received):
@@ -195,22 +193,17 @@ def parseHops(received):
         hop_info["from_ip_whois"] = {}
         hop_info["by_ip_whois"] = {}
 
-        try:
-            parsed_route = EmailParserRouting.parserouting(hop)
-        except Exception:
-            raise
+        parsed_route = EmailParserRouting.parserouting(hop)
         if "date" not in parsed_route:
             continue
-        hop_info["time"] = (
-            parsed_route["date"].astimezone(datetime.UTC).replace(tzinfo=None)
-        )
+        hop_info["time"] = parsed_route["date"].astimezone(datetime.UTC).replace(tzinfo=None)
         hop_info["blacklisted"] = False
         if "from" in parsed_route:
             for f in parsed_route["from"]:
                 denylist = {}
                 hop_info["from"] = f
                 try:
-                    test_ip = ipaddress.ip_address(f)
+                    ipaddress.ip_address(f)
                     ip_check = ip_checker.check(f)
                     # hop_info['from'] = f
                     try:
@@ -219,9 +212,7 @@ def parseHops(received):
                         response = DbIpCity.get(f, api_key="free")
                         hop_info["from_geo"] = json.loads(response.to_json())
                     except Exception as expe:
-                        template = (
-                            "An exception of type {0} occurred. Arguments:\n{1!r}"
-                        )
+                        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
                         message = template.format(type(expe).__name__, expe.args)
 
                     denylist["blacklisted"] = ip_check.blacklisted
@@ -244,9 +235,7 @@ def parseHops(received):
                             hop_info["from_geo"] = json.loads(response.to_json())
                             hop_info["from_ip_whois"] = ip_whois
                         except Exception as exp:
-                            template = (
-                                "An exception of type {0} occurred. Arguments:\n{1!r}"
-                            )
+                            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
                             message = template.format(type(exp).__name__, exp.args)
 
                         denylist["blacklisted"] = domain_check.blacklisted
@@ -254,9 +243,7 @@ def parseHops(received):
                         denylist["categories"] = domain_check.categories.copy()
                         hop_info["blacklist_info"].append(denylist)
                     except Exception as e:
-                        template = (
-                            "An exception of type {0} occurred. Arguments:\n{1!r}"
-                        )
+                        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
                         message = template.format(type(e).__name__, e.args)
                         logger(message)
                 except Exception as ex:
@@ -265,14 +252,14 @@ def parseHops(received):
                     logger(message)
 
                 if "blacklisted" in denylist:
-                    if denylist["blacklisted"] == True:
+                    if denylist["blacklisted"]:
                         hop_info["blacklisted"] = True
         else:
             hop_info["from"] = ""
         if "by" in parsed_route:
             hop_info["by"] = parsed_route["by"][0]
             try:
-                test_ip = ipaddress.ip_address(hop_info["by"])
+                ipaddress.ip_address(hop_info["by"])
 
                 obj = IPWhois(hop_info["by"])
 
@@ -290,9 +277,7 @@ def parseHops(received):
                         response = DbIpCity.get(resolved_ip, api_key="free")
                         hop_info["by_geo"] = json.loads(response.to_json())
                     except Exception as expl:
-                        template = (
-                            "An exception of type {0} occurred. Arguments:\n{1!r}"
-                        )
+                        template = "An exception of type {0} occurred. Arguments:\n{1!r}"
                         message = template.format(type(expl).__name__, expl.args)
                 except Exception as exp:
                     template = "An exception of type {0} occurred. Arguments:\n{1!r}"
@@ -303,9 +288,7 @@ def parseHops(received):
         else:
             hop_info["with"] = ""
         if previous_hop:
-            hop_info["delay"] = (
-                parsed_route["date"] - previous_hop["date"]
-            ).total_seconds()
+            hop_info["delay"] = (parsed_route["date"] - previous_hop["date"]).total_seconds()
         else:
             hop_info["delay"] = "*"
         previous_hop = hop_info
@@ -314,7 +297,7 @@ def parseHops(received):
     return hops
 
 
-def coalesce(input_dict, *arg):
+def coalesce(input_dict, *arg: str):
     for el in arg:
         if el in input_dict:
             if isinstance(input_dict[el], list):
@@ -393,20 +376,16 @@ def buildResult(header, siemplify):
                 fromserver = EmailParserRouting.parserouting(fromserver_str)
                 try:
                     if "by" in fromserver:
-                        test_ip = ipaddress.ip_address(fromserver["by"][0])
+                        ipaddress.ip_address(fromserver["by"][0])
                         result["SourceServerIP"] = fromserver["by"][0]
                         result["SourceServer"] = fromserver["by"][0]
                 except Exception:
                     if "by" in fromserver:
                         result["SourceServer"] = fromserver["by"][0]
-                        try:
-                            result["SourceServerIP"] = (
-                                EmailUtilitiesManager.Resolver().query(
-                                    result["SourceServer"],
-                                )[0][2]
-                            )
-                        except:
-                            pass
+                        with contextlib.suppress(BaseException):
+                            result["SourceServerIP"] = EmailUtilitiesManager.Resolver().query(
+                                result["SourceServer"],
+                            )[0][2]
                 continue
     except Exception:
         pass
@@ -434,12 +413,8 @@ def main(siemplify):
     )
 
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
-    )
-    result_value = (
-        None  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    output_message = "output message :"  # human readable message, showed in UI as the action result
+    result_value = None  # Set a simple result value, used for playbook if\else and placeholders.
     h = json.loads(headers_json)
 
     headers_res = buildResult(h, siemplify)
@@ -447,7 +422,10 @@ def main(siemplify):
     siemplify.result.add_result_json(headers_res)
     siemplify.result.add_json("Headers", headers_res)
     siemplify.LOGGER.info(
-        f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}",
+        "\n  status: %s\n  result_value: %s\n  output_message: %s",
+        status,
+        result_value,
+        output_message,
     )
     siemplify.end(output_message, result_value, status)
 

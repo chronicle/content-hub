@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 # Imports
 from ..core.MobileIronManager import MobileIronManager
-from soar_sdk.SiemplifyAction import SiemplifyAction
 
 # Consts.
 PROVIDER_NAME = "MobileIron"
@@ -50,7 +51,8 @@ def main():
     if device_uuid:
         mobile_iron_manager.unlock_device_by_uuid(device_uuid)
     else:
-        raise Exception("Device UUID can not be empty.")
+        msg = "Device UUID can not be empty."
+        raise Exception(msg)
 
     output_message = f"System information fetched for UUID {device_uuid}"
 

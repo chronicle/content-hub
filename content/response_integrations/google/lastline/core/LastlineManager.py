@@ -24,27 +24,31 @@
 # ============================= IMPORTS ===================================== #
 
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin
+
+import requests
+
+from .consts import (
+    AUTHENTICATION_ERROR,
+    INVALID_PARAMETER_ERROR,
+    PERMISSION_DENIED,
+    SUCCESS_CODE,
+    TOO_MANY_REQUESTS_ERROR,
+)
 from .exceptions import (
     LastlineAPIException,
     LastlineAuthenticationException,
-    LastlinePermissionException,
     LastlineInvalidParamException,
     LastlineManyRequestsException,
+    LastlinePermissionException,
 )
-from .consts import (
-    SUCCESS_CODE,
-    AUTHENTICATION_ERROR,
-    PERMISSION_DENIED,
-    INVALID_PARAMETER_ERROR,
-    TOO_MANY_REQUESTS_ERROR,
-)
-from .datamodels import SubmissionTask, Analysis
+from .LastlineParser import LastlineParser
 from .utils import remove_empty_kwargs
 
-from .LastlineParser import LastlineParser
-
-import requests
+if TYPE_CHECKING:
+    from .datamodels import Analysis, SubmissionTask
 
 HEADERS = {"Content-Type": "multipart/form-data"}
 
@@ -74,9 +78,7 @@ class LastlineManager:
         self.parser = LastlineParser()
 
     def _obtain_session_cookie(self):
-        """
-        Obtain cookie to make API calls
-        """
+        """Obtain cookie to make API calls"""
         request_url = self._get_full_url("login")
         response = self.session.get(
             request_url, data={"username": self.username, "password": self.password}
@@ -85,8 +87,7 @@ class LastlineManager:
 
     @staticmethod
     def validate_response(response, error_msg="An error occurred"):
-        """
-        Validate a response
+        """Validate a response
         :param response: {requests.Response} The response
         :param error_msg: {str} The error message to display on failure
         """
@@ -98,16 +99,17 @@ class LastlineManager:
                 response.json()
             except:
                 # Not a JSON - return content
+                msg = f"{error_msg}: {error} - {error.response.content}"
                 raise LastlineAPIException(
-                    f"{error_msg}: {error} - {error.response.content}"
+                    msg
                 )
+            msg = f"{error_msg}: {error} {response.json().get('message')}"
             raise LastlineAPIException(
-                f"{error_msg}: {error} {response.json().get('message')}"
+                msg
             )
 
     def _validate_api_errors(self, response, error_msg="An error occurred"):
-        """
-        In case of api with specific Lastline API errors, raise the appropriate error.
+        """In case of api with specific Lastline API errors, raise the appropriate error.
         :param response: {requests.Response} Response from the API call.
         :param error_msg: {str} Error message
         :return: raise Exception if failed to validate response
@@ -117,32 +119,34 @@ class LastlineManager:
 
     @staticmethod
     def raise_api_error(response_json, error_msg):
-        """
-        Raise the appropriate error
+        """Raise the appropriate error
         :param response_json: {Dict} Response error dictionary {success, error_code, error}
         :param error_msg: {str} Error message
         :return: raise Exception if failed to validate response
         """
         if response_json.get("error_code") == AUTHENTICATION_ERROR:
+            msg = f"{error_msg}: {response_json.get('error')}"
             raise LastlineAuthenticationException(
-                f"{error_msg}: {response_json.get('error')}"
+                msg
             )
-        elif response_json.get("error_code") == PERMISSION_DENIED:
+        if response_json.get("error_code") == PERMISSION_DENIED:
+            msg = f"{error_msg}: {response_json.get('error')}"
             raise LastlinePermissionException(
-                f"{error_msg}: {response_json.get('error')}"
+                msg
             )
-        elif response_json.get("error_code") == INVALID_PARAMETER_ERROR:
+        if response_json.get("error_code") == INVALID_PARAMETER_ERROR:
+            msg = f"{error_msg}: {response_json.get('error')}"
             raise LastlineInvalidParamException(
-                f"{error_msg}: {response_json.get('error')}"
+                msg
             )
-        elif response_json.get("error_code") == TOO_MANY_REQUESTS_ERROR:
+        if response_json.get("error_code") == TOO_MANY_REQUESTS_ERROR:
+            msg = f"{error_msg}: {response_json.get('error')}"
             raise LastlineManyRequestsException(
-                f"{error_msg}: {response_json.get('error')}"
+                msg
             )
 
     def _get_full_url(self, url_key, **kwargs) -> str:
-        """
-        Get full url from url key.
+        """Get full url from url key.
         :param url_id: {str} The key of url
         :param kwargs: {dict} Variables passed for string formatting
         :return: {str} The full url
@@ -150,8 +154,7 @@ class LastlineManager:
         return urljoin(self.api_root, ENDPOINTS[url_key].format(**kwargs))
 
     def test_connectivity(self):
-        """
-        Test connectivity to the Lastline service with parameters provided at the integration configuration page on
+        """Test connectivity to the Lastline service with parameters provided at the integration configuration page on
         the Marketplace tab.
         :return: raise Exception if failed to validate response
         """
@@ -163,8 +166,7 @@ class LastlineManager:
         self._validate_api_errors(response, "Unable to login")
 
     def submit_url(self, url_for_analysis: str, is_get_process=False) -> SubmissionTask:
-        """
-        Create submission task for URL if this url submission does not exists.
+        """Create submission task for URL if this url submission does not exists.
         Returns the summary of the task
         should be provided as action input parameter.
         :param url_for_analysis: {str} Specify URL to analyze.
@@ -184,8 +186,7 @@ class LastlineManager:
         )
 
     def get_progress(self, uuid: str, is_get_process=True):
-        """
-        Get progress for a previously submitted analysis task.
+        """Get progress for a previously submitted analysis task.
         :param uuid: {str} The unique identifier of the submitted task.
         :param is_get_process: {bool} Weather if this an status update request or submission data request
         :return: {datamodels.SubmissionTask} SubmissionTask data model
@@ -205,8 +206,7 @@ class LastlineManager:
         return self.parser.build_submission_task_obj(response, is_get_process)
 
     def submit_file(self, file_path: str, is_get_process=False) -> SubmissionTask:
-        """
-        Submit analysis task for the provided URL.
+        """Submit analysis task for the provided URL.
         :param file_path: {str} Specify File Path to analyze.
         :param is_get_process: {bool} Weather if this an status update request or submission data request
         :return: {datamodels.SubmissionTask} SubmissionTask data model
@@ -229,8 +229,7 @@ class LastlineManager:
     def get_result(
         self, uuid: str, full_report_score: int = -1, is_get_process: bool = False
     ):
-        """
-        Get results for a previously submitted analysis task.
+        """Get results for a previously submitted analysis task.
         :param uuid: {str} The unique identifier of the submitted task.
         :param is_get_process: {bool} Weather if this an status update request or submission data request
         :param full_report_score: {int}  Minimum score that causes detailed analysis reports to be served; -1 indicates
@@ -252,16 +251,15 @@ class LastlineManager:
 
     def search_analysis_history(
         self,
-        submission_type: str = None,
-        start_time: str = None,
-        search_in_last_x_scans: int = None,
-        skip_first_x_scans: int = None,
-        url: str = None,
-        file_md5: str = None,
-        file_sha1: str = None,
+        submission_type: str | None = None,
+        start_time: str | None = None,
+        search_in_last_x_scans: int | None = None,
+        skip_first_x_scans: int | None = None,
+        url: str | None = None,
+        file_md5: str | None = None,
+        file_sha1: str | None = None,
     ) -> Analysis:
-        """
-        Search Lastline completed analysis tasks history.
+        """Search Lastline completed analysis tasks history.
         :param submission_type: {str} submission type to search for, either URL or FileHash.
         :param start_time: {int} Time frame for which to search for completed analysis tasks
         :param search_in_last_x_scans: {int} Search for report in last x analyses executed in any run.

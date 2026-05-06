@@ -24,7 +24,9 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
+
 import urllib.parse
+
 import requests
 
 # =====================================
@@ -63,8 +65,7 @@ HEADERS = {"Content-Type": "application/json"}
 class F5BigIQManager:
 
     def __init__(self, host, username, password, verify_ssl=False):
-        """
-        :param host: Server Host Address {string}
+        """:param host: Server Host Address {string}
         :param username: BigIQ Username {string}
         :param password: BigIQ Password {string}
         """
@@ -77,9 +78,7 @@ class F5BigIQManager:
         self.login()
 
     def login(self):
-        """
-        Obtain BigIQ token and add it to self.headers.
-        """
+        """Obtain BigIQ token and add it to self.headers."""
         # Form request URL.
         request_url = urllib.parse.urljoin(self.host, OBTAIN_TOKEN_URL)
         # Get response.
@@ -104,8 +103,7 @@ class F5BigIQManager:
         HEADERS["X-F5-Auth-Token"] = self.token
 
     def get_event_logs_by_blocking_id(self, blocking_id):
-        """
-        Get events log for a blocking id.
+        """Get events log for a blocking id.
         :param blocking_id: {string}
         :return: request response {JSON}
         """
@@ -126,8 +124,7 @@ class F5BigIQManager:
         return response.json()
 
     def change_policy_enforcement_mode(self, policy_id, enforcement_mode):
-        """
-        Modify the enforcement mode of a policy by it's id.
+        """Modify the enforcement mode of a policy by it's id.
         :param policy_id: {string}
         :param enforcement_mode: {string}
         :return: success status {bool}

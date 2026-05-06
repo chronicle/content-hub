@@ -13,12 +13,13 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from ..core.FireEyeEXManager import FireEyeEXManager
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
 
+from ..core.FireEyeEXManager import FireEyeEXManager
 
 INTEGRATION_NAME = "FireEyeEX"
 SCRIPT_NAME = "Ping"

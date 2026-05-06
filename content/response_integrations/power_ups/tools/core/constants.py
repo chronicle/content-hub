@@ -17,9 +17,7 @@ from __future__ import annotations
 import re
 
 INTEGRATION_NAME: str = "Tools"
-DELAY_PLAYBOOK_SYNCHRONOUS_SCRIPT_NAME: str = (
-    f"{INTEGRATION_NAME} - Delay Playbook Synchronous"
-)
+DELAY_PLAYBOOK_SYNCHRONOUS_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - Delay Playbook Synchronous"
 
 MAX_SYNC_DELAY_TIME_IN_SECONDS: int = 30
 MIN_SYNC_DELAY_TIME_IN_SECONDS: int = 0

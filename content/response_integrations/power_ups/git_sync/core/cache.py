@@ -14,12 +14,11 @@
 
 from __future__ import annotations
 
-import collections
 import copy
 import json
 from collections.abc import Iterable, Iterator, MutableMapping, MutableSequence
 from collections.abc import Set as AbstractSet
-from typing import Generic, Protocol, TypeAlias, TypeVar
+from typing import Generic, NamedTuple, Protocol, TypeAlias, TypeVar
 
 from soar_sdk import SiemplifyBase, SiemplifyUtils
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -31,7 +30,9 @@ _Index: TypeAlias = int
 _Record: TypeAlias = MutableMapping[_KT, _VT]
 _Cache: TypeAlias = MutableSequence[_Record]
 _KeyToIndex: TypeAlias = MutableMapping[_KT, _Index]
-_CacheInitData = collections.namedtuple("_CacheInitData", ["cache", "largest_index"])
+class _CacheInitData(NamedTuple):
+    cache: _Cache
+    largest_index: _Index
 JsonStr: TypeAlias = str
 
 CONTEXT_MOD_TIME_KEY: str = "name_to_modification_time_mapping_{0}"

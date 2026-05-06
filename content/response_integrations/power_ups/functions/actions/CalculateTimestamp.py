@@ -41,9 +41,7 @@ class CalculateTimestampAction(Action):
 
     def __init__(self) -> None:
         super().__init__(CALCULATE_TIMESTAMP_SCRIPT_NAME)
-        self.output_message: str = (
-            "Successfully calculated timestamps based on the provided parameters."
-        )
+        self.output_message: str = "Successfully calculated timestamps based on the provided parameters."
 
     def _init_api_clients(self) -> None:
         """Initialize API clients if required (placeholder)."""
@@ -101,9 +99,9 @@ class CalculateTimestampAction(Action):
             return
 
         if not self.params.custom_timestamp:
+            msg = "“Custom Timestamp” parameter should have a value, if “Input Type” is set to “Custom Timestamp”."
             raise ValueError(
-                '“Custom Timestamp” parameter should have a value, '
-                'if “Input Type” is set to “Custom Timestamp”.'
+                msg
             )
 
         if self.params.custom_timestamp_format:
@@ -113,19 +111,19 @@ class CalculateTimestampAction(Action):
                     self.params.custom_timestamp_format,
                 )
             except ValueError as exc:
+                msg = (
+                    "input provided in “Custom Timestamp” and “Custom Timestamp Format” "
+                    "is not aligned. Please check the spelling."
+                )
                 raise ValueError(
-                    'input provided in “Custom Timestamp” and “Custom Timestamp Format” '
-                    'is not aligned. Please check the spelling.'
+                    msg
                 ) from exc
 
     def _validate_output_format(self, fmt: str) -> None:
         """Ensures valid output timestamp format."""
-        if (
-            fmt
-            and fmt != DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR
-            and not fmt.startswith("%")
-        ):
-            raise ValueError("Invalid 'Output Timestamp Format' provided")
+        if fmt and fmt != DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR and not fmt.startswith("%"):
+            msg = "Invalid 'Output Timestamp Format' provided"
+            raise ValueError(msg)
 
     def _perform_action(self, _: Any = None) -> None:
         original_timestamp = self._get_original_timestamp()
@@ -141,10 +139,13 @@ class CalculateTimestampAction(Action):
             json_result["calculated_timestamps"][delta_key] = shifted_value
 
         if invalid_deltas:
-            raise ValueError(
+            msg = (
                 "invalid values provided "
-                f'in the “Timestamp Delta” parameter: {", ".join(invalid_deltas)}. '
+                f"in the “Timestamp Delta” parameter: {', '.join(invalid_deltas)}. "
                 "Please check the spelling."
+            )
+            raise ValueError(
+                msg
             )
         self.json_results: SingleJson = json_result
 
@@ -154,26 +155,25 @@ class CalculateTimestampAction(Action):
             case InputType.CURRENT_TIME.value:
                 return arrow.get()
             case InputType.ALERT_CREATION_TIME.value:
-                alert_creation_ms = getattr(
-                    self.soar_action.current_alert, "creation_time", None
-                )
+                alert_creation_ms = getattr(self.soar_action.current_alert, "creation_time", None)
                 if alert_creation_ms:
                     return arrow.get(alert_creation_ms / 1000)
-                raise ValueError(
-                    "Alert creation time not found in the current context."
-                )
+                msg = "Alert creation time not found in the current context."
+                raise ValueError(msg)
             case InputType.CASE_CREATION_TIME.value:
                 case_creation_ms = getattr(self.soar_action.case, "creation_time", None)
                 if case_creation_ms:
                     return arrow.get(case_creation_ms / 1000)
-                raise ValueError("Case creation time not found in the current context.")
+                msg = "Case creation time not found in the current context."
+                raise ValueError(msg)
             case InputType.CUSTOM_TIMESTAMP.value:
                 return self._parse_custom_timestamp(
                     self.params.custom_timestamp,
                     self.params.custom_timestamp_format,
                 )
             case _:
-                raise ValueError(f"Unsupported Input Type: {self.params.input_type}")
+                msg = f"Unsupported Input Type: {self.params.input_type}"
+                raise ValueError(msg)
 
     def _parse_custom_timestamp(self, value: str, fmt: str | None) -> arrow.Arrow:
         """Parses custom timestamp string with or without format."""
@@ -188,16 +188,17 @@ class CalculateTimestampAction(Action):
                 return arrow.get(num_value / 1000 if len(value) == 13 else num_value)
 
         except Exception as exc:
+            msg = (
+                "input provided in “Custom Timestamp” and “Custom Timestamp Format” "
+                "is not aligned. Please check the spelling."
+            )
             raise ValueError(
-                'input provided in “Custom Timestamp” and “Custom Timestamp Format” '
-                'is not aligned. Please check the spelling.'
+                msg
             ) from exc
 
     def _build_json_result(self, original: arrow.Arrow) -> SingleJson:
         """Builds initial JSON result skeleton."""
-        original_str = self._format_timestamp(
-            original, self.params.output_timestamp_format
-        )
+        original_str = self._format_timestamp(original, self.params.output_timestamp_format)
         return {
             "original_timestamp": original_str,
             "calculated_timestamps": {},
@@ -223,9 +224,7 @@ class CalculateTimestampAction(Action):
             return None
 
         shifted = base_timestamp.shift(**shift_kwargs)
-        formatted_shifted = self._format_timestamp(
-            shifted, self.params.output_timestamp_format
-        )
+        formatted_shifted = self._format_timestamp(shifted, self.params.output_timestamp_format)
         return f"timestamp{delta_str}", formatted_shifted
 
     def _format_timestamp(self, ts: arrow.Arrow, fmt: str) -> Any:

@@ -13,10 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.MicroFocusITSMAManager import MicroFocusITSMAManager
 
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
+from ..core.MicroFocusITSMAManager import MicroFocusITSMAManager
 
 ITSMA_PROVIDER = "MicroFocusITSMA"
 
@@ -57,7 +58,7 @@ def main():
         updated_params = [
             param
             for param, value in siemplify.parameters.items()
-            if value and key is not "Incident ID"
+            if value and key != "Incident ID"
         ]
 
         output_message = f'An incident with id "{incident_id}" was successfully updated. \n Updated parameters: {",".join(updated_params)}'

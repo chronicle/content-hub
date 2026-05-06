@@ -70,7 +70,7 @@ def main():
     for file_location in file_names:
         try:
             head_tail = os.path.split(file_location)
-            filename, file_extension = os.path.splitext(file_location)
+            _filename, file_extension = os.path.splitext(file_location)
             file_data = {}
             file_data["path"] = head_tail[0]
             file_data["filename"] = head_tail[1]
@@ -82,7 +82,7 @@ def main():
             file_paths.append(head_tail[1])
 
         except Exception as e:
-            siemplify.LOGGER.error("General error performing action:\r")
+            siemplify.LOGGER.exception("General error performing action:\r")
             siemplify.LOGGER.exception(e)
             status = EXECUTION_STATE_FAILED
             result_value = "Failed"

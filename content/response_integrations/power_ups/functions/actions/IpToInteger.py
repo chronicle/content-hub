@@ -24,8 +24,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 
 def ip2long(ip):
     """Convert an IP string to long"""
-    packedIP = socket.inet_aton(ip)
-    return struct.unpack("!L", packedIP)[0]
+    packed_ip = socket.inet_aton(ip)
+    return struct.unpack("!L", packed_ip)[0]
 
 
 @output_handler
@@ -33,12 +33,8 @@ def main():
     siemplify = SiemplifyAction()
 
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
-    )
-    result_value = (
-        None  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    output_message = "output message :"  # human readable message, showed in UI as the action result
+    result_value = None  # Set a simple result value, used for playbook if\else and placeholders.
 
     ip_addresses = list(
         filter(
@@ -50,7 +46,6 @@ def main():
     res = []
     for ip_addr in ip_addresses:
         iplong = ip2long(ip_addr)
-        print(iplong)
         json_result[ip_addr] = iplong
         res.append(iplong)
 

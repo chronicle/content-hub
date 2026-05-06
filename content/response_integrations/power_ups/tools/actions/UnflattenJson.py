@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Union
+from typing import Any
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -24,7 +24,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 
 SingleJson = dict[str, Any]
 ListJson = list[SingleJson]
-Json = Union[SingleJson, ListJson]
+Json = SingleJson | ListJson
 
 ACTION_NAME = "Unflatten JSON"
 
@@ -52,9 +52,7 @@ def unflatten_dict(json_: Json, delimiter: str | None = None) -> SingleJson:
     unflattened = {}
     for key, value in json_.items():
         current = unflattened
-        tokens = (
-            key.split(delimiter) if delimiter is not None else re.findall(r"\w+", key)
-        )
+        tokens = key.split(delimiter) if delimiter is not None else re.findall(r"\w+", key)
 
         if not tokens:
             tokens = [key]
@@ -69,9 +67,7 @@ def unflatten_dict(json_: Json, delimiter: str | None = None) -> SingleJson:
             if not isinstance(current, (dict, list)):
                 continue
 
-            next_value = (
-                next_token if i == len(tokens) else ([] if next_token.isdigit() else {})
-            )
+            next_value = next_token if i == len(tokens) else ([] if next_token.isdigit() else {})
 
             if isinstance(current, list):
                 index = int(index)
@@ -119,15 +115,15 @@ def main() -> None:
         else:
             output_message += f"{e}"
 
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(e)
         result_value = False
         action_status = EXECUTION_STATE_FAILED
 
     siemplify.LOGGER.info("---------------- Main - Finished ----------------")
-    siemplify.LOGGER.info(f"Output Message: {output_message}")
-    siemplify.LOGGER.info(f"Result: {result_value}")
-    siemplify.LOGGER.info(f"Execution Status: {action_status}")
+    siemplify.LOGGER.info("Output Message: %s", output_message)
+    siemplify.LOGGER.info("Result: %s", result_value)
+    siemplify.LOGGER.info("Execution Status: %s", action_status)
     siemplify.end(output_message, result_value, action_status)
 
 

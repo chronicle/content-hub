@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-from .datamodels import *
+
 from collections import Counter
+
+from .datamodels import *
 
 
 class Outpost24Parser:
@@ -40,16 +42,12 @@ class Outpost24Parser:
         for ip_address in raw_data:
             if ip_address.get("ip") == entity_identifier:
                 return ip_address
+        return None
 
     @staticmethod
     def filter_found_information(data, risk_level_filter):
 
-        filtered_results = []
-        for information in data:
-            if information.get("riskLevel").lower() in risk_level_filter:
-                filtered_results.append(information)
-
-        return filtered_results
+        return [information for information in data if information.get("riskLevel").lower() in risk_level_filter]
 
     @staticmethod
     def add_findings_to_entity_object(entity_object, data):

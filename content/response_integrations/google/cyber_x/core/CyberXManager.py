@@ -23,9 +23,11 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
-import requests
-import urllib.parse
+
 import copy
+import urllib.parse
+
+import requests
 
 # =====================================
 #             CONSTANTS               #
@@ -58,20 +60,19 @@ class CyberXManager:
 
     @staticmethod
     def validate_response(response):
-        """
-        Validate HTTP response and raise informative Exception.
+        """Validate HTTP response and raise informative Exception.
         :param response: HTTP response object.
         :return: {void}
         """
         try:
             response.raise_for_status()
         except Exception as err:
-            raise CyberXManagerError(f"Error:{err}, Content:{response.content}")
+            msg = f"Error:{err}, Content:{response.content}"
+            raise CyberXManagerError(msg)
 
     @staticmethod
     def get_vulnerability_report_by_address(reports, ip_address):
-        """
-        Get vulnerability report for specific IP address.(Method is static in purpose to not call get all reports
+        """Get vulnerability report for specific IP address.(Method is static in purpose to not call get all reports
         every time.)
         :param reports: {list} list of report objects.
         :param ip_address: {string} Target IP address.
@@ -80,12 +81,12 @@ class CyberXManager:
         for report in reports:
             if ip_address in report.get("ipAddresses"):
                 return report
-        raise CyberXManagerError(f'Error: Not found report for address "{ip_address}"')
+        msg = f'Error: Not found report for address "{ip_address}"'
+        raise CyberXManagerError(msg)
 
     @staticmethod
     def get_vulnerability_report_by_host(reports, host_name):
-        """
-        Get vulnerability report for specific IP address.(Method is static in purpose to not call get all reports
+        """Get vulnerability report for specific IP address.(Method is static in purpose to not call get all reports
         every time.)
         :param reports: {list} list of report objects.
         :param host_name: {string} Target IP address.
@@ -94,11 +95,11 @@ class CyberXManager:
         for report in reports:
             if host_name.lower() == report.get("name").lower():
                 return report
-        raise CyberXManagerError(f'Error: Not found report for host name "{host_name}"')
+        msg = f'Error: Not found report for host name "{host_name}"'
+        raise CyberXManagerError(msg)
 
     def get_all_devices(self):
-        """
-        Get list of all devices object that are detected by XSense.
+        """Get list of all devices object that are detected by XSense.
         :return: {list} List of devices objects.
         """
         request_url = urllib.parse.urljoin(self.api_root, GET_DEVICES_URL)
@@ -107,8 +108,7 @@ class CyberXManager:
         return response.json()
 
     def get_device_by_ip_address(self, ip_address):
-        """
-        Get device object by it's IP address.
+        """Get device object by it's IP address.
         :param ip_address: {string} Target device IP address.
         :return: {dict} Device object.
         """
@@ -116,11 +116,11 @@ class CyberXManager:
         for device in devices:
             if ip_address in device.get("ipAddress"):
                 return device
-        raise CyberXManagerError(f'Error, No device with ip "{ip_address}" was found.')
+        msg = f'Error, No device with ip "{ip_address}" was found.'
+        raise CyberXManagerError(msg)
 
     def get_device_by_host_name(self, host_name):
-        """
-        Get device object by it's host name.
+        """Get device object by it's host name.
         :param host_name: {string} Target host name.
         :return: {dict} Device object.
         """
@@ -128,39 +128,39 @@ class CyberXManager:
         for device in devices:
             if host_name.lower() == device.get("name").lower():
                 return device
+        msg = f'Error, No device with host name "{host_name}" was found.'
         raise CyberXManagerError(
-            f'Error, No device with host name "{host_name}" was found.'
+            msg
         )
 
     def get_device_id_by_address(self, ip_address):
-        """
-        Get device ID by it's IP address.
+        """Get device ID by it's IP address.
         :param ip_address: {string} Target IP address.
         :return: {string} Device ID.
         """
         device_information = self.get_device_by_ip_address(ip_address)
         if device_information.get("id"):
             return device_information.get("id")
+        msg = f'Error: No ID found for device with address "{ip_address}"'
         raise CyberXManagerError(
-            f'Error: No ID found for device with address "{ip_address}"'
+            msg
         )
 
     def get_device_id_by_host_name(self, host_name):
-        """
-        Get device ID by host name.
+        """Get device ID by host name.
         :param host_name: {string} Target host name.
         :return: {string} Device ID.
         """
         device_information = self.get_device_by_host_name(host_name)
         if device_information.get("id"):
             return device_information.get("id")
+        msg = f'Error: No ID found for device for host "{host_name}"'
         raise CyberXManagerError(
-            f'Error: No ID found for device for host "{host_name}"'
+            msg
         )
 
     def get_device_connections(self, device_id):
-        """
-        Get list of connections from device.
+        """Get list of connections from device.
         :param device_id: {string} Target device ID.
         :return: {list} List of connection objects.
         """
@@ -172,8 +172,7 @@ class CyberXManager:
         return response.json()
 
     def get_devices_vulnerability_reports(self):
-        """
-        Get list of report objects.
+        """Get list of report objects.
         :return: {list} List of Report objects.
         """
         request_url = urllib.parse.urljoin(
@@ -184,8 +183,7 @@ class CyberXManager:
         return response.json()
 
     def get_alerts(self):
-        """
-        Fetch list of all alerts detected by XSense.
+        """Fetch list of all alerts detected by XSense.
         :return: {list} List of alerts objects.
         """
         request_url = urllib.parse.urljoin(self.api_root, GET_ALERTS_URL)
@@ -194,8 +192,7 @@ class CyberXManager:
         return response.json()
 
     def get_events(self):
-        """
-        Fetch list of events reported to the event log.
+        """Fetch list of events reported to the event log.
         :return: {list} List of events objects.
         """
         request_url = urllib.parse.urljoin(self.api_root, GET_EVENTS_URL)
@@ -204,4 +201,3 @@ class CyberXManager:
         return response.json()
 
 
-#

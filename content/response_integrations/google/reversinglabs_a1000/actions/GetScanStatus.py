@@ -13,16 +13,17 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
 
 # Imports
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import (
+    convert_dict_to_json_result_dict,
     dict_to_flat,
     flat_dict_to_csv,
-    convert_dict_to_json_result_dict,
+    output_handler,
 )
+
 from ..core.A1000MalwareAnalysis import A1000MalwareAnalysisClient
 
 # Consts
@@ -45,12 +46,9 @@ def main():
         password
     )
 
-    hash_values = []
     hash_status_dict = {}
 
-    for entity in siemplify.target_entities:
-        if entity.entity_type == FILEHASH:
-            hash_values.append(entity.identifier.lower())
+    hash_values = [entity.identifier.lower() for entity in siemplify.target_entities if entity.entity_type == FILEHASH]
 
     hash_status = a1000_manager.processing_status(hash_values)
 

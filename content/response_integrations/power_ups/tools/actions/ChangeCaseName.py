@@ -28,28 +28,21 @@ def main():
         change = True
         siemplify.case.alerts.sort(key=lambda x: x.detected_time)
         if siemplify.parameters.get("Only If First Alert", "false").lower() == "true":
-            if (
-                siemplify.current_alert.identifier
-                != siemplify.case.alerts[0].identifier
-            ):
+            if siemplify.current_alert.identifier != siemplify.case.alerts[0].identifier:
                 change = False
         if change:
             rename_case(
-                chronicle_soar=siemplify,
-                case_id=siemplify.case_id,
-                case_title=siemplify.parameters["New Name"]
+                chronicle_soar=siemplify, case_id=siemplify.case_id, case_title=siemplify.parameters["New Name"]
             )
 
-            output_message = (
-                f"Case's title changed to: {siemplify.parameters['New Name']}"
-            )
+            output_message = f"Case's title changed to: {siemplify.parameters['New Name']}"
             result_value = "true"
         else:
             output_message = "Case's title not changed, not first alert in the case"
             result_value = "true"
     except Exception as e:
         output_message = "An error occured: " + e
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(e)
 
     siemplify.end(output_message, result_value)

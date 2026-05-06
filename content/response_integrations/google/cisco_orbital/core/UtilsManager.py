@@ -13,16 +13,18 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+from ipaddress import IPv4Address, ip_address
+
 import requests
 from soar_sdk.SiemplifyUtils import unix_now
-from ipaddress import ip_address, IPv4Address
-from .constants import IPV4_TYPE, IPV6_TYPE, ASYNC_ACTION_TIMEOUT_THRESHOLD_MS
+
+from .constants import ASYNC_ACTION_TIMEOUT_THRESHOLD_MS, IPV4_TYPE, IPV6_TYPE
 from .exceptions import BadRequestException, CiscoOrbitalException
 
 
 def validate_response(response, error_msg="An error occurred"):
-    """
-    Validate response
+    """Validate response
     :param response: {requests.Response} The response to validate
     :param error_msg: {str} Default message to display on error
     """
@@ -31,35 +33,31 @@ def validate_response(response, error_msg="An error occurred"):
 
     except requests.HTTPError as error:
         if response.status_code == 400:
+            msg = f"{error_msg}: {error} {error.response.content}"
             raise BadRequestException(
-                f"{error_msg}: {error} {error.response.content}"
+                msg
             ) from error
 
+        msg = f"{error_msg}: {error} {error.response.content}"
         raise CiscoOrbitalException(
-            f"{error_msg}: {error} {error.response.content}"
+            msg
         ) from error
 
     return True
 
 
 def get_dict_from_string(string):
-    """
-    Convert key:value string to dictionary
+    """Convert key:value string to dictionary
     :param string: {str} The string to convert
     :return: {dict} The converted dictionary
     """
-    res = []
-
-    for sub in string.split(","):
-        if ":" in sub:
-            res.append(map(str.strip, sub.split(":", 1)))
+    res = [map(str.strip, sub.split(":", 1)) for sub in string.split(",") if ":" in sub]
 
     return dict(res)
 
 
 def get_ip_type(ip):
-    """
-    Check if ip is IPv4 or IPv6 or Invalid
+    """Check if ip is IPv4 or IPv6 or Invalid
     :param ip: {str} The given ip to check
     :return: {str} The type of ip
     """
@@ -70,8 +68,7 @@ def get_ip_type(ip):
 
 
 def is_action_approaching_timeout(python_process_timeout):
-    """
-    Check if a action script timeout is approaching.
+    """Check if a action script timeout is approaching.
     :param python_process_timeout: {int} The python process timeout
     :return: {bool} True if timeout is approaching, otherwise False
     """
@@ -79,8 +76,7 @@ def is_action_approaching_timeout(python_process_timeout):
 
 
 def hours_to_milliseconds(hours):
-    """
-    Convert hours to milliseconds
+    """Convert hours to milliseconds
     :param hours: {int} Value in hours
     :return: {int} Converted value to milliseconds
     """

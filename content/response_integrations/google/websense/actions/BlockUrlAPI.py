@@ -13,11 +13,13 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
+
 from soar_sdk.SiemplifyAction import *
-from ..core.WebsenseManager import WebsenseAPIManager
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
+
+from ..core.WebsenseManager import WebsenseAPIManager
 
 INTEGRATION_NAME = "Websense"
 

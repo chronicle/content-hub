@@ -13,11 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.SymantecICDXManager import SymantecICDXManager
-from soar_sdk.SiemplifyUtils import dict_to_flat, construct_csv
+
 import arrow
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import construct_csv, dict_to_flat, output_handler
+
+from ..core.SymantecICDXManager import SymantecICDXManager
 
 PROVIDER = "SymantecICDX"
 ACTION_NAME = "SymantecICDX - Get Events Minutes Back"
@@ -60,7 +61,7 @@ def main():
         )
         output_message = f"Found {len(events)} events"
     else:
-        output_message = f"No events were found."
+        output_message = "No events were found."
 
     siemplify.end(output_message, len(events))
 

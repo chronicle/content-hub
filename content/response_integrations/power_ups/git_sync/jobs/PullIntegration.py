@@ -28,12 +28,7 @@ def main():
     siemplify.script_name = SCRIPT_NAME
 
     pull_allowlist = [
-        _f
-        for _f in [
-            x.strip()
-            for x in siemplify.extract_job_param("Install Whitelist", " ").split(",")
-        ]
-        if _f
+        _f for _f in [x.strip() for x in siemplify.extract_job_param("Install Whitelist", " ").split(",")] if _f
     ]
 
     try:

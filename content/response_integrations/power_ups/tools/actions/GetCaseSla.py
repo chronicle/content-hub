@@ -46,8 +46,7 @@ def main():
         case_data = response.to_json()
 
         case_sla = int(
-            case_data.get("sla", {}).get("slaExpirationTime")
-            or case_data.get("stageSla", {}).get("slaExpirationTime")
+            case_data.get("sla", {}).get("slaExpirationTime") or case_data.get("stageSla", {}).get("slaExpirationTime")
         )
         dt_case_sla = convert_unixtime_to_datetime(case_sla).strftime(dt_format)
         siemplify.LOGGER.info(f"stage SLA: {dt_case_sla}")
@@ -68,19 +67,14 @@ def main():
             "critical_SLA": dt_case_critical_sla,
         }
         siemplify.result.add_result_json(json_result)
-        output_message = (
-            f"Stage SLA: {dt_case_sla}, Criticasl Stage SLA: {dt_case_critical_sla}"
-        )
+        output_message = f"Stage SLA: {dt_case_sla}, Criticasl Stage SLA: {dt_case_critical_sla}"
 
     except Exception as e:
-        if isinstance(e, TypeError):
-            error_msg = f"SLA was not set for case {siemplify.case_id}"
-        else:
-            error_msg = str(e)
+        error_msg = f"SLA was not set for case {siemplify.case_id}" if isinstance(e, TypeError) else str(e)
         output_message = f"Error executing action {ACTION_NAME}. Reason: {error_msg}"
         result_value = False
         status = EXECUTION_STATE_FAILED
-        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(output_message)
         siemplify.LOGGER.exception(e)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")

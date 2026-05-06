@@ -13,12 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import construct_csv
-from ..core.PortnoxManager import PortnoxManager
 
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import construct_csv, output_handler
+
+from ..core.PortnoxManager import PortnoxManager
 
 SCRIPT_NAME = "Portnox - GetInstalledApplications"
 
@@ -63,7 +63,7 @@ def main():
         except Exception as e:
             # An error occurred - skip entity and continue
             siemplify.LOGGER.error(
-                f"An error occurred on entity: {entity.identifier}.\n{str(e)}."
+                f"An error occurred on entity: {entity.identifier}.\n{e!s}."
             )
 
     if enriched_entities:

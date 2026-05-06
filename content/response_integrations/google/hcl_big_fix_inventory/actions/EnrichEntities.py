@@ -13,19 +13,20 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
-from soar_sdk.SiemplifyDataModel import EntityTypes
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
 from TIPCommon import (
-    extract_configuration_param,
     extract_action_param,
+    extract_configuration_param,
     flat_dict_to_csv,
 )
-from ..core.HCLBigFixInventoryManager import HCLBigFixInventoryManager
-from ..core.constants import INTEGRATION_NAME, ENRICH_ENTITIES_SCRIPT_NAME, ENRICHMENT_PREFIX
-from ..core.UtilsManager import get_entity_original_identifier, convert_comma_separated_to_list
 
+from ..core.constants import ENRICH_ENTITIES_SCRIPT_NAME, ENRICHMENT_PREFIX, INTEGRATION_NAME
+from ..core.HCLBigFixInventoryManager import HCLBigFixInventoryManager
+from ..core.UtilsManager import convert_comma_separated_to_list, get_entity_original_identifier
 
 SUPPORTED_ENTITY_TYPES = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]
 

@@ -38,11 +38,11 @@ class BaseUrlSession(requests.Session):
     def __init__(self, base_url=None):
         if base_url:
             self.base_url = base_url
-        super(BaseUrlSession, self).__init__()
+        super().__init__()
 
-    def request(self, method, url, *args, **kwargs):
+    def request(self, method, url, *args: Any, **kwargs):
         url = self.create_url(url)
-        return super(BaseUrlSession, self).request(method, url, *args, **kwargs)
+        return super().request(method, url, *args, **kwargs)
 
     def create_url(self, url):
         return urljoin(self.base_url, url)
@@ -580,7 +580,7 @@ class SiemplifyApiClient:
                 chronicle_soar=chronicle_soar,
                 integration_identifier=integration_name,
                 instance_display_name=display_name,
-                environments=environments
+                environments=environments,
             )
         except HTTPError as e:
             if e.response and e.response.status_code == 404 and consider_404_to_none:

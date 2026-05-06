@@ -35,11 +35,7 @@ def main():
         default_value=None,
     )
 
-    list_categories = (
-        [category.strip() for category in categories.split(",") if category.strip()]
-        if categories
-        else []
-    )
+    list_categories = [category.strip() for category in categories.split(",") if category.strip()] if categories else []
     status = EXECUTION_STATE_COMPLETED
     output_message = "Failed to get custom list items with provided parameters."
     result_value = True
@@ -49,19 +45,13 @@ def main():
     try:
         siemplify.LOGGER.info("Getting custom list records")
         records = get_traking_list_records_filtered(siemplify, categories, string)
-        records = records = (
-            records.get("custom_lists", [])
-            if isinstance(records, dict) else records
-        )
+        records = records.get("custom_lists", []) if isinstance(records, dict) else records
 
         siemplify.LOGGER.info("Searching records for match criteria")
 
         if records:
             if list_categories:
-                relevant_records = []
-                for record in records:
-                    if record["category"] in list_categories:
-                        relevant_records.append(record)
+                relevant_records = [record for record in records if record["category"] in list_categories]
             else:
                 relevant_records = records
 
@@ -69,9 +59,7 @@ def main():
             match_records = []
             if relevant_records:
                 if string:
-                    for record in relevant_records:
-                        if string in record["entityIdentifier"]:
-                            match_records.append(record)
+                    match_records.extend(record for record in relevant_records if string in record["entityIdentifier"])
                 else:
                     match_records = relevant_records
             if match_records:
@@ -97,7 +85,7 @@ def main():
         result_value = False
         output_message = "Failed to find records in custom lists"
         siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(e)
+        siemplify.LOGGER.error(e)
 
     siemplify.LOGGER.info(
         f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}",

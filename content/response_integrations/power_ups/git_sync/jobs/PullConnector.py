@@ -45,9 +45,7 @@ def main():
             if include_vf or include_mappings:
                 mappings = gitsync.content.get_mapping(connector.integration)
                 if mappings:
-                    installed_visual_families = [
-                        x.get("family") for x in gitsync.api.get_custom_families(True)
-                    ]
+                    installed_visual_families = [x.get("family") for x in gitsync.api.get_custom_families(True)]
                     visual_families = set(
                         [
                             x.get("familyName")

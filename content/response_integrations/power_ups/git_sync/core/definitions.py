@@ -39,7 +39,7 @@ from .constants import (
     VISUAL_FAMILY_README,
     ScriptType,
     WorkflowTypes,
-    STEP_TYPE
+    STEP_TYPE,
 )
 
 if TYPE_CHECKING:
@@ -248,11 +248,7 @@ class Integration(Content):
                 "ConnectorsScripts",
             ):
                 self.connectors.append(json.loads(self.zipfile.read(file)))
-            elif (
-                not self.isCustom
-                and file.startswith("Managers")
-                and file.endswith(".managerdef")
-            ):
+            elif not self.isCustom and file.startswith("Managers") and file.endswith(".managerdef"):
                 self.managers.append(json.loads(self.zipfile.read(file)))
             elif self.isCustom and file.startswith("Managers"):
                 self.managers.append(file)
@@ -454,10 +450,7 @@ class Workflow(Content):
     ) -> None:
         """Updates name of instances in the steps."""
         for step in self.steps:
-            if (
-                step.get("type") == STEP_TYPE
-                and step.get("actionProvider") == "Scripts"
-            ):
+            if step.get("type") == STEP_TYPE and step.get("actionProvider") == "Scripts":
                 self._update_instance_display_names_for_step(step, api, chronicle_soar)
 
     def _is_integration_instance_param(
@@ -507,7 +500,7 @@ class Workflow(Content):
                         param["FallbackInstanceDisplayName"] = display_name
             except HTTPError as e:
                 # ignoring 404 errors as they expected in migrations between instances.
-                if e.response is not None and hasattr(e.response, 'status_code'):
+                if e.response is not None and hasattr(e.response, "status_code"):
                     status_code = e.response.status_code
                     if status_code != 404:
                         raise e
@@ -515,7 +508,7 @@ class Workflow(Content):
                     # TIPCommon is re-raising HTTPError without response object
                     # Try to extract status code from the error message itself
                     error_msg = str(e)
-                    status_code_match = re.search(r'(\d{3})\s+Client Error', error_msg)
+                    status_code_match = re.search(r"(\d{3})\s+Client Error", error_msg)
                     if status_code_match:
                         status_code = int(status_code_match.group(1))
                         if status_code != 404:

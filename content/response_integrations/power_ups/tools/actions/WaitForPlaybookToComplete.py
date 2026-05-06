@@ -60,33 +60,30 @@ def main():
 
     if wf_status == WF_STATUS_COMPLETED:
         output_message = (
-            f"Alert Id: {siemplify.current_alert.identifier}, "
-            f"Playbook: {playbook_name} Finished. Lock Released. "
+            f"Alert Id: {siemplify.current_alert.identifier}, Playbook: {playbook_name} Finished. Lock Released. "
         )
         result_value = "true"
         status = EXECUTION_STATE_COMPLETED
 
     elif wf_status == WF_STATUS_FAILED:
         output_message = (
-            f"Alert Id: {siemplify.current_alert.identifier}, "
-            f"Playbook: {playbook_name} Failed. Lock Released. "
+            f"Alert Id: {siemplify.current_alert.identifier}, Playbook: {playbook_name} Failed. Lock Released. "
         )
         result_value = "true"
         status = EXECUTION_STATE_COMPLETED
 
     elif wf_status == WF_STATUS_TERMINATED:
         output_message = (
-            f"Alert Id: {siemplify.current_alert.identifier}, "
-            f"Playbook: {playbook_name} terminated. Lock Released. "
+            f"Alert Id: {siemplify.current_alert.identifier}, Playbook: {playbook_name} terminated. Lock Released. "
         )
         result_value = "true"
         status = EXECUTION_STATE_COMPLETED
 
-    elif wf_status in (
+    elif wf_status in {
         WF_STATUS_INPROGRESS,
         WF_STATUS_PENDING_FOR_USER,
         WF_STATUS_PENDING_IN_QUEUE,
-    ):
+    }:
         output_message = (
             f"Alert Id: {siemplify.current_alert.identifier}: "
             f"Playbook {playbook_name} Inprogress. Current playbook locked."
@@ -95,9 +92,7 @@ def main():
         status = EXECUTION_STATE_INPROGRESS
 
     else:
-        output_message = (
-            f"Alert Id: {siemplify.current_alert.identifier}: Playbook {playbook_name} not found."
-        )
+        output_message = f"Alert Id: {siemplify.current_alert.identifier}: Playbook {playbook_name} not found."
         result_value = "true"
         status = EXECUTION_STATE_COMPLETED
 

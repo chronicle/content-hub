@@ -53,20 +53,20 @@ def decode_field(field: str) -> str:
 
     """
     try:
-        _decoded = email.header.decode_header(field)
+        decoded = email.header.decode_header(field)
     except email.errors.HeaderParseError:
         return field
 
     string = ""
 
-    for _text, charset in _decoded:
+    for text, charset in decoded:
         if charset:
-            string += decode_string(_text, charset)
+            string += decode_string(text, charset)
         # @TODO might be an idea to check with chardet here
-        elif isinstance(_text, bytes):
-            string += _text.decode("utf-8", "ignore")
+        elif isinstance(text, bytes):
+            string += text.decode("utf-8", "ignore")
         else:
-            string += _text
+            string += text
 
     return string
 
@@ -115,10 +115,7 @@ def decode_string(string: bytes, encoding: str | None) -> str:
             else:
                 break
 
-        if text == "":
-            value = string.decode("ascii", "ignore")
-        else:
-            value = text
+        value = string.decode("ascii", "ignore") if text == "" else text
 
     return value
 
@@ -162,20 +159,14 @@ def workaround_field_value_parsing_errors(
         list: Return an extracted list of strings.
 
     """
-    if msg.policy == email.policy.compat32:  # type: ignore
-        new_policy = None
-    else:
-        new_policy = msg.policy  # type: ignore
+    new_policy = None if msg.policy == email.policy.compat32 else msg.policy  # type: ignore[attr-defined]
 
-    msg.policy = email.policy.compat32  # type: ignore
-    return_value = []
+    msg.policy = email.policy.compat32  # type: ignore[attr-defined]
 
-    for value in msg.get_all(header, []):
-        if value != "":
-            return_value.append(value)
+    return_value = [value for value in msg.get_all(header, []) if value != ""]
 
     if new_policy is not None:
-        msg.policy = new_policy  # type: ignore
+        msg.policy = new_policy  # type: ignore[attr-defined]
 
     return return_value
 
@@ -207,7 +198,7 @@ def robust_string2date(line: str) -> datetime.datetime:
     try:
         date_ = email.utils.parsedate_to_datetime(line)
     except (TypeError, ValueError, LookupError):
-        logger.debug(f'Exception parsing date "{line}"', exc_info=True)
+        logger.debug('Exception parsing date "%s"', line, exc_info=True)
 
         try:
             date_ = dateutil.parser.parse(line)
@@ -224,14 +215,10 @@ def robust_string2date(line: str) -> datetime.datetime:
 def json_serial(obj: typing.Any) -> str | None:
     """JSON serializer for objects not serializable by default json code."""
     if isinstance(obj, datetime.datetime):
-        if obj.tzinfo is not None:
-            serial = obj.astimezone(datetime.UTC).isoformat()
-        else:
-            serial = obj.isoformat()
+        return obj.astimezone(datetime.UTC).isoformat() if obj.tzinfo is not None else obj.isoformat()
 
-        return serial
-
-    raise TypeError(f"Type not serializable - {type(obj)!s}")
+    msg = f"Type not serializable - {type(obj)!s}"
+    raise TypeError(msg)
 
 
 def export_to_json(parsed_msg: dict, sort_keys: bool = False) -> str:

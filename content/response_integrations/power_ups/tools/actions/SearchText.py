@@ -30,14 +30,14 @@ def main():
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = "No match was found in the input string."  # human readable message, showed in UI as the action result
+    output_message = (
+        "No match was found in the input string."  # human readable message, showed in UI as the action result
+    )
     result_value = "false"  # Set a simple result value, used for playbook if\else and placeholders.
     json_result = {"matches": []}
     text = siemplify.extract_action_param("Text", "")
     search_for = siemplify.extract_action_param("Search For")
-    case_sensitive = (
-        siemplify.parameters.get("Case Sensitive", "false").lower() == "true"
-    )
+    case_sensitive = siemplify.parameters.get("Case Sensitive", "false").lower() == "true"
     search_for_regex = list(
         filter(
             None,
@@ -76,9 +76,7 @@ def main():
                 found = re.search(regex, text, flags=re.IGNORECASE | re.MULTILINE)
             if found:
                 result_value = "true"
-                output_message = (
-                    f"A match was found in the input string using regex: {regex}."
-                )
+                output_message = f"A match was found in the input string using regex: {regex}."
                 match = {"search": regex, "input": text, "match": True}
                 json_result["matches"].append(match)
                 # break

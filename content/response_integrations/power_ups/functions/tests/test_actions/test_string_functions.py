@@ -14,11 +14,15 @@
 
 from __future__ import annotations
 
-from integration_testing.platform.script_output import MockActionOutput
+from typing import TYPE_CHECKING
+
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from ...actions import StringFunctions
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
 
 
 @set_metadata(
@@ -57,8 +61,7 @@ def test_string_function_regex_replace(
     StringFunctions.main()
 
     assert action_output.results.output_message == (
-        "Underscore_to_space successfully converted to "
-        "Underscore to space with regex replace function"
+        "Underscore_to_space successfully converted to Underscore to space with regex replace function"
     )
     assert action_output.results.result_value == "Underscore to space"
     assert action_output.results.execution_state == ExecutionState.COMPLETED

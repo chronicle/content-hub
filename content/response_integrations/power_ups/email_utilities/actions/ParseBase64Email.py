@@ -39,15 +39,16 @@ from ..core import EmailParser, EmailParserRegex, EmailParserRouting
 def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
     if isinstance(obj, datetime.datetime):
-        serial = obj.isoformat()
-        return serial
+        return obj.isoformat()
     if isinstance(obj, bytes):
         return base64.b64encode(obj).decode()
-    raise TypeError("Type not serializable")
+    msg = "Type not serializable"
+    raise TypeError(msg)
 
 
-def parse_headers(msg, denylist=[], is_allowlist=False, stop_transport=""):
-    header = []
+def parse_headers(msg, denylist=None, is_allowlist=False, stop_transport=""):
+    if denylist is None:
+        denylist = []
     transport = []
     transport_stopped = False
     headers = {}
@@ -90,8 +91,8 @@ def string_sliding_window_loop(
         body: Body to slice into smaller pieces.
         slice_step: Slice this number or characters.
 
-    Returns:
-        typing.Iterator[str]: Sliced body string.
+    Yields:
+        str: Sliced body string.
 
     """
     body_length = len(body)
@@ -103,10 +104,10 @@ def string_sliding_window_loop(
         for ptr_end in range(slice_step, body_length, slice_step):
             if " " in body[ptr_end - 1 : ptr_end]:
                 while not (
-                        EmailParserRegex.window_slice_regex.match(
+                    EmailParserRegex.window_slice_regex.match(
                         body[ptr_end - 1 : ptr_end],
                     )
-                        or ptr_end > body_length
+                    or ptr_end > body_length
                 ):
                     if ptr_end > body_length:
                         ptr_end = body_length
@@ -211,9 +212,7 @@ def parse_transport(name, header):
     headers_struc["ipv6"] = []
 
     try:
-        found_smtpin: collections.Counter = (
-            collections.Counter()
-        )  # Array for storing potential duplicate "HOP"
+        collections.Counter()  # Array for storing potential duplicate "HOP"
         if header:
             line = str(header).lower()
             received_line_flat = re.sub(r"(\r|\n|\s|\t)+", " ", line, flags=re.UNICODE)
@@ -232,7 +231,7 @@ def parse_transport(name, header):
                 try:
                     ip_obj = ipaddress.ip_address(ip)
                 except ValueError:
-                    print(f'Invalid IP in received line - "{ip}"')
+                    pass
                 else:
                     if not (ip_obj.is_private):
                         headers_struc["ipv4"].append(str(ip_obj))
@@ -241,7 +240,7 @@ def parse_transport(name, header):
                 try:
                     ip_obj = ipaddress.ip_address(ip)
                 except ValueError:
-                    print(f'Invalid IP in received line - "{ip}"')
+                    pass
                 else:
                     if not (ip_obj.is_private):
                         headers_struc["ipv6"].append(str(ip_obj))
@@ -269,7 +268,8 @@ def parse_transport(name, header):
             # print(headers_struc['email'])
 
     except TypeError:  # Ready to parse email without received headers.
-        raise Exception("Exception occurred while parsing received lines.")
+        msg = "Exception occurred while parsing received lines."
+        raise Exception(msg)
 
     headers_struc["email"] = list(set(headers_struc["email"]))
     headers_struc["domain"] = list(set(headers_struc["domain"]))
@@ -281,7 +281,7 @@ def parse_transport(name, header):
 
 
 def attachment(filename, content):
-    attachment_json = {
+    return {
         "filename": filename,
         "size": len(content),
         "extension": os.path.splitext(filename)[1][1:],
@@ -293,7 +293,6 @@ def attachment(filename, content):
         },
         "raw": base64.b64encode(content).decode(),
     }
-    return attachment_json
 
 
 def body(msg, content_type):
@@ -310,48 +309,34 @@ def header(x_msg, o_msg, denylist, is_allowlist, stop_transport):
     to_smtp = "null"
     from_smtp = "null"
     if "ReceivedByAddressType" in o_msg:
-        if o_msg["ReceivedByAddressType"] == "EX":
-            to_smtp = "ReceivedBySmtpAddress"
-        else:
-            to_smtp = "ReceivedByEmailAddress"
+        to_smtp = "ReceivedBySmtpAddress" if o_msg["ReceivedByAddressType"] == "EX" else "ReceivedByEmailAddress"
 
-        if o_msg["SenderAddressType"] == "EX":
-            from_smtp = "SenderSmtpAddress"
-        else:
-            from_smtp = "SenderEmailAddress"
-    if to_smtp in o_msg:
-        to = o_msg.get(to_smtp)
-    else:
-        to = x_msg.to
+        from_smtp = "SenderSmtpAddress" if o_msg["SenderAddressType"] == "EX" else "SenderEmailAddress"
+    to = o_msg.get(to_smtp) if to_smtp in o_msg else x_msg.to
 
-    if from_smtp in o_msg:
-        from_header = o_msg.get(from_smtp)
-    else:
-        from_header = x_msg.sender
+    from_header = o_msg.get(from_smtp) if from_smtp in o_msg else x_msg.sender
 
     headers, transport = parse_headers(x_msg, denylist, is_allowlist, stop_transport)
 
-    header_json = {
+    return {
         "to": [to],
         "from": from_header,
-        "subject": o_msg["Subject"] if "Subject" in o_msg else x_msg.subject,
+        "subject": o_msg.get("Subject", x_msg.subject),
         "cc": x_msg.cc,
         "date": x_msg.date,
         "header": headers,
         "transport": transport,
     }
 
-    return header_json
-
 
 def fill_json(x_msg, o_msg, denylist, is_allowlist, stop_transport):
-    _current_json = {
+    current_json = {
         "header": header(x_msg, o_msg, denylist, is_allowlist, stop_transport),
         "body": [body(x_msg.body, "text/plain")],
     }
     if x_msg.htmlBody:
-        _current_json["body"].append(body(x_msg.htmlBody, "text/html"))
-    return _current_json
+        current_json["body"].append(body(x_msg.htmlBody, "text/html"))
+    return current_json
 
 
 def parse_msg(msg, denylist, is_allowlist, stop_transport):
@@ -359,61 +344,58 @@ def parse_msg(msg, denylist, is_allowlist, stop_transport):
     msg_obj = MsOxMessage(msg)
     msox_msg = msg_obj._message.as_dict()
 
-    _cur_json = fill_json(x_msg, msox_msg, denylist, is_allowlist, stop_transport)
-    _cur_json["attached_emails"] = {}
-    _cur_json["attachment"] = []
+    cur_json = fill_json(x_msg, msox_msg, denylist, is_allowlist, stop_transport)
+    cur_json["attached_emails"] = {}
+    cur_json["attachment"] = []
 
     # add the attachments to current json
-    _att_counter = 0
-    for _attachment in x_msg.attachments:
+    att_counter = 0
+    for attachment_ in x_msg.attachments:
         # _attachment.save()
         msox_obj = None
         for msox_attachments in msox_msg["attachments"]:
-            if (
-                msox_msg["attachments"][msox_attachments]["AttachFilename"]
-                == _attachment.shortFilename
-            ):
+            if msox_msg["attachments"][msox_attachments]["AttachFilename"] == attachment_.shortFilename:
                 msox_obj = msox_msg["attachments"][msox_attachments]
 
-        if _attachment.type in "msg":
-            _attached_json = fill_json(
-                _attachment.data,
+        if attachment_.type in "msg":
+            attached_json = fill_json(
+                attachment_.data,
                 msox_obj["EmbeddedMessage"]["properties"],
                 denylist,
                 is_allowlist,
                 stop_transport,
             )  # , attached_obj.as_dict())
             try:
-                _attached_json["body"].append(
+                attached_json["body"].append(
                     body(
-                        base64.b64encode(_attachment.data.compressedRtf).decode(),
+                        base64.b64encode(attachment_.data.compressedRtf).decode(),
                         "text/base64",
                     ),
                 )
-                _attached_json["body"].append(body(attachment.data.rtfBody, "text/rtf"))
+                attached_json["body"].append(body(attachment.data.rtfBody, "text/rtf"))
             except:
                 pass
-            for _attach_attached in _attachment.data.attachments:
-                _attached_json["attachment"].append(
+            for attach_attached in attachment_.data.attachments:
+                attached_json["attachment"].append(
                     attachment(
-                        filename=_attach_attached.shortFilename,
-                        content=_attach_attached.data,
+                        filename=attach_attached.shortFilename,
+                        content=attach_attached.data,
                     ),
                 )
-            _cur_json["attached_emails"][_attachment.shortFilename] = _attached_json
-        elif _attachment.type in "data":
+            cur_json["attached_emails"][attachment_.shortFilename] = attached_json
+        elif attachment_.type in "data":
             # if attachment in parent msg has binary content
-            _att_counter += 1
-            _cur_json["attachment"].append(
+            att_counter += 1
+            cur_json["attachment"].append(
                 attachment(
                     filename=msox_obj["AttachLongFilename"],
-                    content=_attachment.data,
+                    content=attachment_.data,
                 ),
             )
             # _cur_json['attachment'].append(attachment(filename = msox_obj['AttachLongFilename'], content = msox_obj['AttachDataObject']))
     #        _cur_json['attached_files'].append({"filename": _attachment.shortFilename, "base64_data":  base64.b64encode
     #                                (_attachment.data).decode()})
-    return _cur_json
+    return cur_json
 
 
 def process_attachment(attachment, denylist, is_allowlist, stop_transport):
@@ -446,29 +428,22 @@ def process_attachment(attachment, denylist, is_allowlist, stop_transport):
 def main():
     siemplify = SiemplifyAction()
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
-    )
-    result_value = (
-        None  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    output_message = "output message :"  # human readable message, showed in UI as the action result
+    result_value = None  # Set a simple result value, used for playbook if\else and placeholders.
 
     siemplify.script_name = "Parse Email"
     base64_blob = siemplify.parameters["EML/MSG Base64 String"]
     denylist = list(
-        set(
-            [
+        {
+
                 x.strip().lower()
                 for x in (siemplify.parameters.get("Blacklisted Headers") or "").split(
                     ",",
                 )
-            ],
-        ),
+            },
     )
     is_allowlist = siemplify.parameters["Use Blacklist As Whitelist"].lower() == "true"
-    stop_transport = (
-        siemplify.parameters.get("Stop Transport At Header", "") or ""
-    ).strip() or ""
+    stop_transport = (siemplify.parameters.get("Stop Transport At Header", "") or "").strip() or ""
     content = base64.b64decode(base64_blob)
 
     try:
@@ -570,21 +545,15 @@ def main():
                                 stop_transport,
                             )
                             nested_attachments_holder = []
-                            for nested_nested_attachment in nested_nested_email[
-                                "attachment"
-                            ]:
+                            for nested_nested_attachment in nested_nested_email["attachment"]:
                                 # attachments.append(nested_nested_attachment)
                                 del nested_nested_attachment["raw"]
                                 nested_attachments_holder.append(
                                     nested_nested_attachment,
                                 )
-                            nested_nested_email["attachments"] = (
-                                nested_attachments_holder
-                            )
+                            nested_nested_email["attachments"] = nested_attachments_holder
                             del nested_nested_email["attachment"]
-                            nested_nested_email["filename"] = nested_attachment[
-                                "filename"
-                            ]
+                            nested_nested_email["filename"] = nested_attachment["filename"]
                             nested_emails[nested_attachment["hash"]["md5"]] = {
                                 "filename": nested_attachment["filename"],
                                 "email": nested_nested_email,
@@ -599,9 +568,8 @@ def main():
                     "filename": attachment["filename"],
                     "email": nested_email,
                 }
-            except Exception as b:
-                print("failed in attachment parsing")
-                print(b)
+            except Exception:
+                pass
         m["attachments"] = list({v["hash"]["sha256"]: v for v in attachments}.values())
         m["attached_emails"] = list(nested_emails.values())
 
@@ -668,7 +636,7 @@ def main():
         m["urls"] = m["observed"]["urls"]
 
     except Exception as e:
-        siemplify.LOGGER.error(e)
+        siemplify.LOGGER.exception(e)
 
     siemplify.result.add_result_json(json.dumps(m, sort_keys=True, default=str))
     siemplify.result.add_json("Parsed Mail", m)

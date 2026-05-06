@@ -39,14 +39,15 @@ def main():
     siemplify = SiemplifyAction()
     original = get_list_param(siemplify, "Original")
     subset = get_list_param(siemplify, "Subset")
-    print(original, subset)
 
     result_value = subset <= original
 
     if result_value:
         output_message = "All items from the subset list are in the original list"
     else:
-        output_message = f"Found items which are not in the original list: {','.join(sorted(str(x) for x in subset - original))}"
+        output_message = (
+            f"Found items which are not in the original list: {','.join(sorted(str(x) for x in subset - original))}"
+        )
 
     siemplify.end(output_message, result_value)
 

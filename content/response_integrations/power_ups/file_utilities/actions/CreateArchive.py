@@ -53,12 +53,8 @@ def main():
     archive_name = siemplify.extract_action_param("Archive Base Name", print_value=True)
 
     status = EXECUTION_STATE_COMPLETED
-    output_message = (
-        "output message :"
-    )
-    result_value = (
-        None
-    )
+    output_message = "output message :"
+    result_value = None
 
     # Does directory exist? If not, then create it.
 
@@ -66,7 +62,7 @@ def main():
         try:
             pathlib.Path(DEST_DIR).mkdir(parents=True, exist_ok=True)
         except OSError:
-            siemplify.LOGGER.error(f"Creation of the directory {DEST_DIR} failed")
+            siemplify.LOGGER.exception(f"Creation of the directory {DEST_DIR} failed")
             status = EXECUTION_STATE_FAILED
 
     try:
@@ -86,8 +82,9 @@ def main():
 
         else:
             siemplify.LOGGER.error("Archive input is not file or directory.")
+            msg = "Unknown Input Type"
             raise Exception(
-                "Unknown Input Type",
+                msg,
                 "Archive input is not file or directory",
             )
 
@@ -96,7 +93,7 @@ def main():
         siemplify.result.add_result_json(json_result)
         output_message = f"Successfully created archive: {archive_output}"
     except Exception as e:
-        siemplify.LOGGER.error("General error performing action:\r")
+        siemplify.LOGGER.exception("General error performing action:\r")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "Failed"

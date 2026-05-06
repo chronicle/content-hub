@@ -134,7 +134,7 @@ class EmlParser:
         if self.ignore_bad_start or ignore_bad_start:
             # Skip invalid start of file
             # Note that this has a considerable performance impact, which is why it is disabled by default.
-            _eml_file = b""
+            eml_file_ = b""
 
             if b":" not in eml_file.split(b"\n", 1):
                 start = True
@@ -144,13 +144,13 @@ class EmlParser:
 
                     start = False
 
-                    _eml_file += line
+                    eml_file_ += line
             else:
-                _eml_file = eml_file
+                eml_file_ = eml_file
         else:
-            _eml_file = eml_file
+            eml_file_ = eml_file
 
-        self.msg = email.message_from_bytes(_eml_file, policy=self.policy)
+        self.msg = email.message_from_bytes(eml_file_, policy=self.policy)
 
         return self.parse_email()
 
@@ -164,7 +164,7 @@ class EmlParser:
             try:
                 ip_obj = ipaddress.ip_address(entry)
             except ValueError:
-                logger.debug(f'Invalid IP in received line - "{entry}"')
+                logger.debug('Invalid IP in received line - "%s"', entry)
                 try:
                     dom = get_fld(entry.lower(), fix_protocol=True)
                     r["domains"].append(dom)
@@ -180,20 +180,6 @@ class EmlParser:
         """Parse an e-mail and return a dictionary containing the various parts of\
         the e-mail broken down into key-value pairs.
 
-        Args:
-          msg (str): Raw EML e-mail string.
-          include_raw_body (bool, optional): If True, includes the raw body in the resulting
-                                   dictionary. Defaults to False.
-          include_attachment_data (bool, optional): If True, includes the full attachment
-                                                    data in the resulting dictionary.
-                                                    Defaults to False.
-          pconf (dict, optional): A dict with various optional configuration parameters,
-                                  e.g. allowlist IPs, allowlist e-mail addresses, etc.
-
-          parse_attachments (bool, optional): Set this to false if you want to disable the parsing of attachments.
-                                              Please note that HTML attachments as well as other text data marked to be
-                                              in-lined, will always be parsed.
-
         Returns:
           dict: A dictionary with the content of the EML parsed and broken down into
                 key-value pairs.
@@ -205,7 +191,8 @@ class EmlParser:
         bodys_struc: dict[str, typing.Any] = {}  # body structure
 
         if self.msg is None:
-            raise ValueError("msg is not set.")
+            msg = "msg is not set."
+            raise ValueError(msg)
 
         # parse and decode subject
         subject = self.msg.get("subject", "")
@@ -220,17 +207,17 @@ class EmlParser:
         try:
             msg_header_field = str(self.msg.get("from", "")).lower()
         except (IndexError, AttributeError):
-            _from = EmailParserDecode.workaround_bug_27257(self.msg, "from")
-            self.msg.__delitem__("from")
+            from_field = EmailParserDecode.workaround_bug_27257(self.msg, "from")
+            del self.msg["from"]
 
-            if _from:
-                self.msg.add_header("from", _from[0])
-                __from = _from[0].lower()
+            if from_field:
+                self.msg.add_header("from", from_field[0])
+                from_field_val = from_field[0].lower()
             else:
                 self.msg.add_header("from", "")
-                __from = ""
+                from_field_val = ""
 
-            msg_header_field = __from
+            msg_header_field = from_field_val
 
         if msg_header_field != "":
             m = EmailParserRegex.email_regex.search(msg_header_field)
@@ -281,9 +268,7 @@ class EmlParser:
         headers_struc["receiving"] = []
 
         try:
-            found_smtpin: collections.Counter = (
-                collections.Counter()
-            )  # Array for storing potential duplicate "HOP"
+            found_smtpin: collections.Counter = collections.Counter()  # Array for storing potential duplicate "HOP"
 
             for received_line in self.msg.get_all("received", []):
                 line = str(received_line).lower()
@@ -325,20 +310,11 @@ class EmlParser:
                 receiving["ips"].extend(to_routing["ips"])
                 receiving["domains"].extend(to_routing["domains"])
                 receiving["hosts"].extend(to_routing["hosts"])
-                print(receiving)
 
-                if (
-                    len(receiving["ips"]) > 0
-                    or len(receiving["domains"]) > 0
-                    or len(receiving["hosts"]) > 0
-                ):
+                if len(receiving["ips"]) > 0 or len(receiving["domains"]) > 0 or len(receiving["hosts"]) > 0:
                     headers_struc["receiving"].append(receiving)
 
-                if (
-                    len(sending["ips"]) > 0
-                    or len(sending["domains"]) > 0
-                    or len(sending["hosts"]) > 0
-                ):
+                if len(sending["ips"]) > 0 or len(sending["domains"]) > 0 or len(sending["hosts"]) > 0:
                     headers_struc["sending"].append(sending)
 
                 # If required collect the IP of the gateway that have injected the mail.
@@ -352,7 +328,6 @@ class EmlParser:
                     for by_item in parsed_routing.get("by", []):
                         for byhostentry_ in self.pconf["byhostentry"]:
                             byhostentry = byhostentry_.lower()
-                            print(f"{byhostentry} {by_item}")
                             if byhostentry in by_item:
                                 # Save the last Found.. ( most external )
                                 headers_struc["received_src"] = parsed_routing.get(
@@ -361,9 +336,7 @@ class EmlParser:
 
                                 # Increment watched by detection counter, and warn if needed
                                 found_smtpin[byhostentry] += 1
-                                if (
-                                    found_smtpin[byhostentry] > 1
-                                ):  # Twice found the header...
+                                if found_smtpin[byhostentry] > 1:  # Twice found the header...
                                     if parsed_routing.get("warning"):
                                         parsed_routing["warning"].append(
                                             ["Duplicate SMTP by entrypoint"],
@@ -385,11 +358,9 @@ class EmlParser:
                             ip,
                         )  # type of findall is list[str], so this is correct
                     except ValueError:
-                        logger.debug(f'Invalid IP in received line - "{ip}"')
+                        logger.debug('Invalid IP in received line - "%s"', ip)
                     else:
-                        if not (
-                            ip_obj.is_private or str(ip_obj) in self.pconf["whiteip"]
-                        ):
+                        if not (ip_obj.is_private or str(ip_obj) in self.pconf["whiteip"]):
                             headers_struc["received_ip"].append(str(ip_obj))
 
                 # search for domain
@@ -424,9 +395,9 @@ class EmlParser:
 
         headers_struc["received_foremail"] = []
         if "received" in headers_struc:
-            for _parsed_routing in headers_struc["received"]:
+            for parsed_routing_ in headers_struc["received"]:
                 # print(_parsed_routing)
-                for itemfor in _parsed_routing.get("for", []):
+                for itemfor in parsed_routing_.get("for", []):
                     if itemfor not in self.pconf["whitefor"]:
                         headers_struc["received_foremail"].append(itemfor)
 
@@ -466,10 +437,7 @@ class EmlParser:
         bodys = {}
 
         # Is it a multipart email ?
-        if len(raw_body) == 1:
-            multipart = False
-        else:
-            multipart = True
+        multipart = len(raw_body) != 1
 
         for body_tup in raw_body:
             bodie: dict[str, typing.Any] = {}
@@ -508,9 +476,7 @@ class EmlParser:
                     except ValueError:
                         continue
                     else:
-                        if not (
-                            ipaddress_match.is_private or match in self.pconf["whiteip"]
-                        ):
+                        if not (ipaddress_match.is_private or match in self.pconf["whiteip"]):
                             list_observed_ip[match] = 1
                 for match in EmailParserRegex.ipv6_regex.findall(body_slice):
                     try:
@@ -518,9 +484,7 @@ class EmlParser:
                     except ValueError:
                         continue
                     else:
-                        if not (
-                            ipaddress_match.is_private or match in self.pconf["whiteip"]
-                        ):
+                        if not (ipaddress_match.is_private or match in self.pconf["whiteip"]):
                             list_observed_ip[match] = 1
 
             # Report uri,email and observed domain or hash if no raw body
@@ -608,19 +572,15 @@ class EmlParser:
             decoded_values = []
 
             try:
-                for value in self.msg.get_all(k, []):
-                    if value:
-                        decoded_values.append(value)
+                decoded_values.extend(value for value in self.msg.get_all(k, []) if value)
             except (IndexError, AttributeError, TypeError):
                 # We have hit a field value parsing error.
                 # Try to work around this by using a relaxed policy, if possible.
                 # Parsing might not give meaningful results in this case!
-                logger.error(
+                logger.exception(
                     "ERROR: Field value parsing error, trying to work around this!",
                 )
-                decoded_values = (
-                    EmailParserDecode.workaround_field_value_parsing_errors(self.msg, k)
-                )
+                decoded_values = EmailParserDecode.workaround_field_value_parsing_errors(self.msg, k)
 
             if decoded_values:
                 if k in header:
@@ -647,14 +607,10 @@ class EmlParser:
             if not report_struc["attachment"]:
                 del report_struc["attachment"]
             else:
-                newattach = []
-                for attachment in report_struc["attachment"]:
-                    newattach.append(report_struc["attachment"][attachment])
+                newattach = [report_struc["attachment"][attachment] for attachment in report_struc["attachment"]]
                 report_struc["attachment"] = newattach
 
-        newbody = []
-        for body in bodys_struc:
-            newbody.append(bodys_struc[body])
+        newbody = [bodys_struc[body] for body in bodys_struc]
         report_struc["body"] = newbody
         # End of dirty hack
 
@@ -678,8 +634,8 @@ class EmlParser:
             body: Body to slice into smaller pieces.
             slice_step: Slice this number or characters.
 
-        Returns:
-            typing.Iterator[str]: Sliced body string.
+        Yields:
+            str: Sliced body string.
 
         """
         body_length = len(body)
@@ -693,10 +649,10 @@ class EmlParser:
             for ptr_end in range(slice_step, body_length, slice_step):
                 if " " in body[ptr_end - 1 : ptr_end]:
                     while not (
-                            EmailParserRegex.window_slice_regex.match(
+                        EmailParserRegex.window_slice_regex.match(
                             body[ptr_end - 1 : ptr_end],
                         )
-                            or ptr_end > body_length
+                        or ptr_end > body_length
                     ):
                         if ptr_end > body_length:
                             ptr_end = body_length
@@ -747,7 +703,8 @@ class EmlParser:
 
         """
         if self.msg is None:
-            raise ValueError("msg is not set.")
+            msg = "msg is not set."
+            raise ValueError(msg)
 
         try:
             field = email.utils.getaddresses(self.msg.get_all(header, []))
@@ -759,7 +716,7 @@ class EmlParser:
         return_field = []
 
         for m in field:
-            if not m[1] == "":
+            if m[1] != "":
                 if self.email_force_tld:
                     if EmailParserRegex.email_force_tld_regex.match(m[1]):
                         return_field.append(m[1].lower())
@@ -796,7 +753,7 @@ class EmlParser:
         self,
         msg: email.message.Message,
     ) -> list[tuple[typing.Any, typing.Any, typing.Any]]:
-        """This method recursively retrieves all e-mail body parts and returns them as a list.
+        """Recursively retrieve all e-mail body parts and return them as a list.
 
         Args:
             msg (email.message.Message): The actual e-mail message or sub-message.
@@ -825,11 +782,8 @@ class EmlParser:
 
             # pylint: disable=too-many-boolean-expressions
             if (
-                (
-                    "content-disposition" not in msg
-                    and msg.get_content_maintype() == "text"
-                )
-                or (filename.endswith(".html") or filename.endswith(".htm"))
+                ("content-disposition" not in msg and msg.get_content_maintype() == "text")
+                or (filename.endswith((".html", ".htm")))
                 or (
                     "content-disposition" in msg
                     and msg.get_content_disposition() == "inline"
@@ -862,10 +816,10 @@ class EmlParser:
                 try:
                     raw_body.append((encoding, raw_body_str, msg.items()))
                 except (AttributeError, TypeError):
-                    former_policy: email.policy.Policy = msg.policy  # type: ignore
-                    msg.policy = email.policy.compat32  # type: ignore
+                    former_policy: email.policy.Policy = msg.policy  # type: ignore[attr-defined]
+                    msg.policy = email.policy.compat32  # type: ignore[attr-defined]
                     raw_body.append((encoding, raw_body_str, msg.items()))
-                    msg.policy = former_policy  # type: ignore
+                    msg.policy = former_policy  # type: ignore[attr-defined]
 
         return raw_body
 
@@ -903,9 +857,9 @@ class EmlParser:
             str: Returns the calculated hash as a string.
 
         """
-        _string = string.encode("utf-8")
+        string_ = string.encode("utf-8")
 
-        return hashlib.sha256(_string).hexdigest()
+        return hashlib.sha256(string_).hexdigest()
 
     def traverse_multipart(
         self,
@@ -962,16 +916,15 @@ class EmlParser:
 
         # In case we hit bug 27257, try to downgrade the used policy
         try:
-            lower_keys = [k.lower() for k in msg.keys()]
+            lower_keys = [k.lower() for k in msg]
         except AttributeError:
-            former_policy: email.policy.Policy = msg.policy  # type: ignore
-            msg.policy = email.policy.compat32  # type: ignore
-            lower_keys = [k.lower() for k in msg.keys()]
-            msg.policy = former_policy  # type: ignore
+            former_policy: email.policy.Policy = msg.policy  # type: ignore[attr-defined]
+            msg.policy = email.policy.compat32  # type: ignore[attr-defined]
+            lower_keys = [k.lower() for k in msg]
+            msg.policy = former_policy  # type: ignore[attr-defined]
 
         if (
-            "content-disposition" in lower_keys
-            and msg.get_content_disposition() != "inline"
+            "content-disposition" in lower_keys and msg.get_content_disposition() != "inline"
         ) or msg.get_content_maintype() != "text":
             # if it's an attachment-type, pull out the filename
             # and calculate the size in bytes
@@ -993,10 +946,7 @@ class EmlParser:
                 file_size = len(data)
 
             filename = msg.get_filename("")
-            if filename == "":
-                filename = f"part-{counter:03d}"
-            else:
-                filename = EmailParserDecode.decode_field(filename)
+            filename = f"part-{counter:03d}" if filename == "" else EmailParserDecode.decode_field(filename)
 
             file_id = str(uuid.uuid1())
             attachment[file_id] = {}
@@ -1020,7 +970,7 @@ class EmlParser:
                 attachment[file_id]["mime_type_short"] = mime_type_short
             elif magic is not None:
                 logger.warning(
-                    f'Error determining attachment mime-type - "{file_id}"',
+                    'Error determining attachment mime-type - "%s"', file_id,
                 )
 
             if self.include_attachment_data:
@@ -1112,7 +1062,7 @@ def decode_email(
     """
     warnings.warn(
         "You are using a deprecated method, please use the EmlParser class instead.",
-        DeprecationWarning,
+        DeprecationWarning, stacklevel=2,
     )
 
     with open(eml_file, "rb") as fp:
@@ -1162,6 +1112,7 @@ def decode_email_b(
 
         policy (email.policy.Policy, optional): Policy to use when parsing e-mails.
               Default = email.policy.default.
+        parse_attachments (bool, optional): If True, parses attachments. Default is True.
 
         ignore_bad_start (bool, optional): Ignore invalid file start. This has a considerable performance impact.
 
@@ -1179,7 +1130,7 @@ def decode_email_b(
     """
     warnings.warn(
         "You are using a deprecated method, please use the EmlParser class instead.",
-        DeprecationWarning,
+        DeprecationWarning, stacklevel=2,
     )
 
     ep = EmlParser(

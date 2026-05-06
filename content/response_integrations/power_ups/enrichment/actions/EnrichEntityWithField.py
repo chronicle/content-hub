@@ -32,9 +32,7 @@ def main():
 
     for entity in siemplify.target_entities:
         for field in fields_to_enrich:
-            entity.additional_properties[field["entity_field_name"]] = field[
-                "entity_field_value"
-            ]
+            entity.additional_properties[field["entity_field_name"]] = field["entity_field_value"]
         updated_entities.append(entity)
 
     count_updated_entities = len(updated_entities)

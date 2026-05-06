@@ -27,9 +27,7 @@ def main():
     siemplify = SiemplifyAction()
 
     status = EXECUTION_STATE_COMPLETED
-    output_message = (
-        "output message :"
-    )
+    output_message = "output message :"
     result_value = True
     base64_input = siemplify.parameters.get("Base64 Input")
     encoding = siemplify.extract_action_param(
@@ -43,9 +41,7 @@ def main():
         decoded_content = str(base64.b64decode(base64_input), encoding)
         result = {"decoded_content": decoded_content}
         siemplify.result.add_result_json(json.dumps(result))
-        output_message = (
-            f"Content was succesfully decoded from base 64 to string with encoding {encoding}"
-        )
+        output_message = f"Content was succesfully decoded from base 64 to string with encoding {encoding}"
 
     except Exception as e:
         status = EXECUTION_STATE_FAILED

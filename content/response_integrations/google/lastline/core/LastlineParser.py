@@ -13,20 +13,19 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from .datamodels import (
-    SubmissionTask,
-    SubmissionTaskData,
-    SubmissionTaskProcessData,
-    SubmissionTaskAnalysisSubject,
     Analysis,
     AnalysisData,
+    SubmissionTask,
+    SubmissionTaskAnalysisSubject,
+    SubmissionTaskData,
+    SubmissionTaskProcessData,
 )
 
 
 class LastlineParser:
-    """
-    Lastline Parser
-    """
+    """Lastline Parser"""
 
     @staticmethod
     def build_submission_task_obj(response, is_get_process: bool) -> SubmissionTask:

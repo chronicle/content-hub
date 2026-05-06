@@ -30,17 +30,14 @@ select * from "WorkflowInstances" where "WorkflowName" = '{}' AND "CaseId" = {}
 """
 
 DELETE_WI_QUERY = (
-    "delete from \"WorkflowInstances\" "
-    "where \"CaseId\" = {} "
+    'delete from "WorkflowInstances" '
+    'where "CaseId" = {} '
     "and \"WorkflowName\" = '{}' "
     "and \"IndicatorIdentifier\" = '{}';"
 )
 
 DELETE_AR_QUERY = (
-    "delete from \"ActionResults\" "
-    "where \"CaseId\" = {} "
-    "and \"WorkflowId\" = '{}' "
-    "and \"IndicatorIdentifier\" = '{}';"
+    'delete from "ActionResults" where "CaseId" = {} and "WorkflowId" = \'{}\' and "IndicatorIdentifier" = \'{}\';'
 )
 
 
@@ -54,8 +51,7 @@ class ConnectToDb:
 
         # Connect to PostgreSQL
         self.conn = psycopg2.connect(
-            f"dbname='{self.database}' user='{self.username}' "
-            f"host='{self.server}' password='{self.password}'",
+            f"dbname='{self.database}' user='{self.username}' host='{self.server}' password='{self.password}'",
         )
 
     def execute(self, query):
@@ -77,8 +73,7 @@ class ConnectToDb:
                 # raise Exception(rows)
 
                 # Construct results
-                data = self.get_data(rows, columns)
-                return data
+                return self.get_data(rows, columns)
         except Exception as e:
             # Query failed - rollback.
             self.conn.rollback()
@@ -97,7 +92,7 @@ class ConnectToDb:
         """
         data = []
         for row in rows:
-            temp = {column: value for column, value in zip(columns, row, strict=False)}
+            temp = dict(zip(columns, row, strict=False))
             data.append(temp)
 
         return data
@@ -152,10 +147,7 @@ def main():
         port=port,
     )
     try:
-        res = (
-            orch_mgr.execute(GET_WFS_QUERY.format(playbook_name, siemplify.case_id))
-            or []
-        )
+        res = orch_mgr.execute(GET_WFS_QUERY.format(playbook_name, siemplify.case_id)) or []
         case = siemplify._get_case()
         for attached_wf in res:
             wf_id = attached_wf["WorkflowDefinitionIdentifier"]
@@ -173,13 +165,10 @@ def main():
                     attached_wf["IndicatorIdentifier"],
                 ),
             )
-            alert = list(
-                filter(
-                    lambda x: x["alert_group_identifier"]
-                    == attached_wf["IndicatorIdentifier"],
+            alert = next(filter(
+                    lambda x: x["alert_group_identifier"] == attached_wf["IndicatorIdentifier"],
                     case["cyber_alerts"],
-                ),
-            )[0]
+                ))
             attach_playbook_to_the_case(
                 chronicle_soar=siemplify,
                 case_id=siemplify.case_id,
@@ -190,17 +179,14 @@ def main():
             )
 
     except Exception as err:
-        siemplify.LOGGER.error("Error re-running the playbook.")
+        siemplify.LOGGER.exception("Error re-running the playbook.")
         siemplify.LOGGER.exception(err)
 
     status = EXECUTION_STATE_COMPLETED
     output_message = "Successfully re-attached the playbook to the case."
-    result_value = (
-        True  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    result_value = True  # Set a simple result value, used for playbook if\else and placeholders.
     siemplify.LOGGER.info(
-        f"\n  status: {status}\n  result_value: {result_value}\n  "
-        f"output_message: {output_message}",
+        f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}",
     )
     siemplify.end(output_message, result_value, status)
 

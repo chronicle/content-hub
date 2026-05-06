@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 
 
@@ -98,14 +99,14 @@ class Alert:
     def priority(self):
         if self.severity == "MAJR":
             return 80
-        elif self.severity == "CRIT":
+        if self.severity == "CRIT":
             return 100
 
         return 60
 
     @property
     def email_id(self):
-        return "-".join([self.smtp_message_subject, self.smtp_to, self.smtp_mail_from])
+        return f"{self.smtp_message_subject}-{self.smtp_to}-{self.smtp_mail_from}"
 
     @property
     def event(self):
@@ -124,7 +125,7 @@ class Alert:
                 event.update(malware)
             else:
                 malware_type = malware["type"]
-                if not malware_type in event:
+                if malware_type not in event:
                     event[malware_type] = []
 
                 event[malware_type].append(malware)

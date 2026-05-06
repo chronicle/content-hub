@@ -48,7 +48,8 @@ def main():
     new_time = ""
     try:
         if not to_format:
-            raise Exception("No output format")
+            msg = "No output format"
+            raise Exception(msg)
         if not input_str:
             new_time = arrow.get()
         elif is_number(input_str):
@@ -62,13 +63,13 @@ def main():
                 try:
                     new_time = arrow.get(input_str)
                 except Exception:
-                    siemplify.LOGGER.error(
+                    siemplify.LOGGER.exception(
                         "input is a timestamp, but badly formatted (not 10 or 13 digits)",
                     )
         else:
             new_time = arrow.get(arrow.Arrow.strptime(input_str, from_format))
     except Exception as e:
-        siemplify.LOGGER.error(e)
+        siemplify.LOGGER.exception(e)
         try:
             if is_number(input_str):
                 if len(input_str) == 10:
@@ -81,7 +82,7 @@ def main():
                     try:
                         new_time = arrow.get(input_str)
                     except Exception:
-                        siemplify.LOGGER.error(
+                        siemplify.LOGGER.exception(
                             "input is a timestamp, but badly formatted (not 10 or 13 digits)",
                         )
             else:
@@ -90,7 +91,8 @@ def main():
                 "Managed to process regardless of the provided format",
             )
         except Exception:
-            raise Exception("Could not process")
+            msg = "Could not process"
+            raise Exception(msg)
     if time_delta_in_seconds:
         # timezone = new_time.format("Z")
         new_time = new_time.shift(seconds=int(time_delta_in_seconds))

@@ -63,14 +63,11 @@ class DelayPlaybookSyncAction(Action):
         target_date: datetime = datetime.now(UTC) + timedelta(
             seconds=self.params.seconds,
         )
-        while (
-            remaining_time := (target_date - datetime.now(UTC)).total_seconds()
-        ) >= 0:
+        while (remaining_time := (target_date - datetime.now(UTC)).total_seconds()) >= 0:
             time.sleep(min(1, int(remaining_time)))
 
         self.output_message = (
-            f"Reached the configured delay of {self.params.seconds} seconds at "
-            f"{target_date.isoformat()}"
+            f"Reached the configured delay of {self.params.seconds} seconds at {target_date.isoformat()}"
         )
 
 

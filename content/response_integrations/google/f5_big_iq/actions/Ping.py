@@ -13,10 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.F5BigIQManager import F5BigIQManager
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
+
+from ..core.F5BigIQManager import F5BigIQManager
 
 # consts
 F5_BIG_IQ_PROVIDER = "F5BigIQ"
@@ -45,10 +47,10 @@ def main():
     f5_bigiq_manager = F5BigIQManager(host_address, username, password, verify_ssl)
 
     if f5_bigiq_manager:
-        output_message = "Connection Established"
+        output_message = "Successfully connected to the F5 Big IQ server."
         result_value = True
     else:
-        output_message = "Connection Failed"
+        output_message = "Failed to connect to the F5 Big IQ server."
         result_value = False
 
     siemplify.end(output_message, result_value)

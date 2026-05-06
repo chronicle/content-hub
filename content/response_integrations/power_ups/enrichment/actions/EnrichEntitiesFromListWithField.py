@@ -48,10 +48,7 @@ def main():
     alert_entities = get_alert_entities(siemplify)
     for target_entity in target_entities:
         for entity in alert_entities:
-            if (
-                entity.identifier.upper() == target_entity.upper()
-                and entity.entity_type == entity_type
-            ):
+            if entity.identifier.upper() == target_entity.upper() and entity.entity_type == entity_type:
                 entities.append(entity)
                 break
 

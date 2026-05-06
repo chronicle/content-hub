@@ -13,14 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.McAfeeATDManager import McAfeeATDManager
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
-from ..core.constants import INTEGRATION_NAME, SUBMIT_FILE_SCRIPT_NAME
+
 import json
 
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+
+from ..core.constants import INTEGRATION_NAME, SUBMIT_FILE_SCRIPT_NAME
+from ..core.McAfeeATDManager import McAfeeATDManager
 
 TABLE_NAME = "Result Task IDs"
 ZIP_FILE = -1

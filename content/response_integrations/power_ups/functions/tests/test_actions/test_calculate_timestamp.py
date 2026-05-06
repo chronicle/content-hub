@@ -14,16 +14,22 @@
 
 from __future__ import annotations
 
-from integration_testing.platform.script_output import MockActionOutput
+from typing import TYPE_CHECKING
+
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from ...actions import CalculateTimestamp
 
-Failed_message = ('Error executing action "Calculate Timestamp"\n'
-                  'Reason: input provided in “Custom Timestamp” and '
-                  '“Custom Timestamp Format” is not aligned. Please check '
-                  'the spelling.')
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
+
+Failed_message = (
+    'Error executing action "Calculate Timestamp"\n'
+    "Reason: input provided in “Custom Timestamp” and "
+    "“Custom Timestamp Format” is not aligned. Please check "
+    "the spelling."
+)
 
 
 @set_metadata(
@@ -67,7 +73,6 @@ def test_calculate_timestamp_custom_with_format(
 
 
 @set_metadata(
-    
     integration_config={},
     parameters={
         "Input Type": "Custom Timestamp",

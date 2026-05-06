@@ -41,13 +41,14 @@ def are_playbooks_complete(siemplify: SiemplifyAction, alert_group_id: str) -> b
 
     Returns:
         int: playbook execution status.
+
     """
     alert_wfs_res = get_workflow_instance_card(
         chronicle_soar=siemplify,
         case_id=siemplify.case_id,
         alert_identifier=alert_group_id,
     )
-    statuses = map(lambda x: x["status"] == WF_STATUS_COMPLETED, alert_wfs_res)
+    statuses = (x["status"] == WF_STATUS_COMPLETED for x in alert_wfs_res)
     return all(statuses)
 
 
@@ -57,10 +58,10 @@ def main():
     siemplify.script_name = "Lock Playbook"
     case = siemplify.case
     current_alert_index = None
-    alerts = list(sorted(
+    alerts = sorted(
         case.alerts,
         key=lambda x: x.creation_time,
-    ))
+    )
 
     for alert_index, alert in enumerate(alerts):
         if alert.identifier == siemplify.alert_id:
@@ -91,8 +92,7 @@ def main():
             status = EXECUTION_STATE_INPROGRESS
         else:
             output_message = (
-                f"Alert Index: {current_alert_index}. Alert Id: "
-                f"{siemplify.current_alert.identifier}: Lock Released. "
+                f"Alert Index: {current_alert_index}. Alert Id: {siemplify.current_alert.identifier}: Lock Released. "
             )
             result_value = "true"
             status = EXECUTION_STATE_COMPLETED

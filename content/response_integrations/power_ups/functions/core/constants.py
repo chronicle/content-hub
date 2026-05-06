@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import re
-from enum import Enum
+from enum import StrEnum
 
 DEFANG_TEXT_SCRIPT_NAME: str = "Defang Text"
 CALCULATE_TIMESTAMP_SCRIPT_NAME: str = "Calculate Timestamp"
@@ -24,7 +24,7 @@ TIMESTAMP_DELTA_REGEX = re.compile(r"^([+-])(\d+)([mdHMS])$")
 DEFAULT_OUTPUT_EPOCH_FORMAT_INDICATOR: str = "epoch"
 
 
-class InputType(str, Enum):
+class InputType(StrEnum):
     """Supported input timestamp types."""
 
     CURRENT_TIME = "Current Time"

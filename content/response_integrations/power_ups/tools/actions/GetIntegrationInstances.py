@@ -31,9 +31,7 @@ def main():
             chronicle_soar=siemplify,
             environment=env,
         )
-        instances.extend(
-            [integration.to_json() for integration in siemplify_integrations]
-        )
+        instances.extend([integration.to_json() for integration in siemplify_integrations])
 
     siemplify.result.add_result_json({"instances": instances})
     output_message = "Returned Instances."

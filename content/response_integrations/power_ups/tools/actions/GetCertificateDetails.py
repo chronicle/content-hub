@@ -14,11 +14,10 @@
 
 from __future__ import annotations
 
-import pprint
 import ssl
-from collections import namedtuple
 from datetime import datetime
 from socket import socket
+from typing import NamedTuple, Any
 
 import idna
 from cryptography import x509
@@ -27,7 +26,11 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-HostInfo = namedtuple(field_names="cert hostname peername", typename="HostInfo")
+class HostInfo(NamedTuple):
+
+    cert: Any
+    hostname: str
+    peername: Any
 
 
 def get_certificate(hostname: str, port: int) -> HostInfo:
@@ -39,6 +42,7 @@ def get_certificate(hostname: str, port: int) -> HostInfo:
 
     Returns:
         HostInfo: A named tuple containing the certificate, hostname, and peername.
+
     """
     hostname_idna = idna.encode(hostname).decode("utf-8")
     sock = socket()
@@ -54,13 +58,13 @@ def get_certificate(hostname: str, port: int) -> HostInfo:
         cert_binary = sock_ssl.getpeercert(binary_form=True)
         crypto_cert = x509.load_der_x509_certificate(cert_binary)
 
-    except (ssl.SSLError, ConnectionRefusedError) as e:
-        pprint.pprint(f"Error connecting or getting certificate for {hostname}:{port} - {e}")
+    except (ssl.SSLError, ConnectionRefusedError):
+        pass
 
     finally:
-        if 'sock_ssl' in locals():
+        if "sock_ssl" in locals():
             sock_ssl.close()
-        elif 'sock' in locals():
+        elif "sock" in locals():
             sock.close()
 
     return HostInfo(cert=crypto_cert, peername=peername, hostname=hostname)
@@ -102,7 +106,7 @@ def get_json_result(hostinfo):
         return {
             "hostname": hostinfo.hostname,
             "ip": hostinfo.peername[0],
-            "error": "No valid certificate found for this host."
+            "error": "No valid certificate found for this host.",
         }
 
     common_name = get_common_name(hostinfo.cert)
@@ -114,7 +118,7 @@ def get_json_result(hostinfo):
     days_to_expiration = delta.days
     is_expired = days_to_expiration < 0
     is_self_signed = common_name == issuer
-    cert_details = {
+    return {
         "hostname": hostinfo.hostname,
         "ip": hostinfo.peername[0],
         "commonName": common_name,
@@ -127,8 +131,6 @@ def get_json_result(hostinfo):
         "days_to_expiration": days_to_expiration,
     }
 
-    return cert_details
-
 
 @output_handler
 def main():
@@ -138,8 +140,6 @@ def main():
     hostinfo = get_certificate(url, 443)
     json_res = get_json_result(hostinfo)
     output_message = f"Url Certificate <{url}> was successfully analyzed."
-    pprint.pprint(json_res)
-    print(json_res)
     siemplify.result.add_result_json(json_res)
 
     siemplify.end(output_message, True, EXECUTION_STATE_COMPLETED)

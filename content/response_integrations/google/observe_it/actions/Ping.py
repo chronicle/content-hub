@@ -13,14 +13,15 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
 
-from ..core.ObserveITManager import ObserveITManager
-from ..core.ObserveITConstants import PROVIDER_NAME, PING_SCRIPT_NAME
+from ..core.ObserveITConstants import PING_SCRIPT_NAME, PROVIDER_NAME
 from ..core.ObserveITExceptions import ObserveITException
+from ..core.ObserveITManager import ObserveITManager
 
 
 @output_handler

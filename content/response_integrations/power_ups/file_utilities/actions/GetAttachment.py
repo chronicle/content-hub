@@ -29,8 +29,7 @@ def main():
     siemplify = SiemplifyAction()
     scope = siemplify.parameters.get("Attachment Scope")
     attachments_metadata = [
-        attachment.to_json() for attachment in
-        get_attachments_metadata(siemplify, siemplify.case.identifier)
+        attachment.to_json() for attachment in get_attachments_metadata(siemplify, siemplify.case.identifier)
     ]
     attachments = []
     for wall_item in attachments_metadata:

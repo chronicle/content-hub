@@ -30,11 +30,13 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
-import requests
+
 import base64
-import urllib.parse
 import copy
 import datetime
+import urllib.parse
+
+import requests
 
 # =====================================
 #               CONSTS                #
@@ -102,11 +104,7 @@ RULE_OBJECT_TO_PUSH = {"RuleObjectId": "", "Name": "", "RuleObjectType": ""}
 #              CLASSES                #
 # =====================================
 class NSMManagerException(Exception):
-    """
-    NSM manager custom exception.
-    """
-
-    pass
+    """NSM manager custom exception."""
 
 
 class NsmManager:
@@ -135,8 +133,7 @@ class NsmManager:
         self.session.headers["NSM-SDK-API"] = self.get_token(username, password)
 
     def get_token(self, username, password):
-        """
-        Obtain NSM connection token.
+        """Obtain NSM connection token.
         :param username:  {string}
         :param password: {string}
         :param ignore_ssl: {bool}
@@ -144,7 +141,7 @@ class NsmManager:
         """
         request_url = urllib.parse.urljoin(self.api_root, GET_SESSION_URL)
         # Organize post base64 key.
-        post_64_cred_key = base64.b64encode(bytes(f"{username}:{password}".encode("utf-8")))
+        post_64_cred_key = base64.b64encode(bytes(f"{username}:{password}".encode()))
         # Organize request headers.
         headers = HEADERS
         headers["NSM-SDK-API"] = post_64_cred_key
@@ -155,25 +152,22 @@ class NsmManager:
         session = response.json()["session"]
         user_id = response.json()["userId"]
         # Form session key
-        post_64_cred_session_key = base64.b64encode(bytes(f"{session}:{user_id}"))
-
-        return post_64_cred_session_key
+        return base64.b64encode(bytes(f"{session}:{user_id}"))
 
     @staticmethod
     def response_validation(response):
-        """
-        Validation of a HTTP response.
+        """Validation of a HTTP response.
         :param response: HTTP response object {HTTP response}
         :return: {void}
         """
         try:
             response.raise_for_status()
         except requests.HTTPError as err:
-            raise NSMManagerException(f"Error: {err}, Content: {response.content}")
+            msg = f"Error: {err}, Content: {response.content}"
+            raise NSMManagerException(msg)
 
     def get_rule_objects(self):
-        """
-        Get all rule objects for configured domain.
+        """Get all rule objects for configured domain.
         :return:  list of rule objects {list}
         """
         request_url = urllib.parse.urljoin(
@@ -185,8 +179,7 @@ class NsmManager:
         return response.json()["RuleObjDef"]
 
     def get_firewall_policy_object(self, policy_name):
-        """
-        Get firewall policy information.
+        """Get firewall policy information.
         :param policy_name: NSM policy name {string}
         :return: policy information {dict}
         """
@@ -199,8 +192,7 @@ class NsmManager:
         return response.json()
 
     def get_all_sensors_by_domain_id(self, domain_id):
-        """
-        Get all sensors for domain.
+        """Get all sensors for domain.
         :param domain_id: NSM domain id {string}
         :return: list of dicts when each is a sensor data {list}
         """
@@ -213,8 +205,7 @@ class NsmManager:
         return response.json()["SensorDescriptor"]
 
     def get_policy_id_by_name(self, policy_name):
-        """
-        Get policy ID by its name.
+        """Get policy ID by its name.
         :param policy_name: firewall policy name {string}
         :return: policy id {integer}
         """
@@ -224,15 +215,15 @@ class NsmManager:
         response = self.session.get(request_url)
         # Validate response.
         self.response_validation(response)
-        # Run over policies -> Has to fetch all the policies 
+        # Run over policies -> Has to fetch all the policies
         # and find the suitable one by running over them.
         for policy in response.json()["FirewallPoliciesForDomainResponseList"]:
             if policy["policyName"] == policy_name:
                 return policy["policyId"]
+        return None
 
     def create_new_rule_object(self, ip_address):
-        """
-        Create new firewall rule object(IP block type)
+        """Create new firewall rule object(IP block type)
         :param ip_address: IP address to block {string}
         :return: rule object data {dict}
         """
@@ -253,29 +244,21 @@ class NsmManager:
         return rule_object
 
     def get_policy_member_rules(self, policy_name):
-        """
-        Get list of rules which are member of the configured policy.
+        """Get list of rules which are member of the configured policy.
         :param policy_name: policy's name {string}
         :return: policy members {list}
         """
         # Define result variable.
-        member_rules = []
         # Get the firewall policy object.
         firewall_policy = self.get_firewall_policy_object(policy_name)
         # Running over member rules and fetching only the rules that belong to Siemplify by checking the description.
-        for member_rule in firewall_policy["MemberDetails"]["MemberRuleList"]:
-            # Rule created manually each contains 10x10 addresses.
-            if (
-                member_rule["Description"]
+        # Rule created manually each contains 10x10 addresses.
+        return [member_rule for member_rule in firewall_policy["MemberDetails"]["MemberRuleList"] if member_rule["Description"]
                 .lower()
-                .startswith(self.siemplify_rules_description.lower())
-            ):
-                member_rules.append(member_rule)
-        return member_rules
+                .startswith(self.siemplify_rules_description.lower())]
 
     def is_rule_object_part_of_the_policy(self, rule_object_id):
-        """
-        Check if rule is contained at the configured policy.
+        """Check if rule is contained at the configured policy.
         :param rule_object_id: an rule object id {string}
         :return: {bool}
         """
@@ -291,8 +274,7 @@ class NsmManager:
         return False
 
     def get_rule_object_from_policy_by_ip_address(self, ip_address):
-        """
-        Get rule object which is related to an specific ip address.
+        """Get rule object which is related to an specific ip address.
         :param ip_address: IP address to get the rule object by {string}
         :return: rule object {dict}
         """
@@ -305,25 +287,19 @@ class NsmManager:
                 and self.is_rule_object_part_of_the_policy(rule_object["ruleobjId"])
             ):
                 return rule_object
+        return None
 
     def get_rule_objects_by_name_prefix(self, prefix):
-        """
-        Get rule objects which name starts with prefix.
+        """Get rule objects which name starts with prefix.
         :param prefix: rule object name prefix {string}
         :return: list of dicts when each one is a rule object {list}
         """
-        result_rule_objects = []
         rule_objects_list = self.get_rule_objects()
         # Run over rule object and check if it's name contains the prefix.
-        for rule_object in rule_objects_list:
-            if rule_object["name"].lower().startswith(prefix.lower()):
-                result_rule_objects.append(rule_object)
-
-        return result_rule_objects
+        return [rule_object for rule_object in rule_objects_list if rule_object["name"].lower().startswith(prefix.lower())]
 
     def get_available_rule_object(self):
-        """
-        Get rule object that's ip addresses block list is not full.
+        """Get rule object that's ip addresses block list is not full.
         :return: rule object {dict}
         """
         siemplify_rule_objects = self.get_rule_objects_by_name_prefix(
@@ -341,10 +317,10 @@ class NsmManager:
                     siemplify_rule_obj["ruleobjId"]
                 ):
                     return siemplify_rule_obj
+        return None
 
     def add_rule_object_to_firewall_policy(self, rule_object):
-        """
-        Update firewall policy by inserting new rule object.
+        """Update firewall policy by inserting new rule object.
         :param rule_object: rule object {dict}
         :return: is success {bool}
         """
@@ -381,23 +357,22 @@ class NsmManager:
 
         # Validate available rule found.
         if not available_rule_found:
+            msg = f"No available rule found in policy: {self.siemplify_policy_name} "
             raise NSMManagerException(
-                f"No available rule found in policy: {self.siemplify_policy_name} "
+                msg
             )
-        else:
-            # If available rule found update.
-            request_url = urllib.parse.urljoin(
-                self.api_root, GET_UPDATE_POLICY_URL.format(policy_id)
-            )
-            response = self.session.put(request_url, json=policy_object)
-            self.response_validation(response)
+        # If available rule found update.
+        request_url = urllib.parse.urljoin(
+            self.api_root, GET_UPDATE_POLICY_URL.format(policy_id)
+        )
+        response = self.session.put(request_url, json=policy_object)
+        self.response_validation(response)
 
         # Return positive result.
         return True
 
     def update_existing_rule_object(self, rule_object, ip_address):
-        """
-        Update existing rule object.
+        """Update existing rule object.
         :param rule_object: rule object {dict}
         :param ip_address: ip address to block {string}
         :return: is success {bool}
@@ -417,13 +392,11 @@ class NsmManager:
         return True
 
     def remove_ip_from_rule_object(self, rule_object, ip_address):
-        """
-        Remove an IP address from rule object's IPs to block list.
+        """Remove an IP address from rule object's IPs to block list.
         :param rule_object: rule object {dict}
         :param ip_address: ip address {string}
         :return: is success {bool}
         """
-
         request_url = urllib.parse.urljoin(
             self.api_root, UPDATE_RULE_OBJECT_URL.format(rule_object["ruleobjId"])
         )
@@ -441,8 +414,7 @@ class NsmManager:
         return True
 
     def remove_rule_object_from_policy_rule(self, rule_object):
-        """
-        Remove rule object from policy rule member.
+        """Remove rule object from policy rule member.
         :param rule_object: a dict which represent rule object object {dict}
         :return: is success {bool}
         """
@@ -474,8 +446,7 @@ class NsmManager:
         return True
 
     def delete_rule_object(self, rule_object):
-        """
-        Delete rule object from NSM.
+        """Delete rule object from NSM.
         :param rule_object: rule object {dict}
         :return: is success {bool}
         """
@@ -488,8 +459,7 @@ class NsmManager:
         return True
 
     def update_sensor_config(self, sensor_id):
-        """
-        Update sensor config.
+        """Update sensor config.
         :param sensor_id: NSM sensor id {string}
         :return: is success {bool}
         """
@@ -502,8 +472,7 @@ class NsmManager:
         return True
 
     def get_sensor_id_by_name(self, sensor_name):
-        """
-        Get sensor id by it's name.
+        """Get sensor id by it's name.
         :param sensor_name: sensor name {string}
         :return: sensor id {string}
         """
@@ -512,11 +481,11 @@ class NsmManager:
         for sensor in sensors_descriptors:
             if sensor["name"] == sensor_name:
                 return str(sensor["sensorId"])
+        return None
 
     # Main Functions.
     def quarantine_ip(self, sensor_id, ip_address, duration):
-        """
-        Quarantine ip address in McAfee NSM.
+        """Quarantine ip address in McAfee NSM.
         :param sensor_id: sensor's id {string}
         :param ip_address: IP address to quarantine {string}
         :param duration: for how much time to quarantine the address {string}
@@ -534,8 +503,7 @@ class NsmManager:
         return True
 
     def is_ip_blocked(self, ip_address):
-        """
-        Check if ip address is already blocked in NSM.
+        """Check if ip address is already blocked in NSM.
         :param ip_address: IP address to check if blocked {string}
         :return: is blocked result {bool}
         """
@@ -543,13 +511,10 @@ class NsmManager:
         rule_object = self.get_rule_object_from_policy_by_ip_address(ip_address)
 
         # If object received, the address is blocked.
-        if rule_object:
-            return True
-        return False
+        return bool(rule_object)
 
     def block_ip(self, ip_address):
-        """
-        Block an IP address at NSM.
+        """Block an IP address at NSM.
         :param ip_address: IP address to block {string}
         :return: is block succeed {bool}
         """
@@ -569,8 +534,7 @@ class NsmManager:
         return True
 
     def release_ip(self, ip_address):
-        """
-        Unblock blocked IP address.
+        """Unblock blocked IP address.
         :param ip_address: ip address {string}
         :return: is success {bool}
         """
@@ -588,8 +552,7 @@ class NsmManager:
         return True
 
     def deploy_changes(self):
-        """
-        Deploy all configuration changes for sensor.
+        """Deploy all configuration changes for sensor.
         :return: return true if deploy changes succeed {bool}
         """
         # Get the names of the sensors that hash to be updated.
@@ -604,8 +567,7 @@ class NsmManager:
         return True
 
     def get_alert_info_by_id(self, alert_id, sensor_name):
-        """
-        Get alert info data by alert id.
+        """Get alert info data by alert id.
         :param alert_id: alert's id {string}
         :param sensor_name: sensor name {string}
         :return: alert info data {dict}
@@ -619,8 +581,7 @@ class NsmManager:
         return response.json()
 
     def logout(self):
-        """
-        End session with NSM
+        """End session with NSM
         :return: {void}
         """
         request_url = urllib.parse.urljoin(self.api_root, GET_SESSION_URL)
@@ -629,7 +590,7 @@ class NsmManager:
             response = self.session.delete(request_url)
             self.response_validation(response)
         else:
-            raise NSMManagerException("Logout attempt refused. No active session")
+            msg = "Logout attempt refused. No active session"
+            raise NSMManagerException(msg)
 
 
-#

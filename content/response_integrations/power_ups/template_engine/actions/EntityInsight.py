@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import time
 from inspect import getmembers, isfunction
@@ -40,14 +41,14 @@ def filter_datetime(date, fmt=None):
 
 
 def map_priority(p):
-    PRIORITY = {
+    priority = {
         "-1": "info",
         "40": "low",
         "60": "medium",
         "80": "high",
         "100": "critical",
     }
-    return PRIORITY.get(p)
+    return priority.get(p)
 
 
 def timectime(s):
@@ -69,7 +70,7 @@ def main():
         is_mandatory=True,
         print_value=False,
     )
-    IDENTIFIER = siemplify.extract_action_param(
+    identifier = siemplify.extract_action_param(
         param_name="Triggered By",
         is_mandatory=True,
         print_value=False,
@@ -103,9 +104,7 @@ def main():
     json_result = {}
     for entity in siemplify.target_entities:
         if entity.additional_properties["Type"] != "ALERT":
-            entities[entity.additional_properties["Identifier"]] = (
-                entity.additional_properties
-            )
+            entities[entity.additional_properties["Identifier"]] = entity.additional_properties
 
     try:
         status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
@@ -116,7 +115,7 @@ def main():
             try:
                 input_json = json.loads(json_object)
             except Exception as e:
-                siemplify.LOGGER.error(f"Error parsing JSON Object: {json_object}")
+                siemplify.LOGGER.exception(f"Error parsing JSON Object: {json_object}")
                 siemplify.LOGGER.exception(e)
                 raise
                 status = EXECUTION_STATE_FAILED
@@ -129,20 +128,14 @@ def main():
                 trim_blocks=True,
                 lstrip_blocks=True,
             )
-            filters = {
-                name: function
-                for name, function in getmembers(JinjaFilters)
-                if isfunction(function)
-            }
+            filters = {name: function for name, function in getmembers(JinjaFilters) if isfunction(function)}
 
             jinja_env.filters.update(filters)
             try:
                 import CustomFilters
 
                 custom_filters = {
-                    name: function
-                    for name, function in getmembers(CustomFilters)
-                    if isfunction(function)
+                    name: function for name, function in getmembers(CustomFilters) if isfunction(function)
                 }
                 jinja_env.filters.update(custom_filters)
             except Exception as e:
@@ -159,10 +152,8 @@ def main():
                 for entry in input_json:
                     if entry["Entity"].lower() == entity.identifier.lower():
                         update_json = {}
-                        try:
+                        with contextlib.suppress(BaseException):
                             update_json = entry["EntityResult"].copy()
-                        except:
-                            pass
                         if isinstance(update_json, dict):
                             update_json["entity"] = entities[entity.identifier].copy()
                         elif isinstance(update_json, list):
@@ -171,13 +162,14 @@ def main():
                                 "results": entry["EntityResult"].copy(),
                             }
                         else:
+                            msg = f"Unsupported Entity Results type: {type(update_json)}"
                             raise Exception(
-                                f"Unsupported Entity Results type: {type(update_json)}",
+                                msg,
                             )
                         result_value += template.render(update_json)
-                        _res = {"entity_insight": result_value, "template": pre_temp}
-                        json_result[entity.identifier] = _res
-                        siemplify.result.add_entity_json(entity.identifier, _res)
+                        res = {"entity_insight": result_value, "template": pre_temp}
+                        json_result[entity.identifier] = res
+                        siemplify.result.add_entity_json(entity.identifier, res)
                         if create_insight and result_value != "":
                             siemplify.LOGGER.info(
                                 f"Creating Insight for entity: {entity.identifier}",
@@ -185,11 +177,11 @@ def main():
                             siemplify.add_entity_insight(
                                 entity,
                                 result_value,
-                                triggered_by=IDENTIFIER,
+                                triggered_by=identifier,
                             )
                         output_message = "Successfully rendered the template."
     except Exception as e:
-        siemplify.LOGGER.error(f"General error performing action {SCRIPT_NAME}")
+        siemplify.LOGGER.exception(f"General error performing action {SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
         raise  # used to return entire error details - including stacktrace back to client UI. Best for most usecases
         # in case you want to handle the error yourself, don't raise, and handle error result ouputs:

@@ -115,7 +115,8 @@ class IpLocation:
 
     def to_xml(self):
         return (
-            dicttoxml.dicttoxml(
+            dicttoxml
+            .dicttoxml(
                 self.__dict__,
                 custom_root="ip_location",
                 attr_type=False,
@@ -126,7 +127,7 @@ class IpLocation:
         )
 
     def to_csv(self, delimiter):
-        return delimiter.join(self.__str__().split("\n"))
+        return delimiter.join(str(self).split("\n"))
 
     def __str__(self):
         return f"{self.ip_address}\n{self.city}\n{self.region}\n{self.country}\n{self.latitude}\n{self.longitude}"
@@ -141,35 +142,25 @@ class DbIpCity:
     @staticmethod
     def get(ip_address, api_key="free", db_path=None, username=None, password=None):
         # process request
-        try:
-            request = requests.get(
-                "http://api.db-ip.com/v2/" + quote(api_key) + "/" + quote(ip_address),
-                timeout=62,
-            )
-        except:
-            raise
+        request = requests.get(
+            "http://api.db-ip.com/v2/" + quote(api_key) + "/" + quote(ip_address),
+            timeout=62,
+        )
 
         # check for HTTP errors
         if request.status_code != 200:
-            raise
+            raise Exception("HTTP error")
 
         # parse content
-        try:
-            content = request.content.decode("utf-8")
-            content = json.loads(content)
-        except:
-            raise
+        content = request.content.decode("utf-8")
+        content = json.loads(content)
 
         # check for errors
         if content.get("error"):
-            if (
-                content["error"] == "invalid address"
-                or content["error"] == "invalid API key"
-            ):
-                raise
-            raise
+            if content["error"] == "invalid address" or content["error"] == "invalid API key":
+                raise Exception("Invalid address or API key")
+            raise Exception("API error")
         # prepare return value
-        print(f"ip address: {ip_address}.")
         ip_location = IpLocation(ip_address)
 
         # format data
@@ -179,11 +170,7 @@ class DbIpCity:
 
         # get lat/lon from OSM
         osm = geocoder.osm(
-            content.get("city", "")
-            + ", "
-            + content.get("stateProv", "")
-            + " "
-            + content.get("countryCode", ""),
+            content.get("city", "") + ", " + content.get("stateProv", "") + " " + content.get("countryCode", ""),
             timeout=62,
         )
 

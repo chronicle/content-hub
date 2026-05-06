@@ -82,13 +82,13 @@ def main():
             if not file_extension.startswith("."):
                 file_path = file_path + "." + file_extension
             else:
-                file_path = file_path + file_extension
+                file_path += file_extension
 
             try:
                 with open(file_path, "wb") as fh:
                     fh.write(base64.b64decode(base64_input))
             except Exception as e:
-                siemplify.LOGGER.error(f"Error: {e}")
+                siemplify.LOGGER.exception("Error: %s", e)
                 raise
             file_paths.append(file_path)
             filedets = {}
@@ -105,7 +105,7 @@ def main():
                 with open(file_path, "wb") as fh:
                     fh.write(base64.b64decode(base64_input))
             except Exception as e:
-                siemplify.LOGGER.error(f"Error: {e}")
+                siemplify.LOGGER.exception("Error: %s", e)
                 raise
             file_paths.append(file_path)
             filedets = {}

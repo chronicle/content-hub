@@ -13,40 +13,41 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import datetime
 import sys
 
 import arrow
-
 from EnvironmentCommon import GetEnvironmentCommonFactory
-from ..core.FireEyeEXManager import FireEyeEXManager
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import (
+    convert_unixtime_to_datetime,
+    dict_to_flat,
     output_handler,
     unix_now,
-    dict_to_flat,
-    convert_unixtime_to_datetime,
 )
 from TIPCommon import (
     extract_connector_param,
-    read_ids_by_timestamp,
-    write_ids_with_timestamp,
-    is_approaching_timeout,
     filter_old_ids,
-    siemplify_save_timestamp,
     get_last_success_time,
+    is_approaching_timeout,
+    read_ids_by_timestamp,
+    siemplify_save_timestamp,
+    write_ids_with_timestamp,
 )
+
 from ..core.consts import (
-    ALERTS_CONNECTOR_NAME,
-    DURATION,
-    MAP_FILE,
-    DEVICE_VENDOR,
-    DEVICE_PRODUCT,
     ALERT_NAME,
-    PRINT_TIME_FORMAT,
+    ALERTS_CONNECTOR_NAME,
+    DEVICE_PRODUCT,
+    DEVICE_VENDOR,
+    DURATION,
     HOURS_LIMIT_IN_IDS_FILE,
+    MAP_FILE,
+    PRINT_TIME_FORMAT,
 )
+from ..core.FireEyeEXManager import FireEyeEXManager
 
 
 def filter_recent_alerts(siemplify, alerts, max_minutes_backwards=5):
@@ -68,7 +69,7 @@ def filter_recent_alerts(siemplify, alerts, max_minutes_backwards=5):
 
 
 def group_alerts(fetched_alerts):
-    alert_groups = set([alert.email_id for alert in fetched_alerts])
+    alert_groups = {alert.email_id for alert in fetched_alerts}
     grouped_alerts = [
         [alert for alert in fetched_alerts if alert.email_id == group]
         for group in alert_groups
@@ -92,7 +93,7 @@ def create_alert_info(environment_common, alerts_group):
     alert_info.ticket_id = sorted_alerts_group[0].uuid
     alert_info.name = ALERT_NAME
     alert_info.rule_generator = sorted_alerts_group[0].name
-    alert_info.priority = max([alert.priority for alert in alerts_group])
+    alert_info.priority = max(alert.priority for alert in alerts_group)
     alert_info.start_time = sorted_alerts_group[0].occurred_time_unix
     alert_info.end_time = sorted_alerts_group[-1].occurred_time_unix
 
@@ -304,10 +305,9 @@ def main(is_test_run):
                     )
                     continue
 
-                else:
-                    alerts.append(alert_info)
-                    info_msg = f"Finished processing alert group {alert_group[0].email_id} was created."
-                    siemplify.LOGGER.info(info_msg)
+                alerts.append(alert_info)
+                info_msg = f"Finished processing alert group {alert_group[0].email_id} was created."
+                siemplify.LOGGER.info(info_msg)
 
                 if is_test_run:
                     siemplify.LOGGER.info(
@@ -343,23 +343,22 @@ def main(is_test_run):
                         f"New timestamp {convert_unixtime_to_datetime(new_timestamp).strftime(PRINT_TIME_FORMAT)} has been saved"
                     )
 
+            elif fetched_alerts:
+                # Alerts were found but none passed the existing ids filtering - this might mean that there are
+                # more than 200 alerts with the same timestamp, or that we got somehow into a loop.
+                # So to avoid looping forever, we will add 1 second to the timestamp to advance the timeline
+                siemplify.LOGGER.info(
+                    "No new alerts were found. Timestamp will be increased by 1 second to avoid looping forever"
+                )
+                last_success_time_datetime += datetime.timedelta(minutes=1)
+                siemplify_save_timestamp(siemplify, last_success_time_datetime)
+                siemplify.LOGGER.info(
+                    f"New timestamp {last_success_time_datetime.strftime(PRINT_TIME_FORMAT)} has been saved"
+                )
             else:
-                if fetched_alerts:
-                    # Alerts were found but none passed the existing ids filtering - this might mean that there are
-                    # more than 200 alerts with the same timestamp, or that we got somehow into a loop.
-                    # So to avoid looping forever, we will add 1 second to the timestamp to advance the timeline
-                    siemplify.LOGGER.info(
-                        "No new alerts were found. Timestamp will be increased by 1 second to avoid looping forever"
-                    )
-                    last_success_time_datetime += datetime.timedelta(minutes=1)
-                    siemplify_save_timestamp(siemplify, last_success_time_datetime)
-                    siemplify.LOGGER.info(
-                        f"New timestamp {last_success_time_datetime.strftime(PRINT_TIME_FORMAT)} has been saved"
-                    )
-                else:
-                    siemplify.LOGGER.info(
-                        "No alerts were fetched. Timestamp won't be updated."
-                    )
+                siemplify.LOGGER.info(
+                    "No alerts were fetched. Timestamp won't be updated."
+                )
 
             write_ids_with_timestamp(siemplify, existing_ids)
 
@@ -373,7 +372,7 @@ def main(is_test_run):
         siemplify.LOGGER.exception(e)
 
         if is_test_run:
-            raise e
+            raise
 
 
 if __name__ == "__main__":

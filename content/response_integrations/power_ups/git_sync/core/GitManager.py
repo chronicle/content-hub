@@ -14,13 +14,14 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
 import stat
 from io import StringIO, IOBase
 import sys
-from typing import TYPE_CHECKING, Union, TextIO, Any
+from typing import TYPE_CHECKING, TextIO, Any, Self
 from urllib.parse import urlparse, urlunparse
 
 import dulwich
@@ -47,14 +48,15 @@ if TYPE_CHECKING:
 
 
 PUSH_FAILURE_INDICATORS = (
-        "pre-receive hook declined",
-        "not allowed to push",
-        "push rejected",
-        "failed to push",
-        "error: failed to push",
-        "! [rejected]",
-        "! [remote rejected]",
-    )
+    "pre-receive hook declined",
+    "not allowed to push",
+    "push rejected",
+    "failed to push",
+    "error: failed to push",
+    "! [rejected]",
+    "! [remote rejected]",
+)
+
 
 class Git:
     """GitManager"""
@@ -144,8 +146,7 @@ class Git:
 
         if self.local_branch_ref != self.repo.refs.get_symrefs()[HEADREF]:
             self.logger.info(
-                f"Git branch parameter changed, checking out branch "
-                f"{self.branch_name.decode()}",
+                f"Git branch parameter changed, checking out branch {self.branch_name.decode()}",
             )
             # Branch changed, checking out
             self._checkout()
@@ -153,18 +154,17 @@ class Git:
         self.tree: Tree = self.get_head_tree()
 
     @staticmethod
-    def modify_dulwich_client(logger: SiemplifyLogger, git_server_fingerprint: str, ):
+    def modify_dulwich_client(
+        logger: SiemplifyLogger,
+        git_server_fingerprint: str,
+    ):
         # dulwich patch to add requests support : https://github.com/jelmer/dulwich/pull/933
         _mod_client.HttpGitClient = RequestsHttpGitClient
         # dulwich patch to add paramiko support (can't pass pkey parameter)
         _mod_client.get_ssh_vendor = lambda **kwargs: SiemplifyParamikoSSHVendor(
             siemplify_logger=logger,
             git_server_fingerprint=git_server_fingerprint or "",
-            **{
-                k: v
-                for k, v in kwargs.items()
-                if k not in {"git_server_fingerprint", "siemplify_logger"}
-            },
+            **{k: v for k, v in kwargs.items() if k not in {"git_server_fingerprint", "siemplify_logger"}},
         )
         # dulwich patch to newer paramiko versions returning string and not bytes
         _mod_client._remote_error_from_stderr = remote_error_from_stderr
@@ -254,7 +254,7 @@ class Git:
 
         except porcelain.DivergedBranches:
             self.logger.error("Could not push updates to remote repository!")
-            self.logger.warn(
+            self.logger.warning(
                 "Local repo code has diverged from the remote repository, most "
                 "likely because of new commits that have been pushed to the remote "
                 "repo "
@@ -264,7 +264,7 @@ class Git:
                 "Updates will be pushed in the next python script execution",
             )
 
-    def _raise_on_push_errors(self, error_content: str |None) -> None:
+    def _raise_on_push_errors(self, error_content: str | None) -> None:
         """Check for push failure indicators and raise exception."""
         if not error_content:
             return
@@ -585,18 +585,14 @@ class Git:
         try:
             self.repo.close()
         except Exception as e:
-            self.logger.warn(f"Git cleanup failed: {e}", exc_info=True)
+            self.logger.warning(f"Git cleanup failed: {e}", exc_info=True)
 
 
 class SiemplifyParamikoSSHVendor:
-    def __init__(
-        self, siemplify_logger: SiemplifyLogger, git_server_fingerprint: str, **kwargs: Any
-    ):
+    def __init__(self, siemplify_logger: SiemplifyLogger, git_server_fingerprint: str, **kwargs: Any):
         """SSH client for dulwich that supports private keys instead of user:password"""
         self.kwargs = kwargs
-        self.git_server_fingerprint = (
-            git_server_fingerprint.strip() if git_server_fingerprint else None
-        )
+        self.git_server_fingerprint = git_server_fingerprint.strip() if git_server_fingerprint else None
 
         self.siemplify_logger = siemplify_logger
 
@@ -657,11 +653,11 @@ class SiemplifyParamikoSSHVendor:
 
         # Handle host key verification based on whether git_server_fingerprint is provided
         if self.git_server_fingerprint:
-            client.get_host_keys().clear() # FORCE unknown host behavior
+            client.get_host_keys().clear()  # FORCE unknown host behavior
             client.set_missing_host_key_policy(AlwaysVerifyPolicy(self))
 
         else:
-            self.siemplify_logger.warn("No fingerprint provided - using insecure mode")
+            self.siemplify_logger.warning("No fingerprint provided - using insecure mode")
 
             # Legacy mode: keep existing insecure behavior
             client.set_missing_host_key_policy(paramiko.client.AutoAddPolicy())
@@ -692,13 +688,14 @@ def remote_error_from_stderr(stderr):
     except AttributeError:
         return HangupException([line.encode("utf-8") for line in lines])
 
+
 class TeeStream(IOBase):
     """Stream multiplexer with protected system streams.
     Duplicates writes to multiple streams while protecting
     sys.stdout/stderr/stdin from accidental closure.
     """
 
-    def __init__(self, *streams: Union[TextIO, IOBase]) -> None:
+    def __init__(self, *streams: TextIO | IOBase) -> None:
         super().__init__()
         self._streams = tuple(streams)
         self._closed = False
@@ -710,7 +707,7 @@ class TeeStream(IOBase):
         """Stream closed state."""
         return self._closed
 
-    def write(self, data: Union[str, bytes]) -> int:
+    def write(self, data: str | bytes) -> int:
         """Write to all streams, converting bytes to string if needed."""
         if self._closed:
             raise ValueError("I/O operation on closed stream")
@@ -735,13 +732,13 @@ class TeeStream(IOBase):
 
         # Close only streams we're allowed to close
         for stream in self._streams:
-            if (stream not in self._protected_streams and
-                    hasattr(stream, 'close') and
-                    not getattr(stream, 'closed', False)):
-                try:
+            if (
+                stream not in self._protected_streams
+                and hasattr(stream, "close")
+                and not getattr(stream, "closed", False)
+            ):
+                with contextlib.suppress(Exception):
                     stream.close()
-                except Exception:
-                    pass
 
         self._closed = True
         super().close()
@@ -750,7 +747,7 @@ class TeeStream(IOBase):
         """Check if stream is writable."""
         return not self._closed
 
-    def __enter__(self) -> 'TeeStream':
+    def __enter__(self) -> Self:
         """Context manager entry."""
         return self
 
@@ -759,29 +756,25 @@ class TeeStream(IOBase):
         self.close()
 
     @staticmethod
-    def _normalize_content(data: Union[str, bytes]) -> str:
+    def _normalize_content(data: str | bytes) -> str:
         """Convert data to string format."""
         if isinstance(data, bytes):
-            return data.decode('utf-8', errors='replace')
+            return data.decode("utf-8", errors="replace")
         return str(data)
 
     @staticmethod
-    def _safe_write(stream: Union[TextIO, IOBase], content: str) -> None:
+    def _safe_write(stream: TextIO | IOBase, content: str) -> None:
         """Write to stream with error suppression."""
-        if not getattr(stream, 'closed', False):
-            try:
+        if not getattr(stream, "closed", False):
+            with contextlib.suppress(Exception):
                 stream.write(content)
-            except Exception:
-                pass
 
     @staticmethod
-    def _safe_flush(stream: Union[TextIO, IOBase]) -> None:
+    def _safe_flush(stream: TextIO | IOBase) -> None:
         """Flush stream with error suppression."""
-        if hasattr(stream, 'flush') and not getattr(stream, 'closed', False):
-            try:
+        if hasattr(stream, "flush") and not getattr(stream, "closed", False):
+            with contextlib.suppress(Exception):
                 stream.flush()
-            except Exception:
-                pass
 
 
 class GitSyncException(Exception):
@@ -789,7 +782,7 @@ class GitSyncException(Exception):
 
 
 class AlwaysVerifyPolicy(paramiko.client.MissingHostKeyPolicy):
-    def __init__(self, vendor_instance : SiemplifyParamikoSSHVendor) -> None:
+    def __init__(self, vendor_instance: SiemplifyParamikoSSHVendor) -> None:
         self.vendor = vendor_instance
 
     def missing_host_key(self, client, hostname, key) -> None:
@@ -804,5 +797,4 @@ class AlwaysVerifyPolicy(paramiko.client.MissingHostKeyPolicy):
             client.get_host_keys().add(hostname, key.get_name(), key)
         else:
             self.vendor.siemplify_logger.error("Fingerprint verification failed.")
-            raise paramiko.ssh_exception.SSHException(
-                f"Host key verification failed for {hostname}")
+            raise paramiko.ssh_exception.SSHException(f"Host key verification failed for {hostname}")

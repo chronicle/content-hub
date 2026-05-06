@@ -39,7 +39,7 @@ def main():
                 fields_to_enrich[lower_field] = lower_dict[lower_field]
                 entity.additional_properties[lower_field] = lower_dict[lower_field]
                 entity_is_updated = True
-        if entity_is_updated == True:
+        if entity_is_updated:
             updated_entities.append(entity)
 
     count_updated_entities = len(updated_entities)

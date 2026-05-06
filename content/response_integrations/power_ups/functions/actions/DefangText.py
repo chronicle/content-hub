@@ -53,9 +53,7 @@ class DefangTextAction(Action):
         # Defang HTTP/HTTPS
         defanged_text = re.sub(
             r"https?://([a-zA-Z0-9.-]+)",
-            lambda m: m.group(0)
-            .replace("http", "hxxp")
-            .replace(m.group(1), m.group(1).replace(".", "[.]")),
+            lambda m: m.group(0).replace("http", "hxxp").replace(m.group(1), m.group(1).replace(".", "[.]")),
             self.params.input_text,
         )
 

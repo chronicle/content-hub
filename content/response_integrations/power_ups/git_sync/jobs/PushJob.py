@@ -41,14 +41,7 @@ def main():
 
     commit_msg = siemplify.extract_job_param("Commit")
     jobs = list(
-        [
-            _f
-            for _f in [
-                x.strip()
-                for x in siemplify.extract_job_param("Job Whitelist", " ").split(",")
-            ]
-            if _f
-        ],
+        [_f for _f in [x.strip() for x in siemplify.extract_job_param("Job Whitelist", " ").split(",")] if _f],
     )
     readme_addon = siemplify.extract_job_param("Readme Addon", input_type=str)
 

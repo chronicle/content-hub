@@ -37,13 +37,13 @@ from ..core.IpLocation import DbIpCity
 
 def create_entity_with_relation(siemplify, new_entity, linked_entity):
     entity_to_create = CreateEntity(
-            case_id=siemplify.case_id,
-            alert_identifier=siemplify.alert_id,
-            entity_type="DOMAIN",
-            entity_identifier=new_entity.upper(),
-            entity_to_connect_regex=f"{re.escape(linked_entity.upper())}$",
-            types_to_connect=[],
-        )
+        case_id=siemplify.case_id,
+        alert_identifier=siemplify.alert_id,
+        entity_type="DOMAIN",
+        entity_identifier=new_entity.upper(),
+        entity_to_connect_regex=f"{re.escape(linked_entity.upper())}$",
+        types_to_connect=[],
+    )
     create_entity(siemplify, entity_to_create)
 
 
@@ -60,7 +60,8 @@ def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
-    raise TypeError(f"Type {type(obj)} not serializable")
+    msg = f"Type {type(obj)} not serializable"
+    raise TypeError(msg)
 
 
 @output_handler
@@ -69,14 +70,9 @@ def main():
 
     status = EXECUTION_STATE_COMPLETED
     output_message = ""
-    result_value = (
-        None
-    )
+    result_value = None
     siemplify.script_name = "Whois"
-    create_entities = (
-        siemplify.extract_action_param("Create Entities", print_value=True).lower()
-        == "true"
-    )
+    create_entities = siemplify.extract_action_param("Create Entities", print_value=True).lower() == "true"
     age_threshold = siemplify.extract_action_param(
         "Domain Age Threshold",
         print_value=True,
@@ -97,8 +93,8 @@ def main():
                 json_result[entity.identifier] = ip_whois
                 enriched_entities[entity.identifier] = ip_whois
                 result_value = "true"
-            except Exception as e:
-                print(e)
+            except Exception:
+                pass
         else:
             try:
                 domain = get_domain_from_string(entity.identifier)
@@ -106,10 +102,7 @@ def main():
                     whois_data = whois_alt.get_whois(domain)
                     if "creation_date" in whois_data:
                         whois_data["age_in_days"] = int(
-                            (
-                                datetime.now() - whois_data["creation_date"][0]
-                            ).total_seconds()
-                            / 86400,
+                            (datetime.now() - whois_data["creation_date"][0]).total_seconds() / 86400,
                         )
                     json_result[entity.identifier] = json.loads(
                         json.dumps(whois_data, default=json_serial),
@@ -138,19 +131,18 @@ def main():
     if enriched_entities:
         siemplify.load_case_data()
         alert_entities = get_alert_entities(siemplify)
-        for new_entity in enriched_entities:
+        for new_entity, properties in enriched_entities.items():
             for entity in alert_entities:
                 if new_entity.strip() == entity.identifier.strip():
                     entity.additional_properties.update(
                         add_prefix_to_dict(
-                            dict_to_flat(enriched_entities[new_entity]),
+                            dict_to_flat(properties),
                             "WHOIS",
                         ),
                     )
                     if (
-                        "age_in_days" in enriched_entities[new_entity]
-                        and enriched_entities[new_entity]["age_in_days"]
-                        < int(age_threshold)
+                        "age_in_days" in properties
+                        and properties["age_in_days"] < int(age_threshold)
                         and int(age_threshold) != 0
                     ):
                         if create_entities and entity.entity_type == "DOMAIN":

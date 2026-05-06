@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.Stealthwatch610Manager import StealthwatchManager
 
 
@@ -29,7 +31,11 @@ def main():
     stealthwatch_manager = StealthwatchManager(server_address, username, password)
 
     connectivity = stealthwatch_manager.test_connectivity()
-    output_message = "Connected Successfully"
+    output_message = (
+        "Successfully connected to the Stealthwatch server."
+        if connectivity
+        else "Failed to connect to the Stealthwatch server."
+    )
     siemplify.end(output_message, connectivity)
 
 

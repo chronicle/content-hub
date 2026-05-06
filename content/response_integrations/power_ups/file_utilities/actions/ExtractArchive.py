@@ -27,7 +27,7 @@ DEST_DIR = "/opt/siemplify/siemplify_server/Scripting/FileUtilities/Extract"
 
 def path_to_dict(path):
     d = {"name": os.path.basename(path)}
-    filename, file_extension = os.path.splitext(path)
+    _filename, file_extension = os.path.splitext(path)
     if os.path.isdir(path):
         d["type"] = "directory"
         d["children"] = [path_to_dict(os.path.join(path, x)) for x in os.listdir(path)]
@@ -49,12 +49,8 @@ def main():
     )
 
     status = EXECUTION_STATE_COMPLETED
-    output_message = (
-        "output message :"
-    )
-    result_value = (
-        None
-    )
+    output_message = "output message :"
+    result_value = None
     json_result = {}
     success_files = []
     failed_files = []
@@ -68,7 +64,7 @@ def main():
             try:
                 pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
             except OSError:
-                siemplify.LOGGER.error(f"Creation of the directory {output_dir} failed")
+                siemplify.LOGGER.exception(f"Creation of the directory {output_dir} failed")
                 status = EXECUTION_STATE_FAILED
                 json_result["archives"].append(
                     {"success": False, "archive": full_archive_name},
@@ -83,11 +79,7 @@ def main():
                 for f in os.listdir(output_dir)
                 if os.path.isfile(os.path.join(output_dir, f))
             ]
-            onlyfiles = [
-                f
-                for f in os.listdir(output_dir)
-                if os.path.isfile(os.path.join(output_dir, f))
-            ]
+            onlyfiles = [f for f in os.listdir(output_dir) if os.path.isfile(os.path.join(output_dir, f))]
             json_result["archives"].append(
                 {
                     "success": True,
@@ -101,7 +93,7 @@ def main():
             output_message = f"\nSuccessfully extracted archive: {full_archive_name}"
             success_files.append(archive)
         except Exception as e:
-            siemplify.LOGGER.error("General error performing action:\r")
+            siemplify.LOGGER.exception("General error performing action:\r")
             siemplify.LOGGER.exception(e)
             status = EXECUTION_STATE_FAILED
             result_value = "Failed"

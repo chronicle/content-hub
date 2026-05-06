@@ -48,9 +48,7 @@ def main():
 
     if result_value:
         result_value = result_value.strip('"')
-        output_message = (
-            f"Successfully found '{result_value}' for key: {key} in scope {scope}."
-        )
+        output_message = f"Successfully found '{result_value}' for key: {key} in scope {scope}."
 
     siemplify.end(output_message, result_value, EXECUTION_STATE_COMPLETED)
 

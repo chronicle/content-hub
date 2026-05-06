@@ -32,7 +32,7 @@ def get_attached_workflows(siemplify):
         case_id=siemplify.case_id,
         alert_identifier=alert_id,
     )
-    return set(alert_wf["name"] for alert_wf in alert_wfs_res)
+    return {alert_wf["name"] for alert_wf in alert_wfs_res}
 
 
 @output_handler
@@ -80,9 +80,7 @@ def main():
         )
 
     if len(not_attached) == len(workflow_names):
-        output_message += (
-            "None of the provided playbooks were attached. Please check the spelling.\n"
-        )
+        output_message += "None of the provided playbooks were attached. Please check the spelling.\n"
     elif not_attached:
         output_message += (
             "Action wasn't able to attach the following "

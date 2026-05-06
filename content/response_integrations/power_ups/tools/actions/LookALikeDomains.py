@@ -26,32 +26,18 @@ THRESHOLD = 2
 
 def get_page_results(siemplify):
     res = get_domain_alias(siemplify)
-    results = [
-        InternalDomain.from_json(res)
-        for res in res.get(
-            "objectsList", res.get("domains", [])
-        )
-    ]
+    results = [InternalDomain.from_json(res) for res in res.get("objectsList", res.get("domains", []))]
     if res.get("metadata", {}).get("totalNumberOfPages", 0) > 1:
         for page in range(res.get("metadata", {}).get("totalNumberOfPages", 0) - 1):
             res = get_domain_alias(siemplify, page + 1)
-            results.extend([
-                InternalDomain.from_json(res)
-                for res in res.get(
-                    "objectsList", res.get("domains", [])
-                )
-            ])
+            results.extend([InternalDomain.from_json(res) for res in res.get("objectsList", res.get("domains", []))])
     return results
 
 
 def get_domains(siemplify):
     res = get_page_results(siemplify)
-    env_domains = []
 
-    for domain in res:  
-        if siemplify._environment in domain.environments_json:
-            env_domains.append(domain.to_json())
-    return env_domains
+    return [domain.to_json() for domain in res if siemplify._environment in domain.environments_json]
 
 
 @output_handler
@@ -80,14 +66,10 @@ def main():
                         f" {domain['domain']} with a score of {distance}.  \n"
                     )
                     entity.is_suspicious = True
-                    entity.additional_properties["look_a_like_domain"] = domain[
-                        "domain"
-                    ]
+                    entity.additional_properties["look_a_like_domain"] = domain["domain"]
                     updated_entities.append(entity)
                     result_value = "true"
-                json_result[entity.identifier]["look_a_like_domains"] = (
-                    look_a_like_domains
-                )
+                json_result[entity.identifier]["look_a_like_domains"] = look_a_like_domains
 
     count_updated_entities = len(updated_entities)
 

@@ -13,18 +13,20 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 from urllib.parse import urljoin
+
 import requests
+
 from .constants import ENDPOINTS
-from .UtilsManager import validate_response
-from .SplashParser import SplashParser
 from .SplashExceptions import EntityNotFoundException
+from .SplashParser import SplashParser
+from .UtilsManager import validate_response
 
 
 class SplashManager:
     def __init__(self, api_root, verify_ssl=False, siemplify_logger=None):
-        """
-        The method is used to init an object of Manager class
+        """The method is used to init an object of Manager class
         :param api_root: {str} API root of the Splash instance.
         :param verify_ssl: {bool} If enabled, verify the SSL certificate for the connection to the Splash server is valid.
         :param siemplify_logger: Siemplify logger
@@ -36,8 +38,7 @@ class SplashManager:
         self.parser = SplashParser()
 
     def _get_full_url(self, url_id, **kwargs):
-        """
-        Get full url from url identifier.
+        """Get full url from url identifier.
         :param url_id: {str} The id of url
         :param kwargs: {dict} Variables passed for string formatting
         :return: {str} The full url
@@ -45,16 +46,13 @@ class SplashManager:
         return urljoin(self.api_root, ENDPOINTS[url_id].format(**kwargs))
 
     def test_connectivity(self):
-        """
-        Test connectivity
-        """
+        """Test connectivity"""
         request_url = self._get_full_url("ping")
         response = self.session.get(request_url)
         validate_response(response)
 
     def get_entity_data(self, identifier, include_history, include_har):
-        """
-        Get details about entity
+        """Get details about entity
         :param identifier: {str} Entity identifier
         :param include_history: {bool} If True, will return history
         :param include_har: {bool} If True, will return HAR
@@ -68,7 +66,7 @@ class SplashManager:
             "png": 1,
         }
         response = self.session.get(request_url, params=params)
-        if response.status_code in [502, 504]:
+        if response.status_code in {502, 504}:
             raise EntityNotFoundException(response.content)
         validate_response(response)
 

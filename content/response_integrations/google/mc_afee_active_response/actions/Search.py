@@ -13,10 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import construct_csv, dict_to_flat, output_handler
+
 from ..core.McAfeeActiveResponseManager import McAfeeActiveResponseManager
-from soar_sdk.SiemplifyUtils import construct_csv, dict_to_flat
 
 PROVIDER = "McAfeeActiveResponse"
 

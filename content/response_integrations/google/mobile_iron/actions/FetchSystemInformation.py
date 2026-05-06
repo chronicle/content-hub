@@ -13,13 +13,13 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv, output_handler
 
 # Imports
 from ..core.MobileIronManager import MobileIronManager
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv
-from soar_sdk.SiemplifyDataModel import EntityTypes
 
 # Consts.
 PROVIDER_NAME = "MobileIron"
@@ -84,7 +84,7 @@ def main():
         output_message = "No information was fetched for entities."
 
     if errors:
-        output_message = "{0}\n\nErrors:\n{1}".format(output_message, "\n".join(errors))
+        output_message = "{}\n\nErrors:\n{}".format(output_message, "\n".join(errors))
 
     siemplify.end(output_message, result_value)
 

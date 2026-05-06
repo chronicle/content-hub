@@ -27,12 +27,8 @@ def main():
     xml_input = siemplify.extract_action_param("xml", print_value=True)
 
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
-    )
-    result_value = (
-        True  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    output_message = "output message :"  # human readable message, showed in UI as the action result
+    result_value = True  # Set a simple result value, used for playbook if\else and placeholders.
 
     try:
         json_result = xmltodict.parse(xml_input)

@@ -13,14 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.IllusiveNetworksManager import IllusiveNetworksManager
-from TIPCommon import extract_configuration_param, extract_action_param
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from ..core.Utils import string_to_multi_value
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import extract_action_param, extract_configuration_param
+
+from ..core.constants import ADD_DECEPTIVE_USER_SCRIPT_NAME, INTEGRATION_NAME, PRODUCT_NAME
 from ..core.IllusiveNetworksExceptions import ManagerAlreadyExistException
-from ..core.constants import INTEGRATION_NAME, ADD_DECEPTIVE_USER_SCRIPT_NAME, PRODUCT_NAME
+from ..core.IllusiveNetworksManager import IllusiveNetworksManager
+from ..core.Utils import string_to_multi_value
 
 
 @output_handler
@@ -81,8 +83,9 @@ def main():
             siemplify_logger=siemplify.LOGGER,
         )
         if manager.get_deceptive_user(username) is not None:
+            msg = f'Deceptive user "{username}" already exists.'
             raise ManagerAlreadyExistException(
-                f'Deceptive user "{username}" already exists.'
+                msg
             )
 
         manager.add_deceptive_user(

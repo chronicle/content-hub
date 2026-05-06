@@ -13,10 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+
 class BaseModel:
-    """
-    Base model for inheritance
-    """
+    """Base model for inheritance"""
 
     def __init__(self, raw_data):
         self.raw_data = raw_data
@@ -37,7 +37,7 @@ class EndpointResult(BaseModel):
         tables_data,
         limit,
     ):
-        super(EndpointResult, self).__init__(raw_data)
+        super().__init__(raw_data)
         self.hostname = hostname
         self.local_ipv4 = local_ipv4
         self.local_ipv6 = local_ipv6
@@ -72,7 +72,7 @@ class EndpointResult(BaseModel):
             )
         ]
 
-        return [dict(zip(table_data.columns, row)) for row in rows[: self.limit]]
+        return [dict(zip(table_data.columns, row, strict=False)) for row in rows[: self.limit]]
 
 
 class TableData:

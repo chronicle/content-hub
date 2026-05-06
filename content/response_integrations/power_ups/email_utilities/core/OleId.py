@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """oleid.py
 
 oleid is a script to analyze OLE files such as MS Office documents (e.g. Word,
@@ -64,7 +63,7 @@ __version__ = "0.60.1.dev2"
 
 
 # ------------------------------------------------------------------------------
-# TODO:
+# TODO: Implement the following features and improvements:
 # + extract relevant metadata: codepage, author, application, timestamps, etc
 # - detect RTF and OpenXML
 # - fragmentation
@@ -152,7 +151,7 @@ def detect_flash(data):
     """
     # TODO: report
     found = []
-    for match in re.finditer(b"CWS|FWS", data):
+    for match in re.finditer(rb"CWS|FWS", data):
         start = match.start()
         if start + 8 > len(data):
             # header size larger than remaining data, this is not a SWF
@@ -215,7 +214,7 @@ class Indicator:
         self.value = value
         self.type = _type
         self.name = name
-        if name == None:
+        if name is None:
             self.name = _id
         self.description = description
         self.risk = risk
@@ -244,7 +243,8 @@ class OleID:
         functions will return None
         """
         if filename is None and data is None:
-            raise ValueError("OleID requires either a file path or file data, or both")
+            msg = "OleID requires either a file path or file data, or both"
+            raise ValueError(msg)
         self.file_on_disk = False  # True = file on disk / False = file in memory
         if data is None:
             self.file_on_disk = True  # useful for some check that don't work in memory
@@ -264,9 +264,7 @@ class OleID:
 
     def get_indicator(self, indicator_id):
         """Helper function: returns an indicator if present (or None)"""
-        result = [
-            indicator for indicator in self.indicators if indicator.id == indicator_id
-        ]
+        result = [indicator for indicator in self.indicators if indicator.id == indicator_id]
         if result:
             return result[0]
         return None
@@ -393,14 +391,14 @@ class OleID:
             if crypto.is_encrypted(self.ole):
                 encrypted.value = True
                 encrypted.risk = RISK.LOW
-                encrypted.description = (
-                    "The file is encrypted. It may be decrypted with msoffcrypto-tool"
-                )
+                encrypted.description = "The file is encrypted. It may be decrypted with msoffcrypto-tool"
         except Exception as exception:
             # msoffcrypto-tool can trigger exceptions, such as "Unknown file format" for Excel 5.0/95
             encrypted.value = "Error"
             encrypted.risk = RISK.ERROR
-            encrypted.description = f"msoffcrypto-tool raised an error when checking if the file is encrypted: {exception}"
+            encrypted.description = (
+                f"msoffcrypto-tool raised an error when checking if the file is encrypted: {exception}"
+            )
         return encrypted
 
     def check_external_relationships(self):
@@ -426,7 +424,7 @@ class OleID:
         # open an XmlParser, using a BytesIO instead of filename (to work in memory)
         xmlparser = ooxml.XmlParser(self.data_bytesio)
         for rel_type, target in oleobj.find_external_relationships(xmlparser):
-            log.debug(f"External relationship: type={rel_type} target={target}")
+            log.debug("External relationship: type=%s target=%s", rel_type, target)
             rel_types.add(rel_type)
             ext_rels.value += 1
         if ext_rels.value > 0:
@@ -524,15 +522,11 @@ class OleID:
                     if vba_parser.detect_xlm_macros():
                         xlm_indicator.value = "Yes"
                         xlm_indicator.risk = RISK.MEDIUM
-                        xlm_indicator.description = (
-                            "This file contains XLM macros. Use olevba to analyse them."
-                        )
+                        xlm_indicator.description = "This file contains XLM macros. Use olevba to analyse them."
                 except Exception as e:
                     xlm_indicator.risk = RISK.ERROR
                     xlm_indicator.value = "Error"
-                    xlm_indicator.description = (
-                        f"Error while checking XLM macros: {e!s}"
-                    )
+                    xlm_indicator.description = f"Error while checking XLM macros: {e!s}"
                 finally:
                     if vba_parser is not None:
                         vba_parser.close()
@@ -580,10 +574,6 @@ class OleID:
 def main():
     """Called when running this file as script. Shows all info on input file."""
     # print banner with version
-    print(f"oleid {__version__} - http://decalage.info/oletools")
-    print("THIS IS WORK IN PROGRESS - Check updates regularly!")
-    print("Please report any issue at https://github.com/decalage2/oletools/issues")
-    print()
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -607,7 +597,6 @@ def main():
     log_helper.enable_logging()
 
     for filename in args.input:
-        print("Filename:", filename)
         oleid = OleID(filename)
         indicators = oleid.check()
 
@@ -619,7 +608,7 @@ def main():
         for indicator in indicators:
             if not (indicator.hide_if_false and not indicator.value):
                 # print '%s: %s' % (indicator.name, indicator.value)
-                color = risk_color.get(indicator.risk, None)
+                color = risk_color.get(indicator.risk)
                 table.write_row(
                     (
                         indicator.name,

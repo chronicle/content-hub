@@ -32,25 +32,25 @@ def main():
     except TypeError:
         siemplify = SiemplifyAction()
 
-    pushToSimulated = siemplify.extract_action_param(
+    push_to_simulated = siemplify.extract_action_param(
         "Push to Simulated Cases",
         input_type=bool,
         default_value=False,
         print_value=True,
     )
-    saveToCaseWall = siemplify.extract_action_param(
+    save_to_case_wall = siemplify.extract_action_param(
         "Save JSON as Case Wall File",
         input_type=bool,
         default_value=False,
         print_value=True,
     )
 
-    overrideName = siemplify.extract_action_param(
+    override_name = siemplify.extract_action_param(
         "Override Alert Name",
         default_value="",
         print_value=True,
     )
-    fullPathName = siemplify.extract_action_param(
+    full_path_name = siemplify.extract_action_param(
         "Full path name",
         default_value="",
         print_value=True,
@@ -62,9 +62,7 @@ def main():
     if "SourceFileContent" in siemplify.current_alert.entities[0].additional_properties:
         # Load the alert data from the 'SourceFileContent' property.
         case_data = json.loads(
-            siemplify.current_alert.entities[0].additional_properties[
-                "SourceFileContent"
-            ],
+            siemplify.current_alert.entities[0].additional_properties["SourceFileContent"],
         )
     else:
         siemplify.LOGGER.error("Alert data is missing 'SourceFileContent' property")
@@ -73,44 +71,33 @@ def main():
     # Modify the 'Event Name' fields in the alert data.
     for i, event in enumerate(case_data["Events"]):
         if "DeviceEventClassId" in case_data["Events"][i]["_fields"]:
-            case_data["Events"][i]["_rawDataFields"]["DeviceEventClassId"] = case_data[
-                "Events"
-            ][i]["_fields"]["DeviceEventClassId"]
-            case_data["Events"][i]["_rawDataFields"]["Name"] = case_data["Events"][i][
-                "_fields"
-            ]["DeviceEventClassId"]
+            case_data["Events"][i]["_rawDataFields"]["DeviceEventClassId"] = case_data["Events"][i]["_fields"][
+                "DeviceEventClassId"
+            ]
+            case_data["Events"][i]["_rawDataFields"]["Name"] = case_data["Events"][i]["_fields"]["DeviceEventClassId"]
         if "deviceEventClassId" in case_data["Events"][i]["_fields"]:
-            case_data["Events"][i]["_rawDataFields"]["DeviceEventClassId"] = case_data[
-                "Events"
-            ][i]["_fields"]["deviceEventClassId"]
-            case_data["Events"][i]["_rawDataFields"]["Name"] = case_data["Events"][i][
-                "_fields"
-            ]["deviceEventClassId"]
+            case_data["Events"][i]["_rawDataFields"]["DeviceEventClassId"] = case_data["Events"][i]["_fields"][
+                "deviceEventClassId"
+            ]
+            case_data["Events"][i]["_rawDataFields"]["Name"] = case_data["Events"][i]["_fields"]["deviceEventClassId"]
 
     # Optionally modify the 'Name' field in the alert data.
-    if fullPathName:
-        case_data["Name"] = (
-            case_data["SourceSystemName"]
-            + "_"
-            + case_data["DeviceProduct"]
-            + "_"
-            + case_data["Name"]
-        )
-    if overrideName:
-        case_data["Name"] = overrideName
+    if full_path_name:
+        case_data["Name"] = case_data["SourceSystemName"] + "_" + case_data["DeviceProduct"] + "_" + case_data["Name"]
+    if override_name:
+        case_data["Name"] = override_name
 
     # Prepare the data to be pushed or saved.
-    myJson = {"cases": [case_data]}
+    my_json = {"cases": [case_data]}
 
     # Push the data to the simulator or save it as a JSON file, depending on the parameters.
-    if pushToSimulated:
-        import_simulator_custom_case(siemplify, myJson)
+    if push_to_simulated:
+        import_simulator_custom_case(siemplify, my_json)
         output_message += " Pushed to Simulated "
 
-    if saveToCaseWall:
-        s = json.dumps(myJson)
+    if save_to_case_wall:
+        s = json.dumps(my_json)
         t = base64.b64encode(s.encode("utf-8")).decode("ascii")
-        # Add the JSON data as an attachment to the case wall.
         siemplify.result.add_attachment(
             title="<<file in here>>",
             filename=case_data["Name"] + ".case",
@@ -122,7 +109,7 @@ def main():
     status = EXECUTION_STATE_COMPLETED
 
     # Add the JSON data to the action result and end the action.
-    siemplify.result.add_result_json(myJson)
+    siemplify.result.add_result_json(my_json)
     siemplify.end(output_message, result_value, status)
 
 

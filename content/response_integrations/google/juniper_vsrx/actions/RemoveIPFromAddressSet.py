@@ -13,9 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyDataModel import EntityTypes
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.JuniperVSRXManager import JuniperVSRXManager
 
 PROVIDER_NAME = "JuniperVSRX"
@@ -71,7 +73,7 @@ def main():
         )
 
     if errors:
-        output_message = "{0}, \n \n Errors: {1}".format(
+        output_message = "{}, \n \n Errors: {}".format(
             output_message, "\n ".join(errors)
         )
 

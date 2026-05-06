@@ -13,13 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+
 class BadRequestException(Exception):
-    """
-    Exception for Bad Request
-    """
+    """Exception for Bad Request"""
 
 
 class CiscoOrbitalException(Exception):
-    """
-    General exception for Cisco Orbital
-    """
+    """General exception for Cisco Orbital"""

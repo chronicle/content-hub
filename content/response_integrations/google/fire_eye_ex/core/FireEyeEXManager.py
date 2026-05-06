@@ -25,9 +25,11 @@
 
 # ============================= IMPORTS ===================================== #
 from __future__ import annotations
-import requests
+
 import os
+
 import defusedxml.ElementTree as ET
+import requests
 
 from .FireEyeEXParser import FireEyeEXParser
 
@@ -40,41 +42,23 @@ API_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f-00:00"
 
 
 class FireEyeEXManagerError(Exception):
-    """
-    General Exception for FireEye EX manager
-    """
-
-    pass
+    """General Exception for FireEye EX manager"""
 
 
 class FireEyeEXNotFoundError(Exception):
-    """
-    Not Found Exception for FireEye EX manager
-    """
-
-    pass
+    """Not Found Exception for FireEye EX manager"""
 
 
 class FireEyeEXUnsuccessfulOperationError(Exception):
-    """
-    Unsuccessful operation exception for FireEye EX manager
-    """
-
-    pass
+    """Unsuccessful operation exception for FireEye EX manager"""
 
 
 class FireEyeEXDownloadFileError(Exception):
-    """
-    Unsuccessful download of a file exception for FireEye EX manager
-    """
-
-    pass
+    """Unsuccessful download of a file exception for FireEye EX manager"""
 
 
 class FireEyeEXManager:
-    """
-    FireEye EX Manager
-    """
+    """FireEye EX Manager"""
 
     def __init__(
         self, api_root, username, password, version="v2.0.0", verify_ssl=False
@@ -90,24 +74,22 @@ class FireEyeEXManager:
         self.parser = FireEyeEXParser()
 
     def get_token(self):
-        """
-        Get a token (equals to login)
-        """
+        """Get a token (equals to login)"""
         url = f"{self.api_root}/auth/login"
         response = self.session.post(url)
         self.validate_response(response, "Unable to obtain token")
         token = response.headers.get("X-FeApi-Token")
 
         if not token:
+            msg = "Authentication failed. No X-FeApi-Token found."
             raise FireEyeEXManagerError(
-                "Authentication failed. No X-FeApi-Token found."
+                msg
             )
 
         return token
 
     def test_connectivity(self):
-        """
-        Test connectivity to FireEye EX
+        """Test connectivity to FireEye EX
         :return: {bool} True if connection is successful, exception otherwise.
         """
         url = f"{self.api_root}/health/system"
@@ -118,8 +100,7 @@ class FireEyeEXManager:
     def list_quarantined_emails(
         self, limit=None, start_time=None, end_time=None, sender=None, subject=None
     ):
-        """
-        Lists quarantined emails.
+        """Lists quarantined emails.
         :param limit: {int} Number of records to return. Default - 10000.
         :param start_time: {string} (YYYY-MM-DD'T'HH:MM:SS.SSS-HHMM). If specified, only emails that were created after
             start time will be returned. If Start Time and End Time are not specified, action returns quarantined emails
@@ -152,8 +133,7 @@ class FireEyeEXManager:
         ]
 
     def release_quarantined_email(self, queue_id):
-        """
-        Release quarantined email based on queue ID.
+        """Release quarantined email based on queue ID.
         :param queue_id: {str} The queue id
         :return: {bool} True if successful, exception otherwise.
         """
@@ -175,8 +155,7 @@ class FireEyeEXManager:
         return True
 
     def delete_quarantined_email(self, queue_id):
-        """
-        Delete quarantined email based on queue ID.
+        """Delete quarantined email based on queue ID.
         :param queue_id: {str} The queue id
         :return: {bool} True if successful, exception otherwise.
         """
@@ -198,8 +177,7 @@ class FireEyeEXManager:
         return True
 
     def download_quarantined_email(self, queue_id):
-        """
-        Download quarantined email based on queue ID.
+        """Download quarantined email based on queue ID.
         :param queue_id: {str} The queue id
         :return: {unicode} The content of the downloaded email.
         """
@@ -228,8 +206,7 @@ class FireEyeEXManager:
             return response
 
     def download_alert_artifacts(self, alert_uuid):
-        """
-        Download alert artifacts on alert UUID.
+        """Download alert artifacts on alert UUID.
         :param alert_uuid: {str} The alert UUID
         :return: {unicode} The content of the downloaded zip of the alert's artifacts.
         """
@@ -242,8 +219,7 @@ class FireEyeEXManager:
         return response
 
     def logout(self):
-        """
-        Logout from FireEye HX
+        """Logout from FireEye HX
         :return: {bool} True if successful, exception otherwise
         """
         url = f"{self.api_root}/auth/logout"
@@ -252,8 +228,7 @@ class FireEyeEXManager:
         return True
 
     def get_alerts(self, duration="48_hours", info_level="extended", start_time=None):
-        """
-        Get alerts by filters
+        """Get alerts by filters
         :param duration: {str} Specifies the time interval to search. This filter is used with either the start_time or
             end_time filter. If duration, start time, and end time are not specified, the system defaults to
             duration=48_hours, end_time=current_ time. If only duration is specified, the end_time defaults to the
@@ -295,8 +270,7 @@ class FireEyeEXManager:
 
     @staticmethod
     def _convert_datetime_to_api_format(time):
-        """
-        Convert datetime object to the API time format of EX
+        """Convert datetime object to the API time format of EX
         :param time: {datetime.Datetime} The datetime object
         :return: {unicode} The formatted time string
         """
@@ -305,8 +279,7 @@ class FireEyeEXManager:
 
     @staticmethod
     def validate_response(response, error_msg="An error occurred"):
-        """
-        Validate a response
+        """Validate a response
         :param response: {requests.Response} The response
         :param error_msg: {unicode} The error message to display on failure
         """
@@ -327,21 +300,23 @@ class FireEyeEXManager:
                 except Exception:
                     try:
                         error_msg = response.json()["fireeyeapis"]["message"]
-                        raise FireEyeEXManagerError(f"{error_msg}: {error} {error_msg}")
+                        msg = f"{error_msg}: {error} {error_msg}"
+                        raise FireEyeEXManagerError(msg)
 
                     except FireEyeEXManagerError:
                         raise
 
                     except Exception:
+                        msg = f"{error_msg}: {error} {response.content}"
                         raise FireEyeEXManagerError(
-                            f"{error_msg}: {error} {response.content}"
+                            msg
                         )
 
-            raise FireEyeEXManagerError(f"{error_msg}: {error} {response.content}")
+            msg = f"{error_msg}: {error} {response.content}"
+            raise FireEyeEXManagerError(msg)
 
     def save_artifacts_to_file(self, response, download_path):
-        """
-        Save raw data to a zip in defined path.
+        """Save raw data to a zip in defined path.
         :param response: Download response.
         :param download_path: Path to save the files.
         :return: True if successful, exception otherwise

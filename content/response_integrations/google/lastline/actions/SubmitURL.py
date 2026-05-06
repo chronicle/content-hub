@@ -13,9 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-import sys
+
 import json
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
+import sys
+from typing import TYPE_CHECKING
 
 from soar_sdk.ScriptResult import (
     EXECUTION_STATE_COMPLETED,
@@ -24,20 +25,23 @@ from soar_sdk.ScriptResult import (
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from ..core.LastlineManager import LastlineManager
+from TIPCommon import construct_csv, extract_action_param, extract_configuration_param
+
 from ..core.consts import INTEGRATION_NAME, SUBMIT_URL
-from ..core.datamodels import SubmissionTask
 from ..core.exceptions import (
-    LastlineInvalidParamException,
-    LastlinePermissionException,
-    LastlineManyRequestsException,
     LastlineAuthenticationException,
+    LastlineInvalidParamException,
+    LastlineManyRequestsException,
+    LastlinePermissionException,
 )
+from ..core.LastlineManager import LastlineManager
+
+if TYPE_CHECKING:
+    from ..core.datamodels import SubmissionTask
 
 
 def start_operation(siemplify, manager, url: str, wait_for_report: bool):
-    """
-    If the action runs for the first time, this function will be called and will create a submission task.
+    """If the action runs for the first time, this function will be called and will create a submission task.
     :param siemplify: {SiemplifyAction} Siemplify service
     :param manager: {LastlineManager} Lastline manager
     :param url: {str} The url to analyze
@@ -61,11 +65,10 @@ def start_operation(siemplify, manager, url: str, wait_for_report: bool):
             wait_for_report=wait_for_report,
         )
 
-    else:
-        result_value = json.dumps(
-            {"task_uuid": submission_task.data.task_uuid, "url": url}
-        )
-        output_message = f"Waiting for the analysis results for the url: {url}"
+    result_value = json.dumps(
+        {"task_uuid": submission_task.data.task_uuid, "url": url}
+    )
+    output_message = f"Waiting for the analysis results for the url: {url}"
 
     return output_message, result_value, status
 
@@ -73,8 +76,7 @@ def start_operation(siemplify, manager, url: str, wait_for_report: bool):
 def query_operation_status(
     siemplify, manager, task_uuid: str, url: str, wait_for_report: bool
 ):
-    """
-    Starting from the second time that the action will run, this function will be called and check if the submission
+    """Starting from the second time that the action will run, this function will be called and check if the submission
     task completed create a submission task.
     :param siemplify: {SiemplifyAction} Siemplify service
     :param manager: {LastlineManager} Lastline manager
@@ -83,10 +85,9 @@ def query_operation_status(
     :param wait_for_report: {bool} Decide if should wait to submission reports or not
     :return: (output_message, result_value, status)
     """
-
-    siemplify.LOGGER.info(f"Checking the status of analysis task.")
+    siemplify.LOGGER.info("Checking the status of analysis task.")
     submission_task = manager.get_progress(uuid=task_uuid)
-    siemplify.LOGGER.info(f"Successfully checked  the status of analysis task.")
+    siemplify.LOGGER.info("Successfully checked  the status of analysis task.")
 
     if submission_task.data.completed:
         completed_submission_task = manager.get_result(uuid=task_uuid)
@@ -108,8 +109,7 @@ def query_operation_status(
 def finish_operation(
     siemplify, submission_task: SubmissionTask, url: str, wait_for_report: bool
 ):
-    """
-    Finalizing results
+    """Finalizing results
     :param siemplify: {SiemplifyAction} Siemplify service
     :param submission_task: {SubmissionTask} Submission Task data model
     :param url: {str} Analyzed URL

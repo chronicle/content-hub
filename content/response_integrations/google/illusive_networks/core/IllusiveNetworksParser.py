@@ -13,9 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+from TIPCommon import SiemplifySession
+
 from .datamodels import *
 from .Utils import transform_string_response_to_json
-from TIPCommon import SiemplifySession
 
 
 class IllusiveNetworksParser:

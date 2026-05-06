@@ -21,7 +21,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 
-def allow_attrs(tag, name, value):
+def allow_attrs(_tag, _name, _value):
     return True
 
 
@@ -37,24 +37,18 @@ def main():
     attributes = list(
         filter(
             None,
-            [
-                x.strip()
-                for x in siemplify.extract_action_param("Attributes", " ").split(",")
-            ],
+            [x.strip() for x in siemplify.extract_action_param("Attributes", " ").split(",")],
         ),
     )
     styles = list(
         filter(
             None,
-            [
-                x.strip()
-                for x in siemplify.extract_action_param("Styles", " ").split(",")
-            ],
+            [x.strip() for x in siemplify.extract_action_param("Styles", " ").split(",")],
         ),
     )
     css_sanitizer = CSSSanitizer(allowed_css_properties=styles)
     input = siemplify.parameters.get("Input HTML")
-    allow_all_tags = (
+    _allow_all_tags = (
         str(
             siemplify.extract_action_param(
                 param_name="Allow All Tags",
@@ -76,7 +70,7 @@ def main():
         ).lower()
         == "true"
     )
-    allow_all_styles = (
+    _allow_all_styles = (
         str(
             siemplify.extract_action_param(
                 param_name="Allow All Styles",
@@ -87,8 +81,6 @@ def main():
         ).lower()
         == "true"
     )
-
-    sanitized = ""
 
     if tags and styles and attributes:
         sanatized = bleach.clean(

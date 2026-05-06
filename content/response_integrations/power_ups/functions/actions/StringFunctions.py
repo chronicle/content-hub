@@ -26,8 +26,7 @@ PLACEHOLDER_MAP = {"_SPACE_": " "}
 
 
 def replace_placeholders(text_input: str) -> str:
-    """
-    Substitutes predefined placeholders in a string with their
+    """Substitutes predefined placeholders in a string with their
     corresponding literal values from the PLACEHOLDER_MAP.
     """
     # Make a mutable copy to modify
@@ -84,7 +83,6 @@ def main():
 
     elif function == "IsAlpha":
         result = input.isalpha()
-        print(result)
         if result:
             output_message = f"All characters in {input} are alphanumeric"
         else:
@@ -92,7 +90,6 @@ def main():
 
     elif function == "IsDigit":
         result = input.isdigit()
-        print(result)
         if result:
             output_message = f"All characters in {input} are digits"
         else:

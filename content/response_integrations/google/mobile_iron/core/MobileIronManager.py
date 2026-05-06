@@ -23,9 +23,11 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
-import requests
-import urllib.parse
+
 import copy
+import urllib.parse
+
+import requests
 
 # =====================================
 #             CONSTANTS               #
@@ -97,8 +99,7 @@ class MobileIronManager:
         connected_cloud=False,
         verify_ssl=False,
     ):
-        """
-        :param username: {string} API username.
+        """:param username: {string} API username.
         :param password: {string} API username password.
         :param verify_ssl: {bool} Verify SSL processing requests.
         """
@@ -112,22 +113,21 @@ class MobileIronManager:
 
     @staticmethod
     def validate_response(response):
-        """
-        HTTP response validation.
+        """HTTP response validation.
         :param response: {HTTP response object}
         :return: throws exception if there is exception at the response {void}
         """
         try:
             response.raise_for_status()
         except requests.HTTPError as err:
+            msg = f"Failed processing request to MobileIron, Status Code:{response.status_code}, Error:{err}, Content: {response.content}"
             raise MobileIronManagerError(
-                f"Failed processing request to MobileIron, Status Code:{response.status_code}, Error:{err}, Content: {response.content}"
+                msg
             )
 
     @staticmethod
     def rearrange_details_output(output_dict):
-        """
-        Rearrange output.
+        """Rearrange output.
         :param output_dict: {list} Output values.
         :return: {dict} Rearranged output.
         """
@@ -138,8 +138,7 @@ class MobileIronManager:
         return result_dict
 
     def ping(self):
-        """
-        Verify API validity.
+        """Verify API validity.
         :return: {bool/exception} True for success.
         """
         request_url = urllib.parse.urljoin(self.api_root, PING_URL)
@@ -148,8 +147,7 @@ class MobileIronManager:
         return True
 
     def fetch_labels(self, limit=DEFAULT_LABELS_LIMIT):
-        """
-        Fetch label information by query.
+        """Fetch label information by query.
         :param: admin_device_id: {integerDevice space ID of the administrator
         :param: limit: {integer} Indicates the maximum number of entries to return. Must be at
         least 0 and no more than 200.
@@ -165,8 +163,7 @@ class MobileIronManager:
         return response.json().get("results", [])
 
     def get_label_id_by_name(self, label_name):
-        """
-        Get lablel id by it's name.
+        """Get lablel id by it's name.
         :param label_name: {string} Label name.
         :return: {string} Label ID.
         """
@@ -174,13 +171,13 @@ class MobileIronManager:
         for label in labels:
             if label.get("name", "").lower() == label_name.lower() and label.get("id"):
                 return label.get("id")
+        msg = f'Failed fetching label with name "{label_name}", Error: Label was not found.'
         raise MobileIronManagerError(
-            f'Failed fetching label with name "{label_name}", Error: Label was not found.'
+            msg
         )
 
     def fetch_devices(self, query="", fields_to_fetch=DEFAULT_FIELDS_TO_FETCH):
-        """
-        :param query: {string} Query for device parameters.
+        """:param query: {string} Query for device parameters.
         :param fields_to_fetch: {string} Fields to fetch in  query result.
         :return: {list} List of device objects.
         """
@@ -201,8 +198,7 @@ class MobileIronManager:
         mode=DEFAULT_DEVICE_ACTION_MESSAGE_MODE,
         subject=DEFAULT_ACTION_MESSAGE_SUBJECT,
     ):
-        """
-        Unlock device by it's UUID.
+        """Unlock device by it's UUID.
         :param device_uuid: {string} UUID String of the device on which to perform the action.
         :param message: {string} Message to send.
         :param mode: {string} Mode of transmission for the message.Has to be sms, pns or email.
@@ -225,8 +221,7 @@ class MobileIronManager:
     def fetch_device_information_by_ip(
         self, ip_address, fields_to_fetch=DEFAULT_FIELDS_TO_FETCH
     ):
-        """
-        Fetch device information by IP address.
+        """Fetch device information by IP address.
         :param ip_address: {string} IP address to search the device by.
         :param fields_to_fetch: {string} Desired fields to fetch.
         :return: {dict} Device system information.
@@ -240,13 +235,13 @@ class MobileIronManager:
             )
         if devices:
             return devices[0]
+        msg = f'Failed fetching device for address "{ip_address}", ERROR: Device was not found.'
         raise MobileIronManagerError(
-            f'Failed fetching device for address "{ip_address}", ERROR: Device was not found.'
+            msg
         )
 
     def get_device_uuid_by_ip_address(self, ip_address):
-        """
-        Get device uuid by IP address.
+        """Get device uuid by IP address.
         :param ip_address: {string} IP address to search the device by.
         :return: {string} Device UUID.
         """
@@ -254,8 +249,7 @@ class MobileIronManager:
         return device.get(DEVICE_UUID_FIELD)
 
     def get_device_details_by_uuid(self, device_uuid):
-        """
-        Get device details using it's UUID.
+        """Get device details using it's UUID.
         :param device_uuid: {string} Device UUID.
         :return: {dict} Device Information.
         """

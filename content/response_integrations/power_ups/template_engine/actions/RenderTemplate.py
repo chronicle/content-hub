@@ -36,15 +36,11 @@ def main():
     siemplify.script_name = SCRIPT_NAME
     siemplify.LOGGER.info("================= Main - Param Init =================")
 
-    events = []
-    for event in siemplify.current_alert.security_events:
-        events.append(event.additional_properties)
+    events = [event.additional_properties for event in siemplify.current_alert.security_events]
     entities = {}
     for entity in siemplify.target_entities:
         if entity.additional_properties["Type"] != "ALERT":
-            entities[entity.additional_properties["Identifier"]] = (
-                entity.additional_properties
-            )
+            entities[entity.additional_properties["Identifier"]] = entity.additional_properties
 
     # INIT ACTION PARAMETERS:
     json_object = siemplify.extract_action_param(
@@ -83,7 +79,7 @@ def main():
             input_json = json.loads(json_object)
 
         except Exception as e:
-            siemplify.LOGGER.error(f"Error parsing JSON Object: {json_object}")
+            siemplify.LOGGER.exception(f"Error parsing JSON Object: {json_object}")
             siemplify.LOGGER.exception(e)
             raise
             status = EXECUTION_STATE_FAILED
@@ -95,22 +91,14 @@ def main():
             trim_blocks=True,
             lstrip_blocks=True,
         )
-        filters = {
-            name: function
-            for name, function in getmembers(JinjaFilters)
-            if isfunction(function)
-        }
+        filters = {name: function for name, function in getmembers(JinjaFilters) if isfunction(function)}
 
         jinja_env.filters.update(filters)
 
         try:
             import CustomFilters
 
-            custom_filters = {
-                name: function
-                for name, function in getmembers(CustomFilters)
-                if isfunction(function)
-            }
+            custom_filters = {name: function for name, function in getmembers(CustomFilters) if isfunction(function)}
             jinja_env.filters.update(custom_filters)
         except Exception as e:
             siemplify.LOGGER.info("Unable to load CustomFilters")
@@ -118,10 +106,7 @@ def main():
 
         if isinstance(input_json, list):
             result_value = ""
-            if jinja:
-                template = jinja_env.from_string(jinja)
-            else:
-                template = jinja_env.from_string(template)
+            template = jinja_env.from_string(jinja) if jinja else jinja_env.from_string(template)
             for entry in input_json:
                 if include_case_data:
                     entry.update({"SiemplifyEvents": events})
@@ -132,18 +117,14 @@ def main():
             if include_case_data:
                 input_json.update({"SiemplifyEvents": events})
                 input_json.update({"SiemplifyEntities": entities})
-                print(input_json)
-            if jinja:
-                template = jinja_env.from_string(jinja)
-            else:
-                template = jinja_env.from_string(template)
+            template = jinja_env.from_string(jinja) if jinja else jinja_env.from_string(template)
             result_value = template.render(input_json=input_json)
             output_message = "Successfully rendered the template."
         else:
             siemplify.LOGGER.error("Incorrect type.  Needs to be a list or dict.")
 
     except Exception as e:
-        siemplify.LOGGER.error(f"General error performing action {SCRIPT_NAME}")
+        siemplify.LOGGER.exception(f"General error performing action {SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
         raise  # Return full error details to the client UI. Best for most use cases.
         # For manual error handling, comment out raise and use the lines below:

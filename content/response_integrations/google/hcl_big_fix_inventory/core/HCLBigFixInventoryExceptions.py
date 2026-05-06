@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+
 class HCLBigFixInventoryException(Exception):
-    """
-    General exception for HCL BigFix Inventory
-    """
+    """General exception for HCL BigFix Inventory"""

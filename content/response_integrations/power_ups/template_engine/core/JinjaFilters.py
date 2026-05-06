@@ -18,6 +18,7 @@ import datetime
 import json
 import re
 import time
+import typing
 
 import dateutil
 import six
@@ -39,10 +40,7 @@ class DotAccessibleDict:
                 setattr(
                     self,
                     key,
-                    [
-                        DotAccessibleDict(**el) if isinstance(el, dict) else el
-                        for el in val
-                    ],
+                    [DotAccessibleDict(**el) if isinstance(el, dict) else el for el in val],
                 )
             else:
                 setattr(self, key, val)
@@ -59,11 +57,7 @@ class DotAccessibleDict:
     def set(self, index, value):
         if index:
             parts = index.split(".")
-            tmp_obj = (
-                getattr(self, parts[0])
-                if hasattr(self, parts[0])
-                else DotAccessibleDict()
-            )
+            tmp_obj = getattr(self, parts[0]) if hasattr(self, parts[0]) else DotAccessibleDict()
             if len(parts) > 1:
                 tmp_obj.set(".".join(parts[1:]), value)
             else:
@@ -84,10 +78,7 @@ class DotAccessibleDict:
             if isinstance(val, DotAccessibleDict):
                 obj[i] = val.to_dict()
             elif isinstance(val, list):
-                obj[i] = [
-                    el.to_dict() if isinstance(el, DotAccessibleDict) else el
-                    for el in val
-                ]
+                obj[i] = [el.to_dict() if isinstance(el, DotAccessibleDict) else el for el in val]
             else:
                 obj[i] = val
         return obj
@@ -122,14 +113,15 @@ def json2tbl(json_object, build_direction="LEFT_TO_RIGHT", table_attributes=None
                 table_attributes=f'class="{table_attributes["class"]}"',
             )
         return json2html.convert(json=json_object)
+    return None
 
 
-def to_json(a, *args, **kw):
+def to_json(a, *args: typing.Any, **kw):
     """Convert the value to JSON"""
     return json.dumps(a, *args, **kw)
 
 
-def to_nice_json(a, indent=4, sort_keys=True, *args, **kw):
+def to_nice_json(a, indent=4, sort_keys=True, *args: typing.Any, **kw):
     """Make verbose, human readable JSON"""
     return to_json(
         a,
@@ -142,7 +134,7 @@ def to_nice_json(a, indent=4, sort_keys=True, *args, **kw):
 
 
 def is_in_list(val, in_list):
-    return True if val in in_list else False
+    return val in in_list
 
 
 def _get_regex_flags(ignorecase=False):
@@ -194,26 +186,26 @@ def filter_datetime(date, fmt="%Y/%m/%d %H:%M:%S"):
 
 
 def map_priority(p):
-    PRIORITY = {
+    priority = {
         "-1": "info",
         "40": "low",
         "60": "medium",
         "80": "high",
         "100": "critical",
     }
-    return PRIORITY.get(p)
+    return priority.get(p)
 
 
 def timectime(s):
     a_str = str(s)
     if len(a_str) == 13:
-        s = s / 1000
+        s /= 1000
     # return datetime.datetime.fromtimestamp(int(s))
     return time.ctime(int(s))  # datetime.datetime.fromtimestamp(s)
 
 
 def dedup_list_of_dicts(list_of_dicts):
-    """This dedups a list of dictionaries. It checks to see if the key/values are the same"""
+    """Dedup a list of dictionaries. It checks to see if the key/values are the same."""
     seen = set()
     new_l = []
     for d in list_of_dicts:
@@ -246,10 +238,7 @@ def comment(text, style="plain", **kw):
     # Pointer to the right comment type
     style_params = comment_styles[style]
 
-    if "decoration" in kw:
-        prepostfix = kw["decoration"]
-    else:
-        prepostfix = style_params["decoration"]
+    prepostfix = kw["decoration"] if "decoration" in kw else style_params["decoration"]
 
     # Default params
     p = {
@@ -274,17 +263,16 @@ def comment(text, style="plain", **kw):
     str_prefix = ""
     if p["prefix"]:
         if p["prefix"] != p["newline"]:
-            str_prefix = str("%s%s" % (p["prefix"], p["newline"])) * int(
+            str_prefix = str("{}{}".format(p["prefix"], p["newline"])) * int(
                 p["prefix_count"],
             )
         else:
-            str_prefix = str("%s" % (p["newline"])) * int(p["prefix_count"])
+            str_prefix = str("{}".format(p["newline"])) * int(p["prefix_count"])
     str_text = (
-        "%s%s"
-        % (
+        "{}{}".format(
             p["decoration"],
             # Prepend each line of the text with the decorator
-            text.replace(p["newline"], "%s%s" % (p["newline"], p["decoration"])),
+            text.replace(p["newline"], "{}{}".format(p["newline"], p["decoration"])),
         )
     ).replace(
         # Remove trailing spaces when only decorator is on the line

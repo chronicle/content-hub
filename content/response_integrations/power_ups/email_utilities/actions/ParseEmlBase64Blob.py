@@ -40,8 +40,7 @@ def _extract_subject(msg):
             return parsed_value
         return parsed_value.decode(encoding)
     except UnicodeDecodeError:
-        msg = "Unable to decode email subject"
-        return msg
+        return "Unable to decode email subject"
 
 
 def _is_attachment(mime_part, include_inline=False):
@@ -71,10 +70,7 @@ def _is_attachment(mime_part, include_inline=False):
     if content_disposition.lower().startswith("attachment"):
         return True
 
-    if include_inline and content_disposition.lower().startswith("inline"):
-        return True
-
-    return False
+    return bool(include_inline and content_disposition.lower().startswith("inline"))
 
 
 def extract_content(msg):
@@ -85,7 +81,6 @@ def extract_content(msg):
     """
     html_body = ""
     text_body = ""
-    files = {}
     count = 0
 
     if not msg.is_multipart():
@@ -206,8 +201,6 @@ def main():
                 else:
                     pass
                     # print ("DEBUG else: part is {}".format(part.get_content_maintype()))
-        else:
-            print(f"Item {i} is NOT multipart")
     siemplify.result.add_result_json(json_result)
     if json_result:
         output_message = "EML found and returned in json result"

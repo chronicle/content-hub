@@ -14,11 +14,15 @@
 
 from __future__ import annotations
 
-from integration_testing.platform.script_output import MockActionOutput
+from typing import TYPE_CHECKING
+
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from ...actions import CreateThumbnail
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
 
 
 @set_metadata(
@@ -26,8 +30,7 @@ from ...actions import CreateThumbnail
     parameters={
         "Base64 Image": (
             # base64 encoded string of a 1x1 transparent PNG image
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C"
-            "8AAAAASUVORK5CYII="
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
         ),
         "Thumbnail Size": "2, 2",
         "Image Key Path": "",
@@ -37,9 +40,6 @@ def test_create_thumbnail_json_result(action_output: MockActionOutput) -> None:
     CreateThumbnail.main()
 
     assert action_output.results.json_output.json_result == {
-        "thumbnail": (
-            "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAQAAADYv8WvAAAAC0lEQVR4nGNggAEAAAoAAX"
-            "+AdF4AAAAASUVORK5CYII="
-        )
+        "thumbnail": ("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAQAAADYv8WvAAAAC0lEQVR4nGNggAEAAAoAAX+AdF4AAAAASUVORK5CYII=")
     }
     assert action_output.results.execution_state == ExecutionState.COMPLETED

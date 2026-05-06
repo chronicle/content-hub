@@ -189,8 +189,7 @@ class RasterizeAction(Action):
         )
         if self.params.full_screen:
             self.logger.info(
-                "Full Screen is enabled. 'Height' and 'Width' parameters "
-                "will be ignored for the screenshot.",
+                "Full Screen is enabled. 'Height' and 'Width' parameters will be ignored for the screenshot.",
             )
 
     def _perform_action(self, _: Never) -> None:
@@ -250,17 +249,15 @@ class RasterizeAction(Action):
 
             for item in rasterize_input.inputs:
                 try:
-                    self.logger.info(f"Processing input: {item}")
+                    self.logger.info("Processing input: %s", item)
                     png_path, pdf_path = self._get_output_paths(item)
-                    created_files = await rasterizer.rasterize(
-                        item, rasterize_input.html_content, png_path, pdf_path
-                    )
+                    created_files = await rasterizer.rasterize(item, rasterize_input.html_content, png_path, pdf_path)
 
                     if created_files:
                         all_created_files.extend(created_files)
 
                     successful_inputs.append(item)
-                    self.logger.info(f"Successfully rasterized input '{item}'.")
+                    self.logger.info("Successfully rasterized input '%s'.", item)
 
                 except Exception as e:
                     if PLAYWRIGHT_PACKAGE_ERROR in str(e):
@@ -281,7 +278,7 @@ class RasterizeAction(Action):
                         )
                         raise ActionSetupError(error_msg) from e
 
-                    self.logger.exception(f"Failed to rasterize input '{item}': {e}")
+                    self.logger.exception("Failed to rasterize input '%s': %s", item, e)
                     failed_inputs.append(item)
 
         finally:
@@ -417,7 +414,7 @@ class Rasterizer:
         wait_until_value: str = self.params.wait_until.lower().replace("_", "")
 
         if self.params.input_type == InputType.URL.value:
-            self.logger.info(f"Navigating to URL: {item}")
+            self.logger.info("Navigating to URL: %s", item)
             await self.page.goto(
                 item,
                 timeout=self.params.timeout * NUM_OF_MILLI_IN_SEC,

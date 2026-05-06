@@ -51,7 +51,7 @@ def main():
             for entity in siemplify.target_entities:
                 if entity.identifier in efm.entities:
                     siemplify.LOGGER.info(f"Removing entity: {entity.identifier}")
-                    efm.removeEntity(entity.identifier)
+                    efm.remove_entity(entity.identifier)
                     output_message += f"Removed Entity: {entity.identifier}\n"
                 else:
                     siemplify.LOGGER.info(
@@ -61,7 +61,7 @@ def main():
                     result_value = False
 
     except Exception as e:
-        siemplify.LOGGER.error(f"General error performing action {SCRIPT_NAME}")
+        siemplify.LOGGER.exception("General error performing action %s", SCRIPT_NAME)
         siemplify.LOGGER.exception(e)
         raise
 

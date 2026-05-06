@@ -13,12 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
-class SplashException(Exception):
-    """
-    General exception for Splash
-    """
 
-    pass
+
+class SplashException(Exception):
+    """General exception for Splash"""
 
 
 class EntityNotFoundException(SplashException):

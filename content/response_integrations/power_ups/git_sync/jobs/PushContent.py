@@ -59,9 +59,7 @@ def main():
         if features["Integrations"]:
             siemplify.LOGGER.info("========== Integrations ==========")
             for integration in [
-                x
-                for x in gitsync.api.get_ide_cards()
-                if x.get("identifier") not in IGNORED_INTEGRATIONS
+                x for x in gitsync.api.get_ide_cards() if x.get("identifier") not in IGNORED_INTEGRATIONS
             ]:
                 siemplify.LOGGER.info(f"Pushing {integration['identifier']}")
                 integration_obj = Integration(
@@ -147,12 +145,12 @@ def main():
                                     try:
                                         prop["value"] = secrets[prop["propertyName"]]
                                     except KeyError:
-                                        siemplify.LOGGER.warn(
+                                        siemplify.LOGGER.warning(
                                             f"{instance['instanceName']} was updated with new "
                                             f"parameters but they weren't configured.",
                                         )
                         except Exception:
-                            siemplify.LOGGER.warn(
+                            siemplify.LOGGER.warning(
                                 f"{instance['identifier']} is not configured. Skipping passwords",
                             )
 
@@ -172,10 +170,10 @@ def main():
         # Ontology - Visual Families
         if features["Visual Families"]:
             siemplify.LOGGER.info("========== Visual Families ==========")
-            for visualFamily in gitsync.api.get_custom_families():
-                siemplify.LOGGER.info(f"Pushing {visualFamily['family']}")
+            for visual_family in gitsync.api.get_custom_families():
+                siemplify.LOGGER.info(f"Pushing {visual_family['family']}")
                 gitsync.content.push_visual_family(
-                    VisualFamily(gitsync.api.get_custom_family(visualFamily["id"])),
+                    VisualFamily(gitsync.api.get_custom_family(visual_family["id"])),
                 )
 
         # Ontology - Mappings
@@ -199,11 +197,7 @@ def main():
                         )
                         for r in rule["familyFields"] + rule["systemFields"]:
                             # remove bad rules with no source
-                            if (
-                                r["mappingRule"]["source"]
-                                and r["mappingRule"]["source"].lower()
-                                == integration.lower()
-                            ):
+                            if r["mappingRule"]["source"] and r["mappingRule"]["source"].lower() == integration.lower():
                                 rules.append(rule)
                                 break
 

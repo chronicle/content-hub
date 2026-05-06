@@ -24,8 +24,9 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
-import requests
+
 import arrow
+import requests
 
 # =====================================
 #             CONSTANTS               #
@@ -42,17 +43,11 @@ REVALIDATE_DONE_STATUS = "AuthorizationPassed"
 #              CLASSES                #
 # =====================================
 class PortnoxManagerError(Exception):
-    """
-    General Exception for Portnox manager
-    """
-
-    pass
+    """General Exception for Portnox manager"""
 
 
 class PortnoxManager:
-    """
-    Responsible for all Portnox operations functionality
-    """
+    """Responsible for all Portnox operations functionality"""
 
     def __init__(self, api_root, username, password, verify_ssl=False):
         self.api_root = self.validate_api_root(api_root)
@@ -68,8 +63,7 @@ class PortnoxManager:
 
     @staticmethod
     def validate_api_root(api_root):
-        """
-        Validate that api root is not endind with '/'
+        """Validate that api root is not endind with '/'
         :param api_root: api root url {string}
         :return: valid api root {string}
         """
@@ -78,8 +72,7 @@ class PortnoxManager:
         return api_root
 
     def test_conectivity(self):
-        """
-        Test connection to sever
+        """Test connection to sever
         :return: {bool} True if connection is successful, exception otherwise
         """
         response = self.session.get(f"{self.api_root}/auth/user")
@@ -87,8 +80,7 @@ class PortnoxManager:
         return True
 
     def revalidate_device(self, device_id):
-        """
-        Revalidate auth policy on a specific device connected to NAC
+        """Revalidate auth policy on a specific device connected to NAC
         :param device_id: {string} The device to revalidate
         :return: {bool} True if connection is successful, exception otherwise
         """
@@ -99,8 +91,7 @@ class PortnoxManager:
         return True
 
     def get_device_info(self, device_id):
-        """
-        Retrieve all NAC info on specific device
+        """Retrieve all NAC info on specific device
         :param device_id: {string} The device id
         :return: {dict} Device details
         """
@@ -110,8 +101,7 @@ class PortnoxManager:
         return response.json()
 
     def get_device_user_history(self, device_id):
-        """
-        Get authentication history of a given device.
+        """Get authentication history of a given device.
         :param device_id: {string} The device id
         :return: {list} User history
         """
@@ -128,8 +118,7 @@ class PortnoxManager:
         from_timestamp=arrow.utcnow().isoformat(),
         to_timestamp=arrow.utcnow().isoformat(),
     ):
-        """
-        Get device history of a given device.
+        """Get device history of a given device.
         :param device_id: {string} The device
         :param from_timestamp: {str} Timestamp to fetch history from (ISO format)
         :param to_timestamp: {str} Timestamp to fetch history until (ISO format)
@@ -145,8 +134,7 @@ class PortnoxManager:
         return response.json()
 
     def get_device_installed_applications(self, device_id):
-        """
-        Get the installed applications of a given device.
+        """Get the installed applications of a given device.
         :param device_id: {string} The device id
         :return: {list} The installed applications
         """
@@ -158,8 +146,7 @@ class PortnoxManager:
         return response.json()
 
     def get_device_services(self, device_id):
-        """
-        Get the services of a given device.
+        """Get the services of a given device.
         :param device_id: {string} The device id
         :return: {list} The services
         """
@@ -171,8 +158,7 @@ class PortnoxManager:
         return response.json()
 
     def get_device_locations(self, device_id):
-        """
-        Get the locations of a given device.
+        """Get the locations of a given device.
         :param device_id: {string} The device id
         :return: {list} The locations
         """
@@ -184,8 +170,7 @@ class PortnoxManager:
         return response.json()
 
     def get_device_open_ports(self, device_id):
-        """
-        Get the open ports of a given device.
+        """Get the open ports of a given device.
         :param device_id: {string} The device id
         :return: {list} The open ports
         """
@@ -197,8 +182,7 @@ class PortnoxManager:
         return response.json()
 
     def search_device(self, key, value, search_type="Equals"):
-        """
-        Search for device by key value filtering
+        """Search for device by key value filtering
         :param key: {string} The key to search in
         :param value: {string} The expected value in key
         :param search_type: {string} Search type. Valid values:
@@ -216,28 +200,30 @@ class PortnoxManager:
         self.validate_response(response, f"Unable to search for {key}-{value}")
 
         if not response.json():
-            raise PortnoxManagerError(f"No devices were found for {key}:{value}")
+            msg = f"No devices were found for {key}:{value}"
+            raise PortnoxManagerError(msg)
 
         return response.json()[0]
 
     def wait_for_device_revalidation(self, device_id, timeout=1000):
-        """
-        Revalidate device policy over NAC and wait for revalidation confirmation
+        """Revalidate device policy over NAC and wait for revalidation confirmation
         :param device_id: {string} The device to revalidate
         :param timeout: {int} Time to wait for confirmation (in Seconds)
         :return: {bool} True if successful, exception otherwise.
         """
         device_details = self.get_device_info(device_id)
         if "securityStatus" not in device_details:
-            raise PortnoxManagerError(f"Invalid details for device {device_id} details")
+            msg = f"Invalid details for device {device_id} details"
+            raise PortnoxManagerError(msg)
 
         timeout_timestamp = arrow.utcnow().shift(seconds=timeout)
 
         # Run with timeout checking
         while True:
             if arrow.utcnow() > timeout_timestamp:
+                msg = f"Timeout reached while waiting for device {device_id} revalidation."
                 raise PortnoxManagerError(
-                    f"Timeout reached while waiting for device {device_id} revalidation."
+                    msg
                 )
 
             if device_details.get("securityStatus") == REVALIDATE_DONE_STATUS:
@@ -248,8 +234,7 @@ class PortnoxManager:
 
     @staticmethod
     def validate_response(response, error_msg="An error occurred"):
-        """
-        Validate Portnox responses
+        """Validate Portnox responses
         :param response: {requests.Response}
         :param error_msg: {str} Message to display on error
         """
@@ -268,4 +253,5 @@ class PortnoxManager:
                 # The error doens't contain message.
                 pass
 
-            raise PortnoxManagerError(f"{error_msg}: {error} {text}")
+            msg = f"{error_msg}: {error} {text}"
+            raise PortnoxManagerError(msg)

@@ -13,12 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-import os
+
 import datetime
 import json
+import os
+
 import requests
-from soar_sdk.SiemplifyUtils import utc_now, convert_datetime_to_unix_time, unix_now
 from EnvironmentCommon import EnvironmentHandle
+from soar_sdk.SiemplifyUtils import convert_datetime_to_unix_time, unix_now, utc_now
 from TIPCommon import validate_map_file
 
 
@@ -41,8 +43,7 @@ TIMEOUT_THRESHOLD = 0.9
 def is_approaching_timeout(
     python_process_timeout, connector_starting_time, timeout_threshold=0.9
 ):
-    """
-    Check if a timeout is approaching.
+    """Check if a timeout is approaching.
     :param python_process_timeout: {int} The python process timeout
     :param connector_starting_time: {int} The connector start unix time
     :param timeout_threshold: {int} Determines which part of the execution time is
@@ -61,8 +62,7 @@ def get_last_success_time(
     print_value=True,
     date_time_format=None,
 ):
-    """
-    Get last success time datetime
+    """Get last success time datetime
     :param siemplify: {siemplify} Siemplify object
     :param offset_with_metric: {dict} metric and value. Ex {'hours': 1}
     :param time_format: {int} The format of the output time. Ex DATETIME, UNIX
@@ -95,8 +95,7 @@ def get_last_success_time(
 
 
 def validate_response(response, error_msg="An error occurred"):
-    """
-    Validate response
+    """Validate response
     :param response: {requests.Response} The response to validate
     :param error_msg: {unicode} Default message to display on error
     """
@@ -104,7 +103,8 @@ def validate_response(response, error_msg="An error occurred"):
         response.raise_for_status()
 
     except requests.HTTPError as error:
-        raise Exception(f"{error_msg}: {error} {error.response.content}")
+        msg = f"{error_msg}: {error} {error.response.content}"
+        raise Exception(msg)
 
     return True
 
@@ -113,8 +113,7 @@ def validate_response(response, error_msg="An error occurred"):
 def get_environment_common(
     siemplify, environment_field_name, environment_regex_pattern, map_file="map.json"
 ):
-    """
-    Get environment common
+    """Get environment common
     :param siemplify: {siemplify} Siemplify object
     :param environment_field_name: {string} The environment field name
     :param environment_regex_pattern: {string} The environment regex pattern
@@ -134,8 +133,7 @@ def get_environment_common(
 
 # Move to TIPCommon
 def filter_old_alerts(logger, alerts, existing_ids, id_key="alert_id"):
-    """
-    Filter alerts that were already processed
+    """Filter alerts that were already processed
     :param logger: {SiemplifyLogger} Siemplify logger
     :param alerts: {list} The alerts to filter
     :param existing_ids: {list} The ids to filter
@@ -155,8 +153,7 @@ def filter_old_alerts(logger, alerts, existing_ids, id_key="alert_id"):
 
 # Move to TIPCommon
 def read_ids(siemplify, ids_file_name="ids.json"):
-    """
-    Read existing alerts IDs from ids file (from last 24h only)
+    """Read existing alerts IDs from ids file (from last 24h only)
     :param siemplify: {Siemplify} Siemplify object.
     :param ids_file_name: {str} The name of the ids file
     :return: {list} List of ids
@@ -166,7 +163,7 @@ def read_ids(siemplify, ids_file_name="ids.json"):
         return []
 
     try:
-        with open(ids_file_path, "r") as f:
+        with open(ids_file_path, encoding="utf-8") as f:
             return json.loads(f.read())
     except Exception as e:
         siemplify.LOGGER.error(f"Unable to read ids file: {e}")
@@ -176,8 +173,7 @@ def read_ids(siemplify, ids_file_name="ids.json"):
 
 # Move to TIPCommon
 def write_ids(siemplify, ids, ids_file_name="ids.json"):
-    """
-    Write ids to the ids file
+    """Write ids to the ids file
     :param siemplify: {Siemplify} Siemplify object.
     :param ids: {list} The ids to write to the file
     :param ids_file_name: {unicode} The name of the ids file.
@@ -189,7 +185,7 @@ def write_ids(siemplify, ids, ids_file_name="ids.json"):
         if not os.path.exists(os.path.dirname(ids_file_path)):
             os.makedirs(os.path.dirname(ids_file_path))
 
-        with open(ids_file_path, "w") as f:
+        with open(ids_file_path, "w", encoding="utf-8") as f:
             try:
                 for chunk in json.JSONEncoder().iterencode(ids):
                     f.write(chunk)
@@ -212,8 +208,7 @@ def write_ids(siemplify, ids, ids_file_name="ids.json"):
 
 # Move to TIPCommon
 def is_overflowed(siemplify, alert_info, is_test_run):
-    """
-    Check if overflowed
+    """Check if overflowed
     :param siemplify: {Siemplify} Siemplify object.
     :param alert_info: {AlertInfo}
     :param is_test_run: {bool} Whether test run or not.
@@ -244,8 +239,7 @@ def save_timestamp(
     incrementation_value=0,
     log_timestamp=True,
 ):
-    """
-    Save last timestamp for given alerts
+    """Save last timestamp for given alerts
     :param siemplify: {Siemplify} Siemplify object
     :param alerts: {list} The list of alerts to find the last timestamp
     :param timestamp_key: {str} key for getting timestamp from alert
@@ -276,7 +270,8 @@ def priority_text_to_value(priority_text):
     }
     priority_value = supported_priorities.get(priority_text.lower())
     if not priority_value:
-        raise Exception(f"Severity {priority_text} not supported")
+        msg = f"Severity {priority_text} not supported"
+        raise Exception(msg)
 
     return priority_value
 
@@ -310,8 +305,7 @@ def pass_whitelist_filter(
 
 
 def string_to_multi_value(string_value, delimiter=",", only_unique=False):
-    """
-    String to multi value.
+    """String to multi value.
     :param string_value: {str} String value to convert multi value.
     :param delimiter: {str} Delimiter to extract multi values from single value string.
     :param only_unique: {bool} include only uniq values

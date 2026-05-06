@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 INTEGRATION_NAME = "HCL BigFix Inventory"
 INTEGRATION_DISPLAY_NAME = "HCL BigFix Inventory"
 

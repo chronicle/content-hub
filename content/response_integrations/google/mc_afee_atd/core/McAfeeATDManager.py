@@ -24,10 +24,12 @@
 #              IMPORTS                #
 # =====================================
 from __future__ import annotations
-import requests
+
 import base64
 import copy
 import json
+
+import requests
 
 # =====================================
 #               CONSTS                #
@@ -76,8 +78,7 @@ class McAfeeATDManagerError(Exception):
 
 class McAfeeATDManager:
     def __init__(self, api_root, username, password, verify_ssl=False):
-        """
-        :param api_root: McAfee ATD server api root {string}
+        """:param api_root: McAfee ATD server api root {string}
         :param username: McAfee ATD username {string}
         :param password: password for the user {string}
         :param verify_ssl: Verify SSL in an HTTP reqiest or not {bool}
@@ -92,13 +93,12 @@ class McAfeeATDManager:
 
     @staticmethod
     def validate_report_response(report_response, error_msg="An error occurred"):
-        """
-        Function that validates the report in the response, if a txt or pdf report returns HTML code, it's an invalid report.
-        """
+        """Function that validates the report in the response, if a txt or pdf report returns HTML code, it's an invalid report."""
         if "html" in report_response:
             # Not a JSON - return content
+            msg = "The scanning was completed, but the report is not available. Please make sure that the scan was valid."
             raise McAfeeATDManagerError(
-                "The scanning was completed, but the report is not available. Please make sure that the scan was valid."
+                msg
             )
 
     @staticmethod
@@ -109,14 +109,14 @@ class McAfeeATDManager:
         except requests.HTTPError as error:
 
             # Not a JSON - return content
+            msg = f"{error_msg}: {error} - {error.response.content}"
             raise McAfeeATDManagerError(
-                f"{error_msg}: {error} - {error.response.content}"
+                msg
             )
 
     @staticmethod
     def update_string_payload_data(string_payload, parameter, value):
-        """
-        Edit McAfeeATD payload string.
+        """Edit McAfeeATD payload string.
         :param string_payload: json string payload {string}
         :param parameter: parameter to edit.
         :param value: value to replace with {string}
@@ -131,8 +131,7 @@ class McAfeeATDManager:
         return json.dumps(json_payload)
 
     def obtain_token(self, username, password, verify_ssl=False):
-        """
-        Obtain session auth token.
+        """Obtain session auth token.
         :param username: Use {string}
         :param password: {string}
         :return:
@@ -140,25 +139,22 @@ class McAfeeATDManager:
         request_url = f"{self.api_root}{LOGIN_URL}"
         headers = copy.deepcopy(REQUEST_HEADERS)
         headers["VE-SDK-API"] = base64.b64encode(
-            f"{username}:{password}".encode("utf-8")
+            f"{username}:{password}".encode()
         )
         headers["Accept"] = LOGIN_HEADER_TYPE
         response = requests.get(request_url, headers=headers, verify=verify_ssl)
         self.validate_response(response)
         if not response.json().get("errorMessage"):
             return base64.b64encode(
-                f"{response.json()['results'].get('session')}:{response.json()['results'].get('userId')}".encode(
-                    "utf-8"
-                )
+                f"{response.json()['results'].get('session')}:{response.json()['results'].get('userId')}".encode()
             )
-        else:
-            raise McAfeeATDManagerError(
-                f'Connection error accrued, Error: {response.json().get("errorMessage")}'
-            )
+        msg = f'Connection error accrued, Error: {response.json().get("errorMessage")}'
+        raise McAfeeATDManagerError(
+            msg
+        )
 
     def submit_file(self, file_path, profile_id):
-        """
-        Submit file for analysis.
+        """Submit file for analysis.
         :param file_path: the file path of the file to be submitted {sting}
         :param profile_id: Analyzer Profile ID {string} (also called VmProfileId)
         :return: result {dict}
@@ -182,8 +178,7 @@ class McAfeeATDManager:
         )
 
     def submit_url(self, url, profile_id):
-        """
-        Submit file for analysis.
+        """Submit file for analysis.
         :param url: {sting} the URL to be submitted
         :param profile_id: {string} Analyzer Profile ID  (also called VmProfileId) (Only profiles with internet access)
         :return: {dict} result
@@ -206,8 +201,7 @@ class McAfeeATDManager:
         )
 
     def get_pdf_report(self, task_id):
-        """
-        Get PDF report for task id.
+        """Get PDF report for task id.
         :param task_id: {string} id of a submission task
         :return: {file} file content
         """
@@ -217,8 +211,7 @@ class McAfeeATDManager:
         return response.content
 
     def get_json_report(self, task_id):
-        """
-        Get PDF report for task id.
+        """Get PDF report for task id.
         :param task_id: {string} id of a submission task
         :return: {file} file content
         """
@@ -228,8 +221,7 @@ class McAfeeATDManager:
         return response.json()
 
     def get_txt_report(self, task_id):
-        """
-        Get TXT report for task id.
+        """Get TXT report for task id.
         :param task_id: {string} id of a submission task
         :return: {file} file content
         """
@@ -240,14 +232,14 @@ class McAfeeATDManager:
         return response.text
 
     def is_hash_blacklist(self, file_hash):
-        """
-        Check if hash is blacklisted.
+        """Check if hash is blacklisted.
         :param file_hash: {string} file_hash
         :return: {bool} true if blacklisted
         """
         # Validate md5.
-        if not len(file_hash) == 32:
-            raise McAfeeATDManagerError(f'File hash "{file_hash}" is not MD5 type.')
+        if len(file_hash) != 32:
+            msg = f'File hash "{file_hash}" is not MD5 type.'
+            raise McAfeeATDManagerError(msg)
         request_url = f"{self.api_root}{CHECK_HASH_BLACKLISTED_URL}"
         data = copy.deepcopy(CHECK_HASH_BLACKLISTED_PAYLOAD)
         # Payload is a string of a dict in a dict(So the string has to be turned into a dict and back).
@@ -255,16 +247,10 @@ class McAfeeATDManager:
         response = self.session.post(request_url, data=data)
         self.validate_response(response)
         # "b" in a response means blacklisted.
-        if (
-            response.json().get("results")
-            and response.json().get("results").get(file_hash) == "b"
-        ):
-            return True
-        return False
+        return bool(response.json().get("results") and response.json().get("results").get(file_hash) == "b")
 
     def get_task_id_status(self, task_id):
-        """
-        Get Status of single taskID
+        """Get Status of single taskID
         :param task_id: {string} id of a submission task
         :return:{string}  status -> Current status of the sample. Example: waiting / analyzing / completed.
         """
@@ -274,8 +260,7 @@ class McAfeeATDManager:
         return response.json()["results"]["status"]
 
     def logout(self):
-        """
-        Disconnect session
+        """Disconnect session
         :return:
         """
         request_url = f"{self.api_root}{LOGIN_URL}"
@@ -283,8 +268,7 @@ class McAfeeATDManager:
         self.validate_response(response)
 
     def get_analyzer_profiles(self):
-        """
-        Retrieve all analyzer profiles details
+        """Retrieve all analyzer profiles details
         :return: {list of dicts}
         """
         request_url = f"{self.api_root}{GET_VM_PROFILES_URL}"

@@ -13,20 +13,22 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import datetime
 import uuid
+
+from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import (
-    convert_string_to_unix_time,
     convert_string_to_datetime,
+    convert_string_to_unix_time,
     utc_now,
 )
-from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 
 from .ObserveITConstants import (
-    DEVICE_VENDOR,
-    DEVICE_PRODUCT,
-    BLACKLIST_FILTER,
     ACCEPTABLE_TIME_INTERVAL_IN_MINUTES,
+    BLACKLIST_FILTER,
+    DEVICE_PRODUCT,
+    DEVICE_VENDOR,
     OBSERVE_IT_TO_SIEM_SEVERITY,
 )
 
@@ -83,7 +85,7 @@ class Alert(BaseData):
         rising_value=None,
         **kwargs
     ):
-        super(Alert, self).__init__(raw_data)
+        super().__init__(raw_data)
         self.id = id
         self.created_at = created_at
         self.observed_at = observed_at
@@ -125,16 +127,14 @@ class Alert(BaseData):
 
     @property
     def priority(self):
-        """
-        Converts API severity format to SIEM priority
+        """Converts API severity format to SIEM priority
         @return: SIEM priority
         """
         return OBSERVE_IT_TO_SIEM_SEVERITY.get(self.severity, -1)
 
     def to_alert_info(self, environment):
         # type: (EnvironmentHandle) -> AlertInfo
-        """
-        Creates Siemplify Alert Info based on API alert information
+        """Creates Siemplify Alert Info based on API alert information
         @param environment: EnvironmentHandle object
         @return: Alert Info object
         """
@@ -162,8 +162,7 @@ class Alert(BaseData):
 
     def pass_time_filter(self):
         # type: () -> bool
-        """
-        Check if now - created_at time is older than acceptable time in minutes
+        """Check if now - created_at time is older than acceptable time in minutes
         @return: Is older or not
         """
         return utc_now() - convert_string_to_datetime(
@@ -171,8 +170,7 @@ class Alert(BaseData):
         ) > datetime.timedelta(minutes=ACCEPTABLE_TIME_INTERVAL_IN_MINUTES)
 
     def pass_whitelist_or_blacklist_filter(self, rules_list, whitelist_filter_type):
-        """
-        Determine whether threat pass the whitelist/blacklist filter or not.
+        """Determine whether threat pass the whitelist/blacklist filter or not.
         :param rules_list: {list} The rules list provided by user.
         :param whitelist_filter_type: {unicode} whitelist filter type. Possible values are WHITELIST_FILTER, BLACKLIST_FILTER
         :return: {bool} Whether threat pass the whitelist/blacklist filter or not.

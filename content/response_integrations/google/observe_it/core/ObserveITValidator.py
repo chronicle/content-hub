@@ -13,21 +13,22 @@
 # limitations under the License.
 
 from __future__ import annotations
-from .ObserveITExceptions import ObserveITSeverityException
-from .ObserveITConstants import OBSERVE_IT_TO_SIEM_SEVERITY
+
 from .ObserveITCommon import ObserveITCommon
+from .ObserveITConstants import OBSERVE_IT_TO_SIEM_SEVERITY
+from .ObserveITExceptions import ObserveITSeverityException
 
 
 class ObserveITValidator:
     @staticmethod
     def validate_severity(severity):
         # type: (str or unicode) -> None or ObserveITSeverityException
-        """
-        Validate if severity is acceptable
+        """Validate if severity is acceptable
         @param severity: Severity. Ex. Low
         """
         acceptable_severities = list(OBSERVE_IT_TO_SIEM_SEVERITY.keys())
         if severity not in acceptable_severities:
+            msg = f'Severity "{severity}" is not in {ObserveITCommon.convert_list_to_comma_separated_string(acceptable_severities)}'
             raise ObserveITSeverityException(
-                f'Severity "{severity}" is not in {ObserveITCommon.convert_list_to_comma_separated_string(acceptable_severities)}'
+                msg
             )

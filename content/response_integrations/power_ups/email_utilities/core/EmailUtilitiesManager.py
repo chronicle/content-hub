@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import contextlib
 import hashlib
 import logging
 import re
@@ -25,10 +26,8 @@ import time
 import dnslib
 
 # only needed for arc
-try:
+with contextlib.suppress(ImportError):
     from authres import AuthenticationResultsHeader
-except ImportError:
-    pass
 
 # only needed for ed25519 signing/verification
 try:
@@ -36,8 +35,6 @@ try:
     import nacl.signing
 except ImportError:
     pass
-from netaddr import valid_ipv4, valid_ipv6
-
 import eml_parser
 from dkim.crypto import (
     DigestTooLargeError,
@@ -47,6 +44,7 @@ from dkim.crypto import (
     parse_pem_private_key,
     parse_public_key,
 )
+from netaddr import valid_ipv4, valid_ipv6
 
 __all__ = [
     "ARC",
@@ -97,11 +95,11 @@ class InvalidCanonicalizationPolicyError(Exception):
 
 
 def strip_trailing_whitespace(content):
-    return re.sub(b"[\t ]+\r\n", b"\r\n", content)
+    return re.sub(rb"[\t ]+\r\n", b"\r\n", content)
 
 
 def compress_whitespace(content):
-    return re.sub(b"[\t ]+", b" ", content)
+    return re.sub(rb"[\t ]+", b" ", content)
 
 
 def strip_trailing_lines(content):
@@ -123,7 +121,7 @@ def strip_trailing_lines(content):
 
 
 def unfold_header_value(content):
-    return re.sub(b"\r\n", b"", content)
+    return content.replace(b"\r\n", b"")
 
 
 def correct_empty_body(content):
@@ -196,7 +194,7 @@ class CanonicalizationPolicy:
         if c is None:
             c = b"simple/simple"
         m = c.split(b"/")
-        if len(m) not in (1, 2):
+        if len(m) not in {1, 2}:
             raise InvalidCanonicalizationPolicyError(c)
         if len(m) == 1:
             m.append(b"simple")
@@ -219,7 +217,7 @@ class CanonicalizationPolicy:
         return self.body_algorithm.canonicalize_body(body)
 
 
-ALGORITHMS = dict((c.name, c) for c in (Simple, Relaxed))
+ALGORITHMS = {c.name: c for c in (Simple, Relaxed)}
 
 
 class InvalidTagValueList(Exception):
@@ -245,7 +243,7 @@ def get_txt_dnspython(name, timeout=5):
         )
         for r in a.response.answer:
             if r.rdtype == dns.rdatatype.TXT:
-                return b"".join(list(r.items)[0].strings)
+                return b"".join(next(iter(r.items)).strings)
                 # return "".join((r.items.strings))
     except dns.resolver.NXDOMAIN:
         pass
@@ -270,13 +268,10 @@ try:
 
     _get_txt = get_txt_dnspython
 except ImportError:
-    try:
-        import DNS
+    import DNS
 
-        DNS.DiscoverNameServers()
-        _get_txt = get_txt_pydns
-    except:
-        raise
+    DNS.DiscoverNameServers()
+    _get_txt = get_txt_pydns
 
 
 def parse_tag_value(tag_list):
@@ -470,7 +465,7 @@ def hash_headers_ed25519(
 
 def validate_signature_fields(
     sig,
-    mandatory_fields=[b"v", b"a", b"b", b"bh", b"d", b"h", b"s"],
+    mandatory_fields=None,
     arc=False,
 ):
     """Validate DKIM or ARC Signature fields.
@@ -480,31 +475,37 @@ def validate_signature_fields(
     @param mandatory_fields: A list of non-optional fields
     @param arc: flag to differentiate between dkim & arc
     """
-    if arc:
-        hashes = ARC_HASH_ALGORITHMS
-    else:
-        hashes = HASH_ALGORITHMS
+    if mandatory_fields is None:
+        mandatory_fields = [b"v", b"a", b"b", b"bh", b"d", b"h", b"s"]
+    hashes = ARC_HASH_ALGORITHMS if arc else HASH_ALGORITHMS
     for field in mandatory_fields:
         if field not in sig:
-            raise ValidationError(f"missing {field}=")
+            msg = f"missing {field}="
+            raise ValidationError(msg)
 
     if b"a" in sig and sig[b"a"] not in hashes:
-        raise ValidationError(f"unknown signature algorithm: {sig[b'a']}")
+        msg = f"unknown signature algorithm: {sig[b'a']}"
+        raise ValidationError(msg)
 
     if b"b" in sig:
         if re.match(rb"[\s0-9A-Za-z+/]+=*$", sig[b"b"]) is None:
-            raise ValidationError(f"b= value is not valid base64 ({sig[b'b']})")
+            msg = f"b= value is not valid base64 ({sig[b'b']})"
+            raise ValidationError(msg)
         if len(re.sub(rb"\s+", b"", sig[b"b"])) % 4 != 0:
-            raise ValidationError(f"b= value is not valid base64 ({sig[b'b']})")
+            msg = f"b= value is not valid base64 ({sig[b'b']})"
+            raise ValidationError(msg)
 
     if b"bh" in sig:
         if re.match(rb"[\s0-9A-Za-z+/]+=*$", sig[b"bh"]) is None:
-            raise ValidationError(f"bh= value is not valid base64 ({sig[b'bh']})")
+            msg = f"bh= value is not valid base64 ({sig[b'bh']})"
+            raise ValidationError(msg)
         if len(re.sub(rb"\s+", b"", sig[b"bh"])) % 4 != 0:
-            raise ValidationError(f"bh= value is not valid base64 ({sig[b'bh']})")
+            msg = f"bh= value is not valid base64 ({sig[b'bh']})"
+            raise ValidationError(msg)
 
-    if b"cv" in sig and sig[b"cv"] not in (CV_Pass, CV_Fail, CV_None):
-        raise ValidationError(f"cv= value is not valid ({sig[b'cv']})")
+    if b"cv" in sig and sig[b"cv"] not in {CV_Pass, CV_Fail, CV_None}:
+        msg = f"cv= value is not valid ({sig[b'cv']})"
+        raise ValidationError(msg)
 
     # Nasty hack to support both str and bytes... check for both the
     # character and integer values.
@@ -513,40 +514,49 @@ def validate_signature_fields(
         and b"i" in sig
         and (
             not sig[b"i"].lower().endswith(sig[b"d"].lower())
-            or sig[b"i"][-len(sig[b"d"]) - 1] not in ("@", ".", 64, 46)
+            or sig[b"i"][-len(sig[b"d"]) - 1] not in {"@", ".", 64, 46}
         )
     ):
+        msg = f"i= domain is not a subdomain of d= (i={sig[b'i']} d={sig[b'd']})"
         raise ValidationError(
-            f"i= domain is not a subdomain of d= (i={sig[b'i']} d={sig[b'd']})",
+            msg,
         )
     if b"l" in sig and re.match(rb"\d{,76}$", sig[b"l"]) is None:
-        raise ValidationError(f"l= value is not a decimal integer ({sig[b'l']})")
+        msg = f"l= value is not a decimal integer ({sig[b'l']})"
+        raise ValidationError(msg)
     if b"q" in sig and sig[b"q"] != b"dns/txt":
-        raise ValidationError(f"q= value is not dns/txt ({sig[b'q']})")
+        msg = f"q= value is not dns/txt ({sig[b'q']})"
+        raise ValidationError(msg)
 
     if b"t" in sig:
         if re.match(rb"\d+$", sig[b"t"]) is None:
-            raise ValidationError(f"t= value is not a decimal integer ({sig[b't']})")
+            msg = f"t= value is not a decimal integer ({sig[b't']})"
+            raise ValidationError(msg)
         now = int(time.time())
         slop = 36000  # 10H leeway for mailers with inaccurate clocks
         t_sign = int(sig[b"t"])
         if t_sign > now + slop:
-            raise ValidationError(f"t= value is in the future ({sig[b't']})")
+            msg = f"t= value is in the future ({sig[b't']})"
+            raise ValidationError(msg)
 
     if b"v" in sig and sig[b"v"] != b"1":
-        raise ValidationError(f"v= value is not 1 ({sig[b'v']})")
+        msg = f"v= value is not 1 ({sig[b'v']})"
+        raise ValidationError(msg)
 
     if b"x" in sig:
         if re.match(rb"\d+$", sig[b"x"]) is None:
-            raise ValidationError(f"x= value is not a decimal integer ({sig[b'x']})")
+            msg = f"x= value is not a decimal integer ({sig[b'x']})"
+            raise ValidationError(msg)
         x_sign = int(sig[b"x"])
         now = int(time.time())
         slop = 36000  # 10H leeway for mailers with inaccurate clocks
         if x_sign < now - slop:
-            raise ValidationError(f"x= value is past ({sig[b'x']})")
+            msg = f"x= value is past ({sig[b'x']})"
+            raise ValidationError(msg)
             if x_sign < t_sign:
+                msg = f"x= value is less than t= value (x={sig[b'x']} t={sig[b't']})"
                 raise ValidationError(
-                    f"x= value is less than t= value (x={sig[b'x']} t={sig[b't']})",
+                    msg,
                 )
 
 
@@ -558,14 +568,14 @@ def rfc822_parse(message):
     The body is a CRLF-separated string.
     """
     headers = []
-    lines = re.split(b"\r?\n", message)
+    lines = re.split(rb"\r?\n", message)
     i = 0
     while i < len(lines):
         if len(lines[i]) == 0:
             # End of headers, return what we have plus the body, excluding the blank line.
             i += 1
             break
-        if lines[i][0] in ("\x09", "\x20", 0x09, 0x20):
+        if lines[i][0] in {"\x09", "\x20", 0x09, 0x20}:
             headers[-1][1] += lines[i] + b"\r\n"
         else:
             m = re.match(rb"([\x21-\x7e]+?):", lines[i])
@@ -574,8 +584,9 @@ def rfc822_parse(message):
             elif lines[i].startswith(b"From "):
                 pass
             else:
+                msg = f"Unexpected characters in RFC822 header: {lines[i]}"
                 raise MessageFormatError(
-                    f"Unexpected characters in RFC822 header: {lines[i]}",
+                    msg,
                 )
         i += 1
     return (headers, b"\r\n".join(lines[i:]))
@@ -650,7 +661,8 @@ def fold(header, namelen=0, linesep=b"\r\n"):
 
 def evaluate_pk(name, s):
     if not s:
-        raise KeyFormatError(f"missing public key: {name}")
+        msg = f"missing public key: {name}"
+        raise KeyFormatError(msg)
     try:
         if type(s) is str:
             s = s.encode("ascii")
@@ -659,7 +671,8 @@ def evaluate_pk(name, s):
         raise KeyFormatError(e)
     try:
         if pub[b"v"] != b"DKIM1":
-            raise KeyFormatError("bad version")
+            msg = "bad version"
+            raise KeyFormatError(msg)
     except KeyError:
         # Version not required in key record: RFC 6376 3.6.1
         pass
@@ -671,8 +684,9 @@ def evaluate_pk(name, s):
                     encoder=nacl.encoding.Base64Encoder,
                 )
             except NameError:
+                msg = "pynacl module required for ed25519 signing, see README.md"
                 raise NaClNotFoundError(
-                    "pynacl module required for ed25519 signing, see README.md",
+                    msg,
                 )
             keysize = 256
             ktag = b"ed25519"
@@ -683,12 +697,15 @@ def evaluate_pk(name, s):
             pk = parse_public_key(base64.b64decode(pub[b"p"]))
             keysize = bitsize(pk["modulus"])
         except KeyError:
-            raise KeyFormatError(f"incomplete public key: {s}")
+            msg = f"incomplete public key: {s}"
+            raise KeyFormatError(msg)
         except (TypeError, UnparsableKeyError) as e:
-            raise KeyFormatError(f"could not parse public key ({pub[b'p']}): {e}")
+            msg = f"could not parse public key ({pub[b'p']}): {e}"
+            raise KeyFormatError(msg)
         ktag = b"rsa"
     if pub[b"k"] != b"rsa" and pub[b"k"] != b"ed25519":
-        raise KeyFormatError(f"unknown algorithm in k= tag: {pub[b'k']}")
+        msg = f"unknown algorithm in k= tag: {pub[b'k']}"
+        raise KeyFormatError(msg)
     seqtlsrpt = False
     try:
         # Ignore unknown service types, RFC 6376 3.6.1
@@ -696,7 +713,8 @@ def evaluate_pk(name, s):
             pk = None
             keysize = None
             ktag = None
-            raise KeyFormatError(f"unknown service type in s= tag: {pub[b's']}")
+            msg = f"unknown service type in s= tag: {pub[b's']}"
+            raise KeyFormatError(msg)
         if pub[b"s"] == b"tlsrpt":
             seqtlsrpt = True
     except Exception:
@@ -768,9 +786,7 @@ class DomainSigner:
             logger = logging.getLogger(__name__)
 
         self.logger = logger
-        self.info_content = (
-            info_content and logger is not None and logger.isEnabledFor(logging.info)
-        )
+        self.info_content = info_content and logger is not None and logger.isEnabledFor(logging.info)
         if signature_algorithm not in HASH_ALGORITHMS:
             raise ParameterError(
                 "Unsupported signature algorithm: " + signature_algorithm,
@@ -885,9 +901,7 @@ class DomainSigner:
         >>> [text(x) for x in sorted(dkim2.frozen_sign)]
         ['date', 'from', 'subject']
         """
-        self.frozen_sign.update(
-            x.lower() for x in s if x.lower() not in self.should_not_sign
-        )
+        self.frozen_sign.update(x.lower() for x in s if x.lower() not in self.should_not_sign)
 
     def add_should_not(self, s):
         """Add headers not in should_not_sign to frozen_sign.
@@ -903,9 +917,7 @@ class DomainSigner:
             'resent-bcc', 'return-path', 'sender', 'to'
         ]
         """
-        self.should_not_sign.update(
-            x.lower() for x in s if x.lower() not in self.frozen_sign
-        )
+        self.should_not_sign.update(x.lower() for x in s if x.lower() not in self.frozen_sign)
 
     #: Load a new message to be signed or verified.
     #: @param message: an RFC822 formatted message to be signed or verified
@@ -939,9 +951,7 @@ class DomainSigner:
         """
         hset = self.should_sign | self.frozen_sign
         include_headers = [x for x, y in self.headers if x.lower() in hset]
-        return include_headers + [
-            x for x in include_headers if x.lower() in self.frozen_sign
-        ]
+        return include_headers + [x for x in include_headers if x.lower() in self.frozen_sign]
 
     def all_sign_headers(self):
         """Return header list of all existing headers not in should_not_sign.
@@ -966,9 +976,7 @@ class DomainSigner:
         standardize=False,
     ):
         if standardize:
-            lower = [
-                (x, y.lower().replace(b" ", b"")) for (x, y) in fields if x != b"bh"
-            ]
+            lower = [(x, y.lower().replace(b" ", b"")) for (x, y) in fields if x != b"bh"]
             reg = [(x, y.replace(b" ", b"")) for (x, y) in fields if x == b"bh"]
             fields = lower + reg
             fields = sorted(fields, key=(lambda x: x[0]))
@@ -991,16 +999,14 @@ class DomainSigner:
             sig,
         )
         if self.info_content:
-            self.logger.info("sign %s headers: %r" % (header_name, h.hashed()))
+            self.logger.info(f"sign {header_name} headers: {h.hashed()!r}")
 
-        if (
-            self.signature_algorithm == b"rsa-sha256"
-            or self.signature_algorithm == b"rsa-sha1"
-        ):
+        if self.signature_algorithm in {b"rsa-sha256", b"rsa-sha1"}:
             try:
                 sig2 = RSASSA_PKCS1_v1_5_sign(h, pk)
             except DigestTooLargeError:
-                raise ParameterError("digest too large for modulus")
+                msg = "digest too large for modulus"
+                raise ParameterError(msg)
         elif self.signature_algorithm == b"ed25519-sha256":
             sigobj = pk.sign(h.digest())
             sig2 = sigobj.signature
@@ -1009,7 +1015,7 @@ class DomainSigner:
         # Instead of leaving unfolded (which lets an MTA fold it later and still
         # breaks yahoo and live.com), we change the default signing mode to
         # relaxed/simple (for broken receivers), and fold now.
-        idx = [i for i in range(len(fields)) if fields[i][0] == b"b"][0]
+        idx = next(i for i in range(len(fields)) if fields[i][0] == b"b")
         fields[idx] = (b"b", base64.b64encode(bytes(sig2)))
         header_value = b"; ".join(b"=".join(x) for x in fields) + self.linesep
 
@@ -1028,17 +1034,20 @@ class DomainSigner:
         """
         # RFC 8460 MAY ignore signatures without tlsrpt Service Type
         if self.tlsrpt == "strict" and not self.seqtlsrpt:
-            raise ValidationError("Message is tlsrpt and Service Type is not tlsrpt")
+            msg = "Message is tlsrpt and Service Type is not tlsrpt"
+            raise ValidationError(msg)
         # Inferred requirement from both RFC 8460 and RFC 6376
         if not self.tlsrpt and self.seqtlsrpt:
-            raise ValidationError("Message is not tlsrpt and Service Type is tlsrpt")
+            msg = "Message is not tlsrpt and Service Type is tlsrpt"
+            raise ValidationError(msg)
 
         try:
             canon_policy = CanonicalizationPolicy.from_c_value(
                 sig.get(b"c", b"simple/simple"),
             )
         except InvalidCanonicalizationPolicyError as e:
-            raise MessageFormatError(f"invalid c= value: {e.args[0]}")
+            msg = f"invalid c= value: {e.args[0]}"
+            raise MessageFormatError(msg)
 
         hasher = HASH_ALGORITHMS[sig[b"a"]]
 
@@ -1061,7 +1070,7 @@ class DomainSigner:
         )
         if self.info_content:
             self.logger.info(
-                "signed for %s: %r" % (sig_header[b"dkim-signature"], h.hashed()),
+                "signed for {}: {!r}".format(sig_header[b"dkim-signature"], h.hashed()),
             )
         signature = base64.b64decode(re.sub(rb"\s+", b"", sig[b"b"]))
         if self.ktag == b"rsa":
@@ -1069,10 +1078,11 @@ class DomainSigner:
                 res = RSASSA_PKCS1_v1_5_verify(h, signature, self.pk)
                 self.logger.info(f"{sig_header[b'dkim-signature']} valid: {res}")
                 if res and self.keysize < self.minkey:
-                    raise KeyFormatError("public key too small: %d" % self.keysize)
+                    raise KeyFormatError(f"public key too small: {self.keysize}")
                 return res
             except (TypeError, DigestTooLargeError) as e:
-                raise KeyFormatError(f"digest too large for modulus: {e}")
+                msg = f"digest too large for modulus: {e}"
+                raise KeyFormatError(msg)
         elif self.ktag == b"ed25519":
             try:
                 self.pk.verify(h.digest(), signature)
@@ -1097,10 +1107,10 @@ class DomainSigner:
                 timeout=self.timeout,
             )
         except KeyFormatError as e:
-            self.logger.error(f"{e}")
+            self.logger.exception("%s", e)
             return False
         except binascii.Error as e:
-            self.logger.error(f"KeyFormatError: {e}")
+            self.logger.exception("KeyFormatError: %s", e)
             return False
         return self.verify_sig_process(sig, include_headers, sig_header, dnsfunc)
 
@@ -1154,10 +1164,7 @@ class DKIM(DomainSigner):
     ):
         if signature_algorithm:
             self.signature_algorithm = signature_algorithm
-        if (
-            self.signature_algorithm == b"rsa-sha256"
-            or self.signature_algorithm == b"rsa-sha1"
-        ):
+        if self.signature_algorithm in {b"rsa-sha256", b"rsa-sha1"}:
             try:
                 pk = parse_pem_private_key(privkey)
             except UnparsableKeyError as e:
@@ -1169,25 +1176,23 @@ class DKIM(DomainSigner):
                     encoder=nacl.encoding.Base64Encoder,
                 )
             except NameError:
+                msg = "pynacl module required for ed25519 signing, see README.md"
                 raise NaClNotFoundError(
-                    "pynacl module required for ed25519 signing, see README.md",
+                    msg,
                 )
 
         if identity is not None and not identity.endswith(domain):
-            raise ParameterError("identity must end with domain")
+            msg = "identity must end with domain"
+            raise ParameterError(msg)
 
         canon_policy = CanonicalizationPolicy.from_c_value(b"/".join(canonicalize))
 
         if include_headers is None:
             include_headers = self.default_sign_headers()
-        try:
+        with contextlib.suppress(TypeError):
             include_headers = [bytes(x, "utf-8") for x in include_headers]
-        except TypeError:
-            # TypeError means it's already bytes and we're good or we're in
-            # Python 2 and we don't care.  See LP: #1776775.
-            pass
 
-        include_headers = tuple([x.lower() for x in include_headers])
+        include_headers = tuple(x.lower() for x in include_headers)
         # record what verify should extract
         self.include_headers = include_headers
 
@@ -1197,12 +1202,14 @@ class DKIM(DomainSigner):
 
         # rfc4871 says FROM is required
         if b"from" not in include_headers:
-            raise ParameterError("The From header field MUST be signed")
+            msg = "The From header field MUST be signed"
+            raise ParameterError(msg)
 
         # raise exception for any SHOULD_NOT headers, call can modify
         # SHOULD_NOT if really needed.
         for x in set(include_headers).intersection(self.should_not_sign):
-            raise ParameterError(f"The {x} header field SHOULD NOT be signed")
+            msg = f"The {x} header field SHOULD NOT be signed"
+            raise ParameterError(msg)
 
         body = canon_policy.canonicalize_body(self.body)
 
@@ -1248,9 +1255,7 @@ class DKIM(DomainSigner):
     #: Checks if any DKIM signature is present
     #: @return: True if there is one or more DKIM signatures present or False otherwise
     def present(self):
-        return (
-            len([(x, y) for x, y in self.headers if x.lower() == b"dkim-signature"]) > 0
-        )
+        return len([(x, y) for x, y in self.headers if x.lower() == b"dkim-signature"]) > 0
 
     def verify_headerprep(self, idx=0):
         """Non-DNS verify parts to minimize asyncio code duplication."""
@@ -1326,7 +1331,7 @@ class ARC(DomainSigner):
                             f"invalid instance number {m.group(1)}: '{x}: {y}'",
                         )
                 else:
-                    self.logger.info(f"not instance number: '{x}: {y}'")
+                    self.logger.info("not instance number: '%s: %s'", x, y)
 
         if len(headers) == 0:
             return 0, []
@@ -1375,11 +1380,11 @@ class ARC(DomainSigner):
         timestamp=None,
         standardize=False,
     ):
-        INSTANCE_LIMIT = 50  # Maximum allowed i= value
+        _instance_limit = 50  # Maximum allowed i= value
         self.add_should_not(("Authentication-Results",))
         # check if authres has been imported
         try:
-            AuthenticationResultsHeader
+            _ = AuthenticationResultsHeader
         except Exception:
             self.logger.info("authres package not installed")
             raise AuthresNotFoundError
@@ -1390,9 +1395,7 @@ class ARC(DomainSigner):
             raise KeyFormatError(str(e))
 
         # extract, parse, filter & group AR headers
-        ar_headers = [
-            res.strip() for [ar, res] in self.headers if ar == b"Authentication-Results"
-        ]
+        ar_headers = [res.strip() for [ar, res] in self.headers if ar == b"Authentication-Results"]
         grouped_headers = [
             (
                 res,
@@ -1402,20 +1405,14 @@ class ARC(DomainSigner):
             )
             for res in ar_headers
         ]
-        auth_headers = [
-            res
-            for res in grouped_headers
-            if res[1].authserv_id == srv_id.decode("utf-8")
-        ]
+        auth_headers = [res for res in grouped_headers if res[1].authserv_id == srv_id.decode("utf-8")]
 
         if len(auth_headers) == 0:
             self.logger.info("no AR headers found, chain terminated")
             return []
 
         # consolidate headers
-        results_lists = [
-            raw.replace(srv_id + b";", b"").strip() for (raw, parsed) in auth_headers
-        ]
+        results_lists = [raw.replace(srv_id + b";", b"").strip() for (raw, parsed) in auth_headers]
         results_lists = [tags.split(b";") for tags in results_lists]
         results = [tag.strip() for sublist in results_lists for tag in sublist]
         auth_results = srv_id + b"; " + (b";" + self.linesep + b"  ").join(results)
@@ -1424,9 +1421,7 @@ class ARC(DomainSigner):
         parsed_auth_results = AuthenticationResultsHeader.parse(
             "Authentication-Results: " + auth_results.decode("utf-8"),
         )
-        arc_results = [
-            res for res in parsed_auth_results.results if res.method == "arc"
-        ]
+        arc_results = [res for res in parsed_auth_results.results if res.method == "arc"]
         if len(arc_results) == 0:
             chain_validation_status = CV_None
         elif len(arc_results) != 1:
@@ -1439,30 +1434,34 @@ class ARC(DomainSigner):
         if include_headers is None:
             include_headers = self.default_sign_headers()
 
-        include_headers = tuple([x.lower() for x in include_headers])
+        include_headers = tuple(x.lower() for x in include_headers)
 
         # record what verify should extract
         self.include_headers = include_headers
 
         # rfc4871 says FROM is required
         if b"from" not in include_headers:
-            raise ParameterError("The From header field MUST be signed")
+            msg = "The From header field MUST be signed"
+            raise ParameterError(msg)
 
         # raise exception for any SHOULD_NOT headers, call can modify
         # SHOULD_NOT if really needed.
         for x in set(include_headers).intersection(self.should_not_sign):
-            raise ParameterError(f"The {x} header field SHOULD NOT be signed")
+            msg = f"The {x} header field SHOULD NOT be signed"
+            raise ParameterError(msg)
 
         max_instance, arc_headers_w_instance = self.sorted_arc_headers()
         instance = 1
         if len(arc_headers_w_instance) != 0:
             instance = max_instance + 1
         if instance > INSTANCE_LIMIT:
-            raise ParameterError("Maximum instance tag value exceeded")
+            msg = "Maximum instance tag value exceeded"
+            raise ParameterError(msg)
 
         if instance == 1 and chain_validation_status != CV_None:
+            msg = "No existing chain found on message, cv should be none"
             raise ParameterError(
-                "No existing chain found on message, cv should be none",
+                msg,
             )
         if instance != 1 and chain_validation_status == CV_None:
             self.logger.info(
@@ -1471,13 +1470,10 @@ class ARC(DomainSigner):
             return []
 
         new_arc_set = []
-        if chain_validation_status != CV_Fail:
-            arc_headers = [y for x, y in arc_headers_w_instance]
-        else:  # don't include previous sets for a failed/invalid chain
-            arc_headers = []
+        arc_headers = [y for x, y in arc_headers_w_instance] if chain_validation_status != CV_Fail else []
 
         # Compute ARC-Authentication-Results
-        aar_value = ("i=%d; " % instance).encode("utf-8") + auth_results
+        aar_value = (f"i={instance:d}; ").encode() + auth_results
         if aar_value[-1] != b"\n":
             aar_value += b"\r\n"
 
@@ -1492,7 +1488,7 @@ class ARC(DomainSigner):
         h = HashThrough(self.hasher(), self.info_content)
         h.update(canon_policy.canonicalize_body(self.body))
         if self.info_content:
-            self.logger.info("sign ams body hashed: %r" % h.hashed())
+            self.logger.info(f"sign ams body hashed: {h.hashed()!r}")
         bodyhash = base64.b64encode(h.digest())
 
         # Compute ARC-Message-Signature
@@ -1553,7 +1549,8 @@ class ARC(DomainSigner):
         if chain_validation_status == CV_Fail:
             self.headers.reverse()
         if b"h" in as_fields:
-            raise ValidationError("h= tag not permitted in ARC-Seal header field")
+            msg = "h= tag not permitted in ARC-Seal header field"
+            raise ValidationError(msg)
         res = self.gen_header(
             as_fields,
             as_include_headers,
@@ -1596,7 +1593,7 @@ class ARC(DomainSigner):
                 )
                 result_data.append(result)
             except DKIMException as e:
-                self.logger.error(f"{e}")
+                self.logger.exception("%s", e)
                 return CV_Fail, result_data, f"{e}"
 
         # Most recent instance must ams-validate
@@ -1611,14 +1608,15 @@ class ARC(DomainSigner):
                 return (
                     None,
                     result_data,
-                    "ARC-Seal[%d] reported failure, the chain is terminated"
-                    % result["instance"],
+                    f"ARC-Seal[{result['instance']}] reported failure, the chain is terminated"
+,
                 )
             if not result["as-valid"]:
                 return (
                     CV_Fail,
                     result_data,
-                    "ARC-Seal[%d] did not validate" % result["instance"],
+                    f"ARC-Seal[{result['instance']}] did not validate"
+,
                 )
             if ((result["instance"] == 1) and (result["cv"] != CV_None)) or (
                 (result["instance"] != 1) and (result["cv"] == CV_None)
@@ -1626,8 +1624,8 @@ class ARC(DomainSigner):
                 return (
                     CV_Fail,
                     result_data,
-                    "ARC-Seal[%d] reported invalid status %s"
-                    % (result["instance"], result["cv"]),
+                    f"ARC-Seal[{result['instance']}] reported invalid status {result['cv']}"
+,
                 )
         return CV_Pass, result_data, "success"
 
@@ -1645,7 +1643,7 @@ class ARC(DomainSigner):
     def verify_instance(self, arc_headers_w_instance, instance, dnsfunc=get_txt):
         if (instance == 0) or (len(arc_headers_w_instance) == 0):
             raise ParameterError(
-                "request to verify instance %d not present" % (instance),
+                f"request to verify instance {instance} not present",
             )
 
         aar_value = None
@@ -1662,26 +1660,24 @@ class ARC(DomainSigner):
                 if arc_header[0].lower() == b"arc-authentication-results":
                     if aar_value is not None:
                         raise MessageFormatError(
-                            "Duplicate ARC-Authentication-Results for instance %d"
-                            % instance,
+                            f"Duplicate ARC-Authentication-Results for instance {instance}",
                         )
                     aar_value = arc_header[1]
                 elif arc_header[0].lower() == b"arc-message-signature":
                     if ams_value is not None:
                         raise MessageFormatError(
-                            "Duplicate ARC-Message-Signature for instance %d"
-                            % instance,
+                            f"Duplicate ARC-Message-Signature for instance {instance}",
                         )
                     ams_value = arc_header[1]
                 elif arc_header[0].lower() == b"arc-seal":
                     if as_value is not None:
                         raise MessageFormatError(
-                            "Duplicate ARC-Seal for instance %d" % instance,
+                            f"Duplicate ARC-Seal for instance {instance}",
                         )
                     as_value = arc_header[1]
 
         if (aar_value is None) or (ams_value is None) or (as_value is None):
-            raise MessageFormatError("Incomplete ARC set for instance %d" % instance)
+            raise MessageFormatError(f"Incomplete ARC set for instance {instance}")
 
         output["aar-value"] = aar_value
 
@@ -1691,7 +1687,7 @@ class ARC(DomainSigner):
         except InvalidTagValueList as e:
             raise MessageFormatError(e)
 
-        self.logger.info("ams sig[%d]: %r" % (instance, sig))
+        self.logger.info(f"ams sig[{instance}]: {sig!r}")
 
         validate_signature_fields(
             sig,
@@ -1703,7 +1699,8 @@ class ARC(DomainSigner):
 
         include_headers = [x.lower() for x in re.split(rb"\s*:\s*", sig[b"h"])]
         if b"arc-seal" in include_headers:
-            raise ParameterError("The Arc-Message-Signature MUST NOT sign ARC-Seal")
+            msg = "The Arc-Message-Signature MUST NOT sign ARC-Seal"
+            raise ParameterError(msg)
 
         # we can't use the AMS provided above, as it's already been canonicalized
         # relaxed
@@ -1714,11 +1711,7 @@ class ARC(DomainSigner):
         #     (x, y) for (x, y) in self.headers
         #     if x.lower() == b'arc-message-signature'
         # ][0]
-        raw_ams_header = [
-            (x, self.headers[x])
-            for x in self.headers
-            if x.lower() == b"arc-message-signature"
-        ][0]
+        raw_ams_header = next((x, self.headers[x]) for x in self.headers if x.lower() == b"arc-message-signature")
 
         # Only relaxed canonicalization used by ARC
         if b"c" not in sig:
@@ -1726,11 +1719,11 @@ class ARC(DomainSigner):
         try:
             ams_valid = self.verify_sig(sig, include_headers, raw_ams_header, dnsfunc)
         except DKIMException as e:
-            self.logger.error(f"{e}")
+            self.logger.exception("%s", e)
             ams_valid = False
 
         output["ams-valid"] = ams_valid
-        self.logger.info("ams valid: %r" % ams_valid)
+        self.logger.info(f"ams valid: {ams_valid!r}")
 
         # Validate Arc-Seal
         try:
@@ -1738,11 +1731,12 @@ class ARC(DomainSigner):
         except InvalidTagValueList as e:
             raise MessageFormatError(e)
 
-        self.logger.info("as sig[%d]: %r" % (instance, sig))
+        self.logger.info(f"as sig[{instance}]: {sig!r}")
 
         validate_signature_fields(sig, [b"i", b"a", b"b", b"cv", b"d", b"s"], True)
         if b"h" in sig:
-            raise ValidationError("h= tag not permitted in ARC-Seal header field")
+            msg = "h= tag not permitted in ARC-Seal header field"
+            raise ValidationError(msg)
 
         output["as-domain"] = sig[b"d"]
         output["as-selector"] = sig[b"s"]
@@ -1757,11 +1751,11 @@ class ARC(DomainSigner):
         try:
             as_valid = self.verify_sig(sig, as_include_headers[:-1], as_header, dnsfunc)
         except DKIMException as e:
-            self.logger.error(f"{e}")
+            self.logger.exception("%s", e)
             as_valid = False
 
         output["as-valid"] = as_valid
-        self.logger.info("as valid: %r" % as_valid)
+        self.logger.info(f"as valid: {as_valid!r}")
         return output
 
 
@@ -1780,7 +1774,7 @@ def sign(
     tlsrpt=False,
 ):
     # type: (bytes, bytes, bytes, bytes, bytes, tuple, bytes, list, bool, any) -> bytes
-    """Sign an RFC822 message and return the DKIM-Signature header line.
+    r"""Sign an RFC822 message and return the DKIM-Signature header line.
     @param message: an RFC822 formatted message (with either \\n or \\r\\n line endings)
     @param selector: the DKIM selector value for the signature
     @param domain: the DKIM domain value for the signature
@@ -1820,7 +1814,7 @@ def sign(
 
 
 def verify(message, logger=None, dnsfunc=get_txt, minkey=1024, timeout=5, tlsrpt=False):
-    """Verify the first (topmost) DKIM signature on an RFC822 formatted message.
+    r"""Verify the first (topmost) DKIM signature on an RFC822 formatted message.
     @param message: an RFC822 formatted message (with either \\n or \\r\\n line endings)
     @param logger: a logger to which info info will be written (default None)
     @param timeout: number of seconds for DNS lookup timeout (default = 5)
@@ -1835,19 +1829,18 @@ def verify(message, logger=None, dnsfunc=get_txt, minkey=1024, timeout=5, tlsrpt
         return d.verify(dnsfunc=dnsfunc)
     except DKIMException as x:
         if logger is not None:
-            logger.error(f"{x}")
+            logger.exception("%s", x)
         return False
 
 
 # aiodns requires Python 3.5+, so no async before that
-if sys.version_info >= (3, 5):
-    try:
-        from dkim.asyncsupport import verify_async
+try:
+    from dkim.asyncsupport import verify_async
 
-        dkim_verify_async = verify_async
-    except ImportError:
-        # If aiodns is not installed, then async verification is not available
-        pass
+    dkim_verify_async = verify_async
+except ImportError:
+    # If aiodns is not installed, then async verification is not available
+    pass
 
 # For consistency with ARC
 dkim_sign = sign
@@ -1868,7 +1861,7 @@ def arc_sign(
     linesep=b"\r\n",
 ):
     # type: (bytes, bytes, bytes, bytes, bytes, bytes, list, any, any, bool) -> list
-    """Sign an RFC822 message and return the ARC set header lines for the next instance
+    r"""Sign an RFC822 message and return the ARC set header lines for the next instance
     @param message: an RFC822 formatted message (with either \\n or \\r\\n line endings)
     @param selector: the DKIM selector value for the signature
     @param domain: the DKIM domain value for the signature
@@ -1901,7 +1894,7 @@ def arc_sign(
 
 def arc_verify(message, logger=None, dnsfunc=get_txt, minkey=1024, timeout=5):
     # type: (bytes, any, function, int) -> tuple
-    """Verify the ARC chain on an RFC822 formatted message.
+    r"""Verify the ARC chain on an RFC822 formatted message.
     @param message: an RFC822 formatted message (with either \\n or \\r\\n line endings)
     @param logger: a logger to which info info will be written (default None)
     @param dnsfunc: an optional function to lookup TXT resource records
@@ -1915,7 +1908,7 @@ def arc_verify(message, logger=None, dnsfunc=get_txt, minkey=1024, timeout=5):
         return a.verify(dnsfunc=dnsfunc)
     except DKIMException as x:
         if logger is not None:
-            logger.error(f"{x}")
+            logger.exception("%s", x)
         return CV_Fail, [], f"{x}"
 
 
@@ -1930,7 +1923,9 @@ class Resolver:
     failed_code = False
     last_resolver = ""
 
-    def __init__(self, nameservers=["8.8.8.8", "8.8.4.4"]):
+    def __init__(self, nameservers=None):
+        if nameservers is None:
+            nameservers = ["8.8.8.8", "8.8.4.4"]
         self.nameservers = nameservers
 
     def query(self, hostname, query_type="ANY", name_server=False, use_tcp=True):
@@ -1948,7 +1943,8 @@ class Resolver:
             if response_q:
                 response = dnslib.DNSRecord.parse(response_q)
             else:
-                raise OSError("Empty Response")
+                msg = "Empty Response"
+                raise OSError(msg)
         except Exception as e:
             # IOErrors are all conditions that require a retry.
             raise OSError(str(e))
@@ -1964,10 +1960,10 @@ class Resolver:
                 rhost = str(r.rname).rstrip(".")
                 ret.append((rhost, rtype, str(r.rdata)))
             # What kind of response did we get?
-            if self.rcode not in ["NOERROR", "NXDOMAIN", "SERVFAIL", "REFUSED"]:
+            if self.rcode not in {"NOERROR", "NXDOMAIN", "SERVFAIL", "REFUSED"}:
                 trace("!Odd error code:", self.rcode, hostname, query_type)
             # Is this a perm error?  We will have to retry to find out.
-            if self.rcode in ["SERVFAIL", "REFUSED", "FORMERR", "NOTIMP", "NOTAUTH"]:
+            if self.rcode in {"SERVFAIL", "REFUSED", "FORMERR", "NOTIMP", "NOTAUTH"}:
                 raise OSError("DNS Failure: " + hostname + " - " + self.rcode)
             # Did we get an empty body and a non-error code?
             if not ret and self.rcode != "NXDOMAIN":
@@ -1976,9 +1972,7 @@ class Resolver:
 
     def was_successful(self):
         ret = False
-        if (
-            self.failed_code and self.rcode != self.failed_code
-        ) or self.rcode == "NOERROR":
+        if (self.failed_code and self.rcode != self.failed_code) or self.rcode == "NOERROR":
             ret = True
         return ret
 
@@ -2012,7 +2006,7 @@ class Resolver:
                 nameservers = []
             for n in nameservers:
                 # A DNS server could return anything.
-                rhost, record_type, record = n
+                _rhost, record_type, record = n
                 if record_type == "NS":
                     # Return all A records for this NS lookup.
                     a_lookup = self.query(record.rstrip("."), "A")
@@ -2030,7 +2024,7 @@ class Resolver:
 verbose = False
 
 
-def trace(*args, **kwargs):
+def trace(*args: typing.Any, **kwargs):
     if verbose:
         for a in args:
             sys.stderr.write(str(a))
@@ -2061,21 +2055,23 @@ class SpfRecord:
             redirect_record = SpfRecord.from_domain(redirect_domain)
             redirect_record.recursion_depth = self.recursion_depth + 1
             return redirect_record
+        return None
 
     def get_redirect_domain(self):
         redirect_domain = None
         if self.mechanisms is not None:
             for mechanism in self.mechanisms:
-                redirect_mechanism = re.match("redirect=(.*)", mechanism)
+                redirect_mechanism = re.match(r"redirect=(.*)", mechanism)
                 if redirect_mechanism is not None:
                     redirect_domain = redirect_mechanism.group(1)
             return redirect_domain
+        return None
 
     def get_include_domains(self):
         include_domains = []
         if self.mechanisms is not None:
             for mechanism in self.mechanisms:
-                include_mechanism = re.match("include:(.*)", mechanism)
+                include_mechanism = re.match(r"include:(.*)", mechanism)
                 if include_mechanism is not None:
                     include_domains.append(include_mechanism.group(1))
             return include_domains
@@ -2098,7 +2094,7 @@ class SpfRecord:
     def _is_all_mechanism_strong(self):
         strong_spf_all_string = True
         if self.all_string is not None:
-            if not (self.all_string == "~all" or self.all_string == "-all"):
+            if self.all_string not in {"~all", "-all"}:
                 strong_spf_all_string = False
         else:
             strong_spf_all_string = False
@@ -2118,10 +2114,7 @@ class SpfRecord:
     def _are_include_mechanisms_strong(self):
         include_records = self.get_include_records()
         for record in include_records:
-            if (
-                include_records[record] is not None
-                and include_records[record].is_record_strong()
-            ):
+            if include_records[record] is not None and include_records[record].is_record_strong():
                 return True
         return False
 
@@ -2170,7 +2163,7 @@ def _extract_version(spf_string):
 def _extract_all_mechanism(mechanisms):
     all_mechanism = None
     for mechanism in mechanisms:
-        if re.match(".all", mechanism):
+        if re.match(r".all", mechanism):
             all_mechanism = mechanism
     return all_mechanism
 
@@ -2185,23 +2178,20 @@ def _extract_mechanisms(spf_string):
         "|ip4|ip6|exists|redirect|exp|all)"
         r"(?:(?::|=|/)?(?:\S*))?) ?)"
     )
-    spf_mechanisms = re.findall(spf_mechanism_pattern, spf_string)
-
-    return spf_mechanisms
+    return re.findall(spf_mechanism_pattern, spf_string)
 
 
 def _merge_txt_record_strings(txt_record):
     # SPF spec requires that TXT records containing multiple strings be cat'd together.
-    string_pattern = re.compile('"([^"]*)"')
+    string_pattern = re.compile(r'"([^"]*)"')
     txt_record_strings = string_pattern.findall(txt_record)
     return "".join(txt_record_strings)
 
 
 def _match_spf_record(txt_record):
     clean_txt_record = _merge_txt_record_strings(txt_record)
-    spf_pattern = re.compile("^(v=spf.*)")
-    potential_spf_match = spf_pattern.match(str(clean_txt_record))
-    return potential_spf_match
+    spf_pattern = re.compile(r"^(v=spf.*)")
+    return spf_pattern.match(str(clean_txt_record))
 
 
 def _find_record_from_answers(txt_records):
@@ -2256,9 +2246,7 @@ def extract_valid_ips_from_body(body: str) -> list[str]:
 
     Retruns:
         list[str]: list of valid ips.
+
     """
     candidates = re.findall(r"\b[0-9a-fA-F:.]+\b", body)
-    return [
-        candidate for candidate in candidates
-        if valid_ipv4(candidate) or valid_ipv6(candidate)
-    ]
+    return [candidate for candidate in candidates if valid_ipv4(candidate) or valid_ipv6(candidate)]

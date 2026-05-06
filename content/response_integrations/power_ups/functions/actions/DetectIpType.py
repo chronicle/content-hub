@@ -29,12 +29,8 @@ def main():
     siemplify = SiemplifyAction()
 
     status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = (
-        "IP types found"  # human readable message, showed in UI as the action result
-    )
-    result_value = (
-        "true"  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    output_message = "IP types found"  # human readable message, showed in UI as the action result
+    result_value = "true"  # Set a simple result value, used for playbook if\else and placeholders.
 
     res = []
     to_enrich = []
@@ -61,10 +57,7 @@ def main():
                     d = {"IPType": "IPV4"}
                 else:
                     match = re.match(IPV6, entity.identifier)
-                    if match:
-                        d = {"IPType": "IPV6"}
-                    else:
-                        d = {"IPType": "UNDETECTED"}
+                    d = {"IPType": "IPV6"} if match else {"IPType": "UNDETECTED"}
                 entity.additional_properties.update(d)
                 to_enrich.append(entity)
                 d["Address"] = entity.identifier

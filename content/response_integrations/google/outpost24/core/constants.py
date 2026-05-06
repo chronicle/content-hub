@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 INTEGRATION_NAME = "Outpost24"
 INTEGRATION_DISPLAY_NAME = "Outpost24"
 

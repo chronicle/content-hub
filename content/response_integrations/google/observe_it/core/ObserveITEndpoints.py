@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import urllib.parse
 
 from .ObserveITConstants import GET, POST
@@ -22,8 +23,7 @@ class ObserveITEndpoints:
     @staticmethod
     def get_authorization_endpoint(api_root):
         # type: (str or unicode) -> (str or unicode, str or unicode)
-        """
-        Get method and endpoint to call with
+        """Get method and endpoint to call with
         @param api_root: API Root
         @return: Method and Endpoint
         """
@@ -32,8 +32,7 @@ class ObserveITEndpoints:
     @staticmethod
     def get_test_connectivity_endpoint(api_root):
         # type: (str or unicode) -> (str or unicode, str or unicode)
-        """
-        Get method and endpoint to call with
+        """Get method and endpoint to call with
         @param api_root: API Root
         @return: Method and Endpoint
         """
@@ -44,8 +43,7 @@ class ObserveITEndpoints:
     @staticmethod
     def get_alerts_endpoint(api_root):
         # type: (str or unicode) -> (str or unicode, str or unicode)
-        """
-        Get method and endpoint to call with
+        """Get method and endpoint to call with
         @param api_root: API Root
         @return: Method and Endpoint
         """
