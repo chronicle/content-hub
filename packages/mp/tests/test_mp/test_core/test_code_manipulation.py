@@ -48,11 +48,11 @@ if TYPE_CHECKING:
         ),
         (
             f"from ..{CORE_SCRIPTS_DIR} import another_thing, yet_another as y",
-            "import another_thing, yet_another as y",
+            "import another_thing\nimport yet_another as y",
         ),
         (
             f"from {CORE_SCRIPTS_DIR} import another_thing, yet_another as y",
-            "import another_thing, yet_another as y",
+            "import another_thing\nimport yet_another as y",
         ),
         (
             f"from ...{COMMON_SCRIPTS_DIR}.module.sub.a.b.c.d.e import something as s",
@@ -60,11 +60,11 @@ if TYPE_CHECKING:
         ),
         (
             f"from ...{COMMON_SCRIPTS_DIR} import another_thing as at, yet_another",
-            "import another_thing as at, yet_another",
+            "import another_thing as at\nimport yet_another",
         ),
         (
             f"from {COMMON_SCRIPTS_DIR} import another_thing as at, yet_another",
-            "import another_thing as at, yet_another",
+            "import another_thing as at\nimport yet_another",
         ),
         (
             f"from ...{SDK_PACKAGE_NAME}.module.sub.a.b.c.d.e import something as s",
@@ -72,19 +72,19 @@ if TYPE_CHECKING:
         ),
         (
             f"from ...{SDK_PACKAGE_NAME} import another_thing as at, yet_another",
-            "import another_thing as at, yet_another",
+            "import another_thing as at\nimport yet_another",
         ),
         (
             f"from {SDK_PACKAGE_NAME} import another_thing as at, yet_another",
-            "import another_thing as at, yet_another",
+            "import another_thing as at\nimport yet_another",
         ),
         (
             "from . import utils, constants as c",
-            "import utils, constants as c",
+            "import utils\nimport constants as c",
         ),
         (
             "from .. import utils, constants as c",
-            "import utils, constants as c",
+            "import utils\nimport constants as c",
         ),
         (
             "from .data_models import Integration as I",
@@ -404,7 +404,7 @@ def test_mixed_transformers(
         (
             "core_package_multiple_imports",
             "from ..core import manager1, manager2",
-            "import manager1, manager2",
+            "import manager1\nimport manager2",
         ),
         (
             "core_package_from_import_multiple",
@@ -426,7 +426,7 @@ def test_mixed_transformers(
         (
             "core_internal_multiple_imports",
             "from . import constants, manager",
-            "import constants, manager",
+            "import constants\nimport manager",
         ),
         (
             "core_internal_from_import_multiple",
