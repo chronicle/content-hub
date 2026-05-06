@@ -46,6 +46,18 @@ class NonFatalCommandError(NonFatalValidationError):
     """Non-fatal error that happens during shell commands."""
 
 
+def _log_subprocess_result(result: sp.CompletedProcess[str] | sp.CalledProcessError) -> None:
+    """Log the output of a subprocess command.
+
+    Args:
+        result: The result of the subprocess command.
+    """
+    for line in (result.stdout or "").splitlines():
+        logger.debug(line)
+    for line in (result.stderr or "").splitlines():
+        logger.debug(line)
+
+
 def compile_core_integration_dependencies(project_path: Path, requirements_path: Path) -> None:
     """Compile/Export all project dependencies into a requirements' file.
 
@@ -82,11 +94,9 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
 
     try:
         result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
-        if result.stdout:
-            logger.debug(result.stdout)
-        if result.stderr:
-            logger.debug(result.stderr)
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
@@ -109,11 +119,9 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
     logger.debug("Running pip command: %s in %s", command, cwd)
     try:
         result = sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # noqa: S603
-        if result.stdout:
-            logger.debug(result.stdout)
-        if result.stderr:
-            logger.debug(result.stderr)
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         # Check if this is a safe-to-ignore error / marker issue
         if ignored_packages := _get_safe_to_ignore_packages(e):
             message = (
@@ -253,12 +261,9 @@ def _add_regular_dependencies_to_toml(deps_to_add: list[str], base_command: list
     deps_command.extend(deps_to_add)
     try:
         result = sp.run(deps_command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
-        if result.stdout:
-            logger.debug(result.stdout)
-        if result.stderr:
-            logger.debug(result.stderr)
-
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
@@ -278,11 +283,9 @@ def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list
         result = sp.run(  # noqa: S603
             dev_base_command, cwd=project_path, check=True, text=True, capture_output=True
         )
-        if result.stdout:
-            logger.debug(result.stdout)
-        if result.stderr:
-            logger.debug(result.stderr)
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
@@ -349,11 +352,9 @@ def init_python_project(project_path: Path) -> None:
 
     try:
         result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
-        if result.stdout:
-            logger.debug(result.stdout)
-        if result.stderr:
-            logger.debug(result.stderr)
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
@@ -579,12 +580,10 @@ def check_lock_file(project_path: Path) -> None:
         result = sp.run(  # noqa: S603
             command, cwd=project_path, check=True, text=True, capture_output=True
         )
-        if result.stdout:
-            logger.debug(result.stdout)
-        if result.stderr:
-            logger.debug(result.stderr)
+        _log_subprocess_result(result)
 
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         error_output = e.stderr.strip()
         error_output = f"{COMMAND_ERR_MSG.format('uv lock --check')}: {error_output}"
         raise NonFatalCommandError(error_output) from e
