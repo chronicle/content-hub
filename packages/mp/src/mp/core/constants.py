@@ -144,6 +144,7 @@ SDK_DEPENDENCIES_INSTALL_NAMES: dict[str, str] = {
     "dateutil": "python-dateutil",
     "OpenSSL": "pyopenssl",
 }
+SDK_DEPENDENCIES_MIN_VERSIONS: dict[str, str] = {"requests": "2.32.4"}
 
 README_FILE: str = "README.md"
 LOCK_FILE: str = "uv.lock"

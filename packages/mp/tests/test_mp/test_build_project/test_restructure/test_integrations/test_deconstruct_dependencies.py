@@ -206,6 +206,29 @@ def test_get_dependencies_creates_placeholder_for_missing_local_file(tmp_path: P
         assert "EnvironmentCommon==2.0.2" in result.placeholders.dependencies
 
 
+def test_get_dependencies_bumps_sdk_dependency_to_min_version(tmp_path: Path) -> None:
+    """Test that a dependency version is bumped to the minimum required version."""
+    _create_dummy_python_file(tmp_path, "import requests")
+    dependencies_dir = _create_dependencies_dir(tmp_path)
+    (dependencies_dir / "requests-2.25.1-py3-none-any.whl").touch()
+
+    min_versions = {"requests": "2.26.1"}
+
+    with (
+        unittest.mock.patch.dict("mp.core.constants.SDK_DEPENDENCIES_MIN_VERSIONS", min_versions),
+        unittest.mock.patch(
+            "mp.build_project.restructure.integrations.deconstruct_dependencies._get_provided_imports",
+            return_value={"requests"},
+        ),
+    ):
+        result = DependencyDeconstructor(tmp_path).get_dependencies()
+
+        assert "requests==2.26.1" in result.dependencies.dependencies
+        assert "requests==2.25.1" not in result.dependencies.dependencies
+        assert not result.placeholders.dependencies
+        assert not result.dependencies.dev_dependencies
+
+
 @pytest.mark.parametrize(
     ("tipcommon_version", "envcommon_should_be_dependency"),
     [
