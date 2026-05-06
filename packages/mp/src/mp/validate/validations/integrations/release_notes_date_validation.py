@@ -101,7 +101,7 @@ def _perform_validation(content: list[dict], head_sha: str | None, existing_vers
     date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
     invalid: list[str] = []
     for note in content:
-        version = _normalize_version(note.get("version", "?"))
+        version = _normalize_version(note.get("version") or note.get("integration_version", "?"))
         if head_sha and version in existing_versions:
             continue  # Pre-existing entry — skip
 
