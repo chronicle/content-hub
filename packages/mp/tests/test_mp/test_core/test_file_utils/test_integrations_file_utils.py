@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import base64
+import shutil
 import unittest.mock
 from typing import TYPE_CHECKING
 
@@ -128,12 +129,11 @@ def test_get_integration_base_folders_paths(tmp_path: Path) -> None:
         third_party_paths = mp.core.file_utils.get_integration_base_folders_paths(
             mp.core.constants.THIRD_PARTY_REPO_NAME
         )
-        commercial_paths = mp.core.file_utils.get_integration_base_folders_paths(
-            mp.core.constants.COMMERCIAL_REPO_NAME
-        )
+        commercial_paths = mp.core.file_utils.get_integration_base_folders_paths(mp.core.constants.COMMERCIAL_REPO_NAME)
 
         third_party = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
         expected_third_party_paths = [
+            third_party,
             tmp_path / mp.core.constants.POWERUPS_DIR_NAME,
             third_party / mp.core.constants.COMMUNITY_DIR_NAME,
             third_party / mp.core.constants.PARTNER_DIR_NAME,
@@ -289,3 +289,22 @@ def test_png_path_to_bytes(tmp_path: Path) -> None:
 
         assert mp.core.file_utils.png_path_to_bytes(input_file) == expected_b64_string
         assert mp.core.file_utils.png_path_to_bytes(non_existent_file) is None
+
+
+def test_is_commercial_integration(tmp_path: Path, non_built_integration: Path) -> None:
+    commercial_dir: Path = tmp_path / mp.core.constants.COMMERCIAL_REPO_NAME
+    powerups_dir: Path = tmp_path / mp.core.constants.POWERUPS_DIR_NAME
+    third_party_dir: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
+    community_dir: Path = third_party_dir / mp.core.constants.COMMUNITY_DIR_NAME
+    partner_dir: Path = third_party_dir / mp.core.constants.PARTNER_DIR_NAME
+
+    shutil.copytree(non_built_integration.parent, commercial_dir)
+    shutil.copytree(non_built_integration.parent, powerups_dir)
+    shutil.copytree(non_built_integration.parent, community_dir)
+    shutil.copytree(non_built_integration.parent, partner_dir)
+
+    name: str = non_built_integration.name
+    assert mp.core.file_utils.is_certified_integration(commercial_dir / name) is True
+    assert mp.core.file_utils.is_certified_integration(powerups_dir / name) is True
+    assert mp.core.file_utils.is_certified_integration(partner_dir / name) is False
+    assert mp.core.file_utils.is_certified_integration(community_dir / name) is False

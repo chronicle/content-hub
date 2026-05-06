@@ -31,9 +31,7 @@ PARAMETER_EXTRACTION_ERR_MSG = (
 CONFIG_PARAMETER_EXTRACTION_ERR_MSG = (
     "Failed to get the full-details file of the integration!\nHTTPError stacktrace: {error}\n"
 )
-DEF_FILE_PARSE_ERROR_MSG = (
-    'Failed to parse the "get env action-def" response Json\nJSONDecoder stacktrace: {error}\n'
-)
+DEF_FILE_PARSE_ERROR_MSG = 'Failed to parse the "get env action-def" response Json\nJSONDecoder stacktrace: {error}\n'
 CONFIG_DEF_FILE_PARSE_ERROR_MSG = (
     'Failed to parse the "get full-details" response Json\nJSONDecoder stacktrace: {error}\n'
 )

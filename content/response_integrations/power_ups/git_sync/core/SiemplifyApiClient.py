@@ -14,12 +14,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 from urllib.parse import urljoin
 
 import requests
 from packaging import version
 from requests.exceptions import HTTPError
+
 from TIPCommon.rest.soar_api import (
     add_case_stage,
     get_installed_integrations,
@@ -602,6 +603,14 @@ class SiemplifyApiClient:
 
     def get_playbook_categories(self):
         return get_playbook_categories(self.siemplify_soar)
+
+    def get_soc_roles(self) -> list[dict[str, Any]]:
+        """Get the SOC roles from the platform.
+
+        Returns:
+            A list of SOC roles.
+        """
+        return self.get_page_results("socroles/getSocRoles")
 
     def get_simulated_cases(self):
         return get_simulated_cases(self.siemplify_soar)

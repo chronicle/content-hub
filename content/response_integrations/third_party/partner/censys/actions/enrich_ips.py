@@ -93,19 +93,25 @@ def _build_output_message(
     message_parts = []
 
     if successful:
-        message_parts.append(f"Successfully enriched {len(successful)} IP(s) from Censys.")
+        message_parts.append(
+            f"Successfully enriched {len(successful)} IP(s) from Censys."
+        )
 
     if invalid:
         entities_str = ", ".join(invalid[:5])
         if len(invalid) > 5:
             entities_str += f" and {len(invalid) - 5} more"
-        message_parts.append(f"{len(invalid)} IP(s) skipped due to invalid format: {entities_str}")
+        message_parts.append(
+            f"{len(invalid)} IP(s) skipped due to invalid format: {entities_str}"
+        )
 
     if not_found:
         entities_str = ", ".join(not_found[:5])
         if len(not_found) > 5:
             entities_str += f" and {len(not_found) - 5} more"
-        message_parts.append(f"{len(not_found)} IP(s) not found in Censys: {entities_str}")
+        message_parts.append(
+            f"{len(not_found)} IP(s) not found in Censys: {entities_str}"
+        )
 
     if failed:
         entities_str = ", ".join(failed[:5])
@@ -194,16 +200,17 @@ def main():
         if invalid_ips:
             invalid_entities.extend(invalid_ips)
 
-            more_text = f" and {len(invalid_ips) - 5} more" if len(invalid_ips) > 5 else ""
+            more_text = (
+                f" and {len(invalid_ips) - 5} more" if len(invalid_ips) > 5 else ""
+            )
             siemplify.LOGGER.info(
                 f"Found {len(invalid_ips)} invalid IP(s): {', '.join(invalid_ips[:5])}{more_text}"
             )
 
         # Skip API call if no valid IPs
         if not valid_ips:
-            output_message = (
-                f"No valid IP addresses to process. All {len(invalid_ips)} IP(s) are invalid."
-            )
+            output_message = "No valid IP addresses to process." \
+                 f" All {len(invalid_ips)} IP(s) are invalid."
             siemplify.LOGGER.error(output_message)
             siemplify.result.add_result_json([])
             siemplify.end(output_message, RESULT_VALUE_FALSE, EXECUTION_STATE_FAILED)
@@ -249,13 +256,17 @@ def main():
                 enrichment_data = host_model.get_enrichment_data()
 
                 if not enrichment_data:
-                    siemplify.LOGGER.info(f"No enrichment data available for {entity_identifier}")
+                    siemplify.LOGGER.info(
+                        f"No enrichment data available for {entity_identifier}"
+                    )
                     not_found_entities.append(entity_identifier)
                     continue
 
                 # Remove old Censys IP enrichment data
                 remove_ip_enrichment(entity)
-                siemplify.LOGGER.info(f"Removed old IP enrichment data for {entity_identifier}")
+                siemplify.LOGGER.info(
+                    f"Removed old IP enrichment data for {entity_identifier}"
+                )
 
                 # Add timestamp and enrich entity
                 enrichment_data[f"{ENRICHMENT_PREFIX}last_enriched"] = (
@@ -267,10 +278,12 @@ def main():
 
                 # Store results
                 successful_entities.append(entity_identifier)
-                json_results.append({
-                    "Entity": entity_identifier,
-                    "EntityResult": host_model.to_json(),
-                })
+                json_results.append(
+                    {
+                        "Entity": entity_identifier,
+                        "EntityResult": host_model.to_json(),
+                    }
+                )
 
                 siemplify.LOGGER.info(f"Successfully enriched: {entity_identifier}")
 
@@ -281,9 +294,8 @@ def main():
                 failed_entities.append(entity_identifier)
 
     except ValueError as e:
-        output_message = (
-            f"Invalid parameter value: {str(e)}\nPlease verify your input parameters and try again."
-        )
+        output_message = f"Invalid parameter value: {str(e)}\nPlease verify your input " \
+            "parameters and try again."
         siemplify.LOGGER.error(output_message)
         status = EXECUTION_STATE_FAILED
         result_value = RESULT_VALUE_FALSE
@@ -291,7 +303,9 @@ def main():
     except ValidationException as e:
         error_detail = str(e)
         ip_list = ", ".join(ip_addresses[:10])
-        more_text = f" and {len(ip_addresses) - 10} more" if len(ip_addresses) > 10 else ""
+        more_text = (
+            f" and {len(ip_addresses) - 10} more" if len(ip_addresses) > 10 else ""
+        )
 
         output_message = (
             f"Validation error occurred while processing "

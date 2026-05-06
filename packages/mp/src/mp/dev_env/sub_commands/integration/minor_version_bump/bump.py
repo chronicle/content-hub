@@ -14,12 +14,12 @@
 
 from __future__ import annotations
 
+import logging
 import math
 import pathlib
 import tomllib
 from typing import TYPE_CHECKING, Any
 
-import rich
 import typer
 
 import mp.core.constants
@@ -33,6 +33,8 @@ from .utils import (
     update_cache_file,
     update_version_cache,
 )
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -64,9 +66,7 @@ def minor_version_bump(
 
         version: float = float(pyproject_data["project"]["version"])
         cache_dir: Path = get_marketplace_path() / INTEGRATIONS_CACHE_DIR_NAME
-        cache: VersionCache | None = load_and_validate_cache(
-            cache_dir, integration_id, math.floor(version)
-        )
+        cache: VersionCache | None = load_and_validate_cache(cache_dir, integration_id, math.floor(version))
         updated_hash: str = calculate_dependencies_hash(pyproject_data)
         updated_version_cache: VersionCache = update_version_cache(cache, updated_hash, version)
 
@@ -74,5 +74,5 @@ def minor_version_bump(
         update_built_def_file(integration_dir_built, updated_version_cache)
 
     except FileNotFoundError as e:
-        rich.print(f"[red]Error: {e}[/red]")
+        logger.exception("Failed to perform minor version bump for integration")
         raise typer.Exit(1) from e

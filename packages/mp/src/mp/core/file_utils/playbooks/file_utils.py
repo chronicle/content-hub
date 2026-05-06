@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
-import rich
 import yaml
 
 import mp.core.constants
@@ -26,6 +26,8 @@ from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def create_or_get_playbooks_root_dir() -> Path:
@@ -36,8 +38,7 @@ def create_or_get_playbooks_root_dir() -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_content_dir()
-        / mp.core.constants.PLAYBOOKS_DIR_NAME
+        mp.core.file_utils.common.utils.create_or_get_content_dir() / mp.core.constants.PLAYBOOKS_DIR_NAME
     )
 
 
@@ -56,9 +57,7 @@ def get_or_create_playbook_repo_base_path(playbooks_classification: str) -> Path
     )
 
 
-def get_playbook_base_folders_paths(
-    repository_classification: str, repo_base_path: Path
-) -> list[Path]:
+def get_playbook_base_folders_paths(repository_classification: str, repo_base_path: Path) -> list[Path]:
     """Get the root folder for the playbooks' repositories.
 
     Returns:
@@ -103,8 +102,7 @@ def get_playbook_out_base_dir() -> Path:
 
     """
     return mp.core.file_utils.common.utils.create_dir_if_not_exists(
-        mp.core.file_utils.common.utils.create_or_get_out_contents_dir()
-        / mp.core.constants.PLAYBOOK_BASE_OUT_DIR_NAME
+        mp.core.file_utils.common.utils.create_or_get_out_contents_dir() / mp.core.constants.PLAYBOOK_BASE_OUT_DIR_NAME
     )
 
 
@@ -148,17 +146,18 @@ def is_built_playbook(path: Path) -> bool:
             data: dict[str, Any] = json.load(f)
 
         if not mp.core.constants.PLAYBOOK_MUST_HAVE_KEYS.issubset(data.keys()):
-            rich.print(
-                f"[red]Playbook is invalid, File {path.name} is missing one or more required keys:"
-                f" {mp.core.constants.PLAYBOOK_MUST_HAVE_KEYS - data.keys()}[/red]"
+            logger.error(
+                "Playbook is invalid, File %s is missing one or more required keys: %s",
+                path.name,
+                mp.core.constants.PLAYBOOK_MUST_HAVE_KEYS - data.keys(),
             )
             return False
 
     except json.JSONDecodeError:
-        rich.print(f"[red]Playbook is invalid,File {path.name} is not a valid JSON file.[/red]")
+        logger.exception("Playbook is invalid, File %s is not a valid JSON file.", path.name)
         return False
-    except OSError as e:
-        rich.print(f"[red]Error reading file {path.name}: {e}[/red]")
+    except OSError:
+        logger.exception("Error reading file %s", path.name)
         return False
 
     return True
@@ -175,6 +174,4 @@ def get_display_info(playbook_path: Path) -> PlaybookDisplayInfo:
 
     """
     display_info_path: Path = playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME
-    return PlaybookDisplayInfo.from_non_built(
-        yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
-    )
+    return PlaybookDisplayInfo.from_non_built(yaml.safe_load(display_info_path.read_text(encoding="utf-8")))

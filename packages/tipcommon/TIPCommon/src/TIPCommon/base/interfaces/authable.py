@@ -15,11 +15,13 @@
 from __future__ import annotations
 
 import abc
-from typing import Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
-from ...types import AuthParams
-from ..utils import CreateSession
-from .session import AuthenticatedSession
+from TIPCommon.base.utils import CreateSession
+from TIPCommon.types import AuthParams
+
+if TYPE_CHECKING:
+    from .session import AuthenticatedSession
 
 
 class Authable(abc.ABC, Generic[AuthParams]):

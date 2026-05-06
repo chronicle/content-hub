@@ -41,7 +41,7 @@ The `mp` tool sits at the center of your integration development workflow:
 
 ## Key Features
 
-- **Build & Package**: transforming source code into deployable artifacts.
+- **Build & Package**: transforming source code into deployable artifacts and SOAR-supported ZIP files (`pack`).
 - **Quality Assurance**: Automated linting (`check`), formatting (`format`), and testing (`test`).
 - **Development Loop**: Rapidly push changes to your development environment (`dev-env`).
 
@@ -57,6 +57,7 @@ The `mp` tool sits at the center of your integration development workflow:
 | `test`     | Run pre-build integration tests.                        | [Docs](docs/commands/test.md)     |
 | `validate` | Validate integration structure and metadata.            | [Docs](docs/commands/validate.md) |
 | `dev-env`  | Interact with dev environment (login, push).            | [Docs](docs/commands/dev_env.md)  |
+| `pack`     | Package integrations into SOAR-supported ZIP files.     | [Docs](docs/commands/pack.md)     |
 
 ## Documentation
 

@@ -16,18 +16,20 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import logging
 import pathlib
 from typing import TYPE_CHECKING, Any, NamedTuple
 
-import rich
-
 from mp.core.unix import NonFatalCommandError
-from mp.validate.pre_build_validation.integrations.required_dependencies_validation import (
+from mp.validate.validations.integrations.required_dependencies_validation import (
     RequiredDevDependenciesValidation,
 )
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class TestIssue(NamedTuple):
@@ -69,10 +71,8 @@ def process_pytest_json_report(
     except FileNotFoundError:
         return _get_fnf_test_results(integration_name, json_report_path)
 
-    except json.JSONDecodeError as e:
-        rich.print(
-            f"[bold red]Error:[/bold red] Failed to decode JSON report at {json_report_path}: {e}"
-        )
+    except json.JSONDecodeError:
+        logger.exception("Error: Failed to decode JSON report at: %s", json_report_path)
         json_report_path.unlink(missing_ok=True)
         return None
 
@@ -125,7 +125,7 @@ def _extract_skipped_test_issue(test_item: dict) -> TestIssue:
 
     if not skip_reason or skip_reason == "Unknown reason":
         call_info: dict[str, Any] = test_item.get("call", {})
-        longrepr: str = call_info.get("longrepr")
+        longrepr: str | None = call_info.get("longrepr")
         if isinstance(longrepr, str):
             skip_reason = longrepr.splitlines()[0] if longrepr else "No specific reason found."
 
@@ -141,19 +141,14 @@ def _extract_skipped_test_issue(test_item: dict) -> TestIssue:
     return TestIssue(test_name=test_name, stack_trace=skip_reason)
 
 
-def _get_fnf_test_results(
-    integration_name: str,
-    json_report_path: Path,
-) -> IntegrationTestResults | None:
-    rich.print(f"[bold red]Error:[/bold red] JSON report not found at {json_report_path}")
+def _get_fnf_test_results(integration_name: str, json_report_path: Path) -> IntegrationTestResults | None:
+    logger.error("Error: JSON report not found at %s", json_report_path)
     try:
         RequiredDevDependenciesValidation.run(json_report_path.parent)
     except NonFatalCommandError as e:
         error_msg: str = f"{e}"
         result: IntegrationTestResults = IntegrationTestResults(integration_name=integration_name)
-        result.failed_tests_summary.append(
-            TestIssue(test_name="Missing Dependencies", stack_trace=error_msg)
-        )
+        result.failed_tests_summary.append(TestIssue(test_name="Missing Dependencies", stack_trace=error_msg))
         result.failed_tests += 1
         return result
 

@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, NamedTuple
-
-import rich
 
 import mp.core.constants
 import mp.core.file_utils
@@ -28,6 +27,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.custom_types import RepositoryType
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class Repos(NamedTuple):
@@ -52,15 +54,11 @@ def build_playbooks(
             _build_playbooks(set(playbooks), repos.custom, deconstruct=deconstruct)
 
         else:
-            commercial_not_found: set[str] = _build_playbooks(
-                set(playbooks), repos.commercial, deconstruct=deconstruct
-            )
-            community_not_found: set[str] = _build_playbooks(
-                set(playbooks), repos.community, deconstruct=deconstruct
-            )
+            commercial_not_found: set[str] = _build_playbooks(set(playbooks), repos.commercial, deconstruct=deconstruct)
+            community_not_found: set[str] = _build_playbooks(set(playbooks), repos.community, deconstruct=deconstruct)
 
             if commercial_not_found.intersection(community_not_found):
-                rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
+                logger.info(mp.core.constants.RECONFIGURE_MP_MSG)
 
     elif repositories:
         _build_playbooks_repositories([repos.commercial, repos.community])
@@ -82,16 +80,16 @@ def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos
     )
     custom: PlaybooksRepo | None = None
     if modified_src is not None:
-        custom: PlaybooksRepo = PlaybooksRepo(modified_src, modified_dst, default_src=False)
+        custom = PlaybooksRepo(modified_src, modified_dst, default_src=False)
 
     return Repos(commercial, community, custom)
 
 
 def _build_playbooks_repositories(repos: list[PlaybooksRepo]) -> None:
-    rich.print("[blue]Building all playbooks in repository...[/blue]")
+    logger.info("Building all playbooks in repository...")
     for repository in repos:
         _build_single_repo_folder(repository)
-    rich.print("[blue]Done repository playbook build.[/blue]")
+    logger.info("Done repository playbook build.")
 
 
 def _build_single_repo_folder(repository: PlaybooksRepo) -> None:
@@ -113,20 +111,17 @@ def _build_playbooks(
         playbooks, repository.base_folders, deconstruct=deconstruct
     )
     valid_playbooks_names: set[str] = {i.name for i in valid_playbooks_paths}
-    normalized_playbooks: set[str] = {
-        _normalize_name_to_json(name, deconstruct=deconstruct) for name in playbooks
-    }
+    normalized_playbooks: set[str] = {_normalize_name_to_json(name, deconstruct=deconstruct) for name in playbooks}
     not_found_playbooks: set[str] = normalized_playbooks.difference(valid_playbooks_names)
     if not_found_playbooks:
-        rich.print(
-            f"The following playbooks could not be found in the {repository.name} "
-            f"repository: {', '.join(not_found_playbooks)}"
+        logger.error(
+            "The following playbooks could not be found in the %s repository: %s",
+            repository.name,
+            ", ".join(not_found_playbooks),
         )
 
     if valid_playbooks_paths:
-        rich.print(
-            f"[blue]Building the following playbooks: {', '.join(valid_playbooks_names)}[/blue]"
-        )
+        logger.info("Building the following playbooks: %s", ", ".join(valid_playbooks_names))
 
         if deconstruct:
             repository.deconstruct_playbooks(valid_playbooks_paths)
@@ -140,9 +135,7 @@ def _get_playbooks_paths_from_repository(
     playbooks_names: Iterable[str], repositories_paths: list[Path], *, deconstruct: bool = False
 ) -> set[Path]:
     result: set[Path] = set()
-    normalized_names = [
-        _normalize_name_to_json(n, deconstruct=deconstruct) for n in playbooks_names
-    ]
+    normalized_names = [_normalize_name_to_json(n, deconstruct=deconstruct) for n in playbooks_names]
     for path in repositories_paths:
         result.update(p for n in normalized_names if (p := path / n).exists())
     return result

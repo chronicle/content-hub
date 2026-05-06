@@ -111,11 +111,7 @@ class TestNameValidations:
 
             # Verify the error message contains something about the title field
             error_text: str = str(exc_info.value).lower()
-            assert (
-                "title" in error_text
-                or "pattern" in error_text
-                or "should have at most" in error_text
-            )
+            assert "title" in error_text or "pattern" in error_text or "should have at most" in error_text
 
     def test_widget_title_valid(self) -> None:
         """Test that a widget with a valid title passes validation."""
@@ -148,8 +144,7 @@ class TestParameterListValidations:
     def test_job_parameters_too_many(self) -> None:
         """Test that a job with too many parameters fails validation."""
         too_many_params: list[JobParameter] = [
-            mock.MagicMock(spec=JobParameter)
-            for _ in range(mp.core.constants.MAX_PARAMETERS_LENGTH + 1)
+            mock.MagicMock(spec=JobParameter) for _ in range(mp.core.constants.MAX_PARAMETERS_LENGTH + 1)
         ]
 
         with pytest.raises(pydantic.ValidationError) as exc_info:
@@ -174,8 +169,7 @@ class TestParameterListValidations:
     def test_job_parameters_exact_max_length(self) -> None:
         """Test that a job with exactly max parameters passes validation."""
         exact_max_params: list[JobParameter] = [
-            mock.MagicMock(spec=JobParameter)
-            for _ in range(mp.core.constants.MAX_PARAMETERS_LENGTH)
+            mock.MagicMock(spec=JobParameter) for _ in range(mp.core.constants.MAX_PARAMETERS_LENGTH)
         ]
 
         # Should not raise an exception

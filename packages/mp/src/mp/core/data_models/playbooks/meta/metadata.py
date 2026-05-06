@@ -24,12 +24,7 @@ import mp.core.utils
 from mp.core import exclusions
 from mp.core.data_models.abc import RepresentableEnum, SingularComponentMetadata
 
-from .access_permissions import (
-    AccessPermission,
-    BuiltAccessPermission,
-    NonBuiltAccessPermission,
-    PlaybookAccessLevel,
-)
+from .access_permissions import AccessPermission, BuiltAccessPermission, NonBuiltAccessPermission, PlaybookAccessLevel
 from .display_info import PlaybookType
 
 if TYPE_CHECKING:
@@ -39,9 +34,10 @@ if TYPE_CHECKING:
 class PlaybookCreationSource(RepresentableEnum):
     """Represents the source of a playbook's creation."""
 
-    USER_OR_API_INITIATED = 0
-    AI_GENERATED_FROM_ALERT = 1
-    AI_GENERATED_FROM_PROMPT = 2
+    PLAYBOOK_CREATION_SOURCE_UNSPECIFIED = 0
+    USER_OR_API_INITIATED = 1
+    AI_GENERATED_FROM_ALERT = 2
+    AI_GENERATED_FROM_PROMPT = 3
 
 
 class BuiltPlaybookMetadata(TypedDict):
@@ -50,13 +46,13 @@ class BuiltPlaybookMetadata(TypedDict):
     IsEnable: bool
     Version: float
     Description: str
-    CreationSource: NotRequired[int | None]
-    DefaultAccessLevel: NotRequired[int | None]
+    CreationSource: NotRequired[int | str | None]
+    DefaultAccessLevel: NotRequired[int | str | None]
     SimulationClone: NotRequired[bool | None]
     DebugAlertIdentifier: str | None
     DebugBaseAlertIdentifier: str | None
     IsDebugMode: bool
-    PlaybookType: int
+    PlaybookType: int | str
     TemplateName: str | None
     OriginalWorkflowIdentifier: str
     VersionComment: str | None
@@ -170,9 +166,9 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
         return cls._from_non_built_path(definition_path)
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltPlaybookMetadata) -> Self:  # ty:ignore[invalid-method-override]
-        access_level: int | None = built.get("DefaultAccessLevel")
-        creation_source: int | None = built.get("CreationSource")
+    def _from_built(cls, file_name: str, built: BuiltPlaybookMetadata) -> Self:  # noqa: ARG003
+        access_level: int | str | None = built.get("DefaultAccessLevel")
+        creation_source: int | str | None = built.get("CreationSource")
         return cls(
             identifier=built["Identifier"],
             is_enable=built["IsEnable"],
@@ -193,21 +189,15 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
             is_automatic=built["IsAutomatic"],
             is_archived=built["IsArchived"],
             last_editor=built.get("LastEditor"),
-            default_access_level=(
-                PlaybookAccessLevel(int(access_level)) if access_level is not None else None
-            ),
-            creation_source=(
-                PlaybookCreationSource(int(creation_source))
-                if creation_source is not None
-                else None
-            ),
+            default_access_level=(PlaybookAccessLevel(int(access_level)) if access_level is not None else None),
+            creation_source=(PlaybookCreationSource(int(creation_source)) if creation_source is not None else None),
             simulation_clone=built.get("SimulationClone"),
             permissions=[AccessPermission.from_built(p) for p in built["Permissions"]],
             environments=built.get("Environments", []),
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltPlaybookMetadata) -> Self:  # ty:ignore[invalid-method-override]
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltPlaybookMetadata) -> Self:  # noqa: ARG003
         access_level: str | None = non_built.get("default_access_level")
         creation_source: str | None = non_built.get("creation_source")
         return cls(
@@ -230,13 +220,9 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
             is_automatic=non_built["is_automatic"],
             is_archived=non_built["is_archived"],
             last_editor=non_built.get("last_editor"),
-            default_access_level=(
-                PlaybookAccessLevel.from_string(access_level) if access_level is not None else None
-            ),
+            default_access_level=(PlaybookAccessLevel.from_string(access_level) if access_level is not None else None),
             creation_source=(
-                PlaybookCreationSource.from_string(creation_source)
-                if creation_source is not None
-                else None
+                PlaybookCreationSource.from_string(creation_source) if creation_source is not None else None
             ),
             simulation_clone=non_built.get("simulation_clone"),
             permissions=[AccessPermission.from_non_built(p) for p in non_built["permissions"]],
@@ -270,9 +256,7 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
             IsAutomatic=self.is_automatic,
             IsArchived=self.is_archived,
             LastEditor=self.last_editor,
-            DefaultAccessLevel=(
-                self.default_access_level.value if self.default_access_level is not None else None
-            ),
+            DefaultAccessLevel=(self.default_access_level.value if self.default_access_level is not None else None),
             CreationSource=self.creation_source.value if self.creation_source is not None else None,
             SimulationClone=self.simulation_clone,
             Permissions=[p.to_built() for p in self.permissions],
@@ -309,9 +293,7 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
             default_access_level=self.default_access_level.to_string()
             if self.default_access_level is not None
             else None,
-            creation_source=self.creation_source.to_string()
-            if self.creation_source is not None
-            else None,
+            creation_source=self.creation_source.to_string() if self.creation_source is not None else None,
             simulation_clone=self.simulation_clone,
             permissions=[p.to_non_built() for p in self.permissions],
             environments=self.environments,

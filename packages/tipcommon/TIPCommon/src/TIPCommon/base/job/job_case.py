@@ -14,16 +14,15 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple, TYPE_CHECKING
-
 import hashlib
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, NamedTuple
 
-from ...consts import JOB_MAX_TAG_LEN, JOB_MIN_TAG_LEN
-from ...data_models import AlertCard, CaseDataStatus, CaseDetails
+from TIPCommon.consts import JOB_MAX_TAG_LEN, JOB_MIN_TAG_LEN
+from TIPCommon.data_models import AlertCard, CaseDataStatus, CaseDetails
 
 if TYPE_CHECKING:
-    from ...types import SingleJson
+    from TIPCommon.types import SingleJson
 
 
 class JobCommentsResult(NamedTuple):
@@ -105,6 +104,7 @@ class JobCase:
         Returns:
             AlertCard | None: The first alert based on the specified criteria, or None
             if no such alert exists.
+
         """
         if open_only:
             return next(
@@ -125,6 +125,7 @@ class JobCase:
 
         Returns:
             str | None: The corresponding alert identifier if found, otherwise None.
+
         """
         alert = self.product_ids_from_secops_alerts.get(product_id)
 
@@ -139,6 +140,7 @@ class JobCase:
 
         Returns:
             list[str]: The comments from the case details.
+
         """
         return self.case_detail.comments
 
@@ -148,6 +150,7 @@ class JobCase:
 
         Args:
             value (list[str]): The comments to set in the case details.
+
         """
         self.case_detail.comments = value
 
@@ -162,6 +165,7 @@ class JobCase:
             incident: The product incident to add.
             product_key (str): The key to use for matching the incident to the alert
             (default is "name").
+
         """
         incident_product_id = getattr(incident, product_key)
         alert = self.product_ids_from_secops_alerts.get(incident_product_id)
@@ -180,6 +184,7 @@ class JobCase:
 
         Returns:
             SingleJson | None: The corresponding product incident if found, otherwise None.
+
         """
         for product_id, alert in self.product_ids_from_secops_alerts.items():
             if product_id == alert_id and hasattr(alert, "incident"):
@@ -200,6 +205,7 @@ class JobCase:
             comment (str): The comment to add to the incident.
             product_key (str): The key to use for matching the incident to the alert
             (default is "id").
+
         """
         product_comments = [comment]
         matched_incident = next(
@@ -239,6 +245,7 @@ class JobCase:
         Returns:
             JobCommentsResult: A named tuple containing lists of comments to sync to case and
             product.
+
         """
         case_hashes = self.get_case_comments_hashes()
         product_hashes = self.get_product_comments_hashes()
@@ -279,6 +286,7 @@ class JobCase:
 
         Returns:
             list[str]: A list of formatted comments to sync to the case.
+
         """
         results: list[str] = []
 
@@ -319,6 +327,7 @@ class JobCase:
 
         Returns:
             list[str]: A list of formatted comments to sync to the product.
+
         """
         results: list[str] = []
 
@@ -345,6 +354,7 @@ class JobCase:
 
         Returns:
             bool: True if the comment should be synced, False otherwise.
+
         """
         content: str = comment.get("comment", "") or ""
 
@@ -361,6 +371,7 @@ class JobCase:
         Returns:
             bool: True if the comment is valid and should be considered for syncing,
             False otherwise.
+
         """
         content: str = comment
 
@@ -371,10 +382,9 @@ class JobCase:
 
         Returns:
             list[str]: A list of hashes representing the comments currently in the case.
+
         """
-        return [
-            self._generate_string_hash(comment["comment"] or "") for comment in self.case_comments
-        ]
+        return [self._generate_string_hash(comment["comment"] or "") for comment in self.case_comments]
 
     def get_product_comments_hashes(self) -> list[str]:
         """Get hashes of all product comments in the case alerts.
@@ -382,13 +392,15 @@ class JobCase:
         Returns:
             list[str]: A list of hashes representing the comments currently in the product incidents
             associated with the case alerts.
+
         """
         comments_hashes = []
         for alert in self.case_detail.alerts:
             if not hasattr(alert, "incident") or alert.incident is None:
                 continue
-            for comment in alert.incident.comments:
-                comments_hashes.append(self._generate_string_hash(comment.message or ""))
+            comments_hashes.extend(
+                self._generate_string_hash(comment.message or "") for comment in alert.incident.comments
+            )
 
         return comments_hashes
 
@@ -400,6 +412,7 @@ class JobCase:
 
         Returns:
             str: The resulting SHA256 hash of the input string.
+
         """
         return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()
 
@@ -421,10 +434,9 @@ class JobCase:
             tuple[list[SingleJson], list[str]]: A tuple containing a list of dicts
             with product identifiers and their corresponding tags to sync, and
             a list of all product tags.
+
         """
-        all_tags = self.__get_all_product_tags(
-            product_properties_key=product_properties_key, tags_key=tags_key
-        )
+        all_tags = self.__get_all_product_tags(product_properties_key=product_properties_key, tags_key=tags_key)
         incident_to_update_tags = []
 
         for alert in self.case_detail.alerts:
@@ -432,10 +444,7 @@ class JobCase:
                 continue
             incident = alert.incident
             tags = set(getattr(incident, tags_key, []))
-            tags = [
-                getattr(tag, tags_name, None) if getattr(tag, tags_name, None) else tag
-                for tag in tags
-            ]
+            tags = [getattr(tag, tags_name, None) or tag for tag in tags]
             tags_to_update = set(all_tags).difference(tags)
             if tags_to_update:
                 incident_to_update_tags.append(incident)
@@ -458,6 +467,7 @@ class JobCase:
 
         Returns:
             list[str]: A list of all product tags from the case alerts.
+
         """
         all_tags = set()
 
@@ -465,16 +475,9 @@ class JobCase:
             if not hasattr(alert, "incident") or alert.incident is None:
                 continue
             incident = alert.incident
-            incident = (
-                getattr(incident, product_properties_key, {})
-                if product_properties_key
-                else incident
-            )
+            incident = getattr(incident, product_properties_key, {}) if product_properties_key else incident
             tags = getattr(incident, tags_key, [])
-            tags = [
-                getattr(tag, tags_name, None) if getattr(tag, tags_name, None) else tag
-                for tag in tags
-            ]
+            tags = [getattr(tag, tags_name, None) or tag for tag in tags]
             all_tags.update(tags)
 
         return list(all_tags)
@@ -484,10 +487,9 @@ class JobCase:
 
         Returns:
             list[str]: A list of all case tags.
+
         """
-        return [
-            tag["displayName"] if "displayName" in tag else tag for tag in self.case_detail.tags
-        ]
+        return [tag.get("displayName", tag) for tag in self.case_detail.tags]
 
     def product_tags(
         self,
@@ -505,6 +507,7 @@ class JobCase:
 
         Returns:
             list[str]: A list of all product tags from the case alerts.
+
         """
         return self.__get_all_product_tags(
             product_properties_key=product_properties_key,
@@ -518,6 +521,7 @@ class JobCase:
 
         Returns:
             list[str]: A list of all case tags.
+
         """
         return self.__get_all_case_tags()
 
@@ -545,6 +549,7 @@ class JobCase:
 
         Returns:
             JobTagsResult: The result containing tags to sync between product and case.
+
         """
         case_tags = self.case_tags
         product_tags = self.product_tags(
@@ -586,6 +591,7 @@ class JobCase:
 
         Returns:
             CaseTagsData: The data object containing tags to add to and remove from the case.
+
         """
         return CaseTagsData(
             tags_to_add=self._get_new_tags(
@@ -620,6 +626,7 @@ class JobCase:
 
         Returns:
             ProductTagsData: The data object containing tags to add to and remove from the product.
+
         """
         return ProductTagsData(
             tags_to_add=self._get_new_tags(
@@ -662,13 +669,12 @@ class JobCase:
         Returns:
             list[str]: A list of new tags to be added to the destination system,
             each prefixed with prefix_to_add.
+
         """
         new_tags = []
         for tag in source_tags:
             stripped_tag = tag.strip()
-            if self._is_tag_valid(
-                stripped_tag, prefix_to_exclude, tag_to_exclude, min_len, max_len
-            ):
+            if self._is_tag_valid(stripped_tag, prefix_to_exclude, tag_to_exclude, min_len, max_len):
                 prefixed_tag = f"{prefix_to_add}{stripped_tag}"
                 if prefixed_tag not in existing_tags:
                     new_tags.append(prefixed_tag)
@@ -691,6 +697,7 @@ class JobCase:
 
         Returns:
             list[str]: A list of tags to be removed from the destination system.
+
         """
         source_tags_prefixed = {f"{source_prefix}{tag.strip()}" for tag in source_tags}
 
@@ -721,6 +728,7 @@ class JobCase:
 
         Returns:
             bool: True if the tag is valid and should be considered for syncing, False otherwise.
+
         """
         if not stripped_tag:
             return False
@@ -742,6 +750,7 @@ class JobCase:
             JobAssigneeResult: A named tuple containing the target user dictionary to sync to
             (or None if no match is found) and the corresponding alert for reference
             (or None if no open alert is found).
+
         """
         first_open_alert = self.get_first_alert(open_only=True)
 
@@ -776,6 +785,7 @@ class JobCase:
         Returns:
             JobSeverityResult: A named tuple containing a list of tuples, each with an AlertCard
             and the corresponding severity to update to.
+
         """
         updates = []
 
@@ -800,6 +810,7 @@ class JobCase:
             JobStatusResult: A named tuple with two lists, one with alerts that need
             to be closed in SecOps along with their metadata, and another with payloads
             for incidents that need to be closed in the product.
+
         """
         product_to_secops = []
         secops_to_product = []
@@ -812,12 +823,8 @@ class JobCase:
 
             if self._should_close_alert_in_secops(alert, meta, product_closed_status):
                 product_to_secops.append((alert, meta))
-            elif self._should_close_alert_in_product(
-                alert, meta, is_case_closed, product_closed_status
-            ):
-                secops_to_product.append(
-                    self._build_product_closure_payload(alert, meta, is_case_closed)
-                )
+            elif self._should_close_alert_in_product(alert, meta, is_case_closed, product_closed_status):
+                secops_to_product.append(self._build_product_closure_payload(alert, meta, is_case_closed))
 
         return JobStatusResult(product_to_secops, secops_to_product)
 
@@ -826,6 +833,7 @@ class JobCase:
 
         Returns:
             bool: True if the case is closed, False otherwise.
+
         """
         return self.case_detail.status == CaseDataStatus.CLOSED
 
@@ -845,6 +853,7 @@ class JobCase:
 
         Returns:
             bool: True if the alert should be closed in SecOps, False otherwise.
+
         """
         return meta.status == closed_status and alert.status.lower() != "close"
 
@@ -867,13 +876,12 @@ class JobCase:
         Returns:
             bool: True if the alert's corresponding incident should be closed in the product,
             False otherwise.
+
         """
         if meta.status == closed_status:
             return False
 
-        return is_case_closed or (
-            alert.status.lower() == "close" and len(self.case_detail.alerts) > 1
-        )
+        return is_case_closed or (alert.status.lower() == "close" and len(self.case_detail.alerts) > 1)
 
     def _build_product_closure_payload(
         self,
@@ -892,6 +900,7 @@ class JobCase:
         Returns:
             SingleJson: A dictionary containing the necessary information to update the product
             incident's status.
+
         """
         payload = {
             "alert": alert,
