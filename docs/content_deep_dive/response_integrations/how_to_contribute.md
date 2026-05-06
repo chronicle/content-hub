@@ -12,7 +12,7 @@ The `mp` tool helps automate the process of pulling, validating, and structuring
     - [Follow the installation guide](/packages/mp/docs/installation.md).
 
 - ### 1.2. Pull the integration from SOAR
-    - [Use the'dev env' commands to log in and pull the integration](/packages/mp/docs/commands/dev_env.md).
+    - [Use the 'dev env' commands to log in and pull the integration](/packages/mp/docs/commands/dev_env.md).
   ```bash
   mp login --api-root <soar_url> --api-key <api_key>
   
