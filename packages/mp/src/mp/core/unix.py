@@ -46,18 +46,6 @@ class NonFatalCommandError(NonFatalValidationError):
     """Non-fatal error that happens during shell commands."""
 
 
-def _log_subprocess_result(result: sp.CompletedProcess[str] | sp.CalledProcessError) -> None:
-    """Log the output of a subprocess command.
-
-    Args:
-        result: The result of the subprocess command.
-    """
-    for line in (result.stdout or "").splitlines():
-        logger.debug(line)
-    for line in (result.stderr or "").splitlines():
-        logger.debug(line)
-
-
 def compile_core_integration_dependencies(project_path: Path, requirements_path: Path) -> None:
     """Compile/Export all project dependencies into a requirements' file.
 
@@ -671,3 +659,16 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
 
 def _get_python_version() -> str:
     return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+
+
+def _log_subprocess_result(result: sp.CompletedProcess[str] | sp.CalledProcessError) -> None:
+    """Log the output of a subprocess command.
+
+    Args:
+        result: The result of the subprocess command.
+
+    """
+    for line in (result.stdout or "").splitlines():
+        logger.debug(line)
+    for line in (result.stderr or "").splitlines():
+        logger.debug(line)
