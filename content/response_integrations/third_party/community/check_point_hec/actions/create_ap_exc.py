@@ -1,3 +1,4 @@
+"""Create Anti-Phishing Exception action – adds a whitelist or blacklist AP exception."""
 from ..core.base_action import BaseAction
 from ..core.constants import CREATE_AP_EXC_SCRIPT_NAME
 
@@ -6,13 +7,21 @@ ERROR_MESSAGE: str = "Failed creating Anti-Phishing exception!"
 
 
 class CreateAPException(BaseAction):
+    """Create an Anti-Phishing exception (whitelist or blacklist) in Check Point HEC.
+
+    Accepts a rich set of optional matching criteria – sender email, domain,
+    subject, recipient, IP addresses, attachment MD5, link domains, and various
+    *matching mode* fields – and submits them to the AP exceptions API.
+    """
 
     def __init__(self) -> None:
+        """Initialize the action with its script name and output messages."""
         super().__init__(CREATE_AP_EXC_SCRIPT_NAME)
         self.output_message: str = SUCCESS_MESSAGE
         self.error_output_message: str = ERROR_MESSAGE
 
     def _extract_action_parameters(self) -> None:
+        """Extract all AP exception fields from the SOAR action parameters."""
         self.params.exception_type = self.soar_action.extract_action_param(
             param_name="Exception Type",
             print_value=True,
@@ -117,6 +126,7 @@ class CreateAPException(BaseAction):
         )
 
     def _perform_action(self, _=None) -> None:
+        """Build the exception payload and call the API to create it."""
         exception_type = self.params.exception_type
         entity_id = self.params.entity_id
         attachment_md5 = self.params.attachment_md5

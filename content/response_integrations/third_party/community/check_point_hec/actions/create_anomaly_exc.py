@@ -1,3 +1,4 @@
+"""Create Anomaly Exception action – adds a new anomaly detection exception rule."""
 from __future__ import annotations
 import yaml
 
@@ -11,13 +12,20 @@ ERROR_MESSAGE: str = "Failed creating Anomaly exception!"
 
 
 class CreateAnomalyException(BaseAction):
+    """Create a new anomaly detection exception in Check Point HEC.
+
+    Accepts a JSON payload that describes the exception rule and an optional
+    *Added By* label that identifies the analyst who created the entry.
+    """
 
     def __init__(self) -> None:
+        """Initialize the action with its script name and output messages."""
         super().__init__(CREATE_ANOMALY_EXC_SCRIPT_NAME)
         self.output_message: str = SUCCESS_MESSAGE
         self.error_output_message: str = ERROR_MESSAGE
 
     def _extract_action_parameters(self) -> None:
+        """Extract *Request JSON* and optional *Added By* from the SOAR action parameters."""
         self.params.request_json = self.soar_action.extract_action_param(
             param_name="Request JSON",
             print_value=True,
@@ -30,10 +38,12 @@ class CreateAnomalyException(BaseAction):
         )
 
     def _validate_params(self) -> None:
+        """Validate that *Request JSON* is well-formed JSON."""
         validator: ParameterValidator = ParameterValidator(self.soar_action)
         validator.validate_json(param_name="Request JSON", json_string=self.params.request_json)
 
     def _perform_action(self, _=None) -> None:
+        """Parse the request JSON and call the API to create the anomaly exception."""
         request_json = yaml.safe_load(self.params.request_json)
         added_by = self.params.added_by
         self.json_results = self.api_client.create_anomaly_exception(request_json=request_json, added_by=added_by)

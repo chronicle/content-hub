@@ -1,3 +1,4 @@
+"""Update Anti-Phishing Exception action – modifies an existing AP exception."""
 from ..core.base_action import BaseAction
 from ..core.constants import UPDATE_AP_EXC_SCRIPT_NAME
 
@@ -6,13 +7,21 @@ ERROR_MESSAGE: str = "Failed updating Anti-Phishing exception!"
 
 
 class UpdateAPException(BaseAction):
+    """Update an existing Anti-Phishing exception identified by type and ID.
+
+    Accepts the same matching-criteria fields as
+    :class:`~actions.create_ap_exc.CreateAPException` plus the mandatory
+    *Exception ID* that identifies the record to update.
+    """
 
     def __init__(self) -> None:
+        """Initialise the action with its script name and output messages."""
         super().__init__(UPDATE_AP_EXC_SCRIPT_NAME)
         self.output_message: str = SUCCESS_MESSAGE
         self.error_output_message: str = ERROR_MESSAGE
 
     def _extract_action_parameters(self) -> None:
+        """Extract *Exception Type*, *Exception ID*, and all optional matching fields."""
         self.params.exception_type = self.soar_action.extract_action_param(
             param_name="Exception Type",
             print_value=True,
@@ -123,6 +132,7 @@ class UpdateAPException(BaseAction):
         )
 
     def _perform_action(self, _=None) -> None:
+        """Build the updated exception payload and call the AP exceptions update API."""
         exception_type = self.params.exception_type
         exception_id = self.params.exception_id
         entity_id = self.params.entity_id

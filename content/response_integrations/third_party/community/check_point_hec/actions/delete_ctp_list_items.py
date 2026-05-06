@@ -1,3 +1,4 @@
+"""Delete CTP List Items action – bulk-removes multiple CTP list items by ID."""
 from ..core.base_action import BaseAction
 from ..core.constants import DELETE_CTP_LIST_ITEMS_SCRIPT_NAME
 
@@ -6,13 +7,20 @@ ERROR_MESSAGE: str = "Failed deleting Click Time Protection List Items!"
 
 
 class DeleteCTPListItems(BaseAction):
+    """Delete multiple CTP exception list items in a single API call.
+
+    Accepts a comma-separated string of item IDs via the *List Item IDs*
+    parameter and sends them as a batch-delete request.
+    """
 
     def __init__(self) -> None:
+        """Initialise the action with its script name and output messages."""
         super().__init__(DELETE_CTP_LIST_ITEMS_SCRIPT_NAME)
         self.output_message: str = SUCCESS_MESSAGE
         self.error_output_message: str = ERROR_MESSAGE
 
     def _extract_action_parameters(self) -> None:
+        """Extract the mandatory *List Item IDs* comma-separated parameter."""
         self.params.list_item_ids = self.soar_action.extract_action_param(
             param_name="List Item IDs",
             print_value=True,
@@ -21,6 +29,7 @@ class DeleteCTPListItems(BaseAction):
         )
 
     def _perform_action(self, _=None) -> None:
+        """Split the ID string and call the CTP API for batch deletion."""
         list_item_ids = self.params.list_item_ids.split(",")
 
         self.json_results = self.api_client.delete_ctp_list_items(list_item_ids)

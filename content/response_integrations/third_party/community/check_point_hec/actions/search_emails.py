@@ -1,3 +1,4 @@
+"""Search Emails action – queries email entities with rich filtering options."""
 import yaml
 
 from ..core.base_action import BaseAction
@@ -9,13 +10,33 @@ ERROR_MESSAGE: str = "Failed getting Emails!"
 
 
 class SearchEmails(BaseAction):
+    """Search for email entities in Check Point HEC using a comprehensive set of filters.
+
+    Supported filter parameters include:
+
+    * Date range (*Date From* / *Date To*)
+    * SaaS platform (*SaaS* – ``Microsoft Exchange`` or ``Gmail``)
+    * Direction (``internal`` / ``incoming`` / ``outgoing``)
+    * Subject / sender / recipient / name (contains or exact-match variants)
+    * Check Point detection categories (*CP Detection*) – mapped via
+      :data:`~core.constants.CP_DETECTION_VALUES`
+    * Microsoft detection categories (*MS Detection*) – mapped via
+      :data:`~core.constants.MS_DETECTION_VALUES`
+    * Quarantine state filters for both CP and Microsoft
+    * Server IP, client IP, email links, internet message ID, attachment MD5
+
+    When both CP and MS detection lists are supplied, the *Detection Op*
+    (``AND``/``OR``) controls how they are combined.
+    """
 
     def __init__(self) -> None:
+        """Initialise the action with its script name and output messages."""
         super().__init__(SEARCH_EMAILS_SCRIPT_NAME)
         self.output_message: str = SUCCESS_MESSAGE
         self.error_output_message: str = ERROR_MESSAGE
 
     def _extract_action_parameters(self) -> None:
+        """Extract all email-search filter parameters from the SOAR action."""
         self.params.start_date = self.soar_action.extract_action_param(
             param_name="Date From",
             print_value=True,
@@ -142,6 +163,7 @@ class SearchEmails(BaseAction):
         )
 
     def _perform_action(self, _=None) -> None:
+        """Map filter values to API identifiers and call the email search endpoint."""
         start_date = self.params.start_date
         end_date = self.params.end_date
         saas = SAAS_APPS_TO_SAAS_NAMES[self.params.saas] if self.params.saas else None
