@@ -438,6 +438,9 @@ class ImportTransformer(cst.CSTTransformer):
             return updated_node
 
         orig_import_from = original_node.body[0]
+        if not isinstance(orig_import_from, cst.ImportFrom):
+            return updated_node
+
         if orig_import_from.module is None or (
             isinstance(orig_import_from.module, cst.Name)
             and orig_import_from.module.value
