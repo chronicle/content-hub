@@ -40,6 +40,7 @@ from ..core.constants import (
     IGNORED_INTEGRATIONS,
 )
 from ..core.GitSyncManager import GitSyncManager
+from ..core.definitions import IntegrationInstance
 
 SCRIPT_NAME = "Pull Content"
 
@@ -165,10 +166,15 @@ def main():
 
                     instance["settings"]["instanceIdentifier"] = instance_identifier
 
+                    settings_to_save = instance["settings"]
+                    if platform_supports_1p_api():
+                        settings_to_save = IntegrationInstance.from_dict(instance).to_1p(instance_identifier)
+
                     gitsync.api.save_integration_instance_settings(
                         instance_identifier=instance_identifier,
                         env=instance["environment"],
-                        settings=instance["settings"],
+                        settings=settings_to_save,
+                        integration_identifier=instance["integrationIdentifier"],
                     )
 
         if features["Playbooks"]:
@@ -181,12 +187,11 @@ def main():
             for connector in gitsync.content.get_connectors():# Assuming this API exists
                 
                     is_duplicate = any(
-                        c.get("name") or c.get("displayName")  == connector.name and c.get("environment") == connector.environment
+                        (c.get("name") == connector.name or c.get("displayName") == connector.name) and c.get("environment") == connector.environment
                         for c in existing_connectors
                     )
 
                     if is_duplicate:
-                        siemplify.LOGGER.info(f"Connector {connector.name} already exists in {connector.environment}. Updating.")
                         continue
                     siemplify.LOGGER.info(f"Installing {connector.name}")
                     gitsync.install_connector(connector)
@@ -406,8 +411,8 @@ def main():
                 if not isinstance(definition, dict):
                     continue
 
-                def_type = definition.get("slaType") or definition.get("Type")
-                def_val = definition.get("slaTypeValue") or definition.get("TypeValue")
+                def_type = definition.get("slaType") or definition.get("Type") or definition.get("valueType")
+                def_val = definition.get("slaTypeValue") or definition.get("TypeValue") or definition.get("value")
                 def_envs = definition.get("environments") or ([definition.get("environment")] if definition.get("environment") else []) or ([definition.get("Environment")] if definition.get("Environment") else [])
                 def_envs = [e for e in def_envs if e]
                 
@@ -415,8 +420,8 @@ def main():
                 for c in current_sla_records:
                     if not isinstance(c, dict):
                         continue
-                    c_type = c.get("slaType") or c.get("Type")
-                    c_val = c.get("slaTypeValue") or c.get("TypeValue")
+                    c_type = c.get("slaType") or c.get("Type") or c.get("valueType")
+                    c_val = c.get("slaTypeValue") or c.get("TypeValue") or c.get("value")
                     c_envs = c.get("environments") or ([c.get("environment")] if c.get("environment") else []) or ([c.get("Environment")] if c.get("Environment") else [])
                     c_envs = [e for e in c_envs if e]
                     
@@ -444,9 +449,15 @@ def main():
                 if "items" in logo_data:
 
                     for item in logo_data.get("items", []):
+                        if item.get("displayName") == "ChangeFavicon":
+                             continue
                         
-                        if "value" not in item:
-                            item["value"] = "True"
+                        if "value" not in item or item.get("value").strip() == "":
+                            item["value"] = "Null"
+                        elif item.get("displayName") == "CompanyLogo":
+                            val = item["value"]
+                            if not val.startswith("data:image/png;base64,"):
+                                item["value"] = "data:image/png;base64," + val
                     
                         payload = item
                         gitsync.api.update_logo(payload)

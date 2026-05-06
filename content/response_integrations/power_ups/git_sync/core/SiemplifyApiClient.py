@@ -285,12 +285,13 @@ class SiemplifyApiClient:
             environment=env,
         )
 
-    def save_integration_instance_settings(self, instance_identifier, env, settings):
+    def save_integration_instance_settings(self, instance_identifier, env, settings, integration_identifier=None):
         return save_integration_instance_settings(
             chronicle_soar=self.siemplify_soar,
             identifier=instance_identifier,
             environment=env,
             integration_data=settings,
+            integration_identifier=integration_identifier,
         )
 
     def get_ide_cards(self, include_staging=False):
@@ -535,8 +536,8 @@ class SiemplifyApiClient:
         Returns:
             list[SingleJson]: List of denylists.
         """
-        if self.system_version > VERSION_6117:
-            return self.get_blocklists(chronicle_soar=chronicle_soar)
+        # if self.system_version > VERSION_6117:
+        #     return self.get_blocklists(chronicle_soar=chronicle_soar)
 
         return get_denylists(chronicle_soar)
 

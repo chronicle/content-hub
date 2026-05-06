@@ -327,9 +327,14 @@ def main():
         if features["Logo"]:
             siemplify.LOGGER.info("Pushing logo")
             logo = gitsync.api.get_logo()
+
             if isinstance(logo, dict) and logo.get("imageBase64"):
-                # A custom logo is configured.
-                logo["imageBase64"] = "data:image/png;base64," + logo["imageBase64"]
+                base64_str = logo["imageBase64"]
+                prefix = "data:image/png;base64,"
+                
+                if not base64_str.startswith("data:"):
+                    logo["imageBase64"] = prefix + base64_str
+
             gitsync.content.push_logo(logo)
 
         if features["Case Tags"]:

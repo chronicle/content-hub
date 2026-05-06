@@ -577,3 +577,39 @@ class Job(Content):
 
     def iter_files(self) -> Iterator[File]:
         yield File(f"Jobs/{self.name}.json", json.dumps(self.raw_data, indent=4))
+
+
+class IntegrationInstance(Content):
+    def __init__(self, raw_data: dict):
+        super().__init__()
+        self.raw_data = raw_data
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(data)
+
+    def to_1p(self, identifier: str) -> dict:
+        settings_payload = self.raw_data.get("settings", {})
+        params = []
+        for s in settings_payload.get("settings", []):
+            params.append({
+                "description": s.get("propertyDescription") or None,
+                "mandatory": s.get("isMandatory") or False,
+                "type": s.get("propertyType"),
+                "id": s.get("id"),
+                "displayName": s.get("propertyDisplayName"),
+                "propertyName": s.get("propertyName"),
+                "value": s.get("value")
+            })
+        
+        return {
+            "name": f"projects/project/locations/location/instances/instance/integrations/{self.raw_data.get('integrationIdentifier')}/integrationInstances/{identifier}",
+            "environment": self.raw_data.get("environment"),
+            "identifier": identifier,
+            "configured": True,
+            "remote": None,
+            "parameters": params,
+            "integrationIdentifier": self.raw_data.get("integrationIdentifier"),
+            "description": settings_payload.get("instanceDescription") or None,
+            "displayName": settings_payload.get("instanceName")
+        }
