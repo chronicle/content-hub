@@ -429,11 +429,28 @@ class ImportTransformer(cst.CSTTransformer):
             case _:
                 return updated_node
 
-    def leave_SimpleStatementLine(  # noqa: N802, PLR6301, D102
+    def leave_SimpleStatementLine(  # noqa: N802, PLR6301
         self,
         original_node: cst.SimpleStatementLine,
         updated_node: cst.SimpleStatementLine,
     ) -> FlattenSentinel[cst.SimpleStatementLine] | cst.SimpleStatementLine:
+        """Transform a multi-import line from core/common/sdk into separate import lines.
+
+        This visitor method checks if a `SimpleStatementLine` contains a specific
+        `ImportFrom` statement (e.g., `from ..core import a, b`). If it matches,
+        it replaces that single line with multiple `SimpleStatementLine` nodes,
+        each containing a single `Import`.
+
+        Args:
+            original_node: The original `SimpleStatementLine` from the unmodified CST.
+            updated_node: The `SimpleStatementLine` with changes from child visitors.
+
+        Returns:
+            A `FlattenSentinel` containing a list of new `SimpleStatementLine` nodes
+            if the import was transformed, otherwise the `updated_node` is returned
+            unchanged.
+
+        """
         if not isinstance(updated_node.body[0], cst.ImportFrom):
             return updated_node
 
