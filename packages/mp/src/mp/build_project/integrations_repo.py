@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import logging
 import shutil
-from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import mp.core.config
@@ -41,7 +40,7 @@ from .restructure.integrations.deconstruct import DeconstructIntegration
 from .restructure.integrations.integration import restructure_integration
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable
     from pathlib import Path
 
 
@@ -91,10 +90,15 @@ class IntegrationsRepo:
             integration_paths: The paths of integrations to build
 
         """
-        paths: Iterator[Path] = (p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p))
+        paths: list[Path] = [p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p)]
         processes: int = mp.core.config.get_processes_number()
-        with ThreadPoolExecutor(max_workers=processes) as pool:
-            list(pool.map(self.build_integration, paths))
+
+        mp.core.utils.run_in_parallel(
+            func=self.build_integration,
+            items=paths,
+            max_workers=processes,
+            error_message_template="Failed to build '%s'",
+        )
 
     def build_integration(self, integration_path: Path) -> None:
         """Build a single integration provided by `integration_path`.
@@ -171,10 +175,15 @@ class IntegrationsRepo:
             integration_paths: The paths of integrations to deconstruct
 
         """
-        paths: Iterator[Path] = (p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p))
+        paths: list[Path] = [p for p in integration_paths if p.exists() and mp.core.file_utils.is_integration(p)]
         processes: int = mp.core.config.get_processes_number()
-        with ThreadPoolExecutor(max_workers=processes) as pool:
-            list(pool.map(self.deconstruct_integration, paths))
+
+        mp.core.utils.run_in_parallel(
+            func=self.deconstruct_integration,
+            items=paths,
+            max_workers=processes,
+            error_message_template="Failed to deconstruct '%s'",
+        )
 
     def deconstruct_integration(self, integration_path: Path) -> None:
         """Deconstruct a single integration provided by `integration_path`.
