@@ -177,7 +177,6 @@ class DependencyDeconstructor:
             min_version = mp.core.constants.SDK_DEPENDENCIES_MIN_VERSIONS[package_install_name]
             if Version(version) < Version(min_version):
                 version = min_version
-
         matched_imports = required_modules.intersection(provided_imports)
 
         if not matched_imports:
