@@ -14,29 +14,38 @@
 
 from __future__ import annotations
 
+from Siemplify import Siemplify
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 
 @output_handler
-def main():
+def main() -> None:
+    """Execute AttachPlaybookToAllCaseAlerts action."""
     siemplify = SiemplifyAction()
 
     workflow_name = siemplify.parameters["Playbook Name"]
 
     for alert in siemplify.case.alerts:
         alert_identifier = alert.identifier
-        success = super(SiemplifyAction, siemplify).attach_workflow_to_case(
+        success = Siemplify.attach_workflow_to_case(
+            siemplify,
             workflow_name,
             siemplify.case_id,
             alert_identifier,
         )
-    if str(success) == "True":
-        output_message = f"Attached Playbook [{workflow_name}] to all alerts in Case [{siemplify.case_id}]"
+    if success:
+        output_message = (
+            f"Attached Playbook [{workflow_name}] to all alerts "
+            f"in Case [{siemplify.case_id}]"
+        )
     else:
-        output_message = f"Failed to attach Playbook [{workflow_name}] to alerts in Case [{siemplify.case_id}]"
+        output_message = (
+            f"Failed to attach Playbook [{workflow_name}] to alerts "
+            f"in Case [{siemplify.case_id}]"
+        )
 
-    siemplify.end(output_message, str(success))
+    siemplify.end(output_message, success)
 
 
 if __name__ == "__main__":

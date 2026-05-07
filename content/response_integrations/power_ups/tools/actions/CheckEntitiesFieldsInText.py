@@ -17,27 +17,45 @@ from __future__ import annotations
 import copy
 import json
 import re
+from typing import Any
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
 
+from ..core.ToolsCommon import (
+    ExecutionScope,
+    get_execution_scope,
+    get_target_entities,
+)
 
-def get_entity_object_by_identifier(siemplify, identifier):
-    for entity in siemplify.target_entities:
+
+def get_entity_object_by_identifier(
+    target_entities: list[Any], identifier: str
+) -> Any | None:
+    """Find an entity object in target entities list by case-insensitive identifier.
+
+    Args:
+        target_entities: Pre-extracted list of target entities to search.
+        identifier: The target identifier to locate.
+
+    Returns:
+        The matching Entity SDK object if found, otherwise None.
+    """
+    for entity in target_entities:
         if identifier.lower() == entity.identifier.lower():
             return entity
     return None
 
 
 @output_handler
-def main():
+def main() -> None:
+    """Execute CheckEntitiesFieldsInText action."""
     siemplify = SiemplifyAction()
 
     try:
         status = EXECUTION_STATE_COMPLETED
-        output_message = "output message :"
-        result_value = False
+        output_message = ""
         failed_entities = []
         successfull_entities = []
         json_result = {}
@@ -49,12 +67,19 @@ def main():
             siemplify.parameters.get("IsCaseSensitive").lower() == "true"
         )
 
-        for entity in siemplify.target_entities:
+        raw_scope = getattr(siemplify, "execution_scope", ExecutionScope.Alert.value)
+        execution_scope = get_execution_scope(raw_scope, logger=siemplify.LOGGER)
+        target_entities = get_target_entities(
+            execution_scope=execution_scope,
+            target_entities=siemplify.target_entities,
+            case_alerts=getattr(siemplify.case, "alerts", []),
+        )
+
+        for entity in target_entities:
             try:
                 entity_fields_json = copy.deepcopy(fields_json)
                 for item in entity_fields_json:
                     item_results = []
-                    # for event in siemplify.current_alert.security_events:
                     if item.get("RegexForFieldName"):
                         for key in entity.additional_properties.keys():
                             if re.search(item.get("RegexForFieldName"), key):
@@ -94,44 +119,34 @@ def main():
                                 values_post_regex.append(
                                     [{"key": item["FieldName"], "val": post_regex_val}],
                                 )
-                            # values_post_regex.append(post_regex_val)
                         item["ResultsToSearch"] = {"val_to_search": values_post_regex}
-                        # print(values_post_regex)
                     else:
                         item["ResultsToSearch"] = {"val_to_search": [item_results]}
                     item["ResultsToSearch"]["found_results"] = []
                     item["ResultsToSearch"]["num_of_results"] = 0
 
-                    # Prepare values to search in:
                     regex_for_search_field = item.get("RegEx")
                     if not regex_for_search_field:
                         regex_for_search_field = ".*"
-                    for item in search_data_json:
-                        search_string = re.findall(regex_for_search_field, item["Data"])
+                    for search_item in search_data_json:
+                        search_string = re.findall(
+                            regex_for_search_field, search_item["Data"]
+                        )
                         if isinstance(search_string, list):
-                            item["search_string"] = " ".join(search_string)
+                            search_item["search_string"] = " ".join(search_string)
                         else:
-                            item["search_string"] = search_string
+                            search_item["search_string"] = search_string
                 json_result[entity.identifier] = entity_fields_json
-            except Exception:
+            except Exception as e:
                 failed_entities.append(entity.identifier)
-                raise
+                siemplify.LOGGER.error(
+                    f"Failed to process entity: {entity.identifier}."
+                )
+                siemplify.LOGGER.exception(e)
 
-        # # Prepare values to search in:
-        # regex_for_search_field = item.get("RegEx")
-        # if not regex_for_search_field:
-        #     regex_for_search_field = ".*"
-        # for item in search_data_json:
-        #     search_string = re.findall(regex_for_search_field, item["Data"])
-        #     if isinstance(search_string, list):
-        #         item["search_string"] = " ".join(search_string)
-        #     else:
-        #         item["search_string"] = search_string
-
-        # Find matches!!
         for entity_id, entity_data in json_result.items():
             for item in entity_data:
-                for vals in item.get("ResultsToSearch", []).get("val_to_search", []):
+                for vals in item["ResultsToSearch"]["val_to_search"]:
                     for search_in_item in search_data_json:
                         for val in vals:
                             if (
@@ -142,7 +157,7 @@ def main():
                                 and val["val"].lower()
                                 in search_in_item.get("search_string").lower()
                             ):
-                                item.get("ResultsToSearch", [])["found_results"].append(
+                                item["ResultsToSearch"]["found_results"].append(
                                     {
                                         "to_search": val,
                                         "searched_in": search_in_item.get(
@@ -150,20 +165,18 @@ def main():
                                         ),
                                     },
                                 )
-                                item.get("ResultsToSearch", [])["num_of_results"] = (
-                                    1
-                                    + item.get("ResultsToSearch", [])["num_of_results"]
+                                item["ResultsToSearch"]["num_of_results"] = (
+                                    1 + item["ResultsToSearch"]["num_of_results"]
                                 )
 
                                 ent = get_entity_object_by_identifier(
-                                    siemplify,
+                                    target_entities,
                                     entity_id,
                                 )
-                                successfull_entities.append(ent)
-                                if enrich_key:
-                                    ent.additional_properties[enrich_key] = True
-                            else:
-                                pass
+                                if ent:
+                                    successfull_entities.append(ent)
+                                    if enrich_key:
+                                        ent.additional_properties[enrich_key] = True
 
         if enrich_key:
             siemplify.update_entities(successfull_entities)
@@ -177,26 +190,30 @@ def main():
             unique_entity_identifiers = list(
                 set([x.identifier for x in successfull_entities]),
             )
-            output_message += "\n Successfully processed entities:\n   {}".format(
+            output_message += "Successfully processed entities:\n   {}".format(
                 "\n   ".join(unique_entity_identifiers),
             )
         else:
-            output_message += "\n No entities where processed."
+            output_message += "No entities were processed."
 
         result_value = len(successfull_entities)
 
         if failed_entities:
-            output_message += "\n Failed processing entities:\n   {}".format(
+            output_message += (
+                "\n" if output_message else ""
+            ) + "Failed processing entities:\n   {}".format(
                 "\n   ".join(failed_entities),
             )
             status = EXECUTION_STATE_FAILED
 
     except Exception as e:
-        raise
-        raise Exception(item)
         status = EXECUTION_STATE_FAILED
         result_value = "Failed"
-        output_message += f"\n {e}"
+        output_message += (
+            "\n" if output_message else ""
+        ) + f"Error executing action 'CheckEntitiesFieldsInText'. Reason: {e}."
+        siemplify.LOGGER.error(output_message)
+        siemplify.LOGGER.exception(e)
 
     siemplify.end(output_message, result_value, status)
 
