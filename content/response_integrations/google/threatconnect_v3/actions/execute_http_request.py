@@ -30,7 +30,6 @@ from ..core.constants import EXECUTE_HTTP_REQUEST_SCRIPT_NAME
 from ..core.exceptions import ThreatConnectV3HTTPError
 
 if TYPE_CHECKING:
-    from typing import NoReturn
 
     from TIPCommon.types import SingleJson  # type: ignore
 
@@ -244,7 +243,7 @@ class ExecuteHttpRequest(ThreatConnectV3Action):
             )
             self.result_value = False  # type: ignore[assignment]
 
-        return None
+        return
 
 
 def main() -> None:

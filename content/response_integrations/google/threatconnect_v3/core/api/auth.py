@@ -23,8 +23,8 @@ import time
 from urllib.parse import urlparse
 
 import requests
-from requests.structures import CaseInsensitiveDict
 from requests.auth import AuthBase
+from requests.structures import CaseInsensitiveDict
 
 
 class ThreatConnectV3Auth(AuthBase):

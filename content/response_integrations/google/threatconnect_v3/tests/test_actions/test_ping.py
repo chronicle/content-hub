@@ -19,16 +19,17 @@ from __future__ import annotations
 import pathlib
 from typing import TYPE_CHECKING
 
-from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 if TYPE_CHECKING:
     from integration_testing.platform.script_output import MockActionOutput
+    from integration_testing.request import MockRequest
+
+    from threatconnect_v3.tests.core.session import ThreatConnectV3Session
 
 from threatconnect_v3.actions import ping
-from threatconnect_v3.tests.core.session import ThreatConnectV3Session
 
 CONFIG_PATH = pathlib.Path(__file__).parent.parent / "config.json"
 
