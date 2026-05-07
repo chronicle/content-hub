@@ -75,7 +75,7 @@ class TestPing:
                 content={"message": "Unauthorized", "status": "Error"},
                 status_code=401,
             )
-        script_session.routes["GET"][r"/api/v3/indicators"] = mock_get_indicators  # type: ignore
+        script_session.routes["GET"][r"/api/v3/indicators"] = mock_get_indicators
 
         ping.main()
 

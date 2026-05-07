@@ -91,7 +91,7 @@ class TestExecuteHttpRequest:
                 content={"message": "Unauthorized", "status": "Error"},
                 status_code=401,
             )
-        script_session.routes["GET"][r"/api/v3/indicators"] = mock_get_indicators  # type: ignore
+        script_session.routes["GET"][r"/api/v3/indicators"] = mock_get_indicators
 
         execute_http_request.main()
 
@@ -122,7 +122,7 @@ class TestExecuteHttpRequest:
                 content={"message": "Unauthorized", "status": "Error"},
                 status_code=401,
             )
-        script_session.routes["GET"][r"/api/v3/indicators"] = mock_get_indicators  # type: ignore
+        script_session.routes["GET"][r"/api/v3/indicators"] = mock_get_indicators
 
         execute_http_request.main()
 
@@ -152,7 +152,7 @@ class TestExecuteHttpRequest:
                 content={"status": "success"},
                 status_code=201,
             )
-        script_session.routes["POST"][r"/api/v3/indicators"] = mock_post_indicators  # type: ignore
+        script_session.routes["POST"][r"/api/v3/indicators"] = mock_post_indicators
 
         execute_http_request.main()
 

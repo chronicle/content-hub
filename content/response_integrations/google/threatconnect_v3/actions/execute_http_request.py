@@ -19,10 +19,10 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from TIPCommon.base.action.data_models import ExecutionState  # type: ignore
-from TIPCommon.extraction import extract_action_param  # type: ignore
-from TIPCommon.utils import is_empty_string_or_none  # type: ignore
-from TIPCommon.validation import ParameterValidator  # type: ignore
+from TIPCommon.base.action.data_models import ExecutionState
+from TIPCommon.extraction import extract_action_param
+from TIPCommon.utils import is_empty_string_or_none
+from TIPCommon.validation import ParameterValidator
 
 from ..core import utils
 from ..core.base_action import ThreatConnectV3Action
@@ -31,7 +31,7 @@ from ..core.exceptions import ThreatConnectV3HTTPError
 
 if TYPE_CHECKING:
 
-    from TIPCommon.types import SingleJson  # type: ignore
+    from TIPCommon.types import SingleJson
 
 
 SUCCESS_MESSAGE: str = "Successfully executed API request."
@@ -214,7 +214,7 @@ class ExecuteHttpRequest(ThreatConnectV3Action):
                     "Waiting for expected response values."
                 )
                 self.execution_state = ExecutionState.IN_PROGRESS
-                self.result_value = json.dumps(results)  # type: ignore[assignment]
+                self.result_value = json.dumps(results)
                 return
 
             if self.params.save_to_case_wall:
@@ -241,7 +241,7 @@ class ExecuteHttpRequest(ThreatConnectV3Action):
                 f"{error.status_code} was returned. Please check the request or "
                 "try again later."
             )
-            self.result_value = False  # type: ignore[assignment]
+            self.result_value = False
 
         return
 
