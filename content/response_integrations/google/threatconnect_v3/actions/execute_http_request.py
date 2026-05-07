@@ -100,7 +100,7 @@ class ExecuteHttpRequest(ThreatConnectV3Action):
         )
         self.params.fail_on_error = extract_action_param(
             self.soar_action,
-            param_name="Fail on 4xx/5xx",
+            param_name="Fail on HTTP Error",
             input_type=bool,
             print_value=True,
         )

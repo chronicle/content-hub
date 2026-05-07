@@ -74,7 +74,7 @@ class TestExecuteHttpRequest:
             "URL Path": "https://partners.threatconnect.com/api/v3/indicators?resultLimit=1",
             "Fields To Return": "response_data, response_code",
             "Request Timeout": "120",
-            "Fail on 4xx/5xx": "False",
+            "Fail on HTTP Error": "False",
         },
         integration_config_file_path=CONFIG_PATH,
     )
@@ -105,7 +105,7 @@ class TestExecuteHttpRequest:
             "URL Path": "https://partners.threatconnect.com/api/v3/indicators?resultLimit=1",
             "Fields To Return": "response_data, response_code",
             "Request Timeout": "120",
-            "Fail on 4xx/5xx": "True",
+            "Fail on HTTP Error": "True",
         },
         integration_config_file_path=CONFIG_PATH,
     )
