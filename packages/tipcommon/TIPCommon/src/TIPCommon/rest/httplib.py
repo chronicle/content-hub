@@ -46,7 +46,8 @@ def get_auth_session(credentials=None, service_account=None, audience=None, veri
     elif service_account is not None:
         token = generate_jwt_from_sa(service_account, audience=audience).decode("utf-8")
     else:
-        raise ValueError("credentials or service_account must be provided")
+        msg = "credentials or service_account must be provided"
+        raise ValueError(msg)
 
     headers = {"Authorization": f"Bearer {token}"}
     session = requests.Session()

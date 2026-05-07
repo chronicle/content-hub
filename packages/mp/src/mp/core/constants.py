@@ -19,6 +19,8 @@ from __future__ import annotations
 # ------------------ Common ------------------
 
 REPO_NAME: str = "marketplace"
+APP_NAME: str = "mp-cli-tool"
+APP_AUTHOR: str = "Google"
 
 CONTENT_DIR_NAME: str = "content"
 COMMERCIAL_REPO_NAME: str = "google"
@@ -39,10 +41,10 @@ WINDOWS_PLATFORM: str = "win32"
 
 RECONFIGURE_MP_MSG: str = (
     "Please ensure the content-hub path is properly configured.\n"
-    "You can verify your configuration by running [bold]mp config "
-    "--display-config[/bold].\n"
-    "If the path is incorrect, re-configure it by running [bold]mp config "
-    "--root-path <your_path>[/bold]."
+    "You can verify your configuration by running mp config "
+    "--display-config.\n"
+    "If the path is incorrect, re-configure it by running mp config "
+    "--root-path <your_path>."
 )
 
 # ------------------ Integrations ------------------
@@ -142,7 +144,6 @@ SDK_DEPENDENCIES_INSTALL_NAMES: dict[str, str] = {
     "dateutil": "python-dateutil",
     "OpenSSL": "pyopenssl",
 }
-
 SDK_DEPENDENCIES_MIN_VERSIONS: dict[str, str] = {"requests": "2.32.4"}
 
 README_FILE: str = "README.md"

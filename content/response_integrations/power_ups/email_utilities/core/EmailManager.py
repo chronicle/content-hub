@@ -1187,7 +1187,7 @@ class EMLParser:
 
                 self.msg.policy = email.policy.compat32  # type: ignore
 
-                for value in self.msg.get_all(header, []):
+                for value in self.msg.get_all(k, []):
                     if k == "from":
                         value = EMLParser.get_from_address(self.msg)
                     if value != "":
@@ -1487,7 +1487,7 @@ class EMLParser:
                 # used policy
                 try:
                     raw_body.append((encoding, raw_body_str, msg.items()))
-                except (AttributeError, TypeError):
+                except (AttributeError, IndexError, TypeError):
                     former_policy: email.policy.Policy = msg.policy  # type: ignore
                     msg.policy = email.policy.compat32  # type: ignore
                     raw_body.append((encoding, raw_body_str, msg.items()))

@@ -19,18 +19,23 @@ from __future__ import annotations
 import configparser
 import dataclasses
 import functools
+import logging
+import shutil
 import typing
 import warnings
 from pathlib import Path
 from typing import TypeVar
 
 import typer
+from platformdirs import user_config_dir
 
 import mp.core.constants
-from mp.core.logger.setup import setup_logging
+
+logger = logging.getLogger(__name__)
 
 CONFIG_FILE_NAME: str = ".mp_config"
-CONFIG_PATH: Path = Path.home() / CONFIG_FILE_NAME
+CONFIG_DIR: Path = Path(user_config_dir(mp.core.constants.APP_NAME, mp.core.constants.APP_AUTHOR))
+CONFIG_PATH: Path = CONFIG_DIR / CONFIG_FILE_NAME
 
 
 MARKETPLACE_PATH_KEY: str = "marketplace_path"
@@ -301,9 +306,20 @@ def _remove_config_key(section: str, key: str) -> None:
         _get_config_key.cache_clear()
 
 
+def _migrate_old_config_if_needed() -> None:
+    old_config_path = Path.home() / CONFIG_FILE_NAME
+    if old_config_path.exists() and not CONFIG_PATH.exists():
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+
+        shutil.copy(old_config_path, CONFIG_PATH)
+
+
 def _read_config_if_exists_or_create_defaults() -> configparser.ConfigParser:
+    _migrate_old_config_if_needed()
+
     config: configparser.ConfigParser = configparser.ConfigParser()
-    CONFIG_PATH.touch()
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.touch(exist_ok=True)
     config.read(CONFIG_PATH)
     _add_defaults_to_config(config)
     return config
@@ -350,7 +366,6 @@ class RuntimeParams:
         self.validate()
         set_is_quiet(value=self.quiet)
         set_is_verbose(value=self.verbose)
-        setup_logging(verbose=self.verbose, quiet=self.quiet)
 
     def validate(self) -> None:
         """Validate the runtime parameters.

@@ -82,7 +82,9 @@ def assert_build_integration(
 ) -> Callable[[Path], None]:
     def wrapper(integration_path: Path) -> None:
         community: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
-        shutil.copytree(integration_path.parent, community)
+        shutil.copytree(
+            integration_path.parent, community, ignore=shutil.ignore_patterns(".venv", ".git", "__pycache__")
+        )
         integration: Path = community / built_integration.name
         py_version: Path = integration / mp.core.constants.PYTHON_VERSION_FILE
         if integration.exists():

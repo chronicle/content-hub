@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""exceptions
+"""exceptions.
 ==========
 
 A module containing all constant in use by TIPCommon package,
@@ -28,74 +28,74 @@ Usage Example::
 
 # Connector Exceptions ####
 class GeneralConnectorException(Exception):
-    """General Connector Exception"""
+    """General Connector Exception."""
 
 
 class ConnectorValidationError(GeneralConnectorException):
-    """Connector Validation Error"""
+    """Connector Validation Error."""
 
 
 class ConnectorContextError(GeneralConnectorException):
-    """Connector Context Error"""
+    """Connector Context Error."""
 
 
 class ConnectorSetupError(GeneralConnectorException):
-    """Connector Initialization Error"""
+    """Connector Initialization Error."""
 
 
 class ConnectorProcessingError(GeneralConnectorException):
-    """Connector Processing Error"""
+    """Connector Processing Error."""
 
 
 # Action Exceptions ####
 class GeneralActionException(Exception):
-    """General Action Exception"""
+    """General Action Exception."""
 
 
 class ActionSetupError(GeneralActionException):
-    """ACTION Initialization Error"""
+    """ACTION Initialization Error."""
 
 
 class CaseResultError(GeneralActionException):
-    """Errors that happen when sending data to case result"""
+    """Errors that happen when sending data to case result."""
 
 
 class SDKWrapperError(GeneralActionException):
-    """Errors that happen in SDK methods wrappers"""
+    """Errors that happen in SDK methods wrappers."""
 
 
 class EnrichActionError(GeneralActionException):
-    """Errors that happen in an enrichment action"""
+    """Errors that happen in an enrichment action."""
 
 
 # Job Exceptions ####
 class GeneralJobException(Exception):
-    """General Job Exception"""
+    """General Job Exception."""
 
 
 class JobSetupError(GeneralActionException):
-    """Job Initialization Error"""
+    """Job Initialization Error."""
 
 
 class RefreshTokenRenewalJobException(GeneralJobException):
-    """Failure in a RefreshTokenRenewalJob instance"""
+    """Failure in a RefreshTokenRenewalJob instance."""
 
 
 class BaseSyncJobException(GeneralJobException):
-    """Failure in a BaseSyncJob instance"""
+    """Failure in a BaseSyncJob instance."""
 
 
 # General Exceptions ####
 class EmptyMandatoryValues(Exception):
-    """Exception for empty mandatory values"""
+    """Exception for empty mandatory values."""
 
 
 class ParameterExtractionError(Exception):
-    """Parameter extraction error"""
+    """Parameter extraction error."""
 
 
 class InvalidTimeException(Exception):
-    """Exception for invalid time"""
+    """Exception for invalid time."""
 
 
 class ParameterValidationError(Exception):
@@ -109,37 +109,36 @@ class ParameterValidationError(Exception):
         exception=None,
         print_value=True,
         print_error=False,
-    ):
+    ) -> None:
         msg = message
         if print_error and exception is not None:
             msg = f"{msg} - {exception}"
 
         super().__init__(
-            f'Invalid parameter "{param_name}". {msg}.'
-            + (f" Wrong value provided: {value}" if print_value else "")
+            f'Invalid parameter "{param_name}". {msg}.' + (f" Wrong value provided: {value}" if print_value else "")
         )
 
 
 class InternalJSONDecoderError(Exception):
-    """Internal Json parsing error using json.load/dump that requires only a msg"""
+    """Internal Json parsing error using json.load/dump that requires only a msg."""
 
 
 # GCP Exceptions ####
 class GoogleCloudException(Exception):
-    """General Google Cloud Exception"""
+    """General Google Cloud Exception."""
 
 
 class AlreadyExistsError(GoogleCloudException):
-    """GCP resource already exists"""
+    """GCP resource already exists."""
 
 
 class NotFoundError(GoogleCloudException):
-    """GCP resource not found"""
+    """GCP resource not found."""
 
 
 class BadGatewayError(GoogleCloudException):
     """A server between the client and the backend GCP servers
-    detected a temporary issue
+    detected a temporary issue.
     """
 
 
@@ -148,7 +147,7 @@ class DeadlineExceededError(GoogleCloudException):
 
 
 class InvalidArgumentError(GoogleCloudException):
-    """Invalid Request to GCP resource"""
+    """Invalid Request to GCP resource."""
 
 
 class FailedPreconditionError(GoogleCloudException):
@@ -157,12 +156,12 @@ class FailedPreconditionError(GoogleCloudException):
 
 class PermissionDeniedError(GoogleCloudException):
     """The client does not have permission to perform the operation
-    on the resource
+    on the resource.
     """
 
 
 class UnauthenticatedError(GoogleCloudException):
-    """The client is not authenticated properly"""
+    """The client is not authenticated properly."""
 
 
 class UnavailableError(GoogleCloudException):
@@ -171,16 +170,16 @@ class UnavailableError(GoogleCloudException):
 
 class ResourceExhaustedError(GoogleCloudException):
     """This error indicates that the quota for the cloud project has been
-    exceeded, or that there are too many concurrent requests from the client
+    exceeded, or that there are too many concurrent requests from the client.
     """
 
 
 class ImpersonationUnauthorizedError(GoogleCloudException):
-    """The caller is not authorized to impersonate the service account"""
+    """The caller is not authorized to impersonate the service account."""
 
 
 class OauthError(Exception):
-    """Generic exception raised when an error occurs in Oauth flow"""
+    """Generic exception raised when an error occurs in Oauth flow."""
 
 
 class SMIMEMailError(Exception):

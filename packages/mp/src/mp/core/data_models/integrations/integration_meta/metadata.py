@@ -138,10 +138,10 @@ class NonBuiltIntegrationMetadata(TypedDict):
     identifier: str
     python_version: NotRequired[str]
     documentation_link: NotRequired[str | None]
-    image_path: str | None
+    image_path: NotRequired[str | None]
     parameters: list[NonBuiltIntegrationParameter]
     should_install_in_system: NotRequired[bool]
-    svg_logo_path: str | None
+    svg_logo_path: NotRequired[str | None]
     version: NotRequired[float]
     is_custom: NotRequired[bool]
     is_available_for_community: NotRequired[bool]
@@ -264,7 +264,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
 
         return cls(
             categories=built["Categories"],
-            description=built["Description"],
+            description=built.get("Description") or "",
             feature_tags=feature_tags,
             name=built["DisplayName"],
             identifier=built["Identifier"],
@@ -301,7 +301,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             identifier=non_built["identifier"],
             documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
             description=non_built.get("description", ""),
-            image_base64=non_built["image_path"],  # ty:ignore[invalid-argument-type]
+            image_base64=non_built.get("image_path"),  # ty:ignore[invalid-argument-type]
             parameters=[IntegrationParameter.from_non_built(p) for p in non_built["parameters"]],
             should_install_in_system=non_built.get("should_install_in_system", False),
             is_custom=non_built.get("is_custom", False),

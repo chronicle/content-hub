@@ -34,6 +34,7 @@ def build_upgrade_connector_instance_payload(
 
     Returns:
         SingleJson: Payload dictionary for upgrading the connector instance.
+
     """
     parameters: list[SingleJson] = [
         {
@@ -47,9 +48,7 @@ def build_upgrade_connector_instance_payload(
         "name": connector_instance["name"],
         "id": str(connector_instance["id"]),
         "enabled": latest_definition.get("enabled", connector_instance.get("enabled")),
-        "environment": latest_definition.get(
-            "environment", connector_instance.get("environment")
-        ),
+        "environment": latest_definition.get("environment", connector_instance.get("environment")),
         "displayName": connector_instance["displayName"],
         "description": connector_instance.get("description", ""),
         "intervalSeconds": latest_definition.get(

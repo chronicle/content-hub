@@ -15,10 +15,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
-import rich
 import yaml
 
 import mp.core.constants
@@ -38,6 +38,9 @@ if TYPE_CHECKING:
     from mp.core.data_models.playbooks.playbook import BuiltPlaybook
     from mp.core.data_models.playbooks.step.metadata import BuiltStep
     from mp.core.data_models.playbooks.step.step_parameter import BuiltStepParameter
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ReleaseNotesDisplayInfo(NamedTuple):
@@ -75,7 +78,7 @@ def _generate_playbooks_display_info(repo_paths: list[Path], out_path: Path) -> 
                 non_built_playbook_path.name, out_path
             )
             if not built_playbook_path:
-                rich.print(f"{non_built_playbook_path.stem} could not be found in the out folder.")
+                logger.info("%s could not be found in the out folder.", non_built_playbook_path.stem)
                 continue
 
             built_display_info: BuiltPlaybookDisplayInfo = PlaybookDisplayInfo.from_non_built(

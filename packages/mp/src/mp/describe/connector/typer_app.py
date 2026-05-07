@@ -15,16 +15,19 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import pathlib  # noqa: TC003
 from typing import Annotated
 
-import rich
 import typer
 
 import mp.core.config
 
 from .describe import DescribeConnector
 from .describe_all import describe_all_connectors
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 app = typer.Typer(help="Describe connectors in the marketplace.")
 
@@ -99,5 +102,5 @@ def describe(  # noqa: PLR0913
     elif all_marketplace:
         asyncio.run(describe_all_connectors(src=src, dst=dst, override=override))
     else:
-        rich.print("[red]Please specify either --integration or --all[/red]")
+        logger.error("Please specify either --integration or --all")
         raise typer.Exit(code=1)
