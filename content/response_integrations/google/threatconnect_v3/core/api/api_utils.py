@@ -32,7 +32,7 @@ def get_full_url(
     api_root: str,
     endpoint_id: str,
     endpoints: dict[str, str] | None = None,
-    **kwargs: Any,  # noqa: ANN401
+    **kwargs: dict[str, Any],
 ) -> str:
     """Construct the full URL using a URL identifier and optional variables.
 

@@ -16,8 +16,8 @@
 
 from __future__ import annotations
 
-from ..core.base_action import ThreatConnectV3Action  # type: ignore[misc]
-from ..core.constants import PING_SCRIPT_NAME  # type: ignore[misc]
+from core.base_action import ThreatConnectV3Action
+from core.constants import PING_SCRIPT_NAME
 
 SUCCESS_MESSAGE: str = (
     "Successfully connected to the ThreatConnect server with the provided connection parameters!"
@@ -33,7 +33,7 @@ class Ping(ThreatConnectV3Action):
         self.output_message = SUCCESS_MESSAGE
         self.error_output_message = ERROR_MESSAGE
 
-    def _perform_action(self, current_entity: object | None = None) -> None:
+    def _perform_action(self, _: object | None = None) -> None:
         """Verify connectivity through the client."""
         self.api_client.test_connectivity()
         self.result_value = True

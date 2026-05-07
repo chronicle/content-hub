@@ -23,9 +23,9 @@ import mimetypes
 import re
 from typing import TYPE_CHECKING, Any
 
-import pyzipper  # type: ignore
-from TIPCommon.data_models import CaseWallAttachment  # type: ignore
-from TIPCommon.rest.soar_api import (  # type: ignore
+import pyzipper
+from TIPCommon.data_models import CaseWallAttachment
+from TIPCommon.rest.soar_api import (
     save_attachment_to_case_wall as soar_save_attachment_to_case_wall,
 )
 

@@ -180,7 +180,7 @@ class ExecuteHttpRequest(ThreatConnectV3Action):
                 print_value=True,
             )
 
-    def _perform_action(self, current_entity: object | None = None) -> None:
+    def _perform_action(self, _: object | None = None) -> None:
         try:
             response = self.api_client.execute_request(
                 method=self.params.method,
