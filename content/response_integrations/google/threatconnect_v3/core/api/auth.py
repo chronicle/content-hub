@@ -23,6 +23,7 @@ import time
 from urllib.parse import urlparse
 
 import requests
+from requests.structures import CaseInsensitiveDict
 from requests.auth import AuthBase
 
 
@@ -56,6 +57,9 @@ class ThreatConnectV3Auth(AuthBase):
             hashlib.sha256,
         )
         signature = base64.b64encode(hmac_obj.digest()).decode("utf-8")
+
+        if r.headers is None:
+            r.headers = CaseInsensitiveDict()
 
         r.headers["Authorization"] = f"TC {self.api_access_id}:{signature}"
         r.headers["Timestamp"] = timestamp

@@ -33,7 +33,7 @@ class Ping(ThreatConnectV3Action):
         self.output_message = SUCCESS_MESSAGE
         self.error_output_message = ERROR_MESSAGE
 
-    def _perform_action(self, _: object = None) -> None:
+    def _perform_action(self, current_entity: object | None = None) -> None:
         """Verify connectivity through the client."""
         self.api_client.test_connectivity()
         self.result_value = True

@@ -19,8 +19,7 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING
 
-from ..constants import SECURITY_LABELS_URI
-from ..exceptions import ThreatConnectV3Error
+from .api_utils import get_full_url, validate_response
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -58,20 +57,54 @@ class ThreatConnectV3ApiClient:
         self.logger = logger
 
     def test_connectivity(self) -> None:
-        """Verify connectivity by calling the securityLabels API endpoint.
-
-        Raises:
-            ThreatConnectV3Error: If connection verification fails.
-
-        """
-        url = f"{self.api_root}{SECURITY_LABELS_URI}"
+        """Verify connectivity by calling the securityLabels API endpoint."""
+        url = get_full_url(self.api_root, "ping")
         self.logger.info(f"Testing connectivity via: {url}")  # noqa: G004
 
-        try:
-            params = {"resultLimit": 1}
-            response = self.session.get(url, params=params, verify=self.verify_ssl)
-            response.raise_for_status()
-        except Exception as error:
-            self.logger.exception("Connectivity check failed.")
-            msg = f"Failed to connect to the ThreatConnect server: {error}"
-            raise ThreatConnectV3Error(msg) from error
+        params = {"resultLimit": 1}
+        response = self.session.get(url, params=params, verify=self.verify_ssl)
+        validate_response(response, error_msg="Failed to connect to the ThreatConnect server")
+
+    def execute_request(  # noqa: PLR0913
+        self,
+        method: str,
+        url: str,
+        *,
+        params: dict | None = None,
+        headers: dict | None = None,
+        cookies: dict | None = None,
+        data: str | None = None,
+        verify: bool | None = None,
+        timeout: int | None = None,
+    ) -> requests.Response:
+        """Execute an arbitrary HTTP request.
+
+        Args:
+            method (str): HTTP method.
+            url (str): Full URL or path.
+            params (dict, optional): Query parameters.
+            headers (dict, optional): Headers.
+            cookies (dict, optional): Cookies.
+            data (str, optional): Body payload.
+            verify (bool, optional): SSL verification.
+            timeout (int, optional): Request timeout.
+
+        Returns:
+            requests.Response: The HTTP response.
+
+        """
+        if verify is None:
+            verify = self.verify_ssl
+
+        response = self.session.request(
+            method=method,
+            url=url,
+            params=params,
+            headers=headers,
+            cookies=cookies,
+            data=data,
+            verify=verify,
+            timeout=timeout,
+        )
+        validate_response(response, error_msg=f"Failed to execute {method} request to {url}")
+        return response
