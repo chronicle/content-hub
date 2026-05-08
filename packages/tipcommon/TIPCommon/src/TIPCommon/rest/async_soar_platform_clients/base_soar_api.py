@@ -16,19 +16,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import httpx
-
 from TIPCommon.data_models import Container
 from TIPCommon.rest.custom_types import HttpMethod
-from TIPCommon.rest.async_soar_platform_clients.secops_soar import AsyncChronicleSOAR
 
 if TYPE_CHECKING:
+    import httpx
+
+    from TIPCommon.rest.async_soar_platform_clients.secops_soar import AsyncChronicleSOAR
     from TIPCommon.types import SingleJson
 
 
 class BaseAsyncSoarApi:
-    """
-    Base asynchronous API client for Chronicle SOAR.
+    """Base asynchronous API client for Chronicle SOAR.
     Uses AsyncChronicleSOAR for transport and logging.
     """
 
@@ -61,10 +60,9 @@ class BaseAsyncSoarApi:
 
         Raises:
             httpx.HTTPStatusError: If the request returns an unsuccessful status code.
+
         """
-        self.logger.info(
-            f"Calling SOAR API (async): {method} {self.async_sdk.api_root}/{endpoint}"
-        )
+        self.logger.info(f"Calling SOAR API (async): {method} {self.async_sdk.api_root}/{endpoint}")
 
         response: httpx.Response = await self.client.request(
             method,
@@ -74,10 +72,7 @@ class BaseAsyncSoarApi:
             headers=headers,
         )
 
-        self.logger.info(
-            f"SOAR API response (async): {method} {endpoint} "
-            f"(status={response.status_code})"
-        )
+        self.logger.info(f"SOAR API response (async): {method} {endpoint} (status={response.status_code})")
 
         response.raise_for_status()
 
@@ -99,6 +94,7 @@ class BaseAsyncSoarApi:
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         return await self._make_request(HttpMethod.GET.value, endpoint, params=params)
 
@@ -118,6 +114,7 @@ class BaseAsyncSoarApi:
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         return await self._make_request(HttpMethod.POST.value, endpoint, payload=payload)
 
@@ -139,6 +136,7 @@ class BaseAsyncSoarApi:
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         return await self._make_request(
             HttpMethod.PATCH.value,
@@ -158,5 +156,6 @@ class BaseAsyncSoarApi:
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         return await self._make_request(HttpMethod.DELETE.value, endpoint)

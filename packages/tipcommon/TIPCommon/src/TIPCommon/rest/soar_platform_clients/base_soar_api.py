@@ -59,9 +59,8 @@ class BaseSoarApi:
         if headers:
             request_kwargs["headers"] = headers
 
-        response = self.chronicle_soar.session.request(
+        return self.chronicle_soar.session.request(
             method.value,
             url,
             **request_kwargs,
         )
-        return response

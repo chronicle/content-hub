@@ -15,12 +15,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
-import rich
 import typer
 
 from mp.dev_env import api
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 CONFIG_PATH: Path = Path.home() / ".mp_dev_env.json"
 
@@ -36,7 +39,7 @@ def load_dev_env_config() -> dict[str, str]:
 
     """
     if not CONFIG_PATH.exists():
-        rich.print("[red] Not logged in. Please run 'mp dev-env login' first. [/red]")
+        logger.error(" Not logged in. Please run 'mp dev-env login' first. ")
         raise typer.Exit(1)
     with CONFIG_PATH.open(encoding="utf-8") as f:
         return json.load(f)
@@ -70,5 +73,5 @@ def get_backend_api(config: dict[str, str]) -> api.BackendAPI:
         return backend_api  # noqa: TRY300
 
     except Exception as e:
-        rich.print(f"[red]Authentication failed: {e}[/red]")
+        logger.exception("Authentication failed")
         raise typer.Exit(1) from e

@@ -14,10 +14,10 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any
 
-import rich
 import typer
 
 from mp.dev_env.sub_commands.push import push_app
@@ -26,6 +26,9 @@ from mp.telemetry import track_command
 
 from . import utils
 from .minor_version_bump import minor_version_bump
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from mp.dev_env.api import BackendAPI
@@ -72,16 +75,15 @@ def push_integration(
     utils.build_integration(integration, src=src, custom=custom)
 
     zip_path: Path = _zip_integration(integration, src=src, custom=custom)
-    rich.print(f"Zipped built integration at {zip_path}")
+    logger.info("Zipped built integration at %s", zip_path)
 
     try:
         result = _push_zip_to_soar(zip_path, is_staging=is_staging)
-        rich.print(f"Upload result: {result}")
-        rich.print("[green]✅ Integration pushed successfully.[/green]")
+        logger.info("Upload result: %s", result)
+        logger.info("✅ Integration pushed successfully.")
 
     except Exception as e:
-        error_message = f"Upload failed for {zip_path.stem}: {e}"
-        rich.print(f"[red]{error_message}[/red]")
+        logger.exception("Upload failed for %s", zip_path.stem)
         raise typer.Exit(1) from e
 
     finally:
@@ -123,13 +125,13 @@ def _push_custom_integrations(zipped_paths: list[Path]) -> None:
         try:
             details = backend_api.get_integration_details(zip_path)
             backend_api.upload_integration(zip_path, details["identifier"])
-            rich.print(f"[green]Successfully pushed: {zip_path.name}[/green]")
+            logger.info("Successfully pushed: %s", zip_path.name)
 
         except Exception as e:  # noqa: BLE001
             results.append(f"{zip_path.name}: {e}")
 
     if results:
-        rich.print("\n[bold red]Upload errors detected:[/bold red]")
+        logger.error("\nUpload errors detected:")
         for error in results:
-            rich.print(f"  - {error}")
+            logger.error("  - %s", error)
         raise typer.Exit(1)

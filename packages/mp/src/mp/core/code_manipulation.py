@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import logging
 import warnings
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
@@ -36,6 +37,8 @@ if TYPE_CHECKING:
 
 SDK_PREFIX: str = f"{constants.SDK_PACKAGE_NAME}."
 CORE_PREFIX: str = f"{constants.CORE_SCRIPTS_DIR}."
+
+logger = logging.getLogger(__name__)
 
 
 class LinterWarning(RuntimeWarning):
@@ -83,6 +86,7 @@ def static_type_check_python_files(paths: Iterable[Path]) -> None:
 def format_python_files(paths: Iterable[Path]) -> None:
     """Format python files."""
     paths = [p for p in paths if p.is_dir() or file_utils.is_python_file(p)]
+    logger.debug("Formatting python files")
     status_code: int = unix.ruff_format(paths)
     if status_code != 0:
         msg: str = "Found format issues"
@@ -428,6 +432,8 @@ class ImportTransformer(cst.CSTTransformer):
                 ),
                 names=names,
             ):
+                if isinstance(names, cst.ImportStar):
+                    return updated_node
                 return cst.Import(names=names)
 
             # `from .module import ...` => `from module import ...`
@@ -448,9 +454,11 @@ def _is_reserved_node(node: cst.Attribute) -> bool:
 
 def _get_attribute_list(node: cst.ImportFrom) -> list[cst.Attribute]:
     nodes: list[cst.Attribute] = []
-    current_node: cst.Name | cst.Attribute | None = node.module
+    current_node: cst.BaseExpression | cst.Name | cst.Attribute | None = node.module
     while isinstance(current_node, cst.Attribute):
         nodes.append(current_node)
-        current_node = current_node.value  # ty: ignore[invalid-assignment]
+        current_node = current_node.value
+        if not isinstance(current_node, cst.Name | cst.Attribute):
+            break
 
     return nodes

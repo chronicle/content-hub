@@ -30,7 +30,7 @@ class PlaybookAccessLevel(RepresentableEnum):
 class BuiltAccessPermission(TypedDict):
     WorkflowOriginalIdentifier: str
     User: str
-    AccessLevel: int
+    AccessLevel: int | str
 
 
 class NonBuiltAccessPermission(TypedDict):

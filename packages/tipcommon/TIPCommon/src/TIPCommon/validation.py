@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""validation
+"""validation.
 ==========
 
 This module contains the ``Validator`` class for validating various types of parameters.
@@ -33,20 +33,23 @@ Usage Example::
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
 from .exceptions import ParameterValidationError
 from .transformation import (
     convert_comma_separated_to_list,
     convert_list_to_comma_string,
 )
-from .types import ChronicleSOAR
 from .utils import is_valid_email
+
+if TYPE_CHECKING:
+    from .types import ChronicleSOAR
 
 empty = object()
 
 
 class ParameterValidator:
-    """Class that contains parameters validation functions"""
+    """Class that contains parameters validation functions."""
 
     _WARN_MSG_WITH_VALUE = (
         "Invalid parameter: {param_name}, "
@@ -55,9 +58,7 @@ class ParameterValidator:
         "Default value {default_value} will be used instead."
     )
     _WARN_MSG_WITHOUT_VALUE = (
-        "Invalid parameter: {param_name}, "
-        "Issue: {msg}, "
-        "Default value {default_value} will be used instead."
+        "Invalid parameter: {param_name}, Issue: {msg}, Default value {default_value} will be used instead."
     )
 
     def __init__(self, siemplify: ChronicleSOAR) -> None:
@@ -65,7 +66,7 @@ class ParameterValidator:
 
     @classmethod
     def _get_warning(cls, param_name: str, value, error_msg, default_value, print_value=True):
-        """Gets a formatted warning message for failed validation check
+        """Gets a formatted warning message for failed validation check.
 
         Args:
             param_name: The name of the parameter
@@ -82,12 +83,10 @@ class ParameterValidator:
             return cls._WARN_MSG_WITH_VALUE.format(
                 param_name=param_name, value=value, msg=error_msg, default_value=default_value
             )
-        return cls._WARN_MSG_WITHOUT_VALUE.format(
-            param_name=param_name, msg=error_msg, default_value=default_value
-        )
+        return cls._WARN_MSG_WITHOUT_VALUE.format(param_name=param_name, msg=error_msg, default_value=default_value)
 
-    def _log_warning(self, param_name, value, error_msg, default_value, print_value=True):
-        """Logs a formatted warning message for failed validation check
+    def _log_warning(self, param_name, value, error_msg, default_value, print_value=True) -> None:
+        """Logs a formatted warning message for failed validation check.
 
         Args:
             param_name: The name of the parameter
@@ -133,8 +132,7 @@ class ParameterValidator:
 
         """
         try:
-            res = json.loads(json_string, **kwargs)
-            return res
+            return json.loads(json_string, **kwargs)
         except Exception as err:
             err_msg = "The JSON structure is invalid"
             if default_value is not empty:
@@ -184,15 +182,12 @@ class ParameterValidator:
             ParameterValidationError: If the DDL string is invalid.
 
         """
-        _value = value
+        value_ = value
         if not case_sensitive:
-            _value = value.lower()
+            value_ = value.lower()
             ddl_values = [val.lower() for val in ddl_values]
-        if _value not in ddl_values:
-            err_msg = (
-                f"The provided value must be one of the following: "
-                f"{convert_list_to_comma_string(ddl_values)}"
-            )
+        if value_ not in ddl_values:
+            err_msg = f"The provided value must be one of the following: {convert_list_to_comma_string(ddl_values)}"
             if default_value is not empty:
                 self._log_warning(
                     param_name=param_name,
@@ -297,8 +292,7 @@ class ParameterValidator:
 
         """
         try:
-            _value = float(value)
-            return _value
+            return float(value)
         except Exception as err:
             err_msg = "The value must be a number"
             if default_value is not empty:
@@ -344,8 +338,7 @@ class ParameterValidator:
 
         """
         try:
-            _value = int(value)
-            return _value
+            return int(value)
         except Exception as err:
             err_msg = "The value must be an integer"
             if default_value is not empty:
@@ -392,8 +385,8 @@ class ParameterValidator:
             int: The validated value.
 
         """
-        _value = self.validate_integer(param_name, value, default_value)
-        if _value > limit:
+        value_ = self.validate_integer(param_name, value, default_value)
+        if value_ > limit:
             err_msg = f"The value can't be greater then {limit}"
             if default_value is not empty:
                 self._log_warning(
@@ -411,7 +404,7 @@ class ParameterValidator:
                 print_value=print_value,
                 print_error=print_error,
             )
-        return _value
+        return value_
 
     def validate_lower_limit(
         self,
@@ -439,8 +432,8 @@ class ParameterValidator:
             int: The validated value.
 
         """
-        _value = self.validate_integer(param_name, value, default_value)
-        if _value < limit:
+        value_ = self.validate_integer(param_name, value, default_value)
+        if value_ < limit:
             err_msg = f"The value can't be lower then {limit}"
             if default_value is not empty:
                 self._log_warning(
@@ -458,7 +451,7 @@ class ParameterValidator:
                 print_value=print_value,
                 print_error=print_error,
             )
-        return _value
+        return value_
 
     def validate_positive(
         self,
@@ -550,8 +543,8 @@ class ParameterValidator:
             int: The validated value.
 
         """
-        _value = self.validate_integer(param_name, value, default_value)
-        if _value == 0:
+        value_ = self.validate_integer(param_name, value, default_value)
+        if value_ == 0:
             err_msg = "The value can't be 0"
             if default_value is not empty:
                 self._log_warning(
@@ -569,7 +562,7 @@ class ParameterValidator:
                 print_value=print_value,
                 print_error=print_error,
             )
-        return _value
+        return value_
 
     def validate_percentage(
         self,
@@ -686,9 +679,9 @@ class ParameterValidator:
 
         """
         try:
-            _severity = int(severity)
+            severity_ = int(severity)
             if max_limit and min_limit:
-                _severity = self.validate_range(
+                severity_ = self.validate_range(
                     param_name,
                     severity,
                     min_limit,
@@ -698,7 +691,7 @@ class ParameterValidator:
                     print_error=print_error,
                 )
             elif max_limit:
-                _severity = self.validate_upper_limit(
+                severity_ = self.validate_upper_limit(
                     param_name,
                     severity,
                     max_limit,
@@ -707,7 +700,7 @@ class ParameterValidator:
                     print_error=print_error,
                 )
             elif min_limit:
-                _severity = self.validate_lower_limit(
+                severity_ = self.validate_lower_limit(
                     param_name,
                     severity,
                     min_limit,
@@ -716,7 +709,7 @@ class ParameterValidator:
                     print_error=print_error,
                 )
         except ValueError:
-            _severity = self.validate_ddl(
+            severity_ = self.validate_ddl(
                 param_name,
                 severity,
                 ddl_values=possible_values,
@@ -724,7 +717,7 @@ class ParameterValidator:
                 print_value=print_value,
                 print_error=print_error,
             )
-        return _severity
+        return severity_
 
     def validate_email(
         self,
@@ -750,8 +743,8 @@ class ParameterValidator:
             str: The email address string.
 
         """
-        _email = email.lower()
-        if not is_valid_email(_email):
+        email_ = email.lower()
+        if not is_valid_email(email_):
             err_msg = "Invalid email address"
             if default_value is not empty:
                 self._log_warning(

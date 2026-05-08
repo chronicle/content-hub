@@ -16,32 +16,30 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
-from EnvironmentCommon import EnvironmentHandle, GetEnvironmentCommonFactory
-from SiemplifyConnectors import SiemplifyConnectorExecution
-from SiemplifyConnectorsDataModel import AlertInfo
-from SiemplifyLogger import SiemplifyLogger
 from SiemplifyUtils import from_unix_time, unix_now, utc_now
 
-from ... import extraction
-from ...consts import DATETIME_FORMAT, NONE_VALS, UNIX_FORMAT
-from ...data_models import BaseAlert, ConnectorParamTypes, Container
-from ...exceptions import ConnectorSetupError
-from ...smp_time import get_last_success_time
-from ...utils import (
-    camel_to_snake_case,
-    is_overflowed,
-    none_to_default_value,
-    platform_supports_db,
-)
-from ...validation import ParameterValidator
-from ..utils import (
+from TIPCommon import extraction
+from TIPCommon.base.utils import (
     create_params_container,
     create_soar_connector,
     get_param_value_from_vault,
     is_native,
     nativemethod,
 )
+from TIPCommon.consts import DATETIME_FORMAT, NONE_VALS, UNIX_FORMAT
+from TIPCommon.data_models import BaseAlert, ConnectorParamTypes, Container
+from TIPCommon.envcommon import EnvironmentHandle, GetEnvironmentCommonFactory
+from TIPCommon.exceptions import ConnectorSetupError
+from TIPCommon.smp_time import get_last_success_time
+from TIPCommon.utils import camel_to_snake_case, is_overflowed, none_to_default_value, platform_supports_db
+from TIPCommon.validation import ParameterValidator
+
+if TYPE_CHECKING:
+    from SiemplifyConnectors import SiemplifyConnectorExecution
+    from SiemplifyConnectorsDataModel import AlertInfo
+    from SiemplifyLogger import SiemplifyLogger
 
 
 class BaseConnector(ABC):
@@ -266,22 +264,14 @@ class BaseConnector(ABC):
             vault_settings = self.siemplify.context.vault_settings
             setattr(
                 self.params,
-                camel_to_snake_case(
-                    " ".join(" ".join(word[0].upper() + word[1:] for word in param.name.split()))
-                ),
-                input_type(
-                    value
-                    if vault_settings is None
-                    else get_param_value_from_vault(vault_settings, value)
-                )
+                camel_to_snake_case(" ".join(" ".join(word[0].upper() + word[1:] for word in param.name.split()))),
+                input_type(value if vault_settings is None else get_param_value_from_vault(vault_settings, value))
                 if value not in NONE_VALS
                 else value,
             )
 
         self.params.whitelist = (
-            self.siemplify.whitelist
-            if isinstance(self.siemplify.whitelist, list)
-            else [self.siemplify.whitelist]
+            self.siemplify.whitelist if isinstance(self.siemplify.whitelist, list) else [self.siemplify.whitelist]
         )
 
     @nativemethod
@@ -315,7 +305,7 @@ class BaseConnector(ABC):
         """
 
     @nativemethod
-    def store_alert_in_cache(self, alert: BaseAlert):
+    def store_alert_in_cache(self, alert: BaseAlert) -> None:
         """Save alert id to `ids.json` or equivalent.
 
         Args:
@@ -335,7 +325,7 @@ class BaseConnector(ABC):
         """
 
     @nativemethod
-    def read_context_wrapper(self):
+    def read_context_wrapper(self) -> None:
         """Wrapper for read_context_data method."""
         self.context.last_success_timestamp = self.get_last_success_time()
         if not is_native(self.read_context_data):
@@ -416,13 +406,9 @@ class BaseConnector(ABC):
         )
 
         if padding_period_param_name:
-            padding_time_with_metric = {
-                padding_period_metric: getattr(self.params, padding_period_param_name)
-            }
+            padding_time_with_metric = {padding_period_metric: getattr(self.params, padding_period_param_name)}
             dt_last_success_time = (
-                from_unix_time(last_success_time)
-                if time_format == UNIX_FORMAT
-                else last_success_time
+                from_unix_time(last_success_time) if time_format == UNIX_FORMAT else last_success_time
             )
             padding_time = utc_now() - timedelta(**padding_time_with_metric)
             if dt_last_success_time > padding_time:
@@ -433,12 +419,11 @@ class BaseConnector(ABC):
                     f"{last_success_time} will be used as last success time."
                 )
 
-        last_success_time = (
+        return (
             last_success_time.strftime(date_time_format)
             if time_format == DATETIME_FORMAT and date_time_format is not None
             else last_success_time
         )
-        return last_success_time
 
     @nativemethod
     def load_env_common(self) -> EnvironmentHandle:
@@ -463,7 +448,8 @@ class BaseConnector(ABC):
                 self.params.environment_regex_pattern,
             )
         except Exception as e:
-            raise ConnectorSetupError(f"Failed to create environment handle object: {e}") from e
+            msg = f"Failed to create environment handle object: {e}"
+            raise ConnectorSetupError(msg) from e
 
     @nativemethod
     def max_alerts_processed(self, processed_alerts) -> bool:
@@ -482,7 +468,7 @@ class BaseConnector(ABC):
 
     @nativemethod
     def pass_filters(self, alert) -> bool:
-        """Boolean method to check if alert passes connector filters
+        """Boolean method to check if alert passes connector filters.
 
         Args:
             alert: The alert to check.
@@ -495,7 +481,7 @@ class BaseConnector(ABC):
 
     @nativemethod
     def filter_alerts(self, alerts: list[BaseAlert]) -> list[BaseAlert]:
-        """Filter alerts from manager and return list of filtered alerts
+        """Filter alerts from manager and return list of filtered alerts.
 
         Args:
             alerts: A list of alerts.
@@ -509,9 +495,7 @@ class BaseConnector(ABC):
     @nativemethod
     def _perspectives(self) -> None:
         self.context._location = (
-            "DB"
-            if platform_supports_db(self.siemplify)
-            else f"Local File System: {self.siemplify.run_folder}"
+            "DB" if platform_supports_db(self.siemplify) else f"Local File System: {self.siemplify.run_folder}"
         )
 
     @nativemethod

@@ -41,7 +41,7 @@ The `mp` tool sits at the center of your integration development workflow:
 
 ## Key Features
 
-- **Build & Package**: transforming source code into deployable artifacts.
+- **Build & Package**: transforming source code into deployable artifacts and SOAR-supported ZIP files (`pack`).
 - **Quality Assurance**: Automated linting (`check`), formatting (`format`), and testing (`test`).
 - **Development Loop**: Rapidly push changes to your development environment (`dev-env`).
 
@@ -56,7 +56,10 @@ The `mp` tool sits at the center of your integration development workflow:
 | `format`   | Auto-format Python files.                               | [Docs](docs/commands/format.md)   |
 | `test`     | Run pre-build integration tests.                        | [Docs](docs/commands/test.md)     |
 | `validate` | Validate integration structure and metadata.            | [Docs](docs/commands/validate.md) |
-| `dev-env`  | Interact with dev environment (login, push).            | [Docs](docs/commands/dev_env.md)  |
+| `login`    | Log in to a SecOps environment.                         | [Docs](docs/commands/dev_env.md)  |
+| `push`     | Push content to the SecOps environment.                 | [Docs](docs/commands/dev_env.md)  |
+| `pull`     | Pull content from a SecOps environment.                 | [Docs](docs/commands/dev_env.md)  |
+| `pack`     | Package integrations into SOAR-supported ZIP files.     | [Docs](docs/commands/pack.md)     |
 
 ## Documentation
 
