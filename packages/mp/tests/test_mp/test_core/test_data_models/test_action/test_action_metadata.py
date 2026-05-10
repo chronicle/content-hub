@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 from hypothesis import given, settings
 
+from mp.core.data_models.integrations.action.dynamic_results_metadata import NonBuiltDynamicResultsMetadata
 from mp.core.data_models.integrations.action.metadata import (
     ActionMetadata,
     BuiltActionMetadata,
@@ -31,6 +33,18 @@ from .strategies import (
     ST_VALID_BUILT_ACTION_METADATA_DICT,
     ST_VALID_NON_BUILT_ACTION_METADATA_DICT,
 )
+
+
+def _drm(
+    result_example_path: str | None = None,
+    result_name: str = "JsonResult",
+    show_result: bool = True,
+) -> NonBuiltDynamicResultsMetadata:
+    return NonBuiltDynamicResultsMetadata(
+        result_example_path=result_example_path,
+        result_name=result_name,
+        show_result=show_result,
+    )
 
 
 class TestValidations:
@@ -54,7 +68,7 @@ class TestLoadJsonExamples:
 
     def test_null_result_example_path_is_preserved(self) -> None:
         """DRM with result_example_path=None must be kept with show_result intact."""
-        drms = [{"result_example_path": None, "result_name": "JsonResult", "show_result": True}]
+        drms = [_drm(result_example_path=None)]
         result = _load_json_examples(drms, Path("/unused"))
         assert len(result) == 1
         assert result[0]["result_example_path"] == "{}"
@@ -63,7 +77,7 @@ class TestLoadJsonExamples:
 
     def test_empty_string_result_example_path_is_preserved(self) -> None:
         """DRM with result_example_path='' must be kept with show_result intact."""
-        drms = [{"result_example_path": "", "result_name": "JsonResult", "show_result": True}]
+        drms = [_drm(result_example_path="")]
         result = _load_json_examples(drms, Path("/unused"))
         assert len(result) == 1
         assert result[0]["result_example_path"] == "{}"
@@ -76,10 +90,10 @@ class TestLoadJsonExamples:
         json_file.parent.mkdir(parents=True)
         json_file.write_text(json.dumps(json_content), encoding="utf-8")
 
-        drms = [{"result_example_path": "resources/example.json", "result_name": "JsonResult", "show_result": True}]
+        drms = [_drm(result_example_path="resources/example.json")]
         result = _load_json_examples(drms, tmp_path / "actions")
         assert len(result) == 1
-        assert json.loads(result[0]["result_example_path"]) == json_content
+        assert json.loads(cast("str", result[0]["result_example_path"])) == json_content
 
     def test_mixed_null_and_valid_paths_all_preserved(self, tmp_path: Path) -> None:
         """All DRM entries must be preserved regardless of whether path is null or valid."""
@@ -89,25 +103,21 @@ class TestLoadJsonExamples:
         json_file.write_text(json.dumps(json_content), encoding="utf-8")
 
         drms = [
-            {"result_example_path": None, "result_name": "JsonResult", "show_result": True},
-            {
-                "result_example_path": "resources/action_JsonResult_example.json",
-                "result_name": "JsonResult",
-                "show_result": False,
-            },
-            {"result_example_path": "", "result_name": "OtherResult", "show_result": True},
+            _drm(result_example_path=None),
+            _drm(result_example_path="resources/action_JsonResult_example.json", show_result=False),
+            _drm(result_example_path="", result_name="OtherResult"),
         ]
         result = _load_json_examples(drms, tmp_path / "actions")
         assert len(result) == 3
         assert result[0]["result_example_path"] == "{}"
         assert result[0]["show_result"] is True
-        assert json.loads(result[1]["result_example_path"]) == json_content
+        assert json.loads(cast("str", result[1]["result_example_path"])) == json_content
         assert result[1]["show_result"] is False
         assert result[2]["result_example_path"] == "{}"
         assert result[2]["show_result"] is True
 
     def test_does_not_mutate_input(self) -> None:
         """Input DRM dicts must not be modified in place."""
-        drms = [{"result_example_path": None, "result_name": "JsonResult", "show_result": True}]
+        drms = [_drm(result_example_path=None)]
         _load_json_examples(drms, Path("/unused"))
         assert drms[0]["result_example_path"] is None
