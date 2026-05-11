@@ -260,8 +260,10 @@ def _find_package_file(package_dir: Path, wheel_name_prefix: str) -> Path:
 
     """
     for extension in PACAKGE_SUFFIXES:
-        for file in package_dir.glob(f"{wheel_name_prefix}{extension}"):
-            return file
+        ext_suffix = extension.lstrip("*")
+        for file in package_dir.glob(f"{wheel_name_prefix}*{ext_suffix}"):
+            if file.name.startswith(f"{wheel_name_prefix}-") or file.name == f"{wheel_name_prefix}{ext_suffix}":
+                return file
 
     msg: str = f"No wheel or source distribution found in {package_dir}"
     raise FileNotFoundError(msg)
