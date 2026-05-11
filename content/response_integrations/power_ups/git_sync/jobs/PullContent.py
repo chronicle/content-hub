@@ -145,6 +145,11 @@ def main():
                     )
 
                     if current:
+                        display_name = instance.get("displayName") or instance["settings"].get("instanceName")
+                        if platform_supports_1p_api() and display_name == "System Default Instance":
+                            siemplify.LOGGER.info(f"Skipping update for {display_name}")
+                            continue
+
                         siemplify.LOGGER.info(
                             f"Updating {instance['settings']['instanceName']}",
                         )
@@ -299,13 +304,15 @@ def main():
             all_records = gitsync.api.get_ontology_records(chronicle_soar=siemplify) #vf
             valid_record_id = all_records[0].get("id") if all_records else None #vf
             for family in gitsync.content.get_visual_families():
+                validated_family = id_validator(family.raw_data, "family", "id", current_vfs)
+                if validated_family.get("id"):
+                    continue
+
                 gitsync.api.add_custom_family(
                     {
-                        "visualFamilyDataModel": (
-                            id_validator(family.raw_data, "family", "id", current_vfs)
-                        ),
+                        "visualFamilyDataModel": validated_family,
                     },
-                    valid_record_id, #vf
+                    valid_record_id,
                 )
 
         if features["Mappings"]:
@@ -449,11 +456,8 @@ def main():
                 if "items" in logo_data:
 
                     for item in logo_data.get("items", []):
-                        if item.get("displayName") == "ChangeFavicon":
-                             continue
-                        
                         if "value" not in item or item.get("value").strip() == "":
-                            item["value"] = "Null"
+                            item["value"] = "False"
                         elif item.get("displayName") == "CompanyLogo":
                             val = item["value"]
                             if not val.startswith("data:image/png;base64,"):

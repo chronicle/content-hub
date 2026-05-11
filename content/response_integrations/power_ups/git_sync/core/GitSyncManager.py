@@ -227,11 +227,11 @@ class GitSyncManager:
             self.logger.info(
                 f"{integration.identifier} is a commercial integration - Checking installation",
             )
-            if not self.get_installed_integration_version(integration.identifier):
+            if self.get_installed_integration_version(integration.identifier) == "0.0":
                 self.logger.info(
                     f"{integration.identifier} is not installed - installing from the marketplace",
                 )
-                if not self.install_marketplace_integration(integration.identifier):
+                if not self.install_marketplace_integration(integration.identifier, fallback_version=integration.version):
                     self.logger.warn(
                         f"Couldn't install integration {integration.identifier} "
                         "from the marketplace",
@@ -558,11 +558,12 @@ class GitSyncManager:
         if item_name in self._cache:
             del self._cache[item_name]
 
-    def install_marketplace_integration(self, integration_name: str) -> bool:
+    def install_marketplace_integration(self, integration_name: str, fallback_version: str = None) -> bool:
         """Installs or update an integration from the marketplace.
 
         Args:
             integration_name: Name of the integration to install
+            fallback_version: Version to use if not found in marketplace
 
         Returns: True if the integration was installed successfully, otherwise False
 
@@ -575,9 +576,13 @@ class GitSyncManager:
             ),
             None,
         )
-        if not store_integration:
+        
+        version = store_integration.get("version", fallback_version) if store_integration else fallback_version
+        is_certified = store_integration.get("isCertified", store_integration.get("certified", True)) if store_integration else True
+        
+        if not version:
             self.logger.warn(
-                f"Integration {integration_name} wasn't found in the marketplace",
+                f"Integration {integration_name} wasn't found in the marketplace and no fallback version provided",
             )
             return False
         try:
@@ -585,8 +590,8 @@ class GitSyncManager:
                 chronicle_soar=self._siemplify,
                 integration_identifier=integration_name,
                 integration_name="",
-                version=store_integration["version"],
-                is_certified=store_integration["isCertified"],
+                version=version,
+                is_certified=is_certified,
             )
             self.logger.info(f"{integration_name} installed successfully")
             return True
@@ -594,10 +599,10 @@ class GitSyncManager:
             self.logger.warn(f"Couldn't install {integration_name} - {e}")
             return False
 
-    def get_installed_integration_version(self, integration_name: str) -> float:
+    def get_installed_integration_version(self, integration_name: str) -> str:
         """Get the currently installed integration version
 
-        If the integration is not installed, 0.0 will be returned
+        If the integration is not installed, "0.0" will be returned
 
         Args:
             integration_name: Name of the integration to check
@@ -605,14 +610,15 @@ class GitSyncManager:
         Returns: Integration version
 
         """
-        return next(
+        version = next(
             (
-                x.get("installedVersion") or x.get("version")
+                x.get("installedVersion")
                 for x in self._marketplace_integrations
                 if x["identifier"] == integration_name
             ),
-            0.0,
+            "0.0",
         )
+        return version or "0.0"
 
 
 class WorkflowInstaller:
@@ -687,7 +693,7 @@ class WorkflowInstaller:
         (with the same name) identifiers.
         """
         playbook_id: str = self._installed_playbooks[workflow.name]["identifier"]
-        local_playbook: dict[str, Any] = self.api.get_playbook(playbook_id)
+        local_playbook: dict[str, Any] = self.api.get_playbook(chronicle_soar=self.chronicle_soar, identifier=playbook_id)
         self._copy_ids_from_existing_workflow(workflow, local_playbook)
         self._process_steps(workflow, local_playbook)
 
@@ -1059,23 +1065,23 @@ class WorkflowInstaller:
         """
         cache_key = f"integration_instances_{environment}"
         if cache_key not in self._cache:
-            self._cache[cache_key] = self.api.get_integrations_instances(environment) or []
+            self._cache[cache_key] = self.api.get_integrations_instances(chronicle_soar=self.chronicle_soar, environment=environment) or []
 
         instances = self._cache.get(cache_key, [])
 
         filtered_instances = [
             x
             for x in instances
-            if x.get("integrationIdentifier") == integration_name
+            if x.integration_identifier == integration_name
         ]
 
-        configured_instances = [x for x in filtered_instances if x.get("isConfigured")]
+        configured_instances = [x for x in filtered_instances if x.instance.get("isConfigured")]
         if configured_instances:
-            return sorted(configured_instances, key=lambda x: x.get("instanceName") or "")
+            return sorted(configured_instances, key=lambda x: x.instance_name or "")
 
         # Fallback: return unconfigured instances sorted by name when no configured
         # instances are available, so callers can still find something to assign.
-        return sorted(filtered_instances, key=lambda x: x.get("instanceName") or "")
+        return sorted(filtered_instances, key=lambda x: x.instance_name or "")
 
     def _is_valid_existing_instance(
         self,
@@ -1100,7 +1106,7 @@ class WorkflowInstaller:
                 integration_name,
                 env,
             )
-            if any(x.get("identifier") == instance_id for x in instances):
+            if any(x.identifier == instance_id for x in instances):
                 return True
 
         return False
