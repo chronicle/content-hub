@@ -41,7 +41,7 @@ class CliDisplay:
             self.console.print("[bold green]All Validations Passed\n[/bold green]")
             return
 
-        display_categories: list[str] = ["Pre-Build", "Build", "Post-Build"]
+        display_categories: list[str] = ["Validations"]
 
         for content_type, full_report in self.validation_results.items():
             if not any(full_report.values()):

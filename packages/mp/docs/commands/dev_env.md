@@ -1,4 +1,4 @@
-# `mp dev-env`
+# `mp` and development environment commands
 
 Commands for interacting with the development environment (playground). This suite of commands helps you manage your connection to the Google SecOps SOAR environment and deploy your integrations for testing.
 
@@ -30,7 +30,7 @@ Authenticate to the dev environment.
 **Usage:**
 
 ```bash
-mp dev-env login [OPTIONS]
+mp login [OPTIONS]
 ```
 
 **Options:**
@@ -50,7 +50,7 @@ Build and push an integration to the dev environment.
 **Usage:**
 
 ```bash
-mp dev-env push integration [INTEGRATION] [OPTIONS]
+mp push integration [INTEGRATION] [OPTIONS]
 ```
 
 **Arguments:**
@@ -73,7 +73,7 @@ Build and push a playbook to the dev environment.
 **Usage:**
 
 ```bash
-mp dev-env push playbook [PLAYBOOK] [OPTIONS]
+mp push playbook [PLAYBOOK] [OPTIONS]
 ```
 
 **Arguments:**
@@ -95,7 +95,7 @@ Build, zip, and upload the entire custom integration repository.
 **Usage:**
 
 ```bash
-mp dev-env push custom-integration-repository
+mp push custom-integration-repository
 ```
 
 ### `pull integration`
@@ -105,7 +105,7 @@ Pull and deconstruct an integration from the dev environment.
 **Usage:**
 
 ```bash
-mp dev-env pull integration [INTEGRATION] [OPTIONS]
+mp pull integration [INTEGRATION] [OPTIONS]
 ```
 
 **Arguments:**
@@ -126,7 +126,7 @@ Pull and deconstruct a playbook from the dev environment.
 **Usage:**
 
 ```bash
-mp dev-env pull playbook [PLAYBOOK] [OPTIONS]
+mp pull playbook [PLAYBOOK] [OPTIONS]
 ```
 
 **Arguments:**

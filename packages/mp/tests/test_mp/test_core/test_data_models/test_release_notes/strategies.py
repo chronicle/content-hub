@@ -49,7 +49,7 @@ ST_VALID_NON_BUILT_RELEASE_NOTE_DICT = st.fixed_dictionaries(
         "Any",
         {
             "description": st_valid_long_description,
-            "integration_version": st_valid_version,
+            "version": st_valid_version,
             "item_name": st.text(),
             "item_type": st.text(),
         },
