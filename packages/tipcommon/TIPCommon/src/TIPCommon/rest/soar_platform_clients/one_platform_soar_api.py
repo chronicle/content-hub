@@ -1169,8 +1169,9 @@ class OnePlatformSoarApi(BaseSoarApi):
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def add_or_update_company_logo(self) -> requests.Response:
         """Add or update company logo."""
-        endpoint: str = "/moduleSettings/CompanySetting/properties/CompanyLogo"
-        payload = self.params.company_logo # QA fixes
+        prop_name = self.params.company_logo.get("displayName") or self.params.company_logo.get("name") or "CompanyLogo"
+        endpoint: str = f"/moduleSettings/CompanySetting/properties/{prop_name}"
+        payload = self.params.company_logo # QA fixes - 2
         return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
@@ -1247,7 +1248,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             response_json = self._make_request(
                 HttpMethod.GET, endpoint, params=params
             ).json()
-            page_items = response_json.get("marketplaceIntegrations", [])
+            page_items = response_json.get("marketplaceIntegrations") or response_json.get("marketplace_integrations", []) #Qa fixes
             all_integrations.extend(page_items)
             next_page_token = response_json.get("nextPageToken")
             if not next_page_token:
@@ -1558,6 +1559,9 @@ class OnePlatformSoarApi(BaseSoarApi):
         family_data = self.params.visual_family
         if isinstance(family_data, dict) and "visualFamilyDataModel" in family_data:
             family_data = family_data["visualFamilyDataModel"]
+            
+        if isinstance(family_data, dict) and "rules" in family_data:
+            family_data["modelingRules"] = family_data.pop("rules") #QA fixes
 
         return self._make_request(
             HttpMethod.POST, endpoint, json_payload=family_data

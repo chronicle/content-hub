@@ -2529,7 +2529,7 @@ def save_case_title_settings(
         
     return response.json()
 
-def add_or_update_company_logo( #QA fixes
+def add_or_update_company_logo( #QA fixes 2
     chronicle_soar: ChronicleSOAR,
     company_logo: SingleJson,
 ) -> SingleJson:
@@ -2539,7 +2539,12 @@ def add_or_update_company_logo( #QA fixes
 
     response = api_client.add_or_update_company_logo()
     validate_response(response, validate_json=False)
-    return response.json()
+    if not response.text or not response.text.strip():
+        return {}
+    try:
+        return response.json()
+    except (ValueError, InternalJSONDecoderError): #QA fixes
+        return {}
 
 
 def attache_workflow_to_case(
@@ -2667,8 +2672,7 @@ def get_store_data(chronicle_soar: ChronicleSOAR) -> SingleJson:
     api_client = get_soar_client(chronicle_soar)
 
     response = api_client.get_store_data()
-    return response.get("integrations", response.get("marketplaceIntegrations", []))
-
+    return response.get("integrations", response.get("marketplaceIntegrations", response.get("marketplace_integrations", []))) #QA fixes
 
 def import_package(
     chronicle_soar: ChronicleSOAR, integration_name: str, b64_blob: str
