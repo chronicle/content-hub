@@ -13,7 +13,6 @@ from urllib3.util.retry import Retry
 
 from .constants import (
     ACTIVITY_STATUS_ENDPOINT,
-    CASE_ACTION_ENDPOINT,
     CASE_BY_ID_ENDPOINT,
     CASES_ENDPOINT,
     CONTENT_TYPE_JSON,
@@ -42,7 +41,6 @@ from .constants import (
     MESSAGES_SEARCH_ENDPOINT,
     RETRY_BACKOFF_FACTOR,
     RETRY_STATUS_CODES,
-    THREAT_ACTION_ENDPOINT,
     THREAT_BY_ID_ENDPOINT,
     THREATS_ENDPOINT,
     USER_AGENT,
@@ -281,15 +279,41 @@ class AbnormalManager:
         action: str,
         message_ids: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Take action on a threat. POST /v1/threats/{id}/actions/{action_id}"""
+        """Take action on a threat.
+
+        Submits a new action by POSTing to /v1/threats/{id} with the action
+        verb in the body. The /v1/threats/{id}/actions/{action_id} endpoint
+        is GET-only — it returns status for an already-submitted action, not
+        a submission endpoint.
+
+        Args:
+            threat_id: UUID of the threat to take action on.
+            action: Action verb to perform. Must be one of VALID_THREAT_ACTIONS
+                (currently "remediate" or "unremediate").
+            message_ids: Optional list of message IDs to scope the action to.
+                If omitted, the action applies to all messages in the threat.
+
+        Returns:
+            Decoded JSON response body from the Abnormal Security API,
+            including the submitted action_id and status fields.
+
+        Raises:
+            AbnormalValidationError: If threat_id is empty or action is not
+                in VALID_THREAT_ACTIONS.
+            AbnormalAuthenticationError: If the API rejects the credentials.
+            AbnormalRateLimitError: If the API returns HTTP 429.
+            AbnormalConnectionError: On network failures or timeouts.
+            AbnormalAPIManagerError: On other non-2xx responses or invalid
+                response bodies.
+        """
         if not threat_id:
             raise AbnormalValidationError(ERROR_MSG_MISSING_THREAT_ID)
         if action not in VALID_THREAT_ACTIONS:
             raise AbnormalValidationError(
                 f"{ERROR_MSG_INVALID_THREAT_ACTION} Valid: {', '.join(VALID_THREAT_ACTIONS)}"
             )
-        endpoint = THREAT_ACTION_ENDPOINT.format(threat_id=threat_id, action_id=action)
-        body: dict[str, Any] = {}
+        endpoint = THREAT_BY_ID_ENDPOINT.format(threat_id=threat_id)
+        body: dict[str, Any] = {"action": action}
         if message_ids:
             body["message_ids"] = message_ids
         return self._make_request("POST", endpoint, json_data=body)
@@ -316,12 +340,38 @@ class AbnormalManager:
         return self._make_request("GET", endpoint)
 
     def post_case_action(self, case_id: str, action: str) -> dict[str, Any]:
-        """Take action on a case. POST /v1/cases/{id}/actions/{action_id}"""
+        """Take action on a case.
+
+        Submits a new action by POSTing to /v1/cases/{id} with the action
+        verb in the body. The /v1/cases/{id}/actions/{action_id} endpoint
+        is GET-only — it returns status for an already-submitted action, not
+        a submission endpoint.
+
+        Args:
+            case_id: ID of the case to take action on.
+            action: Action verb to perform. Must be one of VALID_CASE_ACTIONS
+                (action_required, acknowledge_resolved, acknowledge_in_progress,
+                acknowledge_not_an_attack).
+
+        Returns:
+            Decoded JSON response body from the Abnormal Security API,
+            including the submitted action_id and status fields.
+
+        Raises:
+            AbnormalValidationError: If case_id is empty or action is not
+                in VALID_CASE_ACTIONS.
+            AbnormalAuthenticationError: If the API rejects the credentials.
+            AbnormalRateLimitError: If the API returns HTTP 429.
+            AbnormalConnectionError: On network failures or timeouts.
+            AbnormalAPIManagerError: On other non-2xx responses or invalid
+                response bodies.
+        """
         if not case_id:
             raise AbnormalValidationError(ERROR_MSG_MISSING_CASE_ID)
         if action not in VALID_CASE_ACTIONS:
             raise AbnormalValidationError(
                 f"{ERROR_MSG_INVALID_CASE_ACTION} Valid: {', '.join(VALID_CASE_ACTIONS)}"
             )
-        endpoint = CASE_ACTION_ENDPOINT.format(case_id=case_id, action_id=action)
-        return self._make_request("POST", endpoint, json_data={})
+        endpoint = CASE_BY_ID_ENDPOINT.format(case_id=case_id)
+        body: dict[str, Any] = {"action": action}
+        return self._make_request("POST", endpoint, json_data=body)
