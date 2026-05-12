@@ -1,55 +1,29 @@
 from __future__ import annotations
+
+
 class BloodHoundException(Exception):
-    """
-    General Exception for BloodHound manager
-    """
-
-    pass
+    """General Exception for BloodHound manager."""
 
 
-class BloodHoundValidationException(Exception):
-    """
-    Validation Exception for BloodHound
-    """
-
-    pass
+class BloodHoundValidationException(BloodHoundException):
+    """Validation Exception for BloodHound."""
 
 
-class BloodHoundBadRequestException(Exception):
-    """
-    Bad Request Exception for BloodHound
-    """
-
-    pass
+class BloodHoundBadRequestException(BloodHoundException):
+    """Bad Request Exception for BloodHound."""
 
 
-class BloodHoundNotFoundException(Exception):
-    """
-    Not Found Exception for BloodHound
-    """
-
-    pass
+class BloodHoundNotFoundException(BloodHoundException):
+    """Not Found Exception for BloodHound."""
 
 
-class BloodHoundUnauthorizedException(Exception):
-    """
-    Unauthorized Exception for BloodHound
-    """
-
-    pass
+class BloodHoundUnauthorizedException(BloodHoundException):
+    """Unauthorized Exception for BloodHound."""
 
 
-class BloodHoundForbiddenException(Exception):
-    """
-    Forbidden Exception for BloodHound
-    """
-
-    pass
+class BloodHoundForbiddenException(BloodHoundException):
+    """Forbidden Exception for BloodHound."""
 
 
-class BloodHoundRateLimitException(Exception):
-    """
-    Rate Limit Exception for BloodHound
-    """
-
-    pass
+class BloodHoundRateLimitException(BloodHoundException):
+    """Rate Limit Exception for BloodHound."""

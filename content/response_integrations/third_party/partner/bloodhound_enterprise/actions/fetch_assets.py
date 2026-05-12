@@ -120,10 +120,9 @@ def main():
         siemplify.end(output_message, "true", EXECUTION_STATE_COMPLETED)
 
     except Exception as e:
-        # Unexpected error handling
-        output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error: {error}"
+        output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error is {e}"
         siemplify.LOGGER.error(output_message)
-        siemplify.LOGGER.exception(error)
+        siemplify.LOGGER.exception(e)
         siemplify.end(f"Unexpected error: {str(e)}", "false", EXECUTION_STATE_FAILED)
 
 if __name__ == "__main__":

@@ -615,7 +615,7 @@ def update_domain_dates(siemplify, domain_latest_dates):
     
     # Store the updated dates dictionary
     if existing_dates:
-        siemplify.LOGGER.error(f'*****updating with data {existing_dates}******')
+        siemplify.LOGGER.info(f'*****updating with data {existing_dates}******')
         store_domain_last_created_dates(siemplify, data=existing_dates)
 
 # Listed below are the sub-functions associated with the main function.
@@ -646,7 +646,7 @@ def main(is_test_run):
     siemplify.LOGGER.info(f"Connector identifier: {siemplify.context.connector_info.identifier}")
     
     # Check if parameters are missing
-    if not token_id and not token_key and not tenant_domain:
+    if not token_id or not token_key or not tenant_domain:
         siemplify.LOGGER.error("Missing credentials or domain in configuration.")
         return
 
@@ -717,10 +717,10 @@ def main(is_test_run):
             raise Exception(error_msg)
 
     except Exception as error:
-        output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error: {error}"
+        output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error is {error}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 
 if __name__ == "__main__":
-    is_test_run = not (len(sys.argv) < 2 or sys.argv[1] == 'True')
+    is_test_run = not (len(sys.argv) > 1 and sys.argv[1] == 'True')
     main(is_test_run)

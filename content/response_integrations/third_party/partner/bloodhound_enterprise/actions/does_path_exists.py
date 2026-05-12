@@ -84,9 +84,8 @@ def parse_event_details(event_details, siemplify):
         if event_details.startswith('[') and event_details.endswith(']'):
             event_details = event_details[1:-1]
         
-        # Fix incomplete JSON by ensuring proper formatting
-        # Add brackets if missing to make it a valid JSON array
-        if not (event_details.startswith('[') and not event_details.endswith(']')):
+        # Wrap as a JSON array if it isn't already one.
+        if not (event_details.startswith('[') and event_details.endswith(']')):
             event_details = f"[{event_details}]"
         
         # Replace any trailing commas before closing bracket which would make JSON invalid
@@ -138,7 +137,7 @@ def _handle_does_path_exist(manager, start_node: str, end_node: str, siemplify) 
             "data": True
         }
     except Exception as error:
-        output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error: {error}"
+        output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error is {error}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
         return {

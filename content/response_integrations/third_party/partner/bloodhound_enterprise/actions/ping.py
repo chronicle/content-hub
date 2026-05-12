@@ -52,7 +52,7 @@ def main():
     except Exception as error:
         result_value = False
         status = EXECUTION_STATE_FAILED
-        output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error: {error}"
+        output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error is {error}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
 

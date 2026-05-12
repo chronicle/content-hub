@@ -167,7 +167,7 @@ class BloodhoundManager:
             else:
                 self._log_error("Received non-200 response or empty body.")
                 return ""
-        except Exception as e:
+        except BloodHoundException as e:
             self._log_error(f"Failed to fetch short_description for finding type {finding_type}: {e}")
             return ""
     
@@ -196,7 +196,7 @@ class BloodhoundManager:
                 self._log_error("Received non-200 response or empty body.")
                 return ""
 
-        except Exception as e:
+        except BloodHoundException as e:
             self._log_error(f"Failed to fetch short_remediation for finding type {finding_type}: {e}")
             return ""
 
@@ -224,7 +224,7 @@ class BloodhoundManager:
                 self._log_error("Received non-200 response or empty body.")
                 return ""
 
-        except Exception as e:
+        except BloodHoundException as e:
             self._log_error(f"Failed to fetch long_remediation for finding type {finding_type}: {e}")
             return ""
 
@@ -281,7 +281,7 @@ class BloodhoundManager:
                 self._log_error("Received non-200 response or empty body.")
                 return ""
 
-        except Exception as e:
+        except BloodHoundException as e:
             self._log_error(f"Failed to fetch title for finding type {finding_type}: {e}")
             return ""
 
@@ -320,7 +320,7 @@ class BloodhoundManager:
             )
             
             return response.get("data", []) if response else []
-        except Exception as e:
+        except BloodHoundException as e:
             self._log_error(f"Failed to fetch attack path details for domain {domain_id}, finding type {finding_type}: {e}")
             return []
 

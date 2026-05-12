@@ -1,4 +1,5 @@
 from __future__ import annotations
+import urllib.parse
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from ..core.bloodhound_manager import BloodhoundManager
@@ -52,7 +53,7 @@ def main():
 
     for name in names:
         siemplify.LOGGER.info(f"Processing name: {name}")
-        encoded_name = name.strip().replace(" ", "%20").replace("@", "%40")
+        encoded_name = urllib.parse.quote(name.strip())
         object_id_info = _handle_get_object_id(bhe_manager, encoded_name, siemplify)
         response_payload[name] = object_id_info
         messages.append(f"{name}: {object_id_info.get('message')}")
@@ -91,7 +92,7 @@ def _handle_get_object_id(manager, name: str, siemplify) -> dict:
             
 
     except Exception as error:
-        output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error: {error}"
+        output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error is {error}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
         return {
