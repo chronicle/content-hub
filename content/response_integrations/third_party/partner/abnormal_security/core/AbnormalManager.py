@@ -13,7 +13,6 @@ from urllib3.util.retry import Retry
 
 from .constants import (
     ACTIVITY_STATUS_ENDPOINT,
-    CASE_ACTION_ENDPOINT,
     CASE_BY_ID_ENDPOINT,
     CASES_ENDPOINT,
     CONTENT_TYPE_JSON,
@@ -42,7 +41,6 @@ from .constants import (
     MESSAGES_SEARCH_ENDPOINT,
     RETRY_BACKOFF_FACTOR,
     RETRY_STATUS_CODES,
-    THREAT_ACTION_ENDPOINT,
     THREAT_BY_ID_ENDPOINT,
     THREATS_ENDPOINT,
     USER_AGENT,
@@ -281,15 +279,20 @@ class AbnormalManager:
         action: str,
         message_ids: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Take action on a threat. POST /v1/threats/{id}/actions/{action_id}"""
+        """Take action on a threat. POST /v1/threats/{id} with {"action": ...} in body.
+
+        The /v1/threats/{id}/actions/{action_id} endpoint is GET-only — it returns
+        status for an already-submitted action. To submit a new action, POST to the
+        threat resource itself with the action verb in the body.
+        """
         if not threat_id:
             raise AbnormalValidationError(ERROR_MSG_MISSING_THREAT_ID)
         if action not in VALID_THREAT_ACTIONS:
             raise AbnormalValidationError(
                 f"{ERROR_MSG_INVALID_THREAT_ACTION} Valid: {', '.join(VALID_THREAT_ACTIONS)}"
             )
-        endpoint = THREAT_ACTION_ENDPOINT.format(threat_id=threat_id, action_id=action)
-        body: dict[str, Any] = {}
+        endpoint = THREAT_BY_ID_ENDPOINT.format(threat_id=threat_id)
+        body: dict[str, Any] = {"action": action}
         if message_ids:
             body["message_ids"] = message_ids
         return self._make_request("POST", endpoint, json_data=body)
@@ -316,12 +319,17 @@ class AbnormalManager:
         return self._make_request("GET", endpoint)
 
     def post_case_action(self, case_id: str, action: str) -> dict[str, Any]:
-        """Take action on a case. POST /v1/cases/{id}/actions/{action_id}"""
+        """Take action on a case. POST /v1/cases/{id} with {"action": ...} in body.
+
+        Same pattern as post_threat_action — /v1/cases/{id}/actions/{action_id} is
+        GET-only for status; submitting a new action goes to the case resource.
+        """
         if not case_id:
             raise AbnormalValidationError(ERROR_MSG_MISSING_CASE_ID)
         if action not in VALID_CASE_ACTIONS:
             raise AbnormalValidationError(
                 f"{ERROR_MSG_INVALID_CASE_ACTION} Valid: {', '.join(VALID_CASE_ACTIONS)}"
             )
-        endpoint = CASE_ACTION_ENDPOINT.format(case_id=case_id, action_id=action)
-        return self._make_request("POST", endpoint, json_data={})
+        endpoint = CASE_BY_ID_ENDPOINT.format(case_id=case_id)
+        body: dict[str, Any] = {"action": action}
+        return self._make_request("POST", endpoint, json_data=body)
