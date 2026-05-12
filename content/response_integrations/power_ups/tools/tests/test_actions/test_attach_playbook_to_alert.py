@@ -56,7 +56,7 @@ def test_attach_playbook_to_alert_alert_scope(
 
     AttachPlaybookToAlert.main()
 
-    assert len(script_session.request_history) == 5
+    assert len(script_session.request_history) == 3
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED
 
 
@@ -78,5 +78,5 @@ def test_attach_playbook_to_alert_case_scope(
 
     AttachPlaybookToAlert.main()
 
-    assert len(script_session.request_history) == 7
+    assert len(script_session.request_history) == 6
     assert action_output.results.execution_state.value == EXECUTION_STATE_COMPLETED

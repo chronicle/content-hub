@@ -64,7 +64,7 @@ def test_add_or_update_alert_additional_data_alert_scope(
     assert "dict" in result_json
     assert result_json["dict"]["dict_key"] == "dict_val"
 
-    assert len(script_session.request_history) == 4
+    assert len(script_session.request_history) == 2
 
     payload = script_session.request_history[-1].request.kwargs.get("json") or {}
     alert_1_data = json.loads(
@@ -98,7 +98,7 @@ def test_add_or_update_alert_additional_data_case_scope(
     assert "list" in result_json
     assert "list_item" in result_json["list"]
 
-    assert len(script_session.request_history) == 4
+    assert len(script_session.request_history) == 3
 
     payload = script_session.request_history[-1].request.kwargs.get("json") or {}
     alert_1_data = json.loads(
