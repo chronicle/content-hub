@@ -14,7 +14,8 @@
 
 from __future__ import annotations
 
-import rich
+import logging
+
 import typer
 
 from mp.telemetry import track_command
@@ -24,9 +25,13 @@ from .sub_commands.login import login_app
 from .sub_commands.pull import pull_app
 from .sub_commands.push import push_app
 
+logger: logging.Logger = logging.getLogger(__name__)
+
+
 dev_env_app: typer.Typer = typer.Typer(
     name="dev-env",
-    help="Commands for interacting with the SecOps environment.",
+    help="[yellow]Deprecated.[/yellow] Please use 'mp login', 'mp pull' and 'mp push' directly.",
+    callback=lambda: logger.warning("Note: 'dev-env' is deprecated. Use 'mp login', 'mp pull' and 'mp push' directly."),
 )
 
 dev_env_app.add_typer(login_app)
@@ -34,10 +39,7 @@ dev_env_app.add_typer(push_app)
 dev_env_app.add_typer(pull_app)
 
 
-@dev_env_app.command(
-    deprecated=True,
-    help="Deprecated. Please use 'dev-env push integration' instead.",
-)
+@dev_env_app.command(deprecated=True, help="[yellow]Deprecated.[/yellow] Please use 'mp push integration' instead.")
 @track_command
 def deploy(
     integration: str = typer.Argument(help="Integration to build and deploy."),
@@ -45,5 +47,5 @@ def deploy(
     is_staging: bool = False,
 ) -> None:
     """Deprecated."""  # noqa: D401
-    rich.print("[yellow]Note: 'deploy' is deprecated. Use 'push integration' instead.[/yellow]")
+    logger.warning("Note: 'deploy' is deprecated. Use 'mp push integration' instead.")
     push_integration(integration, is_staging=is_staging)

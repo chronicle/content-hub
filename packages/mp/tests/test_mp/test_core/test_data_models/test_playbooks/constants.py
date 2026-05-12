@@ -67,8 +67,8 @@ from mp.core.data_models.playbooks.step.step_debug_data import (
 )
 from mp.core.data_models.playbooks.step.step_debug_enrichment_data import (
     BuiltStepDebugEnrichmentData,
-    DebugStepEnrichmentData,
     NonBuiltStepDebugEnrichmentData,
+    StepDebugEnrichmentData,
 )
 from mp.core.data_models.playbooks.step.step_parameter import (
     BuiltStepParameter,
@@ -101,7 +101,7 @@ NON_BUILT_STEP_DEBUG_ENRICHMENT_DATA: NonBuiltStepDebugEnrichmentData = {
     "is_custom": False,
 }
 
-DEBUG_STEP_ENRICHMENT_DATA = DebugStepEnrichmentData(
+DEBUG_STEP_ENRICHMENT_DATA = StepDebugEnrichmentData(
     field="field",
     value="value",
     use_in_playbook=True,
@@ -513,7 +513,7 @@ BUILT_PLAYBOOK_METADATA: BuiltPlaybookMetadata = {
     "IsEnable": True,
     "Version": 1.0,
     "Description": "description",
-    "CreationSource": 0,
+    "CreationSource": 1,
     "DefaultAccessLevel": 1,
     "SimulationClone": False,
     "DebugAlertIdentifier": "debug_alert_id",
@@ -668,7 +668,6 @@ PLAYBOOK_METADATA_WITH_NONE = PlaybookMetadata(
     permissions=[],
     environments=["*"],
 )
-
 
 BUILT_WIDGET_DATA_DEFINITION: BuiltWidgetDataDefinition = {
     "htmlHeight": 400,
@@ -835,7 +834,6 @@ DISPLAY_INFO = PlaybookDisplayInfo(
     should_display_in_content_hub=False,
     allowed_debug_data=False,
 )
-
 
 BUILT_OVERVIEW: BuiltOverview = {
     "OverviewTemplate": {

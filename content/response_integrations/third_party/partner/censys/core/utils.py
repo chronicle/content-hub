@@ -7,7 +7,11 @@ from typing import Any, List, Optional, Tuple, Union
 
 from soar_sdk.SiemplifyDataModel import EntityTypes
 
-from .censys_exceptions import CensysException, InternalServerError, InvalidIntegerException
+from .censys_exceptions import (
+    CensysException,
+    InternalServerError,
+    InvalidIntegerException,
+)
 from .constants import ENRICHMENT_PREFIX, INTEGRATION_NAME, PING_ACTION_IDENTIFIER
 
 
@@ -89,7 +93,13 @@ def validate_integer_param(
             None
             if not default_value
             else validate_integer_param(
-                default_value, param_name, None, zero_allowed, allow_negative, max_value, min_value
+                default_value,
+                param_name,
+                None,
+                zero_allowed,
+                allow_negative,
+                max_value,
+                min_value,
             )
         )
 
@@ -103,9 +113,13 @@ def validate_integer_param(
     if int_value == 0 and not zero_allowed:
         raise InvalidIntegerException(f"{param_name} must be greater than zero.")
     if max_value is not None and int_value > max_value:
-        raise InvalidIntegerException(f"{param_name} must be less than or equal to {max_value}.")
+        raise InvalidIntegerException(
+            f"{param_name} must be less than or equal to {max_value}."
+        )
     if min_value is not None and int_value < min_value:
-        raise InvalidIntegerException(f"{param_name} must be greater than or equal to {min_value}.")
+        raise InvalidIntegerException(
+            f"{param_name} must be greater than or equal to {min_value}."
+        )
 
     return int_value
 
@@ -218,7 +232,9 @@ def validate_rfc3339_timestamp(timestamp_str: str, param_name: str = "At Time") 
         else:
             raise ValueError("Invalid timestamp_str format")
     except ValueError as e:
-        raise ValueError(f"Invalid date/time values in timestamp_str '{timestamp_str}': {str(e)}")
+        raise ValueError(
+            f"Invalid date/time values in timestamp_str '{timestamp_str}': {str(e)}"
+        )
 
     return timestamp_str
 
@@ -369,7 +385,9 @@ def filter_valid_certificate_ids(cert_ids: List[str]) -> Tuple[List[str], List[s
     return valid_certs, invalid_certs
 
 
-def validate_web_property_entities(entities: List, siemplify: Any) -> Tuple[List, List[str]]:
+def validate_web_property_entities(
+    entities: List, siemplify: Any
+) -> Tuple[List, List[str]]:
     """
     Validate entities for web properties (IPs and domains).
 
@@ -404,7 +422,9 @@ def validate_web_property_entities(entities: List, siemplify: Any) -> Tuple[List
                 siemplify.LOGGER.info(f"Invalid domain format: {identifier}")
                 invalid_identifiers.append(identifier)
         else:
-            siemplify.LOGGER.info(f"Unsupported entity type {entity_type}: {identifier}")
+            siemplify.LOGGER.info(
+                f"Unsupported entity type {entity_type}: {identifier}"
+            )
             invalid_identifiers.append(identifier)
 
         if is_valid:
@@ -424,7 +444,9 @@ def get_ip_entities(siemplify: Any) -> List:
         list: List of IP address entities
     """
     return [
-        entity for entity in siemplify.target_entities if entity.entity_type == EntityTypes.ADDRESS
+        entity
+        for entity in siemplify.target_entities
+        if entity.entity_type == EntityTypes.ADDRESS
     ]
 
 
@@ -456,7 +478,9 @@ def get_filehash_entities(siemplify: Any) -> List:
         list: List of FILEHASH entities
     """
     return [
-        entity for entity in siemplify.target_entities if entity.entity_type == EntityTypes.FILEHASH
+        entity
+        for entity in siemplify.target_entities
+        if entity.entity_type == EntityTypes.FILEHASH
     ]
 
 

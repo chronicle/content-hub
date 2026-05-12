@@ -21,19 +21,13 @@ from mp.core import constants, exclusions, file_utils
 from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.exceptions import FatalValidationError
-from mp.validate.data_models import (
-    BUILD,
-    POST_BUILD,
-    PRE_BUILD,
-    FullReport,
-    ValidationResults,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, YamlFileContent
+    from mp.validate.data_models import FullReport
 
 
 DEF_FILE_NAME_KEY: str = "name"
@@ -96,9 +90,7 @@ def load_integration_def(integration_path: Path) -> YamlFileContent:
         raise FatalValidationError(msg) from e
 
 
-def load_components_defs(
-    integration_path: Path, *components: str
-) -> dict[str, list[YamlFileContent]]:
+def load_components_defs(integration_path: Path, *components: str) -> dict[str, list[YamlFileContent]]:
     """Load component's definition files, organized by component type.
 
     Returns:
@@ -121,8 +113,7 @@ def load_components_defs(
             component_dir: Path = integration_path / component_dir_name
             if component_dir.is_dir():
                 component_defs[component_dir_name] = [
-                    file_utils.load_yaml_file(p)
-                    for p in component_dir.glob(f"*{constants.YAML_SUFFIX}")
+                    file_utils.load_yaml_file(p) for p in component_dir.glob(f"*{constants.YAML_SUFFIX}")
                 ]
     except Exception as e:
         msg: str = f"Failed to load components def files: {e}"
@@ -187,9 +178,7 @@ def _validate_ssl_parameter(
         return None
 
     if not ssl_param["default_value"]:
-        return (
-            f"The default value of the 'Verify SSL' param in {script_name} must be a boolean true"
-        )
+        return f"The default value of the 'Verify SSL' param in {script_name} must be a boolean true"
 
     return None
 
@@ -224,9 +213,7 @@ def get_new_release_notes(new_rn_content: str, old_rn_content: str) -> list[Rele
     return new_notes[len(old_notes) :]
 
 
-def are_new_release_notes_valid(
-    new_notes: list[ReleaseNote] | None, version_to_compare: float = 1.0
-) -> bool:
+def are_new_release_notes_valid(new_notes: list[ReleaseNote] | None, version_to_compare: float = 1.0) -> bool:
     """Validate a list of new release notes against a specific version.
 
     Args:
@@ -247,20 +234,17 @@ def combine_results(*validations_outputs: FullReport) -> FullReport:
         A single report.
 
     """
-    combined_output: FullReport = {}
-    keys_to_combine = (PRE_BUILD, BUILD, POST_BUILD)
+    combined_output: FullReport = {"Validations": []}
+    all_lists_are_none = True
 
-    for key in keys_to_combine:
-        combined_list: list[ValidationResults] = []
-        all_lists_are_none = True
-
-        for output_dict in validations_outputs:
-            current_list = output_dict.get(key)
+    for output_dict in validations_outputs:
+        for current_list in output_dict.values():
             if current_list is not None:
-                combined_list.extend(current_list)
+                combined_output["Validations"].extend(current_list)
                 all_lists_are_none = False
 
-        combined_output[key] = [] if all_lists_are_none else combined_list
+    if all_lists_are_none:
+        return {}
 
     return combined_output
 
@@ -272,4 +256,9 @@ def should_fail_program(validations_output: FullReport) -> bool:
         True if need to fail overwise False.
 
     """
-    return any(validation_result for validation_result in validations_output.values())
+    for stage_results in validations_output.values():
+        if stage_results:
+            for result in stage_results:
+                if not result.is_success:
+                    return True
+    return False

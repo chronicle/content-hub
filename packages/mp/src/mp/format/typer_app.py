@@ -14,10 +14,10 @@
 
 from __future__ import annotations
 
+import logging
 import pathlib
 from typing import TYPE_CHECKING, Annotated
 
-import rich
 import typer
 
 import mp.core.code_manipulation
@@ -36,6 +36,9 @@ __all__: list[str] = ["format_app", "format_files"]
 format_app: typer.Typer = typer.Typer()
 
 
+logger: logging.Logger = logging.getLogger(__name__)
+
+
 @format_app.command(name="format", help="Format '.py' files.")
 @track_command
 def format_files(
@@ -50,10 +53,7 @@ def format_files(
     changed_files: Annotated[
         bool,
         typer.Option(
-            help=(
-                "Check all changed files based on a diff with the"
-                " origin/develop branch instead of --file-paths"
-            ),
+            help=("Check all changed files based on a diff with the origin/develop branch instead of --file-paths"),
         ),
     ] = False,
     quiet: Annotated[
@@ -86,12 +86,12 @@ def format_files(
     run_params.set_in_config()
     sources: list[str] = _get_source_files(file_paths, changed_file=changed_files)
     if not sources:
-        rich.print("No files found to check")
+        logger.info("No files found to check")
         return
 
     paths: set[Path] = _get_relevant_source_paths(sources)
     if not paths:
-        rich.print("No relevant python files to format")
+        logger.info("No relevant python files to format")
         return
 
     _format_python_files(paths)
@@ -113,5 +113,5 @@ def _get_relevant_source_paths(sources: list[str]) -> set[Path]:
 
 
 def _format_python_files(paths: Iterable[Path]) -> None:
-    rich.print(f"Formatting Python files: {', '.join(p.name for p in paths)}")
+    logger.info("Formatting Python files: %s", ", ".join(p.name for p in paths))
     mp.core.code_manipulation.format_python_files(paths)

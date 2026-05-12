@@ -37,13 +37,8 @@ from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from mp.core.data_models.playbooks.meta.access_permissions import (
-        BuiltAccessPermission,
-    )
-    from mp.core.data_models.playbooks.trigger.metadata import (
-        BuiltTrigger,
-        NonBuiltTrigger,
-    )
+    from mp.core.data_models.playbooks.meta.access_permissions import BuiltAccessPermission
+    from mp.core.data_models.playbooks.trigger.metadata import BuiltTrigger, NonBuiltTrigger
     from mp.core.data_models.playbooks.widget.metadata import (
         BuiltPlaybookWidgetMetadata,
         NonBuiltPlaybookWidgetMetadata,
@@ -87,13 +82,13 @@ class BuiltPlaybookDefinition(TypedDict):
     VersionComment: str | None
     OriginalWorkflowIdentifier: str
     TemplateName: str | None
-    PlaybookType: int
+    PlaybookType: int | str
     IsDebugMode: bool
     DebugBaseAlertIdentifier: str | None
     DebugAlertIdentifier: str | None
     SimulationClone: NotRequired[bool | None]
-    DefaultAccessLevel: NotRequired[int | None]
-    CreationSource: NotRequired[int | None]
+    DefaultAccessLevel: NotRequired[int | str | None]
+    CreationSource: NotRequired[int | str | None]
     Steps: list[BuiltStep]
     Triggers: list[BuiltTrigger]
     OverviewTemplates: list[BuiltOverviewDetails]
@@ -146,7 +141,7 @@ class Playbook:
             trigger=Trigger.from_built_path(path),
             release_notes=[EMPTY_RN],
             meta_data=PlaybookMetadata.from_built_path(path),
-            display_info=PlaybookDisplayInfo.from_built({}),  # ty:ignore[missing-typed-dict-key, invalid-argument-type]
+            display_info=PlaybookDisplayInfo(),
         )
 
     @classmethod
@@ -177,9 +172,7 @@ class Playbook:
             A BuiltPlaybook dictionary.
 
         """
-        built_widgets: list[BuiltPlaybookWidgetMetadata] = [
-            widget.to_built() for widget in self.widgets
-        ]
+        built_widgets: list[BuiltPlaybookWidgetMetadata] = [widget.to_built() for widget in self.widgets]
 
         built_overviews: list[BuiltOverview] = [overview.to_built() for overview in self.overviews]
         built_overviews_for_definition: list[BuiltOverviewDetails] = [

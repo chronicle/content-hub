@@ -15,10 +15,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
-import rich
 import yaml
 
 import mp.core.constants
@@ -30,9 +30,6 @@ from mp.core.data_models.playbooks.meta.display_info import (
     PlaybookDisplayInfo,
     PlaybookType,
 )
-from mp.core.data_models.playbooks.playbook import (
-    BuiltPlaybook,
-)
 from mp.core.data_models.playbooks.step.metadata import StepType
 from mp.core.utils import to_snake_case
 
@@ -43,15 +40,16 @@ if TYPE_CHECKING:
     from mp.core.data_models.playbooks.step.step_parameter import BuiltStepParameter
 
 
+logger: logging.Logger = logging.getLogger(__name__)
+
+
 class ReleaseNotesDisplayInfo(NamedTuple):
     creation_time: int
     update_time: int
     version: float
 
 
-def write_playbooks_json(
-    commercial_playbooks: PlaybooksRepo, community_playbooks: PlaybooksRepo
-) -> None:
+def write_playbooks_json(commercial_playbooks: PlaybooksRepo, community_playbooks: PlaybooksRepo) -> None:
     """Generate and writes the playbooks.json file."""
     commercial_playbooks_json: list[BuiltPlaybookDisplayInfo] = _generate_playbooks_display_info(
         commercial_playbooks.base_folders, commercial_playbooks.out_dir
@@ -60,25 +58,19 @@ def write_playbooks_json(
         community_playbooks.base_folders, community_playbooks.out_dir
     )
     out_path: Path = commercial_playbooks.out_dir.parent / mp.core.constants.PLAYBOOKS_JSON_NAME
-    playbooks_json: list[BuiltPlaybookDisplayInfo] = (
-        commercial_playbooks_json + community_playbooks_json
-    )
+    playbooks_json: list[BuiltPlaybookDisplayInfo] = commercial_playbooks_json + community_playbooks_json
     with Path.open(out_path, "w") as f:
         json.dump(playbooks_json, f, indent=4)
 
 
-def _generate_playbooks_display_info(
-    repo_paths: list[Path], out_path: Path
-) -> list[BuiltPlaybookDisplayInfo]:
+def _generate_playbooks_display_info(repo_paths: list[Path], out_path: Path) -> list[BuiltPlaybookDisplayInfo]:
     res: list[BuiltPlaybookDisplayInfo] = []
     for path in repo_paths:
         for non_built_playbook_path in path.iterdir():
             if not non_built_playbook_path.is_dir():
                 continue
 
-            display_info_path: Path = (
-                non_built_playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME
-            )
+            display_info_path: Path = non_built_playbook_path / mp.core.constants.DISPLAY_INFO_FILE_NAME
             if not display_info_path.exists():
                 continue
 
@@ -86,19 +78,15 @@ def _generate_playbooks_display_info(
                 non_built_playbook_path.name, out_path
             )
             if not built_playbook_path:
-                rich.print(f"{non_built_playbook_path.stem} could not be found in the out folder.")
+                logger.info("%s could not be found in the out folder.", non_built_playbook_path.stem)
                 continue
 
             built_display_info: BuiltPlaybookDisplayInfo = PlaybookDisplayInfo.from_non_built(
                 yaml.safe_load(display_info_path.read_text(encoding="utf-8"))
             ).to_built()
 
-            built_playbook: BuiltPlaybook = json.loads(
-                built_playbook_path.read_text(encoding="utf-8")
-            )
-            _update_display_info(
-                built_playbook, built_display_info, non_built_playbook_path, out_path
-            )
+            built_playbook: BuiltPlaybook = json.loads(built_playbook_path.read_text(encoding="utf-8"))
+            _update_display_info(built_playbook, built_display_info, non_built_playbook_path, out_path)
             built_display_info["FileName"] = built_playbook_path.name
             res.append(built_display_info)
 
@@ -106,9 +94,7 @@ def _generate_playbooks_display_info(
 
 
 def _find_built_playbook_in_out_folder(non_built_playbook_name: str, out_path: Path) -> Path | None:
-    built_playbook_name: str = (
-        f"{to_snake_case(non_built_playbook_name)}{mp.core.constants.JSON_SUFFIX}"
-    )
+    built_playbook_name: str = f"{to_snake_case(non_built_playbook_name)}{mp.core.constants.JSON_SUFFIX}"
     if (out_path / built_playbook_name).exists():
         return out_path / built_playbook_name
     return None
@@ -127,9 +113,7 @@ def _update_display_info(
     built_display_info["CreateTime"] = rn_values.creation_time
     built_display_info["UpdateTime"] = rn_values.update_time
     built_display_info["Version"] = rn_values.version
-    built_display_info["Type"] = PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE[
-        built_playbook["Definition"]["PlaybookType"]
-    ]
+    built_display_info["Type"] = PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE[int(built_playbook["Definition"]["PlaybookType"])]
     built_display_info["Integrations"] = _extract_integrations(built_playbook, out_path)
     built_display_info["DependentPlaybookIds"] = list(
         mp.core.utils.get_playbook_dependent_blocks_ids(non_built_playbook_path)
@@ -163,10 +147,7 @@ def _extract_from_block(step: BuiltStep, parent_folder: Path, result: set[str]) 
             result.update(temp)
 
 
-def _extract_integrations_from_nested_block(
-    block_identifier: str | None,
-    base_folder: Path,
-) -> set[str]:
+def _extract_integrations_from_nested_block(block_identifier: str | None, base_folder: Path) -> set[str]:
     result: set[str] = set()
     for file in base_folder.iterdir():
         if file.is_dir() or file.suffix == ".zip":
@@ -178,9 +159,9 @@ def _extract_integrations_from_nested_block(
         if not _is_specific_block(block_json, block_identifier):
             continue
 
-        steps: list[dict] = block_json.get("Definition").get("Steps")
+        steps: list[dict] = block_json.get("Definition", {}).get("Steps", [])
         for step in steps:
-            integration_name: str = step.get("Integration")
+            integration_name: str | None = step.get("Integration")
             if integration_name not in {"Flow", None}:
                 result.add(integration_name)
 
@@ -198,7 +179,7 @@ def _is_specific_block(block_json: dict, block_identifier: str | None) -> bool:
 
 def _extract_display_info_from_rn(rn_path: Path) -> ReleaseNotesDisplayInfo:
     release_notes: list[ReleaseNote] = ReleaseNote.from_non_built_path(rn_path)
-    latest_version: float = max(float(rn.version) for rn in release_notes)
+    latest_version: float = max(rn.version for rn in release_notes)
     creation_time: int = min(rn.publish_time for rn in release_notes if rn.publish_time is not None)
     update_time: int = max(rn.publish_time for rn in release_notes if rn.publish_time is not None)
     return ReleaseNotesDisplayInfo(creation_time, update_time, latest_version)

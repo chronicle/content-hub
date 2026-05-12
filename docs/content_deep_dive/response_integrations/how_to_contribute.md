@@ -12,12 +12,11 @@ The `mp` tool helps automate the process of pulling, validating, and structuring
     - [Follow the installation guide](/packages/mp/docs/installation.md).
 
 - ### 1.2. Pull the integration from SOAR
-    - [Use the
-      'dev-env' commands to login and pull the integration](/packages/mp/docs/commands/dev_env.md).
+    - [Use the 'dev env' commands to log in and pull the integration](/packages/mp/docs/commands/dev_env.md).
   ```bash
-  mp dev-env login --api-root <soar_url> --api-key <api_key>
+  mp login --api-root <soar_url> --api-key <api_key>
   
-  mp dev-env pull integration <integration_name> [option] --dest <pull_destionation_folder>
+  mp pull integration <integration_name> [option] --dest <pull_destionation_folder>
   ```
 
 - ### 1.3 Fill the `release_notes.yaml` file

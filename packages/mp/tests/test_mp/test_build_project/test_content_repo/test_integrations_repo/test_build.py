@@ -82,15 +82,15 @@ def assert_build_integration(
 ) -> Callable[[Path], None]:
     def wrapper(integration_path: Path) -> None:
         community: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
-        shutil.copytree(integration_path.parent, community)
+        shutil.copytree(
+            integration_path.parent, community, ignore=shutil.ignore_patterns(".venv", ".git", "__pycache__")
+        )
         integration: Path = community / built_integration.name
         py_version: Path = integration / mp.core.constants.PYTHON_VERSION_FILE
         if integration.exists():
             py_version.write_text("3.11", encoding="utf-8")
 
-        marketplace: IntegrationsRepo = mp.build_project.integrations_repo.IntegrationsRepo(
-            community
-        )
+        marketplace: IntegrationsRepo = mp.build_project.integrations_repo.IntegrationsRepo(community)
         marketplace.build_integration(integration)
 
         out_integration: Path = marketplace.out_dir / integration.name
@@ -118,16 +118,22 @@ def assert_build_integration(
         assert actual == expected
 
         actual, expected = test_mp.common.get_json_content(
-            expected=(
-                built_integration
-                / mp.core.constants.INTEGRATION_DEF_FILE.format(built_integration.name)
-            ),
-            actual=(
-                out_integration
-                / mp.core.constants.INTEGRATION_DEF_FILE.format(built_integration.name)
-            ),
+            expected=(built_integration / mp.core.constants.INTEGRATION_DEF_FILE.format(built_integration.name)),
+            actual=(out_integration / mp.core.constants.INTEGRATION_DEF_FILE.format(built_integration.name)),
         )
         assert actual == expected
+
+        # Check action definitions
+        expected_actions_dir: Path = built_integration / mp.core.constants.OUT_ACTIONS_META_DIR
+        actual_actions_dir: Path = out_integration / mp.core.constants.OUT_ACTIONS_META_DIR
+        if expected_actions_dir.exists():
+            for expected_action_file in expected_actions_dir.rglob(f"*{mp.core.constants.ACTIONS_META_SUFFIX}"):
+                actual_action_file = actual_actions_dir / expected_action_file.name
+                actual_action, expected_action = test_mp.common.get_json_content(
+                    expected=expected_action_file,
+                    actual=actual_action_file,
+                )
+                assert actual_action == expected_action
 
         actual, expected = test_mp.common.get_json_content(
             expected=(
@@ -147,14 +153,10 @@ def assert_build_integration(
 
         actual, expected = test_mp.common.get_json_content(
             expected=(
-                built_integration
-                / mp.core.constants.OUT_MAPPING_RULES_DIR
-                / mp.core.constants.OUT_MAPPING_RULES_FILE
+                built_integration / mp.core.constants.OUT_MAPPING_RULES_DIR / mp.core.constants.OUT_MAPPING_RULES_FILE
             ),
             actual=(
-                out_integration
-                / mp.core.constants.OUT_MAPPING_RULES_DIR
-                / mp.core.constants.OUT_MAPPING_RULES_FILE
+                out_integration / mp.core.constants.OUT_MAPPING_RULES_DIR / mp.core.constants.OUT_MAPPING_RULES_FILE
             ),
         )
         assert actual == expected
@@ -166,9 +168,7 @@ def assert_build_integration(
                 / mp.core.constants.OUT_CUSTOM_FAMILIES_FILE
             ),
             actual=(
-                out_integration
-                / mp.core.constants.OUT_CUSTOM_FAMILIES_DIR
-                / mp.core.constants.OUT_CUSTOM_FAMILIES_FILE
+                out_integration / mp.core.constants.OUT_CUSTOM_FAMILIES_DIR / mp.core.constants.OUT_CUSTOM_FAMILIES_FILE
             ),
         )
         assert actual == expected

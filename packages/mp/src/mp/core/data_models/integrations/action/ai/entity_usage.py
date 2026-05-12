@@ -22,6 +22,17 @@ from .entity_types import EntityType  # noqa: TC001
 
 
 class EntityUsage(BaseModel):
+    reasoning: Annotated[
+        str,
+        Field(
+            title="Categorization Reasoning",
+            description=(
+                "Step-by-step reasoning evaluating how the action uses entities. Explicitly "
+                "state the entity types used and why each filtering condition is met or not "
+                "met before setting the boolean flags."
+            ),
+        ),
+    ] = ""
     entity_types: Annotated[
         list[EntityType],
         Field(
@@ -78,18 +89,14 @@ simply process general data.
     filters_by_creation_time: Annotated[
         bool,
         Field(
-            description=(
-                "Whether the code runs on entities and filters the entities it runs on by"
-                " their creation time"
-            )
+            description="Whether the code runs on entities and filters the entities it runs on by their creation time"
         ),
     ]
     filters_by_modification_time: Annotated[
         bool,
         Field(
             description=(
-                "Whether the code runs on entities and filters the entities it runs on by"
-                " their modification time"
+                "Whether the code runs on entities and filters the entities it runs on by their modification time"
             )
         ),
     ]
@@ -124,8 +131,7 @@ simply process general data.
         bool,
         Field(
             description=(
-                "Whether the code runs on entities and filters the entities it runs on by"
-                " their 'entity_type' attribute"
+                "Whether the code runs on entities and filters the entities it runs on by their 'entity_type' attribute"
             )
         ),
     ]
@@ -133,8 +139,7 @@ simply process general data.
         bool,
         Field(
             description=(
-                "Whether the code runs on entities and filters the entities it runs on by"
-                " their 'is_internal' attribute"
+                "Whether the code runs on entities and filters the entities it runs on by their 'is_internal' attribute"
             )
         ),
     ]
@@ -151,8 +156,7 @@ simply process general data.
         bool,
         Field(
             description=(
-                "Whether the code runs on entities and filters the entities it runs on by"
-                " their 'is_artifact' attribute"
+                "Whether the code runs on entities and filters the entities it runs on by their 'is_artifact' attribute"
             )
         ),
     ]
@@ -169,8 +173,7 @@ simply process general data.
         bool,
         Field(
             description=(
-                "Whether the code runs on entities and filters the entities it runs on by"
-                " their 'is_enriched' attribute"
+                "Whether the code runs on entities and filters the entities it runs on by their 'is_enriched' attribute"
             )
         ),
     ]
@@ -178,8 +181,7 @@ simply process general data.
         bool,
         Field(
             description=(
-                "Whether the code runs on entities and filters the entities it runs on by"
-                " their 'is_pivot' attribute"
+                "Whether the code runs on entities and filters the entities it runs on by their 'is_pivot' attribute"
             )
         ),
     ]

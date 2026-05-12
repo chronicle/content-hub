@@ -67,15 +67,11 @@ HTML_WIDGET_DATA_DEFINITION_WITH_NONE = HtmlWidgetDataDefinition(
 
 class TestHtmlWidgetDataDefinitionModel:
     def test_from_built_with_valid_data(self) -> None:
-        assert (
-            HtmlWidgetDataDefinition.from_built("", BUILT_WIDGET_DATA_DEFINITION)
-            == HTML_WIDGET_DATA_DEFINITION
-        )
+        assert HtmlWidgetDataDefinition.from_built("", BUILT_WIDGET_DATA_DEFINITION) == HTML_WIDGET_DATA_DEFINITION
 
     def test_from_non_built_with_valid_data(self) -> None:
         assert (
-            HtmlWidgetDataDefinition.from_non_built("", NON_BUILT_WIDGET_DATA_DEFINITION)
-            == HTML_WIDGET_DATA_DEFINITION
+            HtmlWidgetDataDefinition.from_non_built("", NON_BUILT_WIDGET_DATA_DEFINITION) == HTML_WIDGET_DATA_DEFINITION
         )
 
     def test_to_built(self) -> None:
@@ -97,16 +93,10 @@ class TestHtmlWidgetDataDefinitionModel:
         )
 
     def test_to_built_with_none_values(self) -> None:
-        assert (
-            HTML_WIDGET_DATA_DEFINITION_WITH_NONE.to_built()
-            == BUILT_WIDGET_DATA_DEFINITION_WITH_NONE
-        )
+        assert HTML_WIDGET_DATA_DEFINITION_WITH_NONE.to_built() == BUILT_WIDGET_DATA_DEFINITION_WITH_NONE
 
     def test_to_non_built_with_none_values(self) -> None:
-        assert (
-            HTML_WIDGET_DATA_DEFINITION_WITH_NONE.to_non_built()
-            == NON_BUILT_WIDGET_DATA_DEFINITION_WITH_NONE
-        )
+        assert HTML_WIDGET_DATA_DEFINITION_WITH_NONE.to_non_built() == NON_BUILT_WIDGET_DATA_DEFINITION_WITH_NONE
 
     def test_from_built_to_built_is_idempotent(self) -> None:
         assert (
@@ -116,8 +106,6 @@ class TestHtmlWidgetDataDefinitionModel:
 
     def test_from_non_built_to_non_built_is_idempotent(self) -> None:
         assert (
-            HtmlWidgetDataDefinition.from_non_built(
-                "", NON_BUILT_WIDGET_DATA_DEFINITION
-            ).to_non_built()
+            HtmlWidgetDataDefinition.from_non_built("", NON_BUILT_WIDGET_DATA_DEFINITION).to_non_built()
             == NON_BUILT_WIDGET_DATA_DEFINITION
         )

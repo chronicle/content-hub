@@ -129,12 +129,11 @@ def test_get_integration_base_folders_paths(tmp_path: Path) -> None:
         third_party_paths = mp.core.file_utils.get_integration_base_folders_paths(
             mp.core.constants.THIRD_PARTY_REPO_NAME
         )
-        commercial_paths = mp.core.file_utils.get_integration_base_folders_paths(
-            mp.core.constants.COMMERCIAL_REPO_NAME
-        )
+        commercial_paths = mp.core.file_utils.get_integration_base_folders_paths(mp.core.constants.COMMERCIAL_REPO_NAME)
 
         third_party = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
         expected_third_party_paths = [
+            third_party,
             tmp_path / mp.core.constants.POWERUPS_DIR_NAME,
             third_party / mp.core.constants.COMMUNITY_DIR_NAME,
             third_party / mp.core.constants.PARTNER_DIR_NAME,

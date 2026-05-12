@@ -15,11 +15,16 @@
 from __future__ import annotations
 
 import base64
+import logging
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 import requests
-import rich
 import typer
+import urllib3
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -49,21 +54,41 @@ class BackendAPI:
             typer.Exit: Validations error.
 
         """
-        self.api_root = api_root.rstrip("/")
-        self.username = username
-        self.password = password
-        self.api_key = api_key
-        self.session = requests.Session()
-        self.token = None
+        self.api_root: str = api_root.rstrip("/")
+        self.username: str | None = username
+        self.password: str | None = password
+        self.api_key: str | None = api_key
+        self.session: requests.Session = requests.Session()
+        self.token: str | None = None
+
+        if self._is_localhost():
+            logger.info("Localhost deployment detected. TLS verification disabled.")
+            self._disable_tls()
 
         if api_key is not None:
             if username is not None or password is not None:
-                rich.print("[red]Cannot use both API key and username/password[/red]")
+                logger.error("Cannot use both API key and username/password")
                 raise typer.Exit(1)
 
         elif username is None or password is None:
-            rich.print("[red]You must provide username and password or api key[/red]")
+            logger.error("You must provide username and password or api key")
             raise typer.Exit(1)
+
+    def _disable_tls(self) -> None:
+        """Disables tls verification."""
+        self.session.verify = False
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    def _is_localhost(self) -> bool:
+        """Check if the api_root is localhost.
+
+        Returns:
+            True if the api_root is localhost, False otherwise.
+
+        """
+        hostname = urlparse(self.api_root).hostname
+        local_hostnames = ["localhost", "127.0.0.1", "::1"]
+        return hostname in local_hostnames
 
     def login(self) -> None:
         """Authenticate and store the session token or API key header."""
@@ -148,9 +173,7 @@ class BackendAPI:
             Response object containing the integration package.
 
         """
-        url: str = (
-            f"{self.api_root}/api/external/v1/ide/ExportPackage/{integration_name}?format=camel"
-        )
+        url: str = f"{self.api_root}/api/external/v1/ide/ExportPackage/{integration_name}?format=camel"
         resp = self.session.get(url)
         resp.raise_for_status()
         return resp
@@ -165,9 +188,7 @@ class BackendAPI:
             dict: The backend response after uploading the playbook.
 
         """
-        upload_url: str = (
-            f"{self.api_root}/api/external/v1/playbooks/ImportDefinitions?format=camel"
-        )
+        upload_url: str = f"{self.api_root}/api/external/v1/playbooks/ImportDefinitions?format=camel"
         data = base64.b64encode(zip_path.read_bytes()).decode()
         upload_payload = {"blob": data, "fileName": zip_path.name}
         resp = self.session.post(upload_url, json=upload_payload)
@@ -181,10 +202,7 @@ class BackendAPI:
             list: Contains all playbooks meta-data.
 
         """
-        url: str = (
-            f"{self.api_root}"
-            "/api/external/v1/playbooks/GetWorkflowMenuCardsWithEnvFilter?format=camel"
-        )
+        url: str = f"{self.api_root}/api/external/v1/playbooks/GetWorkflowMenuCardsWithEnvFilter?format=camel"
         resp = self.session.post(url, json=[1, 0])
         resp.raise_for_status()
         return resp.json()

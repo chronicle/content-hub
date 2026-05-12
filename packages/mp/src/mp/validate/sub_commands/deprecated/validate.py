@@ -15,18 +15,14 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 from typing import TYPE_CHECKING, Annotated
 
-import rich
 import typer
 
 import mp.core.config
 from mp.core.custom_types import RepositoryType
-from mp.core.utils import (
-    ensure_valid_list,
-    should_preform_integration_logic,
-    should_preform_playbook_logic,
-)
+from mp.core.utils import ensure_valid_list, should_preform_integration_logic, should_preform_playbook_logic
 from mp.telemetry import track_command
 from mp.validate.data_models import ContentType, FullReport
 from mp.validate.display import display_validation_reports
@@ -37,6 +33,9 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from mp.core.config import RuntimeParams
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -109,15 +108,6 @@ def validate(  # noqa: PLR0913
         ),
     ],
     *,
-    only_pre_build: Annotated[
-        bool,
-        typer.Option(
-            help=(
-                "Execute only pre-build validations "
-                "checks on the integrations, skipping the full build process."
-            ),
-        ),
-    ] = False,
     quiet: Annotated[
         bool,
         typer.Option(
@@ -146,8 +136,6 @@ def validate(  # noqa: PLR0913
                     within these repositories.
         integration: A list of specific integrations to validate.
         playbook: A list of specific playbooks to validate.
-        only_pre_build: If set to True, only pre-build validation checks are
-                        performed.
         quiet: quiet log options
         verbose: Verbose log options
 
@@ -159,13 +147,13 @@ def validate(  # noqa: PLR0913
         return
 
     if not any([repository, integration, playbook]):
-        typer.echo(ctx.get_help())
+        logger.info(ctx.get_help())
         raise typer.Exit
 
-    rich.print(
-        "[yellow]Note: 'validate' flags are deprecated. "
+    logger.warning(
+        "Note: 'validate' flags are deprecated. "
         "Use 'mp validate integration' or 'mp validate playbook' or mp validate repository "
-        "instead.[/yellow]"
+        "instead."
     )
 
     repositories = ensure_valid_list(repository)
@@ -180,19 +168,11 @@ def validate(  # noqa: PLR0913
 
     full_report: dict[ContentType, FullReport] = {}
     f1, f2 = False, False
-    if RepositoryType.ALL_CONTENT in repositories or should_preform_integration_logic(
-        integrations, repositories
-    ):
-        full_report[ContentType.INTEGRATION], f1 = validate_integrations(
-            integrations, repositories, only_pre_build=only_pre_build
-        )
+    if RepositoryType.ALL_CONTENT in repositories or should_preform_integration_logic(integrations, repositories):
+        full_report[ContentType.INTEGRATION], f1 = validate_integrations(integrations, repositories)
 
-    if RepositoryType.ALL_CONTENT in repositories or should_preform_playbook_logic(
-        playbooks, repositories
-    ):
-        full_report[ContentType.PLAYBOOK], f2 = validate_playbooks(
-            playbooks, repositories, only_pre_build=only_pre_build
-        )
+    if RepositoryType.ALL_CONTENT in repositories or should_preform_playbook_logic(playbooks, repositories):
+        full_report[ContentType.PLAYBOOK], f2 = validate_playbooks(playbooks, repositories)
 
     display_validation_reports(full_report)
 

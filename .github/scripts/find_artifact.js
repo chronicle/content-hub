@@ -15,32 +15,32 @@
 
 const fs = require("fs");
 
-async function findAndDownloadArtifact({ github, context, artifactName, destZipPath }) {
-  const { owner, repo } = context.repo;
-  const run_id = context.payload.workflow_run.id;
+async function findAndDownloadArtifact({github, context, artifactName, destZipPath}) {
+    const {owner, repo} = context.repo;
+    const run_id = context.payload.workflow_run.id;
 
-  const { data: list } = await github.rest.actions.listWorkflowRunArtifacts({
-    owner,
-    repo,
-    run_id,
-  });
+    const {data: list} = await github.rest.actions.listWorkflowRunArtifacts({
+        owner,
+        repo,
+        run_id,
+    });
 
-  const matchingArtifacts = list.artifacts.filter((a) => a.name === artifactName);
-  if (matchingArtifacts.length === 0) {
-    throw new Error(`Artifact not found: ${artifactName}`);
-  }
+    const matchingArtifacts = list.artifacts.filter((a) => a.name === artifactName);
+    if (matchingArtifacts.length === 0) {
+        throw new Error(`Artifact not found: ${artifactName}`);
+    }
 
-  matchingArtifacts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  const latestArtifact = matchingArtifacts[0];
+    matchingArtifacts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const latestArtifact = matchingArtifacts[0];
 
-  const { data: zipData } = await github.rest.actions.downloadArtifact({
-    owner,
-    repo,
-    artifact_id: latestArtifact.id,
-    archive_format: "zip",
-  });
+    const {data: zipData} = await github.rest.actions.downloadArtifact({
+        owner,
+        repo,
+        artifact_id: latestArtifact.id,
+        archive_format: "zip",
+    });
 
-  fs.writeFileSync(destZipPath, Buffer.from(zipData));
+    fs.writeFileSync(destZipPath, Buffer.from(zipData));
 }
 
-module.exports = { findAndDownloadArtifact };
+module.exports = {findAndDownloadArtifact};

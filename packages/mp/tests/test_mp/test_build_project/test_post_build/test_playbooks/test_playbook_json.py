@@ -58,13 +58,11 @@ def test_write_playbooks_json(  # noqa: PLR0913, PLR0917
 
     shutil.copy(
         built_playbook_path,
-        commercial_playbooks.out_dir
-        / f"{to_snake_case(non_built_playbook_path.name)}{mp.core.constants.JSON_SUFFIX}",
+        commercial_playbooks.out_dir / f"{to_snake_case(non_built_playbook_path.name)}{mp.core.constants.JSON_SUFFIX}",
     )
     shutil.copy(
         built_block_path,
-        commercial_playbooks.out_dir
-        / f"{to_snake_case(non_built_block_path.name)}{mp.core.constants.JSON_SUFFIX}",
+        commercial_playbooks.out_dir / f"{to_snake_case(non_built_block_path.name)}{mp.core.constants.JSON_SUFFIX}",
     )
 
     community_repo: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
@@ -76,15 +74,9 @@ def test_write_playbooks_json(  # noqa: PLR0913, PLR0917
     community_playbooks.out_dir = community_repo / "out"
     community_playbooks.out_dir.mkdir(parents=True, exist_ok=True)
 
-    mp.build_project.post_build.playbooks.playbooks_json.write_playbooks_json(
-        commercial_playbooks, community_playbooks
-    )
+    mp.build_project.post_build.playbooks.playbooks_json.write_playbooks_json(commercial_playbooks, community_playbooks)
 
-    out_playbooks_json_path = (
-        commercial_playbooks.out_dir.parent / mp.core.constants.PLAYBOOKS_JSON_NAME
-    )
-    expected, actual = test_mp.common.get_json_content(
-        expected=playbooks_json_path, actual=out_playbooks_json_path
-    )
+    out_playbooks_json_path = commercial_playbooks.out_dir.parent / mp.core.constants.PLAYBOOKS_JSON_NAME
+    expected, actual = test_mp.common.get_json_content(expected=playbooks_json_path, actual=out_playbooks_json_path)
 
     assert DeepDiff(expected, actual, ignore_order=True) == NO_DIFF

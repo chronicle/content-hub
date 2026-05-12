@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-
 HTTP_CONNECT_TIMEOUT_SECONDS: float = 10.0
 HTTP_READ_TIMEOUT_SECONDS: float = 300.0
 HTTP_WRITE_TIMEOUT_SECONDS: float = 10.0

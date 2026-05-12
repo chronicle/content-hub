@@ -211,7 +211,11 @@ class CensysAPIManager:
         """Mock test_connectivity method."""
         if self.should_fail_connectivity:
             self._raise_exception()
-        return self.connectivity_response if self.connectivity_response is not None else True
+        return (
+            self.connectivity_response
+            if self.connectivity_response is not None
+            else True
+        )
 
     def enrich_hosts(self, host_ids: list, at_time: Optional[str] = None) -> dict:
         """Mock enrich_hosts method."""
@@ -219,7 +223,9 @@ class CensysAPIManager:
             self._raise_exception()
         return self.enrich_hosts_response or {"result": []}
 
-    def enrich_web_properties(self, webproperty_ids: list, at_time: Optional[str] = None) -> dict:
+    def enrich_web_properties(
+        self, webproperty_ids: list, at_time: Optional[str] = None
+    ) -> dict:
         """Mock enrich_web_properties method."""
         if self.should_fail_enrich_web_properties:
             self._raise_exception()
@@ -235,9 +241,13 @@ class CensysAPIManager:
         """Mock get_host_history method."""
         if self.should_fail_host_history:
             self._raise_exception()
-        return self.host_history_response or {"result": {"events": [], "total_events": 0}}
+        return self.host_history_response or {
+            "result": {"events": [], "total_events": 0}
+        }
 
-    def get_value_counts(self, query: Optional[str], and_count_conditions: list) -> dict:
+    def get_value_counts(
+        self, query: Optional[str], and_count_conditions: list
+    ) -> dict:
         """Mock get_value_counts method."""
         if self.should_fail_value_counts:
             self._raise_exception()
@@ -249,7 +259,9 @@ class CensysAPIManager:
         """Mock run_search_query_with_pagination method."""
         if self.should_fail_search_query:
             self._raise_exception()
-        return self.search_query_response or {"result": {"hits": [], "total_available": 0}}
+        return self.search_query_response or {
+            "result": {"hits": [], "total_available": 0}
+        }
 
     def initiate_rescan(
         self,
@@ -278,7 +290,9 @@ def censys_manager() -> CensysAPIManager:
 
 
 @pytest.fixture(autouse=True)
-def mock_requests_session(monkeypatch: pytest.MonkeyPatch, censys_manager: CensysAPIManager):
+def mock_requests_session(
+    monkeypatch: pytest.MonkeyPatch, censys_manager: CensysAPIManager
+):
     """Mock requests.Session to intercept HTTP calls."""
 
     class MockSession:
@@ -290,7 +304,10 @@ def mock_requests_session(monkeypatch: pytest.MonkeyPatch, censys_manager: Censy
 
         def request(self, method, url, **kwargs):
             # Check for failure flags and raise exceptions if needed
-            if "/accounts/organizations/" in url and censys_manager.should_fail_connectivity:
+            if (
+                "/accounts/organizations/" in url
+                and censys_manager.should_fail_connectivity
+            ):
                 censys_manager._raise_exception()
             elif (
                 "/asset/host" in url
@@ -298,25 +315,38 @@ def mock_requests_session(monkeypatch: pytest.MonkeyPatch, censys_manager: Censy
                 and censys_manager.should_fail_enrich_hosts
             ):
                 censys_manager._raise_exception()
-            elif "/asset/webproperty" in url and censys_manager.should_fail_enrich_web_properties:
+            elif (
+                "/asset/webproperty" in url
+                and censys_manager.should_fail_enrich_web_properties
+            ):
                 censys_manager._raise_exception()
-            elif "/asset/certificate" in url and censys_manager.should_fail_enrich_certificates:
+            elif (
+                "/asset/certificate" in url
+                and censys_manager.should_fail_enrich_certificates
+            ):
                 censys_manager._raise_exception()
             elif "/timeline" in url and censys_manager.should_fail_host_history:
                 censys_manager._raise_exception()
             elif "/scans/rescan" in url and censys_manager.should_fail_initiate_rescan:
                 censys_manager._raise_exception()
-            elif "/scans/" in url and method == "GET" and censys_manager.should_fail_rescan_status:
+            elif (
+                "/scans/" in url
+                and method == "GET"
+                and censys_manager.should_fail_rescan_status
+            ):
                 censys_manager._raise_exception()
 
             # Return mock responses
             if "/accounts/organizations/" in url:
                 return MockResponse(
-                    censys_manager.connectivity_response or {"result": {"id": "test_org"}},
+                    censys_manager.connectivity_response
+                    or {"result": {"id": "test_org"}},
                     200,
                 )
             elif "/asset/host" in url and method == "POST":
-                return MockResponse(censys_manager.enrich_hosts_response or {"result": []}, 200)
+                return MockResponse(
+                    censys_manager.enrich_hosts_response or {"result": []}, 200
+                )
             elif "/asset/webproperty" in url:
                 return MockResponse(
                     censys_manager.enrich_web_properties_response or {"result": []},
@@ -334,12 +364,14 @@ def mock_requests_session(monkeypatch: pytest.MonkeyPatch, censys_manager: Censy
                 )
             elif "/scans/rescan" in url:
                 return MockResponse(
-                    censys_manager.initiate_rescan_response or {"result": {"scan_id": "test"}},
+                    censys_manager.initiate_rescan_response
+                    or {"result": {"scan_id": "test"}},
                     200,
                 )
             elif "/scans/" in url:
                 return MockResponse(
-                    censys_manager.rescan_status_response or {"result": {"status": "completed"}},
+                    censys_manager.rescan_status_response
+                    or {"result": {"status": "completed"}},
                     200,
                 )
             else:
@@ -399,7 +431,9 @@ def mock_siemplify_methods(monkeypatch: pytest.MonkeyPatch):
     """Mock Siemplify methods that are not provided by integration_testing framework."""
     # Mock update_entities
     mock_update = MagicMock(return_value=None)
-    monkeypatch.setattr("soar_sdk.SiemplifyAction.SiemplifyAction.update_entities", mock_update)
+    monkeypatch.setattr(
+        "soar_sdk.SiemplifyAction.SiemplifyAction.update_entities", mock_update
+    )
 
     # Mock get_system_version to prevent API calls during APIManager initialization
     mock_version = MagicMock(return_value="1.0.0")

@@ -71,15 +71,6 @@ def validate_repository(
         ),
     ],
     *,
-    only_pre_build: Annotated[
-        bool,
-        typer.Option(
-            help=(
-                "Execute only pre-build validations "
-                "checks on the integrations, skipping the full build process."
-            ),
-        ),
-    ] = False,
     quiet: Annotated[
         bool,
         typer.Option(
@@ -105,8 +96,6 @@ def validate_repository(
         repositories: repository type on which to run validation.
                     Validation will be performed on all content found
                     within this repository.
-        only_pre_build: If set to True, only pre-build validation checks are
-                        performed.
         quiet: quiet log options
         verbose: Verbose log options
 
@@ -124,14 +113,10 @@ def validate_repository(
     full_report: dict[ContentType, FullReport] = {}
     f1, f2 = False, False
     if is_integration_repo(repositories):
-        full_report[ContentType.INTEGRATION], f1 = validate_integrations(
-            integrations=[], repositories=repositories, only_pre_build=only_pre_build
-        )
+        full_report[ContentType.INTEGRATION], f1 = validate_integrations(integrations=[], repositories=repositories)
 
     if is_playbook_repo(repositories):
-        full_report[ContentType.PLAYBOOK], f2 = validate_playbooks(
-            playbooks=[], repositories=repositories, only_pre_build=only_pre_build
-        )
+        full_report[ContentType.PLAYBOOK], f2 = validate_playbooks(playbooks=[], repositories=repositories)
 
     display_validation_reports(full_report)
 

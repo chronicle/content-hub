@@ -16,15 +16,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-import rich
 import yaml
 
 import mp.core.constants
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 CONFIG_PATH: Path = Path.home() / ".mp_dev_env.json"
 INTEGRATIONS_CACHE_DIR_NAME: str = ".integrations_cache"
@@ -78,11 +80,9 @@ def _load_cached_version(cache_folder: Path, integration_name: str) -> VersionCa
 
     try:
         cached_data: dict[str, Any] = yaml.safe_load(version_file_path.read_text(encoding="utf-8"))
-        return VersionCache(
-            cached_data["version"], cached_data["hash"], cached_data["next_version_change"]
-        )
+        return VersionCache(cached_data["version"], cached_data["hash"], cached_data["next_version_change"])
     except (KeyError, TypeError):
-        rich.print("[yellow]Cache file is invalid. Invalidating and removing old cache.[/yellow]")
+        logger.warning("Cache file is invalid. Invalidating and removing old cache.")
         version_file_path.unlink(missing_ok=True)
         return None
 
@@ -110,9 +110,7 @@ def calculate_dependencies_hash(pyproject_data: dict[str, Any]) -> str:
     if dep_groups := pyproject_data.get("dependency-groups"):
         sections_to_hash["dependency-groups"] = dep_groups
 
-    serialized_data: bytes = json.dumps(sections_to_hash, sort_keys=True, indent=None).encode(
-        "utf-8"
-    )
+    serialized_data: bytes = json.dumps(sections_to_hash, sort_keys=True, indent=None).encode("utf-8")
     return hashlib.md5(serialized_data, usedforsecurity=False).hexdigest()
 
 
@@ -177,9 +175,7 @@ def update_built_def_file(integration_dir_built: Path, updated_cache: VersionCac
         updated_cache: The VersionCache object containing the new version data.
 
     """
-    def_file_path = integration_dir_built / mp.core.constants.INTEGRATION_DEF_FILE.format(
-        integration_dir_built.name
-    )
+    def_file_path = integration_dir_built / mp.core.constants.INTEGRATION_DEF_FILE.format(integration_dir_built.name)
 
     with def_file_path.open("r", encoding="utf-8") as f:
         def_data: dict[str, Any] = json.load(f)

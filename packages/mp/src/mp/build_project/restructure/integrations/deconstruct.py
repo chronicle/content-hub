@@ -25,30 +25,28 @@ from __future__ import annotations
 import dataclasses
 import datetime
 import io
+import logging
 import shutil
 import tomllib
 from typing import TYPE_CHECKING, Any, TypeAlias
 
-import rich
 import toml
 
 import mp.core.constants
 import mp.core.file_utils
 import mp.core.unix
 import mp.core.utils
-from mp.build_project.restructure.integrations.deconstruct_dependencies import (
-    Dependencies,
-    DependencyDeconstructor,
-)
+from mp.build_project.restructure.integrations.deconstruct_dependencies import Dependencies, DependencyDeconstructor
 from mp.core import code_manipulation
 from mp.core.constants import IMAGE_FILE, LOGO_FILE, RESOURCES_DIR
 from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote
 from mp.core.data_models.integrations.action.metadata import ActionMetadata
 from mp.core.data_models.integrations.action_widget.metadata import ActionWidgetMetadata
 from mp.core.data_models.integrations.connector.metadata import ConnectorMetadata
-from mp.core.data_models.integrations.integration_meta.metadata import (
-    IntegrationMetadata,
-    PythonVersion,
+from mp.core.data_models.integrations.integration_meta.ai.metadata import IntegrationAiMetadata
+from mp.core.data_models.integrations.integration_meta.ai.product_categories import (
+    PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY,
+    IntegrationProductCategories,
 )
 from mp.core.data_models.integrations.job.metadata import JobMetadata
 
@@ -58,27 +56,29 @@ if TYPE_CHECKING:
 
     import libcst as cst
 
-    from mp.core.data_models.integrations.action.dynamic_results_metadata import (
-        DynamicResultsMetadata,
-    )
+    from mp.core.data_models.integrations.action.dynamic_results_metadata import DynamicResultsMetadata
     from mp.core.data_models.integrations.custom_families.metadata import NonBuiltCustomFamily
     from mp.core.data_models.integrations.integration import Integration
+    from mp.core.data_models.integrations.integration_meta.metadata import IntegrationMetadata
     from mp.core.data_models.integrations.mapping_rules.metadata import NonBuiltMappingRule
 
 _ValidMetadata: TypeAlias = ActionMetadata | ConnectorMetadata | JobMetadata | ActionWidgetMetadata
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def _update_pyproject_from_integration_meta(
     pyproject_toml: MutableMapping[str, Any],
     integration_meta: IntegrationMetadata,
 ) -> None:
-    py_version: str = PythonVersion(integration_meta.python_version).to_string()
+    py_version: str = integration_meta.python_version.to_range_string()
     pyproject_toml["project"].update(
         {
             "name": integration_meta.identifier.replace(" ", "-"),
             "description": integration_meta.description,
-            "version": str(float(integration_meta.version)),
-            "requires-python": f">={py_version}",
+            "version": str(integration_meta.version),
+            "requires-python": py_version,
         },
     )
 
@@ -108,7 +108,7 @@ class DeconstructIntegration:
         mp.core.unix.init_python_project_if_not_exists(self.out_path)
         self.update_pyproject(placeholders=result.placeholders)
 
-        rich.print(f"Adding dependencies to {mp.core.constants.PROJECT_FILE}")
+        logger.info("Adding dependencies to %s", mp.core.constants.PROJECT_FILE)
         try:
             mp.core.unix.add_dependencies_to_toml(
                 project_path=self.out_path,
@@ -117,7 +117,7 @@ class DeconstructIntegration:
             )
 
         except mp.core.unix.FatalCommandError as e:
-            rich.print(f"Failed to install dependencies: {e}")
+            logger.warning("Failed to install dependencies: %s", e)
 
     def update_pyproject(self, placeholders: Dependencies | None = None) -> None:
         """Update an integration's pyproject.toml file from its definition file."""
@@ -133,8 +133,7 @@ class DeconstructIntegration:
         if placeholders and (placeholders.dependencies or placeholders.dev_dependencies):
             for dep in placeholders.dependencies:
                 buffer.write(
-                    f"\n# TODO: Failed to automatically add the following dependency. "
-                    f"Please add it manually: {dep}\n",
+                    f"\n# TODO: Failed to automatically add the following dependency. Please add it manually: {dep}\n",
                 )
             for dep in placeholders.dev_dependencies:
                 buffer.write(
@@ -169,18 +168,37 @@ class DeconstructIntegration:
 
         self._create_png_image(resources_dir)
         self._create_svg_logo(resources_dir)
+        self._create_ai_description_file(resources_dir)
+
+    def _create_ai_description_file(self, resources_dir: Path) -> None:
+        ai_dir: Path = resources_dir / mp.core.constants.AI_DIR
+        ai_dir.mkdir(exist_ok=True, parents=True)
+
+        for file_name, content in self.integration.ai_metadata.items():
+            if file_name == mp.core.constants.INTEGRATIONS_AI_DESCRIPTION_FILE:
+                continue
+
+            ai_file: Path = ai_dir / file_name
+            mp.core.file_utils.write_yaml_to_file(content, ai_file)
+
+        categories_dict: dict[str, bool | str] = {
+            category: value in self.integration.metadata.product_categories
+            for category, value in PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY.items()
+        }
+        categories_dict["reasoning"] = ""
+
+        ai_meta = IntegrationAiMetadata(product_categories=IntegrationProductCategories.model_validate(categories_dict))
+
+        ai_file: Path = ai_dir / mp.core.constants.INTEGRATIONS_AI_DESCRIPTION_FILE
+        mp.core.file_utils.write_yaml_to_file(ai_meta.model_dump(), ai_file)
 
     def _create_png_image(self, resources_dir: Path) -> None:
         if self.integration.metadata.image_base64:
-            mp.core.file_utils.base64_to_png_file(
-                self.integration.metadata.image_base64, resources_dir / IMAGE_FILE
-            )
+            mp.core.file_utils.base64_to_png_file(self.integration.metadata.image_base64, resources_dir / IMAGE_FILE)
 
     def _create_svg_logo(self, resources_dir: Path) -> None:
         if self.integration.metadata.svg_logo:
-            mp.core.file_utils.text_to_svg_file(
-                self.integration.metadata.svg_logo, resources_dir / LOGO_FILE
-            )
+            mp.core.file_utils.text_to_svg_file(self.integration.metadata.svg_logo, resources_dir / LOGO_FILE)
 
     def _create_actions_json_example_files(self) -> None:
         resources_dir: Path = self.out_path / RESOURCES_DIR
@@ -190,9 +208,7 @@ class DeconstructIntegration:
                 if not drm.result_example:
                     continue
 
-                json_file_name: str = (
-                    f"{mp.core.utils.str_to_snake_case(action_name)}_{drm.result_name}_example.json"
-                )
+                json_file_name: str = f"{mp.core.utils.str_to_snake_case(action_name)}_{drm.result_name}_example.json"
                 json_file_path: Path = resources_dir / json_file_name
                 mp.core.file_utils.write_str_to_json_file(json_file_path, drm.result_example)
 
@@ -227,7 +243,7 @@ class DeconstructIntegration:
                 content=[
                     NonBuiltReleaseNote(
                         description="",
-                        integration_version=float(self.integration.metadata.version),
+                        version=self.integration.metadata.version,
                         item_name=self.integration.metadata.identifier,
                         item_type="Integration",
                         publish_time=str(datetime.datetime.now(datetime.UTC).date()),
@@ -239,17 +255,13 @@ class DeconstructIntegration:
 
     def _create_custom_families(self) -> None:
         cf: Path = self.out_path / mp.core.constants.CUSTOM_FAMILIES_FILE
-        families: list[NonBuiltCustomFamily] = [
-            c.to_non_built() for c in self.integration.custom_families
-        ]
+        families: list[NonBuiltCustomFamily] = [c.to_non_built() for c in self.integration.custom_families]
         if families:
             mp.core.file_utils.write_yaml_to_file(families, cf)
 
     def _create_mapping_rules(self) -> None:
         mr: Path = self.out_path / mp.core.constants.MAPPING_RULES_FILE
-        mapping: list[NonBuiltMappingRule] = [
-            m.to_non_built() for m in self.integration.mapping_rules
-        ]
+        mapping: list[NonBuiltMappingRule] = [m.to_non_built() for m in self.integration.mapping_rules]
         if mapping:
             mp.core.file_utils.write_yaml_to_file(mapping, mr)
 
@@ -319,20 +331,14 @@ class DeconstructIntegration:
         ]
 
         if out_dir != mp.core.constants.CORE_SCRIPTS_DIR:
-            transformers.append(
-                code_manipulation.CorePackageImportTransformer(self.core_module_names)
-            )
+            transformers.append(code_manipulation.CorePackageImportTransformer(self.core_module_names))
         else:
             transformers.append(
-                code_manipulation.CorePackageInternalImportTransformer(
-                    self.core_module_names, file_path.stem
-                )
+                code_manipulation.CorePackageInternalImportTransformer(self.core_module_names, file_path.stem)
             )
 
         original_content: str = file_path.read_text(encoding="utf-8")
-        transformed_content: str = code_manipulation.apply_transformers(
-            original_content, transformers
-        )
+        transformed_content: str = code_manipulation.apply_transformers(original_content, transformers)
         file_path.write_text(transformed_content, encoding="utf-8")
 
     def _create_package_file(self) -> None:

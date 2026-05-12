@@ -12,12 +12,11 @@ The `mp` tool helps automate the process of pulling, validating, and structuring
     - [Follow the installation guide](/packages/mp/docs/installation.md).
 
 - ### 1.2. Pull the playbook from SOAR
-    - [Use the
-      'dev-env' commands to login and pull the playbook](/packages/mp/docs/commands/dev_env.md).
+    - [Use the dev env commands to log in and pull the playbook](/packages/mp/docs/commands/dev_env.md).
   ```bash
-  mp dev-env login --api-root <soar_url> --api-key <api_key>
+  mp login --api-root <soar_url> --api-key <api_key>
   
-  mp dev-env pull playbook <playbook_name> [option] --dest <pull_destionation_folder>
+  mp pull playbook <playbook_name> [option] --dest <pull_destionation_folder>
   ```
 - ### 1.3. Fill the `display_info.yaml` file
     - Provide the required metadata (e.g., display name, author, description).

@@ -75,9 +75,7 @@ class NonBuiltWidgetDataDefinition(TypedDict):
     widget_definition_scope: str
 
 
-class HtmlWidgetDataDefinition(
-    ComponentMetadata[BuiltWidgetDataDefinition, NonBuiltWidgetDataDefinition]
-):
+class HtmlWidgetDataDefinition(ComponentMetadata[BuiltWidgetDataDefinition, NonBuiltWidgetDataDefinition]):
     html_height: int
     safe_rendering: bool
     type: WidgetType
@@ -93,7 +91,7 @@ class HtmlWidgetDataDefinition(
         raise NotImplementedError
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltWidgetDataDefinition) -> Self:  # ty:ignore[invalid-method-override]
+    def _from_built(cls, file_name: str, built: BuiltWidgetDataDefinition) -> Self:  # noqa: ARG003
         return cls(
             html_height=built["htmlHeight"],
             safe_rendering=built["safeRendering"],
@@ -103,7 +101,7 @@ class HtmlWidgetDataDefinition(
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltWidgetDataDefinition) -> Self:  # ty:ignore[invalid-method-override]
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltWidgetDataDefinition) -> Self:  # noqa: ARG003
         return cls(
             html_height=non_built["html_height"],
             safe_rendering=non_built["safe_rendering"],

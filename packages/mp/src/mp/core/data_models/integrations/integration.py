@@ -17,7 +17,9 @@ from __future__ import annotations
 import dataclasses
 import itertools
 import tomllib
-from typing import TYPE_CHECKING, Self, TypedDict
+from typing import TYPE_CHECKING, Any, Self, TypedDict, cast
+
+import yaml
 
 import mp.core.constants
 import mp.core.file_utils
@@ -37,10 +39,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, ManagerName, WidgetName
-    from mp.core.data_models.common.release_notes.metadata import (
-        BuiltReleaseNote,
-        NonBuiltReleaseNote,
-    )
+    from mp.core.data_models.common.release_notes.metadata import BuiltReleaseNote, NonBuiltReleaseNote
 
     from .action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
     from .action_widget.metadata import BuiltActionWidgetMetadata, NonBuiltActionWidgetMetadata
@@ -63,6 +62,7 @@ class BuiltIntegration(TypedDict):
     connectors: Mapping[ConnectorName, BuiltConnectorMetadata]
     jobs: Mapping[JobName, BuiltJobMetadata]
     widgets: Mapping[WidgetName, BuiltActionWidgetMetadata]
+    ai_metadata: Mapping[str, Any]
 
 
 class NonBuiltIntegration(TypedDict):
@@ -75,6 +75,7 @@ class NonBuiltIntegration(TypedDict):
     connectors: Mapping[ConnectorName, NonBuiltConnectorMetadata]
     jobs: Mapping[JobName, NonBuiltJobMetadata]
     widgets: Mapping[WidgetName, NonBuiltActionWidgetMetadata]
+    ai_metadata: Mapping[str, Any]
 
 
 class FullDetailsReleaseNoteJson(TypedDict):
@@ -117,6 +118,7 @@ class Integration:
     connectors_metadata: Mapping[ConnectorName, ConnectorMetadata]
     jobs_metadata: Mapping[JobName, JobMetadata]
     widgets_metadata: Mapping[WidgetName, ActionWidgetMetadata]
+    ai_metadata: Mapping[str, Any]
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:
@@ -148,13 +150,10 @@ class Integration:
                 mapping_rules=MappingRule.from_built_path(path),
                 common_modules=mp.core.file_utils.discover_core_modules(path),
                 actions_metadata={a.file_name: a for a in ActionMetadata.from_built_path(path)},
-                connectors_metadata={
-                    c.file_name: c for c in ConnectorMetadata.from_built_path(path)
-                },
+                connectors_metadata={c.file_name: c for c in ConnectorMetadata.from_built_path(path)},
                 jobs_metadata={j.file_name: j for j in JobMetadata.from_built_path(path)},
-                widgets_metadata={
-                    w.file_name: w for w in ActionWidgetMetadata.from_built_path(path)
-                },
+                widgets_metadata={w.file_name: w for w in ActionWidgetMetadata.from_built_path(path)},
+                ai_metadata=_get_ai_metadata(path),
             )
         except ValueError as e:
             msg: str = f"Failed to load integration {path.name}"
@@ -176,7 +175,7 @@ class Integration:
         """
         project_file_path: Path = path / mp.core.constants.PROJECT_FILE
         file_content: str = project_file_path.read_text(encoding="utf-8")
-        pyproject_toml: PyProjectTomlFile = tomllib.loads(file_content)  # ty: ignore[invalid-assignment]
+        pyproject_toml: PyProjectTomlFile = cast("PyProjectTomlFile", cast("object", tomllib.loads(file_content)))
         try:
             integration_meta: IntegrationMetadata = IntegrationMetadata.from_non_built_path(path)
             _update_integration_meta_form_pyproject(
@@ -197,13 +196,10 @@ class Integration:
                 mapping_rules=MappingRule.from_non_built_path(path),
                 common_modules=mp.core.file_utils.discover_core_modules(path),
                 actions_metadata={a.file_name: a for a in ActionMetadata.from_non_built_path(path)},
-                connectors_metadata={
-                    c.file_name: c for c in ConnectorMetadata.from_non_built_path(path)
-                },
+                connectors_metadata={c.file_name: c for c in ConnectorMetadata.from_non_built_path(path)},
                 jobs_metadata={j.file_name: j for j in JobMetadata.from_non_built_path(path)},
-                widgets_metadata={
-                    w.file_name: w for w in ActionWidgetMetadata.from_non_built_path(path)
-                },
+                widgets_metadata={w.file_name: w for w in ActionWidgetMetadata.from_non_built_path(path)},
+                ai_metadata=_get_ai_metadata(path),
             )
 
         except (KeyError, ValueError, tomllib.TOMLDecodeError) as e:
@@ -224,11 +220,10 @@ class Integration:
             mapping_rules=[mr.to_built() for mr in self.mapping_rules],
             common_modules=self.common_modules,
             actions={name: metadata.to_built() for name, metadata in self.actions_metadata.items()},
-            connectors={
-                name: metadata.to_built() for name, metadata in self.connectors_metadata.items()
-            },
+            connectors={name: metadata.to_built() for name, metadata in self.connectors_metadata.items()},
             jobs={name: metadata.to_built() for name, metadata in self.jobs_metadata.items()},
             widgets={name: metadata.to_built() for name, metadata in self.widgets_metadata.items()},
+            ai_metadata=self.ai_metadata,
         )
 
     def to_non_built(self) -> NonBuiltIntegration:
@@ -244,16 +239,11 @@ class Integration:
             custom_families=[cf.to_non_built() for cf in self.custom_families],
             mapping_rules=[mr.to_non_built() for mr in self.mapping_rules],
             common_modules=self.common_modules,
-            actions={
-                name: metadata.to_non_built() for name, metadata in self.actions_metadata.items()
-            },
-            connectors={
-                name: metadata.to_non_built() for name, metadata in self.connectors_metadata.items()
-            },
+            actions={name: metadata.to_non_built() for name, metadata in self.actions_metadata.items()},
+            connectors={name: metadata.to_non_built() for name, metadata in self.connectors_metadata.items()},
             jobs={name: metadata.to_non_built() for name, metadata in self.jobs_metadata.items()},
-            widgets={
-                name: metadata.to_non_built() for name, metadata in self.widgets_metadata.items()
-            },
+            widgets={name: metadata.to_non_built() for name, metadata in self.widgets_metadata.items()},
+            ai_metadata=self.ai_metadata,
         )
 
     def to_built_full_details(self) -> BuiltFullDetails:
@@ -269,11 +259,9 @@ class Integration:
             DisplayName=self.metadata.name,
             Description=self.metadata.description,
             DocumentationLink=(
-                str(self.metadata.documentation_link)
-                if self.metadata.documentation_link is not None
-                else None
+                str(self.metadata.documentation_link) if self.metadata.documentation_link is not None else None
             ),
-            MinimumSystemVersion=float(self.metadata.minimum_system_version),
+            MinimumSystemVersion=self.metadata.minimum_system_version,
             IntegrationProperties=[p.to_built() for p in self.metadata.parameters],
             Actions=[am.name for am in self.actions_metadata.values()],
             Jobs=[jm.name for jm in self.jobs_metadata.values()],
@@ -282,7 +270,7 @@ class Integration:
             CustomFamilies=[cf.family for cf in self.custom_families],
             MappingRules=["Default mapping rules"] if self.mapping_rules else [],
             Widgets=[wm.action_identifier for wm in self.widgets_metadata.values()],
-            Version=float(self.metadata.version),
+            Version=self.metadata.version,
             IsCustom=False,
             ExampleUseCases=[],
             ReleaseNotes=self._get_full_details_release_notes(),
@@ -297,9 +285,7 @@ class Integration:
         for version, items in version_to_rns:
             # casting done to prevent generator exhaustion after the first iteration
             rns: list[ReleaseNote] = list(items)
-            max_publish_time: int = max(
-                rn.publish_time if rn.publish_time is not None else 0 for rn in rns
-            )
+            max_publish_time: int = max(rn.publish_time if rn.publish_time is not None else 0 for rn in rns)
             rn_object: FullDetailsReleaseNoteJson = {
                 "Version": version,
                 "Items": [rn.description for rn in rns],
@@ -325,3 +311,13 @@ def _update_integration_meta_form_pyproject(
     integration_meta.python_version = pyproject_toml.project.requires_python
     integration_meta.description = pyproject_toml.project.description
     integration_meta.version = pyproject_toml.project.version
+
+
+def _get_ai_metadata(path: Path) -> dict[str, Any]:
+    ai_metadata: dict[str, Any] = {}
+    ai_dir: Path = path / mp.core.constants.RESOURCES_DIR / mp.core.constants.AI_DIR
+    for ai_file in mp.core.constants.AI_DESCRIPTION_FILES:
+        if (ai_path := ai_dir / ai_file).exists():
+            ai_metadata[ai_file] = yaml.safe_load(ai_path.read_text(encoding="utf-8"))
+
+    return ai_metadata
