@@ -12,39 +12,66 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from actions.Ping import prepare_runner
+from __future__ import annotations
+
+from unittest.mock import MagicMock
+
+import pytest
+from TIPCommon.base.action import ExecutionState
+from TIPCommon.base.data_models import ActionOutput
+from integration_testing.platform.script_output import MockActionOutput
+from integration_testing.set_meta import set_metadata
+
+from cloud_identity.actions import ping
+from cloud_identity.core.base_action import CloudIdentityAction
 
 
-def test_should_call_test_connectivity(action_context, api_manager) -> None:
-    # GIVEN
-    runner = prepare_runner()
-    runner.register_injectable("api_manager", api_manager)
+@set_metadata(
+    integration_config={
+        "Delegated Email": "admin@example.com",
+    }
+)
+def test_ping_success(
+    api_manager: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+    action_output: MockActionOutput,
+) -> None:
+    monkeypatch.setattr(CloudIdentityAction, "_get_api_manager", lambda _: api_manager)
+    ping.main()
 
-    # WHEN
-    result = runner.run(action_context)
-
-    # THEN
     api_manager.test_connectivity.assert_called_once()
-    assert result.value is True
-    assert (
-        "Successfully connected to the Cloud Identity server with the provided "
-        "connection parameters!" in result.output_message
+    assert action_output.results == ActionOutput(
+        output_message=(
+            "Successfully connected to the Cloud Identity server with "
+            "the provided connection parameters!"
+        ),
+        result_value=True,
+        execution_state=ExecutionState.COMPLETED,
+        json_output=None,
     )
 
 
-def test_should_show_error_when(action_context, api_manager) -> None:
-    # GIVEN
-    runner = prepare_runner()
-    runner.register_injectable("api_manager", api_manager)
+@set_metadata(
+    integration_config={
+        "Delegated Email": "admin@example.com",
+    }
+)
+def test_ping_failure(
+    api_manager: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+    action_output: MockActionOutput,
+) -> None:
+    monkeypatch.setattr(CloudIdentityAction, "_get_api_manager", lambda _: api_manager)
     api_manager.test_connectivity.side_effect = Exception("Something went wrong")
+    ping.main()
 
-    # WHEN
-    result = runner.run(action_context)
-
-    # THEN
     api_manager.test_connectivity.assert_called_once()
-    assert result.value is False
-    assert (
-        "Failed to connect to the Cloud Identity server. Error is: Something went wrong"
-        in result.output_message
+    assert action_output.results == ActionOutput(
+        output_message=(
+            "Failed to connect to the Cloud Identity server!\n"
+            "Reason: Something went wrong"
+        ),
+        result_value=False,
+        execution_state=ExecutionState.FAILED,
+        json_output=None,
     )

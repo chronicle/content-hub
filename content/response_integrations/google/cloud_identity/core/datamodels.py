@@ -25,6 +25,15 @@ from dataclass_wizard.serial_json import JSONWizard
 from .exceptions import GoogleCloudIdentityApiException
 
 
+@dataclass
+class IntegrationParameters:
+    service_account_json: str | dict | None
+    verify_ssl: bool
+    workload_identity_email: str | None
+    delegated_email: str | None
+    siemplify_logger: Any
+
+
 class PolicyType(StrEnum):
     ADMIN = "ADMIN"
     SYSTEM = "SYSTEM"

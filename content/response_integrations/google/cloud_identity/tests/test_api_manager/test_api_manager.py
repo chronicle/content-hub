@@ -15,8 +15,8 @@
 from unittest.mock import Mock
 
 import pytest
-from core.api_manager import GoogleCloudIdentityApiManager
-from core.datamodels import (
+from cloud_identity.core.api_manager import CloudIdentityApiParameters, GoogleCloudIdentityApiManager
+from cloud_identity.core.datamodels import (
     DLPRulePolicySettingValue,
     Policy,
     PolicySetting,
@@ -34,6 +34,8 @@ def api_manager_fixture(
 
     manager = GoogleCloudIdentityApiManager(
         auth_session,
+        configuration=CloudIdentityApiParameters(api_root="https://example.com"),
+        logger=Mock(),
         policies_resource=policies_resource,
         org_units_resource=org_units_resource,
     )

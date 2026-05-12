@@ -12,13 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import Mock
+from __future__ import annotations
+
+from unittest.mock import MagicMock
 
 import pytest
-from actions.AddEntityToDetectorURLList import (
-    prepare_runner,
-)
-from core.datamodels import Policy
+from SiemplifyAction import SiemplifyAction
+from TIPCommon.base.action import EntityTypesEnum, ExecutionState
+from TIPCommon.base.data_models import ActionJsonOutput, ActionOutput
+from integration_testing.common import create_entity
+from integration_testing.platform.script_output import MockActionOutput
+from integration_testing.set_meta import set_metadata
+
+from cloud_identity.actions import add_entity_to_detector_url_list
+from cloud_identity.core.base_action import CloudIdentityAction
+from cloud_identity.core.datamodels import Policy
 
 
 @pytest.fixture(name="updated_policy_data")
@@ -45,30 +53,31 @@ def mock_updated_policy_data() -> dict:
     }
 
 
-def test_add_entity_to_detector_url_list_success_params(
-    action_context, api_manager, updated_policy_data
-) -> None:
-    # GIVEN
-    action_context.action_parameters = {
+@set_metadata(
+    integration_config={
+        "Delegated Email": "admin@example.com",
+    },
+    parameters={
         "Organization Unit Name": "org_unit_name",
         "Detector Policy ID": "policy_id",
-        "URL": ["http://example.com", "http://example2.com"],
-        "Domain": ["example.org", "example2.org"],
-    }
-
-    # Mock entities to return nothing for this test
-    action_context.get_entities = Mock(return_value=[])
-
-    runner = prepare_runner()
-    runner.register_injectable("api_manager", api_manager)
+        "URL": "http://example.com, http://example2.com",
+        "Domain": "example.org, example2.org",
+    },
+)
+def test_add_entity_to_detector_url_list_success_params(
+    api_manager: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+    action_output: MockActionOutput,
+    updated_policy_data: dict,
+) -> None:
+    monkeypatch.setattr(CloudIdentityAction, "_get_api_manager", lambda _: api_manager)
+    monkeypatch.setattr(SiemplifyAction, "target_entities", [])
     api_manager.update_url_list_detector_policy.return_value = Policy.from_dict(
         updated_policy_data
     )
 
-    # WHEN
-    result = runner.run(action_context)
+    add_entity_to_detector_url_list.main()
 
-    # THEN
     api_manager.test_connectivity.assert_called_once()
     api_manager.update_url_list_detector_policy.assert_called_once_with(
         policy_id="policy_id",
@@ -79,95 +88,120 @@ def test_add_entity_to_detector_url_list_success_params(
             "example2.org",
         ],
     )
-    assert result.value is True
-    assert result.json_result == updated_policy_data
-    assert "Successfully blocked the following URLs" in result.output_message
+    assert action_output.results == ActionOutput(
+        output_message="Successfully blocked the following URLs using Cloud Identity: http://example.com, http://example2.com, example.org, example2.org",
+        result_value=True,
+        execution_state=ExecutionState.COMPLETED,
+        json_output=ActionJsonOutput(json_result=updated_policy_data),
+    )
 
 
-def test_add_entity_to_detector_url_list_success_entities(
-    action_context, api_manager, updated_policy_data
-) -> None:
-    # GIVEN
-    action_context.action_parameters = {
+@set_metadata(
+    integration_config={
+        "Delegated Email": "admin@example.com",
+    },
+    parameters={
         "Organization Unit Name": "org_unit_name",
         "Detector Policy ID": "policy_id",
-    }
-
-    # Mock entities
-    mock_entity1 = Mock()
-    mock_entity1.identifier = "bad_entity1.com"
-    mock_entity2 = Mock()
-    mock_entity2.identifier = "bad_entity2.com"
-
-    action_context.get_entities = Mock(return_value=[mock_entity1, mock_entity2])
-
-    runner = prepare_runner()
-    runner.register_injectable("api_manager", api_manager)
+    },
+    entities=[
+        create_entity("bad_entity1.com", EntityTypesEnum.URL),
+        create_entity("bad_entity2.com", EntityTypesEnum.URL),
+    ],
+)
+def test_add_entity_to_detector_url_list_success_entities(
+    api_manager: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+    action_output: MockActionOutput,
+    updated_policy_data: dict,
+) -> None:
+    monkeypatch.setattr(CloudIdentityAction, "_get_api_manager", lambda _: api_manager)
+    monkeypatch.setattr(
+        SiemplifyAction,
+        "target_entities",
+        [
+            create_entity("bad_entity1.com", EntityTypesEnum.URL),
+            create_entity("bad_entity2.com", EntityTypesEnum.URL),
+        ],
+    )
     api_manager.update_url_list_detector_policy.return_value = Policy.from_dict(
         updated_policy_data
     )
 
-    # WHEN
-    result = runner.run(action_context)
+    add_entity_to_detector_url_list.main()
 
-    # THEN
     api_manager.test_connectivity.assert_called_once()
     api_manager.update_url_list_detector_policy.assert_called_once_with(
-        policy_id="policy_id", urls=["bad_entity1.com", "bad_entity2.com"]
+        policy_id="policy_id", urls=["BAD_ENTITY1.COM", "BAD_ENTITY2.COM"]
     )
-    assert result.value is True
-    assert result.json_result == updated_policy_data
-    assert "Successfully blocked the following URLs" in result.output_message
+    assert action_output.results == ActionOutput(
+        output_message="Successfully blocked the following URLs using Cloud Identity: BAD_ENTITY1.COM, BAD_ENTITY2.COM",
+        result_value=True,
+        execution_state=ExecutionState.COMPLETED,
+        json_output=ActionJsonOutput(json_result=updated_policy_data),
+    )
 
 
-def test_add_entity_to_detector_url_list_no_input(action_context, api_manager) -> None:
-    # GIVEN
-    action_context.action_parameters = {
+@set_metadata(
+    integration_config={
+        "Delegated Email": "admin@example.com",
+    },
+    parameters={
         "Organization Unit Name": "org_unit_name",
         "Detector Policy ID": "policy_id",
-    }
+    },
+)
+def test_add_entity_to_detector_url_list_no_input(
+    api_manager: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+    action_output: MockActionOutput,
+) -> None:
+    monkeypatch.setattr(CloudIdentityAction, "_get_api_manager", lambda _: api_manager)
+    monkeypatch.setattr(SiemplifyAction, "target_entities", [])
 
-    action_context.get_entities = Mock(return_value=[])
+    add_entity_to_detector_url_list.main()
 
-    runner = prepare_runner()
-    runner.register_injectable("api_manager", api_manager)
-
-    # WHEN
-    result = runner.run(action_context)
-
-    # THEN
     api_manager.test_connectivity.assert_called_once()
     api_manager.update_url_list_detector_policy.assert_not_called()
-    assert result.value is True
-    assert result.output_message == "No entities, domains or url provided to block"
+    assert action_output.results == ActionOutput(
+        output_message="No entities, domains or url provided to block",
+        result_value=True,
+        execution_state=ExecutionState.COMPLETED,
+        json_output=None,
+    )
 
 
-def test_add_entity_to_detector_url_list_failure(
-    action_context, api_manager
-) -> None:
-    # GIVEN
-    action_context.action_parameters = {
+@set_metadata(
+    integration_config={
+        "Delegated Email": "admin@example.com",
+    },
+    parameters={
         "Organization Unit Name": "org_unit_name",
         "Detector Policy ID": "policy_id",
-        "URL": ["http://example.com"],
-    }
-
-    action_context.get_entities = Mock(return_value=[])
-
-    runner = prepare_runner()
-    runner.register_injectable("api_manager", api_manager)
+        "URL": "http://example.com",
+    },
+)
+def test_add_entity_to_detector_url_list_failure(
+    api_manager: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+    action_output: MockActionOutput,
+) -> None:
+    monkeypatch.setattr(CloudIdentityAction, "_get_api_manager", lambda _: api_manager)
+    monkeypatch.setattr(SiemplifyAction, "target_entities", [])
     api_manager.update_url_list_detector_policy.side_effect = Exception("API error")
 
-    # WHEN
-    result = runner.run(action_context)
+    add_entity_to_detector_url_list.main()
 
-    # THEN
     api_manager.test_connectivity.assert_called_once()
     api_manager.update_url_list_detector_policy.assert_called_once_with(
         policy_id="policy_id", urls=["http://example.com"]
     )
-    assert result.value is False
-    assert (
-        "Error executing action “Add Entity To Detector URL List”. Reason: API error"
-        in result.output_message
+    assert action_output.results == ActionOutput(
+        output_message=(
+            'Error executing action "CloudIdentity - AddEntityToDetectorURLList"\n'
+            "Reason: API error"
+        ),
+        result_value=False,
+        execution_state=ExecutionState.FAILED,
+        json_output=None,
     )

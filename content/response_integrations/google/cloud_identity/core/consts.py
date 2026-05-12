@@ -14,16 +14,8 @@
 
 from __future__ import annotations
 
-from .action_param_mappers import non_empty, parse_bool, required
-
 INTEGRATION_NAME = "CloudIdentity"
 INTEGRATION_DISPLAY_NAME = "Cloud Identity"
-INTEGRATION_PARAM_MAPPERS = {
-    "Service Account JSON File Content": [],
-    "Verify SSL": [parse_bool()],
-    "Workload Identity Email": [],
-    "Delegated Email": [required(), non_empty()],
-}
 
 DEFAULT_API_ROOT = "https://cloudidentity.googleapis.com"
 ADMIN_SDK_API_ROOT = "https://admin.googleapis.com"

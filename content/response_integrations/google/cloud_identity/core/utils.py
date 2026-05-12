@@ -17,6 +17,10 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import TYPE_CHECKING
 
+from TIPCommon.extraction import extract_configuration_param
+
+from . import consts
+from .datamodels import IntegrationParameters
 from .exceptions import (
     GoogleCloudIdentityApiEntityNotFoundException,
     GoogleCloudIdentityApiException,
@@ -24,43 +28,70 @@ from .exceptions import (
 
 if TYPE_CHECKING:
     import requests
+    from TIPCommon.types import ChronicleSOAR
 
-    from .action_wrapper import ActionContext
+
+def get_integration_parameters(chronicle_soar: ChronicleSOAR) -> IntegrationParameters:
+    """Get the parameters object for CloudIdentity auth and api manager.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): ChronicleSOAR object.
+
+    Returns:
+        IntegrationParameters: IntegrationParameters object.
+
+    """
+    service_account_json = extract_configuration_param(
+        chronicle_soar,
+        provider_name=consts.INTEGRATION_NAME,
+        param_name="Service Account JSON File Content",
+        is_mandatory=False,
+    )
+    verify_ssl = extract_configuration_param(
+        chronicle_soar,
+        provider_name=consts.INTEGRATION_NAME,
+        param_name="Verify SSL",
+        is_mandatory=False,
+        input_type=bool,
+        default_value=True,
+        print_value=True,
+    )
+    workload_identity_email = extract_configuration_param(
+        chronicle_soar,
+        provider_name=consts.INTEGRATION_NAME,
+        param_name="Workload Identity Email",
+        is_mandatory=False,
+        print_value=True,
+    )
+    delegated_email = extract_configuration_param(
+        chronicle_soar,
+        provider_name=consts.INTEGRATION_NAME,
+        param_name="Delegated Email",
+        is_mandatory=True,
+        print_value=True,
+    )
+    return IntegrationParameters(
+        service_account_json=service_account_json,
+        verify_ssl=verify_ssl,
+        workload_identity_email=workload_identity_email,
+        delegated_email=delegated_email,
+        siemplify_logger=chronicle_soar.LOGGER,
+    )
 
 
-class IntegrationParameters:
-    """A data class for holding integration parameters."""
+def string_to_list(comma_separated_string: str | None) -> list[str]:
+    """Convert a comma-separated string to a clean list of strings.
 
-    def __init__(self, context: ActionContext) -> None:
-        """Initialize the IntegrationParameters.
+    Args:
+        comma_separated_string: Comma-separated string.
 
-        Args:
-            context: The action context containing integration parameters.
+    Returns:
+        List of clean string items.
 
-        """
-        # Integration configuration
-        self.service_account_json = context.integration_parameters.get(
-            "Service Account JSON File Content"
-        )
-        self.verify_ssl = context.integration_parameters.get("Verify SSL")
-        self.workload_identity_email = context.integration_parameters.get(
-            "Workload Identity Email"
-        )
-        self.delegated_email = context.integration_parameters.get("Delegated Email")
-
-    def as_dict(self) -> dict[str, object]:
-        """Return the parameters as a dictionary.
-
-        Returns:
-            A dictionary representation of the parameters.
-
-        """
-        return {
-            "service_account_json": self.service_account_json,
-            "verify_ssl": self.verify_ssl,
-            "workload_identity_email": self.workload_identity_email,
-            "delegated_email": self.delegated_email,
-        }
+    """
+    if not comma_separated_string:
+        return []
+    return [item.strip() for item in comma_separated_string.split(",") if item.strip()]
 
 
 def validate_response(response: requests.Response, api_name: str) -> None:

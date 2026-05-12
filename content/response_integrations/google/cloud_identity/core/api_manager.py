@@ -14,11 +14,11 @@
 
 from __future__ import annotations
 
-import logging
 from enum import StrEnum  # pylint: disable=no-name-in-module
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, NamedTuple
 
-from .consts import DEFAULT_API_ROOT
+from TIPCommon.base.interfaces import Apiable
+
 from .datamodels import (
     DLPRulePolicySettingValue,
     OrgUnit,
@@ -40,6 +40,7 @@ from .orgunits_api_resource import OrgUnitsApiResource
 from .policies_api_resource import PoliciesApiResource
 
 if TYPE_CHECKING:
+    import logging
     from collections.abc import Iterable
 
     from google.auth.transport.requests import AuthorizedSession
@@ -52,26 +53,52 @@ class _Prefix(StrEnum):
     ORGANIZATION_UNITS = "orgUnits/"
 
 
-class GoogleCloudIdentityApiManager:
+class CloudIdentityApiParameters(NamedTuple):
+    """Parameters for Cloud Identity API client."""
+
+    api_root: str
+
+
+class GoogleCloudIdentityApiManager(Apiable):
     """Manager for interacting with the Google Cloud Identity Policies API."""
 
-    def __init__(self, session: AuthorizedSession, **kwargs: Any) -> None:  # noqa: ANN401
+    def __init__(  # noqa: PLR0913, PLR0917
+        self,
+        authenticated_session: AuthorizedSession,
+        configuration: CloudIdentityApiParameters,
+        logger: logging.Logger,
+        policies_resource: PoliciesApiResource | None = None,
+        orgunits_resource: OrgUnitsApiResource | None = None,
+        org_units_resource: OrgUnitsApiResource | None = None,
+    ) -> None:
         """Initialize the GoogleCloudIdentityApiManager.
 
         Args:
-            session: The authorized session for API requests.
-            **kwargs: Additional keyword arguments.
+            authenticated_session: The authorized session for API requests.
+            configuration: API configuration parameters.
+            logger: Logger instance.
+            policies_resource: Optional policies resource.
+            orgunits_resource: Optional org units resource.
+            org_units_resource: Optional org units resource (alias).
 
         """
-        self._session = session
-        self._logger = kwargs.get("logger", logging.getLogger(__name__))
-        self._api_root = kwargs.get("api_root", DEFAULT_API_ROOT)
-        self._policies_resource = kwargs.get(
-            "policies_resource",
-            PoliciesApiResource(self._session, self._api_root, logger=self._logger),
+        super().__init__(
+            authenticated_session=authenticated_session,
+            configuration=configuration,
         )
-        self._org_units_resource = kwargs.get(
-            "orgunits_resource", OrgUnitsApiResource(self._session, logger=self._logger)
+        self._session = authenticated_session
+        self._logger = logger
+        self._api_root = configuration.api_root
+        self._policies_resource = (
+            policies_resource
+            if policies_resource is not None
+            else PoliciesApiResource(self._session, self._api_root, logger=self._logger)
+        )
+        ou_resource = orgunits_resource or org_units_resource
+        self._org_units_resource = (
+            ou_resource
+            if ou_resource is not None
+            else OrgUnitsApiResource(self._session, logger=self._logger)
         )
 
     def test_connectivity(self) -> None:

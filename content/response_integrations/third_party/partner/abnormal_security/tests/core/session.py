@@ -38,7 +38,7 @@ class AbnormalSession(MockSession[MockRequest, MockResponse, Abnormal]):
         except Exception as e:
             return MockResponse(content=str(e), status_code=500)
 
-    @router.post(r"/v1/threats/[^/]+/actions/[^/]+/?$")
+    @router.post(r"/v1/threats/[^/]+/?$")
     def post_threat_action(self, request: MockRequest) -> MockResponse:
         try:
             return MockResponse(content=self._product.post_threat_action())
@@ -59,7 +59,7 @@ class AbnormalSession(MockSession[MockRequest, MockResponse, Abnormal]):
         except Exception as e:
             return MockResponse(content=str(e), status_code=500)
 
-    @router.post(r"/v1/cases/[^/]+/actions/[^/]+/?$")
+    @router.post(r"/v1/cases/[^/]+/?$")
     def post_case_action(self, request: MockRequest) -> MockResponse:
         try:
             return MockResponse(content=self._product.post_case_action())

@@ -17,14 +17,13 @@ from __future__ import annotations
 from unittest.mock import NonCallableMagicMock
 
 import pytest
-from core.action_wrapper import ActionContext
-from core.api_manager import (
+from cloud_identity.core.api_manager import (
     GoogleCloudIdentityApiManager,
 )
-from core.orgunits_api_resource import (
+from cloud_identity.core.orgunits_api_resource import (
     OrgUnitsApiResource,
 )
-from core.policies_api_resource import (
+from cloud_identity.core.policies_api_resource import (
     PoliciesApiResource,
 )
 from google.auth.transport.requests import AuthorizedSession
@@ -44,12 +43,6 @@ def api_manager() -> GoogleCloudIdentityApiManager:
     return NonCallableMagicMock(
         spec=GoogleCloudIdentityApiManager,
     )
-
-
-@pytest.fixture
-def action_context() -> ActionContext:
-    """Action context"""
-    return NonCallableMagicMock(ActionContext)
 
 
 @pytest.fixture

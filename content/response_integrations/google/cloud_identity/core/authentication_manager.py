@@ -14,18 +14,64 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 
 from google.auth import iam
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2 import service_account
+from TIPCommon.base.interfaces import Authable
 from TIPCommon.rest.auth import build_credentials_from_sa, get_auth_request
 from TIPCommon.rest.gcp import get_workload_sa_email
 from TIPCommon.utils import is_empty_string_or_none
 
 from .consts import OAUTH_SCOPES
 from .exceptions import GoogleCloudAuthenticationError
+
+
+@dataclasses.dataclass(slots=True)
+class SessionAuthenticationParameters:
+    """Parameters for session authentication."""
+
+    service_account_json: str | dict | None
+    workload_identity_email: str | None
+    delegated_email: str | None
+    verify_ssl: bool
+
+
+class AuthenticatedSession(Authable):
+    """Authenticated session for Google Cloud Identity API requests."""
+
+    def authenticate_session(self, params: SessionAuthenticationParameters) -> None:
+        """Authenticate the session with Google Cloud Identity credentials.
+
+        Args:
+            params: Session authentication parameters.
+
+        """
+        self.session = get_authenticated_session(session_parameters=params)
+
+
+def get_authenticated_session(
+    session_parameters: SessionAuthenticationParameters,
+) -> AuthorizedSession:
+    """Get an authenticated session for API requests.
+
+    Args:
+        session_parameters: Authentication parameters.
+
+    Returns:
+        AuthorizedSession object.
+
+    """
+    auth_manager = AuthManager(
+        service_account_creds=session_parameters.service_account_json,
+        workload_identity_email=session_parameters.workload_identity_email,
+        delegated_email=session_parameters.delegated_email,
+        verify_ssl=session_parameters.verify_ssl,
+    )
+    return auth_manager.prepare_session()
 
 
 class AuthManager:
