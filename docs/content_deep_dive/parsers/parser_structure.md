@@ -83,7 +83,7 @@ All the log files must follow the nested JSON format described below.
     "entries": [ // A list of objects containing the log data.
       {
         "data": "The actual raw log string", // (Mandatory) The raw string of the log message to be parsed.
-        "collection_time": "YYYY-MM-DDTHH:MM:SS.ssssssZ" (optional) // The specific timestamp when this individual log entry was collected.
+        "collection_time": "YYYY-MM-DDTHH:MM:SS.ssssssZ" // (optional) The specific timestamp when this individual log entry was collected.
       }
     ]
   }

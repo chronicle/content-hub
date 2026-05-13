@@ -151,14 +151,14 @@ def get_pretty_relpath(path: Path) -> str:
 
 def validate_log_structure(data: Any, file_name: str) -> bool:
     """Validates that the log file follows the required nested structure.
-    
+
     Expected Structure:
     {
       "create_time": "...",
       "raw_logs": {
         "start_time": "...",
         "entries": [
-          { "data": "...", "collection_time": "..." (optional) }
+          { "data": "...", "collection_time": "..." }
         ]
       }
     }
@@ -167,35 +167,23 @@ def validate_log_structure(data: Any, file_name: str) -> bool:
         logging.error(f"  Error: {file_name} structure is incorrect. It must be a JSON object.")
         return False
 
-    if "create_time" not in data:
-        logging.error(f"  Error: {file_name} structure is incorrect. Missing 'create_time' at the root.")
+    if not isinstance(data.get("create_time"), str):
+        logging.error(f"  Error: {file_name} structure is incorrect. Missing or invalid 'create_time' at the root (must be a string).")
         return False
 
-    if "raw_logs" not in data:
-        logging.error(f"  Error: {file_name} structure is incorrect. Missing 'raw_logs' at the root.")
-        return False
-
-    raw_logs = data["raw_logs"]
+    raw_logs = data.get("raw_logs")
     if not isinstance(raw_logs, dict):
-        logging.error(f"  Error: {file_name} structure is incorrect. 'raw_logs' must be an object.")
+        logging.error(f"  Error: {file_name} structure is incorrect. Missing or invalid 'raw_logs' object.")
         return False
 
-    if "entries" not in raw_logs:
-        logging.error(f"  Error: {file_name} structure is incorrect. 'raw_logs' is missing 'entries'.")
-        return False
-
-    entries = raw_logs["entries"]
-    if not isinstance(entries, list):
-        logging.error(f"  Error: {file_name} structure is incorrect. 'entries' must be a list.")
-        return False
-
-    if not entries:
-        logging.error(f"  Error: {file_name} structure is incorrect. 'entries' list is empty.")
+    entries = raw_logs.get("entries")
+    if not isinstance(entries, list) or not entries:
+        logging.error(f"  Error: {file_name} structure is incorrect. 'entries' must be a non-empty list.")
         return False
 
     for i, entry in enumerate(entries):
-        if not isinstance(entry, dict) or "data" not in entry:
-            logging.error(f"  Error: {file_name} structure is incorrect. Entry at index {i} is missing 'data' field.")
+        if not isinstance(entry, dict) or not isinstance(entry.get("data"), str):
+            logging.error(f"  Error: {file_name} structure is incorrect. Entry at index {i} must be an object with a 'data' string.")
             return False
 
     return True
@@ -287,8 +275,8 @@ def main(argv: list[str]) -> None:
             try:
                 metadata_data = json.loads(metadata_file.read_text())
                 actual_log_type = metadata_data.get("log_type", _DEFAULT_LOG_TYPE)
-            except json.JSONDecodeError:
-                logging.warning(f"  Warning: Could not parse {metadata_file}.")
+            except json.JSONDecodeError as e:
+                logging.warning(f"  Warning: Could not parse {metadata_file}: {e}. Using default log type '{_DEFAULT_LOG_TYPE}'.")
 
         raw_logs_path = cbn_path / "testdata" / "raw_logs"
         expected_events_path = cbn_path / "testdata" / "expected_events"
@@ -315,8 +303,8 @@ def main(argv: list[str]) -> None:
 
             try:
                 logs_data = json.loads(log_file.read_text())
-            except json.JSONDecodeError:
-                logging.error(f"  Error: Failed to parse JSON from {log_file.name}")
+            except json.JSONDecodeError as e:
+                logging.error(f"  Error: Failed to parse JSON from {log_file.name}: {e}")
                 continue
 
             if not validate_log_structure(logs_data, log_file.name):
