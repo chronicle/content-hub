@@ -15,8 +15,7 @@
 from __future__ import annotations
 import pathlib
 import json
-from integration_testing.common import get_def_file_content
 from pathlib import Path
 INTEGRATION_PATH = Path(__file__).parents[1]
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / 'config.json'
-CONFIG: dict = get_def_file_content(CONFIG_PATH) if CONFIG_PATH.exists() else {}
+CONFIG: dict = json.loads(CONFIG_PATH.read_text()) if CONFIG_PATH.exists() else {}
