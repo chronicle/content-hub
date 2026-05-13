@@ -1,22 +1,31 @@
 from __future__ import annotations
-from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
-from soar_sdk.SiemplifyUtils import output_handler, unix_now
-from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 
-import sys
-import random
 import json
-from urllib.parse import urlparse
-import re
+import sys
 import uuid
 from datetime import datetime
+from urllib.parse import urlparse
 
-from ..core.constants import (INTEGRATION_NAME, ALERT_CONNECTOR_NAME, DEVICE_PRODUCT, VENDOR_NAME, PRODUCT_NAME, PROPERTY_KEY)
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
+from soar_sdk.SiemplifyUtils import output_handler, unix_now
+
 from ..core.bloodhound_manager import BloodhoundManager
+from ..core.constants import (
+    ALERT_CONNECTOR_NAME,
+    DEVICE_PRODUCT,
+    INTEGRATION_NAME,
+    PRODUCT_NAME,
+    PROPERTY_KEY,
+    VENDOR_NAME,
+)
 
 
 # Function to generate a consistent context identifier for storing the latest dates
-def get_domain_dates_context_identifier(siemplify:SiemplifyConnectorExecution, context_identifier_prefix:str="bloodhound_last_created_attack_paths_date_"):
+def get_domain_dates_context_identifier(
+    siemplify: SiemplifyConnectorExecution,
+    context_identifier_prefix: str = "bloodhound_last_created_attack_paths_date_",
+):
     """
     Generate a consistent context identifier for storing latest dates for all domains
     :return: {str} The generated context identifier
@@ -25,6 +34,7 @@ def get_domain_dates_context_identifier(siemplify:SiemplifyConnectorExecution, c
     
     # Create the context identifier
     return f"{context_identifier_prefix}{identifier}"
+
 
 def get_domain_last_created_dates(siemplify):
     """
@@ -40,8 +50,8 @@ def get_domain_last_created_dates(siemplify):
     try:
         # Get stored last created_at dates from context property
         last_dates_json = siemplify.get_connector_context_property(
-            identifier= context_identifier,
-            property_key= property_key
+            identifier=context_identifier,
+            property_key=property_key
         )
         
         if not last_dates_json:
@@ -57,6 +67,7 @@ def get_domain_last_created_dates(siemplify):
         siemplify.LOGGER.error(f"Unable to read last created_at dates from context: {e}")
         siemplify.LOGGER.exception(e)
         return {}
+
 
 def store_domain_last_created_dates(siemplify, data):
     """
@@ -84,6 +95,7 @@ def store_domain_last_created_dates(siemplify, data):
         siemplify.LOGGER.error(f"Failed storing domain last update dates, ERROR: {e}")
         siemplify.LOGGER.exception(e)
 
+
 def extract_date_from_timestamp(timestamp_str):
     """
     Extract the date part from a timestamp string
@@ -95,9 +107,10 @@ def extract_date_from_timestamp(timestamp_str):
         dt = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S.%fZ")
         # Extract just the date part in YYYY-MM-DD format
         return dt.strftime("%Y-%m-%d")
-    except Exception as e:
+    except Exception:
         # If unable to parse, return None
         return None
+
 
 def test_bloodhound_connection(bhe_manager, siemplify):
     """
@@ -121,6 +134,7 @@ def test_bloodhound_connection(bhe_manager, siemplify):
         
     return response
 
+
 def get_available_domains(bhe_manager, siemplify):
     """
     Extract available domains from the response
@@ -143,9 +157,10 @@ def get_available_domains(bhe_manager, siemplify):
     domains_data = res_domains.get('data', [])
     
     # Create a dictionary mapping domain IDs to their info
-    domains = {domain['id']: domain for domain in domains_data if domain['collected'] == True}
+    domains = {domain['id']: domain for domain in domains_data if domain['collected']}
     
     return domains
+
 
 def collect_available_types(bhe_manager, domains, siemplify):
     """
@@ -165,6 +180,7 @@ def collect_available_types(bhe_manager, domains, siemplify):
         domains[domain_id]['available_types'] = types
 
     return domains
+
 
 def fetch_path_info(bhe_manager, domains, siemplify):
     """
@@ -206,7 +222,7 @@ def fetch_path_info(bhe_manager, domains, siemplify):
                 "title": title,
                 "short_remediation": short_remediation,
                 "long_remediation": long_remediation,
-                "short_description":short_description
+                "short_description": short_description
             }
         except Exception as e:
             siemplify.LOGGER.error(f"Failed to fetch path details for {finding_type}: {e}")
@@ -214,10 +230,11 @@ def fetch_path_info(bhe_manager, domains, siemplify):
                 "title": finding_type,
                 "short_remediation": "",
                 "long_remediation": "",
-                "short_description":""
+                "short_description": ""
             }
 
     return path_details
+
 
 def fetch_attack_path_details(bhe_manager, domains, siemplify, tenant_domain, is_test_run):
     """
@@ -255,9 +272,15 @@ def fetch_attack_path_details(bhe_manager, domains, siemplify, tenant_domain, is
         last_created_at_timestamp = last_created_at_dates.get(domain_name)
         
         if last_created_at_timestamp:
-            siemplify.LOGGER.info(f"Using last created_at timestamp for domain {domain_name}: {last_created_at_timestamp}.")
+            siemplify.LOGGER.info(
+                f"Using last created_at timestamp for domain {domain_name}: "
+                f"{last_created_at_timestamp}."
+            )
         else:
-            siemplify.LOGGER.info(f"No last created_at timestamp found for domain {domain_name}, will fetch all attack paths.")
+            siemplify.LOGGER.info(
+                f"No last created_at timestamp found for domain {domain_name}, "
+                f"will fetch all attack paths."
+            )
 
         siemplify.LOGGER.info(f"Processing domain: {domain_name} with {len(types)} finding types.")
 
@@ -278,7 +301,10 @@ def fetch_attack_path_details(bhe_manager, domains, siemplify, tenant_domain, is
                 if not page:
                     break
 
-                siemplify.LOGGER.info(f"Number of attack paths fetched even after giving created_at date is {len(page)}")
+                siemplify.LOGGER.info(
+                    f"Number of attack paths fetched even after giving "
+                    f"created_at date is {len(page)}"
+                )
                 
                 # Filter attack paths based on created_at timestamp
                 newer_paths = []
@@ -290,7 +316,10 @@ def fetch_attack_path_details(bhe_manager, domains, siemplify, tenant_domain, is
                             newer_paths.append(attack_path)
                             
                             # Update domain's latest timestamp if needed
-                            if domain_latest_dates[domain_name] is None or created_at > domain_latest_dates[domain_name]:
+                            if (
+                                domain_latest_dates[domain_name] is None
+                                or created_at > domain_latest_dates[domain_name]
+                            ):
                                 domain_latest_dates[domain_name] = created_at
                 
                 # Add only the newer attack paths to our filtered list
@@ -307,6 +336,7 @@ def fetch_attack_path_details(bhe_manager, domains, siemplify, tenant_domain, is
     siemplify.LOGGER.info(f"Domain {domain_name}: {domain_attack_path_counts.get(domain_name)} new attack paths found")
     siemplify.LOGGER.info(f"Latest created_at date for domain {domain_name}: {domain_latest_dates[domain_name]}") 
     return attack_path_details, domain_latest_dates
+
 
 def create_alerts(attack_path_details, domains, attack_paths_info, tenant_domain, siemplify):
     """
@@ -352,30 +382,27 @@ def create_alerts(attack_path_details, domains, attack_paths_info, tenant_domain
             path_info = attack_paths_info.get(finding_type, {})
             short_remediation = path_info.get("short_remediation", "")
             long_remediation = path_info.get("long_remediation", "")
-            short_description = path_info.get("short_description","")
+            short_description = path_info.get("short_description", "")
 
             # Determine severity
-            path_highest_severity = "low"
 
             # Calculate number of batches needed to stay under MAX_EVENTS_PER_ALERT limit
             total_paths = len(attack_paths_with_type)
             num_batches = (total_paths + MAX_EVENTS_PER_ALERT - 1) // MAX_EVENTS_PER_ALERT  # Ceiling division
             
             if num_batches > 1:
-                siemplify.LOGGER.info(f"Splitting {path_title} in {domain_name} into {num_batches} alerts due to {total_paths} events exceeding limit of {MAX_EVENTS_PER_ALERT}")
+                siemplify.LOGGER.info(
+                    f"Splitting {path_title} in {domain_name} into {num_batches} alerts "
+                    f"due to {total_paths} events exceeding limit of {MAX_EVENTS_PER_ALERT}"
+                )
             
             # Process each batch separately
             for batch_num in range(num_batches):
                 start_idx = batch_num * MAX_EVENTS_PER_ALERT
                 end_idx = min((batch_num + 1) * MAX_EVENTS_PER_ALERT, total_paths)
                 batch_paths = attack_paths_with_type[start_idx:end_idx]
-                
-                # Create suffix for batched alerts
-                batch_suffix = f" (Part {batch_num + 1}/{num_batches})" if num_batches > 1 else ""
+
                 alert_name = f"{path_title} in {domain_name}"
-                
-                # Create unique ID for each batch
-                unique_batch_id = str(uuid.uuid4()) if num_batches > 1 else ""
                 alert_id = f"{parsed_tenant_domain}:{domain_name}"
 
                 alert = AlertInfo()
@@ -397,7 +424,10 @@ def create_alerts(attack_path_details, domains, attack_paths_info, tenant_domain
                     f"Short remediation: {short_remediation}"
                 )
                 if num_batches > 1:
-                    alert.description += f" (Part {batch_num + 1} of {num_batches}, contains paths {start_idx+1}-{end_idx} of {total_paths})"
+                    alert.description += (
+                        f" (Part {batch_num + 1} of {num_batches}, contains paths "
+                        f"{start_idx + 1}-{end_idx} of {total_paths})"
+                    )
                 
                 alert.device_event_class_id = alert_id
                 alert.extensions = {
@@ -425,7 +455,7 @@ def create_alerts(attack_path_details, domains, attack_paths_info, tenant_domain
                 for finding_type, item in batch_paths:
                     attack_id = item.get("id", "unknown")
                     severity = item.get("Severity", "low")
-                    props = item.get("FromPrincipalProps") or item.get("Props") or {}
+                    item.get("FromPrincipalProps") or item.get("Props") or {}
 
                     object_ids = (
                         list(filter(None, [
@@ -493,7 +523,6 @@ def create_alerts(attack_path_details, domains, attack_paths_info, tenant_domain
                             item.get("Props", {}).get("objectid")
                     )
 
-
                     alert.Severity = alert_severity
                     alert.events.append(event)
 
@@ -511,6 +540,7 @@ def create_alerts(attack_path_details, domains, attack_paths_info, tenant_domain
     siemplify.LOGGER.info(f"---- Total Alerts Generated: {len(alerts)} ----")
 
     return alerts
+
 
 def filter_domains(domains, selected_domains, siemplify):
     """
@@ -544,11 +574,15 @@ def filter_domains(domains, selected_domains, siemplify):
     
     # Check if domains is empty after filtering and raise an error if it is
     if not filtered_domains:
-        error_msg = "No domains matched the selected domain names. Please check your 'Selected Environments' configuration."
+        error_msg = (
+            "No domains matched the selected domain names. "
+            "Please check your 'Selected Environments' configuration."
+        )
         siemplify.LOGGER.error(error_msg)
         raise Exception(error_msg)
     
     return filtered_domains
+
 
 def filter_finding_types(domains, selected_finding_types, siemplify):
     """
@@ -591,11 +625,15 @@ def filter_finding_types(domains, selected_finding_types, siemplify):
     
     # If no domain has matching finding types, raise an error
     if not any_domain_has_findings:
-        error_msg = "No finding types matched the selected finding types. Please check your 'Selected Finding Types' configuration."
+        error_msg = (
+            "No finding types matched the selected finding types. "
+            "Please check your 'Selected Finding Types' configuration."
+        )
         siemplify.LOGGER.error(error_msg)
         raise Exception(error_msg)
     
     return domains
+
 
 def update_domain_dates(siemplify, domain_latest_dates):
     """
@@ -617,6 +655,7 @@ def update_domain_dates(siemplify, domain_latest_dates):
     if existing_dates:
         siemplify.LOGGER.info(f'*****updating with data {existing_dates}******')
         store_domain_last_created_dates(siemplify, data=existing_dates)
+
 
 # Listed below are the sub-functions associated with the main function.
 @output_handler
@@ -674,7 +713,7 @@ def main(is_test_run):
                 domains = {first_id: domains[first_id]}
             
             # Step 4: Add available types to each domain in the dictionary
-            domains = collect_available_types(bhe_manager, domains,siemplify)
+            domains = collect_available_types(bhe_manager, domains, siemplify)
             
             # Step 5: Filter finding types based on user selection
             domains = filter_finding_types(domains, selected_finding_types, siemplify)
@@ -711,7 +750,10 @@ def main(is_test_run):
             siemplify.return_package(alerts)
         else:
             # Enhanced error message for authentication failure
-            error_msg = "Authentication failed. Please check your 'BloodHound Enterprise Server URL', 'Token ID', and 'Token Key' configurations."
+            error_msg = (
+                "Authentication failed. Please check your 'BloodHound Enterprise "
+                "Server URL', 'Token ID', and 'Token Key' configurations."
+            )
             siemplify.LOGGER.error(error_msg)
             siemplify.LOGGER.error(f"Connection response: {response}")
             raise Exception(error_msg)
@@ -720,6 +762,7 @@ def main(is_test_run):
         output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error is {error}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(error)
+
 
 if __name__ == "__main__":
     is_test_run = not (len(sys.argv) > 1 and sys.argv[1] == 'True')

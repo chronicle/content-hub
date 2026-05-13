@@ -1,11 +1,14 @@
 from __future__ import annotations
-import asyncio
+
+import json
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED, EXECUTION_STATE_INPROGRESS
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED, EXECUTION_STATE_INPROGRESS
-from ..core.constants import INTEGRATION_NAME, FETCH_ASSET_INFO_SCRIPT_NAME
+
 from ..core.bloodhound_manager import BloodhoundManager
-import json
+from ..core.constants import FETCH_ASSET_INFO_SCRIPT_NAME, INTEGRATION_NAME
+
 
 @output_handler
 def main():
@@ -124,6 +127,7 @@ def main():
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         siemplify.end(f"Unexpected error: {str(e)}", "false", EXECUTION_STATE_FAILED)
+
 
 if __name__ == "__main__":
     main()

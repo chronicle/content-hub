@@ -1,10 +1,12 @@
 from __future__ import annotations
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from ..core.bloodhound_manager import BloodhoundManager
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
-from ..core.constants import (INTEGRATION_NAME, PING_SCRIPT_NAME)
+from ..core.bloodhound_manager import BloodhoundManager
+from ..core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
+
 
 @output_handler
 def main():
@@ -47,7 +49,10 @@ def main():
 
         siemplify.LOGGER.info(f"Connecting to {INTEGRATION_NAME}")
         bhe_manager.test_connection()
-        output_message = f"Successfully connected to the {INTEGRATION_NAME} server with the provided connection parameters!"
+        output_message = (
+            f"Successfully connected to the {INTEGRATION_NAME} server "
+            f"with the provided connection parameters!"
+        )
 
     except Exception as error:
         result_value = False

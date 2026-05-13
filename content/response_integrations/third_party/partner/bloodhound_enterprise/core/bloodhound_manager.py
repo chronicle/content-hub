@@ -1,14 +1,32 @@
 from __future__ import annotations
-import requests
-import hmac
-import hashlib
+
 import base64
 import datetime
-from urllib.parse import urljoin
-from urllib.parse import urlparse
+import hashlib
+import hmac
+from urllib.parse import urljoin, urlparse
 
-from .constants import (DIRECTORY_TYPES,AZ_TENANT_RELATED_TYPES, AZURE_TYPES,AZURE_RELATED_TYPES, BAD_REQUEST, UNAUTHORIZE_REQUEST, FORBIDDEN_REQUEST, NOT_FOUND, TOO_MANY_REQUEST, SERVER_ERROR)
-from .exceptions import BloodHoundException, BloodHoundBadRequestException, BloodHoundNotFoundException, BloodHoundForbiddenException, BloodHoundRateLimitException, BloodHoundUnauthorizedException
+import requests
+
+from .constants import (
+    AZ_TENANT_RELATED_TYPES,
+    AZURE_RELATED_TYPES,
+    AZURE_TYPES,
+    BAD_REQUEST,
+    DIRECTORY_TYPES,
+    FORBIDDEN_REQUEST,
+    NOT_FOUND,
+    TOO_MANY_REQUEST,
+    UNAUTHORIZE_REQUEST,
+)
+from .exceptions import (
+    BloodHoundBadRequestException,
+    BloodHoundException,
+    BloodHoundForbiddenException,
+    BloodHoundNotFoundException,
+    BloodHoundRateLimitException,
+    BloodHoundUnauthorizedException,
+)
 
 # Comprehensive endpoints dictionary
 ENDPOINTS = {
@@ -18,15 +36,21 @@ ENDPOINTS = {
     "path_title": "/api/v2/assets/findings/{finding_type}/title.md",
     "attack_path_details": "/api/v2/domains/{domain_id}/details?finding={finding_type}&skip={skip}",
     "search": "/api/v2/search?q={query}",
-    "base":"/api/v2/base/{object_id}",
-    "dictionary_types":"/api/v2/{obj_type}s/{object_id}",
-    "azure_types":"/api/v2/azure/{obj_type}?object_id={object_id}&counts=false",
-    "azure_related_types":"/api/v2/azure/tenants?object_id={object_id}&related_entity_type={rel_type}&skip=0&limit=128",
-    "update_primary_response":"/api/v2/azure/{obj_type}?object_id={object_id}&related_entity_type={related_type}&skip=0&limit=128",
+    "base": "/api/v2/base/{object_id}",
+    "dictionary_types": "/api/v2/{obj_type}s/{object_id}",
+    "azure_types": "/api/v2/azure/{obj_type}?object_id={object_id}&counts=false",
+    "azure_related_types": (
+        "/api/v2/azure/tenants?object_id={object_id}"
+        "&related_entity_type={rel_type}&skip=0&limit=128"
+    ),
+    "update_primary_response": (
+        "/api/v2/azure/{obj_type}?object_id={object_id}"
+        "&related_entity_type={related_type}&skip=0&limit=128"
+    ),
     "shortest_path": "/api/v2/graphs/shortest-path?start_node={start_node}&end_node={end_node}",
-    "short_description":"/api/v2/assets/findings/{finding_type}/short_description.md",
-    "short_remediation":"/api/v2/assets/findings/{finding_type}/short_remediation.md",
-    "long_remediation":"/api/v2/assets/findings/{finding_type}/long_remediation.md"
+    "short_description": "/api/v2/assets/findings/{finding_type}/short_description.md",
+    "short_remediation": "/api/v2/assets/findings/{finding_type}/short_remediation.md",
+    "long_remediation": "/api/v2/assets/findings/{finding_type}/long_remediation.md"
 }
 
 
@@ -60,8 +84,7 @@ class BloodhoundManager:
             digester.update(datetime_formatted[:13].encode())
             digester = hmac.new(digester.digest(), None, hashlib.sha256)
 
-            parsed_url = urlparse(self.tenant_domain)
-            tenant_identifier = parsed_url.netloc or parsed_url.path
+            urlparse(self.tenant_domain)
           
             headers = {
                 'User-Agent': 'BloodHound Enterprise Integration',
@@ -73,7 +96,7 @@ class BloodhoundManager:
 
             return headers
         except Exception as e:
-            error_msg:str = f"Error generating headers: {e}"
+            error_msg: str = f"Error generating headers: {e}"
             self._log_error(error_msg)
             raise BloodHoundException(error_msg)
 
@@ -102,7 +125,6 @@ class BloodhoundManager:
                 raise BloodHoundRateLimitException(f"{error_msg}: Rate Limit - {json_resp.get('message')}")
 
             raise BloodHoundException(f"{error_msg}: {error} - {json_resp.get('message')}")
-
 
     def _api_request(self, endpoint_key: str, return_json=True, method: str = "GET", **kwargs):
         """
@@ -144,7 +166,7 @@ class BloodhoundManager:
         """
         return self._api_request("test_connection", return_json=False)
             
-    def get_finding_type_short_description(self,finding_type:str):
+    def get_finding_type_short_description(self, finding_type: str):
         """
         Fetches the short description markdown for a given finding type.
 
@@ -172,7 +194,7 @@ class BloodhoundManager:
             return ""
     
 	# Get Finding type Short Remediations
-    def get_finding_type_short_remediation(self,finding_type:str):
+    def get_finding_type_short_remediation(self, finding_type: str):
         """
         Fetches the short remediation markdown for a given finding type.
 
@@ -252,7 +274,7 @@ class BloodhoundManager:
     def get_available_types_for_domain(self, domain: str) -> list:
         """Fetch available types for a single domain."""
         try:
-            response = self._api_request( "domain_available_types", domain=domain)
+            response = self._api_request("domain_available_types", domain=domain)
             if response:
                 return response.get("data", [])
             else:
@@ -285,7 +307,13 @@ class BloodhoundManager:
             self._log_error(f"Failed to fetch title for finding type {finding_type}: {e}")
             return ""
 
-    def get_attack_path_details_page(self, domain_id: str, finding_type: str, skip: int = 0, created_at: str = None) -> list:
+    def get_attack_path_details_page(
+        self,
+        domain_id: str,
+        finding_type: str,
+        skip: int = 0,
+        created_at: str = None,
+    ) -> list:
         """
         Fetches a single page of attack path details for the given domain and finding type.
         Pagination is handled outside this method using the `skip` parameter.
@@ -321,7 +349,10 @@ class BloodhoundManager:
             
             return response.get("data", []) if response else []
         except BloodHoundException as e:
-            self._log_error(f"Failed to fetch attack path details for domain {domain_id}, finding type {finding_type}: {e}")
+            self._log_error(
+                f"Failed to fetch attack path details for domain {domain_id}, "
+                f"finding type {finding_type}: {e}"
+            )
             return []
 
     def _handle_fetch_asset_information(self, object_id: str) -> dict:
@@ -359,7 +390,6 @@ class BloodhoundManager:
 
         return {"status": "success", "message": "Asset fetched", "data": primary_response.get("data", {})}
 
-
     def _fetch_primary_response(self, object_id, obj_type):
         """
         Fetches the primary asset data based on object type and ID.
@@ -383,7 +413,6 @@ class BloodhoundManager:
 
         return self._api_request(endpoint_type, **params)
 
-
     def _get_azure_type_path(self, obj_type):
         """
         Converts Azure object type to appropriate API path component.
@@ -399,7 +428,6 @@ class BloodhoundManager:
         elif obj_type == "AZApp":
             return "applications"
         return (obj_type[2:] + "s").lower()
-
 
     def _handle_azure_types(self, object_id, obj_type, primary_response):
         """
@@ -436,7 +464,7 @@ class BloodhoundManager:
         inbound_control_count = 0
 
         for rel_type in AZ_TENANT_RELATED_TYPES:
-            secondary_response = self._api_request("azure_related_types", rel_type=rel_type,object_id=object_id)
+            secondary_response = self._api_request("azure_related_types", rel_type=rel_type, object_id=object_id)
 
             if secondary_response and "count" in secondary_response:
                 if rel_type == "inbound-control":
@@ -460,7 +488,12 @@ class BloodhoundManager:
             related_type (str): Type of related entity to query.
             mapping_key (str): Key under which to store the count in the response.
         """
-        secondary_response = self._api_request("update_primary_response", obj_type=obj_type,object_id=object_id, related_type=related_type)
+        secondary_response = self._api_request(
+            "update_primary_response",
+            obj_type=obj_type,
+            object_id=object_id,
+            related_type=related_type,
+        )
 
         if not secondary_response or "count" not in secondary_response:
             self._log_error(f"Failed to fetch data for related type: {related_type}")
@@ -473,7 +506,7 @@ class BloodhoundManager:
         Checks if a shortest path exists between two nodes in BloodHound Enterprise.
         Returns a dictionary with status, message, and data (True/False).
         """
-        response = self._api_request( 
+        self._api_request(
             "shortest_path", 
             return_json=False,
             start_node=start_node, 
@@ -492,7 +525,7 @@ class BloodhoundManager:
         Returns a dictionary with status, message, and object_id (if found).
         """
         response = self._api_request("search", query=name)
-        return {"status": "success", "data": response.get("data") }
+        return {"status": "success", "data": response.get("data")}
 
     def _log_error(self, message):
         """"

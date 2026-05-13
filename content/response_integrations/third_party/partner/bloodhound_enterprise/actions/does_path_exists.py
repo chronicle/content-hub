@@ -1,11 +1,14 @@
 from __future__ import annotations
+
+import json
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from ..core.bloodhound_manager import BloodhoundManager
-import json
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
-from ..core.constants import (INTEGRATION_NAME, DOES_PATH_EXISTS_SCRIPT_NAME)
+from ..core.bloodhound_manager import BloodhoundManager
+from ..core.constants import DOES_PATH_EXISTS_SCRIPT_NAME, INTEGRATION_NAME
+
 
 @output_handler
 def main():
@@ -67,6 +70,7 @@ def main():
        
     siemplify.end(output_message, result_value, status)
 
+
 def parse_event_details(event_details, siemplify):
     """
     Parse the event_details string into a list of dictionaries containing FromPrincipal and ToPrincipal.
@@ -122,13 +126,14 @@ def parse_event_details(event_details, siemplify):
         siemplify.LOGGER.error(f"Error parsing event details: {str(e)}")
         return []
 
+
 def _handle_does_path_exist(manager, start_node: str, end_node: str, siemplify) -> dict:
     """
     Wrapper function to check if a path exists between two nodes.
     Always returns a consistent dictionary with 'status', 'message', and 'data'.
     """
     try:
-        path_result = manager.does_path_exists_between_nodes(start_node, end_node)
+        manager.does_path_exists_between_nodes(start_node, end_node)
 
         # Assuming path_result is a dict with key 'data' containing a boolean value
         return {
@@ -145,6 +150,7 @@ def _handle_does_path_exist(manager, start_node: str, end_node: str, siemplify) 
             "message": f"Error checking path existence: {str(error)}",
             "data": None
         }
+
 
 if __name__ == "__main__":
     main()

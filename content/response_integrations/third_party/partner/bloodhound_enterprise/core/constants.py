@@ -1,5 +1,6 @@
 
 from __future__ import annotations
+
 INTEGRATION_NAME = "BloodHound Enterprise"
 DEVICE_PRODUCT = "BloodHound Enterprise"
 DEFAULT_DEVICE_VENDOR = "BloodHound Enterprise"

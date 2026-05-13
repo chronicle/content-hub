@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 import urllib.parse
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from ..core.bloodhound_manager import BloodhoundManager
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
-from ..core.constants import ( INTEGRATION_NAME, GET_OBJECT_ID_SCRIPT_NAME)
+from ..core.bloodhound_manager import BloodhoundManager
+from ..core.constants import GET_OBJECT_ID_SCRIPT_NAME, INTEGRATION_NAME
+
 
 @output_handler
 def main():
@@ -68,6 +71,7 @@ def main():
     status = EXECUTION_STATE_COMPLETED
     siemplify.end(output_message, result_value, status)
 
+
 # Get Object ID by Name
 def _handle_get_object_id(manager, name: str, siemplify) -> dict:
     """
@@ -90,7 +94,6 @@ def _handle_get_object_id(manager, name: str, siemplify) -> dict:
             "data": response.get("data")
         }
             
-
     except Exception as error:
         output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error is {error}"
         siemplify.LOGGER.error(output_message)
@@ -100,6 +103,7 @@ def _handle_get_object_id(manager, name: str, siemplify) -> dict:
             "message": str(error),
             "data": None
         }
+
 
 if __name__ == "__main__":
     main()
