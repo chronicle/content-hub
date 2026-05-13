@@ -72,7 +72,23 @@ Each subdirectory under folder `cbn/` will contain the following files:
 * **references**: A public documentation link regarding the log source.
 
 **`testdata/` (Directory)**: This subdirectory houses files for testing the parser's correctness:
-* **`*_log.json` or `*.txt` files**: Sample raw log files (e.g., `sample_input_log.json`). These files contain representative log entries that the parser is expected to process. Naming of the file is flexible in the beginning but has to end with _log.json. 
+* **`*_log.json` or `*.txt` files**: Sample raw log files (e.g., `sample_input_log.json`). Naming of the file is flexible in the beginning but has to end with _log.json. 
+All the log files must follow the nested JSON format described below.
+
+```json
+{
+  "create_time": "YYYY-MM-DDTHH:MM:SS.ssssssZ", // The timestamp indicating when the log batch was generated. 
+  "raw_logs": { //
+    "start_time": "YYYY-MM-DDTHH:MM:SS.ssssssZ", // (Optional) The start timestamp for the collection window of these logs.
+    "entries": [ // A list of objects containing the log data.
+      {
+        "data": "The actual raw log string", // (Mandatory) The raw string of the log message to be parsed.
+        "collection_time": "YYYY-MM-DDTHH:MM:SS.ssssssZ" (optional) // The specific timestamp when this individual log entry was collected.
+      }
+    ]
+  }
+}
+```
 * **`*_events.json` files**: JSON files representing the expected UDM output for each corresponding input log file (e.g., `sample_input_events.json`). The JSON structure must conform to the publicly documented Google Security Operations UDM schema. This allows for validation without exposing internal proto definitions. Naming of the file is flexible but has to end with _events.json.
 
 **`Naming Convention for Logs and Events Files`**: For any log - event pair their prefixes are mandatariliy be same (e.g. `sample_input_log.json` and `sample_input_events.json`). There can be multiple such pairs of logs and events.

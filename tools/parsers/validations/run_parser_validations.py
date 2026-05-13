@@ -149,6 +149,58 @@ def get_pretty_relpath(path: Path) -> str:
     return os.path.relpath(path)
 
 
+def validate_log_structure(data: Any, file_name: str) -> bool:
+    """Validates that the log file follows the required nested structure.
+    
+    Expected Structure:
+    {
+      "create_time": "...",
+      "raw_logs": {
+        "start_time": "...",
+        "entries": [
+          { "data": "...", "collection_time": "..." (optional) }
+        ]
+      }
+    }
+    """
+    if not isinstance(data, dict):
+        logging.error(f"  Error: {file_name} structure is incorrect. It must be a JSON object.")
+        return False
+
+    if "create_time" not in data:
+        logging.error(f"  Error: {file_name} structure is incorrect. Missing 'create_time' at the root.")
+        return False
+
+    if "raw_logs" not in data:
+        logging.error(f"  Error: {file_name} structure is incorrect. Missing 'raw_logs' at the root.")
+        return False
+
+    raw_logs = data["raw_logs"]
+    if not isinstance(raw_logs, dict):
+        logging.error(f"  Error: {file_name} structure is incorrect. 'raw_logs' must be an object.")
+        return False
+
+    if "entries" not in raw_logs:
+        logging.error(f"  Error: {file_name} structure is incorrect. 'raw_logs' is missing 'entries'.")
+        return False
+
+    entries = raw_logs["entries"]
+    if not isinstance(entries, list):
+        logging.error(f"  Error: {file_name} structure is incorrect. 'entries' must be a list.")
+        return False
+
+    if not entries:
+        logging.error(f"  Error: {file_name} structure is incorrect. 'entries' list is empty.")
+        return False
+
+    for i, entry in enumerate(entries):
+        if not isinstance(entry, dict) or "data" not in entry:
+            logging.error(f"  Error: {file_name} structure is incorrect. Entry at index {i} is missing 'data' field.")
+            return False
+
+    return True
+
+
 def main(argv: list[str]) -> None:
     """Runs parser validations on log types.
 
@@ -261,8 +313,19 @@ def main(argv: list[str]) -> None:
                 )
                 continue
 
-            logs_data = json.loads(log_file.read_text())
-            logs = logs_data.get("raw_logs", [])
+            try:
+                logs_data = json.loads(log_file.read_text())
+            except json.JSONDecodeError:
+                logging.error(f"  Error: Failed to parse JSON from {log_file.name}")
+                continue
+
+            if not validate_log_structure(logs_data, log_file.name):
+                logging.error(f"  Please fix the structure of {log_file.name} to match the expected nested format.")
+                # Use os._exit(1) to bypass absl exception handling and stop immediately.
+                os._exit(1)
+
+            # Extract raw logs from the validated structure
+            logs = [entry.get("data", "") for entry in logs_data["raw_logs"]["entries"]]
 
             logging.info(f"    Raw logs file: {get_pretty_relpath(log_file)}")
 
