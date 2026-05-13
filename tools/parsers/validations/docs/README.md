@@ -122,5 +122,5 @@ A **FINAL FAILURE SUMMARY** will be printed at the end, showing any technical er
 
 ## PII Redaction
 
-It is important to ensure that no Personally Identifiable Information (PII) is included in the raw logs or expected events that are committed to the repository. Please redact any sensitive information before committing your changes.
+It is important to ensure that no Personally Identifiable Information (PII) is included in the raw logs or expected events that are committed to the repository. Please redact any sensitive information before committing your changes. 
 
