@@ -34,7 +34,7 @@ import copy
 HEADERS = {"Authorization": "Token"}
 
 # URLs
-GET_DEVICES_URL = "/api/v1/devices_test"
+GET_DEVICES_URL = "/api/v1/devices"
 GET_DEVICE_CONNECTIONS_URL = "/api/v1/devices/{0}/connections"  # {0} - Device ID.
 GET_DEVICES_VULNERABILITIES_REPORT_URL = "/api/v1/reports/vulnerabilities/devices"
 GET_ALERTS_URL = "/api/v1/alerts"
