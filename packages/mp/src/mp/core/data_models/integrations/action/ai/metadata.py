@@ -78,7 +78,7 @@ class ActionAiMetadata(BaseModel):
             ),
         ),
     ]
-    action_product_categories: Annotated[
+    action_outcomes_categories: Annotated[
         ActionOutcomesCategories | None,
         Field(
             description=(

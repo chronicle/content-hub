@@ -136,7 +136,7 @@ def is_remediation_action(action):
 ```"""
             )
         ),
-    ] = False
+    ]
 
 
 class ActionAiCategory(RepresentableEnum):
