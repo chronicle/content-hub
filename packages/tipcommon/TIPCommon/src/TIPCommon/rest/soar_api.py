@@ -2794,6 +2794,18 @@ def update_connector(
     return response
 
 
+def update_existing_connector(
+    chronicle_soar: ChronicleSOAR, connector_data: SingleJson, existing_connector: dict
+) -> SingleJson:
+    """Update existing connector."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.connector_data = connector_data
+    api_client.params.existing_connector = existing_connector
+    response = api_client.update_existing_connector()
+    validate_response(response, validate_json=False)
+    return response #QA fixes
+
+
 # def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson) -> SingleJson:
 #     """Add job."""
 #     api_client = get_soar_client(chronicle_soar)
@@ -2813,6 +2825,19 @@ def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson) -> SingleJson:
     validate_response(response, validate_json=False)
     return response.content
 
+def update_job_instance(
+    chronicle_soar: ChronicleSOAR,
+    job_instance_name: str,
+    job: SingleJson
+) -> SingleJson:
+    """Update job instance."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.job_instance_name = job_instance_name
+    api_client.params.job = job
+    response = api_client.update_job_instance()
+    validate_response(response, validate_json=False)
+    return response.content # QA fixes
+
 
 def add_email_template(
     chronicle_soar: ChronicleSOAR, template: SingleJson
@@ -2823,6 +2848,18 @@ def add_email_template(
     response = api_client.add_email_template()
     validate_response(response, validate_json=False)
     return True
+
+
+def update_email_template(
+    chronicle_soar: ChronicleSOAR, template_data: SingleJson, existing_template: dict
+) -> SingleJson:
+    """Update email template."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.template = template_data
+    api_client.params.existing_template = existing_template
+    response = api_client.update_email_template()
+    validate_response(response, validate_json=False)
+    return response #qa fixes
 
 
 def get_denylists(
@@ -2902,3 +2939,16 @@ def add_custom_family(
     response = api_client.add_custom_family()
     validate_response(response, validate_json=False)
     return response.content
+
+
+def update_visual_family(
+    chronicle_soar: ChronicleSOAR, family_data: SingleJson, existing_vf: dict, mr_id: str
+) -> SingleJson:
+    """Update custom visual family."""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.visual_family = family_data
+    api_client.params.existing_vf = existing_vf
+    api_client.params.mr_id = mr_id
+    response = api_client.update_visual_family()
+    validate_response(response, validate_json=False)
+    return response

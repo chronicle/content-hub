@@ -1037,7 +1037,7 @@ class OnePlatformSoarApi(BaseSoarApi):
     @temporarily_remove_header(DATAPLANE_1P_HEADER) #QA fixes
     def get_installed_connectors(self) -> requests.Response:
         """Get installed connectors."""
-        instance_id: str = self.params.connector_instance_id
+        instance_id: str = getattr(self.params, "connector_instance_id", None)
         endpoint: str = "/integrations/-/connectors/-/connectorInstances"
         
         if instance_id:
@@ -1406,15 +1406,41 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = "/legacyPlaybooks:legacyGetWorkflowCategories"
         return self._make_request(HttpMethod.GET, endpoint)
 
+    # @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    # def update_connector(self) -> requests.Response:
+    #     """Update connector."""
+    #     name = self.params.integration_name
+    #     connector = self.params.connector_id
+    #     endpoint = f"/integrations/{name}/connectors/{connector}/connectorInstances/"
+    #     return self._make_request(
+    #         HttpMethod.POST, endpoint, json_payload=self.params.connector_data
+    #     )
+
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_connector(self) -> requests.Response:
-        """Update connector."""
+        """Update connector (Create new instance)."""
         name = self.params.integration_name
         connector = self.params.connector_id
+        connector_data = self.params.connector_data
         endpoint = f"/integrations/{name}/connectors/{connector}/connectorInstances/"
         return self._make_request(
-            HttpMethod.POST, endpoint, json_payload=self.params.connector_data
+            HttpMethod.POST, endpoint, json_payload=connector_data
         )
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER) #qa fixes
+    def update_existing_connector(self) -> requests.Response:
+        """Update existing connector."""
+        connector_data = self.params.connector_data
+        existing_connector = self.params.existing_connector
+        resource_name = existing_connector.get("name")
+        if resource_name:
+            prefix = "projects/project/locations/location/instances/instance/"
+            clean_path = resource_name.replace(prefix, "")
+            endpoint = f"/{clean_path}"
+            return self._make_request(
+                HttpMethod.PATCH, endpoint, json_payload=connector_data
+            )
+        raise Exception("Existing connector has no resource name")
     # QA fixes
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def add_job(self) -> requests.Response:
@@ -1425,9 +1451,18 @@ class OnePlatformSoarApi(BaseSoarApi):
             job_id = job_full_name.split("jobs/")[1].split("/")[0]
         except (IndexError, AttributeError):
             job_id = job_full_name
-            
+
         endpoint = f"/integrations/{integration}/jobs/{job_id}/jobInstances/"
         return self._make_request(HttpMethod.POST, endpoint, json_payload=self.params.job)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER) #QA fixes
+    def update_job_instance(self) -> requests.Response:
+        """Update job instance."""
+        resource_name = self.params.job_instance_name
+        prefix = "projects/project/locations/location/instances/instance/"
+        clean_path = resource_name.replace(prefix, "")
+        endpoint = f"/{clean_path}"
+        return self._make_request(HttpMethod.PATCH, endpoint, json_payload=self.params.job)
 
     # def add_job(self) -> requests.Response:
     #     """Add job."""
@@ -1442,6 +1477,21 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(
             HttpMethod.POST, endpoint, json_payload=self.params.template
         )
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER) # QA fixes
+    def update_email_template(self) -> requests.Response:
+        """Update email template."""
+        template = self.params.template
+        existing_template = self.params.existing_template
+        resource_name = existing_template.get("name")
+        if resource_name:
+            prefix = "projects/project/locations/location/instances/instance/"
+            clean_path = resource_name.replace(prefix, "")
+            endpoint = f"/{clean_path}"
+            return self._make_request(
+                HttpMethod.PATCH, endpoint, json_payload=template
+            )
+        raise Exception("Existing email template has no resource name")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_denylists(self) -> requests.Response:
@@ -1559,10 +1609,39 @@ class OnePlatformSoarApi(BaseSoarApi):
         family_data = self.params.visual_family
         if isinstance(family_data, dict) and "visualFamilyDataModel" in family_data:
             family_data = family_data["visualFamilyDataModel"]
-            
+
         if isinstance(family_data, dict) and "rules" in family_data:
             family_data["modelingRules"] = family_data.pop("rules") #QA fixes
 
         return self._make_request(
             HttpMethod.POST, endpoint, json_payload=family_data
         )
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def update_visual_family(self) -> requests.Response: #QA fixes
+        """Update custom visual family."""
+        family_data = self.params.visual_family
+        existing_vf = self.params.existing_vf
+        mr_id = self.params.mr_id
+
+        resource_name = existing_vf.get("name")
+        if not resource_name:
+            vf_id = existing_vf.get("id")
+            if vf_id and mr_id:
+                resource_name = f"projects/project/locations/location/instances/instance/ontologyRecords/{mr_id}/visualFamilies/{vf_id}"
+
+        if resource_name:
+            prefix = "projects/project/locations/location/instances/instance/"
+            clean_path = resource_name.replace(prefix, "")
+            endpoint = f"/{clean_path}"
+
+            if isinstance(family_data, dict) and "visualFamilyDataModel" in family_data:
+                family_data = family_data["visualFamilyDataModel"]
+
+            if isinstance(family_data, dict) and "rules" in family_data:
+                family_data["modelingRules"] = family_data.pop("rules")
+
+            return self._make_request(
+                HttpMethod.PATCH, endpoint, json_payload=family_data
+            )
+        raise Exception("Existing visual family has no resource name and cannot be constructed")
