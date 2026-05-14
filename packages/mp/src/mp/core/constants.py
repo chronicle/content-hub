@@ -55,9 +55,11 @@ INTEGRATIONS_DIRS_NAMES_DICT: dict[str, tuple[str, ...]] = {
     THIRD_PARTY_REPO_NAME: (
         COMMUNITY_DIR_NAME,
         PARTNER_DIR_NAME,
+    ),
+    COMMERCIAL_REPO_NAME: (
+        COMMERCIAL_REPO_NAME,
         POWERUPS_DIR_NAME,
     ),
-    COMMERCIAL_REPO_NAME: (COMMERCIAL_REPO_NAME,),
 }
 
 INTEGRATIONS_TYPES: tuple[str, ...] = (

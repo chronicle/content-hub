@@ -54,26 +54,19 @@ def get_integration_path(integration: str, src: Path | None = None, *, custom: b
         typer.Exit: If the integration directory is not found.
 
     """
-    if src and (src / integration).exists():
+    if src is not None and (src / integration).exists():
         return src / integration
 
     integrations_root: Path = mp.core.file_utils.create_or_get_integrations_dir()
-    if custom:
-        source_path = integrations_root / mp.core.constants.CUSTOM_REPO_NAME / integration
-        if source_path.exists():
-            return source_path
+    if custom and (source_path := integrations_root / mp.core.constants.CUSTOM_REPO_NAME / integration).exists():
+        return source_path
 
     for repo, folders in mp.core.constants.INTEGRATIONS_DIRS_NAMES_DICT.items():
-        if repo == mp.core.constants.THIRD_PARTY_REPO_NAME:
-            for folder in folders:
+        for folder in folders:
+            candidate: Path = integrations_root / folder / integration
+            if repo == mp.core.constants.THIRD_PARTY_REPO_NAME:
                 candidate: Path = integrations_root / repo / folder / integration
-                if folder == mp.core.constants.POWERUPS_DIR_NAME:
-                    candidate: Path = integrations_root / folder / integration
 
-                if candidate.exists():
-                    return candidate
-        else:
-            candidate: Path = integrations_root / repo / integration
             if candidate.exists():
                 return candidate
 
