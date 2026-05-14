@@ -98,6 +98,20 @@ class Metadata:
                 "Block": {},
             },
         )
+        # Ensure all expected keys exist
+        defaults = {
+            "Integration": {},
+            "Mappings": {},
+            "Visual Family": {},
+            "Playbook": {},
+            "Connector": {},
+            "Job": {},
+            "Block": {},
+        }
+        for k, v in defaults.items():
+            if k not in self.readme_addons:
+                self.readme_addons[k] = v
+
         self.settings = kwargs.get("settings", {"update_root_readme": True})
 
     def get_readme_addon(self, content_type: str, content_name: str) -> str | None:
@@ -419,19 +433,20 @@ class Workflow(Content):
         super().__init__()
         self.raw_data = raw_data
         self.raw_data["id"] = 0
-        self.raw_data["trigger"]["id"] = 0
+        if "trigger" in self.raw_data and self.raw_data["trigger"] is not None:
+            self.raw_data["trigger"]["id"] = 0
         self.name = self.raw_data.get("name")
         self.description = self.raw_data.get("description")
-        self.type = WorkflowTypes(self.raw_data.get("playbookType"))
+        self.type = WorkflowTypes(self.raw_data.get("playbookType", WorkflowTypes.PLAYBOOK.value))
         self.priority = self.raw_data.get("priority")
         self.isDebugMode = self.raw_data.get("isDebugMode", None)
         self.version = self.raw_data.get("version")
         self.trigger = self.raw_data.get("trigger")
-        self.steps = self.raw_data.get("steps")
+        self.steps = self.raw_data.get("steps") or []
         self.isEnabled = self.raw_data.get("isEnabled")
         self.category = self.raw_data.get("categoryName", "Default")
         self.environments = self.raw_data.get("environments")
-        self.modification_time = self.raw_data["modificationTimeUnixTimeInMs"]
+        self.modification_time = self.raw_data.get("modificationTimeUnixTimeInMs", 0)
 
     def __hash__(self):
         """Used to remove duplicates in workflow lists"""
@@ -576,7 +591,9 @@ class Job(Content):
         self.readme = readme.render(job=self.__dict__)
 
     def iter_files(self) -> Iterator[File]:
-        yield File(f"Jobs/{self.name}.json", json.dumps(self.raw_data, indent=4))
+        name = self.raw_data.get("displayName") or self.name
+        name = name.replace("/", "_")
+        yield File(f"Jobs/{name}.json", json.dumps(self.raw_data, indent=4))
 
 
 class IntegrationInstance(Content):

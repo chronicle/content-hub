@@ -18,6 +18,7 @@ import re
 import tempfile
 import uuid
 from TIPCommon.types import SingleJson
+from TIPCommon.utils import platform_supports_1p_api
 from TIPCommon.rest.soar_api import install_integration
 from typing import Any, TYPE_CHECKING
 
@@ -322,7 +323,31 @@ class GitSyncManager:
                 f"Connector is set to non-existing environment {connector.environment}. "
                 f"Using Default Environment instead",
             )
-        self.api.update_connector(connector.raw_data)
+
+
+        existing_connectors = self.api.get_connectors(chronicle_soar=self._siemplify)
+        if platform_supports_1p_api():
+            existing_connector = next(
+                (
+                    c
+                    for c in existing_connectors
+                    if (
+                        c.get("identifier") == connector.raw_data.get("identifier")
+                        or c.get("displayName") == connector.name
+                    )
+                    and c.get("environment") == connector.environment
+                ),
+                None,
+            )
+
+            if existing_connector:
+                self.logger.info(f"Updating {connector.name}")
+                self.api.update_existing_connector(connector.raw_data, existing_connector)
+            else:
+                self.logger.info(f"Installing {connector.name}")
+                self.api.update_connector(connector.raw_data)
+        else:
+            self.api.update_connector(connector.raw_data)
 
     def install_mappings(self, mappings: Mapping) -> None: #mp
         """Install or update mappings definitions
@@ -375,7 +400,7 @@ class GitSyncManager:
             + [ALL_ENVIRONMENTS_IDENTIFIER]
         )
         for p in workflows:
-            invalid_environments = [x for x in p.environments if x not in environments]
+            invalid_environments = [x for x in (p.environments or []) if x not in environments]
             if invalid_environments:
                 raise Exception(
                     f"Playbook '{p.name}' is assigned to environment(s) that don't "
@@ -443,17 +468,37 @@ class GitSyncManager:
             if job_def_id:
                 job.raw_data["jobDefinitionId"] = job_def_id.get("id")
 
-        job_id = next(
-            (
-                x
-                for x in self.api.get_jobs(chronicle_soar=self._siemplify)
-                if x.get("name") or x.get("displayName") == job.name
-            ),
-            None,
-        )
-        if job_id:
-            job.raw_data["id"] = job_id.get("id")
+        if platform_supports_1p_api():
+            existing_job = next(
+                (
+                    x
+                    for x in self.api.get_jobs(chronicle_soar=self._siemplify)
+                    if x.get("displayName") == job.raw_data.get("displayName")
+                ),
+                None,
+            )
+            if existing_job:
+                job.raw_data["id"] = existing_job.get("id")
+                resource_name = existing_job.get("name")
+                if resource_name:
+                    self.api.update_job_instance(resource_name, job.raw_data)
+                    return
+                else:
+                    self.logger.warn(f"Job {job.name} exists but has no resource name.")
+        else:
+            existing_job = next(
+                (
+                    x
+                    for x in self.api.get_jobs(chronicle_soar=self._siemplify)
+                    if x.get("name") == job.name or x.get("displayName") == job.name
+                ),
+                None,
+            )
+            if existing_job:
+                job.raw_data["id"] = existing_job.get("id")
+                
         self.api.add_job(job.raw_data)
+
 
     def generate_root_readme(self) -> str:
         """Generates the readme file contents for the root of the repository
@@ -813,7 +858,7 @@ class WorkflowInstaller:
             elif step_type == 5:  # Nested Workflow
                 self._link_nested_block_step(step)
 
-        for relation in workflow.raw_data.get("stepsRelations"):
+        for relation in (workflow.raw_data.get("stepsRelations") or []):
             if relation.get("fromStep") in identifier_mappings:
                 relation["fromStep"] = identifier_mappings.get(relation.get("fromStep"))
             if relation.get("toStep") in identifier_mappings:
@@ -1123,7 +1168,7 @@ class WorkflowInstaller:
 
         """
         flat_steps = []
-        for step in steps:
+        for step in (steps or []):
             if step.get("actionProvider") == "ParallelActionsContainer":
                 flat_steps.extend(step.get("parallelActions"))
             flat_steps.append(step)
@@ -1203,9 +1248,9 @@ class WorkflowInstaller:
         workflow.raw_data["identifier"] = workflow.raw_data[
             "originalPlaybookIdentifier"
         ] = str(uuid.uuid4())
-        workflow.raw_data["trigger"]["id"] = 0
-        workflow.raw_data["trigger"]["identifier"] = str(uuid.uuid4())
-
+        if "trigger" in workflow.raw_data and workflow.raw_data["trigger"] is not None:
+            workflow.raw_data["trigger"]["id"] = 0
+            workflow.raw_data["trigger"]["identifier"] = str(uuid.uuid4())
         if workflow.category not in self._playbook_categories:
             category = self.api.create_playbook_category(workflow.category)
             self.refresh_cache_item("categories")

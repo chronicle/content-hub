@@ -349,18 +349,20 @@ class GitContentManager:
             f"{PLAYBOOKS_PATH}/{playbook.category}/{playbook.name}",
         )
 
-    def push_block(self, block: Workflow) -> None:
+    def push_block(self, block: Workflow, category: str = None) -> None:
         """Writes a block to the repo
 
         Args:
             block: A block object
+            category: Optional category to override the block's own category
 
         """
+        cat = category or block.category
         self._push_obj(
             block,
             block.name,
             "Block",
-            f"{BLOCKS_PATH}/{block.category}/{block.name}",
+            f"{PLAYBOOKS_PATH}/{cat}/{block.name}",
         )
 
     def push_connector(self, connector: Connector) -> None:

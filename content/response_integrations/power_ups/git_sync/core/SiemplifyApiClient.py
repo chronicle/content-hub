@@ -82,6 +82,10 @@ from TIPCommon.rest.soar_api import (
     update_api_record,
     update_blocklist,
     update_connector,
+    update_existing_connector,
+    update_email_template,
+    update_visual_family,
+    update_job_instance,
     update_custom_list,
     update_domain,
     update_ide_item,
@@ -388,7 +392,9 @@ class SiemplifyApiClient:
             if self.system_version >= VERSION_6138
             else get_playbooks_workflow_menu_cards
         )
-        return get_playbooks_func(chronicle_soar=chronicle_soar, api_payload=[0, 10000])
+        playbooks = get_playbooks_func(chronicle_soar=chronicle_soar, api_payload=[0, 10000])
+        blocks = get_playbooks_func(chronicle_soar=chronicle_soar, api_payload=[1, 10000])
+        return playbooks + blocks
 
     def get_playbook(
         self,
@@ -462,6 +468,15 @@ class SiemplifyApiClient:
 
     def update_connector(self, connector_data):
         return update_connector(self.siemplify_soar, connector_data)
+
+    def update_existing_connector(self, connector_data, existing_connector):
+        return update_existing_connector(self.siemplify_soar, connector_data, existing_connector)
+
+    def update_email_template(self, template_data, existing_template):
+        return update_email_template(self.siemplify_soar, template_data, existing_template)
+
+    def update_visual_family(self, family_data, existing_vf, mr_id):
+        return update_visual_family(self.siemplify_soar, family_data, existing_vf, mr_id)
 
     def get_custom_lists(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
         """Gets custom lists.
@@ -573,11 +588,30 @@ class SiemplifyApiClient:
 
     def get_jobs(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
         res = get_installed_jobs(chronicle_soar=chronicle_soar)
-
-        return res if isinstance(res, list) else res["job_instances"]
+        jobs = res if isinstance(res, list) else res.get("job_instances", [])
+        
+        enriched_jobs = []
+        for job in jobs:
+            job_id = job.get("id")
+            if job_id:
+                try:
+                    full_details = get_installed_jobs(
+                        chronicle_soar=chronicle_soar,
+                        job_instance_id=job_id
+                    )
+                    if isinstance(full_details, dict):
+                        job.update(full_details)
+                except Exception as e:
+                    chronicle_soar.LOGGER.warn(f"Failed to fetch details for job {job_id}: {e}")
+            enriched_jobs.append(job)
+            
+        return enriched_jobs
 
     def add_job(self, job):
         return add_job(self.siemplify_soar, job)
+
+    def update_job_instance(self, job_instance_name, job):
+        return update_job_instance(self.siemplify_soar, job_instance_name, job)
 
     def get_case_tags(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
         return get_case_tags(chronicle_soar=chronicle_soar)

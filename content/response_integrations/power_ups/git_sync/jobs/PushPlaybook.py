@@ -100,23 +100,21 @@ def main():
                             None,
                         )
 
-                        block_definition = None
                         if not installed_block:
-                            siemplify.LOGGER.info(
-                                f"Block '{block_step.get('name')}' not found in installed playbooks. Assuming it's a "
-                                f"custom block."
+                            siemplify.LOGGER.warn(
+                                f"Block '{block_step.get('name')}' not found in installed playbooks. Skipping."
                             )
-                            block_definition = block_step
-                        else:
-                            block_definition = gitsync.api.get_playbook(
-                                chronicle_soar=siemplify,
-                                identifier=installed_block.get("identifier"),
-                            )
+                            continue
+
+                        block_definition = gitsync.api.get_playbook(
+                            chronicle_soar=siemplify,
+                            identifier=installed_block.get("identifier"),
+                        )
 
                         if block_definition:
                             block = Workflow(block_definition)
                             block.update_instance_name_in_steps(gitsync.api, siemplify)
-                            gitsync.content.push_block(block)
+                            gitsync.content.push_block(block, category=workflow.category)
             else:
                 siemplify.LOGGER.warn(
                     f"Playbook {playbook.get('name')} not found, Skipping",

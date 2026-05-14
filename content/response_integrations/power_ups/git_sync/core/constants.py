@@ -163,6 +163,7 @@ PLAYBOOK_README_TEMPLATE = """# {{ playbook.name }}
 **Priority:** {{ playbook.priority }}\n
 **Playbook Simulator:** {{ playbook.isDebugMode }}
 
+{% if playbook.trigger %}
 {% if playbook.trigger.type != 11 %}
 ### Playbook Trigger
 **Trigger Type:** {{ playbook.trigger.type|trigger_type }}\n
@@ -180,6 +181,7 @@ PLAYBOOK_README_TEMPLATE = """# {{ playbook.name }}
 {% for input in playbook.trigger.conditions -%}
 |{{ input.fieldName }}|{{ input.value }}|
 {% endfor %}
+{% endif %}
 {% endif %}
 ### Involved Steps (Unordered)
 |Step Name|Description|Integration|Original Action|

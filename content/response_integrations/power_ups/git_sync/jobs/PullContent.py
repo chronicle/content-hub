@@ -188,18 +188,8 @@ def main():
 
         if features["Connectors"]:
             siemplify.LOGGER.info("========== Connectors ==========")
-            existing_connectors = gitsync.api.get_connectors(chronicle_soar=siemplify) 
-            for connector in gitsync.content.get_connectors():# Assuming this API exists
-                
-                    is_duplicate = any(
-                        (c.get("name") == connector.name or c.get("displayName") == connector.name) and c.get("environment") == connector.environment
-                        for c in existing_connectors
-                    )
-
-                    if is_duplicate:
-                        continue
-                    siemplify.LOGGER.info(f"Installing {connector.name}")
-                    gitsync.install_connector(connector)
+            for connector in gitsync.content.get_connectors():
+                gitsync.install_connector(connector)
 
 
         if features["Jobs"]:
@@ -305,15 +295,28 @@ def main():
             valid_record_id = all_records[0].get("id") if all_records else None #vf
             for family in gitsync.content.get_visual_families():
                 validated_family = id_validator(family.raw_data, "family", "id", current_vfs)
-                if validated_family.get("id"):
-                    continue
-
-                gitsync.api.add_custom_family(
-                    {
-                        "visualFamilyDataModel": validated_family,
-                    },
-                    valid_record_id,
-                )
+                
+                if platform_supports_1p_api():
+                    name_to_check = validated_family.get("family")
+                    existing_vf = next(
+                        (vf for vf in current_vfs if vf.get("family") == name_to_check),
+                        None
+                    )
+                    if existing_vf:
+                        siemplify.LOGGER.info(f"Updating visual family \"{name_to_check}\"")
+                        gitsync.api.update_visual_family(validated_family, existing_vf, valid_record_id)
+                    else:
+                        siemplify.LOGGER.info(f"Installing visual family \"{name_to_check}\"")
+                        gitsync.api.add_custom_family(
+                            {"visualFamilyDataModel": validated_family},
+                            valid_record_id,
+                        )
+                else:
+                    gitsync.api.add_custom_family(
+                        {
+                            "visualFamilyDataModel": validated_family,
+                        },
+                    )
 
         if features["Mappings"]:
             siemplify.LOGGER.info("Installing mappings")
@@ -364,12 +367,21 @@ def main():
             current_templates = gitsync.api.get_email_templates(chronicle_soar=siemplify)
             for template in gitsync.content.get_email_templates():
                 validated_template = id_validator(template, "name", "id", current_templates)
-                name_to_check = template.get("displayName") or template.get("name")
-                if any((t.get("displayName") == name_to_check or t.get("name") == name_to_check) for t in current_templates):
-                    siemplify.LOGGER.info(f"Email template \"{name_to_check}\" already exists. Skipping.")
-                    continue
                 
-                gitsync.api.add_email_template(validated_template)
+                if platform_supports_1p_api():
+                    name_to_check = template.get("displayName") or template.get("name")
+                    existing_template = next(
+                        (t for t in current_templates if t.get("displayName") == name_to_check or t.get("name") == name_to_check),
+                        None
+                    )
+                    if existing_template:
+                        siemplify.LOGGER.info(f"Updating email template \"{name_to_check}\"")
+                        gitsync.api.update_email_template(validated_template, existing_template)
+                    else:
+                        siemplify.LOGGER.info(f"Installing email template \"{name_to_check}\"")
+                        gitsync.api.add_email_template(validated_template)
+                else:
+                    gitsync.api.add_email_template(validated_template)
 
         if features["Blacklists"]:
             siemplify.LOGGER.info("Installing denylists")
