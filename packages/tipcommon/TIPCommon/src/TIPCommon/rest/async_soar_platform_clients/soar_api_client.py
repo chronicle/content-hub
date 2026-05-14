@@ -16,8 +16,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import httpx
-
 from TIPCommon.rest.async_soar_platform_clients.base_soar_api import BaseAsyncSoarApi
 from TIPCommon.rest.async_soar_platform_clients.constants import (
     CONNECTOR_INSTANCE_UPDATE_FIELDS,
@@ -26,13 +24,13 @@ from TIPCommon.rest.async_soar_platform_clients.constants import (
 )
 
 if TYPE_CHECKING:
+    import httpx
+
     from TIPCommon.types import SingleJson
 
 
 class AsyncMarketplaceApi(BaseAsyncSoarApi):
-    """
-    Async Marketplace Integrations API client.
-    """
+    """Async Marketplace Integrations API client."""
 
     async def get_list_of_integrations_available_for_upgrade(self) -> SingleJson:
         """Get a list of integrations available for upgrade.
@@ -42,6 +40,7 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         params: SingleJson = {
             "orderBy": "identifier asc",
@@ -65,12 +64,13 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         params: SingleJson = {
             "orderBy": "productionIdentifier asc",
             "pageSize": DEFAULT_PAGE_SIZE,
         }
-        response: httpx.Response = await self.get("integrations",params=params)
+        response: httpx.Response = await self.get("integrations", params=params)
         if response.status_code == STATUS_CODE_NO_CONTENT:
             return {"integrations": []}
 
@@ -94,6 +94,7 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         endpoint: str = f"/marketplaceIntegrations/{integration_id}:install"
         payload: SingleJson = {"overrideMapping": override_mapping, "staging": staging}
@@ -109,6 +110,7 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         endpoint: str = "/integrations/-/connectors/-/connectorInstances"
         params: SingleJson = {"pageSize": DEFAULT_PAGE_SIZE}
@@ -136,10 +138,10 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         endpoint: str = (
-            f"/integrations/{integration_id}/connectors/{connector_id}/"
-            f"connectorInstances/{connector_instance_id}"
+            f"/integrations/{integration_id}/connectors/{connector_id}/connectorInstances/{connector_instance_id}"
         )
         response: httpx.Response = await self.get(endpoint)
 
@@ -163,6 +165,7 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         endpoint: str = (
             f"/integrations/{integration_id}/connectors/{connector_id}/"
@@ -183,6 +186,7 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         endpoint: str = f"/integrations/{integration_id}"
         response: httpx.Response = await self.get(endpoint)
@@ -209,10 +213,10 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
+
         """
         endpoint: str = (
-            f"/integrations/{integration_name}/connectors/{connector_id}/"
-            f"connectorInstances/{connector_instance_id}"
+            f"/integrations/{integration_name}/connectors/{connector_id}/connectorInstances/{connector_instance_id}"
         )
         params: SingleJson = {"updateMask": ",".join(CONNECTOR_INSTANCE_UPDATE_FIELDS)}
         response: httpx.Response = await self.patch(

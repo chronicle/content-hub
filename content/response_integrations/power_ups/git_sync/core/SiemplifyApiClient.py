@@ -14,15 +14,18 @@
 
 from __future__ import annotations
 
+from typing import Any
 from urllib.parse import urljoin
 
 import requests
 from packaging import version
 from requests.exceptions import HTTPError
+
 from TIPCommon.rest.soar_api import (
     get_integration_instance_details_by_id,
     get_integration_instance_details_by_name,
 )
+
 
 VERSION_6117 = version.parse("6.1.17")
 VERSION_6138 = version.parse("6.1.38.77")
@@ -500,6 +503,14 @@ class SiemplifyApiClient:
         res = self.session.get("playbooks/GetWorkflowCategories")
         self.validate_response(res)
         return res.json()
+
+    def get_soc_roles(self) -> list[dict[str, Any]]:
+        """Get the SOC roles from the platform.
+
+        Returns:
+            A list of SOC roles.
+        """
+        return self.get_page_results("socroles/getSocRoles")
 
     def get_simulated_cases(self):
         res = self.session.get("attackssimulator/GetCustomCases")

@@ -30,7 +30,7 @@ class BuiltJobParameter(TypedDict):
     Name: str
     Description: str
     IsMandatory: bool
-    Type: int
+    Type: int | str
     DefaultValue: str | float | bool | int | None
 
 

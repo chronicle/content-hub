@@ -19,6 +19,8 @@ from __future__ import annotations
 # ------------------ Common ------------------
 
 REPO_NAME: str = "marketplace"
+APP_NAME: str = "mp-cli-tool"
+APP_AUTHOR: str = "Google"
 
 CONTENT_DIR_NAME: str = "content"
 COMMERCIAL_REPO_NAME: str = "google"
@@ -39,10 +41,10 @@ WINDOWS_PLATFORM: str = "win32"
 
 RECONFIGURE_MP_MSG: str = (
     "Please ensure the content-hub path is properly configured.\n"
-    "You can verify your configuration by running [bold]mp config "
-    "--display-config[/bold].\n"
-    "If the path is incorrect, re-configure it by running [bold]mp config "
-    "--root-path <your_path>[/bold]."
+    "You can verify your configuration by running mp config "
+    "--display-config.\n"
+    "If the path is incorrect, re-configure it by running mp config "
+    "--root-path <your_path>."
 )
 
 # ------------------ Integrations ------------------
@@ -84,6 +86,15 @@ OUT_WIDGETS_META_DIR: str = "Widgets"
 
 AI_DIR: str = "ai"
 ACTIONS_AI_DESCRIPTION_FILE: str = "actions_ai_description.yaml"
+CONNECTORS_AI_DESCRIPTION_FILE: str = "connectors_ai_description.yaml"
+JOBS_AI_DESCRIPTION_FILE: str = "jobs_ai_description.yaml"
+INTEGRATIONS_AI_DESCRIPTION_FILE: str = "integration_ai_description.yaml"
+AI_DESCRIPTION_FILES: tuple[str, ...] = (
+    ACTIONS_AI_DESCRIPTION_FILE,
+    CONNECTORS_AI_DESCRIPTION_FILE,
+    JOBS_AI_DESCRIPTION_FILE,
+    INTEGRATIONS_AI_DESCRIPTION_FILE,
+)
 
 ACTIONS_META_SUFFIX: str = ".actiondef"
 CONNECTORS_META_SUFFIX: str = ".connectordef"
@@ -133,12 +144,12 @@ SDK_DEPENDENCIES_INSTALL_NAMES: dict[str, str] = {
     "dateutil": "python-dateutil",
     "OpenSSL": "pyopenssl",
 }
-
 SDK_DEPENDENCIES_MIN_VERSIONS: dict[str, str] = {"requests": "2.32.4"}
 
 README_FILE: str = "README.md"
 LOCK_FILE: str = "uv.lock"
 PYTHON_VERSION_FILE: str = ".python-version"
+SUPPORTED_PYTHON_VERSIONS: list[str] = ["3.11"]
 
 MS_IN_SEC: int = 1_000
 

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import ast
 import itertools
+import logging
 import re
 import sys
 import zipfile
@@ -30,11 +31,12 @@ from contextlib import suppress
 from pathlib import Path
 from typing import NamedTuple
 
-import rich
 from packaging.version import Version
 
 import mp.core.constants
 from mp.core import config
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class Dependencies(NamedTuple):
@@ -108,7 +110,7 @@ class DependencyDeconstructor:
                             imported_modules.add(module.split(".")[0])
 
             except SyntaxError:
-                rich.print(f"[yellow]Warning:[/] Could not parse {path}, skipping for dependency analysis.")
+                logger.warning("Warning: Could not parse %s, skipping for dependency analysis.", path)
 
         return {
             m
@@ -121,13 +123,14 @@ class DependencyDeconstructor:
         dev_deps_to_add: list[str] = []
         placeholder_deps, placeholder_dev_deps = [], []
 
-        env_common_to_remove = False
+        env_common_originally_required = ENV_COMMON in required_modules
         if TIP_COMMON in required_modules:
             required_modules.add(ENV_COMMON)
 
         dependencies_dir: Path = self.integration_path / mp.core.constants.OUT_DEPENDENCIES_DIR
         found_packages: set[str] = set()
 
+        tip_common_requires_env_common_removal = False
         if dependencies_dir.is_dir():
             package_files = itertools.chain.from_iterable(dependencies_dir.glob(ext) for ext in PACAKGE_SUFFIXES)
             for package in package_files:
@@ -140,7 +143,7 @@ class DependencyDeconstructor:
                 dev_deps_to_add.extend(result.dependencies.dev_dependencies)
                 placeholder_deps.extend(result.placeholders.dependencies)
                 if result.env_common_to_remove:
-                    env_common_to_remove = True
+                    tip_common_requires_env_common_removal = True
 
         missing_packages: set[str] = required_modules.difference(found_packages)
         for missing_package in missing_packages:
@@ -149,7 +152,7 @@ class DependencyDeconstructor:
                 package_to_add = mp.core.constants.SDK_DEPENDENCIES_INSTALL_NAMES[package_to_add]
             deps_to_add.append(package_to_add)
 
-        if env_common_to_remove:
+        if tip_common_requires_env_common_removal and not env_common_originally_required:
             deps_to_add = [dep for dep in deps_to_add if not Path(dep).name.startswith(ENV_COMMON)]
 
         return DependencyResolutionResult(
@@ -174,7 +177,6 @@ class DependencyDeconstructor:
             min_version = mp.core.constants.SDK_DEPENDENCIES_MIN_VERSIONS[package_install_name]
             if Version(version) < Version(min_version):
                 version = min_version
-
         matched_imports = required_modules.intersection(provided_imports)
 
         if not matched_imports:
@@ -199,7 +201,7 @@ class DependencyDeconstructor:
             except FileNotFoundError as e:
                 # This dependency will be added as a placeholder comment
                 placeholder_deps.append(f"{package_install_name}=={version}")
-                rich.print(f"[yellow]Warning:[/] Could not resolve local dependency {package_install_name}: {e}")
+                logger.warning("Could not resolve local dependency %s: %s", package_install_name, e)
         else:
             deps_to_add.append(f"{package_install_name}=={version}")
         return ProcessedPackage(
@@ -237,9 +239,7 @@ class DependencyDeconstructor:
                 self.local_packages_base_path / mp.core.constants.REPO_PACKAGES_CONFIG[INTEGRATION_TESTING]
             )
             if not integration_testing_version_dir.is_dir():
-                rich.print(
-                    f"[yellow]Warning:[/] integration_testing directory not found at {integration_testing_version_dir}"
-                )
+                logger.warning("integration_testing directory not found at %s", integration_testing_version_dir)
             else:
                 it_package_file: Path = _find_package_file(
                     integration_testing_version_dir, f"{INTEGRATION_TESTING}-{version}"
@@ -260,8 +260,12 @@ def _find_package_file(package_dir: Path, wheel_name_prefix: str) -> Path:
 
     """
     for extension in PACAKGE_SUFFIXES:
-        for file in package_dir.glob(f"{wheel_name_prefix}{extension}"):
-            return file
+        ext_suffix = extension.lstrip("*")
+        wheel_prefix_with_dash = f"{wheel_name_prefix}-"
+        exact_match_name = f"{wheel_name_prefix}{ext_suffix}"
+        for file in package_dir.glob(f"{wheel_name_prefix}*{ext_suffix}"):
+            if file.name.startswith(wheel_prefix_with_dash) or file.name == exact_match_name:
+                return file
 
     msg: str = f"No wheel or source distribution found in {package_dir}"
     raise FileNotFoundError(msg)

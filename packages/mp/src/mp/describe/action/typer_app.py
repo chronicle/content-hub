@@ -15,16 +15,19 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import pathlib  # noqa: TC003
 from typing import Annotated
 
-import rich
 import typer
 
 import mp.core.config
 
 from .describe import DescribeAction
 from .describe_all import describe_all_actions
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 app = typer.Typer(help="Commands for describing actions")
 
@@ -50,39 +53,17 @@ def describe(  # noqa: PLR0913
         typer.Option(
             "-a",
             "--all",
-            help=("Describe all integrations in the marketplace, or all actions if an integration is specified"),
+            help="Describe all integrations in the marketplace, or all actions if an integration is specified",
         ),
     ] = False,
-    src: Annotated[
-        pathlib.Path | None,
-        typer.Option(help="Customize source folder to describe from."),
-    ] = None,
+    src: Annotated[pathlib.Path | None, typer.Option(help="Customize source folder to describe from.")] = None,
     dst: Annotated[
-        pathlib.Path | None,
-        typer.Option(help="Customize destination folder to save the AI descriptions."),
+        pathlib.Path | None, typer.Option(help="Customize destination folder to save the AI descriptions.")
     ] = None,
-    quiet: Annotated[
-        bool,
-        typer.Option(
-            "--quiet",
-            "-q",
-            help="Log less on runtime.",
-        ),
-    ] = False,
-    verbose: Annotated[
-        bool,
-        typer.Option(
-            "--verbose",
-            "-v",
-            help="Log more on runtime.",
-        ),
-    ] = False,
+    quiet: Annotated[bool, typer.Option("--quiet", "-q", help="Log less on runtime.")] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Log more on runtime.")] = False,
     override: Annotated[
-        bool,
-        typer.Option(
-            "--override",
-            help="Rewrite actions that already have their description.",
-        ),
+        bool, typer.Option("--override", "-o", help="Rewrite actions that already have their description.")
     ] = False,
 ) -> None:
     """Describe actions in a given integration.
@@ -92,7 +73,7 @@ def describe(  # noqa: PLR0913
         actions: The names of the actions to describe.
         all_marketplace: Whether to describe all integrations in the marketplace.
         src: Customize the source folder to describe from.
-        dst: Customize destination folder to save the AI descriptions.
+        dst: Customize the destination folder to save the AI descriptions.
         quiet: Quiet log options.
         verbose: Verbose log options.
         override: Whether to rewrite existing descriptions.
@@ -118,5 +99,5 @@ def describe(  # noqa: PLR0913
     elif all_marketplace:
         asyncio.run(describe_all_actions(src=src, dst=dst, override=override))
     else:
-        rich.print("[red]Please specify either --integration or --all[/red]")
+        logger.error("Please specify either --integration or --all")
         raise typer.Exit(code=1)

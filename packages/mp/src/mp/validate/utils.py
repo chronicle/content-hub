@@ -21,13 +21,13 @@ from mp.core import constants, exclusions, file_utils
 from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.exceptions import FatalValidationError
-from mp.validate.data_models import BUILD, POST_BUILD, PRE_BUILD, FullReport, ValidationResults
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, YamlFileContent
+    from mp.validate.data_models import FullReport
 
 
 DEF_FILE_NAME_KEY: str = "name"
@@ -234,20 +234,17 @@ def combine_results(*validations_outputs: FullReport) -> FullReport:
         A single report.
 
     """
-    combined_output: FullReport = {}
-    keys_to_combine = (PRE_BUILD, BUILD, POST_BUILD)
+    combined_output: FullReport = {"Validations": []}
+    all_lists_are_none = True
 
-    for key in keys_to_combine:
-        combined_list: list[ValidationResults] = []
-        all_lists_are_none = True
-
-        for output_dict in validations_outputs:
-            current_list = output_dict.get(key)
+    for output_dict in validations_outputs:
+        for current_list in output_dict.values():
             if current_list is not None:
-                combined_list.extend(current_list)
+                combined_output["Validations"].extend(current_list)
                 all_lists_are_none = False
 
-        combined_output[key] = [] if all_lists_are_none else combined_list
+    if all_lists_are_none:
+        return {}
 
     return combined_output
 
@@ -259,4 +256,9 @@ def should_fail_program(validations_output: FullReport) -> bool:
         True if need to fail overwise False.
 
     """
-    return any(validation_result for validation_result in validations_output.values())
+    for stage_results in validations_output.values():
+        if stage_results:
+            for result in stage_results:
+                if not result.is_success:
+                    return True
+    return False

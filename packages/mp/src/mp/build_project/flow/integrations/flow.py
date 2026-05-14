@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, NamedTuple
-
-import rich
 
 import mp.core.constants
 import mp.core.file_utils
@@ -27,6 +26,9 @@ from mp.core.custom_types import RepositoryType
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class Repos(NamedTuple):
@@ -57,8 +59,8 @@ def build_integrations(  # noqa: PLR0913
                 end_msg="Done building custom integrations.",
             )
             if custom_not_found := not_founds[0]:
-                rich.print(
-                    f"The following integrations could not be found in the custom repo: {', '.join(custom_not_found)}"
+                logger.info(
+                    "The following integrations could not be found in the custom repo: %s", ", ".join(custom_not_found)
                 )
 
         else:
@@ -71,7 +73,7 @@ def build_integrations(  # noqa: PLR0913
             )
             commercial_not_found, community_not_found = not_founds[0], not_founds[1]
             if commercial_not_found.intersection(community_not_found):
-                rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
+                logger.info(mp.core.constants.RECONFIGURE_MP_MSG)
 
     elif repositories:
         _build_integration_repositories(repositories, repos)
@@ -102,29 +104,29 @@ def _build_integration_repositories(
 ) -> None:
     repo_types: set[RepositoryType] = set(repositories)
     if _is_commercial_repo(repo_types):
-        rich.print("Building all integrations in commercial repo...")
+        logger.info("Building all integrations in commercial repo...")
         repos.commercial.build()
         repos.commercial.write_marketplace_json()
-        rich.print("Done Commercial integrations build.")
+        logger.info("Done Commercial integrations build.")
 
     if _is_third_party_repo(repo_types):
-        rich.print("Building all integrations in third party repo...")
+        logger.info("Building all integrations in third party repo...")
         repos.community.build()
         repos.community.write_marketplace_json()
-        rich.print("Done third party integrations build.")
+        logger.info("Done third party integrations build.")
 
     if _is_custom_repo(repo_types):
-        rich.print("Building all integrations in custom repo...")
+        logger.info("Building all integrations in custom repo...")
         repos.custom.build()
-        rich.print("Done custom integrations build.")
+        logger.info("Done custom integrations build.")
 
     if _is_full_repo_build(repo_types):
-        rich.print("Checking for duplicate integrations...")
+        logger.info("Checking for duplicate integrations...")
         raise_errors_for_duplicate_integrations(
             commercial_path=repos.commercial.out_dir,
             community_path=repos.community.out_dir,
         )
-        rich.print("Done checking for duplicate integrations.")
+        logger.info("Done checking for duplicate integrations.")
 
 
 def _is_commercial_repo(repos: Iterable[RepositoryType]) -> bool:
@@ -151,9 +153,9 @@ def _build_integrations_from_repos(
     start_msg: str,
     end_msg: str,
 ) -> list[set[str]]:
-    rich.print(start_msg)
+    logger.info(start_msg)
     results = [_build_integrations(set(integrations), repo, deconstruct=deconstruct) for repo in repos]
-    rich.print(end_msg)
+    logger.info(end_msg)
     return results
 
 
@@ -170,16 +172,17 @@ def _build_integrations(
     valid_integration_names: set[str] = {i.name for i in valid_integrations_}
     not_found: set[str] = set(integrations).difference(valid_integration_names)
     if not_found:
-        rich.print(
-            "The following integrations could not be found in"
-            f" the {marketplace_.name} marketplace: {', '.join(not_found)}\n"
+        logger.error(
+            "The following integrations could not be found in the %s marketplace: %s",
+            marketplace_.name,
+            ", ".join(not_found),
         )
 
     if valid_integrations_:
-        rich.print(
-            "[blue]Building the following integrations in the"
-            f" the {marketplace_.name} marketplace:"
-            f" {', '.join(valid_integration_names)}[/blue]"
+        logger.info(
+            "Building the following integrations in the %s marketplace: %s",
+            marketplace_.name,
+            ", ".join(valid_integration_names),
         )
         if deconstruct:
             marketplace_.deconstruct_integrations(valid_integrations_)

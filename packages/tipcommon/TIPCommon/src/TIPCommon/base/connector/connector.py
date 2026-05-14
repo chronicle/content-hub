@@ -15,18 +15,21 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
-from SiemplifyConnectorsDataModel import AlertInfo
 from SiemplifyUtils import output_handler
 
-from ...consts import (
-    TIMEOUT_THRESHOLD,
-)
-from ...data_models import BaseAlert
-from ...exceptions import ConnectorSetupError
-from ...smp_time import is_approaching_timeout, save_timestamp
-from ..utils import is_native, nativemethod
+from TIPCommon.base.utils import is_native, nativemethod
+from TIPCommon.consts import TIMEOUT_THRESHOLD
+from TIPCommon.exceptions import ConnectorSetupError
+from TIPCommon.smp_time import is_approaching_timeout, save_timestamp
+
 from .base_connector import BaseConnector
+
+if TYPE_CHECKING:
+    from SiemplifyConnectorsDataModel import AlertInfo
+
+    from TIPCommon.data_models import BaseAlert
 
 
 class Connector(BaseConnector, ABC):
@@ -125,9 +128,7 @@ class Connector(BaseConnector, ABC):
 
         class FakeConnector(Connector):
             def validate_params(self):
-                self.params.user_email = self.param_validator.validate_email(
-                    "User Email", self.params.user_email
-                )
+                self.params.user_email = self.param_validator.validate_email("User Email", self.params.user_email)
 
             def read_context_data(self):
                 self.context.ids = TIPCommon.read_ids(self.siemplify)
@@ -154,9 +155,7 @@ class Connector(BaseConnector, ABC):
                 alert_info.device_product = "Fake Device Product"
                 alert_info.start_time = alert.start_time
                 alert_info.end_time = alert.end_time
-                alert_info.environment = self.env_common.get_environment(
-                    TIPCommon.dict_to_flat(alert.to_json())
-                )
+                alert_info.environment = self.env_common.get_environment(TIPCommon.dict_to_flat(alert.to_json()))
                 return alert_info
 
             def write_context_data(self, all_alerts):
@@ -210,7 +209,7 @@ class Connector(BaseConnector, ABC):
         """
 
     @nativemethod
-    def write_context_wrapper(self, alerts):
+    def write_context_wrapper(self, alerts) -> None:
         """Wrapper for write_context_data method."""
         self.set_last_success_time(alerts)
         if not is_native(self.write_context_data):
@@ -221,12 +220,12 @@ class Connector(BaseConnector, ABC):
     def set_last_success_time(
         self,
         alerts: list[BaseAlert],
-        timestamp_key: str = None,
+        timestamp_key: str | None = None,
         incrementation_value=0,
         log_timestamp=True,
         convert_timestamp_to_micro_time=False,
         convert_a_string_timestamp_to_unix=False,
-    ):
+    ) -> None:
         """Gets the timestamp of the most recent alert from `alerts` using
         `timestamp_key` where `alerts` is a list of all alerts the connector has tried
         or completed processing, and stores this timestamp in the LFS / DB.
@@ -279,7 +278,7 @@ class Connector(BaseConnector, ABC):
 
     @nativemethod
     def process_alert(self, alert: BaseAlert) -> BaseAlert:
-        """Extensive alert processing (like events enrichment)
+        """Extensive alert processing (like events enrichment).
 
         Args:
             alert: The alert to process.
@@ -292,7 +291,7 @@ class Connector(BaseConnector, ABC):
 
     @nativemethod
     def process_alerts(
-        self, filtered_alerts: list[BaseAlert], timeout_threshold: float = TIMEOUT_THRESHOLD
+        self, filtered_alerts: list[BaseAlert], timeout_threshold: float = TIMEOUT_THRESHOLD,
     ) -> tuple[list[AlertInfo], list[BaseAlert]]:
         """Main alert processing loop.
         Steps for each alert object:
@@ -344,10 +343,7 @@ class Connector(BaseConnector, ABC):
                     break
 
                 if self.max_alerts_processed(processed_alerts):
-                    self.logger.info(
-                        f"Maximum alert count {len(processed_alerts)} "
-                        f"for connector execution reached!."
-                    )
+                    self.logger.info(f"Maximum alert count {len(processed_alerts)} for connector execution reached!.")
                     break
 
                 all_alerts.append(alert)
@@ -389,7 +385,7 @@ class Connector(BaseConnector, ABC):
     @nativemethod
     def finalize(self) -> None:
         """Method is used to handle all post-processing logic before ending
-        connector's current iteration
+        connector's current iteration.
 
         Examples::
 
@@ -421,13 +417,9 @@ class Connector(BaseConnector, ABC):
             ConnectorSetupError: if any of the pre-processing phases fail
 
         """
-        self.logger.info(
-            f"---------------- Starting connector {self.script_name} execution ----------------"
-        )
+        self.logger.info(f"---------------- Starting connector {self.script_name} execution ----------------")
         if self.is_test_run:
-            self.logger.info(
-                '****** This is an "IDE Play Button"\\"Run Connector once" test run ******'
-            )
+            self.logger.info('****** This is an "IDE Play Button"\\"Run Connector once" test run ******')
 
         self.logger.info("------------------- Main - Param Init -------------------")
         self.extract_params()
@@ -449,9 +441,7 @@ class Connector(BaseConnector, ABC):
 
             filtered_alerts = self.filter_alerts(fetched_alerts)
             if not is_native(self.filter_alerts):
-                self.logger.info(
-                    f"Successfully filtered alerts. Filtered alerts count: {len(filtered_alerts)}"
-                )
+                self.logger.info(f"Successfully filtered alerts. Filtered alerts count: {len(filtered_alerts)}")
 
             self.logger.info("Starting to process alerts...")
             processed_alerts, all_alerts = self.process_alerts(filtered_alerts)
@@ -479,6 +469,4 @@ class Connector(BaseConnector, ABC):
         self.logger.info("------------------- Main - Finished -------------------")
         self.logger.info(f"Sending {len(processed_alerts)} new alerts back to SOAR platform.")
         self.siemplify.return_package(processed_alerts)
-        self.logger.info(
-            f"---------------- Finished connector {self.script_name} execution ----------------"
-        )
+        self.logger.info(f"---------------- Finished connector {self.script_name} execution ----------------")

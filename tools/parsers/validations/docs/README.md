@@ -13,7 +13,8 @@ This script allows you to run validations on your parser configurations and test
 ### Using uv (Recommended)
 `uv` handles virtual environments automatically and ensures reproducible builds.
 ```bash
-# In the tools/parsers/ directory
+cd tools/parsers/validations/
+# In the tools/parsers/validations directory
 uv sync
 ```
 
@@ -94,7 +95,9 @@ content-hub/
 You can run the script without manually activating a virtual environment:
 
 ```bash
+# In the tools/parsers/validations directory
 uv run run_parser_validations.py \
+  --parser_source=< e.g. community/partner inside third_party folder> \
   --customer_id=<YOUR_CUSTOMER_ID> \
   --project_id=<YOUR_PROJECT_ID> \
   --region=<YOUR_REGION> \

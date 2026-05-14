@@ -117,7 +117,7 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
         return cls._from_non_built_path(trigger_path)
 
     @classmethod
-    def _from_built(cls, _: str, built: BuiltTrigger) -> Self:  # ty:ignore[invalid-method-override]
+    def _from_built(cls, file_name: str, built: BuiltTrigger) -> Self:  # noqa: ARG003
         return cls(
             playbook_id=built["DefinitionIdentifier"],
             conditions=[Condition.from_built(c) for c in built["Conditions"]],
@@ -130,7 +130,7 @@ class Trigger(SingularComponentMetadata[BuiltTrigger, NonBuiltTrigger]):
         )
 
     @classmethod
-    def _from_non_built(cls, _: str, non_built: NonBuiltTrigger) -> Self:  # ty:ignore[invalid-method-override]
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltTrigger) -> Self:  # noqa: ARG003
         return cls(
             identifier=non_built["identifier"],
             is_enabled=non_built["is_enabled"],
