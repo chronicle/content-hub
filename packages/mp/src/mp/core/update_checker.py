@@ -101,7 +101,7 @@ def print_mp_version(*, value: bool) -> None:
     """
     if value:
         version: str | None = get_mp_version()
-        logger.info("mp %s", version)
+        typer.echo(f"mp {version}")
         raise typer.Exit
 
 

@@ -177,7 +177,6 @@ class DependencyDeconstructor:
             min_version = mp.core.constants.SDK_DEPENDENCIES_MIN_VERSIONS[package_install_name]
             if Version(version) < Version(min_version):
                 version = min_version
-
         matched_imports = required_modules.intersection(provided_imports)
 
         if not matched_imports:
@@ -261,8 +260,12 @@ def _find_package_file(package_dir: Path, wheel_name_prefix: str) -> Path:
 
     """
     for extension in PACAKGE_SUFFIXES:
-        for file in package_dir.glob(f"{wheel_name_prefix}{extension}"):
-            return file
+        ext_suffix = extension.lstrip("*")
+        wheel_prefix_with_dash = f"{wheel_name_prefix}-"
+        exact_match_name = f"{wheel_name_prefix}{ext_suffix}"
+        for file in package_dir.glob(f"{wheel_name_prefix}*{ext_suffix}"):
+            if file.name.startswith(wheel_prefix_with_dash) or file.name == exact_match_name:
+                return file
 
     msg: str = f"No wheel or source distribution found in {package_dir}"
     raise FileNotFoundError(msg)
