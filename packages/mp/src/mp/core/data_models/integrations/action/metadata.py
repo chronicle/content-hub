@@ -227,7 +227,9 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             ai_description=built.get("AIDescription"),
             ai_categories=[ActionAiCategory(c) for c in (built.get("AICategories") or [])],
             entity_types=[EntityType(e) for e in (built.get("EntityTypes") or [])],
-            action_outcomes_categories=[ActionOutcomesCategory(c) for c in (built.get("ActionOutcomesCategories") or [])],
+            action_outcomes_categories=[
+                ActionOutcomesCategory(c) for c in (built.get("ActionOutcomesCategories") or [])
+            ],
         )
 
     @classmethod
@@ -414,10 +416,10 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
         action_outcomes_categories=(
             [
                 ACTION_OUTCOME_CATEGORY_TO_DEF_OUTCOME_CATEGORY[category]
-                for category, val in ai_meta.action_product_categories.model_dump().items()
+                for category, val in ai_meta.action_outcomes_categories.model_dump().items()
                 if category != "reasoning" and val is True
             ]
-            if ai_meta.action_product_categories
+            if ai_meta.action_outcomes_categories
             else []
         ),
     )

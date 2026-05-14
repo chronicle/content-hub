@@ -377,7 +377,7 @@ class ActionOutcomesCategories(BaseModel):
                 "Whether the action can block malicious domains or take similar actions to prevent further access."
                 " Expected Outcome: Blocks malicious domains or takes similar actions to prevent further access."
             ),
-        )
+        ),
     ] = False
     block_malicious_url: Annotated[
         bool,
@@ -386,7 +386,7 @@ class ActionOutcomesCategories(BaseModel):
                 "Whether the action can block malicious URLs or take similar actions to prevent further access."
                 " Expected Outcome: Blocks malicious URLs or takes similar actions to prevent further access."
             ),
-        )
+        ),
     ] = False
 
 
