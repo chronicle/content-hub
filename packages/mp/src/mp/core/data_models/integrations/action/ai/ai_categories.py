@@ -101,12 +101,50 @@ def is_enrichment_action(action):
             )
         ),
     ]
+    remediation: Annotated[
+        bool,
+        Field(
+            description=(
+                """Field Definition: Is Remediation Action
+
+A Remediation Action is a specialized task designed to mitigate or resolve a security threat or
+incident. An action is classified as "Remediation" if it matches one of the following criteria:
+
+Here's a pseudocode example of how to determine whether an action is a remediation
+action:
+
+```
+def is_remediation_action(action):
+    # Rule 1: Check if the action performs identity-based remediation
+    if action.disables_identity or action.resets_password or action.forces_mfa:
+        return True
+
+    # Rule 2: Check if the action performs host-based remediation
+    if action.contains_host:
+        return True
+
+    # Rule 3: Check if the action performs network-based remediation (blocking IOCs)
+    if action.blocks_ip or action.blocks_domain or action.blocks_url:
+        return True
+
+    # Rule 4: Check if the action performs email-based remediation
+    if action.quarantines_email:
+        return True
+
+    # If it doesn't match any remediation criteria, it is not a remediation action
+    return False
+```"""
+            )
+        ),
+    ] = False
 
 
 class ActionAiCategory(RepresentableEnum):
     ENRICHMENT = "Enrichment"
+    REMEDIATION = "Remediation"
 
 
 AI_CATEGORY_TO_DEF_AI_CATEGORY: dict[str, ActionAiCategory] = {
     "enrichment": ActionAiCategory.ENRICHMENT,
+    "remediation": ActionAiCategory.REMEDIATION,
 }

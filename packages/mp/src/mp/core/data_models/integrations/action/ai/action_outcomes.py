@@ -20,7 +20,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 
-class ActionProductCategories(BaseModel):
+class ActionOutcomesCategories(BaseModel):
     reasoning: Annotated[
         str,
         Field(
@@ -350,9 +350,47 @@ class ActionProductCategories(BaseModel):
             ),
         ),
     ]
+    force_identity_mfa: Annotated[
+        bool,
+        Field(
+            title="Force Identity MFA",
+            description=(
+                "Mark as true for actions that requires users to provide two or more verification factors to confirm "
+                "their identity before accessing resources."
+                " Expected Outcome: Forces MFA for identity operations"
+            ),
+        ),
+    ] = False
+    block_ip: Annotated[
+        bool,
+        Field(
+            description=(
+                "Whether the action can block IP addresses or take similar actions to prevent further access."
+                " Expected Outcome: Blocks IP addresses or takes similar actions to prevent further access."
+            ),
+        ),
+    ] = False
+    block_malicious_domain: Annotated[
+        bool,
+        Field(
+            description=(
+                "Whether the action can block malicious domains or take similar actions to prevent further access."
+                " Expected Outcome: Blocks malicious domains or takes similar actions to prevent further access."
+            ),
+        )
+    ] = False
+    block_malicious_url: Annotated[
+        bool,
+        Field(
+            description=(
+                "Whether the action can block malicious URLs or take similar actions to prevent further access."
+                " Expected Outcome: Blocks malicious URLs or takes similar actions to prevent further access."
+            ),
+        )
+    ] = False
 
 
-class ActionProductCategory(enum.StrEnum):
+class ActionOutcomesCategory(enum.StrEnum):
     ENRICH_IOC = "Enrich IOC (Indicator of Compromise)"
     ENRICH_ASSET = "Enrich Asset"
     UPDATE_ALERT = "Update Alert"
@@ -380,34 +418,42 @@ class ActionProductCategory(enum.StrEnum):
     SEND_MESSAGE = "Send Message"
     SEARCH_ASSET = "Search Asset"
     GET_ALERT_INFORMATION = "Get Alert Information"
+    FORCE_IDENTITY_MFA = "Force Identity MFA"
+    BLOCK_IP = "Block IP"
+    BLOCK_MALICIOUS_DOMAIN = "Block Malicious Domain"
+    BLOCK_MALICIOUS_URL = "Block Malicious URL"
 
 
-PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY: dict[str, ActionProductCategory] = {
-    "enrich_ioc": ActionProductCategory.ENRICH_IOC,
-    "enrich_asset": ActionProductCategory.ENRICH_ASSET,
-    "update_alert": ActionProductCategory.UPDATE_ALERT,
-    "add_alert_comment": ActionProductCategory.ADD_ALERT_COMMENT,
-    "create_ticket": ActionProductCategory.CREATE_TICKET,
-    "update_ticket": ActionProductCategory.UPDATE_TICKET,
-    "add_ioc_to_blocklist": ActionProductCategory.ADD_IOC_TO_BLOCKLIST,
-    "remove_ioc_from_blocklist": ActionProductCategory.REMOVE_IOC_FROM_BLOCKLIST,
-    "add_ioc_to_allowlist": ActionProductCategory.ADD_IOC_TO_ALLOWLIST,
-    "remove_ioc_from_allowlist": ActionProductCategory.REMOVE_IOC_FROM_ALLOWLIST,
-    "disable_identity": ActionProductCategory.DISABLE_IDENTITY,
-    "enable_identity": ActionProductCategory.ENABLE_IDENTITY,
-    "contain_host": ActionProductCategory.CONTAIN_HOST,
-    "uncontain_host": ActionProductCategory.UNCONTAIN_HOST,
-    "reset_identity_password": ActionProductCategory.RESET_IDENTITY_PASSWORD,
-    "update_identity": ActionProductCategory.UPDATE_IDENTITY,
-    "search_events": ActionProductCategory.SEARCH_EVENTS,
-    "execute_command_on_the_host": ActionProductCategory.EXECUTE_COMMAND_ON_THE_HOST,
-    "download_file": ActionProductCategory.DOWNLOAD_FILE,
-    "send_email": ActionProductCategory.SEND_EMAIL,
-    "search_email": ActionProductCategory.SEARCH_EMAIL,
-    "delete_email": ActionProductCategory.DELETE_EMAIL,
-    "update_email": ActionProductCategory.UPDATE_EMAIL,
-    "submit_file": ActionProductCategory.SUBMIT_FILE,
-    "send_message": ActionProductCategory.SEND_MESSAGE,
-    "search_asset": ActionProductCategory.SEARCH_ASSET,
-    "get_alert_information": ActionProductCategory.GET_ALERT_INFORMATION,
+ACTION_OUTCOME_CATEGORY_TO_DEF_OUTCOME_CATEGORY: dict[str, ActionOutcomesCategory] = {
+    "enrich_ioc": ActionOutcomesCategory.ENRICH_IOC,
+    "enrich_asset": ActionOutcomesCategory.ENRICH_ASSET,
+    "update_alert": ActionOutcomesCategory.UPDATE_ALERT,
+    "add_alert_comment": ActionOutcomesCategory.ADD_ALERT_COMMENT,
+    "create_ticket": ActionOutcomesCategory.CREATE_TICKET,
+    "update_ticket": ActionOutcomesCategory.UPDATE_TICKET,
+    "add_ioc_to_blocklist": ActionOutcomesCategory.ADD_IOC_TO_BLOCKLIST,
+    "remove_ioc_from_blocklist": ActionOutcomesCategory.REMOVE_IOC_FROM_BLOCKLIST,
+    "add_ioc_to_allowlist": ActionOutcomesCategory.ADD_IOC_TO_ALLOWLIST,
+    "remove_ioc_from_allowlist": ActionOutcomesCategory.REMOVE_IOC_FROM_ALLOWLIST,
+    "disable_identity": ActionOutcomesCategory.DISABLE_IDENTITY,
+    "enable_identity": ActionOutcomesCategory.ENABLE_IDENTITY,
+    "contain_host": ActionOutcomesCategory.CONTAIN_HOST,
+    "uncontain_host": ActionOutcomesCategory.UNCONTAIN_HOST,
+    "reset_identity_password": ActionOutcomesCategory.RESET_IDENTITY_PASSWORD,
+    "update_identity": ActionOutcomesCategory.UPDATE_IDENTITY,
+    "search_events": ActionOutcomesCategory.SEARCH_EVENTS,
+    "execute_command_on_the_host": ActionOutcomesCategory.EXECUTE_COMMAND_ON_THE_HOST,
+    "download_file": ActionOutcomesCategory.DOWNLOAD_FILE,
+    "send_email": ActionOutcomesCategory.SEND_EMAIL,
+    "search_email": ActionOutcomesCategory.SEARCH_EMAIL,
+    "delete_email": ActionOutcomesCategory.DELETE_EMAIL,
+    "update_email": ActionOutcomesCategory.UPDATE_EMAIL,
+    "submit_file": ActionOutcomesCategory.SUBMIT_FILE,
+    "send_message": ActionOutcomesCategory.SEND_MESSAGE,
+    "search_asset": ActionOutcomesCategory.SEARCH_ASSET,
+    "get_alert_information": ActionOutcomesCategory.GET_ALERT_INFORMATION,
+    "force_identity_mfa": ActionOutcomesCategory.FORCE_IDENTITY_MFA,
+    "block_ip": ActionOutcomesCategory.BLOCK_IP,
+    "block_malicious_domain": ActionOutcomesCategory.BLOCK_MALICIOUS_DOMAIN,
+    "block_malicious_url": ActionOutcomesCategory.BLOCK_MALICIOUS_URL,
 }
