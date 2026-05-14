@@ -15,7 +15,8 @@
 from __future__ import annotations
 import sys
 
-from soar_sdk.SiemplifyConnectors import CaseInfo, SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
 from soar_sdk.SiemplifyUtils import (
     convert_string_to_unix_time,
     convert_unixtime_to_datetime,

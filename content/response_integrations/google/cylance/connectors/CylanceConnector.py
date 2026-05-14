@@ -31,7 +31,8 @@ import time
 import logging
 import uuid
 import datetime
-from soar_sdk.SiemplifyConnectors import CaseInfo, SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
 from soar_sdk.SiemplifyUtils import convert_datetime_to_unix_time, unix_now
 from ..core.CylanceManager import CylanceManager
 from soar_sdk.SiemplifyUtils import dict_to_flat
