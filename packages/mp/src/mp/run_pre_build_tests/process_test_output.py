@@ -74,7 +74,12 @@ def process_pytest_json_report(
     except json.JSONDecodeError:
         logger.exception("Error: Failed to decode JSON report at: %s", json_report_path)
         json_report_path.unlink(missing_ok=True)
-        return None
+        result: IntegrationTestResults = IntegrationTestResults(integration_name=integration_name)
+        result.failed_tests_summary.append(
+            TestIssue(test_name="JSON Decode Error", stack_trace=f"Failed to decode JSON report at: {json_report_path}")
+        )
+        result.failed_tests += 1
+        return result
 
     integration_results = IntegrationTestResults(integration_name=integration_name)
 
@@ -141,15 +146,19 @@ def _extract_skipped_test_issue(test_item: dict) -> TestIssue:
     return TestIssue(test_name=test_name, stack_trace=skip_reason)
 
 
-def _get_fnf_test_results(integration_name: str, json_report_path: Path) -> IntegrationTestResults | None:
+def _get_fnf_test_results(integration_name: str, json_report_path: Path) -> IntegrationTestResults:
     logger.error("Error: JSON report not found at %s", json_report_path)
+    result: IntegrationTestResults = IntegrationTestResults(integration_name=integration_name)
+    error_msg: str = (
+        f"JSON report not found at {json_report_path}. "
+        "The test execution script might have failed before running pytest."
+    )
+
     try:
         RequiredDevDependenciesValidation.run(json_report_path.parent)
     except NonFatalCommandError as e:
-        error_msg: str = f"{e}"
-        result: IntegrationTestResults = IntegrationTestResults(integration_name=integration_name)
-        result.failed_tests_summary.append(TestIssue(test_name="Missing Dependencies", stack_trace=error_msg))
-        result.failed_tests += 1
-        return result
+        error_msg = f"{e}\n\n{error_msg}"
 
-    return None
+    result.failed_tests_summary.append(TestIssue(test_name="Test Execution Failure", stack_trace=error_msg))
+    result.failed_tests += 1
+    return result
