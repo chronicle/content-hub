@@ -24,28 +24,28 @@ from ...core.ToolsCommon import get_domain_from_string
 @patch.object(ToolsCommon, 'extract')
 def test_get_domain_from_string(mock_extract) -> None:
     def side_effect(url):
-        if "test.google.com" in url:
+        if url == "https://test.google.com":
             return ExtractResult(
                 subdomain="test",
                 domain="google",
                 suffix="com",
                 is_private=False,
             )
-        if "subdomain1.subdomain2.google.com" in url:
+        if url == "https://subdomain1.subdomain2.google.com":
             return ExtractResult(
                 subdomain="subdomain1.subdomain2",
                 domain="google",
                 suffix="com",
                 is_private=False,
             )
-        if "subdomain.google.com" in url:
+        if url == "https://subdomain.google.com":
             return ExtractResult(
                 subdomain="subdomain",
                 domain="google",
                 suffix="com",
                 is_private=False,
             )
-        if "google.com" in url:
+        if url == "https://google.com":
             return ExtractResult(
                 subdomain="",
                 domain="google",
