@@ -412,9 +412,13 @@ def get_user_profile_cards(
     api_client.params.filter_support_users = filter_support_users
     api_client.params.fetch_only_support_users = fetch_only_support_users
     api_client.params.filter_permission_types = filter_permission_types
-    response = api_client.get_users_profile_cards()
-    validate_response(response)
-    return response.json()
+    result = api_client.get_users_profile_cards()
+
+    if isinstance(api_client, LegacySoarApi):
+        validate_response(result)
+        return result.json()
+
+    return {"objectsList": result}
 
 
 def get_alert_events(
@@ -626,10 +630,15 @@ def get_installed_integrations_of_environment(
     api_client.params.environment = environment
     api_client.params.integration_identifier = integration_identifier
 
-    response = api_client.get_installed_integrations_of_environment()
-    validate_response(response)
-    instances = safe_json_for_204(response, default_for_204={"integrationInstances": []})
-    instances = instances.get("instances", []) or instances.get("integrationInstances", [])
+    result = api_client.get_installed_integrations_of_environment()
+
+    if isinstance(api_client, LegacySoarApi):
+        validate_response(result)
+        instances_dict = safe_json_for_204(result, default_for_204={"integrationInstances": []})
+        instances = instances_dict.get("instances", []) or instances_dict.get("integrationInstances", [])
+    else:
+        instances = result
+
     return [InstalledIntegrationInstance.from_json(instance) for instance in instances]
 
 
@@ -844,10 +853,14 @@ def get_case_insights(
     api_client = get_soar_client(chronicle_soar)
 
     api_client.params.case_id = case_id
-    response = api_client.get_case_insights()
-    validate_response(response)
-    insights = safe_json_for_204(response, default_for_204={"activities": []})
-    insights = insights.get("activities", insights.get("insights", []))
+    result = api_client.get_case_insights()
+
+    if isinstance(api_client, LegacySoarApi):
+        validate_response(result)
+        insights_dict = safe_json_for_204(result, default_for_204={"activities": []})
+        insights = insights_dict.get("activities", insights_dict.get("insights", []))
+    else:
+        insights = result
 
     return [Insight.from_json(insight).to_json() for insight in insights]
 
@@ -1374,7 +1387,7 @@ def get_siemplify_user_details(
     requested_page: int,
     page_size: int,
     should_hide_disabled_users: str,
-) -> UserDetails:
+) -> list[UserDetails]:
     """Get siemplify user details.
 
     Args:
@@ -1396,12 +1409,15 @@ def get_siemplify_user_details(
     api_client.params.page_size = page_size
     api_client.params.should_hide_disabled_users = should_hide_disabled_users
 
-    response = api_client.get_siemplify_user_details()
-    validate_response(response, validate_json=True)
-    return [
-        UserDetails.from_json(res)
-        for res in response.json().get("objectsList", response.json().get("legacySoarUsers", []))
-    ]
+    result = api_client.get_siemplify_user_details()
+
+    if isinstance(api_client, LegacySoarApi):
+        validate_response(result, validate_json=True)
+        users_data = result.json().get("objectsList", [])
+    else:
+        users_data = result
+
+    return [UserDetails.from_json(user_detail) for user_detail in users_data]
 
 
 def get_domain_alias(chronicle_soar: ChronicleSOAR, page_count: int = 0) -> SingleJson:
@@ -1649,10 +1665,13 @@ def search_cases_by_everything(
     api_client = get_soar_client(chronicle_soar)
     api_client.params.search_payload = search_payload
 
-    response = api_client.search_cases_by_everything()
-    validate_response(response, validate_json=True)
+    result = api_client.search_cases_by_everything()
 
-    return response.json()
+    if isinstance(api_client, LegacySoarApi):
+        validate_response(result, validate_json=True)
+        return result.json()
+
+    return {"results": result}
 
 
 def get_case_activities(

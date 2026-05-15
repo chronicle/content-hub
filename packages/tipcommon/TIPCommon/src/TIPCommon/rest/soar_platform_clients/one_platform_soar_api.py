@@ -87,21 +87,20 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
-    def get_case_insights(self) -> requests.Response:
+    def get_case_insights(self) -> list[SingleJson]:
         """Get case insights using 1P API."""
-        endpoint = f"/cases/{self.params.case_id}/activities"
-        query_params = {
-            "$filter": "activityType eq 'CaseInsight'",
-            "pageSize": DEFAULT_1P_PAGE_SIZE,
-        }
-        return self._make_request(HttpMethod.GET, endpoint, params=query_params)
+        query_string = f"$filter=activityType eq 'CaseInsight'&pageSize={DEFAULT_1P_PAGE_SIZE}"
+        endpoint = f"/cases/{self.params.case_id}/activities?{query_string}"
 
-    def get_installed_integrations_of_environment(self) -> requests.Response:
+        return self._paginate_results(endpoint, "activities")
+
+    def get_installed_integrations_of_environment(self) -> list[SingleJson]:
         """Get installed integrations of environment using legacy API."""
-        endpoint = f"/integrations/{self.params.integration_identifier}/integrationInstances"
         name = "*" if self.params.environment == "Shared Instances" else self.params.environment
-        params = {"$filter": f"environment eq '{escape_odata_literal(name)}'"}
-        return self._make_request(HttpMethod.GET, endpoint, params=params)
+        query_string = f"$filter=environment eq '{escape_odata_literal(name)}'&pageSize={_PAGE_SIZE}"
+        endpoint = f"/integrations/{self.params.integration_identifier}/integrationInstances?{query_string}"
+
+        return self._paginate_results(endpoint, "integrationInstances")
 
     def get_connector_cards(self) -> requests.Response:
         """Get connector cards using legacy API."""
@@ -435,10 +434,11 @@ class OnePlatformSoarApi(BaseSoarApi):
         }
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
-    def get_users_profile_cards(self) -> requests.Response:
+    def get_users_profile_cards(self) -> list[SingleJson]:
         """Get users profile cards."""
-        endpoint = "/legacySoarUsers"
-        return self._make_request(HttpMethod.GET, endpoint)
+        page_size = getattr(self.params, "page_size", _PAGE_SIZE)
+        endpoint = f"/legacySoarUsers?pageSize={page_size}"
+        return self._paginate_results(endpoint, "legacySoarUsers")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_security_events(self) -> requests.Response:
@@ -496,10 +496,11 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = f"/system/settings/emailTemplates?pageSize={_EMAIL_TEMPLATES_PAGE_SIZE}"
         return self._paginate_results(endpoint, "emailTemplates")
 
-    def get_siemplify_user_details(self) -> requests.Response:
+    def get_siemplify_user_details(self) -> list[SingleJson]:
         """Get siemplify user details."""
-        endpoint = "/legacySoarUsers"
-        return self._make_request(HttpMethod.GET, endpoint)
+        page_size = getattr(self.params, "page_size", _PAGE_SIZE)
+        endpoint = f"/legacySoarUsers?pageSize={page_size}"
+        return self._paginate_results(endpoint, "legacySoarUsers")
 
     def get_domain_alias(self) -> requests.Response:
         """Get domain alias."""
@@ -701,15 +702,50 @@ class OnePlatformSoarApi(BaseSoarApi):
         )
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def search_cases_by_everything(self) -> requests.Response:
-        """Get Cases search by everything."""
-        endpoint: str = "/legacySearches:legacyCaseSearchEverything"
-        return self._make_request(
-            HttpMethod.POST,
-            endpoint,
-            json_payload=self.params.search_payload,
-            params={"format": "camel"},
-        )
+    def search_cases_by_everything(self) -> list[SingleJson]:
+        """
+        Retrieves all cases using the legacy search endpoint.
+
+        Returns:
+            list[SingleJson]: The complete set of cases found.
+        """
+        all_cases = []
+        page_number = 0
+        has_more_pages = True
+
+        # Make a copy to avoid mutating the instance-wide search_payload
+        request_payload = self.params.search_payload.copy()
+
+        # Making sure that there is a page_size set, default to 50
+        page_size = request_payload.get("pageSize", 50)
+
+        while has_more_pages:
+            request_payload.update({
+                "pageNumber": page_number,
+                "pageSize": page_size,
+            })
+
+            try:
+                response = self._make_request(
+                    HttpMethod.POST,
+                    "/legacySearches:legacyCaseSearchEverything",
+                    json_payload=request_payload,
+                    params={"format": "camel"},
+                )
+                response.raise_for_status()
+                payload = response.json()
+            except Exception as e:
+                self.chronicle_soar.LOGGER.error(f"Request failed at page {page_number}: {e}")
+                return all_cases
+
+            results = payload.get("results", [])
+            if results:
+                all_cases.extend(results)
+
+            has_more_pages = bool(results) and len(all_cases) < payload.get("totalCount", 0)
+            page_number += 1
+
+        return all_cases
 
     def get_case_activities(self) -> requests.Response:
         """Get case activities using 1P API."""
