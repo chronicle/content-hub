@@ -39,37 +39,6 @@ INTEGRATION_NAME = "TemplateEngine"
 SCRIPT_NAME = "RenderTemplate"
 
 
-def get_execution_scope(siemplify: SiemplifyAction) -> ExecutionScope:
-    """Parse the execution scope from the siemplify action context.
-
-    Args:
-        siemplify: The SiemplifyAction orchestration instance.
-
-    Returns:
-        The determined ExecutionScope enum value (defaults to Alert).
-    """
-    raw_scope = getattr(siemplify, "execution_scope", ExecutionScope.Alert.value)
-    execution_scope_value = ExecutionScope.Alert.value
-    try:
-        if hasattr(raw_scope, "value"):
-            raw_scope = raw_scope.value
-
-        str_scope = str(raw_scope).strip().title()
-        if str_scope.isdigit():
-            scope_int = int(str_scope)
-            if scope_int == 0:
-                scope_int = 1
-            execution_scope_value = ExecutionScope(scope_int).value
-        else:
-            if str_scope == "Executionscopeunspecified":
-                str_scope = "Alert"
-            execution_scope_value = ExecutionScope[str_scope].value
-    except Exception as e:
-        siemplify.LOGGER.error(f"Failed to parse execution scope: {e}.")
-
-    return ExecutionScope(execution_scope_value)
-
-
 def _extract_alert_data(
     alert: Any,
     entities_source: list[Any],
@@ -97,19 +66,14 @@ def _extract_alert_data(
 
 
 def extract_context_data(
-    execution_scope: ExecutionScope,
-    current_alert: Any = None,
-    target_entities: list[Any] | None = None,
-    case_alerts: list[Any] | None = None,
-    logger: Any = None,
+    siemplify: SiemplifyAction,
+    execution_scope: Any,
 ) -> dict[str, list[SingleJson] | dict[str, SingleJson]]:
     """Extract security events and entities based on execution scope.
 
     Args:
-        execution_scope: The determined ExecutionScope for playbook run (Alert or Case).
-        current_alert: The current alert SDK instance (optional).
-        target_entities: List of target entities from Siemplify (optional).
-        case_alerts: List of alerts associated with the case (optional).
+        siemplify: The SiemplifyAction orchestration instance.
+        execution_scope: The current execution scope (Alert or Case).
 
     Returns:
         A single dictionary containing lists of security events and
@@ -119,31 +83,23 @@ def extract_context_data(
     entities: dict[str, SingleJson] = {}
 
     if execution_scope.value == ExecutionScope.Alert.value:
-        if current_alert:
-            _extract_alert_data(
-                current_alert,
-                target_entities or [],
-                events,
-                entities,
-            )
+        target_alerts = [siemplify.current_alert]
     else:
-        for alert in case_alerts or []:
-            try:
-                _extract_alert_data(
-                    alert,
-                    getattr(alert, "entities", []),
-                    events,
-                    entities,
-                )
-            except Exception as e:
-                if logger:
-                    identifier = getattr(alert, "identifier", "unknown")
-                    logger.warning(
-                        "Skipping alert %s extraction in case scope "
-                        "due to error: %s.",
-                        identifier,
-                        e,
-                    )
+        siemplify.LOGGER.info(f"Executing action {SCRIPT_NAME} in Case Scope.")
+        target_alerts = getattr(siemplify.case, "alerts", [])
+
+    for alert in target_alerts:
+        entities_source = (
+            getattr(siemplify, "target_entities", []) or []
+            if execution_scope.value == ExecutionScope.Alert.value
+            else getattr(alert, "entities", [])
+        )
+        _extract_alert_data(
+            alert,
+            entities_source,
+            events,
+            entities,
+        )
 
     return {
         "SiemplifyEvents": events,
@@ -157,13 +113,14 @@ def main():
     siemplify.script_name = SCRIPT_NAME
     siemplify.LOGGER.info("================= Main - Param Init =================")
 
-    execution_scope = get_execution_scope(siemplify)
+    execution_scope = getattr(
+        siemplify,
+        "execution_scope",
+        ExecutionScope.Alert,
+    )
     case_data = extract_context_data(
+        siemplify=siemplify,
         execution_scope=execution_scope,
-        current_alert=siemplify.current_alert,
-        target_entities=siemplify.target_entities,
-        case_alerts=getattr(siemplify.case, "alerts", []),
-        logger=siemplify.LOGGER,
     )
 
     # INIT ACTION PARAMETERS:
