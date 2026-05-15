@@ -82,14 +82,9 @@ def main() -> None:
     last_processed_data = None
 
     for alert in target_alerts:
-        try:
-            alert_data = process_single_alert(alert, data)
-            updates[alert.identifier] = json.dumps(alert_data)
-            last_processed_data = alert_data
-        except Exception as e:
-            siemplify.LOGGER.error(
-                f"Failed to process alert {alert.identifier} additional data: {e}."
-            )
+        alert_data = process_single_alert(alert, data)
+        updates[alert.identifier] = json.dumps(alert_data)
+        last_processed_data = alert_data
 
     if updates:
         siemplify.update_alerts_additional_data(updates)

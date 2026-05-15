@@ -43,13 +43,10 @@ def main() -> None:
                 == "true"
             ):
                 siemplify.case.alerts.sort(key=lambda x: x.detected_time)
-                current_alert = None
-                try:
-                    current_alert = siemplify.current_alert
-                except Exception as e:
-                    siemplify.LOGGER.error(f"Failed to retrieve current alert: {e}.")
-
-                if current_alert and current_alert.identifier != siemplify.case.alerts[0].identifier:
+                if (
+                    siemplify.current_alert.identifier
+                    != siemplify.case.alerts[0].identifier
+                ):
                     change = False
 
         if change:

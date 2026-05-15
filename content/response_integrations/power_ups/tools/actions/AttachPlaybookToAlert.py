@@ -85,34 +85,27 @@ def main() -> None:
     target_alerts = get_target_alerts(siemplify, execution_scope)
 
     for alert in target_alerts:
-        try:
-            previously_attached_wf = get_attached_workflows_for_alert(siemplify, alert)
+        previously_attached_wf = get_attached_workflows_for_alert(siemplify, alert)
 
-            for workflow_name in workflow_names:
-                if workflow_name in previously_attached_wf and not allow_duplicates:
-                    all_duplicates.append((alert.identifier, workflow_name))
-                else:
-                    try:
-                        success = Siemplify.attach_workflow_to_case(
-                            siemplify,
-                            workflow_name,
-                            siemplify.case_id,
-                            alert.identifier,
-                        )
-                        if success:
-                            all_attached.append((alert.identifier, workflow_name))
-                        else:
-                            is_success = False
-                            all_not_attached.append((alert.identifier, workflow_name))
-                    except Exception:
+        for workflow_name in workflow_names:
+            if workflow_name in previously_attached_wf and not allow_duplicates:
+                all_duplicates.append((alert.identifier, workflow_name))
+            else:
+                try:
+                    success = Siemplify.attach_workflow_to_case(
+                        siemplify,
+                        workflow_name,
+                        siemplify.case_id,
+                        alert.identifier,
+                    )
+                    if success:
+                        all_attached.append((alert.identifier, workflow_name))
+                    else:
                         is_success = False
                         all_not_attached.append((alert.identifier, workflow_name))
-        except Exception as e:
-            siemplify.LOGGER.error(
-                "Failed to process playbook attachments for alert "
-                f"{alert.identifier}: {e}."
-            )
-            is_success = False
+                except Exception:
+                    is_success = False
+                    all_not_attached.append((alert.identifier, workflow_name))
 
     if execution_scope.value == ExecutionScope.Alert.value:
         duplicates = [wf for _, wf in all_duplicates]
