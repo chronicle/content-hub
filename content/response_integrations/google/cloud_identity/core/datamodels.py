@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum, StrEnum  # pylint: disable=no-name-in-module
+from enum import Enum, StrEnum
 from typing import Any
 
 from dataclass_wizard import IS
@@ -156,9 +156,7 @@ class WordListDetectorPolicySettingValue(PolicySettingValue):
     word_list: dict = field(default_factory=dict)
 
     @staticmethod
-    def from_list_of_words(
-        words: list[str], **kwargs: object
-    ) -> WordListDetectorPolicySettingValue:
+    def from_list_of_words(words: list[str], **kwargs: object) -> WordListDetectorPolicySettingValue:
         """Create a WordListDetectorPolicySettingValue from a list of words.
 
         Args:
@@ -177,9 +175,7 @@ class RegularExpressionDetectorPolicySettingValue(PolicySettingValue):
     regular_expression: dict = field(default_factory=dict)
 
     @staticmethod
-    def from_regular_expression(
-        regexp: str, **kwargs: object
-    ) -> RegularExpressionDetectorPolicySettingValue:
+    def from_regular_expression(regexp: str, **kwargs: object) -> RegularExpressionDetectorPolicySettingValue:
         """Create a RegularExpressionDetectorPolicySettingValue from a regular expression.
 
         Args:
@@ -190,9 +186,7 @@ class RegularExpressionDetectorPolicySettingValue(PolicySettingValue):
             A new RegularExpressionDetectorPolicySettingValue instance.
 
         """
-        return RegularExpressionDetectorPolicySettingValue(
-            regular_expression={"expression": regexp}, **kwargs
-        )
+        return RegularExpressionDetectorPolicySettingValue(regular_expression={"expression": regexp}, **kwargs)
 
 
 @dataclass
@@ -200,9 +194,7 @@ class URLListDetectorPolicySettingValue(PolicySettingValue):
     url_list: dict = field(default_factory=dict)
 
     @staticmethod
-    def from_list_of_words(
-        urls: list[str], **kwargs: object
-    ) -> URLListDetectorPolicySettingValue:
+    def from_list_of_words(urls: list[str], **kwargs: object) -> URLListDetectorPolicySettingValue:
         """Create a URLListDetectorPolicySettingValue from a list of URLs.
 
         Args:
@@ -242,8 +234,7 @@ class PolicySetting:
         mapping = {
             PolicySettingType.DLP_RULE: DLPRulePolicySettingValue,
             PolicySettingType.WORD_LIST_DETECTOR: WordListDetectorPolicySettingValue,
-            PolicySettingType.REGULAR_EXPRESSION_DETECTOR:
-                RegularExpressionDetectorPolicySettingValue,
+            PolicySettingType.REGULAR_EXPRESSION_DETECTOR: RegularExpressionDetectorPolicySettingValue,
             PolicySettingType.URL_LIST_DETECTOR: URLListDetectorPolicySettingValue,
         }
         if isinstance(setting_type, str):
@@ -267,9 +258,7 @@ class PolicySetting:
             A new PolicySetting instance.
 
         """
-        return PolicySetting(
-            type=PolicySetting._class_to_setting_type(value), value=value
-        )
+        return PolicySetting(type=PolicySetting._class_to_setting_type(value), value=value)
 
     @classmethod
     def from_setting_value_dict(cls, policy_setting: dict[str, Any]) -> PolicySetting:

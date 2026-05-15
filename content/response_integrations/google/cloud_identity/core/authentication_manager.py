@@ -99,9 +99,7 @@ class AuthManager:
         self.verify_ssl = verify_ssl
 
         service_account_json = service_account_creds
-        if not is_empty_string_or_none(service_account_creds) and not isinstance(
-            service_account_creds, dict
-        ):
+        if not is_empty_string_or_none(service_account_creds) and not isinstance(service_account_creds, dict):
             service_account_json = json.loads(service_account_creds)
 
         try:
@@ -146,8 +144,6 @@ class AuthManager:
             An AuthorizedSession object.
 
         """
-        session = AuthorizedSession(
-            self.credentials, auth_request=get_auth_request(self.verify_ssl)
-        )
+        session = AuthorizedSession(self.credentials, auth_request=get_auth_request(self.verify_ssl))
         session.verify = self.verify_ssl
         return session

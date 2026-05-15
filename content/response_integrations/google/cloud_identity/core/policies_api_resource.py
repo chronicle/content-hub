@@ -38,9 +38,7 @@ URL_FORMAT = "{api_root}/{version}/policies"
 
 
 class PoliciesApiResource:
-    def __init__(
-        self, session: AuthorizedSession, api_root: str = DEFAULT_API_ROOT, **kwargs: object
-    ) -> None:
+    def __init__(self, session: AuthorizedSession, api_root: str = DEFAULT_API_ROOT, **kwargs: object) -> None:
         """Initialize the PoliciesApiResource.
 
         Args:
@@ -63,9 +61,7 @@ class PoliciesApiResource:
         self._session.mount("http://", adapter)
         self._logger = kwargs.get("logger", logging.getLogger(__name__))
 
-    def _url(
-        self, version: str = DEFAULT_V1_VERSION, policy_id: str | None = None
-    ) -> str:
+    def _url(self, version: str = DEFAULT_V1_VERSION, policy_id: str | None = None) -> str:
         url = URL_FORMAT.format(api_root=self._api_root, version=version)
         if policy_id:
             url += f"/{policy_id}"
@@ -87,10 +83,7 @@ class PoliciesApiResource:
             self._logger.info("Fetching next policies page")
             response = self._session.get(self._url(), params=query.to_dict())
             validate_response(response, self.__class__.__name__)
-            policies = [
-                Policy.from_dict(policy)
-                for policy in response.json().get("policies", [])
-            ]
+            policies = [Policy.from_dict(policy) for policy in response.json().get("policies", [])]
             self._logger.info(f"Fetched page of {len(policies)} policies")  # noqa: G004
             yield from policies
             next_page_token = response.json().get("nextPageToken")
@@ -109,9 +102,7 @@ class PoliciesApiResource:
             A Policy object representing the created policy.
 
         """
-        response = self._session.post(
-            self._url(version=BETA_V1_VERSION), json=policy.to_dict()
-        )
+        response = self._session.post(self._url(version=BETA_V1_VERSION), json=policy.to_dict())
         validate_response(response, self.__class__.__name__)
         result = Operation.from_dict(response.json()).validate()
         return Policy.from_dict(result.response)
@@ -158,9 +149,7 @@ class PoliciesApiResource:
             A Policy object representing the deleted policy.
 
         """
-        response = self._session.delete(
-            self._url(version=BETA_V1_VERSION, policy_id=policy_id)
-        )
+        response = self._session.delete(self._url(version=BETA_V1_VERSION, policy_id=policy_id))
         validate_response(response, self.__class__.__name__)
         result = Operation.from_dict(response.json()).validate()
         return Policy.from_dict(result.response)

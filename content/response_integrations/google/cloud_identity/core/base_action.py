@@ -33,9 +33,21 @@ if TYPE_CHECKING:
 class CloudIdentityAction(Action, ABC):
     """Base action class for Cloud Identity integration."""
 
-    def _init_api_clients(self) -> None:
-        """Initialize API clients placeholder."""
-        self.logger.debug("Initializing API clients placeholder...")
+    api_client: GoogleCloudIdentityApiManager
+
+    def _init_api_clients(self) -> GoogleCloudIdentityApiManager:
+        """Initialize API clients.
+
+        Returns:
+            Configured GoogleCloudIdentityApiManager instance.
+
+        """
+        session = self._get_authenticated_session()
+        return GoogleCloudIdentityApiManager(
+            authenticated_session=session,
+            configuration=CloudIdentityApiParameters(api_root=consts.DEFAULT_API_ROOT),
+            logger=self.logger,
+        )
 
     def _get_integration_params(self) -> IntegrationParameters:
         """Get integration parameters from SOAR configuration.
@@ -65,20 +77,6 @@ class CloudIdentityAction(Action, ABC):
         authenticator = AuthenticatedSession()
         authenticator.authenticate_session(session_params)
         return authenticator.session
-
-    def _get_api_manager(self) -> GoogleCloudIdentityApiManager:
-        """Get a Cloud Identity API manager.
-
-        Returns:
-            Configured GoogleCloudIdentityApiManager instance.
-
-        """
-        session = self._get_authenticated_session()
-        return GoogleCloudIdentityApiManager(
-            authenticated_session=session,
-            configuration=CloudIdentityApiParameters(api_root=consts.DEFAULT_API_ROOT),
-            logger=self.logger,
-        )
 
     @property
     def result_value(self) -> bool:

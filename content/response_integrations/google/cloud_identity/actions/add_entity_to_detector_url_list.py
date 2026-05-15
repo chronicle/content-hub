@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING
 
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from TIPCommon.extraction import extract_action_param
+from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import CloudIdentityAction
 from ..core.consts import INTEGRATION_NAME
-from ..core.utils import string_to_list
 
 if TYPE_CHECKING:
     from typing import NoReturn
@@ -43,28 +43,18 @@ class AddEntityToDetectorURLList(CloudIdentityAction):
         urls_str = extract_action_param(
             self.soar_action,
             param_name="URL",
-            is_mandatory=False,
             print_value=True,
         )
-        self.params.urls = string_to_list(urls_str)
+        self.params.urls = string_to_multi_value(urls_str)
 
         domains_str = extract_action_param(
             self.soar_action,
             param_name="Domain",
-            is_mandatory=False,
             print_value=True,
         )
-        self.params.domains = string_to_list(domains_str)
+        self.params.domains = string_to_multi_value(domains_str)
 
     def _perform_action(self, _: Entity | None = None) -> None:
-        client = self._get_api_manager()
-
-        if not self.params.policy_id or not self.params.policy_id.strip():
-            msg = "Detector Policy ID parameter cannot be empty."
-            raise ValueError(msg)
-
-        client.test_connectivity()
-
         all_urls_to_block: list[str] = []
         all_urls_to_block.extend(self.params.urls)
         all_urls_to_block.extend(self.params.domains)
@@ -77,22 +67,20 @@ class AddEntityToDetectorURLList(CloudIdentityAction):
         )
 
         if not all_urls_to_block:
-            self.result_value = True
+            self.result_value = False
             self.output_message = "No entities, domains or url provided to block"
             return
 
         self.logger.info("Successfully identified URLs to block.")
 
-        updated_policy = client.update_url_list_detector_policy(
+        updated_policy = self.api_client.update_url_list_detector_policy(
             policy_id=self.params.policy_id, urls=all_urls_to_block
         )
         self.json_results = updated_policy.to_dict()
 
         self.result_value = True
         urls_str = ", ".join(all_urls_to_block)
-        self.output_message = (
-            f"Successfully blocked the following URLs using Cloud Identity: {urls_str}"
-        )
+        self.output_message = f"Successfully blocked the following URLs using Cloud Identity: {urls_str}"
 
 
 def main() -> NoReturn:

@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from enum import StrEnum  # pylint: disable=no-name-in-module
+from enum import StrEnum
 from typing import TYPE_CHECKING, NamedTuple
 
 from TIPCommon.base.interfaces import Apiable
@@ -46,7 +46,6 @@ if TYPE_CHECKING:
     from google.auth.transport.requests import AuthorizedSession
 
 
-# pylint: disable=invalid-name
 class _Prefix(StrEnum):
     POLICIES = "policies/"
     CUSTOMERS = "customers/"
@@ -96,9 +95,7 @@ class GoogleCloudIdentityApiManager(Apiable):
         )
         ou_resource = orgunits_resource or org_units_resource
         self._org_units_resource = (
-            ou_resource
-            if ou_resource is not None
-            else OrgUnitsApiResource(self._session, logger=self._logger)
+            ou_resource if ou_resource is not None else OrgUnitsApiResource(self._session, logger=self._logger)
         )
 
     def test_connectivity(self) -> None:
@@ -115,9 +112,7 @@ class GoogleCloudIdentityApiManager(Apiable):
             msg = "Test connectivity failed."
             raise GoogleCloudIdentityApiException(msg) from e
 
-    def fetch_policies_by_setting_type(
-        self, setting_type: PolicySettingType
-    ) -> Iterable[Policy]:
+    def fetch_policies_by_setting_type(self, setting_type: PolicySettingType) -> Iterable[Policy]:
         """Fetch policies filtered by the specified setting type.
 
         Args:
@@ -178,9 +173,7 @@ class GoogleCloudIdentityApiManager(Apiable):
             self._logger.info("No setting type selected.")
             setting_type = ".*"
 
-        query = PoliciesRequestQuery(
-            filter=f'setting.type.matches("{setting_type}")', page_size=100
-        )
+        query = PoliciesRequestQuery(filter=f'setting.type.matches("{setting_type}")', page_size=100)
         results = self._policies_resource.list(query)
 
         def _predicate(v: Policy) -> bool:
@@ -193,7 +186,8 @@ class GoogleCloudIdentityApiManager(Apiable):
             if display_names and v.get_display_name() not in display_names:
                 return False
 
-            self._logger.info("Found policy: %s", v.get_id())
+            log_msg = f"Found policy: {v.get_id()}"
+            self._logger.info(log_msg)
             return True
 
         results = filter(_predicate, results)
@@ -229,11 +223,7 @@ class GoogleCloudIdentityApiManager(Apiable):
             action={
                 "chromeAction": {
                     "blockContent": {
-                        "actionParams": {
-                            "customEndUserMessage": {
-                                "unsafeHtmlMessageBody": html_message_body
-                            }
-                        }
+                        "actionParams": {"customEndUserMessage": {"unsafeHtmlMessageBody": html_message_body}}
                     }
                 },
             },
@@ -292,10 +282,7 @@ class GoogleCloudIdentityApiManager(Apiable):
         policy: Policy = self.fetch_policy(policy_id)
         policy.match_setting_model()
         if policy.setting.type != PolicySettingType.URL_LIST_DETECTOR:
-            msg = (
-                f"Setting type of policy {policy_id} "
-                f"is not {PolicySettingType.URL_LIST_DETECTOR}"
-            )
+            msg = f"Setting type of policy {policy_id} is not {PolicySettingType.URL_LIST_DETECTOR}"
             raise TypeError(msg)
         policy_setting: URLListDetectorPolicySettingValue = policy.setting.value
         existing_urls = policy_setting.url_list.get("urls")
@@ -307,9 +294,7 @@ class GoogleCloudIdentityApiManager(Apiable):
 
         return self._policies_resource.patch(policy)
 
-    def create_policy_for_org_unit(
-        self, organization_unit_id: str, setting: PolicySettingValue
-    ) -> Policy:
+    def create_policy_for_org_unit(self, organization_unit_id: str, setting: PolicySettingValue) -> Policy:
         """Create a policy specifically targeted at a given organizational unit.
 
         Args:
@@ -349,12 +334,8 @@ class GoogleCloudIdentityApiManager(Apiable):
 
         """
         if directory_path_or_name.startswith("/"):
-            org_units = self._org_units_resource.list(
-                org_unit_path=directory_path_or_name
-            ).organization_units
-            org_unit = filter(
-                lambda ou: ou.org_unit_path == directory_path_or_name, org_units
-            )
+            org_units = self._org_units_resource.list(org_unit_path=directory_path_or_name).organization_units
+            org_unit = filter(lambda ou: ou.org_unit_path == directory_path_or_name, org_units)
         else:
             org_units = self._org_units_resource.list().organization_units
             org_unit = filter(lambda ou: ou.name == directory_path_or_name, org_units)

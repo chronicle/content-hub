@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import yaml
+from TIPCommon.exceptions import ActionSetupError
 from TIPCommon.extraction import extract_action_param
 
 from ..core.base_action import CloudIdentityAction
@@ -41,29 +42,28 @@ class CreatePolicy(CloudIdentityAction):
             print_value=True,
         )
 
-    def _perform_action(self, _: Entity | None = None) -> None:
-        client = self._get_api_manager()
+    def _validate_params(self) -> None:
+        try:
+            policy_dict = yaml.safe_load(self.params.policy_entry_str)
+        except Exception as e:
+            msg = "Policy Entry is not a valid JSON."
+            raise ActionSetupError(msg) from e
 
-        self.logger.info("Getting policy entry parameters...")
-        if not self.params.policy_entry_str or not self.params.policy_entry_str.strip():
-            msg = "Policy Entry parameter cannot be empty."
-            raise ValueError(msg)
-
-        policy_dict = yaml.safe_load(self.params.policy_entry_str)
         if not isinstance(policy_dict, dict):
-            msg = "Policy Entry must be a valid YAML dictionary."
-            raise TypeError(msg)
+            msg = "Policy Entry must be a valid JSON dictionary."
+            raise ActionSetupError(msg)
 
-        policy_entry = Policy.from_dict(policy_dict)
+        self.params.policy_dict = policy_dict
+
+    def _perform_action(self, _: Entity | None = None) -> None:
+        policy_entry = Policy.from_dict(self.params.policy_dict)
 
         self.logger.info("Creating policy entry...")
-        created_policy = client.create_policy(policy_entry)
+        created_policy = self.api_client.create_policy(policy_entry)
         self.logger.info("Policy entry created successfully...")
 
         self.json_results = created_policy.to_dict()
-        self.output_message = (
-            f"Successfully added a new policy in {INTEGRATION_DISPLAY_NAME}."
-        )
+        self.output_message = f"Successfully added a new policy in {INTEGRATION_DISPLAY_NAME}."
 
 
 def main() -> NoReturn:

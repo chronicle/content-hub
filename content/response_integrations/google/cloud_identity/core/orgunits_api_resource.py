@@ -36,9 +36,7 @@ URL_FORMAT = "{api_root}/admin/directory/{version}/customer/{customer_id}/orguni
 
 
 class OrgUnitsApiResource:
-    def __init__(
-        self, session: AuthorizedSession, api_root: str = ADMIN_SDK_API_ROOT, **kwargs: object
-    ) -> None:
+    def __init__(self, session: AuthorizedSession, api_root: str = ADMIN_SDK_API_ROOT, **kwargs: object) -> None:
         """Initialize the OrgUnitsApiResource.
 
         Args:
@@ -67,16 +65,12 @@ class OrgUnitsApiResource:
         version: str = DEFAULT_V1_VERSION,
         org_unit_path: str | None = None,
     ) -> str:
-        url = URL_FORMAT.format(
-            api_root=self._api_root, version=version, customer_id=customer_id
-        )
+        url = URL_FORMAT.format(api_root=self._api_root, version=version, customer_id=customer_id)
         if org_unit_path:
             url += f"/{org_unit_path}"
         return url
 
-    def list(
-        self, customer_id: str = MY_CUSTOMER, org_unit_path: str | None = None
-    ) -> OrgUnit:
+    def list(self, customer_id: str = MY_CUSTOMER, org_unit_path: str | None = None) -> OrgUnit:
         """List organizational units.
 
         Args:
@@ -103,9 +97,7 @@ class OrgUnitsApiResource:
             An OrgUnit object representing the organizational unit.
 
         """
-        response = self._session.get(
-            self._url(customer_id=customer_id, org_unit_path=org_unit_path)
-        )
+        response = self._session.get(self._url(customer_id=customer_id, org_unit_path=org_unit_path))
         validate_response(response, self.__class__.__name__)
         return OrgUnit.from_dict(response.json())
 
@@ -120,15 +112,11 @@ class OrgUnitsApiResource:
             An OrgUnit object representing the created organizational unit.
 
         """
-        response = self._session.post(
-            self._url(customer_id=customer_id), json=org_unit.to_dict()
-        )
+        response = self._session.post(self._url(customer_id=customer_id), json=org_unit.to_dict())
         validate_response(response, self.__class__.__name__)
         return OrgUnit.from_dict(response.json())
 
-    def patch(
-        self, org_unit_path: str, org_unit: OrgUnit, customer_id: str = MY_CUSTOMER
-    ) -> OrgUnit:
+    def patch(self, org_unit_path: str, org_unit: OrgUnit, customer_id: str = MY_CUSTOMER) -> OrgUnit:
         """Update an organizational unit. This method supports patch semantics.
 
         Args:
@@ -147,9 +135,7 @@ class OrgUnitsApiResource:
         validate_response(response, self.__class__.__name__)
         return OrgUnit.from_dict(response.json())
 
-    def update(
-        self, org_unit_path: str, org_unit: OrgUnit, customer_id: str = MY_CUSTOMER
-    ) -> OrgUnit:
+    def update(self, org_unit_path: str, org_unit: OrgUnit, customer_id: str = MY_CUSTOMER) -> OrgUnit:
         """Update an organizational unit.
 
         Args:
@@ -176,7 +162,5 @@ class OrgUnitsApiResource:
             customer_id: The unique ID for the customer's Google Workspace account.
 
         """
-        response = self._session.delete(
-            self._url(customer_id=customer_id, org_unit_path=org_unit_path)
-        )
+        response = self._session.delete(self._url(customer_id=customer_id, org_unit_path=org_unit_path))
         validate_response(response, self.__class__.__name__)

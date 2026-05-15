@@ -17,6 +17,8 @@ from __future__ import annotations
 from unittest.mock import NonCallableMagicMock
 
 import pytest
+from integration_testing.common import use_live_api
+
 from cloud_identity.core.api_manager import (
     GoogleCloudIdentityApiManager,
 )
@@ -28,9 +30,36 @@ from cloud_identity.core.policies_api_resource import (
 )
 from google.auth.transport.requests import AuthorizedSession
 
+from .core.product import CloudIdentity
+from .core.session import CloudIdentitySession
+
 pytest_plugins = ("integration_testing.conftest",)
 
 
+@pytest.fixture
+def cloud_identity() -> CloudIdentity:
+    """CloudIdentity in-memory product backend"""
+    return CloudIdentity()
+
+
+@pytest.fixture(autouse=True)
+def script_session(
+    monkeypatch: pytest.MonkeyPatch,
+    cloud_identity: CloudIdentity,
+) -> CloudIdentitySession:
+    """Mock Cloud Identity scripts' session and get back an object to view request history"""
+    session: CloudIdentitySession = CloudIdentitySession(cloud_identity)
+
+    if not use_live_api():
+        monkeypatch.setattr(
+            "cloud_identity.core.authentication_manager.get_authenticated_session",
+            lambda *args, **kwargs: session,
+        )
+
+    return session
+
+
+# Legacy fixtures preserved for backward compatibility during incremental migration
 @pytest.fixture
 def auth_session() -> AuthorizedSession:
     """Authorized session"""

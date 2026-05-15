@@ -14,17 +14,18 @@
 
 from __future__ import annotations
 
-from enum import StrEnum  # pylint: disable=no-name-in-module
+from enum import StrEnum
 from itertools import islice
 from typing import TYPE_CHECKING
 
 from TIPCommon.extraction import extract_action_param
+from TIPCommon.transformation import string_to_multi_value
+from TIPCommon.validation import ParameterValidator
 
 from ..core.base_action import CloudIdentityAction
 from ..core.consts import INTEGRATION_DISPLAY_NAME, INTEGRATION_NAME
 from ..core.datamodels import PolicyType
 from ..core.exceptions import GoogleCloudIdentityApiEntityNotFoundException
-from ..core.utils import string_to_list
 
 if TYPE_CHECKING:
     from typing import NoReturn
@@ -32,7 +33,6 @@ if TYPE_CHECKING:
     from TIPCommon.types import Entity
 
 
-# pylint: disable=invalid-name
 class PolicyTypeDDL(StrEnum):
     ADMIN = PolicyType.ADMIN
     SYSTEM = PolicyType.SYSTEM
@@ -56,7 +56,6 @@ class ListPolicies(CloudIdentityAction):
         policy_type_str = extract_action_param(
             self.soar_action,
             param_name="Policy Type Filter",
-            is_mandatory=False,
             print_value=True,
         )
         if policy_type_str:
@@ -66,16 +65,14 @@ class ListPolicies(CloudIdentityAction):
         self.params.setting_type_filter = extract_action_param(
             self.soar_action,
             param_name="Setting Type Filter",
-            is_mandatory=False,
             print_value=True,
         )
         display_names_str = extract_action_param(
             self.soar_action,
             param_name="Settings Display Name Filter",
-            is_mandatory=False,
             print_value=True,
         )
-        self.params.display_names = string_to_list(display_names_str)
+        self.params.display_names = string_to_multi_value(display_names_str)
 
         self.params.max_results = extract_action_param(
             self.soar_action,
@@ -85,43 +82,39 @@ class ListPolicies(CloudIdentityAction):
             print_value=True,
         )
 
+    def _validate_params(self) -> None:
+        validator = ParameterValidator(self.soar_action)
+        validator.validate_range(
+            param_name="Max Results To Return",
+            value=self.params.max_results,
+            min_limit=1,
+            max_limit=MAX_RESULTS_LIMIT,
+        )
+
     def _perform_action(self, _: Entity | None = None) -> None:
-        client = self._get_api_manager()
-
-        if not self.params.org_unit_name or not self.params.org_unit_name.strip():
-            msg = "Organization Unit Name parameter cannot be empty."
-            raise ValueError(msg)
-
-        if self.params.max_results < 1 or self.params.max_results > MAX_RESULTS_LIMIT:
-            msg = "Max Results To Return must be between 1 and 100."
-            raise ValueError(msg)
-
-        client.test_connectivity()
-
         policy_type_filter = self.params.policy_type_filter
         if policy_type_filter == PolicyTypeDDL.BOTH:
             policy_type_filter = None
         elif policy_type_filter:
             policy_type_filter = PolicyType(policy_type_filter)
 
-        self.logger.info(
-            "setting_type_filter: %s, display_names: %s, policy_type_filter: %s, "
-            "organization_unit_name_or_path: %s, max_results: %s",
-            self.params.setting_type_filter,
-            self.params.display_names,
-            policy_type_filter,
-            self.params.org_unit_name,
-            self.params.max_results,
+        log_msg = (
+            f"setting_type_filter: {self.params.setting_type_filter}, "
+            f"display_names: {self.params.display_names}, "
+            f"policy_type_filter: {policy_type_filter}, "
+            f"organization_unit_name_or_path: {self.params.org_unit_name}, "
+            f"max_results: {self.params.max_results}"
         )
+        self.logger.info(log_msg)
 
-        org_unit = client.fetch_org_unit(self.params.org_unit_name)
+        org_unit = self.api_client.fetch_org_unit(self.params.org_unit_name)
         if org_unit:
             org_unit_id = org_unit.get_org_unit_id()
         else:
             msg = "Organization Unit not found."
             raise GoogleCloudIdentityApiEntityNotFoundException(msg)
 
-        policies = client.list_policies(
+        policies = self.api_client.list_policies(
             org_unit_id,
             self.params.display_names,
             policy_type_filter,
@@ -131,16 +124,12 @@ class ListPolicies(CloudIdentityAction):
 
         if not policies:
             self.result_value = False
-            self.output_message = (
-                f"No policies found based on the provided "
-                f"criteria in {INTEGRATION_DISPLAY_NAME}."
-            )
+            self.output_message = f"No policies found based on the provided criteria in {INTEGRATION_DISPLAY_NAME}."
             return
 
         self.json_results = [policy.to_dict() for policy in policies]
         self.output_message = (
-            f"Successfully listed policies based on the provided criteria in "
-            f"{INTEGRATION_DISPLAY_NAME}."
+            f"Successfully listed policies based on the provided criteria in {INTEGRATION_DISPLAY_NAME}."
         )
 
 

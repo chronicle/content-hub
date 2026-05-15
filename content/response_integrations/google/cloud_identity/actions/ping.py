@@ -26,8 +26,7 @@ if TYPE_CHECKING:
 
 
 SUCCESS_MESSAGE: str = (
-    f"Successfully connected to the {INTEGRATION_DISPLAY_NAME} "
-    "server with the provided connection parameters!"
+    f"Successfully connected to the {INTEGRATION_DISPLAY_NAME} server with the provided connection parameters!"
 )
 ERROR_MESSAGE: str = f"Failed to connect to the {INTEGRATION_DISPLAY_NAME} server!"
 
@@ -39,8 +38,7 @@ class Ping(CloudIdentityAction):
         self.error_output_message: str = ERROR_MESSAGE
 
     def _perform_action(self, _: Entity | None = None) -> None:
-        client = self._get_api_manager()
-        client.test_connectivity()
+        self.api_client.test_connectivity()
 
 
 def main() -> NoReturn:

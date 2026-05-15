@@ -15,7 +15,10 @@
 from unittest.mock import Mock
 
 import pytest
-from cloud_identity.core.api_manager import CloudIdentityApiParameters, GoogleCloudIdentityApiManager
+from cloud_identity.core.api_manager import (
+    CloudIdentityApiParameters,
+    GoogleCloudIdentityApiManager,
+)
 from cloud_identity.core.datamodels import (
     DLPRulePolicySettingValue,
     Policy,

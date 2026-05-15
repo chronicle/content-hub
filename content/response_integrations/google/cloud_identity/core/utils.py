@@ -79,21 +79,6 @@ def get_integration_parameters(chronicle_soar: ChronicleSOAR) -> IntegrationPara
     )
 
 
-def string_to_list(comma_separated_string: str | None) -> list[str]:
-    """Convert a comma-separated string to a clean list of strings.
-
-    Args:
-        comma_separated_string: Comma-separated string.
-
-    Returns:
-        List of clean string items.
-
-    """
-    if not comma_separated_string:
-        return []
-    return [item.strip() for item in comma_separated_string.split(",") if item.strip()]
-
-
 def validate_response(response: requests.Response, api_name: str) -> None:
     """Validate a response from the Google Cloud Identity API.
 
@@ -106,17 +91,17 @@ def validate_response(response: requests.Response, api_name: str) -> None:
         GoogleCloudIdentityApiException: For other API errors.
 
     """
+    response_json = response.json()
     if response.status_code == HTTPStatus.NOT_FOUND:
-        msg = f"{api_name} entity not found: {response.json()}"
+        msg = f"{api_name} entity not found: {response_json}"
         raise GoogleCloudIdentityApiEntityNotFoundException(msg)
-
     try:
         response.raise_for_status()
     except Exception as e:
-        msg = f"{api_name} failed reason: {e}, {response.json()}"
+        msg = f"{api_name} failed reason: {e}, {response_json}"
         raise GoogleCloudIdentityApiException(msg) from e
 
     # Validation for modification calls results
-    if response.json().get("done") is False:
-        msg = f"{api_name} did not finish request: {response.json()}"
+    if response_json.get("done") is False:
+        msg = f"{api_name} did not finish request: {response_json}"
         raise GoogleCloudIdentityApiException(msg)
