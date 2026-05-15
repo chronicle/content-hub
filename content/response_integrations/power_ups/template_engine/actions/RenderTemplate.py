@@ -56,8 +56,13 @@ def get_execution_scope(siemplify: SiemplifyAction) -> ExecutionScope:
 
         str_scope = str(raw_scope).strip().title()
         if str_scope.isdigit():
-            execution_scope_value = ExecutionScope(int(str_scope)).value
+            scope_int = int(str_scope)
+            if scope_int == 0:
+                scope_int = 1
+            execution_scope_value = ExecutionScope(scope_int).value
         else:
+            if str_scope == "Executionscopeunspecified":
+                str_scope = "Alert"
             execution_scope_value = ExecutionScope[str_scope].value
     except Exception as e:
         siemplify.LOGGER.error(f"Failed to parse execution scope: {e}.")
@@ -113,7 +118,7 @@ def extract_context_data(
     events: list[SingleJson] = []
     entities: dict[str, SingleJson] = {}
 
-    if execution_scope == ExecutionScope.Alert:
+    if execution_scope.value == ExecutionScope.Alert.value:
         if current_alert:
             _extract_alert_data(
                 current_alert,
