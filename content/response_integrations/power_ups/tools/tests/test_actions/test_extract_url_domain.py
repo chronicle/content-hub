@@ -17,24 +17,41 @@ from __future__ import annotations
 from unittest.mock import patch
 from tldextract.tldextract import ExtractResult
 
+from ...core import ToolsCommon
 from ...core.ToolsCommon import get_domain_from_string
 
 
-@patch("core.ToolsCommon.extract")
+@patch.object(ToolsCommon, 'extract')
 def test_get_domain_from_string(mock_extract) -> None:
     def side_effect(url):
         if "test.google.com" in url:
-            return ExtractResult(subdomain="test", domain="google", suffix="com")
+            return ExtractResult(
+                subdomain="test",
+                domain="google",
+                suffix="com",
+                is_private=False,
+            )
         if "subdomain1.subdomain2.google.com" in url:
             return ExtractResult(
                 subdomain="subdomain1.subdomain2",
                 domain="google",
                 suffix="com",
+                is_private=False,
             )
         if "subdomain.google.com" in url:
-            return ExtractResult(subdomain="subdomain", domain="google", suffix="com")
+            return ExtractResult(
+                subdomain="subdomain",
+                domain="google",
+                suffix="com",
+                is_private=False,
+            )
         if "google.com" in url:
-            return ExtractResult(subdomain="", domain="google", suffix="com")
+            return ExtractResult(
+                subdomain="",
+                domain="google",
+                suffix="com",
+                is_private=False,
+            )
         raise ValueError(f"Unexpected URL in test: {url}")
 
     mock_extract.side_effect = side_effect
