@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import json
+from typing import TYPE_CHECKING
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler

@@ -15,11 +15,14 @@
 from __future__ import annotations
 
 from typing import Any
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.ToolsCommon import ExecutionScope
 
 SCRIPT_NAME: str = "FindFirstAlert"
+
 
 @output_handler
 def main():

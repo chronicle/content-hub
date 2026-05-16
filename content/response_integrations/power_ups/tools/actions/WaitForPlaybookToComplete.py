@@ -19,7 +19,6 @@ from typing import Any
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_INPROGRESS
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-
 from TIPCommon.rest.soar_api import get_workflow_instance_card
 
 from ..core.ToolsCommon import ExecutionScope

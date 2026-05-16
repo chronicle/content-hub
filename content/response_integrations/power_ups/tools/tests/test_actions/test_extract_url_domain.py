@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from unittest.mock import patch
+
 from tldextract.tldextract import ExtractResult
 
 from ...core import ToolsCommon

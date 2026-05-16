@@ -18,7 +18,6 @@ from unittest.mock import MagicMock, patch
 
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
-
 from TIPCommon.base.action import ExecutionState
 
 from ...actions.CreateEntityRelationships import CreateEntityRelationshipsAction

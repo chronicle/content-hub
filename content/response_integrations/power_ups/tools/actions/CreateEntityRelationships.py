@@ -17,18 +17,17 @@ from __future__ import annotations
 import json
 import re
 import time
-from enum import Enum
 from typing import TYPE_CHECKING
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict
-
 from TIPCommon.base.action import Action
 from TIPCommon.data_models import CreateEntity
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.rest.soar_api import create_entity
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.types import SingleJson
+
 from ..core.ToolsCommon import ExecutionScope
 
 if TYPE_CHECKING:
