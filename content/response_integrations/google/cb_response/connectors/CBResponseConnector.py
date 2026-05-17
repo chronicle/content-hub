@@ -31,7 +31,8 @@ import urllib.parse
 import os
 import json
 from soar_sdk.SiemplifyUtils import dict_to_flat, utc_now, convert_string_to_unix_time
-from soar_sdk.SiemplifyConnectors import CaseInfo, SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
 from ..core.CBResponseManagerLoader import CBResponseManagerLoader
 import datetime
 from TIPCommon import extract_connector_param
