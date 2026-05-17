@@ -21,10 +21,15 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 def main():
     siemplify = SiemplifyAction()
 
-    output_message = "Connection Established"
+    output_message = "Successfully connected to the WMI."
     result_value = "true"
     siemplify.end(output_message, result_value)
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the WMI.
+# Failed to connect to the WMI.
 
 if __name__ == "__main__":
     main()

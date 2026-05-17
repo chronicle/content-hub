@@ -55,9 +55,9 @@ def main():
     result_value = cim.ping()
 
     if result_value:
-        output_message = "Connection Established."
+        output_message = "Successfully connected to the Cisco ISE."
     else:
-        output_message = "Connection Failed."
+        output_message = "Failed to connect to the Cisco ISE."
 
     siemplify.end(output_message, result_value)
 

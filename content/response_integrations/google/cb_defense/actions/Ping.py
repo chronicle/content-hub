@@ -53,7 +53,7 @@ def main():
         cb_defense.test_connectivity()
 
         status = EXECUTION_STATE_COMPLETED
-        output_message = f"Connected successfully to {api_root}."
+        output_message = "Successfully connected to the Carbon Black Defense."
         siemplify.LOGGER.info(output_message)
         result_value = "true"
 

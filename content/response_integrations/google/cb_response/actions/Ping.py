@@ -72,7 +72,7 @@ def main():
         )
         _licence = manager.get_license()
         status = EXECUTION_STATE_COMPLETED
-        output_message = "Connection Established"
+        output_message = "Successfully connected to the Carbon Black Response."
         result_value = "true"
         siemplify.LOGGER.info("Finished processing")
     except Exception as e:
@@ -80,7 +80,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = "Some errors occurred. Please check log"
+        output_message = f"Failed to connect to the Carbon Black Response. Reason: {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(

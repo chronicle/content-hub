@@ -35,10 +35,10 @@ def main():
     result_value = False
 
     if juniper_manager.ping():
-        output_message = "Connection Established."
+        output_message = "Successfully connected to the JuniperVSRX."
         result_value = True
     else:
-        output_message = "Connection Failed."
+        output_message = "Failed to connect to the JuniperVSRX."
 
     juniper_manager.close_session()
 

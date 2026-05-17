@@ -32,8 +32,13 @@ def main():
         server_address, application_id, application_secret, tenant_identifier
     )
 
-    siemplify.end("Successfully connected.", "true")
+    siemplify.end("Successfully connected to the Cylance.", "true")
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the Cylance.
+# Failed to connect to the Cylance.
 
 if __name__ == "__main__":
     main()

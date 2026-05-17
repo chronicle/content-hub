@@ -120,21 +120,21 @@ def main():
         )
 
     except ExchangeExtensionPackIncompleteInfoException as e:
-        output_message = str(e)
+        output_message = f"Failed to connect to the Exchange Extension Pack. Reason: " + str(str(e))
     except ExchangeExtensionPackPowershellException as e:
-        output_message = (
+        output_message = f"Failed to connect to the Exchange Extension Pack. Reason: " + str((
             f"Failed to execute action because powershell is not installed on Siemplify server! Please"
             f" see the configuration instructions on how to install powershell. Error is {e}"
-        )
+        ))
     except ExchangeExtensionPackGssntlmsspException as e:
-        output_message = (
+        output_message = f"Failed to connect to the Exchange Extension Pack. Reason: " + str((
             f"Failed to execute action because gssntlmssp package is not installed on Siemplify server!"
             f" Please see the configuration instructions on how to install powershell. Error is {e}"
-        )
+        ))
     except Exception as e:
         siemplify.LOGGER.error(f"General error performing action {PING_SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
-        output_message = f"Failed to execute action! Error is {e}"
+        output_message = f"Failed to connect to the Exchange Extension Pack. Reason: Failed to execute action! Error is {e}"
     finally:
         if manager:
             manager.disconnect()

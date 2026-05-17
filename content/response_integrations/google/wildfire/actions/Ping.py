@@ -31,8 +31,13 @@ def main():
     connectivity = wildfire_manager.test_connectivity()
 
     # If no exception occurs - then connection is successful
-    siemplify.end("Connected successfully.", connectivity)
+    siemplify.end("Successfully connected to the Palo Alto Wildfire.", connectivity)
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the Palo Alto Wildfire.
+# Failed to connect to the Palo Alto Wildfire.
 
 if __name__ == "__main__":
     main()

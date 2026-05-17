@@ -65,10 +65,15 @@ def main():
     result = cuckoo_manager.test_connectivity()
 
     # If no exception occur - then connection is successful
-    output_message = "Connected successfully."
+    output_message = "Successfully connected to the Cuckoo."
 
     siemplify.end(output_message, result)
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the Cuckoo.
+# Failed to connect to the Cuckoo.
 
 if __name__ == "__main__":
     main()

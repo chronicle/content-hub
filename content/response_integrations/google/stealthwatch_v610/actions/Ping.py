@@ -29,9 +29,14 @@ def main():
     stealthwatch_manager = StealthwatchManager(server_address, username, password)
 
     connectivity = stealthwatch_manager.test_connectivity()
-    output_message = "Connected Successfully"
+    output_message = "Successfully connected to the Stealthwatch V6.10."
     siemplify.end(output_message, connectivity)
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the Stealthwatch V6.10.
+# Failed to connect to the Stealthwatch V6.10.
 
 if __name__ == "__main__":
     main()

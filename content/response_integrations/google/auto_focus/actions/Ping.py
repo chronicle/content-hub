@@ -47,7 +47,7 @@ def main():
 
         # If no exception occur - then connection is successful
         siemplify.LOGGER.info("Connected successfully.")
-        output_message = "Connected successfully."
+        output_message = "Successfully connected to the Palo Alto AutoFocus."
         result_value = "true"
         status = EXECUTION_STATE_COMPLETED
 
@@ -56,7 +56,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = f"Action didn't complete due to error: {e}"
+        output_message = f"Failed to connect to the Palo Alto AutoFocus. Reason: Action didn't complete due to error: {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}:")
