@@ -314,7 +314,7 @@ class Gemini(LlmSdk[GeminiConfig]):
 
             final_results: list[T_Schema | str] = []
             for result in results:
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     raise result
                 final_results.append(result)
 
