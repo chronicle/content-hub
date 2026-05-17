@@ -1,58 +1,71 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Entities:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for endpoints (assets) in Trend Vision One based on IP,
+      Hostname, or Agent UUID, and returns contextual metadata about the endpoint
+      (OS, login account, installed products). This aligns with both 'Search Asset'
+      and 'Enrich Asset' expected outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: true
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     Enriches Hostname and IP Address entities using information from Trend Vision
-    One. This action retrieves detailed endpoint metadata such as OS version, MAC
-    addresses, login accounts, and installed product codes. It also allows for the
-    enrichment of specific endpoints via a list of Agent UUIDs provided as an input
-    parameter.
+    One. The action searches for endpoints associated with the entities or provided
+    Agent UUIDs and retrieves contextual metadata such as OS description, login account,
+    endpoint name, IP, and installed product codes.
 
 
     ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Agent UUID | String | No | A comma-separated list of Trend Vision One Agent
-    UUIDs. The action will attempt to fetch and include data for these specific agents
-    alongside the entities found in the alert context. |
+    | Agent UUID | String | False | A comma-separated list of UUIDs. The action processes
+    these UUIDs along with their related entities. |
 
 
-    ### Flow Description
+    ### Action Flow
 
-    1. **Initialization**: Establishes a connection to the Trend Vision One API using
-    the provided credentials and validates connectivity.
+    1. Iterates over the target entities and filters for Hostname and IP Address types.
 
-    2. **Entity Filtering**: Identifies all Hostname and IP Address entities within
-    the current Google SecOps context.
+    2. For each suitable entity, searches for the corresponding endpoint in Trend
+    Vision One.
 
-    3. **Endpoint Search**: For each identified entity, the action queries the Trend
-    Vision One `/v3.0/eiqs/endpoints` endpoint using the IP or Hostname as a filter.
+    3. If Agent UUIDs are provided, searches for endpoints matching those UUIDs.
 
-    4. **Data Enrichment**: If a matching endpoint is found, the action updates the
-    entity's additional properties with metadata (prefixed with 'TrendVisionOne')
-    and attaches a data table containing OS and network details.
+    4. Enriches the entities with the retrieved endpoint data, updates the entities
+    in the platform, and creates an entity table with the results.
 
-    5. **Agent UUID Processing**: If Agent UUIDs are provided in the parameters, the
-    action explicitly searches for these IDs and retrieves their endpoint information.
-
-    6. **Finalization**: Updates all successfully enriched entities in the Google
-    SecOps platform and returns a comprehensive JSON result containing the raw data
-    for all processed endpoints.
+    5. Returns a JSON object containing the endpoint details.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -63,10 +76,18 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action updates entity attributes (additional properties) with enrichment
-      data and adds data tables to the entities within the Google SecOps case.
+      Updates the entities with enrichment data and adds an entity table.
+    reasoning: >-
+      The action fetches endpoint data from Trend Vision One using a GET request.
+      It does not mutate any external data. Internally, it updates the entities with
+      the retrieved enrichment data and adds an entity table.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source to enrich entities. It does
+      not mutate external data and only performs allowed internal mutations (updating
+      entities). Therefore, it is classified as an enrichment action.
+    remediation: false
   entity_usage:
     entity_types:
     - ADDRESS
@@ -84,147 +105,84 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`.
 Execute Custom Script:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a custom script on remote endpoints in Trend Vision One.
+      This directly aligns with the 'Execute Command on the Host' expected outcome.
+      It does not perform enrichment, containment, or other specific remediation actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Executes a custom script on remote endpoints managed by Trend Vision One. This
-    action supports targeting endpoints via Hostname or IP Address entities, as well
-    as directly through Agent UUIDs. It operates asynchronously, initiating the script
-    execution and then polling for the task status until completion or timeout.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Script Name | String | Yes | The exact name of the script (as defined in Trend
-    Vision One) to be executed on the target endpoints. |
-
-    | Script Parameters | String | No | Optional arguments or parameters required
-    by the script during execution. |
-
-    | Agent UUID | String | No | A comma-separated list of specific Trend Vision One
-    Agent UUIDs to target, bypassing entity resolution. |
-
-
-    ### Additional Notes
-
-    - The action is asynchronous. If the script takes a long time to execute, ensure
-    the action timeout in the Google SecOps IDE is adjusted accordingly.
-
-    - Either suitable entities (IP/Hostname) or Agent UUIDs must be provided for the
-    action to have targets to process.
+    Executes a custom script on specified endpoints in Trend Vision One.
 
 
     ### Flow Description
 
-    1. **Validation**: The action first verifies that the specified 'Script Name'
-    exists within the Trend Vision One environment.
+    1. Iterates over the provided Address and Hostname entities, as well as any provided
+    Agent UUIDs, to search for the corresponding endpoints in Trend Vision One.
 
-    2. **Target Identification**: It identifies target endpoints by searching the
-    Trend Vision One inventory using the identifiers of the provided IP and Hostname
-    entities. It also includes any agents specified via the 'Agent UUID' parameter.
+    2. Initiates a task to run the specified custom script on each identified endpoint.
 
-    3. **Execution**: A request is sent to Trend Vision One to trigger the script
-    execution on all identified endpoints. This generates unique task URLs for tracking.
+    3. Asynchronously polls the Trend Vision One API to check the status of the script
+    execution tasks.
 
-    4. **Monitoring**: The action enters an asynchronous loop, periodically checking
-    the status of each task (e.g., 'running', 'succeeded', 'failed') via the Trend
-    Vision One API.
-
-    5. **Completion**: Once all tasks reach a terminal state or the action approaches
-    its timeout, it aggregates the results, providing task IDs and execution statuses
-    in the JSON output.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Executes custom scripts on remote endpoints, which can change the state, configuration,
-      or files on the target systems managed by Trend Vision One.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - HOSTNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Execute Email:
-  ai_description: >-
-    ### General Description
-
-    Executes email response actions within the Trend Vision One environment. This
-    action allows security analysts to programmatically manage suspicious or malicious
-    emails by performing operations such as deleting, quarantining, or restoring messages
-    based on their Message ID and associated mailbox. The action operates asynchronously,
-    meaning it initiates a task in Trend Vision One and then polls for the completion
-    status.
+    4. Once completed, returns the task details and execution status as JSON results.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Action | String | No | Specifies the operation to perform on the email. Options
-    include: **Delete**, **Quarantine**, and **Restore**. Defaults to 'Delete'. |
+    | Script Name | String | True | Specify the name of the script that needs to be
+    executed on the endpoints. |
 
-    | Message ID | String | Yes | The unique identifier of the email message that
-    the action will be performed on. |
-
-    | Mailbox | String | No | The specific mailbox address related to the message.
+    | Script Parameters | String | False | Specify the parameters for the script.
     |
 
-    | Description | String | No | A text description or justification for the action
-    being performed, which will be logged in Trend Vision One. |
+    | Agent UUID | String | False | A comma-separated list of UUIDs. The action processes
+    these UUIDs along with their related entities. |
 
 
     ### Additional Notes
 
-    - This is an **Asynchronous** action. It will trigger a task and then enter a
-    'Pending' state, polling the external system until the task reaches a terminal
-    state (Success/Failure) or the timeout is reached.
-
-    - Ensure the script timeout in the Google SecOps IDE is adjusted to accommodate
-    the polling duration required by the external API.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action validates the connection to Trend Vision One
-    using the provided API credentials.
-
-    2. **Task Initiation (First Run)**: It sends a POST request to the Trend Vision
-    One email response endpoint with the specified action (Delete/Quarantine/Restore)
-    and message details.
-
-    3. **Task Tracking**: It extracts a Task ID from the API response headers (`Operation-Location`).
-
-    4. **Status Polling**: In subsequent execution cycles, the action queries the
-    status of the task ID.
-
-    5. **Completion**: Once the task status is 'succeeded', 'failed', or 'rejected',
-    the action retrieves the final task details, adds them to the execution results
-    as JSON, and completes the execution.
+    Either suitable entities (Address, Hostname) or the 'Agent UUID' parameter must
+    be provided for the action to run.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -233,13 +191,137 @@ Execute Email:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      This action performs POST requests to the Trend Vision One API to modify the
-      state of email messages (deleting, quarantining, or restoring them) in the target
-      environment.
+      Executes a custom script on the specified endpoints in Trend Vision One.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches endpoint details and task status from Trend Vision One (fetches_data=true).
+      It initiates the execution of a custom script on remote endpoints via the Trend
+      Vision One API, which changes the state of the external system (can_mutate_external_data=true).
+      It does not update entities, create insights, modify alerts, or add case comments,
+      so it does not mutate internal data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by executing a script on remote endpoints,
+      so it cannot be classified as an Enrichment action. It does not perform identity,
+      host, network, or email-based remediation (like blocking or isolating), so it
+      is not a Remediation action.
+    remediation: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      includes `ADDRESS` and `HOSTNAME`. Therefore, it runs on ADDRESS and HOSTNAME
+      entities and filters by entity type.
+Execute Email:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: true
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action can perform 'Delete', 'Quarantine', or 'Restore' operations on an
+      email. 'Delete' aligns with the 'Delete Email' category, while 'Quarantine'
+      and 'Restore' align with modifying the state of an email, matching the 'Update
+      Email' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: true
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    Executes an email action (Delete, Quarantine, or Restore) on a specified message
+    in Trend Vision One. This action runs asynchronously.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Action | Dropdown | No | Specify the action to perform on the email. Valid options
+    are Delete, Quarantine, or Restore. |
+
+    | Message ID | String | Yes | Specify the ID of the message that needs to be used
+    in the action. |
+
+    | Mailbox | String | No | Specify the mailbox related to the message. |
+
+    | Description | String | No | Specify a description for the performed action.
+    |
+
+
+    ### Flow
+
+    1. Initiates the specified email action (Delete, Quarantine, or Restore) using
+    the provided Message ID and Mailbox via the Trend Vision One API.
+
+    2. Polls the API asynchronously to check the status of the execution task.
+
+    3. Returns the task details and results as JSON once the operation completes successfully.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes, quarantines, or restores an email message in Trend Vision One.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action's primary purpose is to execute an email action (Delete, Quarantine,
+      Restore) in Trend Vision One, which mutates external data. It does not fetch
+      contextual data for enrichment, nor does it mutate internal SecOps data such
+      as entities, insights, or case comments.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action mutates external data by deleting or quarantining emails, which violates
+      the read-only constraint of Enrichment actions. Because it performs email-based
+      remediation (quarantine/delete), it is classified as a Remediation action.
+    remediation: true
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -255,56 +337,92 @@ Execute Email:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on the 'Message ID' and 'Mailbox' action parameters to perform
+      its task. Therefore, the entity types list is empty and all filter flags are
+      false.
 Isolate Endpoint:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: true
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action isolates an endpoint from the network using Trend Vision One, which
+      directly aligns with the 'Contain Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    Isolates endpoints in Trend Vision One based on IP Address or Hostname entities,
-    or specific Agent UUIDs. This action is performed asynchronously, meaning it triggers
-    the isolation task and then periodically checks the status until the operation
-    succeeds, fails, or times out. Isolation restricts the network connectivity of
-    the target device to prevent further potential threats.
+    This action isolates endpoints in Trend Vision One. It targets IP Address and
+    Hostname entities, as well as explicitly provided Agent UUIDs, to initiate an
+    isolation task on the Trend Vision One platform, effectively containing the host.
+
+
+    ### Flow Description
+
+    1. The action iterates over the target entities (IP Address and Hostname).
+
+    2. For each entity, it queries Trend Vision One to find the corresponding endpoint
+    and retrieve its GUID.
+
+    3. It initiates an isolation task for the identified endpoints.
+
+    4. It also processes any explicitly provided Agent UUIDs and initiates isolation
+    tasks for them.
+
+    5. The action continuously queries the status of the isolation tasks until they
+    complete, fail, or time out.
+
+    6. Finally, it returns a summary of successfully isolated endpoints and those
+    that failed.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Description | String | No | Specify the reasoning for the isolation of the endpoints.
-    |
+    | Description | String | False | Specify the reasoning for the isolation of the
+    endpoints. This will be recorded in Trend Vision One. |
 
-    | Agent UUID | String | No | A comma-separated list of UUIDs. The action processes
-    these UUIDs along with their related entities. |
-
-
-    ### Flow Description
-
-    1. **Entity Filtering**: The action identifies all `ADDRESS` and `HOSTNAME` entities
-    within the current scope.
-
-    2. **Endpoint Discovery**: For each entity, the action queries Trend Vision One
-    to find the corresponding endpoint GUID using the IP or Hostname.
-
-    3. **Agent UUID Processing**: If `Agent UUID` parameters are provided, the action
-    also searches for those specific agents in the system.
-
-    4. **Isolation Trigger**: The action sends a request to Trend Vision One to isolate
-    all identified endpoints and agents.
-
-    5. **Asynchronous Monitoring**: The action enters an async loop, checking the
-    status of the isolation tasks via the Trend Vision One API until they reach a
-    terminal state (succeeded, failed, or rejected) or the action times out.
+    | Agent UUID | String | False | A comma-separated list of Agent UUIDs. The action
+    processes these UUIDs along with their related entities. |
 
 
     ### Additional Notes
 
-    - This action requires the "API Root" and "API Token" to be configured in the
-    integration settings.
-
-    - Because this is an asynchronous action, ensure the script timeout in the Chronicle
-    SOAR IDE is sufficient for the isolation tasks to complete.
+    This action runs asynchronously. Please adjust the script timeout value in the
+    Chronicle SOAR IDE as needed to allow sufficient time for the isolation tasks
+    to complete.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -313,12 +431,22 @@ Isolate Endpoint:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Isolates endpoints in Trend Vision One, which restricts network connectivity
-      for the target device.
+      Initiates an isolation task on Trend Vision One to isolate the specified endpoints
+      from the network.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by querying Trend Vision One for endpoint details and
+      task statuses (GET requests). It mutates external data by initiating an isolation
+      task on the endpoints (POST request). It does not mutate internal SOAR data,
+      update entities, create insights, modify alerts, or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by isolating endpoints, so it cannot be classified
+      as Enrichment. It performs host-based remediation by isolating the endpoint,
+      so it is classified as Remediation.
+    remediation: true
   entity_usage:
     entity_types:
     - ADDRESS
@@ -336,46 +464,69 @@ Isolate Endpoint:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are ADDRESS
+      and HOSTNAME. Therefore, it filters by entity type.
 Ping:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific security product outcome categories such as enriching IOCs, updating
+      alerts, or containing hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Verifies the connection to the Trend Vision One server using the provided API
-    credentials and root URL. This action is primarily used to validate that the integration
-    is correctly configured and that the Google SecOps environment has network access
-    to the Trend Vision One API endpoints.
+    Tests connectivity to the Trend Vision One platform using the provided integration
+    configuration parameters. The action makes a request to the healthcheck endpoint
+    to verify that the API root and token are valid and that the server is reachable.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The base URL for the Trend Vision One API instance.
-    |
-
-    | API Token | String | Yes | The API token used for authentication with Trend
-    Vision One. |
-
-    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
-    of the API Root. |
+    There are no action-specific parameters for this action. It relies entirely on
+    the integration configuration parameters (API Root, API Token, Verify SSL).
 
 
-    ### Flow Description
+    ### Flow
 
-    1. **Parameter Extraction**: Retrieves the API Root, API Token, and SSL verification
-    preference from the integration configuration.
+    1. Retrieves the integration configuration parameters.
 
-    2. **Manager Initialization**: Initializes the `TrendVisionOneManager` with the
-    provided credentials and session headers.
+    2. Initializes the Trend Vision One manager.
 
-    3. **Connectivity Test**: Executes a GET request to the `/v3.0/healthcheck/connectivity`
-    endpoint to verify the API token and connectivity.
+    3. Calls the healthcheck endpoint to test connectivity.
 
-    4. **Result Reporting**: If the request is successful, it returns a success message.
-    If an exception occurs (e.g., authentication failure or network timeout), it captures
-    the error and reports a failure status.
+    4. Returns a success message if the connection is established, otherwise returns
+    an error.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -384,10 +535,18 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only tests connectivity to the Trend Vision One API by calling a
+      healthcheck endpoint. It does not fetch contextual data for entities or alerts,
+      nor does it mutate any external or internal data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a Ping action, which is explicitly excluded from being categorized
+      as an Enrichment action. It also does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -403,69 +562,81 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or interact with any entities. It simply tests connectivity
+      to the external service.
 Submit File:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action uploads a file to the Trend Vision One sandbox and retrieves the
+      analysis results, which directly matches the 'Submit File' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Submit File** action allows users to upload files from the local filesystem
-    to the Trend Vision One sandbox for automated analysis. This action is designed
-    to handle multiple files simultaneously and supports password-protected archives
-    or documents. Because sandbox analysis can take time, this action operates asynchronously,
-    polling the Trend Vision One API until the analysis is complete or a timeout occurs.
+    Submits one or more files to the Trend Vision One sandbox for analysis. This is
+    an asynchronous action that uploads the files, monitors the analysis tasks, and
+    retrieves the analysis results once completed.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **File Paths** | String | Yes | A comma-separated list of absolute paths to
-    the files on the local system that should be submitted for analysis. |
+    | File Paths | String | Yes | Specify a comma-separated list of paths for the
+    files that need to be submitted. |
 
-    | **Archive Password** | String | No | The password required to extract files
-    if the submitted file is an archive (e.g., ZIP, RAR). |
+    | Archive Password | Password | No | Specify the password for the archive if the
+    file is an archive. |
 
-    | **Document Password** | String | No | The password required to open the file
-    if it is a protected document (e.g., PDF, DOCX). |
+    | Document Password | Password | No | Specify the password for the document if
+    the file is a document. |
 
-    | **Arguments** | String | No | Command-line arguments to be used when executing
-    the file within the sandbox environment. |
-
-
-    ### Additional Notes
-
-    - This action is **asynchronous**. It will submit the files and then enter an
-    "In Progress" state, periodically checking for results in subsequent execution
-    cycles.
-
-    - Users should ensure that the Chronicle SOAR execution timeout is configured
-    to be long enough to accommodate sandbox analysis times.
-
-    - The action verifies the existence and readability of the files on the local
-    system before attempting submission.
+    | Arguments | String | No | Specify the arguments for the submitted file if it
+    is an executable. |
 
 
-    ### Flow Description
+    ### Action Flow
 
-    1. **Validation**: The action first checks if the provided file paths exist and
-    are accessible on the local filesystem.
+    1. Validates the provided file paths to ensure the files exist and are accessible
+    on the system.
 
-    2. **Submission**: For each valid file, it performs a POST request to the Trend
-    Vision One sandbox API, uploading the file content along with any provided passwords
-    or arguments.
+    2. Submits each file to the Trend Vision One sandbox via API.
 
-    3. **Task Tracking**: The action receives a task ID for each submission and stores
-    these in the action's state (additional_data).
+    3. Monitors the status of the analysis tasks asynchronously.
 
-    4. **Polling (Async)**: In subsequent runs, the action queries the status of each
-    pending task using the stored IDs.
-
-    5. **Result Retrieval**: Once a task reaches a 'succeeded' status, the action
-    fetches the detailed analysis report from the sandbox.
-
-    6. **Completion**: After all tasks are finished (or failed/timed out), the action
-    aggregates the results into a JSON object and provides a summary message.
+    4. Retrieves the analysis results for successfully completed tasks and attaches
+    them as JSON results to the action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -474,12 +645,21 @@ Submit File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits file content to the Trend Vision One sandbox and creates new analysis
-      tasks in the external system.
+      Submits a file to the Trend Vision One sandbox for analysis.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action submits a file to an external sandbox (Trend Vision One) using a
+      POST request, which mutates external data. It then fetches the task status and
+      results. It does not update entities, create insights, modify alert data, or
+      create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by uploading a file to a sandbox, so it cannot
+      be classified as Enrichment. It does not perform any remediation tasks like
+      blocking IPs or isolating hosts, so it is not Remediation.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -495,54 +675,79 @@ Submit File:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on SecOps entities. It uses file paths provided
+      directly via the action parameters.
 Submit URL:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action submits a URL sample to a sandbox/analysis engine and retrieves the
+      behavior report. This aligns with the 'Submit File' expected outcome, which
+      covers uploading files or samples to a sandbox.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
+    Submits URL entities to Trend Vision One for sandbox analysis.
+
+
     ### General Description
 
-    Submits URL entities to the Trend Vision One sandbox for automated analysis. This
-    action is designed to identify potential threats by detonating URLs in a controlled
-    environment and retrieving detailed risk assessments, including risk levels, detection
-    names, and threat types.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | No | This action does not require any user-defined parameters beyond
-    the standard integration configuration. |
-
-
-    ### Additional Notes
-
-    * **Asynchronous Execution:** This action operates asynchronously. It submits
-    the URLs and then periodically polls the Trend Vision One API for task completion.
-    Users should ensure the script timeout in the Chronicle SOAR IDE is configured
-    to allow enough time for sandbox analysis (default is often 300 seconds).
-
-    * **Quota Management:** The action includes logic to handle rate limits and daily
-    submission quotas. If a quota is reached, the action will report which URLs were
-    not submitted.
+    This action takes URL entities from the case and submits them to the Trend Vision
+    One sandbox for behavioral analysis. Because sandbox analysis can take time, this
+    action runs asynchronously, periodically checking the status of the submission
+    tasks until they complete or time out. Once completed, the analysis results are
+    retrieved and attached to the action's JSON results.
 
 
     ### Flow Description
 
-    1. **Entity Filtering:** The action identifies all URL entities within the current
-    scope.
+    1. **Entity Filtering:** Iterates over the target entities and filters for URL
+    entities.
 
-    2. **Submission:** It batches the URLs (up to 10 per request) and submits them
-    to the Trend Vision One sandbox via a POST request to create analysis tasks.
+    2. **Submission:** Submits the extracted URLs to the Trend Vision One sandbox
+    API in chunks.
 
-    3. **Status Polling:** The action enters an asynchronous loop, checking the status
-    of each task ID returned by the submission step.
+    3. **Status Polling:** Periodically queries the API to check the status of the
+    analysis tasks.
 
-    4. **Data Retrieval:** Once a task reaches a 'succeeded' status, the action fetches
-    the full analysis results from the sandbox.
+    4. **Result Retrieval:** Once a task is completed, fetches the analysis report
+    and attaches it as a JSON result.
 
-    5. **Result Reporting:** The final analysis data is formatted and attached to
-    the action's JSON results for use in downstream playbooks.
+
+    ### Parameters Description
+
+    This action does not require any specific input parameters to be configured in
+    the action settings. It relies on the integration's configuration parameters (API
+    Root, API Token, Verify SSL) and the entities present in the case.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -551,12 +756,24 @@ Submit URL:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits URLs to the Trend Vision One sandbox, which creates new analysis tasks
-      and consumes submission quotas in the external system.
+      Submits URLs to the Trend Vision One sandbox, creating new analysis tasks on
+      the external platform.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches task details and analysis results from Trend Vision One (fetches_data=true).
+      It mutates external data by submitting URLs to the sandbox, which creates a
+      new analysis task on the Trend Vision One platform (can_mutate_external_data=true).
+      It does not mutate internal SecOps data, update entities, create insights, modify
+      alerts, or add case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action creates new analysis tasks in an external system (Trend Vision One
+      sandbox), which violates the external state preservation rule for Enrichment.
+      It does not perform any containment, blocking, or identity revocation, so it
+      is not a Remediation action.
+    remediation: false
   entity_usage:
     entity_types:
     - DestinationURL
@@ -573,63 +790,77 @@ Submit URL:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where SUPPORTED_ENTITY_TYPES
+      contains EntityTypes.URL (DestinationURL). It does not filter by other attributes.
 Unisolate Endpoint:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action unisolates an endpoint in Trend Vision One, which directly aligns
+      with the 'Uncontain Host' expected outcome of removing network isolation and
+      restoring the endpoint's full communication capabilities.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: true
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Restores network connectivity to endpoints that were previously isolated in Trend
-    Vision One. This action supports unisolating endpoints identified by IP Address
-    or Hostname entities within the Google SecOps scope, as well as specific Agent
-    UUIDs provided as parameters. It operates asynchronously, submitting unisolation
-    requests and then polling for task completion.
+    Unisolates endpoints in Trend Vision One. This action restores network connectivity
+    for isolated endpoints based on IP Address, Hostname, or Agent UUIDs.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Description | String | No | Provides a reason or context for the unisolation
-    request in the Trend Vision One logs. |
+    | Description | String | False | Specify the reasoning for the unisolation of
+    the endpoints. |
 
-    | Agent UUID | String | No | A comma-separated list of specific Trend Micro Agent
-    UUIDs to unisolate. These are processed in addition to any detected entities.
-    |
-
-
-    ### Additional Notes
-
-    - This is an **asynchronous action**. It will submit the request and then enter
-    a polling state to monitor the progress of the unisolation tasks in Trend Vision
-    One.
-
-    - Ensure the script timeout in the IDE is sufficient to allow for the polling
-    of long-running tasks.
+    | Agent UUID | String | False | A comma-separated list of UUIDs. The action processes
+    these UUIDs along with their related entities. |
 
 
-    ### Flow Description
+    ### Flow
 
-    1. **Initialization**: Extracts API credentials and action parameters (Description
-    and Agent UUIDs).
+    1. Iterates over target entities (IP Address, Hostname) and searches for the corresponding
+    endpoint in Trend Vision One to retrieve its GUID.
 
-    2. **Entity Filtering**: Identifies all `ADDRESS` (IP) and `HOSTNAME` entities
-    in the current alert scope.
+    2. Initiates an unisolation task for the found endpoints and any explicitly provided
+    Agent UUIDs.
 
-    3. **Endpoint Discovery**: For each entity, it queries the Trend Vision One API
-    to find the corresponding endpoint GUID.
+    3. Asynchronously monitors the status of the unisolation tasks until completion
+    or timeout.
 
-    4. **Agent Processing**: Parses the `Agent UUID` parameter to include manually
-    specified endpoints.
-
-    5. **Unisolation Request**: Sends a POST request to the Trend Vision One 'restore'
-    endpoint for all identified GUIDs.
-
-    6. **Status Polling**: Enters an asynchronous loop, periodically checking the
-    status of each unisolation task via the API.
-
-    7. **Completion**: Once all tasks reach a terminal state (succeeded, failed, or
-    rejected), it aggregates the results and updates the action status.
+    4. Returns the results of the unisolation operations.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -638,12 +869,20 @@ Unisolate Endpoint:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Restores network connectivity for endpoints in Trend Vision One by submitting
-      a restoration/unisolation task to the external API.
-    fetches_data: true
+      Unisolates endpoints in Trend Vision One, restoring their network connectivity.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action initiates a state change in Trend Vision One by unisolating endpoints
+      (can_mutate_external_data=true). It does not fetch contextual data for enrichment,
+      nor does it mutate internal SecOps data such as entities, insights, or case
+      comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by unisolating an endpoint, which is a remediation
+      action. It does not meet the criteria for enrichment.
+    remediation: true
   entity_usage:
     entity_types:
     - ADDRESS
@@ -661,56 +900,81 @@ Unisolate Endpoint:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where SUPPORTED_ENTITY_TYPES
+      includes ADDRESS and HOSTNAME.
 Update Workbench Alert:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: true
+    reasoning: >-
+      The action updates an alert in a 3rd party product (Trend Vision One). The 'Update
+      Alert' category strictly specifies changing the alert within the SecOps platform,
+      so it does not match. It does not match 'Update Ticket' because Trend Vision
+      One is not an ITSM. However, it does fetch the updated alert information from
+      the 3rd party product, which aligns with the 'Get Alert Information' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    This action updates the investigation status of a specific workbench alert in
-    Trend Vision One. It allows security analysts to programmatically manage the lifecycle
-    of alerts by transitioning them between statuses such as 'New', 'In Progress',
-    'True Positive', or 'False Positive'. After performing the update, the action
-    retrieves the latest details of the alert to ensure the output reflects the current
-    state in the external system.
+    Updates the investigation status of a specific workbench alert in Trend Vision
+    One. This action modifies the alert's status in the external system and then retrieves
+    the updated alert details to return as a JSON result.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Alert ID | String | Yes | The unique identifier of the workbench alert that
-    needs to be updated. |
-
-    | Status | Dropdown | Yes | The new investigation status to set for the alert.
-    Supported values include: 'New', 'In Progress', 'True Positive', and 'False Positive'.
+    | Alert ID | String | Yes | Specify the ID of the alert that needs to be updated.
     |
 
-
-    ### Additional Notes
-
-    - The 'Status' parameter must be set to a value other than 'Select One' for the
-    action to proceed.
-
-    - This action performs a state change in the Trend Vision One platform (External
-    Mutation).
+    | Status | Dropdown | Yes | Specify what status to set for the alert (e.g., New,
+    In Progress, True Positive, False Positive). |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the API configuration and the
-    specific alert details (ID and Status) from the input.
+    1. Validates the provided `Status` parameter to ensure a valid option is selected.
 
-    2. **Validation:** It checks if a valid status has been selected.
+    2. Sends a PATCH request to the Trend Vision One API to update the investigation
+    status of the specified alert.
 
-    3. **External Update:** It sends a PATCH request to the Trend Vision One API endpoint
-    `/v3.0/workbench/alerts/{alert_id}` to update the `investigationStatus` field.
+    3. Sends a GET request to retrieve the updated alert details from Trend Vision
+    One.
 
-    4. **Data Retrieval:** Upon a successful update, it performs a GET request to
-    fetch the most recent data for that specific alert.
-
-    5. **Output Generation:** The updated alert data is attached to the action results
-    as a JSON object, and the action completes with a success message.
+    4. Returns the updated alert data as a JSON result and completes the action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -719,12 +983,21 @@ Update Workbench Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the 'investigationStatus' of a workbench alert in the Trend Vision One
-      platform via a PATCH request.
+      Updates the investigation status of a workbench alert in Trend Vision One.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action mutates external data by sending a PATCH request to update the status
+      of an alert in Trend Vision One. It also fetches data by retrieving the updated
+      alert details via a GET request. It does not mutate any internal SecOps data,
+      update entities, create insights, or add case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (updates an alert in Trend Vision One), so
+      it cannot be classified as Enrichment. It does not perform any identity, host,
+      network, or email-based mitigation, so it is not a Remediation action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -740,3 +1013,6 @@ Update Workbench Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      operates solely on the provided Alert ID parameter.

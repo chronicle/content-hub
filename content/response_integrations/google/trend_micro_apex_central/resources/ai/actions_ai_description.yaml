@@ -1,73 +1,77 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Create Entity UDSO:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    block_ip: true
+    block_malicious_domain: false
+    block_malicious_url: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds entities (IPs, URLs, Hashes) to a User-Defined Suspicious Object
+      list in Trend Micro Apex Central with an action like 'Block'. This matches the
+      'Add IOC To Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
+    Creates a User-Defined Suspicious Object (UDSO) in Trend Micro Apex Central based
+    on the provided entities.
 
-    Creates User-Defined Suspicious Objects (UDSO) in Trend Micro Apex Central based
-    on entities found in a Google SecOps case. This action allows security teams to
-    programmatically block or log malicious indicators (IPs, URLs, and SHA-1 File
-    Hashes) directly within the Trend Micro ecosystem.
+
+    ### Flow Description
+
+    1. Initializes the Trend Micro Apex Central manager with the provided credentials.
+
+    2. Validates the provided parameters, such as note length and expiration days.
+
+    3. Retrieves the list of existing UDSO entries to prevent duplicates.
+
+    4. Iterates through the target entities (IP, URL, FileHash) and validates their
+    format (e.g., IPv4, valid URL, SHA-1 hash).
+
+    5. Adds the valid entities to the UDSO list in Trend Micro Apex Central with the
+    specified action (Block or Log).
+
+    6. Retrieves the JSON results for the successfully added entities and attaches
+    them to the action result.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Action** | String | Yes | Specifies the security action to apply to the UDSO.
-    Options are 'Block' or 'Log'. Default is 'Block'. |
+    | Action | Dropdown | Yes | Specify what action should be applied to the UDSO
+    (Block or Log). |
 
-    | **Note** | String | No | An additional descriptive note for the UDSO. Maximum
-    length is 256 characters. |
+    | Note | String | No | Specify an additional note for the provided UDSO. Warning:
+    this note can't contain more than 256 characters. |
 
-    | **Expire In (Days)** | Integer | No | The number of days until the UDSO expires.
-    If left empty, the object will never expire. Must be a positive integer. |
-
-
-    ### Additional Notes
-
-    * **Supported Entity Types:** IP (IPv4 only), URL, and File Hash.
-
-    * **Hash Constraint:** Only SHA-1 hashes (40 characters) are supported by this
-    specific API endpoint.
-
-    * **Duplicate Prevention:** The action automatically checks the existing UDSO
-    list in Apex Central and will skip entities that are already defined to prevent
-    redundancy.
-
-
-    ### Flow Description
-
-    1. **Parameter Validation:** Validates that the 'Note' is under 256 characters
-    and 'Expire In (Days)' is a positive number.
-
-    2. **Pre-check:** Retrieves the current list of UDSOs from Trend Micro Apex Central
-    to identify indicators already present.
-
-    3. **Entity Filtering:** Iterates through target entities, filtering for supported
-    types (IP, URL, FILEHASH) and performing format validation (e.g., verifying IPv4
-    format and SHA-1 length).
-
-    4. **Creation:** For each new valid indicator, it sends a request to Apex Central
-    to create the UDSO with the specified action, note, and expiration date.
-
-    5. **Result Compilation:** Aggregates the results, identifying which entities
-    were successfully added, which already existed, and which failed, providing a
-    detailed JSON result for the successful additions.
+    | Expire In (Days) | String | No | Specify in how many days the UDSO should expire.
+    If nothing is provided, UDSO will never expire. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -76,18 +80,27 @@ Create Entity UDSO:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates or updates User-Defined Suspicious Objects (UDSO) in Trend Micro Apex
-      Central, which can trigger blocking or logging actions on endpoints managed
-      by the system.
+      Adds new User-Defined Suspicious Objects (UDSO) to Trend Micro Apex Central.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches existing UDSO entries to check for duplicates and retrieves
+      JSON results for added entities (fetches_data=True). It mutates external data
+      by adding new UDSO entries to Trend Micro Apex Central (can_mutate_external_data=True).
+      It does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by adding IOCs to a suspicious objects list,
+      so it is not an enrichment action. It performs network-based remediation by
+      blocking IOCs (IPs, URLs, Hashes), so it is a remediation action.
+    remediation: true
   entity_usage:
     entity_types:
-    - ADDRESS
-    - FILEHASH
     - DestinationURL
+    - FILEHASH
+    - ADDRESS
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -101,47 +114,81 @@ Create Entity UDSO:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by `entity_type`
+      checking if they are in `SUPPORTED_ENTITIES` (URL, ADDRESS, FILEHASH). Therefore,
+      it runs on DestinationURL, FILEHASH, and ADDRESS entities and filters by entity_type.
 Create File UDSO:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action uploads a file to Trend Micro Apex Central's User-Defined Suspicious
+      Objects list with an action like Block or Quarantine, which aligns with the
+      'Add IOC To Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Creates User-Defined Suspicious Objects (UDSO) in Trend Micro Apex Central based
-    on files located at specified file paths. This action allows security teams to
-    programmatically flag files as suspicious across the Trend Micro environment,
-    specifying actions like Blocking, Logging, or Quarantining.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | File Paths | String | Yes | A comma-separated list of local file paths to be
-    used for UDSO creation. |
-
-    | Action | String | Yes | The scan action to be applied to the UDSO. Options:
-    Block, Log, Quarantine. |
-
-    | Note | String | No | An additional note to be associated with the created UDSO.
-    |
+    Creates a User-Defined Suspicious Object (UDSO) in Trend Micro Apex Central based
+    on provided file paths.
 
 
     ### Flow Description
 
-    1. **Initialization**: Connects to Trend Micro Apex Central using provided credentials
-    and extracts action parameters.
+    1. Retrieves the list of existing file UDSOs from Trend Micro Apex Central to
+    prevent duplicates.
 
-    2. **Duplicate Check**: Fetches existing UDSO entries from the server to ensure
-    the files aren't already listed, preventing redundant entries.
+    2. Iterates over the provided file paths, calculates their SHA-1 hashes, and checks
+    if they already exist in the UDSO list.
 
-    3. **File Processing**: For each provided path, the action calculates the SHA-1
-    hash and reads the file content to convert it into a base64 string.
+    3. If a file does not exist, it reads the file content, encodes it in base64,
+    and uploads it to Trend Micro Apex Central with the specified scan action.
 
-    4. **Creation**: Uploads the file content and metadata to Trend Micro Apex Central
-    to create a new UDSO with the specified scan action (Block, Log, or Quarantine)
-    and note.
+    4. Retrieves the JSON results for the successfully added files and attaches them
+    to the action results.
 
-    5. **Result Retrieval**: Fetches the details of the successfully created UDSOs
-    from the server to provide them as structured JSON output.
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Paths | String | Yes | A comma-separated list of local file paths that
+    need to be used to create a UDSO. |
+
+    | Action | Dropdown | Yes | Specifies what action should be applied to the UDSO
+    (e.g., Block, Log, Quarantine). |
+
+    | Note | String | No | Specifies an additional note or description for the provided
+    UDSO. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -150,12 +197,23 @@ Create File UDSO:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates new User-Defined Suspicious Objects (UDSO) in Trend Micro Apex Central,
-      which modifies the external system's threat detection and prevention policies.
+      Adds a file to the User-Defined Suspicious Objects (UDSO) list in Trend Micro
+      Apex Central.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches existing UDSO entries to check for duplicates and fetches
+      the created entries to return JSON results (fetches_data=true). It mutates external
+      data by adding a new file UDSO to Trend Micro Apex Central (can_mutate_external_data=true).
+      It does not mutate internal data, update entities, create insights, modify alert
+      data, or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by adding a file to a suspicious object list,
+      so it cannot be classified as an enrichment action. It acts as a remediation
+      action by blocking or quarantining a file IOC.
+    remediation: true
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -171,61 +229,107 @@ Create File UDSO:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process `siemplify.target_entities`. It relies entirely
+      on the `File Paths` parameter provided by the user. Therefore, the entity types
+      list is empty and no entity filtering is applied.
 Enrich Entities:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches User-Defined Suspicious Objects (UDSO) details for IOCs (URL,
+      IP, Hash), which aligns with 'Enrich IOC'. It also fetches Security Agent details
+      for endpoints (Hostname, MAC, IP), which aligns with 'Enrich Asset'. It does
+      not perform any other actions such as updating alerts, blocking IOCs, or containing
+      hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Enriches entities using Trend Micro Apex Central by retrieving information from
-    the User-Defined Suspicious Objects (UDSO) list and Security Agent (Endpoint)
-    details. The action supports IP Addresses, MAC Addresses, Hostnames, URLs, and
-    SHA-1 File Hashes.
+    ### General Description
+
+    The **Enrich Entities** action queries Trend Micro Apex Central to retrieve contextual
+    information and threat intelligence for supported entities (IP Address, MAC Address,
+    Hostname, URL, Hash). It fetches User-Defined Suspicious Objects (UDSO) details
+    for IOCs and Security Agent details for endpoints. The action enriches the entities
+    with the retrieved data, optionally marks them as suspicious, and generates case
+    insights and data tables with the findings.
 
 
-    ### Parameters
+    ### Parameters Description
 
-    | Parameter | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Default | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- | --- |
 
-    | Create Endpoint Insight | Boolean | No | If enabled (default: True), creates
-    a case insight containing detailed information about enriched endpoints. |
+    | Create Endpoint Insight | Boolean | False | True | If enabled, the action will
+    create an insight consisting of the information regarding the endpoints that were
+    enriched. |
 
-    | Create UDSO Insight | Boolean | No | If enabled (default: True), creates a case
-    insight containing information about entities matched in the UDSO list. |
+    | Create UDSO Insight | Boolean | False | True | If enabled, the action will create
+    an insight consisting of the information regarding the entities that matched UDSO.
+    |
 
-    | Mark UDSO Entities | Boolean | No | If enabled (default: True), marks entities
-    found in the UDSO list as suspicious within Google SecOps. |
+    | Mark UDSO Entities | Boolean | False | True | If enabled, the action will mark
+    all of the entities that were seen in the User-Defined Suspicious Objects list
+    as suspicious. |
 
-    | Extract Domain | Boolean | No | If enabled (default: False), extracts the domain
-    from URL entities to use for UDSO enrichment instead of the full URL. |
-
-
-    ### Additional Notes
-
-    - **Hash Support:** Only SHA-1 hashes (40 characters) are supported for enrichment.
-    Other hash types will be skipped.
-
-    - **Internal Logic:** The action performs two distinct lookups: one for UDSO matches
-    and one for Security Agent details. An entity can be enriched by either or both
-    sources.
+    | Extract Domain | Boolean | False | False | If enabled, the action will extract
+    the domain part of the URL entity and use it for enrichment. |
 
 
     ### Flow Description
 
-    1. **Filter Entities:** Identifies supported entities (IP, MAC, Hostname, URL,
-    File Hash) from the target list.
+    1. The action iterates over the target entities and filters them based on supported
+    types (URL, IP Address, File Hash, Hostname, MAC Address).
 
-    2. **UDSO Lookup:** For URL, File Hash, and IP entities, the action queries the
-    Apex Central UDSO list. If a match is found, it retrieves the scan action and
-    notes, updates the entity's properties, and optionally marks it as suspicious.
+    2. For IOC entities (URL, IP Address, File Hash), it queries Trend Micro Apex
+    Central for User-Defined Suspicious Objects (UDSO) details.
 
-    3. **Endpoint Lookup:** For Hostname, MAC, and IP entities, the action queries
-    for Security Agent details. It also checks if the Endpoint Sensor feature is enabled
-    for the specific agent.
+    3. If UDSO details are found, it enriches the entity, optionally marks it as suspicious,
+    and prepares data for insights and tables.
 
-    4. **Data Integration:** Enriches the entities with the retrieved metadata, adds
-    detailed JSON results, and constructs data tables for the case wall.
+    4. For endpoint entities (Hostname, MAC Address, IP Address), it queries for Security
+    Agent details and checks if the endpoint sensor is enabled.
 
-    5. **Insight Generation:** Creates summary insights for both UDSO matches and
-    Endpoint details if the respective parameters are enabled.
+    5. If endpoint details are found, it enriches the entity and prepares data for
+    insights and tables.
+
+    6. Finally, the action updates the enriched entities in the case, creates case
+    insights (if configured), and attaches data tables and JSON results to the action
+    output.
+
+
+    ### Additional Notes
+
+    - Only SHA-1 hashes are supported for File Hash entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -236,17 +340,30 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity enrichment data (additional_properties), sets the suspicious
-      flag for entities found in the UDSO list, and creates case insights.
+      Updates entities with enrichment data, creates case insights, and adds data
+      tables.
+    reasoning: >-
+      The action fetches UDSO and Security Agent details from Trend Micro Apex Central
+      (fetches_data=true). It does not mutate any external data, as the API calls
+      are strictly for querying information (can_mutate_external_data=false). Internally,
+      it updates the entities with the fetched data, creates case insights, and adds
+      data tables (can_mutate_internal_data=true, can_update_entities=true, can_create_insight=true).
+      It does not modify alert data or create case comments.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source to enrich entities, does not
+      mutate external state, and only performs allowed internal mutations (updating
+      entities and creating insights). Therefore, it is classified as an Enrichment
+      action. It does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types:
-    - ADDRESS
-    - FILEHASH
-    - HOSTNAME
-    - MacAddress
     - DestinationURL
+    - FILEHASH
+    - ADDRESS
+    - MacAddress
+    - HOSTNAME
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -260,62 +377,70 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in the supported list (URL, ADDRESS, FILEHASH, HOSTNAME,
+      MACADDRESS). Therefore, it filters by entity type.
 Isolate Endpoints:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: true
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action isolates an endpoint from the network via Trend Micro Apex Central,
+      which matches the 'Contain Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Isolates endpoints in Trend Micro Apex Central to prevent them from communicating
-    with the network. This action is primarily used for containment during incident
-    response to stop the spread of threats or prevent data exfiltration from compromised
-    hosts. It supports IP Address, Hostname, and MAC Address entities.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It utilizes the following
-    integration configuration parameters to function:
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The API root URL of the Trend Micro Apex Central instance.
-    |
-
-    | Application ID | String | Yes | The Application ID used for JWT authentication.
-    |
-
-    | API Key | String | Yes | The API Key used for JWT authentication. |
-
-    | Verify SSL | Boolean | Yes | Determines whether to verify the SSL certificate
-    of the Trend Micro server. |
+    Isolates endpoints in Trend Micro Apex Central. This action initiates an isolation
+    request for IP Address, Hostname, or MAC Address entities to prevent them from
+    connecting to the network. It runs asynchronously, periodically checking the isolation
+    status until completion or timeout.
 
 
     ### Flow Description
 
-    1. **Entity Identification**: The action filters the target entities to identify
-    supported types: IP Address, Hostname, and MAC Address.
+    1. Iterates over supported entities (IP Address, Hostname, MAC Address).
 
-    2. **Isolation Request**: For each supported entity, the action sends a POST request
-    to the Trend Micro Apex Central API to initiate the `cmd_isolate_agent` command.
+    2. Initiates an isolation request for each valid entity via the Trend Micro Apex
+    Central API.
 
-    3. **Asynchronous Monitoring**: Since isolation is not instantaneous, the action
-    enters an asynchronous state. It stores the list of pending endpoints and periodically
-    polls the Trend Micro API using GET requests to check the `isolation_status` of
-    each agent.
+    3. Periodically queries the API to check the isolation status of the pending endpoints.
 
-    4. **Completion**: The action continues to poll until all endpoints have either
-    reached the 'isolated' status, failed the isolation process, or the action reaches
-    its execution timeout. It then reports the final status of each endpoint.
+    4. Completes when all requested endpoints are successfully isolated, failed, or
+    unsupported.
 
 
-    ### Additional Notes
+    ### Parameters Description
 
-    This is an asynchronous action. Depending on network conditions and the state
-    of the target endpoints, the isolation process can take several minutes. Users
-    should ensure the action timeout in the IDE is configured appropriately for long-running
-    operations.
+    This action does not require any specific parameters other than the integration
+    configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -324,18 +449,27 @@ Isolate Endpoints:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Initiates a network isolation command on the endpoint in Trend Micro Apex Central,
-      which changes the network connectivity state of the target device to prevent
-      communication.
+      Isolates endpoints in Trend Micro Apex Central, preventing them from connecting
+      to the network.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data to check the isolation status of endpoints. It mutates
+      external data by sending a POST request to isolate the endpoints in Trend Micro
+      Apex Central. It does not mutate internal data, update entities, create insights,
+      modify alert data, or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by isolating endpoints, so it is not an enrichment
+      action. It performs host-based remediation by isolating endpoints, so it is
+      a remediation action.
+    remediation: true
   entity_usage:
     entity_types:
     - ADDRESS
-    - HOSTNAME
     - MacAddress
+    - HOSTNAME
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -349,59 +483,69 @@ Isolate Endpoints:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (ADDRESS, MACADDRESS, HOSTNAME).
 Ping:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a Ping action designed to test connectivity to the Trend Micro
+      Apex Central server. It does not interact with alerts, entities, tickets, or
+      perform any remediation or enrichment tasks. Therefore, it does not match any
+      of the expected outcomes for the available categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The Ping action is a diagnostic tool used to verify the connectivity between Google
-    SecOps and the Trend Micro Apex Central server. It ensures that the provided configuration
-    parameters (API Root, Application ID, and API Key) are valid and that the network
-    path is open.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The base URL of the Trend Micro Apex Central instance.
-    |
-
-    | Application ID | String | Yes | The Application ID generated in the Trend Micro
-    Apex Central console for API access. |
-
-    | API Key | String | Yes | The API Key associated with the Application ID. |
-
-    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
-    of the Trend Micro Apex Central server. |
-
-
-    ### Additional Notes
-
-    * This action does not process any entities.
-
-    * It relies entirely on the integration's configuration parameters rather than
-    action-specific inputs.
-
-    * According to standard SOAR practices, Ping actions are used for health checks
-    and are not categorized as enrichment.
+    Tests connectivity to the Trend Micro Apex Central server using the provided integration
+    configuration parameters.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the API Root, Application ID,
-    API Key, and SSL verification settings from the integration configuration.
+    1. Retrieves the integration configuration parameters (API Root, Application ID,
+    API Key, Verify SSL).
 
-    2. **Manager Initialization**: It initializes the `TrendMicroApexCentralManager`
-    with the extracted credentials.
+    2. Initializes the Trend Micro Apex Central manager.
 
-    3. **Connectivity Test**: The manager executes a `test_connectivity` call, which
-    performs a `GET` request to the `/WebApp/API/ServerResource/ProductServers` endpoint.
+    3. Sends a test GET request to the server to verify connectivity.
 
-    4. **Result Reporting**: If the request is successful, the action returns a success
-    message. If an exception occurs (e.g., authentication failure or network timeout),
-    the action fails and logs the error details.
+    4. Returns a success message if the connection is established, otherwise returns
+    an error message.
+
+
+    ### Parameters Description
+
+    This action does not require any action-specific parameters. It relies solely
+    on the integration configuration parameters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -410,10 +554,20 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to test connectivity but does not fetch contextual
+      data for alerts or entities. It does not mutate external data, nor does it mutate
+      internal data such as updating entities, creating insights, modifying alert
+      data, or creating case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping' and its primary purpose is to test connectivity to
+      the external system. According to Rule 0.1, Ping actions are not enrichment
+      actions. It also does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -429,56 +583,68 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or reference `siemplify.target_entities` or any
+      specific entity types. It operates independently of entities.
 Unisolate Endpoints:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action unisolates an endpoint, restoring its network connectivity. This
+      directly aligns with the 'Uncontain Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: true
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Restores network connectivity to isolated endpoints in Trend Micro Apex Central.
-    This action supports IP Address, Hostname, and MAC Address entities. It operates
-    asynchronously, meaning it initiates the unisolation command and then periodically
-    polls the external system to verify when the endpoint's status has returned to
-    normal.
+    Unisolates endpoints in Trend Micro Apex Central. This action restores network
+    connectivity to previously isolated endpoints.
 
 
     ### Parameters
 
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | The API root URL of the Trend Micro Apex Central instance. | String
-    | Yes |
-
-    | Application ID | The Application ID used for authentication with the Trend Micro
-    instance. | String | Yes |
-
-    | API Key | The API Key used for authentication with the Trend Micro instance.
-    | String | Yes |
-
-    | Verify SSL | Specifies whether to verify the SSL certificate of the Trend Micro
-    server. | Boolean | Yes |
+    This action does not require any additional parameters.
 
 
-    ### Flow Description
+    ### Flow
 
-    1. **Entity Filtering**: The action identifies supported entities (IP Address,
-    Hostname, or MAC Address) from the target entities list.
+    1. The action iterates over the supported entities (IP Address, Hostname, MAC
+    Address).
 
-    2. **Unisolation Request**: It sends a 'cmd_restore_isolated_agent' command to
-    Trend Micro Apex Central for each identified endpoint.
+    2. It initiates an unisolation request for each valid endpoint in Trend Micro
+    Apex Central.
 
-    3. **Asynchronous Polling**: The action transitions to an 'In Progress' state
-    and periodically queries the status of the security agents to monitor the transition
-    from 'connection_restoration_pending' to 'normal'.
+    3. Since the unisolation process can take time, the action runs asynchronously
+    and periodically checks the isolation status of the endpoints.
 
-    4. **Finalization**: Once all endpoints are confirmed as unisolated or the operation
-    reaches a timeout/failure state, the action completes and reports the results
-    for each entity.
-
-
-    ### Additional Notes
-
-    - This action can take several minutes to complete depending on the responsiveness
-    of the endpoints and the Trend Micro server. It is recommended to increase the
-    action timeout in the IDE settings.
+    4. Once the unisolation is complete or the action times out, it returns the final
+    status and results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -487,13 +653,21 @@ Unisolate Endpoints:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Restores network connectivity to isolated endpoints by sending a restoration
-      command ('cmd_restore_isolated_agent') to the Trend Micro Apex Central server,
-      changing the security state of the physical or virtual endpoint.
+      Restores network connectivity to isolated endpoints in Trend Micro Apex Central.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action initiates an unisolation request on an external system (Trend Micro
+      Apex Central), which mutates external data. It also fetches the security agent
+      details to check the unisolation status. It does not mutate internal SecOps
+      data, update entities, create insights, or add case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by unisolating endpoints, so it cannot be an
+      enrichment action. It performs host-based remediation by restoring network connectivity,
+      making it a remediation action.
+    remediation: true
   entity_usage:
     entity_types:
     - ADDRESS
@@ -512,3 +686,7 @@ Unisolate Endpoints:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes
+      ADDRESS, MACADDRESS, and HOSTNAME.

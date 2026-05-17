@@ -1,68 +1,70 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Add Ip To Group:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    block_ip: true
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds an IP address to a Checkpoint Firewall group, which is typically
+      used for blocking (as indicated by the parameter 'Blacklist Group Name'). This
+      aligns with the 'Add IOC To Blocklist' and 'Block IP' expected outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Adds IP Address entities to a specified group within the Checkpoint Firewall.
-    This action is used to manage network access control by programmatically updating
-    firewall groups and ensuring the changes are applied through policy installation.
+    Adds IP address entities to a specified Checkpoint Firewall group, effectively
+    blocking them or applying a specific policy.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Blacklist Group Name | String | Yes | The name of the Checkpoint group to which
-    the IP addresses will be added. |
-
-    | Policy Name | String | Yes | (Configuration Parameter) The name of the policy
-    package that needs to be installed for the changes to take effect. |
+    | Blacklist Group Name | String | Yes | Specify the name of the group to which
+    you want to add the IP address. |
 
 
-    ### Flow Description
+    ### Flow
 
-    1. **Initialization**: Connects to the Checkpoint Firewall using provided credentials
-    and configuration.
+    1. Initializes the Checkpoint Firewall manager with the provided credentials.
 
-    2. **Entity Filtering**: Identifies all `ADDRESS` (IP) entities provided in the
-    context.
+    2. Iterates over the target entities of type ADDRESS.
 
-    3. **Group Validation**: For each IP, it verifies the existence and editability
-    of the target group.
+    3. For each IP, checks if the specified group exists and is editable.
 
-    4. **Object Management**: Checks if an address range object exists for the IP.
-    If not, it creates a new one.
+    4. Checks if the IP address range already exists; if not, creates it.
 
-    5. **Group Update**: Adds the address object to the specified group.
+    5. Adds the IP address to the specified group.
 
-    6. **Persistence**: Publishes the session changes to the Checkpoint database.
+    6. Publishes the changes and installs the policy.
 
-    7. **Deployment**: Installs the specified policy package to the firewall to enforce
-    the new group membership.
-
-
-    ### Additional Notes
-
-    - This action performs a "Publish" and "Install Policy" operation, which affects
-    the entire firewall configuration for the specified policy package.
-
-    - If the group is marked as read-only in Checkpoint, the action will fail for
-    that group.
+    7. Returns a summary message of successful and failed operations.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -71,13 +73,22 @@ Add Ip To Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds IP addresses to a specified group in Checkpoint Firewall, creates address
-      range objects if they don't exist, publishes the session changes, and installs
-      the policy package to make the changes effective.
-    fetches_data: true
+      Adds an IP address to a specified group in the Checkpoint Firewall and installs
+      the policy.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action's primary purpose is to mutate external data by adding an IP address
+      to a Checkpoint Firewall group and installing a policy. It does not fetch contextual
+      data for enrichment, nor does it mutate internal SecOps data such as entities,
+      insights, or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by adding an IP to a firewall group, which
+      violates the read-only constraint of Enrichment actions. It qualifies as a Remediation
+      action because it performs network-based remediation by blocking an IP address.
+    remediation: true
   entity_usage:
     entity_types:
     - ADDRESS
@@ -94,28 +105,74 @@ Add Ip To Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      the condition `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it runs
+      on ADDRESS entities and filters by entity type.
 Add Url To Group:
-  ai_description: "Adds URL entities to a specified Check Point Firewall application\
-    \ site group. This action is primarily used for URL filtering or blocking by managing\
-    \ application site objects within the Check Point Management Server. \n\n### Parameters\n\
-    | Parameter Name | Description | Type | Mandatory | Notes |\n| :--- | :--- | :---\
-    \ | :--- | :--- |\n| URLs Group Name | Specify the name of the Check Point application\
-    \ site group to which you want to add the URLs. | String | Yes | The group must\
-    \ already exist and not be read-only. |\n\n### Additional Notes\n* This action\
-    \ requires the 'Policy Name' to be correctly configured in the integration settings,\
-    \ as it performs a policy installation after adding the URLs.\n* Changes are published\
-    \ and the policy is installed automatically to ensure the updates take effect\
-    \ on the firewall gateways.\n\n### Flow Description\n1. **Initialization**: Connects\
-    \ to the Check Point Management Server using provided credentials and configuration.\n\
-    2. **Entity Filtering**: Identifies all URL entities within the current context.\n\
-    3. **Group Validation**: For each URL, it verifies that the target 'URLs Group\
-    \ Name' exists and is not marked as read-only.\n4. **Object Management**: Checks\
-    \ if an application site object already exists for the URL; if not, it creates\
-    \ a new application site object.\n5. **Group Membership**: Adds the application\
-    \ site object to the specified group.\n6. **Persistence**: Publishes the session\
-    \ changes to the Check Point database.\n7. **Policy Deployment**: Triggers a policy\
-    \ installation (using the configured Policy Name) to push the changes to the enforcement\
-    \ points."
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds a URL to a Checkpoint Firewall group, which is typically used
+      to block access to the URL. This aligns with the 'Add IOC To Blocklist' and
+      'Block Malicious URL' expected outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    Adds URL entities to a specified Checkpoint Firewall application site group and
+    installs the policy to apply the changes.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | URLs Group Name | String | Yes | Specify the name of the group to which you
+    want to add the URL. |
+
+
+    ### Flow
+
+    1. Extracts configuration and action parameters.
+
+    2. Iterates over target entities of type URL.
+
+    3. For each URL, adds it to the specified application site group in Checkpoint
+    Firewall.
+
+    4. Installs the policy to apply the changes.
+
+    5. Returns a success or failure message based on the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -124,12 +181,22 @@ Add Url To Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates new application site objects in Check Point, modifies group memberships,
-      publishes database changes, and installs firewall policies.
-    fetches_data: true
+      Adds the specified URL entities to a Checkpoint Firewall application site group
+      and installs the policy to apply the changes.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action does not fetch contextual data for enrichment. It mutates external
+      data by adding URL entities to a Checkpoint Firewall group and installing the
+      policy. It does not mutate internal SecOps data, update entities, create insights,
+      modify alert data, or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by adding URLs to a firewall group, which violates
+      the external state preservation rule for enrichment. It performs network-based
+      remediation by blocking URLs, so it is classified as a remediation action.
+    remediation: true
   entity_usage:
     entity_types:
     - DestinationURL
@@ -146,90 +213,113 @@ Add Url To Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.URL`. Therefore, it runs on URL (DestinationURL) entities and
+      filters by entity type.
 Add a SAM Rule:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    block_ip: true
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds a SAM rule to the firewall, which can be configured to drop
+      or reject traffic based on IP addresses, ports, and protocols. This aligns with
+      the 'Add IOC To Blocklist' and 'Block IP' expected outcomes, as it updates security
+      controls to prevent future interaction with specific network indicators.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Add a SAM Rule** action allows users to dynamically create Suspicious Activity
-    Monitoring (SAM) rules on a specific Checkpoint Security Gateway. SAM rules are
-    used to block or monitor traffic based on specific criteria like source/destination
-    IPs, ports, and protocols without requiring a full policy installation. This action
-    is typically used for rapid response to suspicious activity by enforcing temporary
-    or permanent blocks at the firewall level.
+    Adds a Suspicious Activity Monitoring (SAM) rule to a Checkpoint Firewall. This
+    action constructs and executes a command to drop, reject, or notify on specific
+    network traffic based on source/destination IP, netmask, port, and protocol. It
+    monitors the task execution on the firewall and publishes the changes upon successful
+    completion.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Security Gateway to Create SAM Rule on | String | Yes | Specify the name of
-    the Security Gateway to create the rule for. |
+    | Security Gateway to Create SAM Rule on | string | Yes | Specify the name of
+    Security Gateway to create a rule for. |
 
-    | Source IP | String | No | Specify the source IP to be added to the rule. |
+    | Source IP | string | No | Specify the source IP to be added to the rule. |
 
-    | Source Netmask | String | No | Specify the source netmask to be added to the
+    | Source Netmask | string | No | Specify the source netmask to be added to the
     rule. |
 
-    | Destination IP | String | No | Specify the destination IP to be added to the
+    | Destination IP | string | No | Specify the destination IP to be added to the
     rule. |
 
-    | Destination Netmask | String | No | Specify the destination netmask to be added
+    | Destination Netmask | string | No | Specify the destination netmask to be added
     to the rule. |
 
-    | Port | Integer | No | Specify the port number to be added to the rule (e.g.,
-    5005). |
+    | Port | string | No | Specify the port number to be added to the rule for example,
+    5005. |
 
-    | Protocol | String | No | Specify the protocol name to be added to the rule (e.g.,
-    TCP). |
+    | Protocol | string | No | Specify the protocol name to be added to the rule for
+    example, TCP. |
 
-    | Expiration | Integer | No | Specify how long in seconds the rule should be active.
-    If empty, the rule never expires. |
+    | Expiration | string | No | Specify how long in seconds the newly added SAM rule
+    should be active for example, 4. If nothing is specified - then the rule never
+    expires. |
 
-    | Action for the Matching Connections | Dropdown | Yes | Specify the action for
-    matching connections: Notify, Reject, or Drop. |
+    | Action for the Matching Connections | string | Yes | Specify the action that
+    should be executed for the matching connections (Notify, Reject, Drop). |
 
-    | How to Track Matching Connections | Dropdown | Yes | Specify how to track matching
-    connections: No Log, Log, or Alert. |
+    | How to Track Matching Connections | string | Yes | Specify how to track matching
+    connections (No Log, Log, Alert). |
 
-    | Close Connections | Boolean | No | Specify if existing matching connections
-    should be closed immediately. |
-
-
-    ### Flow Description
-
-    1. **Connection**: The action establishes a session with the Checkpoint Management
-    Server using the provided credentials.
-
-    2. **Criteria Construction**: It processes the network parameters (IPs, netmasks,
-    ports, protocols) to construct a valid SAM criteria string compatible with the
-    Checkpoint `fw_sam` command.
-
-    3. **Command Generation**: It builds the full `fw sam` command, incorporating
-    the selected action (Drop/Reject/Notify), tracking options, expiration time, and
-    connection closure settings.
-
-    4. **Script Execution**: The action uses the Checkpoint `run-script` API to execute
-    the generated command on the target Security Gateway.
-
-    5. **Task Monitoring**: It polls the Checkpoint task status until the script execution
-    is finished or the SOAR execution deadline is reached.
-
-    6. **Publishing**: Once the script completes, it publishes the changes to the
-    Checkpoint database to ensure persistence.
-
-    7. **Result Reporting**: It retrieves the task details and any execution errors
-    or messages to provide a final status in the SOAR platform.
+    | Close Connections | boolean | No | Specify if the existing matching connections
+    should be closed. |
 
 
-    ### Additional Notes
+    ### Action Flow
 
-    - This action does not iterate over entities; it uses the values provided in the
-    action parameters.
+    1. Connects to the Checkpoint Firewall using the provided credentials.
 
-    - Users must ensure that the provided IP/Netmask/Port combinations are valid according
-    to Checkpoint's CLI reference for the `fw_sam` command.
+    2. Constructs the criteria for the SAM rule based on the provided IP, netmask,
+    port, and protocol parameters.
+
+    3. Constructs the `fw sam` command with the specified action, tracking, and expiration
+    settings.
+
+    4. Executes the command on the specified Security Gateway.
+
+    5. Monitors the task status until completion or timeout.
+
+    6. Publishes the changes to the firewall if the task succeeds.
+
+    7. Returns the execution status and task details.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -238,12 +328,20 @@ Add a SAM Rule:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Executes a script on a Checkpoint Security Gateway to add a SAM (Suspicious
-      Activity Monitoring) rule and publishes the changes to the management server.
+      Adds a Suspicious Activity Monitoring (SAM) rule to the Checkpoint Firewall.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes a command on the Checkpoint Firewall to add a SAM rule,
+      which mutates the external state of the firewall. It does not fetch data for
+      enrichment, nor does it mutate internal SecOps data like entities or insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by adding a firewall rule, which disqualifies
+      it from being an enrichment action. Since it can be used to drop or reject connections
+      (blocking IPs/ports), it is classified as a remediation action.
+    remediation: true
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -259,63 +357,93 @@ Add a SAM Rule:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on action parameters (like Source IP, Destination IP) provided
+      by the user or playbook.
 Download Log Attachment:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves specific files (log attachments) from a remote host (CheckPoint
+      FireWall) and saves them locally or to the case wall. This aligns with the 'Download
+      File' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
+    Downloads log attachments from CheckPoint FireWall based on provided Log IDs.
+
+
     ### General Description
 
-    The **Download Log Attachment** action retrieves file attachments (such as packet
-    captures or forensic blobs) associated with specific log entries from a CheckPoint
-    Firewall. It automates the process of requesting the attachment, monitoring the
-    asynchronous task on the firewall, and downloading the resulting file to the local
-    execution environment. Optionally, it can upload these files directly to the Google
-    SecOps case wall for easier access during investigations.
+    This action connects to CheckPoint FireWall to retrieve attachments associated
+    with specific log entries. It initiates a task to process the logs, waits for
+    completion, and then downloads the attachments to a specified local folder. Optionally,
+    it can also attach the downloaded files directly to the case wall in Google SecOps
+    if they are under a specific size limit (3 MB).
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Log IDs** | String | Yes | A comma-separated list of CheckPoint Log IDs from
-    which to retrieve attachments. |
+    | Log IDs | String | Yes | Specify the comma-separated list of log IDs from which
+    you want to download attachments. |
 
-    | **Download Folder Path** | String | Yes | The absolute directory path on the
-    runner where the downloaded files will be stored. |
+    | Download Folder Path | String | Yes | Specify the absolute path for the folder
+    where the action should store the attachments locally. |
 
-    | **Create Case Wall Attachment** | Boolean | No | If enabled, the action will
-    upload successfully downloaded files to the case wall, provided they are smaller
-    than 3 MB. |
+    | Create Case Wall Attachment | Boolean | No | If enabled, the action will create
+    a case wall attachment for each successfully downloaded file, provided its size
+    is less than 3 MB. |
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the CheckPoint Web API using the configured
-    server address and credentials.
+    1. Establishes a connection to CheckPoint FireWall.
 
-    2. **Task Initiation**: For each provided Log ID, the action sends a request to
-    the firewall to prepare the attachment. This creates an asynchronous task.
+    2. Iterates over the provided Log IDs and initiates tasks to retrieve their attachments.
 
-    3. **Status Polling**: The action monitors the progress of each task until it
-    reaches a 'succeeded' or 'failed' state.
+    3. Polls the CheckPoint FireWall to check the progress of the tasks until they
+    are completed.
 
-    4. **Data Retrieval**: For successful tasks, the action retrieves the task details,
-    which include the base64-encoded file content.
+    4. Retrieves the task details and downloads the attachments to the specified local
+    folder path.
 
-    5. **Local Storage**: The base64 data is decoded and saved as a physical file
-    in the specified **Download Folder Path**.
+    5. If the `Create Case Wall Attachment` parameter is enabled, attaches the downloaded
+    files (under 3 MB) to the case wall.
 
-    6. **Internal Enrichment**: If **Create Case Wall Attachment** is enabled and
-    the file size is under the 3 MB limit, the file is uploaded to the Google SecOps
-    case wall.
-
-
-    ### Additional Notes
-
-    - The action handles multiple Log IDs in a single execution.
-
-    - Files are always saved to the local filesystem if the path is valid, regardless
-    of whether they are uploaded to the case wall.
+    6. Returns the task details and attachment metadata as JSON results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -326,10 +454,21 @@ Download Log Attachment:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action can add downloaded files as attachments to the case wall if the 'Create
-      Case Wall Attachment' parameter is enabled.
+      Adds downloaded attachments to the case wall if the 'Create Case Wall Attachment'
+      parameter is enabled.
+    reasoning: >-
+      The action fetches data (log attachments) from CheckPoint FireWall. It does
+      not mutate external data as it only reads/downloads files. It mutates internal
+      data by optionally adding the downloaded files as attachments to the case wall.
+      It does not update entities, create insights, modify alert data, or create case
+      comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action downloads files from an external system. According to the enrichment
+      rules, actions that download files must not be categorized as enrichment actions.
+      It does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -345,59 +484,83 @@ Download Log Attachment:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any target entities. It relies entirely
+      on the provided Log IDs parameter.
 List Layers On Site:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration data (Access Control and Threat Prevention
+      layers) from the Checkpoint Firewall. It does not interact with IOCs, assets,
+      alerts, tickets, identities, emails, or files. Therefore, it does not match
+      any of the specific action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    The **List Layers On Site** action retrieves a comprehensive list of available
-    Access Control and Threat Prevention layers from a Check Point Firewall instance.
-    This utility action is designed to help security administrators and automated
-    playbooks discover the security policy structure of the environment, which is
-    essential for auditing or for identifying specific layers to target in subsequent
-    rule-based actions.
+    Retrieves all available Access Control and Threat Prevention layers from the Checkpoint
+    Firewall. This action connects to the firewall and fetches the configuration layers,
+    returning them as data tables and JSON results for further use in the playbook.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Max Layers To Return** | Integer | No | Specifies the maximum number of layers
-    to retrieve for both Access Control and Threat Prevention categories. The default
-    value is 50. |
-
-
-    ### Additional Notes
-
-    - This action does not operate on specific entities (like IPs or Hosts) and instead
-    performs a global query against the Check Point Management Server.
-
-    - The results are presented in two distinct data tables for clear separation between
-    Access Control and Threat Prevention configurations.
+    | Max Layers To Return | Integer | No | Specifies the maximum number of layers
+    to return in the response. Defaults to 50. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The action initializes a connection to the Check Point
-    Management Server using the provided server address, username, password, and optional
-    domain.
+    1. Initializes the Checkpoint Firewall manager using the provided integration
+    credentials.
 
-    2. **Data Retrieval**: It executes two separate API calls to the firewall: one
-    to fetch Access Control layers and another to fetch Threat Prevention layers,
-    respecting the `Max Layers To Return` limit.
+    2. Sends requests to the Checkpoint API to fetch access layers and threat layers,
+    limited by the `Max Layers To Return` parameter.
 
-    3. **Data Parsing**: The raw JSON responses from the firewall are parsed into
-    structured Python objects (AccessLayer and ThreatLayer models).
+    3. Parses the retrieved layers and constructs CSV-formatted data tables for both
+    Access Control and Threat Prevention layers.
 
-    4. **Output Generation**:
-        - **Data Tables**: Generates two tables: "Access Control Layers" and "Threat
-    Prevention Control Layers" containing details like UID, Name, Type, and Read-Only
-    status.
-        - **JSON Result**: Combines all retrieved layer data into a single JSON array
-    for use in subsequent playbook steps.
-    5. **Session Cleanup**: The action explicitly logs out of the Check Point session
-    to release server resources.
+    4. Combines the results and attaches the raw JSON data to the action's output.
+
+
+    ### Additional Notes
+
+    This action does not run on specific entities and operates globally on the firewall
+    configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -408,8 +571,18 @@ List Layers On Site:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (access and threat layers) from the Checkpoint Firewall
+      via API calls (show-access-layers, show-threat-layers). It does not mutate any
+      external data, nor does it mutate internal data such as entities, insights,
+      or case comments. It only outputs data tables and JSON results.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Checkpoint Firewall) and does
+      not mutate any external or internal state. Therefore, it qualifies as an enrichment
+      action according to the classification rules.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -425,43 +598,91 @@ List Layers On Site:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not reference `siemplify.target_entities` or process any entities.
+      It fetches global configuration data from the firewall. Therefore, the entity
+      types list is empty and all filter flags are false.
 List Policies On Site:
-  ai_description: "### General Description\nThis action retrieves a list of all existing\
-    \ policy packages (packages) from a CheckPoint Firewall management server. It\
-    \ is primarily used for administrative visibility and auditing of the security\
-    \ policies configured on the site. The retrieved data includes details such as\
-    \ policy names, UIDs, types, and associated domains.\n\n### Parameters Description\n\
-    | Parameter Name | Type | Mandatory | Description |\n| :--- | :--- | :--- | :---\
-    \ |\n| Max Policies To Return | Integer | No | Specifies the maximum number of\
-    \ policy packages to retrieve in a single request. The default value is 50. |\n\
-    \n### Additional Notes\n* This action does not operate on specific entities (like\
-    \ IPs or Hosts) but rather queries the global configuration of the CheckPoint\
-    \ management server.\n* The output is provided in two formats: a CSV-formatted\
-    \ data table for easy viewing in the SOAR UI and a raw JSON object for downstream\
-    \ playbook processing.\n\n### Flow Description\n1. **Authentication**: The action\
-    \ initializes a session with the CheckPoint server using the provided credentials\
-    \ and domain information.\n2. **Data Retrieval**: It executes the `show-packages`\
-    \ API command to fetch the list of policy packages, applying the specified limit.\n\
-    3. **Parsing**: The raw API response is parsed into structured `Policy` objects.\n\
-    4. **Output Generation**: \n    * A flattened version of the data is converted\
-    \ to CSV and added as a Data Table named \"CheckPoint Policies Data Table\".\n\
-    \    * The structured policy data is added as a JSON result.\n5. **Session Termination**:\
-    \ The action logs out of the CheckPoint server to ensure the session is closed\
-    \ properly."
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves policies from a firewall. It does not enrich specific IOCs
+      or assets, update alerts, create tickets, or perform any containment/remediation
+      actions. Therefore, it does not match any of the specified action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    Retrieves all existing policies from CheckPoint Firewall.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Policies To Return | Integer | No | Specify how many policies to return
+    in the response. Default is 50. |
+
+
+    ### Flow
+
+    1. Initializes connection to CheckPoint Firewall.
+
+    2. Retrieves the policies using the specified limit.
+
+    3. Adds the retrieved policies to a data table and JSON result.
+
+    4. Logs out of the session.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action populates the action's output with a data table and JSON results
-      containing the retrieved policy information.
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (policies) from CheckPoint Firewall using a GET-like
+      request (show-packages). It does not mutate external data or internal SecOps
+      data.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external source without mutating external or
+      internal state, fulfilling the criteria for an enrichment action. It does not
+      perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -477,56 +698,68 @@ List Policies On Site:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It simply retrieves global policies
+      from the firewall.
 Ping:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific expected outcomes for the defined categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Tests the connectivity between Google SecOps and the Check Point Firewall Management
-    Server. This action validates that the provided credentials and server address
-    are correct and that the network path is open.
+    Tests connectivity to the CheckPoint Firewall by establishing a session using
+    the provided credentials and server address.
 
 
-    ### Flow Description:
+    ### Flow Description
 
-    1. **Parameter Extraction:** Retrieves the Server Address, Username, Password,
-    Domain, and SSL verification settings from the integration configuration.
+    1. Extracts integration configuration parameters.
 
-    2. **Authentication:** Initializes the Checkpoint Manager, which attempts to log
-    in to the Check Point Web API. A successful login returns a session identifier
-    (SID).
+    2. Initializes the CheckpointManager and attempts to log in.
 
-    3. **Connectivity Validation:** Checks for the presence of the session identifier
-    to confirm a valid connection.
+    3. Verifies the session ID to confirm connectivity.
 
-    4. **Session Cleanup:** Executes a 'discard' command to clear any potential session-level
-    changes and then logs out to terminate the session properly.
+    4. Discards any pending changes and logs out.
+
+    5. Returns a success or failure message based on the connection result.
 
 
-    ### Parameters Description:
+    ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Server Address | String | Yes | The IP address or hostname of the Check Point
-    Management Server. |
-
-    | Username | String | Yes | The username used to authenticate with the Check Point
-    API. |
-
-    | Password | String | Yes | The password used to authenticate with the Check Point
-    API. |
-
-    | Domain | String | No | The specific domain name to log into, used in Multi-Domain
-    Management (MDM) environments. Defaults to an empty string. |
-
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the Check Point server. Defaults to False. |
-
-
-    ### Additional Notes:
-
-    - This action does not interact with or require any entities from the SecOps case.
-
-    - It is strictly used for health checks and configuration validation.
+    This action does not require any action-specific parameters. It relies solely
+    on the integration configuration parameters (Server Address, Username, Password,
+    Domain, Verify SSL).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -537,8 +770,16 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only tests connectivity to the CheckPoint Firewall by logging in
+      and logging out. It does not fetch contextual data, mutate external data, or
+      modify internal SecOps data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping', which explicitly excludes it from being an Enrichment
+      action according to the rules. It also does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -554,54 +795,73 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or reference any entities.
 Remove IP From Group:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes an IP address from a firewall group (specifically named 'Blacklist
+      Group Name' in the parameters), which restores connectivity for the indicator
+      by removing it from a restricted list. This matches the 'Remove IOC From Blocklist'
+      category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Removes IP address entities from a specified group on a Check Point Firewall.
-    This action is used for remediation or containment reversal by modifying group
-    memberships and applying the changes to the firewall policy.
+    Removes IP address entities from a specified Checkpoint Firewall group. The action
+    iterates over ADDRESS entities, validates the target group, removes the IP addresses
+    from the group, publishes the changes, and installs the policy to apply the updates.
 
 
     ### Flow Description
 
-    1. **Initialization**: Establishes a session with the Check Point Management Server
-    using provided credentials and domain information.
+    1. Extracts configuration and action parameters.
 
-    2. **Entity Filtering**: Identifies all `ADDRESS` entities within the current
-    context.
+    2. Iterates over target entities of type ADDRESS.
 
-    3. **Group Validation**: For each entity, it verifies that the target group exists
-    and is not marked as read-only.
+    3. For each entity, checks if the target group exists and is editable.
 
-    4. **Membership Removal**: Executes a command to remove the IP address from the
-    specified group's members.
+    4. Removes the IP address from the group and publishes the changes.
 
-    5. **Publishing**: Commits the changes to the Check Point database.
-
-    6. **Policy Installation**: Triggers a policy installation for the specified policy
-    package to ensure the changes are active on the firewall gateways.
+    5. Installs the policy to apply the changes.
 
 
     ### Parameters Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Blacklist Group Name | String | Yes | The name of the Check Point group from
-    which the IP address should be removed. |
-
-    | Policy Name | String | Yes (Config) | The name of the policy package to be installed
-    after the group modification. This is defined in the integration configuration.
-    |
-
-
-    ### Additional Notes
-
-    * The action requires the `Policy Name` to be correctly configured in the integration
-    settings to successfully push changes to the gateways.
-
-    * If the group is set to read-only in Check Point, the action will fail for that
-    specific group.
+    | Blacklist Group Name | String | True | Specify the name of the group from which
+    you want to remove IP address. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -610,12 +870,22 @@ Remove IP From Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes IP addresses from a Check Point Firewall group and installs the updated
-      policy package to the firewall gateways.
+      Removes IP addresses from a specified Checkpoint Firewall group and installs
+      the policy.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action does not fetch data for enrichment. It mutates external data by removing
+      IP addresses from a Checkpoint Firewall group and installing the policy. It
+      does not mutate internal data, update entities, create insights, modify alerts,
+      or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data and mutates external state, so it is not an enrichment
+      action. It removes an IP from a group (unblocking), which does not strictly
+      match the remediation criteria of blocking an IP, domain, or URL.
+    remediation: false
   entity_usage:
     entity_types:
     - ADDRESS
@@ -632,78 +902,97 @@ Remove IP From Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it runs on ADDRESS entities
+      and filters by entity type.
 Remove SAM Rule:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes a SAM rule from a firewall, which is typically used to restore
+      connectivity or execution rights that were previously restricted by the rule.
+      This aligns with the 'Remove IOC From Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Removes a Suspicious Activity Monitoring (SAM) rule from a Checkpoint Firewall.
-    This action allows security administrators to programmatically delete existing
-    SAM rules by providing matching criteria such as source/destination IPs, netmasks,
-    ports, and protocols. The action constructs a specific `fw sam` command, executes
-    it as a script on the target Security Gateway, and waits for the task to complete
-    before publishing the changes to the firewall management server.
+    Removes a SAM (Suspicious Activity Monitoring) rule from a Checkpoint Firewall.
 
 
     ### Flow Description
 
-    1. **Authentication**: Establishes a session with the Checkpoint Management Server
-    using provided credentials.
+    1. Establishes a connection to the Checkpoint Firewall.
 
-    2. **Criteria Construction**: Validates and formats the provided network parameters
-    (IPs, netmasks, etc.) into a valid Checkpoint SAM criteria string.
+    2. Constructs the criteria for the SAM rule based on the provided IP addresses,
+    netmasks, port, and protocol.
 
-    3. **Command Generation**: Builds the `fw sam -C` (cancel/remove) command including
-    the specified action (Drop/Reject/Notify) and tracking options.
+    3. Constructs the `fw sam` command to remove the rule.
 
-    4. **Execution**: Triggers the `run-script` API on the specified Security Gateway.
+    4. Executes the command on the specified Security Gateway.
 
-    5. **Monitoring**: Polls the task status until completion or timeout.
+    5. Waits for the task to complete and publishes the changes to the firewall.
 
-    6. **Finalization**: Publishes the changes to the database and retrieves execution
-    logs/errors.
+    6. Returns the task details and execution status.
 
 
     ### Parameters Description
 
-    | Parameter | Type | Mandatory | Description |
+    * **Security Gateway** (String, Mandatory): The name of the Security Gateway from
+    where to remove the SAM Rule.
 
-    | :--- | :--- | :--- | :--- |
+    * **Source IP** (String, Optional): The source IP of the rule to be removed.
 
-    | Security Gateway | String | Yes | The name of the Security Gateway where the
-    SAM rule should be removed. |
+    * **Source Netmask** (String, Optional): The source netmask of the rule to be
+    removed.
 
-    | Source IP | String | No | The source IP address used in the original rule. |
+    * **Destination IP** (String, Optional): The destination IP of the rule to be
+    removed.
 
-    | Source Netmask | String | No | The source netmask used in the original rule.
-    |
+    * **Destination Netmask** (String, Optional): The destination netmask of the rule
+    to be removed.
 
-    | Destination IP | String | No | The destination IP address used in the original
-    rule. |
+    * **Port** (String, Optional): The port number of the rule to be removed (e.g.,
+    5005).
 
-    | Destination Netmask | String | No | The destination netmask used in the original
-    rule. |
+    * **Protocol** (String, Optional): The protocol name of the rule to be removed
+    (e.g., TCP).
 
-    | Port | Integer | No | The port number used in the original rule (e.g., 443).
-    |
+    * **Action for the Matching Connections** (String, Mandatory): The action that
+    was executed for the matching connections (Notify, Reject, Drop).
 
-    | Protocol | String | No | The protocol name used in the original rule (e.g.,
-    TCP, UDP). |
+    * **How to Track Matching Connections** (String, Mandatory): How the matching
+    connections were tracked (No Log, Log, Alert).
 
-    | Action for the Matching Connections | String | Yes | The action defined in the
-    rule: Notify, Reject, or Drop. |
-
-    | How to Track Matching Connections | String | Yes | The tracking method defined
-    in the rule: No Log, Log, or Alert. |
-
-    | Close Connections | Boolean | No | If true, specifies that existing matching
-    connections should be closed upon rule removal. |
-
-
-    ### Additional Notes
-
-    - To successfully remove a rule, the parameters provided must exactly match the
-    criteria of the existing rule on the firewall.
-
-    - The action uses the `fw sam` CLI utility via the Checkpoint Web API's `run-script`
-    functionality.
+    * **Close Connections** (Boolean, Optional): Specify if the existing matching
+    connections should be closed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -712,12 +1001,21 @@ Remove SAM Rule:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a Suspicious Activity Monitoring (SAM) rule from the Checkpoint Firewall
-      configuration and publishes the changes to the management server.
+      Removes a SAM (Suspicious Activity Monitoring) rule from the Checkpoint Firewall.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes a command on the Checkpoint Firewall to remove a SAM rule,
+      which mutates external data. It does not fetch contextual data for enrichment,
+      nor does it mutate internal SecOps data like entities, insights, or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by removing a rule from a firewall, so it cannot
+      be an enrichment action. It does not actively mitigate a threat (like blocking
+      an IP or disabling a user), but rather reverses a previous block/rule, so it
+      does not strictly fit the remediation category either.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -733,52 +1031,87 @@ Remove SAM Rule:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on the parameters provided to the action.
 Remove Url From Group:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes a URL from a Checkpoint Firewall group, which is typically
+      used to unblock the URL or remove it from a restricted list. This aligns with
+      the 'Remove IOC From Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Removes URL entities from a specified Application Site Group within a CheckPoint
-    Firewall. This action is used to revert blocking or filtering rules by removing
-    specific URLs from management groups and then pushing those changes to the firewall
-    gateways.
+    Removes URL entities from a specified Checkpoint Firewall group.
+
+
+    ### General Description
+
+    This action integrates with Checkpoint Firewall to remove specific URL entities
+    from a designated application site group. It iterates over the target URL entities,
+    verifies their membership in the specified group, and removes them. After processing
+    all relevant entities, the action publishes the changes and installs the updated
+    policy to ensure the changes take effect on the firewall.
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the CheckPoint Management Server using provided
-    credentials and domain information.
+    1. Extracts the necessary configuration and action parameters, including the target
+    group name and policy name.
 
-    2. **Entity Filtering**: Identifies all URL entities within the current context.
+    2. Filters the target entities to include only those of type URL.
 
-    3. **Group Validation**: For each URL, it verifies that the target 'URLs Group
-    Name' exists and is not marked as read-only.
+    3. Initializes a connection to the Checkpoint Firewall using the provided credentials.
 
-    4. **Removal**: Executes the removal of the URL from the group members.
+    4. Iterates over the filtered URL entities:
+       - Verifies if the group exists and is editable.
+       - Checks if the URL is a member of the group.
+       - Removes the URL from the group if it is a member.
+    5. Publishes the changes to the Checkpoint Firewall.
 
-    5. **Persistence**: Publishes the session changes to the CheckPoint database.
+    6. Installs the specified policy to apply the changes.
 
-    6. **Policy Installation**: Triggers an installation of the specified 'Policy
-    Name' to ensure the changes are active on the security gateways.
+    7. Logs out of the Checkpoint Firewall session.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | URLs Group Name | String | Yes | The name of the CheckPoint Application Site
-    Group from which the URLs will be removed. |
-
-    | Policy Name | String | Yes | (Configuration Parameter) The name of the policy
-    package to be installed on the gateways after the group is updated. |
-
-
-    ### Additional Notes
-
-    - This action requires the 'Policy Name' to be correctly configured in the integration
-    settings to successfully push changes to the gateways.
-
-    - If a URL is not found in the group, the action will report a failure for that
-    specific entity but continue processing others.
+    | URLs Group Name | String | True | Specify the name of the group from which you
+    want to remove the URL. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -787,12 +1120,23 @@ Remove Url From Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes URL objects from Application Site Groups in the CheckPoint Management
-      Server and installs the updated policy package to the security gateways.
+      Removes URL entities from a specified Checkpoint Firewall group, publishes the
+      changes, and installs the updated policy.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action does not fetch contextual data for enrichment. It mutates external
+      data by removing URLs from a Checkpoint Firewall group, publishing the changes,
+      and installing a policy. It does not mutate internal SecOps data, update entities,
+      create insights, modify alerts, or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data for enrichment and mutates external state, so
+      it is not an Enrichment action. While it interacts with a firewall, it removes
+      an IOC from a group (unblocking) rather than blocking it, so it does not strictly
+      fit the network-based remediation criteria of blocking an IOC.
+    remediation: false
   entity_usage:
     entity_types:
     - DestinationURL
@@ -809,61 +1153,84 @@ Remove Url From Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type == EntityTypes.URL`. Therefore, it runs on URL entities
+      and filters by entity type.
 Run Script:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action runs an arbitrary script on a remote CheckPoint device and returns
+      the output. This directly aligns with the 'Execute Command on the Host' expected
+      outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    This action executes arbitrary CLI scripts or commands on specified CheckPoint
-    devices using the CheckPoint Management API's `run-script` functionality. It is
-    designed for administrative tasks, troubleshooting, or automated response actions
-    that require direct command execution on firewalls or gateways. Note that this
-    action does not operate on Google SecOps entities and instead targets devices
-    specified by name.
+    Executes an arbitrary script on a specified CheckPoint Firewall device using the
+    run-script API. This action allows for custom commands to be run directly on the
+    firewall and retrieves the execution output.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Script text | String | Yes | The actual CLI command or script content to be
-    executed on the target (e.g., `fw sam -t 600 -I src 8.9.10.12`). |
+    | Script text | String | Yes | The script or command to execute on the device
+    (e.g., `fw sam command: fw sam -t 600 -I src 8.9.10.12`). |
 
-    | Target | String | Yes | A comma-separated list of CheckPoint device names (gateways)
-    where the script should be executed (e.g., `gateway1, gateway2`). |
-
-
-    ### Additional Notes
-
-    * This action is asynchronous; it initiates a task on the CheckPoint server and
-    polls for completion until the script finishes or the action reaches its execution
-    timeout.
-
-    * The action returns the full JSON response from the CheckPoint task, including
-    standard output and error messages.
+    | Target | String | Yes | The CheckPoint device(s) to execute the script on. Accepts
+    multiple values as a comma-separated list (e.g., `gaia80.10`). |
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts the CheckPoint connection details and
-    the script parameters (command and targets).
+    1. Establishes a connection to the CheckPoint Firewall using the provided integration
+    credentials.
 
-    2. **Execution**: It connects to the CheckPoint Management Server and triggers
-    the `run-script` API call.
+    2. Initiates the `run-script` command with the specified script text and target
+    devices.
 
-    3. **Polling**: The action enters a loop, checking the status of the generated
-    Task ID every 5 seconds.
+    3. Continuously polls the task status until it completes or the execution deadline
+    is reached.
 
-    4. **Timeout Handling**: If the action's internal deadline is reached before the
-    script finishes, it marks the execution as timed out.
+    4. Retrieves the task details, including any output messages or errors generated
+    by the script.
 
-    5. **Data Retrieval**: Once the task completes, the action retrieves the full
-    task details, including specific response messages and errors from the target
-    gateways.
-
-    6. **Finalization**: The action outputs the execution results and status to the
-    Google SecOps case.
+    5. Returns the execution results and attaches the detailed output to the action's
+    JSON results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -872,13 +1239,24 @@ Run Script:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Executes arbitrary scripts on CheckPoint gateways which can modify firewall
-      rules, system configurations, or network state depending on the provided script
-      text.
-    fetches_data: true
+      Executes an arbitrary script on the CheckPoint Firewall, which can potentially
+      modify its configuration, rules, or state.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes an arbitrary script on a remote CheckPoint Firewall device.
+      Because the script is arbitrary, it has the potential to mutate the external
+      state of the firewall (e.g., changing configurations or rules). It does not
+      fetch contextual data for enrichment, nor does it mutate internal SecOps data
+      such as entities, insights, or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action executes an arbitrary script on an external system, which can mutate
+      external data. Therefore, it cannot be classified as Enrichment. It also does
+      not perform a specific, predefined remediation task (like blocking an IP or
+      disabling a user), so it is not classified as Remediation.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -894,36 +1272,82 @@ Run Script:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on SecOps entities. It takes a script and a target
+      device as input parameters and executes the script directly on the target device.
 Show Logs:
-  ai_description: "### General Description\nThe **Show Logs** action retrieves logs\
-    \ or audit records from a CheckPoint Firewall Management Server. It allows security\
-    \ analysts to query historical traffic, security events, or administrative changes\
-    \ directly from the Google SecOps SOAR platform. The action supports filtering\
-    \ by query strings and specific time frames to isolate relevant security data.\n\
-    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| **Query Filter** | String | No | Specifies the\
-    \ query filter used to return logs (e.g., 'src:10.0.0.1' or 'action:drop'). |\n\
-    | **Time Frame** | Enum | Yes | Defines the time range for log retrieval. Options\
-    \ include 'Today', 'Yesterday', 'Last Hour', 'Last 24 Hours', 'Last 30 Days',\
-    \ 'This Week', 'This Month', and 'All Time'. |\n| **Log Type** | Enum | Yes |\
-    \ Specifies the type of logs to return: 'Log' (traffic/security events) or 'Audit'\
-    \ (management/administrative changes). |\n| **Max Logs To Return** | Integer |\
-    \ No | Limits the number of logs returned in a single execution. The default is\
-    \ 50, and the maximum supported by the CheckPoint API is 100. |\n\n### Flow Description\n\
-    1. **Authentication**: The action initializes a session with the CheckPoint Management\
-    \ Server using the provided server address, username, password, and optional domain.\n\
-    2. **Log Query**: It executes a search request against the CheckPoint `show-logs`\
-    \ API endpoint using the provided `Query Filter`, `Time Frame`, and `Log Type`.\n\
-    3. **Data Parsing**: The raw API response is parsed into structured `LogResult`\
-    \ objects, extracting key fields such as ID, Title, Severity, Subject, and Timestamps.\n\
-    4. **Output Generation**: \n    - A data table titled 'Results' is created and\
-    \ added to the case wall, containing a CSV-formatted summary of the logs.\n  \
-    \  - The full details of the retrieved logs are attached as a JSON result for\
-    \ downstream processing.\n5. **Session Termination**: The action explicitly logs\
-    \ out of the CheckPoint server to ensure the session is closed securely.\n\n###\
-    \ Additional Notes\n- This action is a utility search tool and does not operate\
-    \ on specific entities within the case.\n- If no logs match the criteria, the\
-    \ action will complete successfully but will not add a data table or JSON results."
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves historical logs from CheckPoint FireWall based on specific
+      search parameters (query filter, time frame, log type). This directly aligns
+      with the 'Search Events' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    Retrieves logs from CheckPoint FireWall based on a specified query filter and
+    time frame.
+
+
+    ### Flow Description
+
+    1. Initializes a connection with the CheckPoint FireWall using the provided integration
+    configuration.
+
+    2. Executes a log search query using the provided filter, time frame, and log
+    type.
+
+    3. Retrieves the matching logs up to the specified maximum limit.
+
+    4. Outputs the retrieved logs as a data table and JSON results.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query Filter | String | False | Specify the query filter that will be used to
+    return logs. |
+
+    | Time Frame | Dropdown | True | Specify what time frame should be used for log
+    retrieval. Options: Today, Yesterday, Last Hour, Last 24 Hours, Last 30 Days,
+    This Week, This Month, All Time. |
+
+    | Log Type | Dropdown | True | Specify what type of logs should be returned. Options:
+    Log, Audit. |
+
+    | Max Logs To Return | String | False | Specify how many logs to return. Maximum
+    is 100. This is a Checkpoint FireWall limitation. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -934,8 +1358,18 @@ Show Logs:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches log data from CheckPoint FireWall using the 'show-logs' API
+      endpoint. It does not mutate any external data, nor does it update entities,
+      create insights, modify alerts, or add case comments.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches data (logs) from an external system without mutating any
+      external or internal state. Therefore, it qualifies as an enrichment action.
+      It does not perform any containment, blocking, or identity manipulation, so
+      it is not a remediation action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -951,3 +1385,6 @@ Show Logs:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over `siemplify.target_entities`. It
+      relies entirely on the provided action parameters to fetch logs.

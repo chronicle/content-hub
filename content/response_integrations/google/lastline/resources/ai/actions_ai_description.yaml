@@ -1,84 +1,92 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get Analysis Results:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves analysis results, scores, and malicious activity details
+      for URLs and FileHashes (IOCs) from Lastline. This matches the 'Enrich IOC'
+      expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    Enriches `FileHash` and `URL` entities by retrieving results from previously completed
-    analysis tasks in Lastline. This action is useful for gaining immediate context
-    on known files or URLs without triggering a new sandbox submission. It retrieves
-    scores, malicious activity summaries, and technical metadata, updating the entity's
-    profile within Google SecOps.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Threshold | Integer | Yes | The score threshold (default is 70). If the retrieved
-    Lastline analysis score is higher than this value, the entity is marked as suspicious
-    in Google SecOps. |
-
-    | Search in last x scans | Integer | Yes | The number of recent analysis records
-    in Lastline to search through (default is 25) to find a match for the entity.
-    |
-
-    | Create Insight? | Boolean | No | If set to `True`, the action creates a detailed
-    insight on the entity in the Google SecOps case containing the score and observed
-    malicious activities. |
-
-
-    ### Additional Notes
-
-    - The action supports `FileHash` entities in **MD5** and **SHA-1** formats only.
-
-    - It always fetches the **latest** available analysis for the provided entity
-    within the specified search limit.
-
-    - If no previous analysis is found within the search limit, the entity will not
-    be enriched.
+    The **Get Analysis Results** action enriches FileHash or URL entities with previously
+    completed analysis task results from Lastline. It retrieves the latest successful
+    analysis report for the provided entities, enriches the entities with the report
+    data, and optionally creates an insight. If the analysis score exceeds a specified
+    threshold, the entity is marked as suspicious.
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the Lastline service using the provided API
-    credentials.
+    1. Extracts configuration and action parameters.
 
-    2. **Entity Filtering**: Iterates through the target entities, filtering for supported
-    types (`URL` and `FileHash`).
+    2. Iterates over the target entities (URL or FILEHASH).
 
-    3. **History Search**: For each valid entity, it searches the Lastline analysis
-    history (up to the defined 'Search in last x scans' limit) to find the most recent
-    completed task.
+    3. Searches the Lastline analysis history for the specific entity.
 
-    4. **Result Retrieval**: If a task is found, it fetches the detailed analysis
-    report using the task's unique identifier (UUID).
+    4. Fetches the detailed report for the latest successful analysis task.
 
-    5. **Internal Mutation (Enrichment)**:
-        - Updates the entity's `additional_properties` with technical details (timestamps,
-    hashes, scores).
-        - Sets the entity as `is_enriched`.
-        - Compares the analysis score against the `Threshold`; if exceeded, marks
-    the entity as `is_suspicious`.
-    6. **Reporting**: Adds a data table to the case wall and, if configured, creates
-    a case insight for the entity.
+    5. Optionally creates an insight based on the report data.
 
-    7. **Completion**: Updates the entities in the SOAR and returns the raw JSON results.
+    6. Generates JSON and CSV results for the analysis.
+
+    7. Enriches the entity with the report data and marks it as suspicious if the
+    score is above the threshold.
+
+    8. Updates the entities in the SecOps platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | Integer | Yes | Mark entity as suspicious if the score value for
+    the entity is above the specified threshold. Default is 70. |
+
+    | Search in last x scans | Integer | Yes | Search for a report for the provided
+    entity in the last x analyses executed in Lastline. Default is 25. |
+
+    | Create Insight? | Boolean | No | Specify whether to create an insight based
+    on the report data. Default is False. |
+
+
+    ### Additional Notes
+
+    - The action supports FileHash entities in MD5 and SHA-1 formats.
+
+    - The action always fetches the latest analysis available for the provided entity
+    in Lastline.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -89,10 +97,20 @@ Get Analysis Results:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes with enrichment data, marks entities as suspicious
-      based on score thresholds, and creates case insights and data tables.
+      Updates entity properties, marks entities as suspicious, and creates insights.
+    reasoning: >-
+      The action fetches analysis history and reports from Lastline using GET requests,
+      so it fetches data. It does not make any POST/PUT/DELETE requests to mutate
+      external data. It mutates internal data by updating entity properties, marking
+      entities as suspicious, and creating insights.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Lastline) to enrich entities.
+      It does not mutate external data, and its internal mutations are limited to
+      updating entities and creating insights. Therefore, it is an enrichment action.
+      It does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types:
     - FILEHASH
@@ -110,34 +128,69 @@ Get Analysis Results:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks if
+      `entity.entity_type` is either `EntityTypes.URL` or `EntityTypes.FILEHASH`.
+      It skips entities that do not match these types. Therefore, it runs on FILEHASH
+      and DestinationURL entities and filters by entity type.
 Ping:
-  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
-    \ used to verify the connectivity between Google SecOps and the Lastline service.\
-    \ It ensures that the provided integration parameters\u2014such as the API Root,\
-    \ Username, and Password\u2014are correct and that the Lastline API is reachable\
-    \ from the environment.\n\n### Parameters Description\nThis action uses the integration's\
-    \ global configuration parameters rather than action-specific inputs:\n\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Api Root**\
-    \ | String | Yes | The base URL of the Lastline API instance. |\n| **Username**\
-    \ | String | Yes | The username used for authenticating with the Lastline service.\
-    \ |\n| **Password** | String | Yes | The password associated with the provided\
-    \ username. |\n| **Verify SSL** | Boolean | No | If enabled (default), the action\
-    \ will verify the SSL certificate of the Lastline server. |\n\n### Additional\
-    \ Notes\n- This action is typically used during the initial setup of the integration\
-    \ or for troubleshooting connection issues.\n- It does not process any entities\
-    \ or modify any data within Google SecOps or Lastline.\n\n### Flow Description\n\
-    1. **Initialization**: The action initializes the Siemplify context and retrieves\
-    \ the global configuration parameters (API Root, Username, Password, and SSL verification\
-    \ setting).\n2. **Manager Setup**: It instantiates the `LastlineManager`, which\
-    \ immediately attempts to establish a session by requesting a session cookie from\
-    \ the Lastline `/papi/login` endpoint.\n3. **Connectivity Test**: The action calls\
-    \ the `test_connectivity` method, which performs a GET request to the login endpoint\
-    \ to validate that the credentials are valid and the service is responsive.\n\
-    4. **Result Handling**: \n    - If the request is successful, the action returns\
-    \ a success message and sets the execution state to completed.\n    - If an authentication\
-    \ error occurs, it catches the `LastlineAuthenticationException` and reports a\
-    \ failure.\n    - If any other network or API error occurs, it catches the general\
-    \ exception and provides the error details."
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      expected outcomes for the defined product categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    Tests connectivity to the Lastline service using the provided integration configuration
+    parameters.
+
+
+    ### Flow Description
+
+    1. Retrieves the integration configuration parameters (API Root, Username, Password,
+    Verify SSL).
+
+    2. Initializes the LastlineManager with the provided credentials.
+
+    3. Attempts to authenticate and establish a session with the Lastline API.
+
+    4. Returns a successful result if the connection is established, or an error message
+    if it fails.
+
+
+    ### Parameters Description
+
+    This action does not take any action-specific parameters. It relies solely on
+    the integration configuration parameters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -146,10 +199,19 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only tests connectivity to the Lastline service by attempting to
+      authenticate. It does not fetch contextual data for entities or alerts, nor
+      does it mutate any external or internal data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping' and its sole purpose is to test connectivity. According
+      to the rules, Ping actions must not be categorized as enrichment actions. It
+      also does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -165,69 +227,94 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or interact with any entities. It only tests the
+      connection to the external service.
 Search Analysis History:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for historical analysis tasks in Lastline based on a provided
+      URL or hash. While it retrieves threat intelligence data, it acts as a search
+      utility rather than an entity enrichment action (it does not run on entities).
+      It does not match any of the specific expected outcomes for the available categories
+      such as Search Events (which is for logs/telemetry), Submit File, or Enrich
+      IOC.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    This action searches the Lastline analysis history for completed tasks based on
-    user-provided parameters. It allows security analysts to look up previous scan
-    results for specific URLs or file hashes (MD5/SHA1) within a defined timeframe
-    and scan limit. Unlike typical enrichment actions, this action does not process
-    entities from the SOAR case; it operates exclusively on the input parameters provided
-    at runtime.
+    Searches Lastline for completed analysis tasks history based on a provided submission
+    name, such as a URL or Filehash. This action retrieves historical analysis data
+    from the Lastline platform without requiring Siemplify entities as input.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Submission Name | String | No | The specific URL or Filehash (MD5 or SHA1) to
-    search for in the history. |
+    | Submission Name | String | False | Submission name to search for. Can be either
+    a URL or a Filehash in MD5 or SHA1 format. |
 
-    | Submission Type | String | No | Defines the type of the 'Submission Name'. Options
-    include 'URL', 'FileHash', or 'Not specified'. If 'Not specified', the action
-    will attempt to auto-detect the type based on the format of the 'Submission Name'.
-    |
+    | Submission Type | Dropdown | False | Optionally specify the submission type
+    to search for, either 'URL' or 'FileHash'. If not specified, the action will attempt
+    to infer the type from the Submission Name. |
 
-    | Max Hours Backwards | Integer | No | The time window (in hours) to look back
-    for completed analysis tasks. Defaults to 24 hours. |
+    | Max Hours Backwards | String | False | The time frame (in hours) for which to
+    search for completed analysis tasks. Default is 24. |
 
-    | Search in last x scans | Integer | Yes | The maximum number of recent scans
-    to search through in Lastline. Defaults to 100. |
+    | Search in last x scans | String | True | The maximum number of recent analyses
+    to search within Lastline. Default is 100. |
 
-    | Skip first x scans | Integer | No | The number of initial scans to skip in the
-    search results (offset). Defaults to 0. |
-
-
-    ### Additional Notes
-
-    - **Entity Usage:** This action does not interact with or iterate over entities
-    present in the Google SecOps case. It relies entirely on the 'Submission Name'
-    parameter.
-
-    - **Hash Support:** When searching for files, the action supports both MD5 and
-    SHA1 hash formats.
+    | Skip first x scans | String | False | The number of initial scans to skip from
+    the Lastline API results. Default is 0. |
 
 
     ### Flow Description
 
-    1. **Initialization:** The action retrieves API credentials (API Root, Username,
-    Password) and connection settings from the integration configuration.
+    1. Extracts the integration configuration and action parameters.
 
-    2. **Parameter Parsing:** It extracts the search criteria, including the submission
-    name, type, and search constraints (timeframe and limits).
+    2. Determines the submission type (URL or FILE) based on the provided `Submission
+    Name` if `Submission Type` is not explicitly specified.
 
-    3. **Type Detection:** If the 'Submission Type' is not specified, the script uses
-    validators to determine if the 'Submission Name' is a URL or a file hash.
+    3. Calculates the appropriate file hashes (MD5 or SHA1) if a file hash is provided.
 
-    4. **API Query:** The `LastlineManager` executes a GET request to the `/papi/analysis/get_history`
-    endpoint with the filtered parameters.
+    4. Calls the Lastline API to search the analysis history using the specified time
+    frame, limits, and submission criteria.
 
-    5. **Result Processing:** The response is parsed into data models. If matching
-    tasks are found, the action generates a JSON result and populates a 'Search Results'
-    data table in the SOAR platform.
+    5. If analysis history is found, the action attaches the results as a JSON object
+    and a CSV data table to the case, and completes successfully.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -238,8 +325,20 @@ Search Analysis History:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches analysis history data from the Lastline API using a GET request.
+      It does not perform any operations that mutate external data in Lastline, nor
+      does it mutate internal SecOps data such as updating entities, creating insights,
+      modifying alerts, or adding case comments. It only outputs the results as JSON
+      and a data table.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Lastline) and does not mutate
+      any external or internal state. Therefore, it qualifies as an Enrichment action.
+      It does not perform any remediation tasks such as blocking IPs, disabling identities,
+      or containing hosts.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -255,130 +354,87 @@ Search Analysis History:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on the action's input parameters (Submission Name) to perform
+      the search. Therefore, the entity types list is empty and no entity filtering
+      is applied.
 Submit File:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action uploads a file to the Lastline sandbox for analysis and retrieves
+      the behavior report. This directly aligns with the 'Submit File' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Submits a file to the Lastline sandbox for automated analysis and retrieves the
-    resulting report. This action operates asynchronously, meaning it can submit the
-    file and then poll for the analysis results until they are ready. Note that this
-    action does not process Google SecOps entities; instead, it requires a direct
-    file path provided as an input parameter.
+    Submits a file to the Lastline sandbox for analysis.
 
 
-    ### Parameters
+    ### General Description
 
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | File Path | String | Yes | The full local path to the file that should be uploaded
-    to Lastline for analysis. |
-
-    | Wait for the report? | Boolean | No | If set to 'True' (default), the action
-    will wait for the analysis to complete and fetch the full report. If 'False',
-    the action completes immediately after the file is successfully submitted. |
+    This action uploads a file from a specified local path to the Lastline analysis
+    engine. It can optionally wait for the analysis to complete and retrieve the resulting
+    behavior report and threat score. If the action is configured to wait, it will
+    run asynchronously, periodically checking the status of the analysis task until
+    it is completed.
 
 
     ### Flow Description
 
-    1. **Submission**: The action reads the file from the specified path and performs
-    a POST request to the Lastline API to create a new analysis task.
+    1. Extracts the provided file path and configuration parameters.
 
-    2. **Async Handling**: If 'Wait for the report?' is enabled, the action enters
-    an 'In Progress' state, storing the task UUID.
+    2. Initiates a file submission task to the Lastline API.
 
-    3. **Status Polling**: In subsequent execution cycles, the action queries the
-    Lastline API to check the progress of the analysis.
+    3. If 'Wait for the report?' is enabled, the action enters an asynchronous loop,
+    periodically querying the task status.
 
-    4. **Data Retrieval**: Once the analysis is marked as completed, the action fetches
-    the final results, including scores and observed malicious activities.
+    4. Once the analysis is complete, it retrieves the full analysis report.
 
-    5. **Output**: The action outputs the raw analysis data as a JSON object and,
-    if the report was waited for, attaches a CSV data table to the case containing
-    the summary of the analysis results.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Submits a file to the Lastline platform, which creates a new analysis task and
-      consumes sandbox resources.
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table to the Google SecOps case containing the file analysis results.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Submit URL:
-  ai_description: >-
-    ### General Description
-
-    This action submits a specific URL to the Lastline platform for sandbox analysis.
-    It is designed to initiate a security scan to determine if a URL is malicious
-    or benign. Unlike many other actions, this does not automatically process entities
-    from the Google SecOps case; instead, the URL must be provided manually as an
-    input parameter. The action supports asynchronous execution, meaning it can wait
-    for the analysis to complete and retrieve the final report.
+    5. Outputs the results as JSON and optionally creates a CSV data table with the
+    analysis summary.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | URL For Analysis | String | Yes | The specific URL that you want Lastline to
-    analyze. |
+    | File Path | String | Yes | Specify the full path to the file to analyze. |
 
-    | Wait for the report? | Boolean | No | If set to `True` (default), the action
-    will enter an asynchronous state, polling Lastline until the analysis is finished
-    to retrieve the full report. If `False`, the action completes immediately after
-    the submission task is created. |
-
-
-    ### Additional Notes
-
-    - This action **does not** use Google SecOps entities (e.g., it won't iterate
-    over URLs found in the alert). You must map or type the URL into the `URL For
-    Analysis` parameter.
-
-    - If `Wait for the report?` is enabled, the action may take several minutes to
-    complete as it waits for the sandbox environment to finish its execution.
-
-
-    ### Flow Description
-
-    1. **Submission**: The action sends a POST request to Lastline's `/papi/analysis/submit_url`
-    endpoint with the provided URL.
-
-    2. **Initial Check**: If `Wait for the report?` is `False`, the action finishes
-    immediately, providing the Task UUID.
-
-    3. **Polling (Async)**: If `Wait for the report?` is `True`, the action checks
-    if the report is already available. If not, it enters an 'In Progress' state.
-
-    4. **Status Retrieval**: In subsequent runs (polling), the action calls `/papi/analysis/get_progress`
-    using the Task UUID to check if the analysis is finished.
-
-    5. **Finalization**: Once the analysis is complete, the action calls `/papi/analysis/get_result`
-    to fetch the full report, which is then attached to the action results as JSON
-    and a Data Table.
+    | Wait for the report? | Boolean | No | Specify whether the action should wait
+    for the report creation. If set to False, the report can be obtained later with
+    the 'Get Analysis Results' action once the scan is completed. Default is True.
+    |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -387,12 +443,22 @@ Submit URL:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action creates a new analysis task/job on the Lastline platform by submitting
-      a URL via a POST request.
+      Uploads a file to the Lastline sandbox and creates a new analysis task.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving the analysis report (fetches_data=true).
+      It mutates external data by uploading a file and creating a new analysis task
+      in the Lastline sandbox (can_mutate_external_data=true). It does not mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by submitting a file to a sandbox, so it cannot
+      be classified as Enrichment. It does not perform any remediation tasks such
+      as blocking IPs or disabling identities, so it is not Remediation.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -408,3 +474,125 @@ Submit URL:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process any SecOps entities. It relies entirely
+      on the 'File Path' parameter provided as input.
+Submit URL:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action submits a URL to a sandbox/analysis engine (Lastline) to get a behavior
+      report or threat score, which aligns with the 'Submit File' expected outcome
+      (which covers submitting files or samples to sandboxes).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    Submits a URL to Lastline for threat analysis. The action initiates an analysis
+    task in the Lastline sandbox and can optionally run asynchronously to wait for
+    the analysis report to complete and return the results.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | URL For Analysis | String | Yes | The specific URL to be submitted to Lastline
+    for analysis. |
+
+    | Wait for the report? | Boolean | No | If set to True, the action will run asynchronously
+    and wait until the analysis report is generated. If False, it will just submit
+    the task and finish immediately. |
+
+
+    ### Flow Description
+
+    1. Extracts the URL and configuration parameters.
+
+    2. Submits the URL to the Lastline API via a POST request to create a new analysis
+    task.
+
+    3. If configured to wait, the action polls the Lastline API periodically to check
+    the task's progress status.
+
+    4. Once the task is completed (or immediately if not waiting), it retrieves the
+    analysis results and attaches them to the action's JSON results and data tables.
+
+
+    ### Additional Notes
+
+    This action does not operate on Google SecOps entities. The URL to analyze must
+    be provided explicitly via the action's input parameters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new URL analysis task in the Lastline sandbox.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving analysis progress and results from Lastline.
+      It mutates external data by submitting a new URL analysis task via a POST request
+      to the Lastline API. It does not mutate internal data, update entities, create
+      insights, modify alerts, or create case comments.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action creates a new analysis task in an external system (Lastline), which
+      violates the read-only constraint of Enrichment. It does not perform any containment,
+      blocking, or mitigation, so it is not a Remediation action.
+    remediation: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action explicitly states it does not work with Siemplify entities and relies
+      solely on the 'URL For Analysis' input parameter. It does not reference `siemplify.target_entities`
+      in the code.
