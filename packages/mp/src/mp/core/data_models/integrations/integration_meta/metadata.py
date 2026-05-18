@@ -263,7 +263,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             svg = built["SvgImage"]
 
         return cls(
-            categories=built["Categories"],
+            categories=built.get("Categories") or [],
             description=built.get("Description") or "",
             feature_tags=feature_tags,
             name=built["DisplayName"],
