@@ -157,21 +157,19 @@ def enrich_entities_with_sources_and_dests(
     Returns:
         A list of updated entities.
     """
+    source_set = {s.casefold() for s in sources}
+    dest_set = {d.casefold() for d in dests}
     updated_entities_map: dict[str, Entity] = {}
 
-    for source in sources:
-        for entity in entities:
-            if entity.identifier.casefold() == source.casefold():
-                entity.additional_properties.update({"isSource": "true"})
-                updated_entities_map[entity.identifier] = entity
-                break
+    for entity in entities:
+        ident = entity.identifier.casefold()
+        if ident in source_set:
+            entity.additional_properties.update({"isSource": "true"})
+            updated_entities_map[entity.identifier] = entity
 
-    for dest in dests:
-        for entity in entities:
-            if entity.identifier.casefold() == dest.casefold():
-                entity.additional_properties.update({"isDest": "true"})
-                updated_entities_map[entity.identifier] = entity
-                break
+        if ident in dest_set:
+            entity.additional_properties.update({"isDest": "true"})
+            updated_entities_map[entity.identifier] = entity
 
     return list(updated_entities_map.values())
 
