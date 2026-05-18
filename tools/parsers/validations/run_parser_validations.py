@@ -149,6 +149,46 @@ def get_pretty_relpath(path: Path) -> str:
     return os.path.relpath(path)
 
 
+def validate_log_structure(data: Any, file_name: str) -> bool:
+    """Validates that the log file follows the required nested structure.
+
+    Expected Structure:
+    {
+      "create_time": "...",
+      "raw_logs": {
+        "start_time": "...",
+        "entries": [
+          { "data": "...", "collection_time": "..." }
+        ]
+      }
+    }
+    """
+    if not isinstance(data, dict):
+        logging.error(f"  Error: {file_name} structure is incorrect. It must be a JSON object.")
+        return False
+
+    if not isinstance(data.get("create_time"), str):
+        logging.error(f"  Error: {file_name} structure is incorrect. Missing or invalid 'create_time' at the root (must be a string).")
+        return False
+
+    raw_logs = data.get("raw_logs")
+    if not isinstance(raw_logs, dict):
+        logging.error(f"  Error: {file_name} structure is incorrect. Missing or invalid 'raw_logs' object.")
+        return False
+
+    entries = raw_logs.get("entries")
+    if not isinstance(entries, list) or not entries:
+        logging.error(f"  Error: {file_name} structure is incorrect. 'entries' must be a non-empty list.")
+        return False
+
+    for i, entry in enumerate(entries):
+        if not isinstance(entry, dict) or not isinstance(entry.get("data"), str):
+            logging.error(f"  Error: {file_name} structure is incorrect. Entry at index {i} must be an object with a 'data' string.")
+            return False
+
+    return True
+
+
 def main(argv: list[str]) -> None:
     """Runs parser validations on log types.
 
@@ -235,8 +275,8 @@ def main(argv: list[str]) -> None:
             try:
                 metadata_data = json.loads(metadata_file.read_text())
                 actual_log_type = metadata_data.get("log_type", _DEFAULT_LOG_TYPE)
-            except json.JSONDecodeError:
-                logging.warning(f"  Warning: Could not parse {metadata_file}.")
+            except json.JSONDecodeError as e:
+                logging.warning(f"  Warning: Could not parse {metadata_file}: {e}. Using default log type '{_DEFAULT_LOG_TYPE}'.")
 
         raw_logs_path = cbn_path / "testdata" / "raw_logs"
         expected_events_path = cbn_path / "testdata" / "expected_events"
@@ -261,8 +301,19 @@ def main(argv: list[str]) -> None:
                 )
                 continue
 
-            logs_data = json.loads(log_file.read_text())
-            logs = logs_data.get("raw_logs", [])
+            try:
+                logs_data = json.loads(log_file.read_text())
+            except json.JSONDecodeError as e:
+                logging.error(f"  Error: Failed to parse JSON from {log_file.name}: {e}")
+                continue
+
+            if not validate_log_structure(logs_data, log_file.name):
+                logging.error(f"  Please fix the structure of {log_file.name} to match the expected nested format.")
+                # Use os._exit(1) to bypass absl exception handling and stop immediately.
+                os._exit(1)
+
+            # Extract raw logs from the validated structure
+            logs = [entry.get("data", "") for entry in logs_data["raw_logs"]["entries"]]
 
             logging.info(f"    Raw logs file: {get_pretty_relpath(log_file)}")
 

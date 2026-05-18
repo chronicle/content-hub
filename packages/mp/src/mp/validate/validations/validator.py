@@ -1,0 +1,88 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
+from mp.core.exceptions import FatalValidationError, NonFatalValidationError
+from mp.validate.data_models import ContentType, ValidationResults, Validator
+from mp.validate.validations.integrations import get_integration_validations
+from mp.validate.validations.playbooks import get_playbooks_validations
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+logger: logging.Logger = logging.getLogger(__name__)
+
+
+class Validations:
+    def __init__(self, validation_path: Path, content_type: ContentType) -> None:
+        self.validation_path: Path = validation_path
+        self.content_type: ContentType = content_type
+        self.results: ValidationResults = ValidationResults(validation_path.name)
+
+    def run_validation(self) -> None:
+        """Run all the pre-build validations."""
+        validations: list[Validator] = _get_content_validations(self.content_type)
+        total_validations = len(validations)
+        integration_name = self.validation_path.name
+
+        logger.info("Running pre-build validations: %s...", integration_name)
+
+        count: int = 0
+        for validator in validations:
+            try:
+                logger.debug("Running validator: %s", validator.name)
+                validator.run(self.validation_path)
+                count += 1
+            except NonFatalValidationError as e:
+                self._handle_non_fatal_error(validator.name, str(e))
+
+            except FatalValidationError as e:
+                self._handle_fatal_error(validator.name, str(e))
+                logger.exception(
+                    "STOPPED | Integration: %s | Reason: Fatal validation failed %s ",
+                    integration_name,
+                    validator.name,
+                )
+                return
+
+        logger.info(
+            "Integration: %s | Passed: %s | Executed: %s / %s validations",
+            integration_name,
+            count,
+            count,
+            total_validations,
+        )
+
+    def _handle_fatal_error(self, validation_name: str, error_msg: str) -> None:
+        self.results.validation_report.add_fatal_validation(validation_name, error_msg)
+        self.results.is_success = False
+
+    def _handle_non_fatal_error(self, validation_name: str, error_msg: str) -> None:
+        self.results.validation_report.add_non_fatal_validation(validation_name, error_msg)
+        self.results.is_success = False
+
+
+def _get_content_validations(content_type: ContentType) -> list[Validator]:
+    if content_type == ContentType.INTEGRATION:
+        return get_integration_validations()
+
+    if content_type == ContentType.PLAYBOOK:
+        return get_playbooks_validations()
+
+    return []

@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from .concurrency import run_in_parallel
 from .utils import (
     ERR_MSG_STRING_LIMIT,
     GIT_STATUS_REGEXP,
@@ -57,6 +58,7 @@ __all__: list[str] = [
     "is_playbook_repo",
     "is_windows",
     "remove_none_entries_from_mapping",
+    "run_in_parallel",
     "should_preform_integration_logic",
     "should_preform_playbook_logic",
     "str_to_snake_case",

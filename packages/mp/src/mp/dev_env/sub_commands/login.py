@@ -79,7 +79,7 @@ def login(
             "Either API key or both username and password are required. "
             "Please provide them using the --api-key option or "
             "--username and --password options. "
-            "Or run 'mp dev-env login' to be prompted for them."
+            "Or run 'mp login' to be prompted for them."
         )
         raise typer.Exit(1)
 
