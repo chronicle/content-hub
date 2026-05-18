@@ -1,60 +1,76 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Entities:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches device information from Armis based on IP or MAC address,
+      returning contextual metadata such as OS version, user, and site. This matches
+      the 'Enrich Asset' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    Enriches IP Address and MAC Address entities with comprehensive device intelligence
-    retrieved from the Armis platform. This action helps security analysts understand
-    the context of an endpoint by providing details such as its category, risk level,
-    operating system, manufacturer, and physical site location.
+    Enriches IP and MAC Address entities using Armis. This action retrieves detailed
+    device information such as risk level, operating system, user, and site details
+    from Armis. It updates the entities with the retrieved data, adds a link to the
+    Armis report, attaches an enrichment table, and optionally generates a case insight.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities provided in the case.
+
+    2. Filters the entities to process only IP (`ADDRESS`) and MAC Address (`MACADDRESS`)
+    types.
+
+    3. Queries the Armis API to fetch device information based on the entity's identifier
+    (IP or MAC).
+
+    4. If device information is found, enriches the entity's additional properties,
+    marks it as enriched, and attaches a link and a data table.
+
+    5. Optionally creates a case insight with the endpoint details.
+
+    6. Updates the successfully processed entities in the SecOps platform.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Create Endpoint Insight | Boolean | No | If enabled (default), the action will
-    generate a detailed HTML insight in the Google SecOps case summary containing
-    a formatted report of the endpoint's characteristics and risk status. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action extracts API credentials and the `Create Endpoint
-    Insight` preference.
-
-    2. **Entity Filtering**: It iterates through the target entities in the case,
-    specifically targeting those of type `ADDRESS` (IP) or `MacAddress`.
-
-    3. **External Lookup**: For each supported entity, it queries the Armis API using
-    the IP or MAC address to find a matching device.
-
-    4. **Internal Enrichment**: If a device is found, the action:
-        *   Updates the entity's additional properties with Armis metadata (prefixed
-    with 'ARMS').
-        *   Marks the entity as 'Enriched'.
-        *   Adds a direct link to the Armis device report and attaches a data table
-    to the entity.
-    5. **Insight Generation**: If the `Create Endpoint Insight` parameter is true,
-    it aggregates the findings into a single 'General' severity insight for the case.
-
-    6. **Finalization**: Updates all processed entities within Google SecOps and returns
-    a success message listing the enriched identifiers.
+    | Create Endpoint Insight | Boolean | No | If enabled (True), the action will
+    create a case insight containing information about the endpoints. Default is True.
+    |
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -65,10 +81,18 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes with Armis device details, attaches data tables to
-      entities, and creates case-level insights.
+      Updates entities with enrichment data and creates case insights.
+    reasoning: >-
+      The action fetches device information from Armis using GET requests. It does
+      not modify external data. It updates internal entities with the fetched data
+      and creates case insights.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source to enrich entities and create
+      insights without modifying external state. This matches the enrichment category
+      criteria.
+    remediation: false
   entity_usage:
     entity_types:
     - ADDRESS
@@ -86,55 +110,82 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by `entity.entity_type`
+      checking if they are in `SUPPORTED_ENTITIES` (ADDRESS, MACADDRESS).
 List Alert Connections:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches connections related to a specific alert from Armis, which
+      aligns with the 'Get Alert Information' category. It does not enrich IOCs or
+      assets, nor does it perform any containment, ticketing, or identity operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **List Alert Connections** action retrieves network connection data associated
-    with a specific alert in the Armis platform. This action is used to identify the
-    communications and traffic patterns related to a security event, providing visibility
-    into how devices involved in an alert are interacting with the network.
+    Lists connections related to a specific alert in Armis. This action queries the
+    Armis service for connections associated with a given alert ID, filtering by severity
+    and limiting the number of results returned. The retrieved connections are then
+    added to the action's JSON result and presented in a data table.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Alert ID** | Integer | Yes | The unique identifier of the Armis alert for
-    which connections are being requested. |
+    | Alert ID | String | Yes | Specify the ID of the alert for which you want to
+    pull connections data. |
 
-    | **Lowest Severity To Fetch** | Dropdown | No | Filters the connections by their
-    risk level. Options include Low, Medium, and High. The action will fetch connections
-    at this level or higher. Default is Medium. |
+    | Lowest Severity To Fetch | Dropdown | No | Specify the lowest severity of the
+    connections that should be used when fetching them. Default is Medium. |
 
-    | **Max Connections To Return** | Integer | No | Limits the number of connection
-    records returned by the action. Default is 50. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action extracts the API configuration and the user-provided
-    parameters (Alert ID, Severity, and Max Results).
-
-    2. **Validation**: It ensures the 'Max Connections To Return' is at least 1.
-
-    3. **Query Construction**: An Armis Query Language (AQL) query is generated to
-    search for connections linked to the specified Alert ID, filtered by the chosen
-    risk level.
-
-    4. **Data Retrieval**: The action calls the Armis API to fetch the connection
-    records, handling pagination to retrieve the requested number of results.
-
-    5. **Output**: The results are formatted into a JSON object and a data table named
-    'Available Communications' for display in the case wall.
+    | Max Connections To Return | String | No | Specify how many connections to return.
+    Default is 50. |
 
 
-    ### Additional Notes
+    ### Flow
 
-    - This action does not operate on SecOps entities (like IPs or Hostnames) from
-    the alert context; it requires a specific Armis Alert ID as input.
+    1. Extracts the provided parameters.
+
+    2. Initializes the Armis API client.
+
+    3. Constructs an AQL query using the provided Alert ID and Lowest Severity To
+    Fetch.
+
+    4. Fetches the alert connections from Armis.
+
+    5. Processes the results, adding them to the action's JSON output and creating
+    a data table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -145,8 +196,19 @@ List Alert Connections:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches alert connections from the Armis API using a GET request.
+      It does not mutate any external data. Internally, it only adds results to the
+      action's JSON and creates a data table, without updating entities, creating
+      insights, or modifying case data.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches supplemental context (connections) about an alert from an
+      external source. It does not mutate external state and does not perform any
+      unauthorized internal mutations. Therefore, it is classified as an Enrichment
+      action. It does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -162,58 +224,77 @@ List Alert Connections:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on SecOps entities. It uses an Alert ID provided
+      as an input parameter to fetch data, and the simulation data indicates an empty
+      entities list.
 Ping:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping). It does not enrich IOCs or
+      assets, update alerts, create tickets, modify blocklists, or perform any other
+      specific security product outcomes defined in the categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Ping** action is a diagnostic tool designed to verify the connectivity between
-    Google SecOps and the Armis instance. It ensures that the provided configuration
-    parameters, such as the API Root and API Secret, are correct and that the network
-    path is open. This action is typically used during the initial setup of the integration
-    or for troubleshooting communication issues.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The base URL of the Armis API instance (e.g., https://<instance>.armis.com).
-    |
-
-    | API Secret | String | Yes | The secret key used to authenticate and generate
-    access tokens for the Armis API. |
-
-    | Verify SSL | Boolean | No | If set to true, the action will verify the SSL certificate
-    of the Armis server. Default is True. |
-
-
-    ### Additional Notes
-
-    - This action does not process any entities and is intended solely for integration
-    health checks.
-
-    - According to standard SOAR practices, Ping actions are not categorized as enrichment
-    actions.
+    Tests connectivity to the Armis platform using the parameters provided in the
+    integration configuration. The action authenticates and makes a test API call
+    to verify that the integration is configured correctly and can communicate with
+    the Armis server.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the API Root, API Secret, and
-    SSL verification settings from the integration configuration.
+    1. Retrieves the API Root, API Secret, and Verify SSL parameters from the integration
+    configuration.
 
-    2. **Manager Initialization:** It initializes the `ArmisManager`, which automatically
-    attempts to log in to the Armis service using the provided secret key to obtain
-    an access token.
+    2. Initializes the ArmisManager and authenticates to get an access token.
 
-    3. **Connectivity Test:** The action calls the `test_connectivity` method, which
-    executes a lightweight AQL (Armis Query Language) search (`in:devices`) with a
-    result limit of 1 to confirm the API is responsive.
+    3. Makes a test API call to the Armis search endpoint to verify connectivity.
 
-    4. **Result Reporting:** If the API call succeeds, the action returns a success
-    message. If any step fails (authentication or network error), it captures the
-    exception and reports a failure status with the error details.
+    4. Returns a success message if the connection is established, or an error message
+    if it fails.
+
+
+    ### Parameters Description
+
+    There are no action parameters for this action. It relies entirely on the integration
+    configuration parameters (API Root, API Secret, Verify SSL).
+
+
+    ### Additional Notes
+
+    This action is used solely to verify the integration configuration and does not
+    perform any operations on alerts or entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -222,10 +303,21 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action is a Ping action designed to test connectivity to the Armis platform.
+      It does not fetch contextual data for alerts or entities, nor does it mutate
+      any external or internal data. It simply authenticates and makes a test request
+      to verify the configuration.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping', which explicitly excludes it from being an Enrichment
+      action according to Rule 0.1. It also does not perform any remediation tasks
+      such as blocking IPs, disabling identities, or containing hosts, so it is not
+      a Remediation action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -241,28 +333,78 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It only tests connectivity
+      to the external service. Therefore, the entity types list is empty and no entity
+      filtering is applied.
 Update Alert Status:
-  ai_description: "### General Description\nUpdates the status of a specific alert\
-    \ within the Armis platform. This action allows security analysts to programmatically\
-    \ manage the lifecycle of Armis alerts by transitioning them between states such\
-    \ as Unhandled, Suppressed, or Resolved directly from Google SecOps.\n\n### Parameters\
-    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
-    \ :--- | :--- |\n| Alert ID | Integer | Yes | The unique identifier of the alert\
-    \ in Armis that needs a status update. |\n| Status | Selection | No | The target\
-    \ status for the alert. Options include: `Unhandled`, `Suppressed`, and `Resolved`.\
-    \ Defaults to `Unhandled` if not specified. |\n\n### Additional Notes\n- If the\
-    \ alert is already set to the requested status, the action will complete successfully\
-    \ with a message indicating no change was necessary.\n- This action does not operate\
-    \ on SecOps entities; it requires a specific Alert ID provided as an input parameter.\n\
-    \n### Flow Description\n1. **Initialization**: The action retrieves the Armis\
-    \ API configuration (Root URL, Secret) and the user-provided parameters (Alert\
-    \ ID and Status).\n2. **API Connection**: It establishes a session with the Armis\
-    \ API using the provided credentials.\n3. **Status Update**: It sends a `PATCH`\
-    \ request to the Armis `/api/v1/alerts/{alert_id}/` endpoint with the new status\
-    \ value.\n4. **Error Handling**: \n    - If the API returns a 400 error indicating\
-    \ the alert already has that status, the action reports success.\n    - If the\
-    \ alert ID is not found (404), the action fails.\n    - For other connectivity\
-    \ or API errors, the action reports a failure state."
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates an alert in an external system (Armis). None of the available
+      product categories perfectly match this outcome, as 'Update Alert' is defined
+      as changing the alert within the SecOps platform, and 'Update Ticket' is for
+      ITSM systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    Updates the status of a specific alert in the Armis platform.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert ID | Integer | Yes | Specify the ID of the alert for which you want to
+    update the status. |
+
+    | Status | String | No | Specify what status should be set for the alert. Expected
+    values are Unhandled, Suppressed, Resolved. Default is Unhandled. |
+
+
+    ### Flow Description
+
+    1. Extracts the `Alert ID` and `Status` parameters.
+
+    2. Initiates a PATCH request to the Armis API to update the status of the specified
+    alert.
+
+    3. Returns a success message if the alert was updated successfully or if it already
+    had the requested status.
+
+    4. Returns a failure message if the alert was not found or if another error occurred.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -271,12 +413,20 @@ Update Alert Status:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the 'status' field of an alert record in the Armis platform via a PATCH
-      request.
+      Updates the status of a specific alert in the Armis platform.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a PATCH request to the Armis API to update the status of an
+      alert, which mutates external data. It does not fetch data, update internal
+      entities, create insights, or add case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (updates an alert status in Armis) and does
+      not fetch data, so it is not an enrichment action. It does not perform any identity,
+      host, network, or email-based remediation, so it is not a remediation action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -292,3 +442,6 @@ Update Alert Status:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It uses the 'Alert ID' parameter provided
+      by the user to perform the update.

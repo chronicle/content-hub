@@ -1,76 +1,87 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Entities:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual information, history, HAR data, and screenshots
+      for URL and IP Address entities from Splash, which aligns with the 'Enrich IOC'
+      expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Enriches URL and IP Address entities using the Splash rendering service. This
-    action interacts with a Splash instance to process entities, retrieve metadata,
-    and optionally capture visual screenshots, redirection history, and HTTP Archive
-    (HAR) data. It is primarily used to gain visibility into the content and behavior
-    of web-based indicators.
+    Enriches URL and IP Address entities using the Splash integration. This action
+    retrieves detailed information about the provided entities, including history,
+    HAR data, and PNG screenshots, by querying the Splash API.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    | Parameter | Type | Mandatory | Default | Description |
+    | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Create Insight | Boolean | No | True | If enabled, the action creates a case-level
-    insight containing the retrieved information about the entity. |
+    | Create Insight | Boolean | No | If enabled, the action will create an insight
+    containing all of the retrieved information about the entity. Default is true.
+    |
 
-    | Include PNG Screenshot | Boolean | No | True | If enabled, includes a PNG screenshot
-    of the rendered page within the insight. Note: This requires 'Create Insight'
-    to be enabled. |
+    | Include PNG Screenshot | Boolean | No | If enabled, the action will return a
+    PNG screenshot in an insight. Note: 'Create Insight' must be enabled for this
+    parameter to work. Default is true. |
 
-    | Include History | Boolean | No | False | If enabled, the action retrieves and
-    includes the redirection history for the URL. |
+    | Include History | Boolean | No | If enabled, the action will return history
+    information. Default is false. |
 
-    | Include HAR | Boolean | No | False | If enabled, the action retrieves and includes
-    HTTP Archive (HAR) information for the session. |
-
-
-    ### Additional Notes
-
-    - **URL Normalization:** For IP Address entities or URLs missing a schema, the
-    action automatically prepends `https://` before sending the request to Splash.
-
-    - **Attachments:** Regardless of the 'Create Insight' parameter, the action attempts
-    to add the rendered PNG as an entity attachment.
+    | Include HAR | Boolean | No | If enabled, the action will return HAR information.
+    Default is false. |
 
 
-    ### Flow Description
+    ### Action Flow
 
-    1. **Filter Entities:** Identifies supported entities (URL and IP Address) from
-    the current context.
+    1. Extracts configuration and action parameters.
 
-    2. **Normalization:** Ensures every identifier has a valid URI schema (defaulting
-    to HTTPS).
+    2. Filters the target entities to include only supported types (URL and IP Address).
 
-    3. **Data Retrieval:** Calls the Splash API's `/render.json` endpoint with the
-    specified parameters (history, HAR, and PNG rendering).
+    3. Iterates through the suitable entities, formatting the identifier to ensure
+    it has an HTTP/HTTPS schema.
 
-    4. **Internal Enrichment:** Updates the entity's additional properties with metadata
-    such as the final URL, page title, and redirection status.
+    4. Queries the Splash API to retrieve entity data, optionally including history
+    and HAR data.
 
-    5. **Evidence Collection:** Adds a CSV table of the results to the entity and
-    attaches the rendered PNG file to the entity record.
+    5. Updates the entity's additional properties with the retrieved enrichment data
+    and marks it as enriched.
 
-    6. **Case Reporting:** If configured, generates a formatted Case Insight and updates
-    the global entity state in Google SecOps.
+    6. Attaches a PNG screenshot to the entity and adds a data table with the results.
+
+    7. If configured, creates a case insight summarizing the retrieved information.
+
+    8. Returns a JSON result with the detailed entity data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -81,10 +92,19 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action updates entity attributes with enrichment data, attaches PNG screenshots
-      to entities, and creates case-level insights.
+      Updates entity properties, adds entity tables and attachments, and creates case
+      insights with the retrieved data.
+    reasoning: >-
+      The action fetches data from the Splash API using a GET request. It does not
+      mutate any external data. Internally, it updates entity properties, adds entity
+      attachments and tables, and creates case insights.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Splash) to enrich entities.
+      It does not mutate external data and only performs allowed internal mutations
+      (updating entities and creating insights). Therefore, it is an enrichment action.
+    remediation: false
   entity_usage:
     entity_types:
     - ADDRESS
@@ -102,50 +122,69 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where supported types are URL
+      and ADDRESS.
 Ping:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping). It does not enrich IOCs or
+      assets, update alerts, create tickets, modify blocklists/allowlists, manage
+      identities, contain hosts, search events, or perform any other specific product
+      outcome defined in the categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Tests the connectivity to the Splash server to ensure that the integration configuration
-    parameters (API Root and SSL verification) are correct and the service is reachable.
-    This action is primarily used for health checks and troubleshooting.
+    Tests connectivity to the Splash server using the provided integration configuration
+    parameters.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The base URL of the Splash instance used for API requests.
-    |
-
-    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
-    for the connection to the Splash server. |
+    There are no action-specific parameters for this action. It relies on the integration-level
+    configuration parameters such as 'API Root' and 'Verify SSL'.
 
 
-    ### Additional Notes
+    ### Action Flow
 
-    There are no action-specific parameters; the action relies entirely on the integration's
-    global configuration settings. This action does not process or require any entities.
+    1. Extracts the integration configuration parameters ('API Root' and 'Verify SSL').
 
+    2. Initializes the SplashManager with the provided credentials.
 
-    ### Flow Description
+    3. Sends a ping request to the Splash server to test connectivity.
 
-    1. **Configuration Retrieval**: The action extracts the 'API Root' and 'Verify
-    SSL' parameters from the integration configuration.
-
-    2. **Manager Initialization**: Initializes the `SplashManager` with the retrieved
-    connection details.
-
-    3. **Connectivity Check**: Executes a GET request to the `/_ping` endpoint of
-    the Splash service.
-
-    4. **Response Validation**: Validates the HTTP response. If the service is reachable
-    and returns a successful status code, the action completes successfully.
-
-    5. **Error Handling**: If the connection fails or the service returns an error,
-    the action captures the exception and reports a failure status.
+    4. Returns a success message if the connection is established, otherwise returns
+    an error message and fails the action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -156,8 +195,19 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action is a Ping action designed to test connectivity to the Splash server.
+      It makes a GET request to the ping endpoint but does not fetch contextual data
+      for alerts or entities. It does not mutate any external data, nor does it update
+      internal SecOps data such as entities, insights, or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping', which explicitly excludes it from being categorized
+      as an Enrichment action according to the rules. It also does not perform any
+      remediation tasks such as blocking IPs, disabling identities, or containing
+      hosts.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -173,3 +223,6 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process any entities. It simply tests connectivity
+      to the external service.

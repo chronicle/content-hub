@@ -1,55 +1,75 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Delete Hash In Hosts:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes a file on a remote host based on its hash. While this is
+      a remediation action, it does not strictly match any of the predefined expected
+      outcomes such as 'Contain Host', 'Add IOC To Blocklist', or 'Execute Command
+      on the Host' (as it uses a specific file deletion API rather than a generic
+      command execution). Therefore, no specific action outcome category is flagged
+      as true.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
+    Deletes files associated with specific file hashes across hosts using Cynet.
+
+
     ### General Description
 
-    This action performs a file remediation by deleting a specific file hash across
-    all hosts where it is detected within the Cynet environment. It is primarily used
-    for containment and incident response to remove malicious or unauthorized files
-    from endpoints.
-
-
-    ### Parameters Description
-
-    There are no additional parameters for this action. It relies on the integration
-    configuration (API Root, Username, Password) and the provided file hash entities.
+    This action acts as a remediation step by identifying hosts where a specific file
+    hash exists and issuing a command to Cynet to delete the file from those hosts.
+    It retrieves the status of the remediation action and returns the results to the
+    case.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action authenticates with the Cynet API using the provided
-    credentials to obtain an access token.
+    1. Iterates over the target entities and filters for `FILEHASH` entities.
 
-    2. **Entity Filtering**: It iterates through the target entities and identifies
-    those of type `FILEHASH`.
+    2. Verifies if the provided hash is a valid SHA256 hash.
 
-    3. **Hash Validation**: For each hash, it verifies if the format is SHA256.
+    3. Fetches hash details from Cynet to identify occurrences (hostnames) where the
+    file is present.
 
-    4. **Occurrence Retrieval**: It queries Cynet to find all hostnames where the
-    specific file hash has been detected.
+    4. Issues a delete file remediation command to Cynet for each identified host.
 
-    5. **Remediation Execution**: For every unique host identified, the action triggers
-    a `delete_file_remediation` command.
+    5. Retrieves the remediation status for the issued commands.
 
-    6. **Status Tracking**: It captures the remediation ID for each host and attempts
-    to retrieve the initial status information.
+    6. Aggregates the remediation IDs and statuses, returning them as a JSON result.
 
-    7. **Reporting**: The action concludes by providing a summary message listing
-    the hostnames and their corresponding remediation IDs, and attaches the raw results
-    as JSON.
+
+    ### Parameters Description
+
+    This action does not require any specific input parameters beyond the standard
+    Cynet integration configuration (API Root, Username, Password, and Verify SSL).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -58,13 +78,23 @@ Delete Hash In Hosts:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action performs a POST request to the Cynet API's '/file/remediation/delete'
-      endpoint, which triggers the physical deletion of a file on remote endpoint
-      hosts.
+      Issues a command to Cynet to delete a specific file (identified by its hash)
+      from target hosts.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving hash details and remediation statuses
+      from Cynet. It mutates external data by issuing a 'delete file' remediation
+      command to Cynet, which removes files from target hosts. It does not mutate
+      internal SecOps data, update entities, create insights, modify alerts, or create
+      case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is not an Enrichment action because it mutates external data (deletes
+      files). It is a Remediation action because it actively mitigates a threat by
+      deleting malicious files from endpoints.
+    remediation: true
   entity_usage:
     entity_types:
     - FILEHASH
@@ -81,67 +111,99 @@ Delete Hash In Hosts:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == FILEHASH`. It does not filter by other
+      attributes like identifier, creation time, or is_internal.
 Hash Query:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves detailed information about a file hash (an IOC) from Cynet,
+      which aligns with the 'Enrich IOC' expected outcome. It does not interact with
+      assets, alerts, tickets, blocklists, or identities in a way that matches the
+      other categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    Retrieves comprehensive information about a specific file hash from Cynet. This
-    action allows security analysts to gather detailed metadata about files, including
-    risk levels, occurrences, and certificate information, to aid in investigation
-    and response.
+    Retrieves detailed information about a specific file hash from Cynet. This action
+    queries the Cynet API to fetch threat intelligence and file details for SHA256
+    hashes, providing analysts with additional context for investigation.
 
 
     ### Parameters Description
 
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | N/A | N/A | N/A | There are no parameters for this action. |
-
-
-    ### Additional Notes
-
-    This action specifically requires the file hash to be in SHA256 format. If the
-    provided hash is not SHA256, the action will skip the entity. The action relies
-    on integration-level configuration for API access (Api Root, Username, Password,
-    and Verify SSL).
+    This action does not require any input parameters.
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the Cynet API using the configured credentials
-    to obtain an access token.
+    1. Iterates over the target entities provided in the case.
 
-    2. **Entity Filtering**: Iterates through the target entities and selects those
-    of type `FILEHASH`.
+    2. Filters the entities to process only those of type `FILEHASH`.
 
-    3. **Hash Validation**: For each `FILEHASH` entity, it verifies if the identifier
-    is a valid SHA256 hash using the `cynet_manager.is_sha256` method.
+    3. Validates whether the file hash is a valid SHA256 hash.
 
-    4. **Data Retrieval**: Queries the Cynet `/full/file` endpoint with the SHA256
-    hash to fetch detailed file information.
+    4. Queries the Cynet API to retrieve detailed information about the validated
+    SHA256 hash.
 
-    5. **Internal Enrichment**: If data is found, it flattens the response and adds
-    a data table to the entity within the Google SecOps case using the `add_entity_table`
-    method.
-
-    6. **Result Reporting**: Returns a JSON object containing the raw data for all
-    successfully queried entities and ends the action with a summary message.
+    5. Attaches the retrieved information to the entity as an entity table and includes
+    it in the action's JSON result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table to the entity in Google SecOps containing the file hash details
-      retrieved from Cynet.
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Cynet API using a GET request to retrieve file
+      hash details. It does not perform any external data mutations (no POST/PUT/DELETE
+      requests that change state). Internally, it adds an entity table and JSON results
+      but does not update entity properties, create insights, modify alert data, or
+      add case comments.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Cynet) to gather supplemental
+      context about a file hash. It does not mutate any external state and does not
+      perform any unauthorized internal mutations. Therefore, it qualifies as an Enrichment
+      action. It does not perform any containment, blocking, or identity disabling,
+      so it is not a Remediation action.
+    remediation: false
   entity_usage:
     entity_types:
     - FILEHASH
@@ -158,54 +220,81 @@ Hash Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      them using the condition `if entity.entity_type == FILEHASH:`. Therefore, it
+      runs on FILEHASH entities and filters by entity type.
 Kill Hash In Hosts:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action kills a process on a host. This does not match 'Contain Host' (which
+      isolates the endpoint from the network), nor does it match 'Execute Command
+      on the Host' (which runs a script and returns STDOUT). It does not match any
+      of the other specific action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
+    Kills a process associated with a specific file hash on hosts using Cynet.
+
+
     ### General Description
 
-    The **Kill Hash In Hosts** action is a remediation capability designed to terminate
-    active processes associated with a specific file hash across all hosts managed
-    by Cynet. This action is critical for containing threats by stopping the execution
-    of malicious files identified during an investigation.
+    This action iterates over FILEHASH entities, verifies if they are SHA256 hashes,
+    and retrieves their details from Cynet to identify the hosts where the file has
+    been observed. It then triggers a 'kill file' remediation action on those specific
+    hosts to terminate the malicious process and fetches the remediation status.
 
 
     ### Parameters Description
 
-
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | This action does not require any input parameters. | N/A | N/A |
-
-
-    ### Additional Notes
-
-    - **Hash Support**: This action specifically requires SHA256 hashes. The logic
-    includes a validation step to ensure the hash format is compatible with Cynet's
-    API.
-
-    - **Scope**: The action automatically discovers all hosts where the hash is present
-    and attempts to kill the process on each one.
+    This action does not require any specific input parameters beyond the standard
+    integration configuration (API Root, Username, Password, Verify SSL).
 
 
     ### Flow Description
 
-    1. **Entity Identification**: The action iterates through the target entities
-    to find `FILEHASH` objects.
+    1. Iterates over the target entities and filters for `FILEHASH` entities.
 
-    2. **Format Validation**: It checks if the hash is a valid SHA256 string.
+    2. Validates if the hash is of type SHA256.
 
-    3. **Host Discovery**: It queries the Cynet API to retrieve a list of all host
-    occurrences for the specified hash.
+    3. Fetches hash details from Cynet to find occurrences (hostnames) where the hash
+    is present.
 
-    4. **Process Termination**: For every host found, the action sends a command to
-    Cynet to kill the process associated with that hash.
+    4. For each identified host, sends a request to Cynet to perform a kill file remediation
+    action.
 
-    5. **Status Verification**: It retrieves the remediation ID and status for each
-    host to track the success of the operation.
+    5. Retrieves the status of the remediation action.
 
-    6. **Result Compilation**: Finally, it provides a summary of the remediation IDs
-    and hostnames where the action was executed.
+    6. Aggregates the remediation IDs and hostnames, returning them as a JSON result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -214,12 +303,22 @@ Kill Hash In Hosts:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Kills running processes associated with the provided file hash on all hosts
-      where it is detected in the Cynet environment.
+      Initiates a kill process remediation action on specific hosts via the Cynet
+      API.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by calling 'get_hash_details' and 'get_remediation_status'.
+      It mutates external data by calling 'kill_file_remediation', which sends a POST
+      request to Cynet to kill a process on a host. It does not mutate internal SecOps
+      data, update entities, create insights, modify alerts, or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by killing a process on a host, so it cannot
+      be an enrichment action. It is a remediation action because it actively mitigates
+      a threat by terminating a process on an endpoint.
+    remediation: true
   entity_usage:
     entity_types:
     - FILEHASH
@@ -236,41 +335,80 @@ Kill Hash In Hosts:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over 'siemplify.target_entities' and filters them using
+      'if entity.entity_type == FILEHASH'. Therefore, it runs on FILEHASH entities
+      and filters by entity type.
 Ping:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping). It does not enrich IOCs/assets,
+      update alerts, create tickets, block/allow IOCs, manage identities, contain
+      hosts, search events, or perform any other specific product outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    Tests the connectivity to the Cynet API by attempting to authenticate using the
-    provided credentials. This action is used to verify that the integration configuration
-    (API Root, Username, Password) is correct and that the Google SecOps environment
-    can reach the Cynet server.
+    The Ping action is used to test connectivity between Google SecOps and the Cynet
+    platform. It verifies that the provided integration configuration (API Root, Username,
+    Password) is correct and that the platform can successfully authenticate and communicate
+    with the Cynet API.
 
 
-    ### Parameters
+    ### Parameters Description
 
     There are no parameters for this action.
 
 
-    ### Additional Notes
-
-    * This action is a standard 'Ping' utility used for integration health checks.
-
-    * It does not interact with any entities or modify any data within Cynet or Google
-    SecOps.
-
-
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the API Root, Username, Password,
-    and SSL verification settings from the integration's shared configuration.
+    1. The action retrieves the integration configuration parameters (API Root, Username,
+    Password, Verify SSL).
 
-    2. **Authentication Attempt**: It initializes the `CynetManager`, which automatically
-    attempts to retrieve an access token by making a POST request to the `/account/token`
-    endpoint.
+    2. It initializes the `CynetManager` using the provided credentials, which attempts
+    to authenticate and retrieve an access token from the Cynet API.
 
-    3. **Result Reporting**: If the authentication is successful and the manager object
-    is created, the action returns a success message ('Connection Established'). If
-    authentication fails, it reports a failure.
+    3. If the authentication is successful and the manager is initialized, the action
+    completes successfully with a "Connection Established." message.
+
+    4. If the authentication fails, the action completes with a "Connection Failed."
+    message.
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup of the Cynet integration
+    to ensure that the credentials and network connectivity are properly configured.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -281,8 +419,16 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action is a Ping action designed to test connectivity to the Cynet API.
+      It authenticates using the provided credentials but does not fetch contextual
+      data, mutate external data, or modify internal SecOps data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping', which explicitly disqualifies it from being an Enrichment
+      action according to the rules. It also does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -298,51 +444,80 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or interact with any entities. It solely tests connectivity
+      to the external API.
 Quarantine Hash In Hosts:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action quarantines a file hash on endpoints, which aligns with updating
+      security controls (EDR) to prevent future interaction with the IOC. Therefore,
+      it matches the 'Add IOC To Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
+    Quarantines a specific file hash on hosts where it has been observed using Cynet.
+
+
     ### General Description
 
-    The **Quarantine Hash In Hosts** action is a remediation capability designed to
-    isolate malicious files across endpoints managed by Cynet. It specifically targets
-    `FILEHASH` entities (SHA256) and automatically triggers a quarantine command on
-    every host where the file is detected within the Cynet environment.
+    This action identifies hosts where a specific SHA256 file hash has been seen and
+    initiates a quarantine remediation action on those hosts via the Cynet API. It
+    then retrieves the status of the remediation action and returns the remediation
+    IDs.
 
 
-    ### Parameters
+    ### Parameters Description
 
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | N/A | N/A | N/A | This action does not take any input parameters. It uses the
-    integration's global configuration for authentication. |
+    This action does not require any specific parameters to be configured in the action
+    settings, as it relies on the integration's configuration (API Root, Username,
+    Password, Verify SSL) and the target entities.
 
 
     ### Flow Description
 
-    1. **Entity Filtering:** The action identifies all `FILEHASH` entities in the
-    current context.
+    1. Iterates over the target entities and filters for `FILEHASH` entities.
 
-    2. **Hash Validation:** It verifies if the provided hash is a valid SHA256 format
-    using the Cynet API.
+    2. Verifies if the file hash is of type SHA256.
 
-    3. **Occurrence Discovery:** It queries Cynet to find all hostnames where the
-    specific file hash has been observed.
+    3. Fetches the hash details from Cynet to identify occurrences and the associated
+    hostnames.
 
-    4. **Remediation Execution:** For every unique host identified, it sends a POST
-    request to Cynet to initiate a "Quarantine File" remediation.
+    4. Initiates a quarantine file remediation action for the hash on each identified
+    host.
 
-    5. **Status Tracking:** It retrieves the remediation ID for each host and checks
-    the initial status of the action.
+    5. Retrieves the status of the remediation action.
 
-    6. **Reporting:** The action returns a summary of the remediation IDs mapped to
-    their respective hostnames and provides a success/failure result value.
-
-
-    ### Additional Notes
-
-    This action is mutative as it changes the state of files on remote endpoints.
-    It will only process entities identified as SHA256 hashes.
+    6. Outputs the remediation IDs as JSON results and provides a summary message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -351,12 +526,23 @@ Quarantine Hash In Hosts:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Initiates a quarantine remediation action on remote hosts via the Cynet API,
-      effectively isolating the specified file hash on all detected endpoints.
+      Initiates a quarantine file remediation action on specific hosts via the Cynet
+      API.
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches hash details and remediation status (fetches_data=true).
+      It mutates external data by initiating a quarantine file remediation action
+      on hosts via the Cynet API (can_mutate_external_data=true). It does not mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by quarantining files, so it cannot be an enrichment
+      action. It performs remediation by blocking/quarantining an IOC (file hash)
+      on endpoints, which classifies it as a remediation action.
+    remediation: true
   entity_usage:
     entity_types:
     - FILEHASH
@@ -373,49 +559,75 @@ Quarantine Hash In Hosts:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == FILEHASH`.
 Remediation Status:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves the status of a remediation action. This does not match
+      any of the predefined action outcome categories such as Enrich IOC, Update Alert,
+      Contain Host, etc.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    The **Remediation Status** action retrieves the current status of a specific remediation
-    task from the Cynet platform using its unique identifier. This action is typically
-    used to track the progress or verify the completion of remediation commands such
-    as file quarantine, process termination, or file deletion.
+    Retrieves the status of a requested file remediation action from Cynet using a
+    specific remediation ID.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Remediation Id** | String | Yes | The unique identifier of the remediation
-    action (e.g., 13592) for which the status is being requested. |
+    | Remediation Id | String | Yes | The ID of the remediation action to check the
+    status for. |
 
 
     ### Flow Description
 
-    1. **Authentication**: The action authenticates with the Cynet API using the configured
-    credentials (API Root, Username, and Password) to obtain an access token.
+    1. Initializes the Cynet manager with the provided credentials.
 
-    2. **Parameter Extraction**: The action retrieves the `Remediation Id` provided
-    by the user.
+    2. Retrieves the `Remediation Id` parameter.
 
-    3. **API Request**: It performs a GET request to the Cynet remediation endpoint
-    using the specified ID.
+    3. Calls the Cynet API to get the remediation status for the given ID.
 
-    4. **Result Processing**: The action parses the API response to extract the status
-    code and status information (e.g., "File does not exist").
+    4. Parses the response and adds the status details to the action's JSON result.
 
-    5. **Final Output**: The retrieved status data is added to the action's JSON results,
-    and a summary message is provided to the user.
-
-
-    ### Additional Notes
-
-    This action does not operate on entities within the Google SecOps case scope;
-    it functions as a utility to query the status of external tasks based on a manual
-    input ID.
+    5. Returns a success message with the status details if found, otherwise returns
+    a failure message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -426,8 +638,18 @@ Remediation Status:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches the status of a remediation action from Cynet using a GET
+      request. It does not mutate any external data, nor does it mutate internal data
+      such as entities, insights, or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action fetches data (remediation status) without mutating external or internal
+      state. However, it does not gather supplemental context about alerts or entities,
+      but rather checks the status of a previous action, so it is not classified as
+      Enrichment. It does not perform any remediation actions, so it is not Remediation.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -443,3 +665,6 @@ Remediation Status:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies solely on the provided `Remediation Id` parameter.

@@ -1,75 +1,74 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 "Add Domains to Exchange-Siemplify Mail Flow Rules":
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    block_ip: false
+    block_malicious_domain: true
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds domains to a Mail Flow Rule in Exchange, which is typically
+      used to block or permanently delete emails from those domains. This aligns with
+      the 'Block Malicious Domain' and 'Add IOC to Blocklist' expected outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    This action adds a list of domains to a specified Exchange Mail Flow Rule (Transport
-    Rule). It is designed to manage domain-based filtering (e.g., for blocking or
-    permanent deletion) within an Exchange On-Premise or Office 365 environment. If
-    the specified rule does not exist, the action will automatically create it with
-    the provided domains and a default action (typically deleting the message).
+    Adds a list of domains to a specified Exchange Mail Flow Rule. This action is
+    typically used to filter or block emails from specific domains by adding them
+    to a rule (e.g., 'Siemplify - Domains List - Permanently Delete'). If the specified
+    rule does not exist, the action will create it.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Domains | String | No | A comma-separated list of domains to be added to the
-    rule. |
+    | Domains | String | False | Specify the Domains you would like to add to the
+    rule, in a comma-separated list. These domains will be validated and added to
+    the specified Mail Flow Rule. |
 
-    | Rule to add Domains to | String | Yes | The name of the Exchange Mail Flow Rule
-    to update or create. Default is 'Siemplify - Domains List - Permanently Delete'.
-    |
-
-
-    ### Additional Notes
-
-    - **Permissions:** Requires 'Organization Management' permissions in Exchange.
-
-    - **Connectivity:** Supports both Exchange On-Premise (via PowerShell Remoting)
-    and Office 365 (via Exchange Online PowerShell).
-
-    - **Validation:** The action validates the format of each domain before attempting
-    to add it to the rule.
-
-    - **Async Execution:** This action runs asynchronously to handle potential network
-    latencies or long-running PowerShell commands.
+    | Rule to add Domains to | String | True | Specify the rule to add the Domains
+    to. If the rule doesn't exist, the action will create it. |
 
 
-    ### Flow Description
+    ### Action Flow
 
-    1. **Initialization:** Extracts environment configuration (server address, credentials,
-    connection type) and action parameters.
+    1. Validates the provided domains from the parameters.
 
-    2. **Validation:** Parses the 'Domains' parameter and validates each domain against
-    a regex pattern. Invalid domains are tracked separately.
+    2. Connects to Exchange On-Prem or Office 365 via PowerShell.
 
-    3. **Rule Discovery:** Checks the Exchange server to see if a rule with the specified
-    name already exists.
+    3. Retrieves existing Mail Flow Rules to check if the target rule exists.
 
-    4. **Rule Modification/Creation:**
-        - If the rule **exists**, the action retrieves the current list of domains,
-    appends the new valid domains, and updates the rule using `Set-TransportRule`.
-        - If the rule **does not exist**, the action creates a new rule using `New-TransportRule`
-    with the specified domains and the default 'DeleteMessage' action.
-    5. **Result Reporting:** Returns a JSON result categorizing domains into 'success'
-    (newly added), 'already_available' (previously present), and 'invalid' (failed
-    validation).
+    4. Creates the rule if it doesn't exist, or updates it by adding the new domains.
+
+    5. Returns a JSON result with successful, already available, and invalid domains.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -78,12 +77,21 @@
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates or updates Mail Flow Rules (Transport Rules) on the target Exchange
-      server or Office 365 tenant to modify mail routing and filtering logic.
-    fetches_data: true
+      Creates or updates a Mail Flow Rule in Exchange to add the specified domains.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action connects to Exchange and executes PowerShell commands to create or
+      update a Mail Flow Rule (can_mutate_external_data=true). It does not fetch contextual
+      data for enrichment, nor does it mutate internal SecOps data like entities or
+      insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by updating Exchange Mail Flow Rules, so it
+      is not an enrichment action. It is a remediation action because it configures
+      Exchange to block or filter emails from specific domains.
+    remediation: true
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -99,40 +107,83 @@
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      receives domains directly from the action parameters.
 "Add Senders to Exchange-Siemplify Mail Flow Rule":
-  ai_description: "Adds specific email addresses or domains to Microsoft Exchange\
-    \ Mail Flow (Transport) Rules. This action is primarily used to automate the management\
-    \ of blocklists or filtering rules within an Exchange environment (On-Premise\
-    \ or Office 365). It can either take a manual list of email addresses or process\
-    \ User entities from the current context. If a specified rule does not exist,\
-    \ the action will automatically create it with a 'Permanently Delete' action.\n\
-    \n### Parameters Description\n\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| Email Addresses | String | No | A comma-separated\
-    \ list of email addresses to add to the rule. If left empty, the action will attempt\
-    \ to use the identifiers of User entities found in the alert context. |\n| Rule\
-    \ to add senders to | String | Yes | The name of the Exchange Transport Rule to\
-    \ modify or create. Default is 'Siemplify - Senders List - Permanently Delete'.\
-    \ |\n| Should add senders' domain to the corresponding Domains List rule as well?\
-    \ | Boolean | No | If set to true, the action extracts the domain from each email\
-    \ address and adds it to a corresponding domain-based rule (e.g., 'Siemplify -\
-    \ Domains List - Permanently Delete'). |\n\n### Additional Notes\n- This action\
-    \ requires 'Organization Management' permissions in Exchange/Office 365.\n- The\
-    \ action is asynchronous and will retry up to 5 times in case of transient network\
-    \ errors.\n- It supports both Exchange On-Premise (via Negotiate/Basic authentication)\
-    \ and Office 365 (via Connect-IPPSSession).\n\n### Flow Description\n1. **Initialization**:\
-    \ Retrieves Exchange connection details (Server Address, URI, Credentials) from\
-    \ the integration configuration.\n2. **Target Identification**: Collects email\
-    \ addresses from the 'Email Addresses' parameter. If empty, it scans the alert's\
-    \ entities for 'USER' types and validates their identifiers as email addresses.\n\
-    3. **Rule Verification**: Connects to the Exchange server and checks if the specified\
-    \ Mail Flow Rule(s) already exist.\n4. **Rule Mutation**: \n    - If the rule\
-    \ exists, it appends the new email addresses/domains to the existing list.\n \
-    \   - If the rule does not exist, it creates a new Transport Rule with the specified\
-    \ name and sets the action to delete messages from those senders.\n5. **Domain\
-    \ Processing**: If enabled, it extracts domains from the valid emails and performs\
-    \ the same update/create logic on the corresponding domain rule.\n6. **Cleanup**:\
-    \ Disconnects the PowerShell session and returns a summary of successful, already\
-    \ present, and invalid entries."
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds email addresses or domains to a mail flow rule (e.g., 'Siemplify
+      - Senders List - Permanently Delete') in Exchange Server. This effectively acts
+      as a blocklist for email senders, matching the 'Add IOC To Blocklist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    Adds a list of email addresses to a mail flow rule in Exchange Server (On-Prem
+    or Office 365). If no email addresses are provided, it extracts email addresses
+    from User entities. It can also automatically add the domains of the provided
+    email addresses to corresponding domain rules.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Email Addresses | String | False | Comma-separated list of email addresses to
+    add to the rule. If empty, the action works on User entities. |
+
+    | Rule to add senders to | Dropdown | True | The rule to add the sender to. If
+    it doesn't exist, it will be created. |
+
+    | Should add senders' domain to the corresponding Domains List rule as well? |
+    Boolean | False | Specify whether the action should automatically take the domains
+    of the provided email addresses and add them to the corresponding domain rules.
+    |
+
+
+    ### Flow
+
+    1. Connects to Exchange Server via PowerShell.
+
+    2. Retrieves existing rules to check if the specified rule exists.
+
+    3. Adds the provided email addresses (or extracted from User entities) to the
+    specified rule.
+
+    4. Optionally adds the domains to the corresponding domain rule.
+
+    5. Returns the status of the operation.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -141,12 +192,22 @@
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates or updates Microsoft Exchange Transport Rules (Mail Flow Rules) by adding
-      new email addresses or domains to the rule's sender filters.
-    fetches_data: true
+      Updates mail flow rules in Exchange Server by adding email addresses or domains
+      to them.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action connects to Exchange Server and executes PowerShell commands to create
+      or update mail flow rules, adding email addresses to them. It does not fetch
+      contextual data for enrichment, nor does it mutate internal SecOps data like
+      entities or insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by updating mail flow rules, so it is not an
+      enrichment action. It performs remediation by blocking senders or domains via
+      mail flow rules.
+    remediation: true
   entity_usage:
     entity_types:
     - USERUNIQNAME
@@ -155,7 +216,7 @@
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: false
+    filters_by_identifier: true
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -163,61 +224,84 @@
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` (which is USER) and validates the identifier using
+      `validate_email_address(entity.identifier)`.
 Delete Compliance Search:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes a compliance search object in Exchange/Office 365. This is
+      an administrative task and does not match any of the specific security product
+      outcome categories such as enriching IOCs, updating alerts, or deleting emails
+      directly.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    Deletes a specific Compliance Search and any associated tasks, such as fetch results
-    or email purge tasks, from an Exchange environment. This action is compatible
-    with both Exchange On-Premises and Office 365 (Exchange Online) and utilizes PowerShell
-    commands to perform the deletion. It is important to note that this action does
-    not operate on Google SecOps entities but rather targets a specific search name
-    provided as a parameter.
+    Deletes a compliance search and any associated fetch results or purge emails tasks
+    in Exchange On-Prem or Office 365. This action executes a PowerShell command to
+    remove the specified search object from the mail server.
+
+
+    ### Flow Description
+
+    1. Connects to the Exchange On-Prem or Office 365 environment using the provided
+    configuration credentials.
+
+    2. Executes the `Remove-ComplianceSearch` PowerShell command to delete the specified
+    compliance search.
+
+    3. Returns a success message if the search is successfully deleted, or an error
+    message if the search is not found or the operation fails.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Compliance Search Name | String | Yes | The unique name of the Compliance Search
-    to be deleted. This name should not contain special characters. |
+    | Compliance Search Name | String | True | The name of the compliance search to
+    delete. Note that the name shouldn't contain special characters. |
 
 
     ### Additional Notes
 
-    - The action requires proper configuration of either Exchange On-Premises or Office
-    365 settings in the integration configuration.
+    - This action does not operate on Google SecOps entities.
 
-    - Only one mail server type (On-Prem or Office 365) can be active for the action
-    to run successfully.
-
-    - This is an asynchronous action that supports retries in case of network-related
-    errors.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves connection details (Server Address,
-    URI, Credentials) from the integration configuration and the target search name
-    from the action parameters.
-
-    2. **Environment Validation:** It verifies that either On-Premises or Office 365
-    is selected (but not both) and that necessary URIs are provided for Office 365.
-
-    3. **Manager Initialization:** An `ExchangeExtensionPackManager` is initialized
-    to handle the PowerShell session and command execution.
-
-    4. **Execution:** The action executes the `Remove-ComplianceSearch` PowerShell
-    command via a subprocess to delete the search and its associated tasks.
-
-    5. **Error Handling:** The action catches specific exceptions such as 'Search
-    Not Found' (returning a success status with a descriptive message) or environment
-    issues like missing PowerShell/GSSNTLMSSP packages.
-
-    6. **Cleanup:** The action ensures the PowerShell session is disconnected in the
-    final stage.
+    - Either Exchange On-Prem or Office 365 must be configured in the integration
+    settings for this action to run successfully.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -226,12 +310,21 @@ Delete Compliance Search:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes a Compliance Search object and its associated results or purge tasks
-      within the target Exchange or Office 365 environment.
+      Deletes a compliance search and its associated tasks in Exchange or Office 365.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes a PowerShell command (`Remove-ComplianceSearch`) to delete
+      a compliance search in Exchange/Office 365. It mutates external data by removing
+      the search object. It does not fetch data, update internal entities, or create
+      insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (deletes a search), so it is not an enrichment
+      action. It does not perform any remediation tasks like blocking IPs, disabling
+      users, or quarantining emails, so it is not a remediation action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -247,60 +340,73 @@ Delete Compliance Search:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not reference `siemplify.target_entities` and explicitly states
+      in the description that it does not work on entities. Therefore, the entity
+      types list is empty and all filter flags are false.
 "Delete Exchange-Siemplify Mail Flow Rules":
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes a mail flow rule in Exchange. This does not match any of
+      the predefined expected outcomes such as enriching IOCs, updating alerts, or
+      blocking specific IOCs.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Deletes specified Exchange mail flow rules (transport rules) from either an On-Premise
-    Exchange server or Office 365 (Exchange Online). This action is primarily used
-    to clean up rules that were previously created for incident response, such as
-    temporary blocks on senders or domains. It supports deleting individual rules
-    by name or a predefined set of Siemplify-specific rules.
+    Deletes specified mail flow rules in Microsoft Exchange (On-Prem or Office 365).
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Rule Name To Delete | String | Yes | The name of the mail flow rule to be removed.
-    You can select a specific rule name or choose 'All available Exchange-Siemplify
-    Mail Flow Rules' to remove all rules associated with the integration. |
-
-
-    ### Additional Notes
-
-    - This action requires **Organization Management** permissions in Exchange.
-
-    - The action is **asynchronous**, meaning it may run in multiple stages to process
-    deletions and handle potential network timeouts or retries.
-
-    - You must configure either the On-Premise or Office 365 connection details in
-    the integration settings for this action to function.
+    | Rule Name To Delete | Dropdown | Yes | Specify the Rule name you would like
+    to completely delete. Options include specific Siemplify rules or all available
+    Exchange-Siemplify Mail Flow Rules. |
 
 
-    ### Flow Description
+    ### Flow
 
-    1. **Initialization**: The action retrieves connection details (Server Address,
-    URI, Credentials) and the target rule name from the parameters.
+    1. Connects to the Exchange server (On-Prem or Office 365) using PowerShell.
 
-    2. **Connection**: It establishes a PowerShell session with the Exchange server
-    using the `ExchangeExtensionPackManager`.
+    2. Determines the list of rules to delete based on the provided parameter.
 
-    3. **Rule Identification**: Based on the input, it identifies whether to delete
-    a single specific rule or a batch of predefined Siemplify rules.
+    3. Iterates over the rules and executes the `Remove-TransportRule` command for
+    each.
 
-    4. **Execution**: It executes the `Remove-TransportRule` PowerShell command via
-    a subprocess to delete the target rule(s).
-
-    5. **State Management**: If multiple rules are being processed or if a network
-    error occurs, the action uses `additional_data` to track which rules were successfully
+    4. Returns the status of the deletion process, indicating which rules were successfully
     deleted and which were not found.
-
-    6. **Completion**: Once all rules are processed or the retry limit is reached,
-    it returns a summary message listing the successfully deleted rules and any rules
-    that could not be found.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -309,12 +415,20 @@ Delete Compliance Search:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes mail flow rules (transport rules) from the target Exchange On-Premise
-      or Office 365 environment.
+      Deletes specified mail flow rules in Microsoft Exchange.
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action connects to Microsoft Exchange and executes a command to delete mail
+      flow rules. It does not fetch data, update entities, or modify internal SecOps
+      data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by deleting mail flow rules, so it is not an
+      enrichment action. It does not perform standard remediation tasks like blocking
+      IOCs or disabling users, so it is not a remediation action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -330,67 +444,114 @@ Delete Compliance Search:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It operates solely
+      on the provided rule name parameter.
 Fetch Compliance Search Results:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches the results of a compliance search from an Exchange server,
+      which contains a list of emails matching specific criteria. This aligns with
+      the 'Search Email' category. It does not enrich specific IOCs or assets, nor
+      does it perform remediation actions like deleting emails or blocking IPs.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: true
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Fetches results for a completed Compliance Search in Microsoft Exchange (On-Premise
-    or Office 365). This action operates asynchronously, first triggering a preview
-    action in Exchange and then polling for results. It retrieves metadata for found
-    emails, such as Sender, Subject, and Received Time, and can optionally clean up
-    the search object from the Exchange server upon completion.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Compliance Search Name | String | Yes | The unique name of the Compliance Search
-    to fetch results for. |
-
-    | Max Emails To Return | Integer | No | The maximum number of email records to
-    retrieve (up to 200 for display). |
-
-    | Remove Compliance Search Once Action Completes? | Boolean | No | If set to true,
-    the action will delete the Compliance Search and related tasks from the Exchange
-    server after fetching results. Default is true. |
-
-    | Create Case Wall Output Table? | Boolean | No | If set to true, creates a formatted
-    table in the Case Wall containing the search results. Default is true. |
+    Fetches the results of a completed Compliance Search from an Exchange On-Prem
+    or Office 365 server. The action initiates a preview of the search results, retrieves
+    the matching emails up to a specified limit, and optionally removes the compliance
+    search from the server once completed.
 
 
     ### Flow Description
 
-    1. **Initialization**: Validates the Exchange connection (On-Prem or O365) and
-    initiates a 'Compliance Search Preview' action on the server.
+    1. Connects to the Exchange server (On-Prem or Office 365) using the provided
+    credentials.
 
-    2. **Status Polling**: Periodically checks the status of the preview action until
-    it reaches a 'Completed' state.
+    2. Initiates a compliance search preview action for the specified search name.
 
-    3. **Data Retrieval**: Once completed, it fetches the preview results, parsing
-    email metadata into a structured format.
+    3. Periodically checks the status of the preview action until it completes.
 
-    4. **Internal Updates**: Adds the retrieved data as a JSON result and optionally
-    constructs a CSV table for the Case Wall.
+    4. Retrieves the search results (emails) up to the specified maximum limit.
 
-    5. **Cleanup (Optional)**: If configured, it sends a command to the Exchange server
-    to remove the Compliance Search object to maintain environment hygiene.
+    5. Optionally removes the compliance search and related tasks from the server.
+
+    6. Outputs the results as JSON and optionally creates a case wall table.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Compliance Search Name | String | Yes | The name of the compliance search to
+    fetch results for. Should not contain special characters. |
+
+    | Max Emails To Return | String | No | The maximum number of emails to return
+    in the results. |
+
+    | Remove Compliance Search Once Action Completes? | Boolean | No | If checked,
+    the action will remove the compliance search and any related fetch or purge tasks
+    from the Exchange server after completion. |
+
+    | Create Case Wall Output Table? | Boolean | No | If checked, the action will
+    create a case wall output table with the results. Recommended to uncheck if returning
+    a large number of emails to improve performance. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: true
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action creates a 'Compliance Search Preview' task on the Exchange server
-      and can optionally delete the Compliance Search object itself upon completion.
+      Creates a compliance search preview action and optionally removes the compliance
+      search from the Exchange server.
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds a data table to the Case Wall containing the fetched search
-      results.
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by retrieving compliance search preview results. It
+      mutates external data by creating a compliance search preview action and optionally
+      deleting the compliance search from the Exchange server. It does not mutate
+      internal data, update entities, create insights, or add case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by creating preview actions and deleting searches
+      on the Exchange server, so it cannot be classified as Enrichment. It does not
+      perform any containment, isolation, or identity disabling, so it is not a Remediation
+      action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -406,60 +567,84 @@ Fetch Compliance Search Results:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any SecOps entities. It operates
+      independently of entities based on the provided compliance search name.
 List Exchange-Siemplify Mail Flow Rules:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration data (mail flow rules) from Exchange. It
+      does not match any of the specific expected outcomes such as enriching an IOC/asset,
+      updating alerts, managing blocklists, or searching emails.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    This action retrieves and lists details for specific or all Exchange-Siemplify
-    Mail Flow Rules (Transport Rules) from an Exchange environment (On-Premises or
-    Office 365). It is primarily used to audit existing mail flow configurations,
-    such as sender or domain blocklists, by executing PowerShell commands via a manager.
-    The results are presented as data tables and a JSON object for further automation
-    steps.
+    Lists specific or all available Exchange-Siemplify Mail Flow Rules from an Exchange
+    On-Prem or Office365 environment. The action connects to the mail server via PowerShell,
+    retrieves the requested rules, and outputs the results as data tables and JSON.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Rule Name To List | String (Dropdown) | Yes | Specifies the name of the rule
-    to retrieve. Options include specific Siemplify rules (e.g., 'Siemplify - Senders
-    List - Permanently Delete') or 'All available Exchange-Siemplify Mail Flow Rules'.
-    |
+    | Rule Name To List | Dropdown | Yes | Specify the Rule name you would like to
+    list. Options include specific Siemplify rules or all available rules. |
 
 
     ### Additional Notes
 
-    - **Permissions:** Requires 'Organization Management' permissions in Exchange.
-
-    - **Connectivity:** The action supports either Exchange On-Premises or Office
-    365, but not both simultaneously. Configuration parameters for the chosen environment
-    must be provided in the integration settings.
-
-    - **Async Execution:** This action is asynchronous and includes built-in retry
-    logic for common network or session errors.
+    The action requires connection parameters to be configured in the integration
+    settings, such as Server Address, Connection URI, Domain, Username, Password,
+    and flags indicating whether the environment is On-Prem or Office365. Only one
+    mail server type (On-Prem or Office365) is supported at a time.
 
 
     ### Flow Description
 
-    1. **Initialization:** Extracts configuration parameters for the Exchange server
-    (address, credentials, and environment type) and the specific rule name to list.
+    1. Validates the connection parameters and determines the target environment (On-Prem
+    or Office365).
 
-    2. **Validation:** Ensures that exactly one environment type (On-Prem or Office
-    365) is selected and that necessary URIs are provided.
+    2. Connects to the specified Exchange environment using PowerShell.
 
-    3. **Connection:** Estantiates the `ExchangeExtensionPackManager` to establish
-    a PowerShell session with the target Exchange environment.
+    3. Retrieves the requested mail flow rules based on the provided rule name parameter.
 
-    4. **Data Retrieval:** Executes the `Get-TransportRule` PowerShell command to
-    fetch the configuration of the requested rule(s).
+    4. Formats the retrieved rules into data tables and JSON results.
 
-    5. **Processing:** Parses the PowerShell output into structured data models.
-
-    6. **Output:** Generates a data table for each rule found and attaches the full
-    rule details as a JSON result to the action.
+    5. Disconnects from the Exchange environment.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -470,8 +655,17 @@ List Exchange-Siemplify Mail Flow Rules:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches mail flow rules from Exchange using PowerShell commands.
+      It does not mutate any external data, nor does it update entities, create insights,
+      modify alert data, or create case comments.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Exchange) without mutating
+      any external or internal data. Therefore, it qualifies as an enrichment action.
+      It does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -487,41 +681,71 @@ List Exchange-Siemplify Mail Flow Rules:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It operates solely
+      based on the provided rule name parameter.
 Ping:
-  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
-    \ designed to verify the connectivity and authentication configuration between\
-    \ Google SecOps and a target Microsoft Exchange environment. It supports both\
-    \ **Exchange On-Premises** and **Office 365 (Exchange Online)**. The action utilizes\
-    \ PowerShell (`pwsh`) to establish a remote session using the provided credentials\
-    \ and server details to ensure that subsequent automation tasks can execute successfully.\n\
-    \n### Parameters Description\nThis action primarily relies on configuration parameters\
-    \ defined at the integration level rather than per-action inputs. \n\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Exchange\
-    \ On-Prem Server Address | String | No | The network address of the Exchange On-Premises\
-    \ server. Required if 'Is Exchange On-Prem?' is true. |\n| Exchange Office365\
-    \ Compliance Uri | String | No | The connection URI for Office 365 compliance\
-    \ sessions. Required if 'Is Office365 (Exchange Online)?' is true. |\n| Domain\
-    \ | String | Yes | The Active Directory domain used for authentication. |\n| User\
-    \ name | String | No | The username for the service account. |\n| Password | String\
-    \ | No | The password for the service account. |\n| Is Exchange On-Prem? | Boolean\
-    \ | Yes | Flag to indicate the target is an On-Premises server. |\n| Is Office365\
-    \ (Exchange Online)? | Boolean | Yes | Flag to indicate the target is Office 365.\
-    \ |\n\n### Additional Notes\n* **Mutual Exclusivity:** Either 'Is Exchange On-Prem?'\
-    \ or 'Is Office365 (Exchange Online)?' must be set to true, but not both simultaneously.\n\
-    * **Prerequisites:** Requires PowerShell (`pwsh`) and the `gssntlmssp` package\
-    \ to be installed on the Google SecOps runner/server for NTLM authentication.\n\
-    \n### Flow Description\n1.  **Initialization:** The action retrieves the integration's\
-    \ configuration parameters (credentials, server addresses, and environment type).\n\
-    2.  **Validation:** It checks that exactly one environment type (On-Prem or O365)\
-    \ is selected and that the necessary URI/Address for that type is provided.\n\
-    3.  **Manager Setup:** An `ExchangeExtensionPackManager` is initialized with the\
-    \ connection details.\n4.  **Connectivity Test:** \n    *   For **On-Prem**, it\
-    \ attempts to create a PSSession using NTLM/Negotiate authentication.\n    * \
-    \  For **Office 365**, it attempts to connect using the `Connect-IPPSSession`\
-    \ command.\n5.  **Cleanup:** The action explicitly disconnects any established\
-    \ sessions in the `finally` block to prevent resource leaks.\n6.  **Result Reporting:**\
-    \ Returns a success message if the session was established or a detailed error\
-    \ message (e.g., missing PowerShell, authentication failure) if it failed."
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping). It does not enrich IOCs/assets,
+      update alerts, create tickets, block/allow IOCs, manage identities, contain
+      hosts, search/download files, or interact with emails/messages in a way that
+      matches any of the expected outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    Tests connectivity to the Exchange On-Prem or Office 365 server using the provided
+    integration configuration parameters.
+
+
+    ### Flow Description
+
+    1. Retrieves configuration parameters such as server address, connection URI,
+    domain, username, password, and server type (On-Prem or Office 365).
+
+    2. Validates the provided parameters to ensure only one server type is selected
+    and required fields are present.
+
+    3. Initializes the `ExchangeExtensionPackManager` and attempts to connect to the
+    specified server.
+
+    4. Returns a success message if the connection is established, or an error message
+    if it fails.
+
+
+    ### Parameters Description
+
+    This action does not take any action-specific parameters. It relies entirely on
+    the integration configuration parameters provided in the Marketplace tab.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -532,8 +756,17 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only tests connectivity to the Exchange or Office 365 server. It
+      does not fetch contextual data, mutate external data, or modify internal SecOps
+      data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping' and its sole purpose is to test connectivity. According
+      to the rules, Ping actions must not be categorized as enrichment. It also does
+      not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -549,58 +782,87 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or interact with any entities. It only uses integration
+      configuration parameters.
 Purge Compliance Search Results:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: true
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action purges emails found by a compliance search from user mailboxes. This
+      directly aligns with the 'Delete Email' expected outcome, which involves removing
+      a specific email or thread from one or more user mailboxes (Purge/Withdraw).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Purges emails identified by a previously completed Microsoft Exchange Compliance
-    Search. This action supports both Exchange On-Premise and Office 365 environments
-    by executing PowerShell commands via a remote session. It can perform either a
-    'SoftDelete' or a 'HardDelete' (permanent removal) and includes an optional cleanup
-    step to remove the search object from the Exchange server once the purge is finished.
+    ### General Description
+
+    The **Purge Compliance Search Results** action purges emails found by a completed
+    Compliance Search in Microsoft Exchange On-Premises or Office 365. It can optionally
+    perform a hard delete (for O365) and remove the compliance search from the server
+    once the purge is complete. Note that this action does not operate on Google SecOps
+    entities.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Connects to the Exchange On-Premises or Office 365 environment
+    using the provided credentials.
+
+    2. **Purge Initiation:** Triggers a purge operation for the specified compliance
+    search.
+
+    3. **Status Monitoring:** Asynchronously polls the Exchange server to check the
+    status of the purge operation until it completes.
+
+    4. **Cleanup (Optional):** If configured, removes the compliance search and related
+    tasks from the Exchange server after the purge finishes.
 
 
     ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Compliance Search Name | String | Yes | The exact name of the Compliance Search
-    whose results should be purged. |
+    | Compliance Search Name | String | Yes | The name of the completed Compliance
+    Search. Note that the name shouldn't contain special characters. |
 
-    | Perform a HardDelete for deleted emails? | Boolean | No | If true, emails are
-    permanently removed (HardDelete). This is primarily applicable to Office 365.
-    Default is false (SoftDelete). |
+    | Perform a HardDelete for deleted emails? | Boolean | No | Specifies whether
+    a HardDelete should be performed. This option applies only to O365 and marks emails
+    for permanent removal from the mailbox. Default is false. |
 
-    | Remove Compliance Search Once Action Completes? | Boolean | No | If true, the
-    action will delete the Compliance Search object and related tasks from the Exchange
-    server after the purge completes. Default is true. |
-
-
-    ### Additional Notes
-
-    - This action does not operate on Google SecOps entities; it relies entirely on
-    the provided search name.
-
-    - The action is asynchronous and will poll the Exchange server until the purge
-    task reaches a 'Completed' status.
-
-
-    ### Flow Description
-
-    1. **Initialization**: Connects to the Exchange server (On-Prem or O365) using
-    the provided integration credentials.
-
-    2. **Purge Initiation**: Executes a PowerShell command to create a new Compliance
-    Search Purge action based on the specified search name and delete type.
-
-    3. **Status Polling**: Periodically checks the status of the purge operation.
-    It retrieves the 'Item count' of purged emails.
-
-    4. **Result Reporting**: Once the purge is finished, it reports the success and
-    the number of items affected.
-
-    5. **Cleanup (Optional)**: If configured, it executes a final command to remove
-    the Compliance Search object from the server to maintain a clean environment.
+    | Remove Compliance Search Once Action Completes? | Boolean | No | Specifies whether
+    the action should remove the search action and any related fetch or purge tasks
+    from the Exchange server once the action completes. Default is true. |
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -609,12 +871,22 @@ Purge Compliance Search Results:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes emails from Exchange mailboxes (SoftDelete or HardDelete) and optionally
-      removes Compliance Search objects from the Exchange server.
-    fetches_data: true
+      Purges emails found by a compliance search and optionally removes the compliance
+      search from the Exchange server.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes a purge command on an external Exchange server to delete
+      emails and optionally removes the compliance search itself. It does not fetch
+      data for enrichment, nor does it mutate internal SecOps data such as entities,
+      insights, or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by purging emails, so it cannot be classified
+      as Enrichment. Since it performs an email-based remediation task (deleting/purging
+      emails), it is classified as a Remediation action.
+    remediation: true
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -630,67 +902,95 @@ Purge Compliance Search Results:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `target_entities`. The description
+      explicitly states that the action does not work on Siemplify entities.
 "Remove Domains from Exchange-Siemplify Mail Flow Rules":
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes domains from an Exchange mail flow rule (which is typically
+      used to block or delete emails from those domains). This aligns with the 'Remove
+      IOC From Blocklist' expected outcome, as it restores the ability for those domains
+      to send emails by removing them from a restricted list.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    This action removes specific domains from an existing Microsoft Exchange (On-Prem
-    or Office 365) mail flow rule. It is primarily used to manage blocklists or allowlists
-    by dynamically updating the 'FromAddressContainsWords' condition of a specified
-    rule. If the removal of domains results in an empty rule (no domains left), the
-    action will automatically delete the rule from the Exchange server.
+    Removes specified domains from an existing Exchange mail flow rule. This action
+    connects to an Exchange On-Prem or Office 365 environment via PowerShell, retrieves
+    the specified mail flow rule, and removes the provided domains from its conditions.
+    This is typically used to unblock domains that were previously added to a deletion
+    or quarantine rule.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Domains | String | No | A comma-separated list of domains to be removed from
-    the rule. |
+    | Domains | String | False | Specify the Domains you would like to remove from
+    the rule, in a comma separated list. |
 
-    | Rule to remove Domains from | String | Yes | The name of the Exchange mail flow
-    rule to modify. Default is 'Siemplify - Domains List - Permanently Delete'. |
+    | Rule to remove Domains from | String | True | Specify the rule to remove the
+    Domains from. If the rule doesn't exist - action will do nothing. |
 
 
     ### Additional Notes
 
-    - **Permissions:** The executing user must have 'Organization Management' permissions
-    in Exchange.
+    - The action requires integration configuration parameters to determine the connection
+    type. Either `Is Exchange On-Prem?` or `Is Office365 (Exchange Online)?` must
+    be set to true.
 
-    - **Server Type:** The integration must be configured for either Exchange On-Prem
-    or Office 365 (not both simultaneously).
+    - If connecting to Office 365, the `Exchange Office365 Online Powershell Uri`
+    parameter must be provided.
 
-    - **Async Execution:** This action runs asynchronously to handle potential network
-    latencies or long-running PowerShell commands.
-
-    - **Rule Deletion:** If all domains are removed from a rule, the rule itself is
-    deleted to maintain a clean configuration.
+    - The action uses PowerShell to execute commands on the Exchange server.
 
 
     ### Flow Description
 
-    1. **Validation:** The action validates the connection configuration (On-Prem
-    vs. Office 365) and parses the provided domains.
+    1. Connects to the Exchange server (On-Prem or Office 365) using PowerShell based
+    on the configuration parameters.
 
-    2. **Domain Filtering:** It filters the input to identify valid domain formats
-    and separates them from invalid ones.
+    2. Validates the provided domains using a regular expression.
 
-    3. **Rule Retrieval:** It connects to the Exchange server via PowerShell and retrieves
-    the current configuration of the specified rule.
+    3. Retrieves the existing mail flow rule specified in the parameters.
 
-    4. **Modification Logic:**
-        - If the rule exists, it identifies which of the requested domains are currently
-    present in the rule.
-        - It calculates the new set of domains by removing the target domains from
-    the existing list.
-    5. **Execution:**
-        - If domains remain, it updates the rule on the Exchange server with the new
-    list.
-        - If no domains remain, it deletes the rule from the Exchange server.
-    6. **Reporting:** The action returns a JSON result detailing which domains were
-    successfully removed, which didn't exist in the rule, and which were invalid.
+    4. Removes the valid domains from the rule's conditions.
+
+    5. Returns the successfully removed domains, domains that didn't exist in the
+    rule, and invalid domains.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -699,13 +999,22 @@ Purge Compliance Search Results:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      This action modifies or deletes mail flow rules (transport rules) on the Microsoft
-      Exchange server by updating the domain list in the rule's conditions or removing
-      the rule entirely if it becomes empty.
-    fetches_data: true
+      Modifies an existing mail flow rule in Exchange by removing specified domains
+      from its conditions.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action connects to an external Exchange server and modifies an existing
+      mail flow rule by removing domains from it. It does not fetch contextual data
+      for entities, nor does it modify internal SecOps data like entities, alerts,
+      or insights.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data (modifies a mail flow rule) and does not fetch
+      data, so it is not an enrichment action. It removes domains from a rule (unblocking),
+      which does not mitigate a threat, so it is not strictly a remediation action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -721,68 +1030,91 @@ Purge Compliance Search Results:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on SecOps entities. It takes a list of domains as
+      a string parameter and processes them directly.
 "Remove Senders from Exchange-Siemplify Mail Flow Rules":
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes senders (email addresses) from an Exchange mail flow rule.
+      Since these rules are typically used to block or delete emails from specific
+      senders, removing them restores their ability to send emails, which aligns with
+      the 'Remove IOC From Blocklist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Removes specific senders (email addresses) or their domains from existing Microsoft
-    Exchange Mail Flow (Transport) rules. This action is useful for managing blocklists
-    or allowlists dynamically within Exchange On-Premises or Office 365 environments.
+    ### General Description
+
+    Removes specified email addresses (senders) from an existing Exchange mail flow
+    rule. If no email addresses are provided as parameters, the action will automatically
+    extract email addresses from the identifiers of User entities attached to the
+    case. It can also optionally remove the domains of these senders from a corresponding
+    domain rule.
 
 
-    ### Flow Description:
-
-    1. **Connection Initialization:** Establishes a PowerShell session with the target
-    Exchange server (On-Premises via WinRM or Office 365 via the Exchange Online PowerShell
-    module).
-
-    2. **Target Identification:** Determines the list of email addresses to remove.
-    It prioritizes the 'Email Addresses' parameter; if empty, it extracts identifiers
-    from 'USER' entities within the case.
-
-    3. **Rule Retrieval:** Fetches the current configuration and item list of the
-    specified Mail Flow rule(s).
-
-    4. **Modification Logic:** Calculates the new set of items by subtracting the
-    target addresses from the existing rule items. If the 'Should remove senders'
-    domains...' parameter is enabled, it also identifies the domains and processes
-    the corresponding domain-based rule.
-
-    5. **Execution:** Updates the rule on the Exchange server with the new item list.
-    If a rule becomes empty after the removal of items, the action automatically deletes
-    the rule to maintain environment cleanliness.
-
-    6. **Reporting:** Returns a JSON result categorizing the inputs into 'success'
-    (removed), 'didn't_exist' (not in the rule), and 'invalid' (malformed email addresses).
-
-
-    ### Parameters Description:
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
     | Email Addresses | String | No | A comma-separated list of email addresses to
-    remove. If left blank, the action will attempt to use the identifiers of 'USER'
-    entities found in the context. |
+    remove from the rule. If left empty, the action will process User entities instead.
+    |
 
-    | Rule to remove Senders from | String | Yes | The exact name of the Exchange
-    Transport Rule from which the senders should be removed. |
+    | Rule to remove Senders from | Dropdown | Yes | Specifies the name of the rule
+    to remove the senders from. If the rule does not exist, the action will do nothing.
+    |
 
     | Should remove senders' domains from the corresponding Domains List rule as well?
-    | Boolean | No | If set to 'True', the action will extract the domain from each
-    email address and remove those domains from the associated domain-based rule (defined
-    in the integration constants). |
+    | Boolean | No | If enabled, the action will automatically extract the domains
+    from the provided email addresses and remove them from the corresponding domain
+    rule. |
 
 
-    ### Additional Notes:
+    ### Flow Description
 
-    - This is an **Async** action that may take several minutes depending on the Exchange
-    environment's responsiveness.
+    1. Establishes a PowerShell session with either Exchange On-Prem or Office 365
+    based on the integration configuration.
 
-    - **Permissions:** Requires 'Organization Management' permissions in Exchange/Office
-    365.
+    2. Retrieves the specified mail flow rules to check their current items.
 
-    - **Rule Deletion:** Be aware that if you remove the last remaining item from
-    a rule, the rule itself will be deleted from Exchange.
+    3. Removes the provided email addresses (and optionally their domains) from the
+    retrieved rules.
+
+    4. Updates the rules in Exchange with the new list of items.
+
+    5. Returns a JSON result detailing the successfully removed items, items that
+    didn't exist in the rule, and any invalid items.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -791,12 +1123,21 @@ Purge Compliance Search Results:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates or deletes Microsoft Exchange Transport Rules (Mail Flow Rules) by removing
-      specific email addresses or domains from their configuration.
-    fetches_data: true
+      Updates mail flow rules in Exchange to remove specified senders and domains.
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes PowerShell commands to update mail flow rules in Exchange,
+      removing specified senders and domains. This mutates external data (can_mutate_external_data=True).
+      It does not fetch contextual data for enrichment, nor does it mutate internal
+      SecOps data like entities, insights, or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action mutates external data by updating mail flow rules in Exchange, so
+      it cannot be classified as an Enrichment action. It modifies security controls
+      (mail flow rules) to unblock senders, which falls under Remediation.
+    remediation: true
   entity_usage:
     entity_types:
     - USERUNIQNAME
@@ -805,7 +1146,7 @@ Purge Compliance Search Results:
     filters_by_case_identifier: false
     filters_by_creation_time: false
     filters_by_entity_type: true
-    filters_by_identifier: false
+    filters_by_identifier: true
     filters_by_is_artifact: false
     filters_by_is_enriched: false
     filters_by_is_internal: false
@@ -813,95 +1154,143 @@ Purge Compliance Search Results:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` if no email addresses are
+      provided in the parameters. It filters the entities by checking if `entity.entity_type`
+      is in `SUPPORTED_ENTITY_TYPES` (which contains `EntityTypes.USER`) and validates
+      the identifier as an email address using `validate_email_address(entity.identifier)`.
+      Therefore, it runs on USERUNIQNAME entities and filters by entity type and identifier.
 Run Compliance Search:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for emails across the mail server based on criteria like
+      sender, subject, or an advanced query. This directly aligns with the 'Search
+      Email' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: true
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Runs an Exchange Compliance Search based on specified conditions for either Exchange
-    On-Premise or Office 365 environments. This action is designed for large-scale
-    searches across multiple mailboxes (1000+) and operates asynchronously. It can
-    construct a search query based on subject, sender, and recipient filters, or accept
-    a KQL-based advanced query. Optionally, the action can fetch the search results
-    and display them in a table on the Case Wall.
+    Runs an Exchange Compliance Search based on provided search conditions (such as
+    subject, sender, recipient, time frame, or an advanced query). It creates a compliance
+    search job on the Exchange server and can optionally fetch and display the search
+    results.
 
 
-    ### Parameters
+    ### Action Flow
+
+    1. Connects to the Exchange On-Prem or Office 365 server using the provided credentials.
+
+    2. Creates a compliance search job on the server using the specified filters or
+    advanced query.
+
+    3. Periodically checks the status of the compliance search job until it completes.
+
+    4. If configured to fetch results, creates a compliance search preview and waits
+    for its completion.
+
+    5. Retrieves the search results and optionally creates a case wall output table
+    with the findings.
+
+
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Compliance Search Name | String | Yes | The unique name for the search object
-    to be created in Exchange. |
+    | Compliance Search Name | String | Yes | Name for the Compliance Search. Note
+    that the name shouldn't contain special characters. |
 
-    | Subject Filter | String | No | Filter condition for the email subject. |
+    | Subject Filter | String | No | Filter condition, specify what subject to search
+    for emails. |
 
-    | Sender Filter | String | No | Filter condition for the email sender. |
+    | Sender Filter | String | No | Filter condition, specify who should be the sender
+    of needed emails. |
 
-    | Recipient Filter | String | No | Filter condition for the email recipient. |
+    | Recipient Filter | String | No | Filter condition, specify who should be the
+    recipient of needed emails. |
 
-    | Operator | Enum | No | Logic operator (AND/OR) used to combine filters. Default
-    is AND. |
+    | Operator | Dropdown | No | Operator (AND/OR) to use to construct the query from
+    the conditions above. |
 
-    | Time Frame (hours) | String | No | The number of hours back from the current
-    time to search. |
+    | Time Frame (hours) | String | No | Time frame interval in hours to search for
+    emails. |
 
-    | Location to Search Emails In | String | Yes | Target mailboxes (comma-separated),
-    distribution groups, or 'All'. |
+    | Location to Search Emails In | String | Yes | Location to search emails in.
+    Can be a comma-separated list of mailboxes, a distribution group, or 'All' for
+    all mailboxes. |
 
-    | Fetch Compliance Search Results? | Boolean | No | If true, the action will wait
-    for the search to finish and then retrieve the results. |
+    | Fetch Compliance Search Results? | Boolean | No | Specify whether the action
+    should immediately fetch the compliance search results. |
 
-    | Max Emails To Return | String | No | Limits the number of results returned (Max
-    200 displayed). |
+    | Max Emails To Return | String | No | Specify how many emails the action can
+    return. |
 
-    | Create Case Wall Output Table? | Boolean | No | If true, adds a formatted table
-    of results to the Case Wall. |
+    | Create Case Wall Output Table? | Boolean | No | Specify if the action should
+    create a case wall output table. |
 
-    | Advanced Query | String | No | A raw KQL query string that overrides individual
-    filters. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: Connects to the Exchange environment using PowerShell based
-    on the integration configuration (On-Prem or O365).
-
-    2. **Search Creation**: Creates a new `ComplianceSearch` object in Exchange with
-    the defined filters and starts the search.
-
-    3. **Status Monitoring**: Periodically checks the status of the search until it
-    reaches a 'Completed' state.
-
-    4. **Result Retrieval (Optional)**: If 'Fetch Compliance Search Results?' is enabled,
-    it triggers a `ComplianceSearchAction` (Preview) to extract metadata for the found
-    emails.
-
-    5. **Output**: Returns the search status and, if requested, populates the JSON
-    results and the Case Wall table with email details (Received Time, Sender, Recipient,
-    Subject).
+    | Advanced Query | String | No | Instead of subject, sender, or recipient filters,
+    provide a query you want to run the compliance search on. |
 
 
     ### Additional Notes
 
-    * This action does not process Siemplify entities; it relies entirely on the provided
-    parameters.
+    - This action does not work on Google SecOps entities.
 
-    * Creating a search object is a state-changing operation in the Exchange environment.
+    - If the "Fetch Compliance Search Results?" checkbox is checked, a maximum of
+    200 elements will be displayed, but the actual search can have more findings than
+    are shown.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: true
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new Compliance Search object and a Compliance Search Action (Preview)
-      within the target Exchange environment (On-Prem or Office 365).
+      Creates a new compliance search job and preview job on the Exchange server.
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a results table to the Case Wall if the 'Create Case Wall Output Table?'
-      parameter is enabled.
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data (email search results) if configured to do so. It mutates
+      external data by creating a new compliance search job (`New-ComplianceSearch`)
+      on the Exchange server. It does not mutate internal data, update entities, create
+      insights, modify alerts, or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action creates a search job on the external Exchange server, which is a
+      mutation of external state. Therefore, it cannot be classified as Enrichment.
+      It does not perform any remediation tasks like blocking or disabling.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -917,3 +1306,6 @@ Run Compliance Search:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. The
+      description explicitly states that the action does not work on entities.

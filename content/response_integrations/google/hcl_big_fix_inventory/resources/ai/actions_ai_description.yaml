@@ -1,89 +1,105 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Entities:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (e.g., OS version, DNS name, health
+      status) for a resource (IP or Hostname) from HCL BigFix Inventory. This perfectly
+      matches the 'Enrich Asset' expected outcome. It does not return threat intelligence
+      (Enrich IOC) or perform any other product category actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    Enriches Hostname and IP Address entities using information retrieved from HCL
-    BigFix Inventory. This action queries the BigFix Inventory API to find matching
-    computer records and populates the entity's context with hardware, software, and
-    health details. It helps analysts understand the state of a device, including
-    its OS, last scan time, and disk space status.
+    Enriches Hostname and IP Address entities using information from HCL BigFix Inventory.
+    This action retrieves device details such as OS, DNS name, and health status to
+    provide contextual metadata about the asset.
 
 
-    ### Parameters Description
+    ### Parameters
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Custom Fields | String | No | A comma-separated list of additional fields to
-    be returned from the BigFix Inventory API in addition to the default set. |
+    | Custom Fields | String | No | Specify a comma-separated list of fields that
+    needs to be returned in addition to the ones that are returned by default. |
 
-    | Create Insight | Boolean | No | If set to `true` (default), the action will
-    create a detailed insight on the entity containing the retrieved information.
+    | Create Insight | Boolean | No | If enabled, the action will create an insight
+    containing all of the retrieved information about the entity. Default is true.
     |
 
 
-    ### Additional Notes
+    ### Action Flow
 
-    - The action uses a prefix `HCLBigFixInv` for all enriched entity attributes.
+    1. Iterates through the target entities and filters for Hostname and IP Address
+    types.
 
-    - Supported entity types are Hostname and IP Address.
+    2. For each suitable entity, queries the HCL BigFix Inventory API to retrieve
+    device information.
 
+    3. If device data is found, enriches the entity's properties with the retrieved
+    metadata.
 
-    ### Flow Description
+    4. Creates an insight for the entity if the `Create Insight` parameter is enabled.
 
-    1. **Initialization**: The action initializes the HCL BigFix Inventory manager
-    using the provided API Root, Token, and SSL configuration.
-
-    2. **Connectivity Check**: Performs a test connectivity call to ensure the API
-    is reachable.
-
-    3. **Entity Filtering**: Identifies all Hostname and IP Address entities within
-    the current context.
-
-    4. **Data Retrieval**: For each entity, it queries the `/api/sam/v2/computers`
-    endpoint using the entity's identifier (IP or Hostname) as criteria.
-
-    5. **Enrichment**: If a matching device is found:
-        - Updates the entity's `additional_properties` with device metadata.
-        - Sets the entity's `is_enriched` status to `true`.
-        - Adds a data table to the entity containing key device metrics.
-        - Optionally creates an entity insight if the `Create Insight` parameter is
-    enabled.
-    6. **Finalization**: Updates the entities in Google SecOps and returns a summary
-    message and JSON result.
+    5. Updates the entities in the SecOps platform and returns a JSON result containing
+    the device data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes (additional_properties), sets the enriched status,
-      and adds insights and data tables to the case.
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches device data from HCL BigFix Inventory via a GET request (fetches_data=true).
+      It does not perform any POST/PUT/DELETE requests to mutate external systems
+      (can_mutate_external_data=false). Internally, it updates entity properties and
+      creates insights, which are standard enrichment behaviors and do not constitute
+      general internal data mutation (can_mutate_internal_data=false).
   categories:
     enrichment: true
+    reasoning: >-
+      The action proactively fetches data from an external source (HCL BigFix Inventory)
+      to gather supplemental context about entities. It does not mutate external state
+      and only modifies internal state by updating entities and creating insights.
+      Therefore, it strictly qualifies as an Enrichment action. It does not perform
+      any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types:
-    - HOSTNAME
     - ADDRESS
+    - HOSTNAME
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -97,58 +113,70 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where SUPPORTED_ENTITY_TYPES includes EntityTypes.ADDRESS
+      and EntityTypes.HOSTNAME. It does not filter by any other entity attributes.
 Ping:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple Ping to test connectivity. It does not enrich IOCs or
+      assets, update alerts, create tickets, block IOCs, contain hosts, or perform
+      any other specific product outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    ### General Description
-
-    The **Ping** action is designed to verify the connectivity between Google SecOps
-    and the HCL BigFix Inventory server. It ensures that the integration configuration
-    parameters, such as the API Root and API Token, are correct and that the server
-    is reachable. This is typically used during the initial setup or for troubleshooting
-    connection issues.
+    Tests connectivity to the HCL BigFix Inventory server using the provided integration
+    configuration parameters. The action makes a simple API call to the server to
+    verify that the API root, API token, and SSL settings are correct and that the
+    server is reachable.
 
 
-    ### Parameters Description
+    ### Parameters
 
-    There are no action-specific parameters for this action. It relies entirely on
-    the global integration configuration parameters:
-
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The base URL of the HCL BigFix Inventory API. |
-
-    | API Token | String | Yes | The authentication token used to authorize requests.
-    |
-
-    | Verify SSL | Boolean | Yes | Determines whether to validate the SSL certificate
-    of the server. |
+    There are no action-specific parameters for this action. It relies solely on the
+    integration configuration parameters (API Root, API Token, Verify SSL).
 
 
-    ### Additional Notes
+    ### Flow
 
-    - This action does not process any entities.
+    1. Retrieves the integration configuration parameters.
 
-    - It performs a simple GET request to the `/api/sam/about` endpoint to validate
-    the connection.
+    2. Initializes the HCL BigFix Inventory manager.
 
+    3. Sends a test request to the server's 'about' endpoint.
 
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves the API Root, API Token, and
-    SSL verification settings from the integration's configuration.
-
-    2. **Manager Initialization:** It initializes the `HCLBigFixInventoryManager`
-    with the retrieved credentials.
-
-    3. **Connectivity Test:** The manager executes a GET request to the HCL BigFix
-    Inventory 'about' endpoint.
-
-    4. **Result Handling:** If the request is successful (HTTP 200), the action returns
-    a success status. If an error occurs (e.g., authentication failure or network
-    timeout), it catches the exception and reports a failure.
+    4. Returns a success message if the connection is established, or an error message
+    if it fails.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -157,10 +185,18 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only tests connectivity to the HCL BigFix Inventory server. It does
+      not fetch contextual data for alerts or entities, nor does it mutate any external
+      or internal data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping', which is explicitly excluded from being an enrichment
+      action according to Rule 0.1. It also does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -176,3 +212,6 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not reference `siemplify.target_entities` or process any entities.
+      It only tests connectivity to the external system.

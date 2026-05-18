@@ -25,7 +25,9 @@ from google import genai
 from google.genai.errors import ClientError
 from google.genai.types import (
     BatchJob,
+    Candidate,
     Content,
+    FinishReason,
     GenerateContentConfig,
     GenerateContentResponse,
     GoogleSearch,
@@ -41,13 +43,12 @@ from google.genai.types import (
     ToolListUnion,
     UrlContext,
 )
-from pydantic import Field
+from pydantic import Field, ValidationError
 from tenacity import (
     RetryCallState,
     after_log,
     retry,
     retry_if_exception,
-    retry_if_not_exception_type,
     stop_after_attempt,
     wait_exponential,
 )
@@ -71,6 +72,10 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 class ApiKeyNotFoundError(Exception):
     """Exception raised when the API key is not found."""
+
+
+class LlmResponseValidationError(Exception):
+    """Exception raised when the LLM response fails validation."""
 
 
 class GeminiConfig(LlmConfig):
@@ -117,18 +122,58 @@ def _log_retry_attempt(retry_state: RetryCallState) -> None:
         return
 
     delay: int = getattr(retry_state.next_action, "sleep", 0)
+    exception: BaseException | None = retry_state.outcome.exception()
     logger.warning(
-        "Retry attempt #%s failed. Retrying in %s seconds.",
+        "Retry attempt #%s failed. Retrying in %s seconds. Reason: %s",
         retry_state.attempt_number,
         delay,
+        exception,
     )
-
-    exception: BaseException | None = retry_state.outcome.exception()
-    logger.debug(" Exception: %s", exception)
 
 
 def _should_retry_exception(e: BaseException) -> bool:
-    return isinstance(e, ClientError) and (e.code == RATE_LIMIT_STATUS_CODE or e.code >= SERVER_ERROR_STATUS_CODE)
+    if isinstance(e, (LlmResponseValidationError, ValueError)):
+        return False
+    if isinstance(e, ClientError):
+        return e.code == RATE_LIMIT_STATUS_CODE or e.code >= SERVER_ERROR_STATUS_CODE
+    return True
+
+
+def _get_error_message_from_response(response: GenerateContentResponse) -> str:
+    """Extract a detailed error message from an LLM response.
+
+    Args:
+        response: The response from the LLM.
+
+    Returns:
+        A detailed error message.
+
+    """
+    if not response.candidates:
+        return "LLM returned no candidates."
+
+    candidate: Candidate = response.candidates[0]
+    reasons: list[str] = []
+    if candidate.finish_reason:
+        reasons.append(f"Finish reason: {candidate.finish_reason}")
+
+    if candidate.finish_reason == FinishReason.SAFETY:
+        reasons.append("The response was blocked by safety filters.")
+    elif candidate.finish_reason == FinishReason.MAX_TOKENS:
+        reasons.append("The response was truncated because it exceeded the maximum token limit.")
+    elif candidate.finish_reason == FinishReason.RECITATION:
+        reasons.append("The response was blocked due to recitation (copyright) filters.")
+
+    if candidate.safety_ratings:
+        blocked_ratings: list[str] = [
+            f"{rating.category} ({rating.probability})"
+            for rating in candidate.safety_ratings
+            if getattr(rating, "blocked", False)
+        ]
+        if blocked_ratings:
+            reasons.append(f"Blocked categories: {', '.join(blocked_ratings)}")
+
+    return ". ".join(reasons) if reasons else "No specific error details found in response."
 
 
 class Gemini(LlmSdk[GeminiConfig]):
@@ -162,7 +207,7 @@ class Gemini(LlmSdk[GeminiConfig]):
     ) -> str: ...
 
     @retry(
-        retry=(retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)),
+        retry=retry_if_exception(_should_retry_exception),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),
@@ -185,7 +230,8 @@ class Gemini(LlmSdk[GeminiConfig]):
             The LLM response as a string or a Pydantic model.
 
         Raises:
-            ValueError: If the JSON schema is invalid.
+            ValueError: If the JSON schema is invalid or the response is empty.
+            LlmResponseValidationError: If the LLM response fails validation.
 
         """
         schema: dict[str, Any] | None = None
@@ -200,25 +246,38 @@ class Gemini(LlmSdk[GeminiConfig]):
         self.content.parts.append(Part.from_text(text=prompt))
 
         response: io.StringIO = io.StringIO()
+        last_chunk: GenerateContentResponse | None = None
         async for chunk in await self.client.models.generate_content_stream(
             model=self.config.model_name,
             contents=self.content,
             config=config,
         ):
+            last_chunk = chunk
             if chunk.text:
                 response.write(chunk.text)
 
         text: str = response.getvalue()
         logger.debug("Response text: %s", text)
         if raise_error_if_empty_response and not text:
-            msg: str = f"Received {text!r} from the LLM as generation results"
+            msg: str = (
+                _get_error_message_from_response(last_chunk) if last_chunk else "Received empty response from LLM"
+            )
             raise ValueError(msg)
 
         if text:
             self.content.parts.append(Part.from_text(text=text))
 
         if response_json_schema is not None and text:
-            return response_json_schema.model_validate_json(text, by_alias=True)
+            try:
+                return response_json_schema.model_validate_json(text, by_alias=True)
+            except ValidationError as e:
+                msg = "LLM response failed validation"
+                if last_chunk:
+                    details = _get_error_message_from_response(last_chunk)
+                    msg = f"{msg} ({details})"
+                logger.exception("%s. Response text: %s", msg, text)
+                error_msg = f"{msg}: {e}"
+                raise LlmResponseValidationError(error_msg) from e
 
         return text
 
@@ -248,9 +307,18 @@ class Gemini(LlmSdk[GeminiConfig]):
             return []
 
         if len(prompts) <= self.bulk_threshold:
-            return await asyncio.gather(*[
-                self._send_single_message_independent(prompt, response_json_schema) for prompt in prompts
-            ])
+            results = await asyncio.gather(
+                *[self._send_single_message_independent(prompt, response_json_schema) for prompt in prompts],
+                return_exceptions=True,
+            )
+
+            final_results: list[T_Schema | str] = []
+            for result in results:
+                if isinstance(result, BaseException):
+                    raise result
+                final_results.append(result)
+
+            return final_results
 
         requests: list[InlinedRequest] = self._prepare_batch_requests(prompts, response_json_schema)
         batch_job: BatchJob = await self._create_batch_job(requests)
@@ -258,7 +326,7 @@ class Gemini(LlmSdk[GeminiConfig]):
         return await self._get_batch_results(batch_job, response_json_schema)
 
     @retry(
-        retry=(retry_if_not_exception_type(ClientError) | retry_if_exception(_should_retry_exception)),
+        retry=retry_if_exception(_should_retry_exception),
         stop=stop_after_attempt(10),
         wait=wait_exponential(max=60),
         after=after_log(logger, logging.WARNING),
@@ -275,6 +343,9 @@ class Gemini(LlmSdk[GeminiConfig]):
 
         Returns:
             The LLM response.
+
+        Raises:
+            LlmResponseValidationError: If the LLM response fails validation.
 
         """
         schema: dict[str, Any] | None = None
@@ -295,8 +366,19 @@ class Gemini(LlmSdk[GeminiConfig]):
         )
 
         text: str = response.text or ""
+        if not text:
+            logger.warning(_get_error_message_from_response(response))
+
         if response_json_schema is not None and text:
-            return response_json_schema.model_validate_json(text, by_alias=True)
+            try:
+                return response_json_schema.model_validate_json(text, by_alias=True)
+            except ValidationError as e:
+                msg = "LLM response failed validation"
+                details = _get_error_message_from_response(response)
+                msg = f"{msg} ({details})"
+                logger.exception("%s. Response text: %s", msg, text)
+                error_msg = f"{msg}: {e}"
+                raise LlmResponseValidationError(error_msg) from e
 
         return text
 
@@ -438,7 +520,11 @@ class Gemini(LlmSdk[GeminiConfig]):
 
             text: str = _parse_response_line_to_text(line)
             if response_json_schema is not None and text:
-                results.append(response_json_schema.model_validate_json(text, by_alias=True))
+                try:
+                    results.append(response_json_schema.model_validate_json(text, by_alias=True))
+                except ValidationError:
+                    logger.exception("File batch item failed validation. Response text: %s", text)
+                    results.append(text)
             else:
                 results.append(text)
 
@@ -552,8 +638,21 @@ def _parse_inlined_responses(
             continue
 
         text: str = inline_response.response.text or ""
+        if not text:
+            msg: str = _get_error_message_from_response(inline_response.response)
+            logger.warning("Empty response in batch item. %s", msg)
+
         if response_json_schema is not None and text:
-            results.append(response_json_schema.model_validate_json(text, by_alias=True))
+            try:
+                results.append(response_json_schema.model_validate_json(text, by_alias=True))
+            except ValidationError:
+                msg: str = _get_error_message_from_response(inline_response.response)
+                logger.exception("Batch item failed validation (%s). Response text: %s", msg, text)
+                # We don't raise here to allow other batch items to be processed,
+                # but we might want to indicate failure.
+                # For now, let's just append the raw text or a placeholder?
+                # Actually, the signature says T_Schema | str.
+                results.append(text)
         else:
             results.append(text)
 

@@ -1,64 +1,91 @@
 Calculate Timestamp:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a utility for calculating timestamps. It does not interact with
+      external systems, enrich data, update alerts, or perform any security-specific
+      outcomes defined in the categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
-    Calculates one or more new timestamps by applying specified time offsets (deltas)
-    to a baseline starting point. This utility action is part of the 'Functions' integration
-    and is used to generate relative time ranges or specific points in time for use
-    in subsequent playbook steps.
+    The 'Calculate Timestamp' action is a utility designed to calculate new timestamps
+    by applying time offsets (deltas) to a baseline starting time.
 
 
-    ### Parameters
+    ### General Description
+
+    This action allows users to determine future or past timestamps based on a specified
+    starting point, such as the current time, alert creation time, case creation time,
+    or a custom provided timestamp. It processes a list of time deltas and outputs
+    the calculated timestamps in a specified format.
+
+
+    ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Input Type | Dropdown | No | Defines the baseline time source. Options: 'Current
-    Time' (default), 'Alert Creation Time', 'Case Creation Time', or 'Custom Timestamp'.
+    | Input Type | Dropdown | No | The starting point to be used as the baseline time.
+    Options include Current Time, Alert Creation Time, Case Creation Time, and Custom
+    Timestamp. Defaults to Current Time. |
+
+    | Custom Timestamp | String | No | The specific date and time value to use when
+    Input Type is set to Custom Timestamp. Required if Input Type is Custom Timestamp.
     |
 
-    | Custom Timestamp | String | No | The specific date/time string to use as a baseline.
-    **Mandatory** if 'Input Type' is set to 'Custom Timestamp'. |
+    | Custom Timestamp Format | String | No | The format of the Custom Timestamp.
+    Defaults to epoch time if not provided. |
 
-    | Custom Timestamp Format | String | No | The strftime-style format of the 'Custom
-    Timestamp'. Defaults to ISO 8601 (%Y-%m-%dT%H:%M:%S%z). If empty, the action attempts
-    to parse as epoch. |
+    | Timestamp Delta | String | No | A comma-separated list of time offsets (e.g.,
+    +30M, -1d). Requires a supported unit (m, d, H, M, S) and an operator (+, -).
+    Defaults to '+30M,-30M'. |
 
-    | Timestamp Delta | String | No | A comma-separated list of offsets to apply.
-    Format: [operator][value][unit]. Units: m (months), d (days), H (hours), M (minutes),
-    S (seconds). Example: '+1d, -30M'. |
-
-    | Output Timestamp Format | String | No | The desired format for the resulting
-    timestamps. Use 'epoch' for Unix timestamps or strftime-style strings. Defaults
-    to ISO 8601. |
-
-
-    ### Additional Notes
-
-    - If 'Input Type' is 'Custom Timestamp', the 'Custom Timestamp' parameter must
-    be populated.
-
-    - If 'Output Timestamp Format' is set to 'epoch', the result will be an integer
-    representing seconds since the Unix epoch.
+    | Output Timestamp Format | String | No | The desired structure for the resulting
+    calculated timestamp. Defaults to epoch time. |
 
 
     ### Flow Description
 
-    1. **Baseline Identification**: The action determines the starting timestamp based
-    on the 'Input Type' (e.g., fetching the current system time or the creation time
-    of the active alert/case).
+    1. **Parameter Extraction and Validation**: The action extracts the input parameters
+    and validates the custom timestamp and delta formats.
 
-    2. **Parsing**: If a custom timestamp is provided, it is parsed using the specified
-    format or identified as an epoch value.
+    2. **Baseline Determination**: It determines the original baseline timestamp based
+    on the selected `Input Type`.
 
-    3. **Delta Calculation**: The action iterates through the 'Timestamp Delta' list,
-    applying each offset (addition or subtraction) to the baseline time using the
-    `arrow` library.
+    3. **Delta Calculation**: For each provided time delta, the action calculates
+    the shifted timestamp (forward or backward in time).
 
-    4. **Formatting**: The original baseline and all calculated offsets are formatted
-    according to the 'Output Timestamp Format'.
-
-    5. **Output**: The results are returned as a JSON object containing the 'original_timestamp'
-    and a dictionary of 'calculated_timestamps'.
+    4. **Formatting and Output**: The original and calculated timestamps are formatted
+    according to the `Output Timestamp Format` and returned as a JSON result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -69,8 +96,18 @@ Calculate Timestamp:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs local time calculations using the `arrow` library. It does
+      not make any external API calls to fetch data, nor does it mutate any external
+      systems. It also does not interact with internal SecOps data structures like
+      entities, insights, or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from external or internal sources, so it is not
+      an enrichment action. It does not perform any mitigation or resolution tasks,
+      so it is not a remediation action. It is a utility action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -86,34 +123,61 @@ Calculate Timestamp:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or interact with `target_entities`. It operates
+      solely on the provided input parameters and context times (like alert or case
+      creation time).
 Convert Time Format:
-  ai_description: "### General Description\nThis action converts a datetime value\
-    \ from one format to another using the `arrow` library. It is a utility function\
-    \ designed to normalize time data within a playbook, allowing for format conversion,\
-    \ timezone adjustments, and time shifting (adding or subtracting seconds).\n\n\
-    ### Parameters Description\n| Parameter | Type | Mandatory | Description |\n|\
-    \ :--- | :--- | :--- | :--- |\n| Input | string | Yes | The input datetime value\
-    \ to be converted. If left empty, the current time is used. Supports epoch timestamps\
-    \ (10 or 13 digits). |\n| From Format | string | Yes | The `strftime` format of\
-    \ the input string (e.g., `%Y-%m-%d %H:%M:%S`). Special handling is included for\
-    \ 'UTC' or 'GMT' suffixes. |\n| To Format | string | Yes | The desired output\
-    \ format using Arrow tokens (e.g., `YYYY/MM/DD`). |\n| Time Delta In Seconds |\
-    \ string | Yes | A shift value in seconds to move the time forward (positive)\
-    \ or backward (negative). Default is 0. |\n| Timezone | string | No | The target\
-    \ timezone for the output (e.g., 'UTC', 'US/Eastern'). |\n\n### Additional Notes\n\
-    - If the `Input` parameter is a 10-digit or 13-digit number, the action treats\
-    \ it as a Unix timestamp (seconds or milliseconds respectively) regardless of\
-    \ the `From Format` provided.\n- The action handles 'UTC' and 'GMT' offsets directly\
-    \ if they are appended to the `From Format` string.\n\n### Flow Description\n\
-    1. **Parameter Extraction**: Retrieves the input string, source format, target\
-    \ format, time delta, and timezone from the action parameters.\n2. **Time Parsing**:\
-    \ \n    - If no input is provided, it defaults to the current time.\n    - If\
-    \ the input is numeric, it parses it as a Unix timestamp.\n    - Otherwise, it\
-    \ attempts to parse the string using the provided `From Format`.\n3. **Time Manipulation**:\
-    \ Applies the `Time Delta In Seconds` to shift the time and converts the object\
-    \ to the specified `Timezone` if provided.\n4. **Formatting**: Converts the resulting\
-    \ datetime object into the string format defined by `To Format`.\n5. **Output**:\
-    \ Returns the formatted string as the action result."
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a utility function for datetime conversion. It does not interact
+      with external systems, IOCs, assets, identities, or tickets, and therefore does
+      not match any of the specific action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description Converts a datetime value from one format to another.
+    It parses an input string or timestamp, optionally shifts the time by a specified
+    delta, converts it to a target timezone, and outputs the formatted string. ###
+    Parameters * **Input** (String, Mandatory): The input datetime value to be converted.
+    * **From Format** (String, Mandatory): The datetime format of the input string.
+    * **To Format** (String, Mandatory): The desired output time format. * **Time
+    Delta In Seconds** (String, Mandatory): Shift parameter to change the output time
+    to the future (positive) or past (negative) in seconds. Default is 0. * **Timezone**
+    (String, Optional): The target timezone for the output. ### Flow 1. Reads the
+    input datetime string and format parameters. 2. Parses the input string into a
+    datetime object. 3. Applies the specified time delta in seconds. 4. Converts the
+    datetime object to the specified timezone. 5. Formats the resulting datetime object
+    and returns it.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -124,8 +188,17 @@ Convert Time Format:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs local string and datetime manipulation using the Arrow library.
+      It does not make any external API calls to fetch or mutate data, nor does it
+      interact with internal SOAR entities, alerts, or cases.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from external or internal sources, so it is not
+      an enrichment action. It does not perform any mitigation or resolution tasks,
+      so it is not a remediation action. It is a utility function.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -141,37 +214,92 @@ Convert Time Format:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over siemplify.target_entities. It operates
+      solely on the provided input parameters.
 Create Thumbnail:
-  ai_description: "### General Description\nThe **Create Thumbnail** action is a utility\
-    \ function designed to generate a resized version (thumbnail) of an image provided\
-    \ in Base64 format. This action is primarily used for data transformation within\
-    \ a playbook, allowing users to standardize image sizes for reporting or display\
-    \ purposes without interacting with external APIs.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | **Base64 Image** | String | No | The Base64 encoded string of the image to be\
-    \ resized. This parameter is used if the image is provided directly rather than\
-    \ through a JSON structure. |\n| **Thumbnail Size** | String | Yes | A comma-separated\
-    \ string representing the target width and height in pixels (e.g., \"250,250\"\
-    ). |\n| **Input JSON** | String | No | A JSON-formatted string (typically an array\
-    \ of objects) containing image data. If provided, the action will iterate through\
-    \ the JSON to find images. |\n| **Image Key Path** | String | No | A dot-notation\
-    \ path (e.g., \"data.content.image\") used to locate the Base64 image string within\
-    \ the objects provided in the `Input JSON`. |\n\n### Additional Notes\n- The action\
-    \ requires either the **Base64 Image** or the **Input JSON** parameter to be populated\
-    \ to function correctly.\n- The output thumbnail is always returned in PNG format,\
-    \ encoded as a Base64 string.\n- This action does not interact with the Google\
-    \ SecOps entity model directly; it processes data passed through parameters.\n\
-    \n### Flow Description\n1. **Initialization**: The action extracts the target\
-    \ dimensions from the `Thumbnail Size` parameter and identifies the source of\
-    \ the image data.\n2. **Data Extraction**: \n    - If `Input JSON` is provided,\
-    \ the action parses the JSON and uses the `Image Key Path` to recursively find\
-    \ the Base64 image strings for each entry.\n    - If `Input JSON` is not provided,\
-    \ it uses the single string from the `Base64 Image` parameter.\n3. **Image Processing**:\
-    \ For each identified image, the action decodes the Base64 string, utilizes the\
-    \ PIL (Pillow) library to resize the image to the specified dimensions, and saves\
-    \ the result as a PNG.\n4. **Encoding**: The resized PNG image is re-encoded into\
-    \ a Base64 string.\n5. **Result Generation**: The action compiles the processed\
-    \ thumbnails into a JSON result object and completes the execution."
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a local utility for resizing images. It does not interact with
+      external systems, modify alerts, manage tickets, or perform any security-specific
+      outcomes defined in the categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    Creates a Base64-encoded thumbnail of an image. It processes either a direct Base64
+    image string or extracts it from a provided JSON object using a specified key
+    path, resizes the image to the requested dimensions using the Python Imaging Library
+    (PIL), and returns the new Base64 string as a JSON result.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Base64 Image | String | No | The Base64 string of the original image. |
+
+    | Thumbnail Size | String | Yes | The desired dimensions of the thumbnail in pixels,
+    formatted as a comma-separated string (e.g., "250,250" for X, Y). |
+
+    | Input JSON | String | No | A JSON string containing image data. If provided,
+    the action will process this instead of the `Base64 Image` parameter. |
+
+    | Image Key Path | String | No | The dot-separated key path to locate the Base64
+    image string within the `Input JSON`. |
+
+
+    ### Additional Notes
+
+    Either `Base64 Image` or `Input JSON` (along with `Image Key Path`) must be provided
+    for the action to successfully process an image.
+
+
+    ### Flow Description
+
+    1. Extracts the input parameters.
+
+    2. Checks if `Input JSON` is provided. If so, parses the JSON and extracts the
+    Base64 image string using the `Image Key Path`.
+
+    3. If `Input JSON` is not provided, uses the `Base64 Image` parameter directly.
+
+    4. Decodes the Base64 string, resizes the image using the specified `Thumbnail
+    Size`, and re-encodes it to Base64.
+
+    5. Outputs the resulting Base64 thumbnail string as a JSON result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -182,8 +310,17 @@ Create Thumbnail:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action processes a Base64 string locally to resize an image. It does not
+      make any external API calls to fetch or mutate data, nor does it modify internal
+      SecOps data such as entities, insights, or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a local utility function for image processing. It does not fetch
+      data from external sources (not Enrichment) and does not perform any containment
+      or mitigation actions (not Remediation).
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -199,53 +336,81 @@ Create Thumbnail:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with the SecOps entity object model or iterate
+      over `siemplify.target_entities`. It processes raw strings or JSON inputs.
 Defang Text:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a local utility function that modifies a string (defanging URLs,
+      IPs, and emails). It does not interact with external systems, modify alerts,
+      enrich IOCs, or perform any of the specific security product outcomes listed.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    This action defangs a provided text string by modifying potentially dangerous
-    indicators such as URLs, IP addresses, and email addresses. Defanging is a security
-    practice used to prevent accidental clicking or automatic resolution of malicious
-    links by rendering them non-functional while remaining human-readable.
+    Defangs input text by modifying URLs, IP addresses, and email addresses to prevent
+    accidental execution or linking. It replaces "http" with "hxxp", dots with "[.]"
+    in IPs, and "@" with "[at]" in emails. This is a utility action that performs
+    local string manipulation and returns the safe, defanged text.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Input | string | No | The raw text string that needs to be defanged. If the
-    input is empty or not provided, the action will return an empty string. |
+    | Input | String | False | The raw text that needs to be defanged. If left empty,
+    the action will simply return an empty string in the results. |
 
 
     ### Flow Description
 
-    1. **Extraction**: The action retrieves the `Input` string from the action parameters.
+    1. Extracts the `Input` text parameter.
 
-    2. **Validation**: If the input text is empty, the action sets the output message
-    to "Input text is empty" and returns an empty result.
+    2. Validates if the input is empty; if so, immediately returns an empty result.
 
-    3. **URL Defanging**: Identifies HTTP/HTTPS URLs and replaces `http` with `hxxp`
-    and replaces dots in the domain with `[.]` (e.g., `http://example.com` becomes
-    `hxxp://example[.]com`).
+    3. Applies regular expressions to defang HTTP/HTTPS URLs (e.g., replacing 'http'
+    with 'hxxp' and '.' with '[.]').
 
-    4. **IP Defanging**: Identifies IPv4 addresses and replaces the dots with `[.]`
-    (e.g., `1.1.1.1` becomes `1[.]1[.]1[.]1`).
+    4. Applies regular expressions to defang IPv4 addresses (e.g., replacing '.' with
+    '[.]').
 
-    5. **Email Defanging**: Identifies email addresses and replaces the `@` symbol
-    with `[at]` and dots in the domain with `[.]` (e.g., `user@example.com` becomes
-    `user[at]example[.]com`).
+    5. Applies regular expressions to defang email addresses (e.g., replacing '@'
+    with '[at]' and '.' with '[.]').
 
-    6. **Result**: The final modified string is returned in the `converted_text` JSON
-    result field.
-
-
-    ### Additional Notes
-
-    This is a utility action that performs local text transformation. It does not
-    interact with external APIs, does not require network connectivity, and does not
-    modify any internal SOAR objects like entities or case comments.
+    6. Outputs the defanged text in the JSON results under the `converted_text` key.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -256,8 +421,19 @@ Defang Text:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs local string manipulation using regular expressions. It
+      does not make any external API calls to fetch data, nor does it mutate any external
+      systems. It also does not interact with Google SecOps internal data structures
+      like entities, alerts, insights, or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from any external or internal source, so it cannot
+      be classified as an enrichment action. It does not perform any containment,
+      blocking, or identity disabling, so it is not a remediation action. It is purely
+      a utility function.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -273,58 +449,89 @@ Defang Text:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action processes a single input string provided via parameters and does
+      not access or iterate over `siemplify.target_entities`. Therefore, it does not
+      run on any entities and all entity-related filters are false.
 Detect Hash Type:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a local utility that identifies the format of a hash string. It
+      does not return threat intelligence, reputation, or prevalence (so it is not
+      Enrich IOC). It does not interact with external systems, tickets, or endpoints.
+      Therefore, it does not match any of the predefined action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    The **Detect Hash Type** action identifies the most likely hash algorithm (MD5,
-    SHA-1, SHA-256, or SHA-512) for provided strings or `FILEHASH` entities. It uses
-    the `hashid` library to perform local identification without external API calls.
-    This utility is primarily used to categorize hash values for downstream logic
-    in playbooks.
+    Detects the most likely hash type (e.g., SHA-256, MD5, SHA-1, SHA-512) for provided
+    hashes or `FILEHASH` entities using local computation. The action evaluates the
+    format of the hash and updates the entity's properties with the identified type.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Hashes** | String | No | A comma-separated list of hash strings to identify.
-    If provided, the action will identify the types for these specific strings in
-    addition to any entities in the case scope. |
+    | Hashes | String | No | One or more comma-separated hashes to identify. If provided,
+    the action will evaluate these hashes in addition to any target entities. |
 
 
     ### Flow Description
 
-    1. **Parameter Parsing**: The action retrieves the `Hashes` parameter and splits
-    it into individual strings if provided.
+    1. Reads the `Hashes` parameter and splits it into a list of individual hashes.
 
-    2. **Manual Identification**: For each string in the `Hashes` parameter, the action
-    uses the `hashid` library to detect the algorithm. It checks if the detected type
-    is within the supported set (MD5, SHA-1, SHA-256, SHA-512).
+    2. Iterates over the provided hashes, identifies their type using a local library,
+    and appends the result to a list.
 
-    3. **Entity Filtering**: The action iterates through all entities in the current
-    case scope, specifically targeting those with the type `FILEHASH`.
+    3. Iterates over the target entities, specifically filtering for `FILEHASH` entities.
 
-    4. **Entity Identification**: For each `FILEHASH` entity, the action identifies
-    the hash type using the same logic as the manual identification.
+    4. Identifies the hash type for each `FILEHASH` entity's identifier.
 
-    5. **Internal Enrichment**: The action updates the `additional_properties` of
-    the `FILEHASH` entities with a new key `HashType` containing the detected algorithm
-    name.
+    5. Updates the entity's `additional_properties` with the detected hash type and
+    prepares it for an update.
 
-    6. **Result Reporting**: The action compiles all identified hash types (from both
-    parameters and entities) into a JSON result and provides a summary message.
+    6. Updates the modified entities within Google SecOps.
+
+    7. Returns a JSON result containing the evaluated hashes and their detected types.
 
 
     ### Additional Notes
 
-    - If a hash cannot be identified or does not match the supported types, the `HashType`
-    is set to `UNDETECTED`.
-
-    - This action is entirely local and does not require network connectivity to external
-    threat intelligence services.
+    Either the `Hashes` parameter must be provided, or the action must be run on `FILEHASH`
+    entities for the action to produce meaningful results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -335,10 +542,22 @@ Detect Hash Type:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      The action updates the 'additional_properties' attribute of FILEHASH entities
-      to include the detected hash algorithm type.
+      Updates the `additional_properties` of FILEHASH entities with their detected
+      hash type.
+    reasoning: >-
+      The action uses a local Python library (`hashid`) to compute the hash type based
+      on string format heuristics. It does not make any external API calls, so it
+      does not fetch data or mutate external data. It does, however, update the `additional_properties`
+      of `FILEHASH` entities and calls `siemplify.update_entities`, meaning it mutates
+      internal data and updates entities.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from an external or internal source (it computes
+      it locally), so it fails the primary criteria for an Enrichment action. It also
+      does not perform any containment, blocking, or identity mitigation, so it is
+      not a Remediation action.
+    remediation: false
   entity_usage:
     entity_types:
     - FILEHASH
@@ -355,54 +574,85 @@ Detect Hash Type:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type == "FILEHASH":`. Therefore, it targets FILEHASH entities
+      and filters them by their entity_type.
 Detect IP Type:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      This action is a local utility script that uses regular expressions to determine
+      if an IP address is IPv4 or IPv6. It does not interact with external systems,
+      fetch threat intelligence, or perform any remediation. Therefore, it does not
+      match any of the expected outcomes for the defined product categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    The **Detect IP Type** action is a utility designed to identify whether an IP
-    address is in IPv4 or IPv6 format. It processes both manually provided IP addresses
-    and existing IP Address entities within a case, enriching the entities with the
-    detected type.
+    Evaluates provided IP addresses and target entities to determine whether they
+    are IPv4 or IPv6 addresses using regular expressions. It updates the additional
+    properties of ADDRESS entities with the detected IP type and outputs a JSON result
+    with the findings.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | IP Addresses | String | No | A comma-separated list of IP addresses to evaluate.
-    If provided, these addresses are processed alongside case entities. |
-
-
-    ### Additional Notes
-
-    - This action uses local regular expression matching and does not require connectivity
-    to external threat intelligence services.
-
-    - If an address does not conform to standard IPv4 or IPv6 formats, it is categorized
-    as 'UNDETECTED'.
+    | IP Addresses | String | False | A comma-separated list of IP addresses to evaluate.
+    If provided, the action will determine the IP type for each address in the list
+    alongside the target entities. |
 
 
     ### Flow Description
 
-    1. **Input Retrieval**: The action fetches the 'IP Addresses' parameter and splits
-    it into a list if it contains values.
+    1. Reads the `IP Addresses` parameter and splits it into a list if provided.
 
-    2. **Manual IP Processing**: Each IP address from the parameter is checked against
-    IPv4 and IPv6 regex patterns. The results are stored for the final output.
+    2. Iterates through the provided IP addresses, matching them against IPv4 and
+    IPv6 regex patterns, and records the results.
 
-    3. **Entity Filtering**: The action iterates through the case's `target_entities`
-    and identifies those with the type `ADDRESS`.
+    3. Iterates through the case's target entities, filtering specifically for `ADDRESS`
+    entities.
 
-    4. **Type Detection**: For each identified entity, the action applies regex patterns
-    to its identifier to determine the IP version.
+    4. Evaluates each entity's identifier against the regex patterns.
 
-    5. **Internal Enrichment**: The detected type is added to the entity's `additional_properties`
-    dictionary under the key `IPType`.
+    5. Updates the `additional_properties` of the matched entities with the `IPType`
+    (IPV4, IPV6, or UNDETECTED).
 
-    6. **State Update**: The action updates the modified entities within Google SecOps
-    and returns a comprehensive JSON result containing all detected types.
+    6. Returns a JSON result containing the evaluated IP addresses and their detected
+    types.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -413,11 +663,22 @@ Detect IP Type:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: >-
-      The action updates the 'additional_properties' attribute of ADDRESS entities
-      to include the detected IP type (IPv4 or IPv6) and persists these changes in
-      Google SecOps using the update_entities method.
+      Updates the additional_properties of ADDRESS entities with their detected IP
+      type (IPv4, IPv6, or UNDETECTED).
+    reasoning: >-
+      The action uses local regular expressions to evaluate IP addresses. It does
+      not make any external API calls (fetches_data=false, can_mutate_external_data=false).
+      It modifies internal data by updating the additional_properties of ADDRESS entities
+      and calling siemplify.update_entities() (can_mutate_internal_data=true, can_update_entities=true).
+      It does not create insights, modify alert data, or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from an external or internal source; it only
+      performs local regex evaluation. Therefore, it does not qualify as an Enrichment
+      action. It also does not perform any remediation tasks like blocking IPs or
+      disabling users, so it is not a Remediation action.
+    remediation: false
   entity_usage:
     entity_types:
     - ADDRESS
@@ -434,58 +695,83 @@ Detect IP Type:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters them
+      using `if entity.entity_type == "ADDRESS":`. Therefore, it runs on ADDRESS entities
+      and filters by entity_type.
 Extract IOCs:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a utility function that extracts IOCs from a string. It does not
+      interact with external security products, ticketing systems, or identity providers.
+      It does not match any of the specific product action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    The **Extract IOCs** action is a utility designed to parse a provided text string
-    and identify common Indicators of Compromise (IOCs). It specifically identifies
-    and extracts URLs, domains, IPv4/IPv6 addresses, and email addresses from unstructured
-    text. This action is typically used to process data from sources like email bodies,
-    log entries, or threat reports to isolate actionable security identifiers.
+    The Extract IOCs action is designed to parse a given text string and extract various
+    Indicators of Compromise (IOCs) such as domains, IP addresses (IPv4 and IPv6),
+    URLs, and email addresses. It utilizes regular expressions and parsing libraries
+    to accurately identify these elements within the text. The extracted IOCs are
+    then returned as a structured JSON object, making them available for subsequent
+    actions in a playbook.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Input String | String | Yes | The raw text string from which the action will
-    attempt to extract IOCs. |
-
-
-    ### Additional Notes
-
-    - This action performs local parsing using regular expressions and specialized
-    libraries (`URLExtract`, `tld`) and does not interact with external APIs.
-
-    - It includes logic to filter out common false positives in URLs (e.g., specific
-    file extensions like .js, .css, .png) and validates IP addresses to ensure they
-    are syntactically correct.
-
-    - By default, it includes internal/private IP addresses in the extraction results.
+    | Input String | string | True | The text string from which to extract the IOCs.
+    |
 
 
     ### Flow Description
 
-    1. **Input Retrieval**: The action retrieves the `Input String` provided as a
-    parameter.
+    1. Retrieves the `Input String` parameter provided by the user.
 
-    2. **URL Extraction**: Uses the `URLExtract` library to identify potential URLs,
-    cleaning them of noise and validating their structure.
+    2. Uses the `urlextract` library to find URLs within the string.
 
-    3. **Domain Extraction**: For every valid URL identified, the action extracts
-    the First Level Domain (FLD) using the `tld` library.
+    3. Extracts domains from the identified URLs using the `tld` library.
 
-    4. **IP Extraction**: Scans the text for IPv4 and IPv6 patterns, validating them
-    using the `ipaddress` module to ensure they are valid network addresses.
+    4. Uses regular expressions to find IPv4 and IPv6 addresses within the string.
 
-    5. **Email Extraction**: Uses a regular expression to identify and extract email
-    addresses from the text.
+    5. Uses regular expressions to find email addresses within the string.
 
-    6. **Result Compilation**: Aggregates all identified IOCs into a structured JSON
-    object and generates a summary message for the action output.
+    6. Compiles the extracted URLs, domains, IPs, and emails into a JSON object.
+
+    7. Returns the JSON object as the action's result and outputs a summary message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -496,8 +782,18 @@ Extract IOCs:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action processes a local string using regular expressions and parsing libraries.
+      It does not fetch data from external APIs, nor does it mutate any external or
+      internal data. It does not update entities, create insights, modify alert data,
+      or create case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from an external or internal source, nor does
+      it perform any remediation tasks. Therefore, it is neither an enrichment nor
+      a remediation action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -513,116 +809,78 @@ Extract IOCs:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on SecOps entities. It processes a generic input
+      string provided as a parameter. Therefore, the entity types list is empty and
+      no entity filtering is applied.
 IP to Integer:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      This action is a local utility function that converts IP addresses to integers.
+      It does not interact with external systems, enrich IOCs/assets, update alerts,
+      or perform any remediation tasks. Therefore, it does not match any of the defined
+      action outcomes categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    This action is a utility function designed to convert IPv4 addresses into their
-    corresponding integer (long) format. It is primarily used for data normalization
-    or when interacting with systems that require IP addresses in numeric form rather
-    than string format.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | IP Addresses | string | Yes | A comma-separated list of IPv4 addresses (e.g.,
-    "192.168.1.1, 10.0.0.1") to be converted into integers. |
-
-
-    ### Additional Notes
-
-    - This action does not interact with any external APIs or services.
-
-    - It does not process or modify Google SecOps entities; it operates strictly on
-    the provided input parameter string.
-
-    - The conversion uses network byte order (big-endian).
-
-
-    ### Flow Description
-
-    1. **Input Parsing**: The action retrieves the `IP Addresses` parameter and splits
-    the string by commas, removing any leading or trailing whitespace.
-
-    2. **Conversion**: For each IP address in the list, the script uses the `socket`
-    and `struct` libraries to convert the string representation into a 32-bit unsigned
-    integer.
-
-    3. **Result Compilation**: The results are stored in a JSON dictionary mapping
-    the original IP to the integer, and also joined into a comma-separated string
-    for the main result value.
-
-    4. **Output**: The action returns the converted values and provides a summary
-    message in the execution log.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Math Arithmetic:
-  ai_description: >-
-    Performs basic arithmetic operations on two provided numeric arguments. This action
-    is designed to facilitate mathematical calculations within playbooks, supporting
-    addition, subtraction, multiplication, division, and modulo operations.
+    Converts a provided list of IP addresses into their corresponding integer (long)
+    representations. This is a utility action that performs local data transformation
+    without interacting with external services.
 
 
     ### Parameters
 
-    | Parameter | Type | Mandatory | Description |
+    | Parameter Name | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Function | ddl | Yes | The mathematical operation to perform. Options include:
-    Plus (addition), Sub (subtraction), Multi (multiplication), Div (division), and
-    Mod (modulo). |
-
-    | Arg 1 | string | Yes | The first numeric value (integer or float) to be used
-    in the calculation. |
-
-    | Arg 2 | string | Yes | The second numeric value (integer or float) to be used
-    in the calculation. |
+    | IP Addresses | String | Yes | A comma-separated list of IP addresses to be converted
+    into integers. |
 
 
     ### Flow Description
 
-    1. **Input Retrieval**: The action retrieves the selected mathematical function
-    and the two input arguments from the configuration.
+    1. Retrieves the comma-separated list of IP addresses from the action parameters.
 
-    2. **Type Conversion**: It attempts to parse the string inputs for 'Arg 1' and
-    'Arg 2' into numeric types, prioritizing integers and falling back to floats if
-    necessary.
+    2. Iterates through each IP address and converts it to a long integer using standard
+    socket libraries.
 
-    3. **Execution**: The script executes the logic corresponding to the selected
-    function (e.g., adding the numbers if 'Plus' is selected).
+    3. Aggregates the converted integers into a JSON object mapping the original IP
+    to its integer value.
 
-    4. **Completion**: The calculated result is returned as the action's output value,
-    accompanied by a status message describing the operation performed.
+    4. Returns the JSON object and a comma-separated string of the integers as the
+    action's result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -633,8 +891,19 @@ Math Arithmetic:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a local mathematical/string conversion of IP addresses to
+      integers. It does not make any external API calls (fetches_data=false, can_mutate_external_data=false)
+      and does not interact with or modify any internal SecOps data such as entities,
+      alerts, insights, or case comments (can_mutate_internal_data=false).
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from any external or internal source, so it is
+      not an Enrichment action. It does not perform any containment, blocking, or
+      identity disabling, so it is not a Remediation action. It is purely a utility
+      data transformation action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -650,54 +919,83 @@ Math Arithmetic:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Math Functions:
+    reasoning: >-
+      The action does not iterate over or interact with `siemplify.target_entities`.
+      It solely processes a string parameter provided by the user.
+Math Arithmetic:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      This action is a generic utility for performing mathematical calculations. It
+      does not interact with external systems, IOCs, assets, identities, or ticketing
+      systems, and therefore does not match any of the specific security product outcome
+      categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    The **Math Functions** action provides a suite of built-in Python mathematical
-    operations to process numeric data within a playbook. It allows users to perform
-    calculations, formatting, and transformations on a list of numbers provided as
-    a comma-separated string.
+    Performs basic mathematical operations on two provided arguments. This utility
+    action acts as a calculator within a playbook, allowing users to compute sums,
+    differences, products, quotients, or modulos dynamically.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Function** | DDL | Yes | The mathematical operation to execute. Supported
-    options: `Max` (largest item), `Min` (smallest item), `Round` (rounds numbers),
-    `Sort` (sorts numbers), `Sum` (totals the items), `Float` (converts to floating
-    point), `Hex` (converts to hexadecimal), `Int` (converts to integer), `Abs` (absolute
-    value), and `Display` (adds comma separators). |
+    | Function | Dropdown | Yes | The mathematical operation to perform. Available
+    options are Plus, Sub, Multi, Div, and Mod. |
 
-    | **Numbers** | String | Yes | A comma-separated list of numbers (e.g., "13.5,
-    -90, 566") to be processed by the selected function. |
+    | Arg 1 | String (Number) | Yes | The first operand for the calculation. It will
+    be parsed into an integer or float. |
+
+    | Arg 2 | String (Number) | Yes | The second operand for the calculation. It will
+    be parsed into an integer or float. |
 
 
     ### Flow Description
 
-    1. **Input Parsing**: The action retrieves the `Numbers` string and splits it
-    by commas. It attempts to parse each element into a float or integer.
+    1. Retrieves the selected mathematical function and the two arguments from the
+    action parameters.
 
-    2. **Function Execution**: Based on the selected `Function` parameter, the action
-    applies the corresponding Python logic (e.g., `abs()`, `max()`, `sum()`, or string
-    formatting for `Display`).
+    2. Parses the provided arguments into integers or floating-point numbers.
 
-    3. **Result Generation**: The processed numbers are stored in a list. If the `Hex`
-    function is chosen, the action specifically filters for integer-compatible values.
+    3. Executes the selected mathematical operation (Plus, Sub, Multi, Div, or Mod)
+    using the parsed arguments.
 
-    4. **Output**: The action returns the result as a JSON array and sets the script
-    result value to the processed data (or a single value if only one result exists).
-
-
-    ### Additional Notes
-
-    - This action does not interact with SecOps entities; it operates strictly on
-    the provided input parameters.
-
-    - The `Hex` function requires integer inputs to function correctly.
+    4. Returns the calculated result as the action's output value and provides a summary
+    message detailing the equation.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -708,8 +1006,18 @@ Math Functions:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs local mathematical calculations based on input parameters.
+      It does not make any external API calls to fetch or mutate data, nor does it
+      interact with internal SecOps data structures like entities, insights, alerts,
+      or case comments.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a local utility for mathematical operations. It does not fetch
+      data from external or internal sources (not Enrichment) and does not mitigate
+      any security threats (not Remediation).
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -725,13 +1033,172 @@ Math Functions:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Ping:
+    reasoning: >-
+      The action does not interact with or process any entities. It solely relies
+      on the provided input parameters (Arg 1 and Arg 2).
+Math Functions:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      This is a mathematical utility action. It does not interact with external systems,
+      ITSM tools, security controls, or SecOps alerts/entities. Therefore, it does
+      not match any of the predefined action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    Verifies the connectivity and availability of the Functions integration within
-    the Google SecOps environment. This action serves as a basic health check to ensure
-    that the integration is correctly configured and can execute scripts.
+    Performs built-in mathematical operations on a provided list of numbers. This
+    utility action supports various functions including calculating absolute values,
+    converting to floats or integers, formatting with commas, converting to hexadecimal,
+    finding the maximum or minimum, rounding, sorting, and summing. It operates entirely
+    locally within the playbook and does not interact with external APIs or SecOps
+    entities.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Function | Dropdown | Yes | The specific mathematical function to apply. Options
+    include: Max, Min, Round, Sort, Sum, Float, Hex, Int, Abs, Display. |
+
+    | Numbers | String | Yes | A comma-separated list of numbers to process (e.g.,
+    "13.5,-90,566,11.32"). |
+
+
+    ### Flow Description
+
+    1. Retrieves the selected math function and the comma-separated list of numbers
+    from the action parameters.
+
+    2. Parses the input string into a list of integers or floating-point numbers.
+
+    3. Applies the selected mathematical operation to the list (e.g., finding the
+    max/min) or to individual elements (e.g., converting to hex/absolute values).
+
+    4. Returns the calculated result as a JSON object and outputs a summary message
+    to the playbook.
+
+
+    ### Additional Notes
+
+    This is a utility action designed for data manipulation within a playbook. It
+    does not require any external integration configuration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs local mathematical calculations on user-provided input strings.
+      It does not make any external API calls (fetches_data=false, can_mutate_external_data=false).
+      It also does not interact with the SecOps case data, meaning it does not update
+      entities, create insights, modify alerts, or add case comments.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action does not fetch data from any external or internal source, so it is
+      not an Enrichment action. It does not perform any containment, isolation, or
+      identity-based mitigation, so it is not a Remediation action. It is strictly
+      a utility action.
+    remediation: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not reference `siemplify.target_entities` or perform any operations
+      on SecOps entities. It solely processes the 'Numbers' string provided in the
+      parameters.
+Ping:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity check (Ping) and does not match any of the
+      specific security product outcomes such as enriching IOCs, updating alerts,
+      or containing hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    Checks connectivity for the Functions integration. It simply returns a success
+    message indicating that the integration is connected and functioning properly.
 
 
     ### Parameters Description
@@ -739,18 +1206,11 @@ Ping:
     There are no parameters for this action.
 
 
-    ### Additional Notes
-
-    This action is a standard utility used primarily for troubleshooting or initial
-    setup verification. It does not interact with external APIs or modify any data.
-
-
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Siemplify SDK context.
+    1. Initializes the Siemplify action.
 
-    2. **Execution**: The action immediately concludes by returning a success message
-    ('Siemplify is connected') to the Google SecOps platform.
+    2. Returns a successful execution message 'Siemplify is connected'.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -761,8 +1221,15 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action simply returns a success message to verify connectivity. It does
+      not fetch data, mutate external systems, or modify internal SecOps data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named 'Ping' and does not fetch data, so it cannot be an enrichment
+      action. It does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -778,53 +1245,78 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or interact with any entities.
 Run JSONPath Query:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      This action is a generic utility for parsing JSON strings using JSONPath expressions.
+      It does not interact with external security products, ITSM tools, or internal
+      SecOps alert/entity management features. Therefore, it does not match any of
+      the specific action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    The **Run JSONPath Query** action is a utility designed to parse a JSON string
-    and extract specific values based on a provided JSONPath expression. It leverages
-    the `jsonpath-ng` library to navigate complex JSON structures, making it highly
-    useful for data transformation and extraction within playbooks.
+    Executes a JSONPath query against a provided JSON string to extract specific values.
+    This is a utility action used to parse and extract data from complex JSON structures
+    within a playbook, returning the matched elements as a structured JSON result.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Json** | Code/String | Yes | The raw JSON string that you want to query. |
+    | Json | Code | Yes | The JSON string to be queried and parsed. |
 
-    | **JSONPath Expression** | String | Yes | The JSONPath expression used to locate
-    and extract data from the input JSON. |
+    | JSONPath Expression | String | Yes | The JSONPath expression used to locate
+    and extract the desired values from the JSON input. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the input JSON string and the
-    JSONPath expression from the action parameters.
+    1. Retrieves the JSON string and JSONPath expression from the action parameters.
 
-    2. **JSON Parsing**: The input string is converted into a Python dictionary or
-    list structure.
+    2. Parses the JSON string into a structured data format.
 
-    3. **Expression Evaluation**: The JSONPath expression is parsed and applied against
-    the JSON data.
+    3. Evaluates the JSONPath expression against the parsed JSON data.
 
-    4. **Result Compilation**: All matching values found by the expression are collected
-    into a list under the key `matches`.
+    4. Extracts all matching values and compiles them into a list.
 
-    5. **Output**: The resulting JSON object containing the matches is returned to
-    the SOAR platform for use in subsequent playbook steps.
-
-
-    ### Additional Notes
-
-    - This action is a pure data processing function and does not interact with external
-    APIs or Google SecOps entities.
-
-    - If the input JSON is malformed or the JSONPath expression is invalid, the action
-    will fail with an error.
+    5. Returns the extracted matches as a JSON result for use in subsequent playbook
+    steps.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -835,8 +1327,18 @@ Run JSONPath Query:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action processes a provided JSON string locally using the jsonpath_ng library.
+      It does not make any external API calls to fetch or mutate data. It also does
+      not interact with SecOps entities, alerts, insights, or case comments. It solely
+      outputs a JSON result to the playbook.
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from an external or internal source, nor does
+      it perform any remediation tasks. It is a local utility function for parsing
+      JSON data. Therefore, it is neither an enrichment nor a remediation action.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -852,15 +1354,53 @@ Run JSONPath Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process any entities. It operates entirely
+      on the string inputs provided in the action parameters.
 SanitizeHTML:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a utility script that sanitizes HTML text. It does not interact
+      with external security products, ticketing systems, or internal SecOps alerts/entities.
+      Therefore, it does not match any of the specific product action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    The **SanitizeHTML** action is a utility designed to clean and sanitize HTML fragments.
-    It uses the `bleach` library to parse HTML according to the HTML5 standard, stripping
-    or escaping tags, attributes, and CSS styles that are not explicitly permitted.
-    This is primarily used to prevent Cross-Site Scripting (XSS) or to clean up malformed
-    HTML data retrieved from external sources.
+    Sanitizes a given HTML fragment by parsing it according to the HTML5 parsing algorithm
+    and removing disallowed tags, attributes, or styles. It uses the Bleach library
+    to ensure the output is safe, properly formatted, and free of potentially malicious
+    or unclosed tags.
 
 
     ### Parameters Description
@@ -869,45 +1409,33 @@ SanitizeHTML:
 
     | :--- | :--- | :--- | :--- |
 
-    | **Input HTML** | String | Yes | The HTML fragment that needs to be sanitized.
+    | **Tags** | String | No | Comma-separated list of allowed HTML tags (e.g., `b,i,strong`).
+    Tags not in this list will be escaped or stripped. |
+
+    | **Attributes** | String | No | Comma-separated list of allowed attributes. |
+
+    | **Styles** | String | No | Comma-separated list of allowed CSS styles (e.g.,
+    `color, background-color`) if the style attribute is permitted. |
+
+    | **Allow All Attributes** | Boolean | No | If set to true, allows all attributes
+    on the allowed tags, overriding the `Attributes` parameter. |
+
+    | **Input HTML** | String | Yes | The raw HTML fragment that needs to be sanitized.
     |
-
-    | **Tags** | String | No | A comma-separated list of allowed HTML tags. Tags not
-    in this list will be escaped or stripped. Default includes common safe tags like
-    `a`, `p`, `div`, etc. |
-
-    | **Attributes** | String | No | A comma-separated list of allowed HTML attributes.
-    |
-
-    | **Styles** | String | No | A comma-separated list of allowed CSS properties
-    (e.g., `color`, `background-color`). |
-
-    | **Allow All Attributes** | Boolean | No | If set to `True`, the action will
-    allow all attributes on the permitted tags. |
-
-
-    ### Additional Notes
-
-    - If no `Tags` are provided, the action uses a default set of safe tags defined
-    in the integration.
-
-    - The action logic also checks for `Allow All Tags` and `Allow All Styles` parameters
-    in the code, though they may not be exposed in all configuration versions.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the input HTML and the configuration
-    for allowed tags, attributes, and styles from the action parameters.
+    1. Extracts the input HTML and configuration parameters (allowed tags, attributes,
+    styles).
 
-    2. **Sanitization Configuration**: It parses the comma-separated strings into
-    lists and initializes a CSS sanitizer if specific styles are allowed.
+    2. Configures the Bleach sanitizer based on the provided allowlists and boolean
+    flags.
 
-    3. **Processing**: It applies the `bleach.clean` method to the input HTML, filtering
-    it against the defined allow-lists for tags, attributes, and CSS properties.
+    3. Processes the input HTML to strip or escape disallowed elements and fix misnested
+    tags.
 
-    4. **Completion**: The sanitized HTML string is returned as the action's result
-    value, and a success message is logged.
+    4. Returns the sanitized HTML string as the action result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -918,8 +1446,18 @@ SanitizeHTML:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action processes a provided HTML string locally using the Bleach library.
+      It does not make any external API calls to fetch or mutate data, nor does it
+      interact with internal SecOps entities, alerts, or cases.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a local utility function for string manipulation (HTML sanitization).
+      It does not fetch data from external sources (not Enrichment) and does not perform
+      any containment or mitigation actions on endpoints, identities, or networks
+      (not Remediation).
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -935,66 +1473,96 @@ SanitizeHTML:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over `siemplify.target_entities`. It
+      solely operates on the 'Input HTML' string parameter provided in the action
+      configuration.
 String Functions:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a utility for string manipulation. It does not interact with external
+      systems, IOCs, assets, identities, or tickets, and therefore does not match
+      any of the specific action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    This action provides a suite of Python-based string manipulation utilities designed
-    to transform, analyze, or format strings within a playbook. It allows users to
-    perform common operations like case conversion, regex matching, and base64 encoding/decoding
-    on a provided input string without requiring custom script blocks.
+    Performs various basic Pythonic string manipulation functions on a provided input
+    string. Supported operations include converting case (Lower, Upper, Title), stripping
+    whitespace, counting occurrences, replacing substrings, regex operations, base64
+    encoding/decoding, and JSON serialization. This is a utility action that operates
+    locally without interacting with external APIs or SecOps entities.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Input | String | Yes | The source string to be processed. |
+    | **Input** | String | Yes | The target string to be manipulated. |
 
-    | Function | DDL | Yes | The specific string operation to apply. Options include:
-    Lower, Upper, Count, Find, IsAlpha, IsDigit, Replace, Strip, Title, Regex Replace,
-    JSON Serialize, Regex, Split, DecodeBase64, EncodeBase64, and RemoveNewLines.
-    |
+    | **Function** | Drop-down | Yes | The specific string operation to perform (e.g.,
+    Lower, Upper, Replace, Split, Regex). |
 
-    | Param 1 | String | No | The first contextual argument required by some functions
-    (e.g., the substring to count, the regex pattern, or the delimiter for splitting).
-    |
+    | **Param 1** | String | No | The primary argument for functions that require
+    it (e.g., the substring to find/replace, regex pattern, or delimiter). |
 
-    | Param 2 | String | No | The second contextual argument required by some functions
-    (e.g., the replacement string for 'Replace' or the join character for 'Regex').
-    |
+    | **Param 2** | String | No | The secondary argument for functions that require
+    it (e.g., the replacement string or join operator). |
 
 
     ### Additional Notes
 
-    - The placeholder `_SPACE_` can be used in `Param 1` and `Param 2` for the 'Replace'
-    and 'Regex Replace' functions; it will be automatically converted to a literal
-    space character before processing.
+    * For the `Replace` and `Regex Replace` functions, the placeholder `_SPACE_` can
+    be used in `Param 1` and `Param 2` to represent a standard space character.
 
-    - For 'DecodeBase64' and 'EncodeBase64', `Param 1` defaults to 'UTF-8' if not
-    specified or if it doesn't match 'UTF-8' or 'ASCII'.
+    * If `Param 1` is not provided for the `Split` function, it defaults to splitting
+    by a comma `,`.
 
-    - The 'Split' function will default to a comma (`,`) delimiter if `Param 1` is
-    not provided.
+    * For Base64 encoding/decoding, `Param 1` specifies the encoding type (defaults
+    to `UTF-8` if not provided or invalid).
 
 
     ### Flow Description
 
-    1. **Parameter Retrieval**: The action fetches the `Input` string, the selected
-    `Function`, and any optional arguments (`Param 1`, `Param 2`).
+    1. Retrieves the `Input` string and the selected `Function` from the action parameters.
 
-    2. **Placeholder Normalization**: For replacement-based functions, it substitutes
-    the `_SPACE_` placeholder with actual space characters.
+    2. Evaluates the selected function and applies the corresponding Python string
+    method or regex operation using `Param 1` and `Param 2` if applicable.
 
-    3. **Logic Execution**: The action executes the specific Python string method
-    or library function (e.g., `re`, `base64`, `json`) corresponding to the user's
-    selection.
-
-    4. **Result Output**: The transformed string or boolean result is returned to
-    the SOAR platform. For the 'Split' function, the resulting list is also attached
-    as a JSON result.
+    3. Returns the manipulated string as the action result. If the `Split` function
+    is used, it also attaches the resulting list as a JSON result to the playbook.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1005,8 +1573,17 @@ String Functions:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs local string manipulation using Python built-in methods
+      and the `re` module. It does not make any external API calls, nor does it interact
+      with Google SecOps entities, alerts, or case data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a local utility script that manipulates strings. It does not fetch
+      data from external or internal sources (not enrichment) and does not mitigate
+      threats (not remediation).
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1022,96 +1599,91 @@ String Functions:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not reference or process `siemplify.target_entities`. It operates
+      solely on the provided input string parameter.
 Time Duration Calculator:
-  ai_description: "### General Description\nThe **Time Duration Calculator** is a\
-    \ utility action designed to calculate the precise time difference between two\
-    \ date-time inputs. It supports various input formats and can dynamically use\
-    \ the current system time as one of the comparison points. The action outputs\
-    \ the duration in a human-readable format (years, days, hours, minutes, seconds)\
-    \ and provides the total duration in seconds as the primary result value.\n\n\
-    ### Parameters Description\n| Parameter Name | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| Input DateTime 1 | String | Yes | The first\
-    \ datetime value to compare. Supports specific date strings or the keyword \"\
-    now\" for the current UTC time. |\n| Input DateTime 1 Format | String | Yes |\
-    \ The `strftime` format used to parse Input DateTime 1 (e.g., `%Y-%m-%dT%H:%M:%S%z`).\
-    \ |\n| Input DateTime 2 | String | Yes | The second datetime value to compare.\
-    \ Supports specific date strings or the keyword \"now\" for the current UTC time.\
-    \ |\n| Input DateTime 2 Format | String | Yes | The `strftime` format used to\
-    \ parse Input DateTime 2 (e.g., `%Y-%m-%dT%H:%M:%S%z`). |\n\n### Additional Notes\n\
-    - If a provided datetime string does not include timezone information, the action\
-    \ automatically localizes it to UTC to ensure accurate calculations.\n- The action\
-    \ is purely mathematical and does not interact with external APIs or modify SecOps\
-    \ entities.\n\n### Flow Description\n1. **Parameter Extraction:** The action retrieves\
-    \ the two input datetime strings and their corresponding format strings from the\
-    \ environment.\n2. **Datetime Parsing:** \n    - If an input is set to \"now\"\
-    , the current UTC time is captured.\n    - Otherwise, the string is parsed using\
-    \ the provided `strftime` format.\n    - Timezone awareness is checked; if the\
-    \ object is naive, it is localized to UTC.\n3. **Duration Calculation:** The action\
-    \ calculates the delta between the two datetime objects.\n4. **Data Breakdown:**\
-    \ The total delta is decomposed into years, days, hours, minutes, and seconds.\n\
-    5. **Output Generation:** The action populates a JSON result with the breakdown\
-    \ and sets the total seconds as the main script result."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-XMLtoJson:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a local utility script that calculates the difference between
+      two timestamps. It does not interact with external systems, enrich IOCs/assets,
+      update alerts/tickets, or perform any containment/remediation tasks. Therefore,
+      it does not match any of the specified action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
   ai_description: >-
     ### General Description
 
-    The **XMLtoJson** action is a utility function designed to convert XML-formatted
-    strings into JSON objects. This is particularly useful for parsing responses from
-    legacy systems or APIs that return data in XML format, allowing subsequent playbook
-    steps to easily access the data using JSON path notation.
+    The Time Duration Calculator action calculates the time elapsed or the difference
+    between two specified date-time values. It performs local mathematical operations
+    on the provided timestamps and outputs the duration broken down into years, days,
+    hours, minutes, and seconds. It does not interact with external APIs or modify
+    internal case data.
 
 
     ### Parameters Description
 
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **xml** | String | Yes | The XML formatted string that needs to be converted
-    to JSON. |
+    | Input DateTime 1 | String | Yes | The first input datetime value. Supports either
+    a custom strftime format or the keyword "now" for the current time. |
+
+    | Input DateTime 1 Format | String | Yes | The strftime format of the first DateTime
+    string (e.g., "%Y-%m-%dT%H:%M:%S%z"). |
+
+    | Input DateTime 2 | String | Yes | The second input datetime value. Supports
+    either a custom strftime format or the keyword "now" for the current time. |
+
+    | Input DateTime 2 Format | String | Yes | The strftime format of the second DateTime
+    string. |
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the XML string provided in the
-    `xml` input parameter.
+    1. Extracts the two input datetime strings and their respective format parameters.
 
-    2. **Parsing**: It utilizes the `xmltodict` library to parse the XML string into
-    a structured Python dictionary.
+    2. Parses the inputs into timezone-aware datetime objects. If "now" is provided,
+    it uses the current UTC time. If a parsed time is not localized, it corrects it
+    to UTC.
 
-    3. **Result Attachment**: The resulting dictionary is added to the action's execution
-    results as a JSON object via `add_result_json`.
+    3. Calculates the total duration between the two datetime objects.
 
-    4. **Completion**: The action concludes by returning the JSON data and a success
-    status. If the XML is malformed and cannot be parsed, the action flags an execution
-    failure and returns the error message.
+    4. Breaks down the duration into specific time units (years, days, hours, minutes,
+    seconds).
+
+    5. Returns the calculated duration values as a JSON result and outputs the total
+    seconds as the primary script result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1122,8 +1694,19 @@ XMLtoJson:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs local datetime calculations. It does not make any external
+      API calls (fetches_data=false, can_mutate_external_data=false). It also does
+      not interact with internal SecOps entities, insights, alerts, or case comments
+      (can_mutate_internal_data=false).
   categories:
     enrichment: false
+    reasoning: >-
+      The action does not fetch data from external or internal sources, so it is not
+      an Enrichment action. It does not perform any mitigation or resolution tasks,
+      so it is not a Remediation action. It is strictly a utility action for calculating
+      time differences.
+    remediation: false
   entity_usage:
     entity_types: []
     filters_by_additional_properties: false
@@ -1139,3 +1722,110 @@ XMLtoJson:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script does not reference `siemplify.target_entities` or perform any operations
+      on SecOps entities. It solely relies on the provided input parameters.
+XMLtoJson:
+  action_outcomes_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    block_ip: false
+    block_malicious_domain: false
+    block_malicious_url: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    force_identity_mfa: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a local data transformation (XML to JSON) and does not interact
+      with external systems, enrich IOCs/assets, or modify alerts/tickets. Therefore,
+      it does not match any of the predefined action outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  ai_description: >-
+    ### General Description
+
+    Converts an XML formatted string into a JSON object. This is a utility action
+    used to parse XML data for easier manipulation, extraction, and usage in subsequent
+    playbook steps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | xml | String | Yes | The XML formatted string that needs to be converted to
+    JSON. |
+
+
+    ### Flow Description
+
+    1. Extracts the `xml` string from the action parameters.
+
+    2. Parses the XML string into a JSON dictionary using the `xmltodict` library.
+
+    3. Attaches the resulting JSON object to the action's JSON result (`siemplify.result.add_result_json`).
+
+    4. Returns a success or failure status based on whether the parsing was successful.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action takes an XML string as input and converts it to JSON using a local
+      Python library (`xmltodict`). It does not make any external API calls to fetch
+      or mutate data, nor does it interact with internal SecOps data structures like
+      entities, insights, alerts, or case comments.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action is a local utility function that transforms data formats (XML to
+      JSON). It does not fetch data from external or internal sources (not Enrichment)
+      and does not perform any threat mitigation or system state changes (not Remediation).
+    remediation: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not access or iterate over `siemplify.target_entities`. It operates
+      solely on the provided 'xml' input parameter.

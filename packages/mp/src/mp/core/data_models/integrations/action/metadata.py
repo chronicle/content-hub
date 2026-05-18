@@ -26,9 +26,9 @@ import mp.core.utils
 import mp.core.validators
 from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata
-from mp.core.data_models.integrations.action.ai.product_categories import (
-    PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY,
-    ActionProductCategory,
+from mp.core.data_models.integrations.action.ai.action_outcomes import (
+    ACTION_OUTCOME_CATEGORY_TO_DEF_OUTCOME_CATEGORY,
+    ActionOutcomesCategory,
 )
 
 from .ai.ai_categories import AI_CATEGORY_TO_DEF_AI_CATEGORY, ActionAiCategory
@@ -53,7 +53,7 @@ class AiFields(NamedTuple):
     description: str | None
     ai_categories: list[ActionAiCategory]
     entity_types: list[EntityType]
-    action_product_categories: list[ActionProductCategory]
+    action_outcomes_categories: list[ActionOutcomesCategory]
 
 
 class BuiltActionMetadata(TypedDict):
@@ -74,7 +74,7 @@ class BuiltActionMetadata(TypedDict):
     AIDescription: NotRequired[str | None]
     AICategories: NotRequired[list[str] | None]
     EntityTypes: NotRequired[list[str] | None]
-    ActionProductCategories: NotRequired[list[str] | None]
+    ActionOutcomesCategories: NotRequired[list[str] | None]
 
 
 class NonBuiltActionMetadata(TypedDict):
@@ -95,7 +95,7 @@ class NonBuiltActionMetadata(TypedDict):
     ai_description: NotRequired[str | None]
     ai_categories: NotRequired[list[str]]
     entity_types: NotRequired[list[str]]
-    action_product_categories: NotRequired[list[str]]
+    action_outcomes_categories: NotRequired[list[str]]
 
 
 class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetadata]):
@@ -138,7 +138,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     ai_description: str | None
     ai_categories: list[ActionAiCategory]
     entity_types: list[EntityType]
-    action_product_categories: list[ActionProductCategory]
+    action_outcomes_categories: list[ActionOutcomesCategory]
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -227,7 +227,9 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             ai_description=built.get("AIDescription"),
             ai_categories=[ActionAiCategory(c) for c in (built.get("AICategories") or [])],
             entity_types=[EntityType(e) for e in (built.get("EntityTypes") or [])],
-            action_product_categories=[ActionProductCategory(c) for c in (built.get("ActionProductCategories") or [])],
+            action_outcomes_categories=[
+                ActionOutcomesCategory(c) for c in (built.get("ActionOutcomesCategories") or [])
+            ],
         )
 
     @classmethod
@@ -269,8 +271,8 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             ai_description=non_built.get("ai_description"),
             ai_categories=[ActionAiCategory(c) for c in (non_built.get("ai_categories") or [])],
             entity_types=[EntityType(e) for e in (non_built.get("entity_types") or [])],
-            action_product_categories=[
-                ActionProductCategory(c) for c in (non_built.get("action_product_categories") or [])
+            action_outcomes_categories=[
+                ActionOutcomesCategory(c) for c in (non_built.get("action_outcomes_categories") or [])
             ],
         )
 
@@ -298,6 +300,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             Version=self.version,
             AIDescription=self.ai_description,
             AICategories=[c.value for c in self.ai_categories] or None,
+            ActionOutcomesCategories=[c.value for c in self.action_outcomes_categories] or None,
             EntityTypes=[e.value for e in self.entity_types] or None,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
@@ -374,7 +377,7 @@ def _load_json_examples(
 
 def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
     empty_results: AiFields = AiFields(
-        description=None, ai_categories=[], entity_types=[], action_product_categories=[]
+        description=None, ai_categories=[], entity_types=[], action_outcomes_categories=[]
     )
     if not integration_path.exists():
         return empty_results
@@ -410,13 +413,13 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
             else []
         ),
         entity_types=ai_meta.entity_usage.entity_types if ai_meta.entity_usage else [],
-        action_product_categories=(
+        action_outcomes_categories=(
             [
-                PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]
-                for category, val in ai_meta.action_product_categories.model_dump().items()
+                ACTION_OUTCOME_CATEGORY_TO_DEF_OUTCOME_CATEGORY[category]
+                for category, val in ai_meta.action_outcomes_categories.model_dump().items()
                 if category != "reasoning" and val is True
             ]
-            if ai_meta.action_product_categories
+            if ai_meta.action_outcomes_categories
             else []
         ),
     )
@@ -426,4 +429,4 @@ def _update_non_built_with_ai_fields(non_built: NonBuiltActionMetadata, ai_field
     non_built["ai_description"] = ai_fields.description
     non_built["ai_categories"] = [c.value for c in ai_fields.ai_categories]
     non_built["entity_types"] = [t.value for t in ai_fields.entity_types]
-    non_built["action_product_categories"] = [c.value for c in ai_fields.action_product_categories]
+    non_built["action_outcomes_categories"] = [c.value for c in ai_fields.action_outcomes_categories]

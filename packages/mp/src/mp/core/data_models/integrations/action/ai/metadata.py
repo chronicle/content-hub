@@ -18,10 +18,10 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+from .action_outcomes import ActionOutcomesCategories  # noqa: TC001
 from .ai_categories import AiCategories  # noqa: TC001
 from .capabilities import ActionCapabilities  # noqa: TC001
 from .entity_usage import EntityUsage  # noqa: TC001
-from .product_categories import ActionProductCategories  # noqa: TC001
 
 
 class ActionAiMetadata(BaseModel):
@@ -78,8 +78,8 @@ class ActionAiMetadata(BaseModel):
             ),
         ),
     ]
-    action_product_categories: Annotated[
-        ActionProductCategories | None,
+    action_outcomes_categories: Annotated[
+        ActionOutcomesCategories | None,
         Field(
             description=(
                 "Categories that describe the action's capabilities in its security product."
