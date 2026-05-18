@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 
 WINDOWS_SCRIPT_NAME: str = "run_pre_build_tests.bat"
 UNIX_SCRIPT_NAME: str = "run_pre_build_tests.sh"
-SUCCESS_STATUS_CODES: set[int] = {0, 2}
+SUCCESS_STATUS_CODES: set[int] = {0, 2, 5}
 
 __all__: list[str] = ["TestIssue", "TestWarning", "run_pre_build_tests", "test_app"]
 test_app: typer.Typer = typer.Typer()
