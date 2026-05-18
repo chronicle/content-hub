@@ -28,19 +28,21 @@ def main() -> None:
         # used to flag back to siemplify system, the action final status
         status = EXECUTION_STATE_COMPLETED
         # human readable message, showed in UI as the action result
-        output_message = "Successfully connected to the Ransomware Resilience server!"
+        output_message = (
+            "Successfully connected to the NetApp Ransomware Resilience server with the provided connection parameters!"
+        )
         # Set a simple result value, used for playbook if\else and placeholders.
         result_value = True
 
     except RrsException as e:
-        output_message = str(e)
+        output_message = f"Failed to connect to the NetApp Ransomware Resilience server! Error is {e}"
         siemplify.LOGGER.error(f"Ping: RRS error - {e}")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False
 
     except Exception as e:
-        output_message = f"Failed to connect to the Ransomware Resilience server! {e}"
+        output_message = f"Failed to connect to the NetApp Ransomware Resilience server! Error is {e}"
         siemplify.LOGGER.error(f"Connection to API failed, performing action {e}")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED

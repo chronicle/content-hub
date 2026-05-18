@@ -25,7 +25,7 @@ class TestBlockUser:
     ) -> None:
         """Test that Block User action succeeds."""
         rrs.block_user_response = MOCK_BLOCK_USER_RESPONSE
-        success_output_msg = "Successfully blocked user"
+        success_output_msg = f"Successfully blocked user on the following entities using NetApp Ransomware Resilience: {DEFAULT_PARAMETERS['User ID']}"
 
         block_user.main()
 
@@ -83,15 +83,15 @@ class TestBlockUser:
         action_output: MockActionOutput,
         rrs: RansomwareResilience,
     ) -> None:
-        """Test that Block User succeeds without user ID (optional field)."""
+        """Test that Block User fails when User ID is empty (mandatory field)."""
         rrs.block_user_response = MOCK_BLOCK_USER_RESPONSE
-        success_output_msg = "Successfully blocked user"
+        expected_output_msg = 'Error executing action "Block User". Reason: Missing mandatory parameter User ID'
 
         block_user.main()
 
-        assert action_output.results.output_message == success_output_msg
-        assert action_output.results.result_value is True
-        assert action_output.results.execution_state.value == 0
+        assert action_output.results.output_message == expected_output_msg
+        assert action_output.results.result_value is False
+        assert action_output.results.execution_state.value == 2
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
@@ -109,7 +109,9 @@ class TestBlockUser:
     ) -> None:
         """Test that Block User succeeds without user IPs (optional for CIFS)."""
         rrs.block_user_response = MOCK_BLOCK_USER_RESPONSE
-        success_output_msg = "Successfully blocked user"
+        success_output_msg = (
+            "Successfully blocked user on the following entities using NetApp Ransomware Resilience: user123456789"
+        )
 
         block_user.main()
 

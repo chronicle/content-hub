@@ -25,7 +25,7 @@ def main() -> None:
     try:
         rrsManager = ApiManager(siemplify)
         # Extract parameters from action
-        user_id = siemplify.extract_action_param("User ID", print_value=False)
+        user_id = siemplify.extract_action_param("User ID", is_mandatory=True, print_value=False)
         user_ips = siemplify.extract_action_param("User IPs", print_value=False)
         duration = siemplify.extract_action_param("Duration", print_value=True)
         siemplify.LOGGER.info("----------------- RRS - Block User: Started -----------------")
@@ -35,12 +35,14 @@ def main() -> None:
         # used to flag back to siemplify system, the action final status
         status = EXECUTION_STATE_COMPLETED
         # human readable message, showed in UI as the action result
-        output_message = "Successfully blocked user"
+        output_message = (
+            f"Successfully blocked user on the following entities using NetApp Ransomware Resilience: {user_id}"
+        )
         # Set a simple result value, used for playbook if\else and placeholders.
         result_value = True
 
     except RrsException as e:
-        output_message = str(e)
+        output_message = f'Error executing action "Block User". Reason: {e}'
         siemplify.LOGGER.error(f"Block User: RRS error - {e}")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
@@ -48,7 +50,7 @@ def main() -> None:
         block_user_result = {}
 
     except Exception as e:
-        output_message = f"Failed to block user. Error: {e}"
+        output_message = f'Error executing action "Block User". Reason: {e}'
         siemplify.LOGGER.error(f"Block User: Failed to block user. Error: {e}")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
