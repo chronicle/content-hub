@@ -28,7 +28,7 @@ def main() -> None:
         # used to flag back to siemplify system, the action final status
         status = EXECUTION_STATE_COMPLETED
         # human readable message, showed in UI as the action result
-        output_message = "Successfully connected to Ransomware Resilience server!"
+        output_message = "Successfully connected to the Ransomware Resilience server!"
         # Set a simple result value, used for playbook if\else and placeholders.
         result_value = True
 
