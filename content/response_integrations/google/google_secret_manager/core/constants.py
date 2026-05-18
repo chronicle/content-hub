@@ -41,3 +41,7 @@ JOBS_KEY: str = "jobs"
 
 # API Filter Values
 ANY_INTEGRATION_FILTER_VALUE: str = "-"
+
+# Async concurrency control
+ASYNC_SEMAPHORE_LIMIT: int = 10
+TIMEOUT_THRESHOLD_MS: int = 1000 * 540
