@@ -14,12 +14,12 @@
 
 from __future__ import annotations
 
+import logging
 import math
 import pathlib
 import tomllib
 from typing import TYPE_CHECKING, Any
 
-import rich
 import typer
 
 import mp.core.constants
@@ -33,6 +33,8 @@ from .utils import (
     update_cache_file,
     update_version_cache,
 )
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -72,5 +74,5 @@ def minor_version_bump(
         update_built_def_file(integration_dir_built, updated_version_cache)
 
     except FileNotFoundError as e:
-        rich.print(f"[red]Error: {e}[/red]")
+        logger.exception("Failed to perform minor version bump for integration")
         raise typer.Exit(1) from e

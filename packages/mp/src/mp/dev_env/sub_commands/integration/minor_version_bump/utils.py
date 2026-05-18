@@ -16,15 +16,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-import rich
 import yaml
 
 import mp.core.constants
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 CONFIG_PATH: Path = Path.home() / ".mp_dev_env.json"
 INTEGRATIONS_CACHE_DIR_NAME: str = ".integrations_cache"
@@ -80,7 +82,7 @@ def _load_cached_version(cache_folder: Path, integration_name: str) -> VersionCa
         cached_data: dict[str, Any] = yaml.safe_load(version_file_path.read_text(encoding="utf-8"))
         return VersionCache(cached_data["version"], cached_data["hash"], cached_data["next_version_change"])
     except (KeyError, TypeError):
-        rich.print("[yellow]Cache file is invalid. Invalidating and removing old cache.[/yellow]")
+        logger.warning("Cache file is invalid. Invalidating and removing old cache.")
         version_file_path.unlink(missing_ok=True)
         return None
 

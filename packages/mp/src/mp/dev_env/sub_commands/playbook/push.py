@@ -14,10 +14,10 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated
 
-import rich
 import typer
 
 import mp.core.utils
@@ -25,6 +25,9 @@ from mp.dev_env.sub_commands.playbook import utils
 from mp.dev_env.sub_commands.push import push_app
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from typing import Any
@@ -76,12 +79,11 @@ def push_playbook(
 
     try:
         result = _push_playbook_zip_to_soar(zip_path)
-        rich.print(f"Upload result for {zip_path.stem}: {result}")
-        rich.print(f"[green]✅ Playbook {zip_path.stem} pushed successfully.[/green]")
+        logger.info("Upload result for %s: %s", zip_path.stem, result)
+        logger.info("✅ Playbook %s pushed successfully.", zip_path.stem)
 
     except Exception as e:
-        error_message = f"Upload failed for {zip_path.stem}: {e}"
-        rich.print(f"[red]{error_message}[/red]")
+        logger.exception("Upload failed for %s", zip_path.stem)
         raise typer.Exit(1) from e
 
     finally:
@@ -98,7 +100,7 @@ def _get_dependent_blocks_names(playbook: str, src: Path | None = None) -> set[s
 def _zip_playbooks(main_playbook: str, content_names: set[str]) -> Path:
     built_paths: list[Path] = [utils.get_built_playbook_path(p) for p in content_names]
     zip_path: Path = utils.zip_built_playbook(main_playbook, built_paths)
-    rich.print(f"Zipped built playbooks at {zip_path}")
+    logger.info("Zipped built playbooks at %s", zip_path)
     return zip_path
 
 

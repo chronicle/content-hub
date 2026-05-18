@@ -30,7 +30,9 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
 
-INTEGRATIONS_CACHE_FOLDER_PATH: Path = get_marketplace_path() / ".integrations_cache"
+
+def get_integrations_cache_folder_path() -> Path:
+    return get_marketplace_path() / ".integrations_cache"
 
 
 @pytest.fixture
@@ -69,7 +71,7 @@ def sandbox(
     def_path: Path = built_dst / f"Integration-{integration_name}.def"
     shutil.move(built_dst / "Integration-mock_integration.def", def_path)
 
-    version_cache_path: Path = INTEGRATIONS_CACHE_FOLDER_PATH / integration_name / "version_cache.yaml"
+    version_cache_path: Path = get_integrations_cache_folder_path() / integration_name / "version_cache.yaml"
 
     try:
         yield {
@@ -80,14 +82,14 @@ def sandbox(
             "TMP_ROOT": tmp_path,
         }
     finally:
-        shutil.rmtree(INTEGRATIONS_CACHE_FOLDER_PATH / integration_name, ignore_errors=True)
+        shutil.rmtree(get_integrations_cache_folder_path() / integration_name, ignore_errors=True)
 
 
 class TestMinorVersionBump:
     def test_run_first_time_success(self, sandbox: dict[str, Path]) -> None:
         minor_version_bump(sandbox["BUILT"], sandbox["NON_BUILT"], sandbox["BUILT"].name)
 
-        assert INTEGRATIONS_CACHE_FOLDER_PATH.exists()
+        assert get_integrations_cache_folder_path().exists()
         assert sandbox["VERSION_CACHE"].exists()
         assert _load_cached_version(sandbox["VERSION_CACHE"]) == 2.2
         assert _load_built_version(sandbox["DEF_FILE"]) == 2.2
@@ -164,8 +166,14 @@ class TestMinorVersionBump:
 
 
 def _load_cached_version(version_cache_path: Path) -> float:
+    if not version_cache_path.exists():
+        pytest.fail(f"Version cache file not found: {version_cache_path}")
+
     with version_cache_path.open("r", encoding="utf-8") as f:
         versions_cache = yaml.safe_load(f)
+        if not versions_cache or "version" not in versions_cache:
+            pytest.fail(f"Version key not found in cache: {versions_cache}")
+
         return versions_cache["version"]
 
 

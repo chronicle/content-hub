@@ -52,6 +52,11 @@ integration_name/
 │   └── job2.yaml
 │
 ├── resources/
+│   ├── ai/
+│   │   ├── actions_ai_description.yaml
+│   │   ├── connectors_ai_description.yaml
+│   │   ├── integration_ai_description.yaml
+│   │   └── jobs_ai_description.yaml
 │   ├── action1_JsonResult_example.json
 │   ├── image.png
 │   └── logo.svg
@@ -190,6 +195,18 @@ The `tests/` directory contains all test files for the integration:
     - **`test_imports.py`**: Tests that using the integration’s virtual environment, all python
       components in the integration do not have import issues
 - **`test_actions/`**: Directory containing all action test modules
+
+### resources/ Directory
+
+The `resources/` directory contains various assets required by the integration:
+
+- **`ai/`**: Directory containing YAML files with AI descriptions that are supported by `mp describe`. These files provide contextual information about the integration and its components for AI features:
+    - **`actions_ai_description.yaml`**: Contains AI descriptions for integration actions.
+    - **`connectors_ai_description.yaml`**: Contains AI descriptions for integration connectors.
+    - **`integration_ai_description.yaml`**: Contains AI descriptions for the integration itself.
+    - **`jobs_ai_description.yaml`**: Contains AI descriptions for integration jobs.
+- **`*_JsonResult_example.json`**: Example JSON responses for actions, used for documentation and testing.
+- **`image.png`** / **`logo.svg`**: Integration logos and images.
 
 ## Best Practices
 

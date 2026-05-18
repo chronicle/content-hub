@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
-import rich
 import yaml
 
 import mp.core.constants
@@ -26,6 +26,8 @@ from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def create_or_get_playbooks_root_dir() -> Path:
@@ -144,17 +146,18 @@ def is_built_playbook(path: Path) -> bool:
             data: dict[str, Any] = json.load(f)
 
         if not mp.core.constants.PLAYBOOK_MUST_HAVE_KEYS.issubset(data.keys()):
-            rich.print(
-                f"[red]Playbook is invalid, File {path.name} is missing one or more required keys:"
-                f" {mp.core.constants.PLAYBOOK_MUST_HAVE_KEYS - data.keys()}[/red]"
+            logger.error(
+                "Playbook is invalid, File %s is missing one or more required keys: %s",
+                path.name,
+                mp.core.constants.PLAYBOOK_MUST_HAVE_KEYS - data.keys(),
             )
             return False
 
     except json.JSONDecodeError:
-        rich.print(f"[red]Playbook is invalid,File {path.name} is not a valid JSON file.[/red]")
+        logger.exception("Playbook is invalid, File %s is not a valid JSON file.", path.name)
         return False
-    except OSError as e:
-        rich.print(f"[red]Error reading file {path.name}: {e}[/red]")
+    except OSError:
+        logger.exception("Error reading file %s", path.name)
         return False
 
     return True

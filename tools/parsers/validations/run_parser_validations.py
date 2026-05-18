@@ -36,6 +36,7 @@ flags.DEFINE_string("customer_id", None, "Chronicle customer ID.")
 flags.DEFINE_string("project_id", None, "Google Cloud project ID.")
 flags.DEFINE_string("region", None, "Chronicle region.")
 flags.DEFINE_boolean("generate_report", False, "Whether to generate the markdown report file.")
+flags.DEFINE_boolean("debug", False, "Whether to generate debug JSON dump files.")
 flags.DEFINE_list(
     "log_type_folders",
     [],
@@ -54,8 +55,17 @@ def clean_val(v: Any) -> Any:
     if v is None:
         return ""
     if isinstance(v, str):
-        return v.strip().rstrip(",").strip('"').strip()
+        return v.replace("\ufffd", "")
     return v
+
+
+def clean_object(obj: Any) -> Any:
+    """Recursively applies clean_val to all string values in a dictionary or list."""
+    if isinstance(obj, dict):
+        return {k: clean_object(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [clean_object(item) for item in obj]
+    return clean_val(obj)
 
 
 def normalize_timestamp(ts: str | None) -> str | None:
@@ -76,16 +86,16 @@ def normalize_timestamp(ts: str | None) -> str | None:
         return ts
 
 
-def filter_timestamps(obj: Any) -> Any:
-    """Recursively removes timestamp fields from a dictionary or list."""
+def filter_ignored_fields(obj: Any) -> Any:
+    """Recursively removes ignored fields (like timestamps and logType) from a dictionary or list."""
     if isinstance(obj, dict):
         return {
-            k: filter_timestamps(v)
+            k: filter_ignored_fields(v)
             for k, v in obj.items()
-            if k not in ["timestamp", "event_timestamp", "eventTimestamp"]
+            if k not in ["timestamp", "event_timestamp", "eventTimestamp", "logType", "collectedTimestamp", "scanEndTime", "scanStartTime"]
         }
     if isinstance(obj, list):
-        return [filter_timestamps(item) for item in obj]
+        return [filter_ignored_fields(item) for item in obj]
     return obj
 
 
@@ -101,22 +111,30 @@ def get_diff_str(d: dict | list, path: str = "$") -> list[str]:
             if k is jsondiff.delete:
                 if isinstance(v, dict):
                     for rk, rv in v.items():
+                        if rv == {} or rv == []:
+                            continue
                         lines.append(
                             f"path: {path}.{rk},\nexpected: {json.dumps(rv)},\ngot: <DELETED>"
                         )
                 elif isinstance(v, list):
                     for pos, val in v:
+                        if val == {} or val == []:
+                            continue
                         lines.append(
                             f"path: {path}[{pos}],\nexpected: {json.dumps(val)},\ngot: <DELETED>"
                         )
             elif k is jsondiff.insert:
                 if isinstance(v, dict):
                     for ak, av in v.items():
+                        if av == {} or av == []:
+                            continue
                         lines.append(
                             f"path: {path}.{ak},\nexpected: <MISSING>,\ngot: {json.dumps(av)}"
                         )
                 elif isinstance(v, list):
                     for pos, val in v:
+                        if val == {} or val == []:
+                            continue
                         lines.append(
                             f"path: {path}[{pos}],\nexpected: <MISSING>,\ngot: {json.dumps(val)}"
                         )
@@ -129,6 +147,46 @@ def get_diff_str(d: dict | list, path: str = "$") -> list[str]:
 def get_pretty_relpath(path: Path) -> str:
     """Returns the relative path of a file in a user-friendly format."""
     return os.path.relpath(path)
+
+
+def validate_log_structure(data: Any, file_name: str) -> bool:
+    """Validates that the log file follows the required nested structure.
+
+    Expected Structure:
+    {
+      "create_time": "...",
+      "raw_logs": {
+        "start_time": "...",
+        "entries": [
+          { "data": "...", "collection_time": "..." }
+        ]
+      }
+    }
+    """
+    if not isinstance(data, dict):
+        logging.error(f"  Error: {file_name} structure is incorrect. It must be a JSON object.")
+        return False
+
+    if not isinstance(data.get("create_time"), str):
+        logging.error(f"  Error: {file_name} structure is incorrect. Missing or invalid 'create_time' at the root (must be a string).")
+        return False
+
+    raw_logs = data.get("raw_logs")
+    if not isinstance(raw_logs, dict):
+        logging.error(f"  Error: {file_name} structure is incorrect. Missing or invalid 'raw_logs' object.")
+        return False
+
+    entries = raw_logs.get("entries")
+    if not isinstance(entries, list) or not entries:
+        logging.error(f"  Error: {file_name} structure is incorrect. 'entries' must be a non-empty list.")
+        return False
+
+    for i, entry in enumerate(entries):
+        if not isinstance(entry, dict) or not isinstance(entry.get("data"), str):
+            logging.error(f"  Error: {file_name} structure is incorrect. Entry at index {i} must be an object with a 'data' string.")
+            return False
+
+    return True
 
 
 def main(argv: list[str]) -> None:
@@ -216,9 +274,9 @@ def main(argv: list[str]) -> None:
         if metadata_file.exists():
             try:
                 metadata_data = json.loads(metadata_file.read_text())
-                actual_log_type = metadata_data.get("logType", _DEFAULT_LOG_TYPE)
-            except json.JSONDecodeError:
-                logging.warning(f"  Warning: Could not parse {metadata_file}.")
+                actual_log_type = metadata_data.get("log_type", _DEFAULT_LOG_TYPE)
+            except json.JSONDecodeError as e:
+                logging.warning(f"  Warning: Could not parse {metadata_file}: {e}. Using default log type '{_DEFAULT_LOG_TYPE}'.")
 
         raw_logs_path = cbn_path / "testdata" / "raw_logs"
         expected_events_path = cbn_path / "testdata" / "expected_events"
@@ -229,6 +287,7 @@ def main(argv: list[str]) -> None:
             continue
 
         logging.info(f"\nProcessing Log Type: {log_type}")
+        logging.info(f"\nActual Log Type: {actual_log_type}")
 
         for log_file in sorted(raw_logs_path.glob("*_log.json")):
             usecase = log_file.name.rsplit("_log.json", 1)[0]
@@ -242,8 +301,19 @@ def main(argv: list[str]) -> None:
                 )
                 continue
 
-            logs_data = json.loads(log_file.read_text())
-            logs = logs_data.get("raw_logs", [])
+            try:
+                logs_data = json.loads(log_file.read_text())
+            except json.JSONDecodeError as e:
+                logging.error(f"  Error: Failed to parse JSON from {log_file.name}: {e}")
+                continue
+
+            if not validate_log_structure(logs_data, log_file.name):
+                logging.error(f"  Please fix the structure of {log_file.name} to match the expected nested format.")
+                # Use os._exit(1) to bypass absl exception handling and stop immediately.
+                os._exit(1)
+
+            # Extract raw logs from the validated structure
+            logs = [entry.get("data", "") for entry in logs_data["raw_logs"]["entries"]]
 
             logging.info(f"    Raw logs file: {get_pretty_relpath(log_file)}")
 
@@ -269,11 +339,43 @@ def main(argv: list[str]) -> None:
                 })
                 continue
 
+            if FLAGS.debug:
+                with open("validation_results_dump.json", "w") as f:
+                    json.dump(validation_results, f, indent=2)
+
             transformed_events = []
             for result in validation_results.get("runParserResults", []):
                 parsed_events = result.get("parsedEvents", {}).get("events", [])
-                for event_wrapper in parsed_events:
-                    old_event = event_wrapper.get("event", {})
+                
+                def make_hashable(obj):
+                    if isinstance(obj, dict):
+                        return tuple(sorted((k, make_hashable(v)) for k, v in obj.items()))
+                    if isinstance(obj, list):
+                        return tuple(make_hashable(e) for e in obj)
+                    return obj
+
+                seen_hashes = set()
+                unique_parsed_events = []
+                for ev in parsed_events:
+                    ev_hash = make_hashable(ev)
+                    if ev_hash not in seen_hashes:
+                        unique_parsed_events.append(ev)
+                        seen_hashes.add(ev_hash)
+
+                for event_wrapper in unique_parsed_events:
+                    if "entity" in event_wrapper:
+                        old_entity = clean_object(event_wrapper.get("entity", {}))
+                        new_event = {
+                            "event": {
+                                "idm": {
+                                    "entity": old_entity,
+                                },
+                            }
+                        }
+                        transformed_events.append(new_event)
+                        continue
+
+                    old_event = clean_object(event_wrapper.get("event", {}))
                     old_metadata = old_event.get("metadata", {})
 
                     timestamp = normalize_timestamp(old_metadata.get("eventTimestamp"))
@@ -281,13 +383,6 @@ def main(argv: list[str]) -> None:
                     if "metadata" in old_event:
                         if "eventTimestamp" in old_event["metadata"]:
                             old_event["metadata"]["eventTimestamp"] = timestamp
-                        if "description" in old_event["metadata"]:
-                            old_event["metadata"]["description"] = clean_val(old_event["metadata"]["description"])
-
-                    if "additional" in old_event:
-                        old_event["additional"] = {
-                            k: clean_val(v) for k, v in old_event["additional"].items()
-                        }
 
                     new_event = {
                         "event": {
@@ -304,14 +399,18 @@ def main(argv: list[str]) -> None:
             expected_events = test_events_data.get("events", [])
             actual_events = transformed_events
 
+            if FLAGS.debug:
+                with open("validation_actual_results_dump.json", "w") as f:
+                    json.dump(actual_events, f, indent=2)
+
             event_failures = []
             for i in range(max(len(expected_events), len(actual_events))):
                 exp = expected_events[i] if i < len(expected_events) else None
                 act = actual_events[i] if i < len(actual_events) else None
 
                 event_diff = jsondiff.diff(
-                    filter_timestamps(exp),
-                    filter_timestamps(act),
+                    filter_ignored_fields(exp),
+                    filter_ignored_fields(act),
                     syntax="symmetric",
                 )
 

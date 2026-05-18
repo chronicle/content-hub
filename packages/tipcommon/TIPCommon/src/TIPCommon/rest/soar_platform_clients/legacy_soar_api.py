@@ -19,12 +19,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from TIPCommon.consts import ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG
+from TIPCommon.consts import ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG, CASE_STATUS_CHANGE_ACTIVITY, DATAPLANE_1P_HEADER
 from TIPCommon.exceptions import NotSupportedPlatformVersion
 from TIPCommon.rest.custom_types import HttpMethod
+from TIPCommon.utils import temporarily_remove_header
 
-from ...consts import CASE_STATUS_CHANGE_ACTIVITY, DATAPLANE_1P_HEADER
-from ...utils import temporarily_remove_header
 from .base_soar_api import BaseSoarApi
 
 if TYPE_CHECKING:
@@ -77,28 +76,24 @@ class LegacySoarApi(BaseSoarApi):
     def get_installed_integrations_of_environment(self) -> requests.Response:
         """Get installed integrations of environment using legacy API."""
         endpoint = "/integrations/GetEnvironmentInstalledIntegrations"
-        payload = {
-            "name": (
-                "*" if self.params.environment == "Shared Instances" else self.params.environment
-            )
-        }
+        payload = {"name": ("*" if self.params.environment == "Shared Instances" else self.params.environment)}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_connector_cards(self) -> requests.Response:
-        """Get connector cards using legacy API"""
+        """Get connector cards using legacy API."""
         endpoint = "/connectors/cards"
         query_params = {"format": "snake"}
         return self._make_request(HttpMethod.GET, endpoint, params=query_params)
 
     def get_federation_cases(self) -> requests.Response:
-        """Get federation cases using legacy API"""
+        """Get federation cases using legacy API."""
         endpoint = "/federation/cases"
         params = {"continuationToken": self.params.continuation_token}
 
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
     def patch_federation_cases(self) -> requests.Response:
-        """Get federation cases using legacy API"""
+        """Get federation cases using legacy API."""
         endpoint = "/federation/cases/batch-patch"
         headers = {"AppKey": self.params.api_key} if self.params.api_key else None
         payload = {"cases": self.params.cases_payload}
@@ -110,7 +105,7 @@ class LegacySoarApi(BaseSoarApi):
         )
 
     def get_workflow_instance_card(self) -> requests.Response:
-        """Get workflow instance card using legacy API"""
+        """Get workflow instance card using legacy API."""
         endpoint = "/cases/GetWorkflowInstancesCards"
         payload = {
             "caseId": self.params.case_id,
@@ -119,7 +114,7 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def pause_alert_sla(self) -> requests.Response:
-        """Pause alert sla"""
+        """Pause alert sla."""
         endpoint = "/cases/PauseAlertSla"
         payload = {
             "caseId": self.params.case_id,
@@ -129,7 +124,7 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def resume_alert_sla(self) -> requests.Response:
-        """Resume alert sla"""
+        """Resume alert sla."""
         endpoint = "/cases/ResumeAlertSla"
         payload = {
             "caseId": self.params.case_id,
@@ -139,13 +134,13 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_case_overview_details(self) -> requests.Response:
-        """Get case overview details"""
+        """Get case overview details."""
         case_id = self.params.case_id
         endpoint = f"/dynamic-cases/GetCaseDetails/{case_id}"
         return self._make_request(HttpMethod.GET, endpoint).json()
 
     def remove_case_tag(self) -> requests.Response:
-        """Remove case tag"""
+        """Remove case tag."""
         endpoint = "/cases/RemoveCaseTag"
         payload = {
             "caseId": self.params.case_id,
@@ -155,7 +150,7 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def change_case_description(self) -> requests.Response:
-        """Change case description"""
+        """Change case description."""
         endpoint = "/cases/ChangeCaseDescription?format=snake"
         payload = {
             "case_id": self.params.case_id,
@@ -164,7 +159,7 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def set_alert_priority(self) -> requests.Response:
-        """Set alert priority"""
+        """Set alert priority."""
         endpoint = "/sdk/UpdateAlertPriority"
         payload = {
             "caseId": self.params.case_id,
@@ -175,7 +170,7 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def set_case_score_bulk(self) -> requests.Response:
-        """Set case score bulk"""
+        """Set case score bulk."""
         endpoint = "/sdk/cases/score"
         payload = {
             "caseScores": [
@@ -188,7 +183,7 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
 
     def get_integration_full_details(self) -> requests.Response:
-        """Get integration full details"""
+        """Get integration full details."""
         endpoint = "/store/GetIntegrationFullDetails"
         payload = {
             "integrationIdentifier": self.params.integration_identifier,
@@ -207,15 +202,15 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_integration_instance_details_by_id(self) -> requests.Response:
-        """Get integration instance details by instance id"""
+        """Get integration instance details by instance id."""
         return self._get_all_integration_instances()
 
     def get_integration_instance_details_by_name(self) -> requests.Response:
-        """Get integration instance details by instance name"""
+        """Get integration instance details by instance name."""
         return self._get_all_integration_instances()
 
     def get_users_profile(self) -> requests.Response:
-        """Get users profile"""
+        """Get users profile."""
         endpoint = "/settings/GetUserProfiles"
         payload = {
             "searchTerm": self.params.search_term,
@@ -227,30 +222,30 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_investigator_data(self) -> requests.Response:
-        """Get investigator data"""
+        """Get investigator data."""
         case_id = self.params.case_id
         endpoint = f"/investigator/GetInvestigatorData/{case_id}"
         return self._make_request(HttpMethod.GET, endpoint)
 
     def remove_entities_from_custom_list(self) -> requests.Response:
-        """Remove entities from custom list"""
+        """Remove entities from custom list."""
         endpoint = "/sdk/RemoveEntitiesFromCustomList"
         payload = self.params.list_entities_data
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def add_entities_to_custom_list(self) -> requests.Response:
-        """Add entities to custom list"""
+        """Add entities to custom list."""
         endpoint = "/sdk/AddEntitiesToCustomList"
         payload = self.params.list_entities_data
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_traking_list_record(self) -> requests.Response:
-        """Get traking list record"""
+        """Get traking list record."""
         endpoint = "/settings/GetTrackingListRecords"
         return self._make_request(HttpMethod.GET, endpoint)
 
     def get_traking_list_records_filtered(self) -> requests.Response:
-        """Get traking list records filtered"""
+        """Get traking list records filtered."""
         endpoint = "/settings/GetTrackingListRecordsFiltered"
         payload = {
             "environments": [self.chronicle_soar.environment],
@@ -258,14 +253,14 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def execute_bulk_assign(self) -> requests.Response:
-        """Execute bulk assign"""
+        """Execute bulk assign."""
         endpoint = "/cases/ExecuteBulkAssign"
         payload = {"casesIds": self.params.case_ids, "userName": self.params.user_name}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def execute_bulk_close_case(self) -> requests.Response:
-        """Execute bulk close case"""
+        """Execute bulk close case."""
         endpoint = "/cases/ExecuteBulkCloseCase"
         payload = {
             "casesIds": self.params.case_ids,
@@ -291,11 +286,11 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_security_events(self) -> requests.Response:
-        """Get security events"""
+        """Get security events."""
         return self.get_full_case_details()
 
     def get_entity_cards(self) -> requests.Response:
-        """Get entity cards"""
+        """Get entity cards."""
         return self.get_full_case_details()
 
     def pause_case_sla(self, case_id: int, message: str | None = None) -> requests.Response:
@@ -305,7 +300,7 @@ class LegacySoarApi(BaseSoarApi):
         raise NotSupportedPlatformVersion(ACTION_NOT_SUPPORTED_PLATFORM_VERSION_MSG)
 
     def rename_case(self) -> requests.Response:
-        """Rename case"""
+        """Rename case."""
         endpoint = "/cases/RenameCase"
         payload = {
             "caseId": self.params.case_id,
@@ -314,7 +309,7 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def add_comment_to_entity(self) -> requests.Response:
-        """Add comment to entity"""
+        """Add comment to entity."""
         endpoint = "/entities/AddNote?format=camel"
         payload = {
             "author": self.params.author,
@@ -326,7 +321,7 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def assign_case_to_user(self) -> requests.Response:
-        """Assign case to user"""
+        """Assign case to user."""
         endpoint = "/cases/AssignUserToCase"
         payload = {
             "caseId": self.params.case_id,
@@ -336,12 +331,12 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_email_template(self) -> requests.Response:
-        """Get email template"""
+        """Get email template."""
         endpoint = "/settings/GetEmailTemplateRecords?format=camel"
         return self._make_request(HttpMethod.GET, endpoint)
 
     def get_siemplify_user_details(self) -> requests.Response:
-        """Get siemplify user details"""
+        """Get siemplify user details."""
         endpoint = "/settings/GetUserProfiles"
         payload = {
             "searchTerm": self.params.search_term,
@@ -353,13 +348,13 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def get_domain_alias(self) -> requests.Response:
-        """Get domain alias"""
+        """Get domain alias."""
         endpoint = "/settings/GetDomainAliases?format=camel"
         payload = {"searchTerm": "", "requestedPage": self.params.page_count, "pageSize": 100}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     def add_tags_to_case_in_bulk(self) -> requests.Response:
-        """Add tags to case in bulk"""
+        """Add tags to case in bulk."""
         endpoint = "/cases/ExecuteBulkAddCaseTag"
         payload = {"casesIds": self.params.case_ids, "tags": self.params.tags}
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
@@ -370,16 +365,16 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint)
 
     def get_all_case_overview_details(self) -> requests.Response:
-        """Get case overview details"""
+        """Get case overview details."""
         self.params.format = "camel"
         return self.get_full_case_details().json()
 
     def get_entity_expand_cards(self) -> requests.Response:
-        """Get entity cards"""
+        """Get entity cards."""
         return self.get_full_case_details()
 
     def get_case_wall_records(self) -> requests.Response:
-        """Get case wall records"""
+        """Get case wall records."""
         return self.get_full_case_details()
 
     def get_attachments_metadata(self) -> requests.Response:
@@ -397,7 +392,7 @@ class LegacySoarApi(BaseSoarApi):
         )
 
     def create_entity(self) -> requests.Response:
-        """Create entity using ExtendCaseGraph"""
+        """Create entity using ExtendCaseGraph."""
         endpoint: str = "/investigator/ExtendCaseGraph"
         return self._make_request(
             HttpMethod.POST,
@@ -407,7 +402,7 @@ class LegacySoarApi(BaseSoarApi):
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def import_simulator_custom_case(self) -> requests.Response:
-        """Import Simulated Custom Case"""
+        """Import Simulated Custom Case."""
         endpoint: str = "/attackssimulator/ImportCustomCase"
         return self._make_request(
             HttpMethod.POST,
@@ -482,7 +477,7 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint)
 
     def get_cases_by_timestamp_filter(self) -> list[SingleJson]:
-        """Get cases by timestamp filter"""
+        """Get cases by timestamp filter."""
         all_cases: list[SingleJson] = []
         current_page = 0
         page_size = 1000
@@ -518,13 +513,14 @@ class LegacySoarApi(BaseSoarApi):
         return all_cases
 
     def get_case_close_comment(self, case_id: str | int) -> requests.Response:
-        """Get case closure comment
+        """Get case closure comment.
 
         Args:
             case_id (str | int): The ID of the case for which to retrieve the closure comment.
 
         Returns:
             requests.Response: The response object containing the closure comment details.
+
         """
         endpoint = "/dynamic-cases/GetCaseWallActivities?format=camel"
         payload = {
@@ -537,6 +533,4 @@ class LegacySoarApi(BaseSoarApi):
             "activities": [CASE_STATUS_CHANGE_ACTIVITY],
             "order": "desc",
         }
-        return self._make_request(
-            method=HttpMethod.POST, endpoint=endpoint, json_payload=payload
-        )
+        return self._make_request(method=HttpMethod.POST, endpoint=endpoint, json_payload=payload)
