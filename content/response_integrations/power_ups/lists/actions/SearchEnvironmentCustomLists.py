@@ -70,7 +70,7 @@ def main():
             if relevant_records:
                 if string:
                     for record in relevant_records:
-                        if string in record["entityIdentifier"]:
+                        if string.lower() in record["entityIdentifier"].lower():
                             match_records.append(record)
                 else:
                     match_records = relevant_records
