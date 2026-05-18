@@ -244,11 +244,15 @@ def _run_tests_for_single_integration(
     json_report_path = integration_path / ".report.json"
     _print_report_summary(json_report_path, integration_path.name)
 
+    results = process_pytest_json_report(integration_path.name, json_report_path)
+
+    if results and results.failed_tests > 0:
+        return results
+
     if status_code in SUCCESS_STATUS_CODES:
-        json_report_path.unlink(missing_ok=True)
         return None
 
-    return process_pytest_json_report(integration_path.name, json_report_path)
+    return results
 
 
 def _print_report_summary(pytest_json_report_path: Path, integration_name: str) -> None:

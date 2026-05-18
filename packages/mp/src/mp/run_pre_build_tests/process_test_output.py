@@ -87,6 +87,26 @@ def process_pytest_json_report(
     integration_results.skipped_tests = summary.get("skipped", 0)
     integration_results.passed_tests = summary.get("passed", 0)
 
+    if summary.get("collected", 0) == 0:
+        integration_results.failed_tests_summary.append(
+            TestIssue(
+                test_name="Collection",
+                stack_trace="No tests were collected. Check for syntax errors or empty tests directory.",
+            )
+        )
+
+    for collector in report_data.get("collectors", []):
+        if collector.get("outcome") == "failed":
+            longrepr = collector.get("longrepr", "Unknown collection error")
+            if isinstance(longrepr, dict):
+                longrepr = longrepr.get("reprcrash", {}).get("message", str(longrepr))
+            integration_results.failed_tests_summary.append(
+                TestIssue(
+                    test_name=f"Collection Error: {collector.get('nodeid')}",
+                    stack_trace=str(longrepr),
+                )
+            )
+
     issue: TestIssue
     for test_item in report_data.get("tests", []):
         outcome = test_item.get("outcome")
