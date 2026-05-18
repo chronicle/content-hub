@@ -42,27 +42,29 @@ SCRIPT_NAME = "RenderTemplate"
 def _extract_alert_data(
     alert: Any,
     entities_source: list[Any],
-    events: list[SingleJson],
-    entities: dict[str, SingleJson],
-) -> None:
+) -> tuple[list[SingleJson], dict[str, SingleJson]]:
     """Extract security events and entities from a single alert context.
 
     Args:
         alert: The target alert SDK object instance.
         entities_source: List of entity object contexts (alert entities or target entities).
-        events: List container to accumulate events additional properties dictionaries.
-        entities: Dictionary container to accumulate unique filename/address/etc. entities properties.
+
+    Returns:
+        A tuple containing:
+            - List of security event properties.
+            - Dictionary of entity properties mapped by identifier.
     """
-    events.extend(
+    extracted_events = [
         event.additional_properties
         for event in getattr(alert, "security_events", [])
-    )
-    entities.update({
+    ]
+    extracted_entities = {
         entity.additional_properties.get("Identifier")
         or entity.identifier: entity.additional_properties
         for entity in entities_source
         if entity.additional_properties.get("Type") != "ALERT"
-    })
+    }
+    return extracted_events, extracted_entities
 
 
 def extract_context_data(
@@ -94,12 +96,12 @@ def extract_context_data(
             if execution_scope.value == ExecutionScope.Alert.value
             else getattr(alert, "entities", [])
         )
-        _extract_alert_data(
+        extracted_events, extracted_entities = _extract_alert_data(
             alert,
             entities_source,
-            events,
-            entities,
         )
+        events.extend(extracted_events)
+        entities.update(extracted_entities)
 
     return {
         "SiemplifyEvents": events,
