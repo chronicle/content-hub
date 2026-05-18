@@ -26,7 +26,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 # Product Version: -
 
 # ==============================================================================
-from soar_sdk.SiemplifyConnectors import CaseInfo, SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
 from ..core.TenableManager import TenableSecurityCenterManager
 from soar_sdk.SiemplifyUtils import (
     dict_to_flat,
