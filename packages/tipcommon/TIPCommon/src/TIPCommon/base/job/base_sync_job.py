@@ -107,7 +107,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             job_case (JobCase): The JobCase object containing the details of the case to sync.
 
         """
-        pass
 
     @nativemethod
     def sync_comments(self, job_case: JobCase) -> None:
@@ -117,7 +116,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             job_case (JobCase): The JobCase object containing the details of the case to sync.
 
         """
-        pass
 
     @nativemethod
     def sync_tags(self, job_case: JobCase) -> None:
@@ -127,7 +125,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             job_case (JobCase): The JobCase object containing the details of the case to sync.
 
         """
-        pass
 
     @abstractmethod
     def is_alert_and_product_closed(self, job_case: JobCase, product: Any) -> bool:
@@ -151,7 +148,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             product_details (Any): The details of the product to sync.
 
         """
-        pass
 
     @nativemethod
     def sync_severity(self, job_case: JobCase) -> None:
@@ -161,7 +157,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             job_case (JobCase): The JobCase object containing the details of the case to sync.
 
         """
-        pass
 
     @nativemethod
     def sync_assignee(self, job_case: JobCase) -> None:
@@ -171,7 +166,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             job_case (JobCase): The JobCase object containing the details of the case to sync.
 
         """
-        pass
 
     @abstractmethod
     def map_product_data_to_case(self, job_case: JobCase) -> None:
