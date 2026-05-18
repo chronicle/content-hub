@@ -25,7 +25,10 @@ class TestBlockUser:
     ) -> None:
         """Test that Block User action succeeds."""
         rrs.block_user_response = MOCK_BLOCK_USER_RESPONSE
-        success_output_msg = f"Successfully blocked user on the following entities using NetApp Ransomware Resilience: {DEFAULT_PARAMETERS['User ID']}"
+        success_output_msg = (
+            "Successfully blocked user on the following entities using NetApp Ransomware Resilience: "
+            f"{DEFAULT_PARAMETERS['User ID']}"
+        )
 
         block_user.main()
 
