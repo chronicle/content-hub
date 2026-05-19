@@ -23,6 +23,7 @@ from .file_utils import (
     remove_paths_if_exists,
     remove_rglobs_if_exists,
     save_yaml,
+    validate_safe_path,
 )
 from .utils import (
     create_dir_if_not_exists,
@@ -48,4 +49,5 @@ __all__: list[str] = [
     "remove_paths_if_exists",
     "remove_rglobs_if_exists",
     "save_yaml",
+    "validate_safe_path",
 ]
