@@ -25,6 +25,7 @@ class RansomwareResilience:
     check_job_status_response: Optional[SingleJson] = None
     take_snapshot_response: Optional[SingleJson] = None
     volume_offline_response: Optional[SingleJson] = None
+    block_user_response: Optional[SingleJson] = None
 
     # Error simulation — set to a non-2xx code to trigger error responses
     token_status_code: Optional[int] = None
@@ -33,6 +34,7 @@ class RansomwareResilience:
     check_job_status_status_code: Optional[int] = None
     take_snapshot_status_code: Optional[int] = None
     volume_offline_status_code: Optional[int] = None
+    block_user_status_code: Optional[int] = None
 
     def get_token(self) -> SingleJson:
         """Return mock OAuth token response."""
@@ -92,4 +94,12 @@ class RansomwareResilience:
             "status": "queued",
             "source": "ontap",
             "agent_id": "mock-agent-id",
+        }
+
+    def get_block_user(self) -> SingleJson:
+        """Return mock block user response."""
+        if self.block_user_response:
+            return self.block_user_response
+        return {
+            "message": "User blocked successfully",
         }
