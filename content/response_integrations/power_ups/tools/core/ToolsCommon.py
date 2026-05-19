@@ -15,13 +15,13 @@
 from __future__ import annotations
 
 import json
+from enum import Enum
 from typing import Any
 
 from tldextract import extract
 from tldextract.tldextract import ExtractResult
 
 from .constants import LABEL_REGEX
-
 
 # CONSTS
 OPEN_PH_PARENTHASIS = "{"
@@ -232,3 +232,106 @@ def get_domain_from_string(identifier: str, extract_subdomain: bool) -> str | No
 
 def is_valid_label(label: str) -> bool:
     return bool(LABEL_REGEX.fullmatch(label))
+
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
+
+def _unwrap_enum_value(raw_value: Any) -> Any:
+    """Extract raw value from custom Enum instances if present."""
+    if hasattr(raw_value, "value"):
+        return raw_value.value
+    return raw_value
+
+
+def _parse_scope_string(scope_str: str) -> int | None:
+    """Parse execution scope integer value from string name or digit."""
+    normalized = scope_str.strip().title()
+    if normalized.isdigit():
+        val = int(normalized)
+        if val in (item.value for item in ExecutionScope):
+            return val
+    else:
+        if normalized in ExecutionScope.__members__:
+            return ExecutionScope[normalized].value
+    return None
+
+
+def get_execution_scope(raw_scope: Any, logger: Any = None) -> ExecutionScope:
+    """Parse the execution scope dynamically from a raw scope input.
+
+    Args:
+        raw_scope: The raw execution scope property value from the platform.
+        logger: Optional logger instance for recording error details.
+
+    Returns:
+        The determined ExecutionScope enum value (defaults to Alert).
+    """
+    execution_scope_value = ExecutionScope.Alert.value
+    try:
+        unwrapped = _unwrap_enum_value(raw_scope)
+        parsed = _parse_scope_string(str(unwrapped))
+        if parsed is not None:
+            execution_scope_value = parsed
+    except Exception as e:
+        if logger:
+            logger.error(f"Failed to parse execution scope: {e}.")
+
+    return ExecutionScope(execution_scope_value)
+
+
+def get_target_alerts(
+    siemplify: Any,
+    execution_scope: ExecutionScope,
+) -> list[Any]:
+    """Retrieve the list of target alerts based on execution scope safely.
+
+    Args:
+        siemplify: The SiemplifyAction orchestration instance.
+        execution_scope: The determined active execution scope.
+
+    Returns:
+        List of target alert objects to be processed.
+    """
+    if execution_scope.value == ExecutionScope.Alert.value:
+        try:
+            current_alert = siemplify.current_alert
+            if current_alert:
+                return [current_alert]
+        except Exception as e:
+            if hasattr(siemplify, "LOGGER"):
+                siemplify.LOGGER.error(f"Failed to retrieve current alert: {e}.")
+        return []
+    return getattr(siemplify.case, "alerts", [])
+
+
+def _extract_case_entities(case_alerts: list[Any]) -> list[Any]:
+    """Extract unique entities consolidated case-wide from all case alerts."""
+    unique_entities = {}
+    for alert in case_alerts:
+        for entity in getattr(alert, "entities", []):
+            unique_entities[entity.identifier.lower()] = entity
+    return list(unique_entities.values())
+
+
+def get_target_entities(
+    execution_scope: ExecutionScope,
+    target_entities: list[Any] | None = None,
+    case_alerts: list[Any] | None = None,
+) -> list[Any]:
+    """Retrieve the list of target entities to process based on execution scope.
+
+    Args:
+        execution_scope: The determined active execution scope.
+        target_entities: The target entities list from the context (optional).
+        case_alerts: The list of alerts associated with the case (optional).
+
+    Returns:
+        List of unique target entity objects to be processed.
+    """
+    if execution_scope == ExecutionScope.Alert:
+        return target_entities or []
+    return _extract_case_entities(case_alerts or [])
