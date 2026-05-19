@@ -15,11 +15,18 @@
 import os
 import site
 import sys
+from typing import TYPE_CHECKING
+from unittest.mock import MagicMock
 
 import pytest
+from pytest_mock import MockerFixture
+
+if TYPE_CHECKING:
+    from TIPCommon.rest.soar_platform_clients.legacy_soar_api import LegacySoarApi
+    from TIPCommon.rest.soar_platform_clients.one_platform_soar_api import OnePlatformSoarApi
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     """Lifecycle hook called when pytest starts up.
 
     Dynamically finds the installed soar-sdk site-packages directory
@@ -31,7 +38,7 @@ def pytest_configure(config):
 
 
 @pytest.fixture
-def mock_chronicle_soar(mocker):
+def mock_chronicle_soar(mocker: MockerFixture) -> MagicMock:
     chronicle_soar = mocker.MagicMock()
     chronicle_soar.session = mocker.MagicMock()
     chronicle_soar.LOGGER = mocker.MagicMock()
@@ -39,21 +46,21 @@ def mock_chronicle_soar(mocker):
 
 
 @pytest.fixture
-def mock_get_sdk_api_uri(mocker):
+def mock_get_sdk_api_uri(mocker: MockerFixture) -> MagicMock:
     mock_uri = mocker.patch("TIPCommon.rest.soar_platform_clients.base_soar_api.get_sdk_api_uri")
     mock_uri.return_value = "https://mock-soar-api.com"
     return mock_uri
 
 
 @pytest.fixture
-def mock_platform_supports_1p(mocker):
+def mock_platform_supports_1p(mocker: MockerFixture) -> MagicMock:
     mock_support = mocker.patch("TIPCommon.rest.soar_platform_clients.api_client_factory.platform_supports_1p_api")
     mock_support.return_value = True
     return mock_support
 
 
 @pytest.fixture
-def mock_legacy_client(mock_chronicle_soar):
+def mock_legacy_client(mock_chronicle_soar: MagicMock) -> "LegacySoarApi":
     # Import is placed inside the fixture to defer its execution until
     # after `pytest_configure` runs and updates `sys.path` with `soar_sdk`.
     from TIPCommon.rest.soar_platform_clients.legacy_soar_api import LegacySoarApi
@@ -63,7 +70,7 @@ def mock_legacy_client(mock_chronicle_soar):
 
 
 @pytest.fixture
-def mock_oneplatform_client(mock_chronicle_soar):
+def mock_oneplatform_client(mock_chronicle_soar: MagicMock) -> "OnePlatformSoarApi":
     # Import is placed inside the fixture to defer its execution until
     # after `pytest_configure` runs and updates `sys.path` with `soar_sdk`.
     from TIPCommon.rest.soar_platform_clients.one_platform_soar_api import OnePlatformSoarApi

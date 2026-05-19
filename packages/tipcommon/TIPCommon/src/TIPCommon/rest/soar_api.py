@@ -842,7 +842,7 @@ def get_full_case_details(
 def get_case_insights(
     chronicle_soar: ChronicleSOAR,
     case_id: int,
-) -> SingleJson:
+) -> list[SingleJson]:
     """Get case attachments.
 
     Args:
