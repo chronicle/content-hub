@@ -135,8 +135,8 @@ def _extract_integrations(built_playbook: BuiltPlaybook, parent_folder: Path) ->
 
 def _extract_from_step(step: BuiltStep, result: set[str]) -> None:
     integration_name: str | None = step.get("Integration")
-    if integration_name not in {"Flow", None}:
-        result.add(integration_name)  # type: ignore invalid-argument-type
+    if integration_name is not None and integration_name != "Flow":
+        result.add(integration_name)
 
 
 def _extract_from_block(step: BuiltStep, parent_folder: Path, result: set[str]) -> None:
@@ -162,8 +162,8 @@ def _extract_integrations_from_nested_block(block_identifier: str | None, base_f
         steps: list[dict] = block_json.get("Definition", {}).get("Steps", [])
         for step in steps:
             integration_name: str | None = step.get("Integration")
-            if integration_name not in {"Flow", None}:
-                result.add(integration_name)  # type: ignore invalid-argument-type
+            if integration_name is not None and integration_name != "Flow":
+                result.add(integration_name)
 
         break
 
