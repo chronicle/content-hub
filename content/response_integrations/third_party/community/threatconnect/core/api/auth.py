@@ -27,7 +27,7 @@ from requests.auth import AuthBase
 from requests.structures import CaseInsensitiveDict
 
 
-class ThreatConnectV3Auth(AuthBase):
+class ThreatConnectAuth(AuthBase):
     """ThreatConnect V3 HMAC-SHA256 Request Authenticator."""
 
     def __init__(self, api_access_id: str, api_secret_key: str) -> None:
@@ -72,4 +72,4 @@ class AuthenticatedSession(requests.Session):
 
     def __init__(self, api_access_id: str, api_secret_key: str) -> None:
         super().__init__()
-        self.auth = ThreatConnectV3Auth(api_access_id, api_secret_key)
+        self.auth = ThreatConnectAuth(api_access_id, api_secret_key)

@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from core.base_action import ThreatConnectV3Action
+from core.base_action import ThreatConnectAction
 from core.constants import PING_SCRIPT_NAME
 
 SUCCESS_MESSAGE: str = (
@@ -25,7 +25,7 @@ SUCCESS_MESSAGE: str = (
 ERROR_MESSAGE: str = "Failed to connect to the ThreatConnect server!"
 
 
-class Ping(ThreatConnectV3Action):
+class Ping(ThreatConnectAction):
     """Ping action to verify ThreatConnect v3 connection settings."""
 
     def __init__(self) -> None:

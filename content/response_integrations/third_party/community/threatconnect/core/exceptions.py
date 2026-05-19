@@ -17,15 +17,15 @@
 from __future__ import annotations
 
 
-class ThreatConnectV3Error(Exception):
-    """Generic exception for ThreatConnectV3 integration."""
+class ThreatConnectError(Exception):
+    """Generic exception for ThreatConnect integration."""
 
 
-class InvalidRequestParametersError(ThreatConnectV3Error):
+class InvalidRequestParametersError(ThreatConnectError):
     """Exception raised when request parameters are invalid."""
 
 
-class ThreatConnectV3HTTPError(ThreatConnectV3Error):
+class ThreatConnectHTTPError(ThreatConnectError):
     """Exception raised when an HTTP error occurs."""
 
     def __init__(self, message: str, status_code: int | None = None) -> None:
@@ -33,9 +33,9 @@ class ThreatConnectV3HTTPError(ThreatConnectV3Error):
         self.status_code = status_code
 
 
-class ThreatConnectV3FileError(ThreatConnectV3Error):
+class ThreatConnectFileError(ThreatConnectError):
     """Exception raised when a file error occurs."""
 
 
-class ThreatConnectV3InvalidJsonError(ThreatConnectV3Error):
+class ThreatConnectInvalidJsonError(ThreatConnectError):
     """Exception raised when provided JSON is invalid."""

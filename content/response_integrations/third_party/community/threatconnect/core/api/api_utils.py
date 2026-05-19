@@ -23,7 +23,7 @@ from urllib.parse import urljoin
 import requests
 
 from ..constants import ENDPOINTS
-from ..exceptions import InvalidRequestParametersError, ThreatConnectV3HTTPError
+from ..exceptions import InvalidRequestParametersError, ThreatConnectHTTPError
 
 HTTP_422_UNPROCESSABLE_ENTITY = 422
 
@@ -62,7 +62,7 @@ def validate_response(
 
     Raises:
         InvalidRequestParametersError: If the response status code is 422.
-        ThreatConnectV3HTTPError: If there is any other error in the response.
+        ThreatConnectHTTPError: If there is any other error in the response.
 
     """
     try:
@@ -76,7 +76,7 @@ def validate_response(
     except requests.HTTPError as error:
         content_str = error.response.content.decode("utf-8") if error.response.content else ""
         msg = f"{error_msg}: {error} {content_str}"
-        raise ThreatConnectV3HTTPError(
+        raise ThreatConnectHTTPError(
             msg,
             status_code=error.response.status_code,
         ) from error

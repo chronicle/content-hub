@@ -26,8 +26,7 @@ from TIPCommon.base.action import ExecutionState
 if TYPE_CHECKING:
     from integration_testing.platform.script_output import MockActionOutput
     from integration_testing.request import MockRequest
-
-    from threatconnect_v3.tests.core.session import ThreatConnectV3Session
+    from threatconnect_v3.tests.core.session import ThreatConnectSession
 
 from threatconnect_v3.actions import execute_http_request
 
@@ -48,7 +47,7 @@ class TestExecuteHttpRequest:
     )
     def test_execute_http_request_success(
         self,
-        script_session: ThreatConnectV3Session,
+        script_session: ThreatConnectSession,
         action_output: MockActionOutput,
     ) -> None:
         """Test successful execution of HTTP request."""
@@ -81,7 +80,7 @@ class TestExecuteHttpRequest:
     )
     def test_execute_http_request_failure_no_raise(
         self,
-        script_session: ThreatConnectV3Session,
+        script_session: ThreatConnectSession,
         action_output: MockActionOutput,
     ) -> None:
         """Test failed execution of HTTP request without raising exception."""
@@ -112,7 +111,7 @@ class TestExecuteHttpRequest:
     )
     def test_execute_http_request_failure_raise(
         self,
-        script_session: ThreatConnectV3Session,
+        script_session: ThreatConnectSession,
         action_output: MockActionOutput,
     ) -> None:
         """Test failed execution of HTTP request with raising exception."""
@@ -142,7 +141,7 @@ class TestExecuteHttpRequest:
     )
     def test_execute_http_request_post_body(
         self,
-        script_session: ThreatConnectV3Session,
+        script_session: ThreatConnectSession,
         action_output: MockActionOutput,
     ) -> None:
         """Test successful execution of POST request with body."""
@@ -173,7 +172,7 @@ class TestExecuteHttpRequest:
     )
     def test_execute_http_request_url_params(
         self,
-        script_session: ThreatConnectV3Session,
+        script_session: ThreatConnectSession,
         action_output: MockActionOutput,
     ) -> None:
         """Test successful execution of GET request with URL params."""

@@ -12,16 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Conftest for ThreatConnectV3 tests."""
+"""Conftest for ThreatConnect tests."""
 
 from __future__ import annotations
 
 import pytest
 from integration_testing.common import use_live_api
 from soar_sdk.SiemplifyBase import SiemplifyBase
+from threatconnect_v3.tests.core.session import ThreatConnectSession
 from TIPCommon.base.utils import CreateSession
-
-from threatconnect_v3.tests.core.session import ThreatConnectV3Session
 
 pytest_plugins = ("integration_testing.conftest",)
 
@@ -29,9 +28,9 @@ pytest_plugins = ("integration_testing.conftest",)
 @pytest.fixture(autouse=True)
 def script_session(
     monkeypatch: pytest.MonkeyPatch,
-) -> ThreatConnectV3Session:
+) -> ThreatConnectSession:
     """Mock scripts' session and get back an object to view request history."""
-    session: ThreatConnectV3Session = ThreatConnectV3Session()
+    session: ThreatConnectSession = ThreatConnectSession()
 
     if not use_live_api():
         monkeypatch.setattr(CreateSession, "create_session", lambda: session)
@@ -42,9 +41,9 @@ def script_session(
 
 
 @pytest.fixture(autouse=True)
-def sdk_session(monkeypatch: pytest.MonkeyPatch) -> ThreatConnectV3Session:
+def sdk_session(monkeypatch: pytest.MonkeyPatch) -> ThreatConnectSession:
     """Mock the SDK sessions and get it back to view request and response history."""
-    session: ThreatConnectV3Session = ThreatConnectV3Session()
+    session: ThreatConnectSession = ThreatConnectSession()
 
     if not use_live_api():
         monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)

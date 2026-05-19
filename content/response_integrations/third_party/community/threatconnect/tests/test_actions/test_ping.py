@@ -26,8 +26,7 @@ from TIPCommon.base.action import ExecutionState
 if TYPE_CHECKING:
     from integration_testing.platform.script_output import MockActionOutput
     from integration_testing.request import MockRequest
-
-    from threatconnect_v3.tests.core.session import ThreatConnectV3Session
+    from threatconnect_v3.tests.core.session import ThreatConnectSession
 
 from threatconnect_v3.actions import ping
 
@@ -43,7 +42,7 @@ class TestPing:
     )
     def test_ping_success(
         self,
-        script_session: ThreatConnectV3Session,
+        script_session: ThreatConnectSession,
         action_output: MockActionOutput,
     ) -> None:
         """Test successful execution of Ping action."""
@@ -64,7 +63,7 @@ class TestPing:
     )
     def test_ping_failure(
         self,
-        script_session: ThreatConnectV3Session,
+        script_session: ThreatConnectSession,
         action_output: MockActionOutput,
     ) -> None:
         """Test failed execution of Ping action."""

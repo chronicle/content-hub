@@ -42,7 +42,7 @@ class ApiParameters:
         self.api_root = api_root_clean
 
 
-class ThreatConnectV3ApiClient:
+class ThreatConnectApiClient:
     """ThreatConnect V3 API Client."""
 
     def __init__(

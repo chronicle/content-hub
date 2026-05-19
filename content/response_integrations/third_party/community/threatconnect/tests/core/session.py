@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Mock session for ThreatConnectV3 tests."""
+"""Mock session for ThreatConnect tests."""
 
 from __future__ import annotations
 
@@ -27,8 +27,8 @@ from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, Response, RouteFunction
 
 
-class ThreatConnectV3Session(MockSession[MockRequest, MockResponse, None]):
-    """Mock session for ThreatConnectV3."""
+class ThreatConnectSession(MockSession[MockRequest, MockResponse, None]):
+    """Mock session for ThreatConnect."""
 
     def get_routed_functions(self) -> Iterable[RouteFunction[Response]]:
         return [

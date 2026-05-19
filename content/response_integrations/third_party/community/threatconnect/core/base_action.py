@@ -21,19 +21,19 @@ from abc import ABC
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_configuration_param
 
-from ..core.api.api_client import ApiParameters, ThreatConnectV3ApiClient
+from ..core.api.api_client import ApiParameters, ThreatConnectApiClient
 from ..core.api.auth import AuthenticatedSession
 from ..core.constants import INTEGRATION_NAME
 
 
-class ThreatConnectV3Action(Action, ABC):
-    """Base action class for ThreatConnectV3 integration."""
+class ThreatConnectAction(Action, ABC):
+    """Base action class for ThreatConnect integration."""
 
-    def _init_api_clients(self) -> ThreatConnectV3ApiClient:
+    def _init_api_clients(self) -> ThreatConnectApiClient:
         """Initialize and return the ThreatConnect V3 API client.
 
         Returns:
-            ThreatConnectV3ApiClient: The configured API client.
+            ThreatConnectApiClient: The configured API client.
 
         """
         api_access_id = extract_configuration_param(
@@ -68,7 +68,7 @@ class ThreatConnectV3Action(Action, ABC):
         session = AuthenticatedSession(api_access_id, api_secret_key)
         parameters = ApiParameters(api_root, verify_ssl)
 
-        return ThreatConnectV3ApiClient(session, parameters, self.logger)
+        return ThreatConnectApiClient(session, parameters, self.logger)
 
     @property
     def result_value(self) -> bool:

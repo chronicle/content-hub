@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from SiemplifyLogger import SiemplifyLogger
     from TIPCommon.types import SingleJson
 
-from .exceptions import ThreatConnectV3FileError, ThreatConnectV3InvalidJsonError
+from .exceptions import ThreatConnectFileError, ThreatConnectInvalidJsonError
 
 FILE_NAME = "threatconnect_response"
 ZIP_FILE_EXTENSION = ".zip"
@@ -53,14 +53,14 @@ def parse_string_to_dict(string: str) -> SingleJson:
         SingleJson: parsed dict.
 
     Raises:
-        ThreatConnectV3InvalidJsonError: If provided JSON string is invalid.
+        ThreatConnectInvalidJsonError: If provided JSON string is invalid.
 
     """
     try:
         return json.loads(string)
     except json.JSONDecodeError as err:
         msg = f"Unable to parse provided json. Error is: {err}"
-        raise ThreatConnectV3InvalidJsonError(msg) from err
+        raise ThreatConnectInvalidJsonError(msg) from err
 
 
 def validate_expected_values(  # noqa: PLR0911
@@ -184,21 +184,21 @@ def extract_file_extension(response_headers: CaseInsensitiveDict[str]) -> str:
         str: file extension.
 
     Raises:
-        ThreatConnectV3FileError: If unable to extract file extension.
+        ThreatConnectFileError: If unable to extract file extension.
 
     """
     mimetype: str | None = response_headers.get("Content-Type")
 
     if not mimetype:
         msg = "Unable to extract file extension from response headers"
-        raise ThreatConnectV3FileError(msg)
+        raise ThreatConnectFileError(msg)
 
     extension: str | None = mimetypes.guess_extension(
         mimetype.partition(";")[0].strip()
     )
     if not extension:
         msg = f"Could not determine file extension for mimetype: {mimetype}"
-        raise ThreatConnectV3FileError(msg)
+        raise ThreatConnectFileError(msg)
     return extension
 
 

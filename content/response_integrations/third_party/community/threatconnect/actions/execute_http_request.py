@@ -25,9 +25,9 @@ from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
 
 from ..core import utils
-from ..core.base_action import ThreatConnectV3Action
+from ..core.base_action import ThreatConnectAction
 from ..core.constants import EXECUTE_HTTP_REQUEST_SCRIPT_NAME
-from ..core.exceptions import ThreatConnectV3HTTPError
+from ..core.exceptions import ThreatConnectHTTPError
 
 if TYPE_CHECKING:
 
@@ -47,7 +47,7 @@ FIELDS_TO_RETURN_POSSIBLE_VALUES: list[str] = [
 ]
 
 
-class ExecuteHttpRequest(ThreatConnectV3Action):
+class ExecuteHttpRequest(ThreatConnectAction):
     """Action to execute arbitrary HTTP requests."""
 
     def __init__(self) -> None:
@@ -227,7 +227,7 @@ class ExecuteHttpRequest(ThreatConnectV3Action):
 
             self.result_value = True  # type: ignore[assignment]
 
-        except ThreatConnectV3HTTPError as error:
+        except ThreatConnectHTTPError as error:
             self.logger.exception("Failed to execute request.")
             if (
                 self.params.fail_on_error
