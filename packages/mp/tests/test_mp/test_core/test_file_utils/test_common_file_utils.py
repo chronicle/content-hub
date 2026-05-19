@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -38,7 +39,7 @@ def test_validate_safe_path_absolute_path(tmp_path: Path, caplog: pytest.LogCapt
     base_path: Path = tmp_path / "integration_dir"
     base_path.mkdir()
 
-    absolute_path: str = "/etc/passwd"
+    absolute_path: str = str(tmp_path.parent / "passwd")
 
     with pytest.raises(typer.Exit) as exc_info:
         validate_safe_path(base_path, absolute_path)
@@ -67,6 +68,36 @@ def test_validate_safe_path_traversal_trick(tmp_path: Path, caplog: pytest.LogCa
     base_path.mkdir()
 
     traversal_path: str = "subdir/../../other_integration/example.json"
+
+    with pytest.raises(typer.Exit) as exc_info:
+        validate_safe_path(base_path, traversal_path)
+
+    assert exc_info.value.exit_code == 1
+    assert "Path traversal detected" in caplog.text
+    assert "attempts to escape the base directory" in caplog.text
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows specific path format")
+def test_validate_safe_path_windows_traversal(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    base_path: Path = tmp_path / "integration_dir"
+    base_path.mkdir()
+
+    traversal_path: str = r"..\other_integration\example.json"
+
+    with pytest.raises(typer.Exit) as exc_info:
+        validate_safe_path(base_path, traversal_path)
+
+    assert exc_info.value.exit_code == 1
+    assert "Path traversal detected" in caplog.text
+    assert "attempts to escape the base directory" in caplog.text
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows specific path format")
+def test_validate_safe_path_windows_traversal_trick(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    base_path: Path = tmp_path / "integration_dir"
+    base_path.mkdir()
+
+    traversal_path: str = r"subdir\..\..\other_integration\example.json"
 
     with pytest.raises(typer.Exit) as exc_info:
         validate_safe_path(base_path, traversal_path)
