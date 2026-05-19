@@ -29,6 +29,7 @@ from .common import (
     remove_paths_if_exists,
     remove_rglobs_if_exists,
     save_yaml,
+    validate_safe_path,
 )
 from .integrations import (
     IntegrationParityValidator,
@@ -119,6 +120,7 @@ __all__: list[str] = [
     "svg_path_to_text",
     "text_to_svg_file",
     "validate_png_content",
+    "validate_safe_path",
     "validate_svg_content",
     "write_str_to_json_file",
     "write_yaml_to_file",
