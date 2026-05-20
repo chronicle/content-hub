@@ -73,10 +73,11 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
 
     """
     sdk_class = type(soar_sdk_object).__name__
-    if sdk_class == "SiemplifyAction" or isinstance(soar_sdk_object, SiemplifyAction):
-        input_dictionary = soar_sdk_object.get_configuration(INTEGRATION_NAME)
-    elif sdk_class in ("SiemplifyConnectorExecution", "SiemplifyJob") or isinstance(
-        soar_sdk_object, (SiemplifyConnectorExecution, SiemplifyJob)
+    if sdk_class == SiemplifyAction.__name__:
+        input_dictionary = soar_sdk_object.get_configuration(INTEGRATION_NAME)  # type: ignore[union-attr]
+    elif sdk_class in (
+        SiemplifyConnectorExecution.__name__,
+        SiemplifyJob.__name__,
     ):
         input_dictionary = soar_sdk_object.parameters
     else:
