@@ -767,6 +767,7 @@ class WorkflowInstaller:
                 else None
             )
             if existing_step:
+                old_steps.remove(existing_step)
                 old_step_identifier = step.get("identifier")
                 identifier_mappings[old_step_identifier] = existing_step.get(
                     "identifier",
@@ -820,73 +821,15 @@ class WorkflowInstaller:
     def _adjust_loop_keys_and_parameters(self, identifier_mappings, workflow):
         self.logger.info("[DEBUG_LOG] Starting _adjust_loop_keys_and_parameters")
         for step in self._flatten_playbook_steps(workflow.raw_data.get("steps")):
-            self.logger.info(
-                f"[DEBUG_LOG] Processing parent fields in step '{step.get('instanceName')}': "
-                f"id='{step.get('identifier')}', "
-                f"parentStepContainerId={step.get('parentStepContainerId')}, "
-                f"parentStepIdentifier={step.get('parentStepIdentifier')}, "
-                f"parentStepIdentifiers={step.get('parentStepIdentifiers')}"
-            )
             if step.get("startLoopStepIdentifier"):
                 mapped_id = identifier_mappings.get(step["startLoopStepIdentifier"])
-                self.logger.info(f"  startLoopStepIdentifier '{step['startLoopStepIdentifier']}' -> '{mapped_id}'")
                 if mapped_id:
                     step["startLoopStepIdentifier"] = mapped_id
 
             if step.get("endLoopStepIdentifier"):
                 mapped_id = identifier_mappings.get(step["endLoopStepIdentifier"])
-                self.logger.info(f"  endLoopStepIdentifier '{step['endLoopStepIdentifier']}' -> '{mapped_id}'")
                 if mapped_id:
                     step["endLoopStepIdentifier"] = mapped_id
-
-            # 1. Map parentStepContainerId (used in ParallelActionsContainer nested steps)
-            if step.get("parentStepContainerId"):
-                mapped_id = identifier_mappings.get(step["parentStepContainerId"])
-                self.logger.info(f"  parentStepContainerId '{step['parentStepContainerId']}' -> '{mapped_id}'")
-                if mapped_id:
-                    step["parentStepContainerId"] = mapped_id
-
-            # 2. Map parentStepIdentifier (used in sequential step logic)
-            if step.get("parentStepIdentifier"):
-                mapped_id = identifier_mappings.get(step["parentStepIdentifier"])
-                self.logger.info(f"  parentStepIdentifier '{step['parentStepIdentifier']}' -> '{mapped_id}'")
-                if mapped_id:
-                    step["parentStepIdentifier"] = mapped_id
-
-            # 3. Map parentStepIdentifiers list (used in sequential step logic)
-            if step.get("parentStepIdentifiers"):
-                old_list = step["parentStepIdentifiers"]
-                mapped_list = [
-                    identifier_mappings.get(x, x)
-                    for x in old_list
-                ]
-                self.logger.info(f"  parentStepIdentifiers '{old_list}' -> '{mapped_list}'")
-                step["parentStepIdentifiers"] = mapped_list
-
-            # 4. If the step is a ParallelActionsContainer, also map elements inside its parallelActions list directly
-            if step.get("actionProvider") == "ParallelActionsContainer":
-                self.logger.info(f"  Processing parallelActions list for container '{step.get('instanceName')}'")
-                for inner_step in step.get("parallelActions", []):
-                    if inner_step.get("parentStepContainerId"):
-                        mapped_id = identifier_mappings.get(inner_step["parentStepContainerId"])
-                        self.logger.info(f"    Inner Step '{inner_step.get('instanceName')}' parentStepContainerId '{inner_step['parentStepContainerId']}' -> '{mapped_id}'")
-                        if mapped_id:
-                            inner_step["parentStepContainerId"] = mapped_id
-
-                    if inner_step.get("parentStepIdentifier"):
-                        mapped_id = identifier_mappings.get(inner_step["parentStepIdentifier"])
-                        self.logger.info(f"    Inner Step '{inner_step.get('instanceName')}' parentStepIdentifier '{inner_step['parentStepIdentifier']}' -> '{mapped_id}'")
-                        if mapped_id:
-                            inner_step["parentStepIdentifier"] = mapped_id
-
-                    if inner_step.get("parentStepIdentifiers"):
-                        old_inner_list = inner_step["parentStepIdentifiers"]
-                        mapped_inner_list = [
-                            identifier_mappings.get(x, x)
-                            for x in old_inner_list
-                        ]
-                        self.logger.info(f"    Inner Step '{inner_step.get('instanceName')}' parentStepIdentifiers '{old_inner_list}' -> '{mapped_inner_list}'")
-                        inner_step["parentStepIdentifiers"] = mapped_inner_list
 
             parameters = step.get("parameters", [])
             for param in parameters:
@@ -896,14 +839,6 @@ class WorkflowInstaller:
                 # Handle Start/EndLoopStepIdentifier parameter
                 if (param_name in {"StartLoopStepIdentifier", "EndLoopStepIdentifier"} and param_value):
                     mapped_id = identifier_mappings.get(param_value)
-                    self.logger.info(f"  Param '{param_name}' value '{param_value}' -> '{mapped_id}'")
-                    if mapped_id:
-                        param["value"] = mapped_id
-
-                # 5. Handle ParentStepIdentifier in step parameters (references to parent outputs)
-                if param_name == "ParentStepIdentifier" and param_value:
-                    mapped_id = identifier_mappings.get(param_value)
-                    self.logger.info(f"  Param '{param_name}' value '{param_value}' -> '{mapped_id}'")
                     if mapped_id:
                         param["value"] = mapped_id
 
