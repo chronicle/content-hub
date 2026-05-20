@@ -305,6 +305,6 @@ def test_is_commercial_integration(tmp_path: Path, non_built_integration: Path) 
 
     name: str = non_built_integration.name
     assert mp.core.file_utils.is_certified_integration(commercial_dir / name) is True
-    assert mp.core.file_utils.is_certified_integration(powerups_dir / name) is True
+    assert mp.core.file_utils.is_certified_integration(powerups_dir / name) is False
     assert mp.core.file_utils.is_certified_integration(partner_dir / name) is False
     assert mp.core.file_utils.is_certified_integration(community_dir / name) is False
