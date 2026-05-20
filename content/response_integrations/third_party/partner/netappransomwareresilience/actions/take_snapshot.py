@@ -58,8 +58,7 @@ def main() -> None:
 
     siemplify.LOGGER.info("----------------- RRS - Take Snapshot: End -----------------")
     siemplify.LOGGER.info(
-        f"Take Snapshot: \n  status: {status}\n  result_value: {result_value}"
-        f"\n  output_message: {output_message}"
+        f"Take Snapshot: \n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}"
     )
 
     # Add result to action output.

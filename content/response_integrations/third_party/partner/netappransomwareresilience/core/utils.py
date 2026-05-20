@@ -30,9 +30,7 @@ def compute_expiry(response: Dict[str, Any]) -> int:
             return now_ms + (expires_in_sec * 1000)
 
         except (TypeError, ValueError) as e:
-            raise RrsException(
-                f"Malformed '{EXPIRES_IN_KEY}' value in OAuth response: {expires_in!r}"
-            ) from e
+            raise RrsException(f"Malformed '{EXPIRES_IN_KEY}' value in OAuth response: {expires_in!r}") from e
     return now_ms + (DEFAULT_EXPIRY_SECONDS * 1000)
 
 
@@ -85,3 +83,21 @@ def extract_domain_from_uri(service_url: str) -> str:
 
 def build_rrs_url(url: str, account_id: str, endpoint: str) -> str:
     return f"{url}/{account_id}/{endpoint}"
+
+
+def mask_sensitive_value(value: str, visible_chars: int = 3) -> str:
+    """Mask a sensitive string, showing only the last N characters.
+
+    Args:
+        value: The sensitive string to mask.
+        visible_chars: Number of characters to show at the end (default: 3).
+
+    Returns:
+        str: Masked string with asterisks and visible trailing characters.
+             Returns empty string if value is None or empty.
+    """
+    if not value:
+        return ""
+    if len(value) <= visible_chars:
+        return "*" * len(value)
+    return "*" * (len(value) - visible_chars) + value[-visible_chars:]

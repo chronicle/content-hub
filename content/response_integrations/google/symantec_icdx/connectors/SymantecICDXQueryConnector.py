@@ -28,7 +28,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 # ==============================================================================
 import json
 import os
-from soar_sdk.SiemplifyConnectors import CaseInfo, SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
 from soar_sdk.SiemplifyUtils import (
     dict_to_flat,
     convert_datetime_to_unix_time,
