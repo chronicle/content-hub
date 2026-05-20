@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 URL_ENTITY = create_entity("http://markossolomon.com/f1q7qx.php", EntityTypesEnum.URL)
 IP_ENTITY = create_entity("1.1.1.1", EntityTypesEnum.ADDRESS)
-HOST_ENTITY = create_entity("badguy.com", EntityTypesEnum.HOST_NAME)
+HOST_ENTITY = create_entity("test.com", EntityTypesEnum.HOST_NAME)
 FILE_ENTITY = create_entity("f5a2496cf66cb8cffe66cb1b27d7dede", EntityTypesEnum.FILE_HASH)
 
 
@@ -153,15 +153,15 @@ class TestEnrichEntities:
     ) -> None:
         """Test that entities are correctly flagged as suspicious based on threatAssessRating threshold."""
         host_raw = INDICATOR_MOCK_RAW.copy()
-        host_raw["summary"] = "badguy.com"
+        host_raw["summary"] = "test.com"
         host_raw["type"] = "Host"
         host_raw["rating"] = 4.5
-        threatconnect.add_indicator("badguy.com", IndicatorData.from_json(host_raw))
+        threatconnect.add_indicator("test.com", IndicatorData.from_json(host_raw))
 
         enrich_entities.main()
 
         assert action_output.results is not None
-        assert "BADGUY.COM" in action_output.results.output_message
+        assert "TEST.COM" in action_output.results.output_message
 
         updated_entities = script_session.request_history[-1].request.kwargs.get("json", [])
         assert len(updated_entities) > 0
