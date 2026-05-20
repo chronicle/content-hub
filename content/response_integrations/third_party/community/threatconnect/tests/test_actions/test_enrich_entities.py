@@ -77,14 +77,14 @@ class TestEnrichEntities:
         assert len(tc_requests) == 2
 
         url_req = tc_requests[0].request
-        assert url_req.url.path.endswith("/api/v3/indicators/http%3A%2F%2Fmarkossolomon.com%2Ff1q7qx.php")
+        assert url_req.url.path == "/api/v3/indicators/http%3A%2F%2Fmarkossolomon.com%2Ff1q7qx.php"
         assert url_req.kwargs.get("params") == {
             "fields": ["tags", "attributes", "associatedGroups", "securityLabels"],
             "owner": "S",
         }
 
         ip_req = tc_requests[1].request
-        assert ip_req.url.path.endswith("/api/v3/indicators/1.1.1.1")
+        assert ip_req.url.path == "/api/v3/indicators/1.1.1.1"
 
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
