@@ -52,7 +52,7 @@ def main():
             if not playbook:
                 siemplify.LOGGER.info(f"{playbook_name} not found in the repository")
                 continue
-            siemplify.LOGGER.info(f"[JOB_LOG] Found playbook '{playbook_name}' in repository (identifier='{playbook.identifier}')")
+            siemplify.LOGGER.info(f"[JOB_LOG] Found playbook '{playbook_name}' in repository (identifier='{playbook.raw_data.get('identifier')}')")
             playbooks[playbook.name] = playbook
             if include_blocks:
                 involved_blocks = playbook.get_involved_blocks()
@@ -63,7 +63,7 @@ def main():
                         siemplify.LOGGER.info(f"[JOB_LOG] Fetching block '{block_name}' from repository")
                         block_workflow = gitsync.content.get_playbook(block_name)
                         if block_workflow:
-                            siemplify.LOGGER.info(f"[JOB_LOG] Found block '{block_name}' in repository (identifier='{block_workflow.identifier}')")
+                            siemplify.LOGGER.info(f"[JOB_LOG] Found block '{block_name}' in repository (identifier='{block_workflow.raw_data.get('identifier')}')")
                             playbooks[block_workflow.name] = block_workflow
                         else:
                             siemplify.LOGGER.warn(f"[JOB_LOG] Block '{block_name}' not found in the repository")
