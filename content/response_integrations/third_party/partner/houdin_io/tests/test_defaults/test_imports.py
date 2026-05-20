@@ -5,7 +5,6 @@ import pathlib
 
 from .. import common
 
-
 VALID_SUFFIXES = (".py",)
 
 
