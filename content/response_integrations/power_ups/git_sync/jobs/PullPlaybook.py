@@ -40,6 +40,8 @@ def main():
         input_type=bool,
     )
 
+    siemplify.LOGGER.info(f"[JOB_LOG] Starting Pull Playbook with parameters: Playbook Whitelist={pull_allowlist}, Include Playbook Blocks={include_blocks}")
+
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
@@ -50,14 +52,23 @@ def main():
             if not playbook:
                 siemplify.LOGGER.info(f"{playbook_name} not found in the repository")
                 continue
+            siemplify.LOGGER.info(f"[JOB_LOG] Found playbook '{playbook_name}' in repository (identifier='{playbook.identifier}')")
             playbooks[playbook.name] = playbook
             if include_blocks:
-                for block in playbook.get_involved_blocks():
-                    if block.get("name") not in playbooks:
-                        block = gitsync.content.get_playbook(block.get("name"))
-                        if block:
-                            playbooks[block.name] = block
+                involved_blocks = playbook.get_involved_blocks()
+                siemplify.LOGGER.info(f"[JOB_LOG] Involved blocks in repository for '{playbook_name}': {[b.get('name') for b in involved_blocks]}")
+                for block in involved_blocks:
+                    block_name = block.get("name")
+                    if block_name not in playbooks:
+                        siemplify.LOGGER.info(f"[JOB_LOG] Fetching block '{block_name}' from repository")
+                        block_workflow = gitsync.content.get_playbook(block_name)
+                        if block_workflow:
+                            siemplify.LOGGER.info(f"[JOB_LOG] Found block '{block_name}' in repository (identifier='{block_workflow.identifier}')")
+                            playbooks[block_workflow.name] = block_workflow
+                        else:
+                            siemplify.LOGGER.warn(f"[JOB_LOG] Block '{block_name}' not found in the repository")
 
+        siemplify.LOGGER.info(f"[JOB_LOG] About to call install_workflows with targets: {list(playbooks.keys())}")
         gitsync.install_workflows(list(playbooks.values()))
 
     except Exception as e:
