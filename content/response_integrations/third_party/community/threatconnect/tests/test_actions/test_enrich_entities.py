@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 from typing import TYPE_CHECKING
 
 from integration_testing.common import create_entity
@@ -89,7 +90,7 @@ class TestEnrichEntities:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert "Following entities were enriched by ThreatConnect." in action_output.results.output_message
-        assert "HTTP://MARKOSSOLOMON.COM/F1Q7QX.PHP" in action_output.results.output_message
+        assert re.search(r"HTTP://MARKOSSOLOMON\.COM/F1Q7QX\.PHP", action_output.results.output_message) is not None
         assert "1.1.1.1" in action_output.results.output_message
 
     @set_metadata(
@@ -135,7 +136,7 @@ class TestEnrichEntities:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert "Following entities were enriched by ThreatConnect." in action_output.results.output_message
-        assert "HTTP://MARKOSSOLOMON.COM/F1Q7QX.PHP" in action_output.results.output_message
+        assert re.search(r"HTTP://MARKOSSOLOMON\.COM/F1Q7QX\.PHP", action_output.results.output_message) is not None
         assert "1.1.1.1" not in action_output.results.output_message
         assert action_output.results.result_value is True
 
@@ -161,7 +162,7 @@ class TestEnrichEntities:
         enrich_entities.main()
 
         assert action_output.results is not None
-        assert "TEST.COM" in action_output.results.output_message
+        assert re.search(r"TEST\.COM", action_output.results.output_message) is not None
 
         updated_entities = script_session.request_history[-1].request.kwargs.get("json", [])
         assert len(updated_entities) > 0
