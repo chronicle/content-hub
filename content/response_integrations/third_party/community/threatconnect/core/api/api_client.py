@@ -17,16 +17,17 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING
+import urllib.parse
+from typing import TYPE_CHECKING, Any
 
+import requests
 from TIPCommon.base.interfaces import Apiable
 
+from ..data_models import IndicatorData
 from .api_utils import get_full_url, validate_response
 
 if TYPE_CHECKING:
     from logging import Logger
-
-    import requests
 
     from ...core.auth import AuthenticatedSession
 
@@ -115,3 +116,42 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
         )
         validate_response(response, error_msg=f"Failed to execute {method} request to {url}")
         return response
+
+    def get_indicator_info(
+        self,
+        indicator_value: str,
+        owner_names: list[str] | None = None,
+    ) -> list[IndicatorData]:
+        """Get enrichment info for a specific indicator value from V3 API.
+
+        Args:
+            indicator_value (str): The indicator value (summary) to fetch.
+            owner_names (list[str], optional): List of owner names.
+
+        Returns:
+            list[IndicatorData]: List of mapped IndicatorData objects.
+
+        """
+        encoded_value = urllib.parse.quote(indicator_value, safe="")
+        url = get_full_url(self.api_root, "indicators")
+        url = f"{url}/{encoded_value}"
+
+        params: dict[str, Any] = {"fields": ["tags", "attributes", "associatedGroups", "securityLabels"]}
+
+        results: list[IndicatorData] = []
+        owners: list[str | None] = list(owner_names) if owner_names else [None]
+
+        for owner in owners:
+            query_params = params.copy()
+            if owner:
+                query_params["owner"] = owner
+
+            try:
+                response = self.execute_request("GET", url, params=query_params)
+                data = response.json().get("data")
+                if data:
+                    results.append(IndicatorData(data))
+            except Exception as e:
+                self.logger.warn(f"Failed to fetch data for indicator {indicator_value} from owner {owner}: {e}")
+
+        return results

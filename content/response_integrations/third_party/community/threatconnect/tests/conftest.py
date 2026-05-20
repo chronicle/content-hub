@@ -21,17 +21,25 @@ from integration_testing.common import use_live_api
 from soar_sdk.SiemplifyBase import SiemplifyBase
 from TIPCommon.base.utils import CreateSession
 
+from threatconnect.tests.core.product import ThreatConnectProduct
 from threatconnect.tests.core.session import ThreatConnectSession
 
 pytest_plugins = ("integration_testing.conftest",)
 
 
+@pytest.fixture
+def threatconnect() -> ThreatConnectProduct:
+    """Fixture for the ThreatConnect mock product."""
+    return ThreatConnectProduct()
+
+
 @pytest.fixture(autouse=True)
 def script_session(
     monkeypatch: pytest.MonkeyPatch,
+    threatconnect: ThreatConnectProduct,
 ) -> ThreatConnectSession:
     """Mock scripts' session and get back an object to view request history."""
-    session: ThreatConnectSession = ThreatConnectSession()
+    session: ThreatConnectSession = ThreatConnectSession(threatconnect)
 
     if not use_live_api():
         monkeypatch.setattr(CreateSession, "create_session", lambda: session)
@@ -41,9 +49,12 @@ def script_session(
 
 
 @pytest.fixture(autouse=True)
-def sdk_session(monkeypatch: pytest.MonkeyPatch) -> ThreatConnectSession:
+def sdk_session(
+    monkeypatch: pytest.MonkeyPatch,
+    threatconnect: ThreatConnectProduct,
+) -> ThreatConnectSession:
     """Mock the SDK sessions and get it back to view request and response history."""
-    session: ThreatConnectSession = ThreatConnectSession()
+    session: ThreatConnectSession = ThreatConnectSession(threatconnect)
 
     if not use_live_api():
         monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)
