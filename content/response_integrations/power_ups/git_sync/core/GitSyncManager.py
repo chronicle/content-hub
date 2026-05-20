@@ -839,6 +839,55 @@ class WorkflowInstaller:
                 if mapped_id:
                     step["endLoopStepIdentifier"] = mapped_id
 
+            # 1. Map parentStepContainerId (used in ParallelActionsContainer nested steps)
+            if step.get("parentStepContainerId"):
+                mapped_id = identifier_mappings.get(step["parentStepContainerId"])
+                self.logger.info(f"  parentStepContainerId '{step['parentStepContainerId']}' -> '{mapped_id}'")
+                if mapped_id:
+                    step["parentStepContainerId"] = mapped_id
+
+            # 2. Map parentStepIdentifier (used in sequential step logic)
+            if step.get("parentStepIdentifier"):
+                mapped_id = identifier_mappings.get(step["parentStepIdentifier"])
+                self.logger.info(f"  parentStepIdentifier '{step['parentStepIdentifier']}' -> '{mapped_id}'")
+                if mapped_id:
+                    step["parentStepIdentifier"] = mapped_id
+
+            # 3. Map parentStepIdentifiers list (used in sequential step logic)
+            if step.get("parentStepIdentifiers"):
+                old_list = step["parentStepIdentifiers"]
+                mapped_list = [
+                    identifier_mappings.get(x, x)
+                    for x in old_list
+                ]
+                self.logger.info(f"  parentStepIdentifiers '{old_list}' -> '{mapped_list}'")
+                step["parentStepIdentifiers"] = mapped_list
+
+            # 4. If the step is a ParallelActionsContainer, also map elements inside its parallelActions list directly
+            if step.get("actionProvider") == "ParallelActionsContainer":
+                self.logger.info(f"  Processing parallelActions list for container '{step.get('instanceName')}'")
+                for inner_step in step.get("parallelActions", []):
+                    if inner_step.get("parentStepContainerId"):
+                        mapped_id = identifier_mappings.get(inner_step["parentStepContainerId"])
+                        self.logger.info(f"    Inner Step '{inner_step.get('instanceName')}' parentStepContainerId '{inner_step['parentStepContainerId']}' -> '{mapped_id}'")
+                        if mapped_id:
+                            inner_step["parentStepContainerId"] = mapped_id
+
+                    if inner_step.get("parentStepIdentifier"):
+                        mapped_id = identifier_mappings.get(inner_step["parentStepIdentifier"])
+                        self.logger.info(f"    Inner Step '{inner_step.get('instanceName')}' parentStepIdentifier '{inner_step['parentStepIdentifier']}' -> '{mapped_id}'")
+                        if mapped_id:
+                            inner_step["parentStepIdentifier"] = mapped_id
+
+                    if inner_step.get("parentStepIdentifiers"):
+                        old_inner_list = inner_step["parentStepIdentifiers"]
+                        mapped_inner_list = [
+                            identifier_mappings.get(x, x)
+                            for x in old_inner_list
+                        ]
+                        self.logger.info(f"    Inner Step '{inner_step.get('instanceName')}' parentStepIdentifiers '{old_inner_list}' -> '{mapped_inner_list}'")
+                        inner_step["parentStepIdentifiers"] = mapped_inner_list
+
             parameters = step.get("parameters", [])
             for param in parameters:
                 param_name = param.get("name")
@@ -846,6 +895,13 @@ class WorkflowInstaller:
 
                 # Handle Start/EndLoopStepIdentifier parameter
                 if (param_name in {"StartLoopStepIdentifier", "EndLoopStepIdentifier"} and param_value):
+                    mapped_id = identifier_mappings.get(param_value)
+                    self.logger.info(f"  Param '{param_name}' value '{param_value}' -> '{mapped_id}'")
+                    if mapped_id:
+                        param["value"] = mapped_id
+
+                # 5. Handle ParentStepIdentifier in step parameters (references to parent outputs)
+                if param_name == "ParentStepIdentifier" and param_value:
                     mapped_id = identifier_mappings.get(param_value)
                     self.logger.info(f"  Param '{param_name}' value '{param_value}' -> '{mapped_id}'")
                     if mapped_id:
