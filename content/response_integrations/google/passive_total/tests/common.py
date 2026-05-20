@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+from integration_testing.common import get_def_file_content
 import pathlib
 import json
 from pathlib import Path
