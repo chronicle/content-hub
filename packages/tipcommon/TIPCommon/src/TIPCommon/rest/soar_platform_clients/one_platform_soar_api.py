@@ -721,7 +721,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         while has_more_pages:
             request_payload.update({
-                "pageNumber": page_number,
+                "requestedPage": page_number,
                 "pageSize": page_size,
             })
 

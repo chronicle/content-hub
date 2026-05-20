@@ -215,7 +215,7 @@ def test_search_cases_by_everything_single_page(
         "POST",
         "https://mock-soar-api.com/legacySearches:legacyCaseSearchEverything",
         params={"format": "camel"},
-        json={"query": "something", "pageSize": 10, "pageNumber": 0},
+        json={"query": "something", "pageSize": 10, "requestedPage": 0},
     )
 
 
@@ -253,13 +253,13 @@ def test_search_cases_by_everything_multi_page(
         (
             "POST",
             "https://mock-soar-api.com/legacySearches:legacyCaseSearchEverything",
-            {"query": "something", "pageSize": 2, "pageNumber": 0},
+            {"query": "something", "pageSize": 2, "requestedPage": 0},
             {"format": "camel"},
         ),
         (
             "POST",
             "https://mock-soar-api.com/legacySearches:legacyCaseSearchEverything",
-            {"query": "something", "pageSize": 2, "pageNumber": 1},
+            {"query": "something", "pageSize": 2, "requestedPage": 1},
             {"format": "camel"},
         ),
     ]
