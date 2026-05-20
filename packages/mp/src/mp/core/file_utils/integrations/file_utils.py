@@ -417,7 +417,6 @@ def is_certified_integration(path: Path) -> bool:
     """
     return is_integration(path) and (
         path.parent.name in constants.INTEGRATIONS_DIRS_NAMES_DICT[constants.COMMERCIAL_REPO_NAME]
-        or path.parent.name == constants.POWERUPS_DIR_NAME
     )
 
 
