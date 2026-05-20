@@ -26,9 +26,10 @@ from TIPCommon.base.action import ExecutionState
 if TYPE_CHECKING:
     from integration_testing.platform.script_output import MockActionOutput
     from integration_testing.request import MockRequest
-    from threatconnect_v3.tests.core.session import ThreatConnectSession
 
-from threatconnect_v3.actions import execute_http_request
+    from threatconnect.tests.core.session import ThreatConnectSession
+
+from threatconnect.actions import execute_http_request
 
 CONFIG_PATH = pathlib.Path(__file__).parent.parent / "config.json"
 
@@ -55,17 +56,11 @@ class TestExecuteHttpRequest:
 
         assert len(script_session.request_history) == 1
         request = script_session.request_history[0].request
-        assert (
-            request.url.geturl()
-            == "https://partners.threatconnect.com/api/v3/indicators?resultLimit=1"
-        )
+        assert request.url.geturl() == "https://partners.threatconnect.com/api/v3/indicators?resultLimit=1"
         assert request.method.value == "GET"
 
         assert action_output.results is not None
-        assert (
-            action_output.results.output_message
-            == execute_http_request.SUCCESS_MESSAGE
-        )
+        assert action_output.results.output_message == execute_http_request.SUCCESS_MESSAGE
         assert action_output.results.execution_state == ExecutionState.COMPLETED
 
     @set_metadata(
@@ -90,6 +85,7 @@ class TestExecuteHttpRequest:
                 content={"message": "Unauthorized", "status": "Error"},
                 status_code=401,
             )
+
         script_session.routes["GET"][r"/api/v3/indicators"] = mock_get_indicators
 
         execute_http_request.main()
@@ -121,6 +117,7 @@ class TestExecuteHttpRequest:
                 content={"message": "Unauthorized", "status": "Error"},
                 status_code=401,
             )
+
         script_session.routes["GET"][r"/api/v3/indicators"] = mock_get_indicators
 
         execute_http_request.main()
@@ -151,6 +148,7 @@ class TestExecuteHttpRequest:
                 content={"status": "success"},
                 status_code=201,
             )
+
         script_session.routes["POST"][r"/api/v3/indicators"] = mock_post_indicators
 
         execute_http_request.main()

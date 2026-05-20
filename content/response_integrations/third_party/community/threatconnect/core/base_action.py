@@ -17,58 +17,47 @@
 from __future__ import annotations
 
 from abc import ABC
+from typing import TYPE_CHECKING
 
 from TIPCommon.base.action import Action
-from TIPCommon.extraction import extract_configuration_param
 
 from ..core.api.api_client import ApiParameters, ThreatConnectApiClient
-from ..core.api.auth import AuthenticatedSession
-from ..core.constants import INTEGRATION_NAME
+from ..core.auth import AuthenticatedSession, SessionAuthenticationParameters, build_auth_params
+
+if TYPE_CHECKING:
+    import requests
 
 
-class ThreatConnectAction(Action, ABC):
+class ThreatConnectAction(Action[ThreatConnectApiClient], ABC):
     """Base action class for ThreatConnect integration."""
 
     def _init_api_clients(self) -> ThreatConnectApiClient:
-        """Initialize and return the ThreatConnect V3 API client.
+        """Initialize and return the ThreatConnect V3 API client using the standard TIPCommon interfaces.
 
         Returns:
             ThreatConnectApiClient: The configured API client.
 
         """
-        api_access_id = extract_configuration_param(
-            self.soar_action,
-            provider_name=INTEGRATION_NAME,
-            param_name="API Access ID",
-            is_mandatory=True,
-            input_type=str,
+        auth_params = build_auth_params(self.soar_action)
+        authenticator = AuthenticatedSession()
+        auth_params_for_session = SessionAuthenticationParameters(
+            api_access_id=auth_params.api_access_id,
+            api_secret_key=auth_params.api_secret_key,
+            verify_ssl=auth_params.verify_ssl,
         )
-        api_secret_key = extract_configuration_param(
-            self.soar_action,
-            provider_name=INTEGRATION_NAME,
-            param_name="API Secret Key",
-            is_mandatory=True,
-            input_type=str,
-        )
-        api_root = extract_configuration_param(
-            self.soar_action,
-            provider_name=INTEGRATION_NAME,
-            param_name="API Root",
-            is_mandatory=True,
-            input_type=str,
-        )
-        verify_ssl = extract_configuration_param(
-            self.soar_action,
-            provider_name=INTEGRATION_NAME,
-            param_name="Verify SSL",
-            default_value=True,
-            input_type=bool,
+        authenticator.authenticate_session(auth_params_for_session)
+        authenticated_session: requests.Session = authenticator.session
+
+        api_params = ApiParameters(
+            api_root=auth_params.api_root,
+            verify_ssl=auth_params.verify_ssl,
         )
 
-        session = AuthenticatedSession(api_access_id, api_secret_key)
-        parameters = ApiParameters(api_root, verify_ssl)
-
-        return ThreatConnectApiClient(session, parameters, self.logger)
+        return ThreatConnectApiClient(
+            authenticated_session=authenticated_session,  # type: ignore[arg-type]
+            configuration=api_params,
+            logger=self.logger,
+        )
 
     @property
     def result_value(self) -> bool:

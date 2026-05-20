@@ -19,8 +19,9 @@ from __future__ import annotations
 import pytest
 from integration_testing.common import use_live_api
 from soar_sdk.SiemplifyBase import SiemplifyBase
-from threatconnect_v3.tests.core.session import ThreatConnectSession
 from TIPCommon.base.utils import CreateSession
+
+from threatconnect.tests.core.session import ThreatConnectSession
 
 pytest_plugins = ("integration_testing.conftest",)
 
@@ -35,7 +36,6 @@ def script_session(
     if not use_live_api():
         monkeypatch.setattr(CreateSession, "create_session", lambda: session)
         monkeypatch.setattr("requests.Session", lambda: session)
-        monkeypatch.setattr("threatconnect_v3.core.base_action.AuthenticatedSession", lambda *_: session)
 
     return session
 

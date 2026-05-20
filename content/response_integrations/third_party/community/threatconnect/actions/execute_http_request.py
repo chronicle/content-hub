@@ -30,8 +30,9 @@ from ..core.constants import EXECUTE_HTTP_REQUEST_SCRIPT_NAME
 from ..core.exceptions import ThreatConnectHTTPError
 
 if TYPE_CHECKING:
+    from TIPCommon.types import Entity, SingleJson
 
-    from TIPCommon.types import SingleJson
+    from ..core.api.api_client import ThreatConnectApiClient
 
 
 SUCCESS_MESSAGE: str = "Successfully executed API request."
@@ -180,9 +181,10 @@ class ExecuteHttpRequest(ThreatConnectAction):
                 print_value=True,
             )
 
-    def _perform_action(self, _: object | None = None) -> None:
+    def _perform_action(self, current_entity: Entity | None = None) -> None:
         try:
-            response = self.api_client.execute_request(
+            client: ThreatConnectApiClient = self.api_client  # type: ignore[assignment]
+            response = client.execute_request(
                 method=self.params.method,
                 url=self.params.url_path,
                 params=self.params.url_params,
@@ -209,12 +211,9 @@ class ExecuteHttpRequest(ThreatConnectAction):
                 )
             )
             if wait_for_expected_values:
-                self.output_message = (
-                    "Successfully executed API request. "
-                    "Waiting for expected response values."
-                )
+                self.output_message = "Successfully executed API request. Waiting for expected response values."
                 self.execution_state = ExecutionState.IN_PROGRESS
-                self.result_value = json.dumps(results)
+                self.result_value = json.dumps(results)  # type: ignore[assignment]
                 return
 
             if self.params.save_to_case_wall:
@@ -229,11 +228,7 @@ class ExecuteHttpRequest(ThreatConnectAction):
 
         except ThreatConnectHTTPError as error:
             self.logger.exception("Failed to execute request.")
-            if (
-                self.params.fail_on_error
-                and error.status_code
-                and error.status_code >= ERROR_STATUS_CODE_THRESHOLD
-            ):
+            if self.params.fail_on_error and error.status_code and error.status_code >= ERROR_STATUS_CODE_THRESHOLD:
                 raise
 
             self.output_message = (

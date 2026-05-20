@@ -193,9 +193,7 @@ def extract_file_extension(response_headers: CaseInsensitiveDict[str]) -> str:
         msg = "Unable to extract file extension from response headers"
         raise ThreatConnectFileError(msg)
 
-    extension: str | None = mimetypes.guess_extension(
-        mimetype.partition(";")[0].strip()
-    )
+    extension: str | None = mimetypes.guess_extension(mimetype.partition(";")[0].strip())
     if not extension:
         msg = f"Could not determine file extension for mimetype: {mimetype}"
         raise ThreatConnectFileError(msg)
@@ -245,9 +243,7 @@ def get_results_from_response(
         response_data = response.text
 
     results: dict[str, Any] = {
-        "response_data": (
-            convert_to_base_64(response_data) if base64_output else response_data
-        ),
+        "response_data": (convert_to_base_64(response_data) if base64_output else response_data),
         "redirects": [item.url for item in response.history] + [response.url],
         "response_code": response.status_code,
         "response_cookies": response.cookies.get_dict(),

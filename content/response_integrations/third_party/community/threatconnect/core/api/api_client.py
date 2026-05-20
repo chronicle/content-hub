@@ -19,12 +19,16 @@ from __future__ import annotations
 import dataclasses
 from typing import TYPE_CHECKING
 
+from TIPCommon.base.interfaces import Apiable
+
 from .api_utils import get_full_url, validate_response
 
 if TYPE_CHECKING:
     from logging import Logger
 
     import requests
+
+    from ...core.auth import AuthenticatedSession
 
 
 @dataclasses.dataclass(slots=True)
@@ -42,18 +46,21 @@ class ApiParameters:
         self.api_root = api_root_clean
 
 
-class ThreatConnectApiClient:
-    """ThreatConnect V3 API Client."""
+class ThreatConnectApiClient(Apiable[ApiParameters]):
+    """ThreatConnect V3 API Client implementing Apiable interface."""
 
     def __init__(
         self,
-        session: requests.Session,
-        parameters: ApiParameters,
+        authenticated_session: AuthenticatedSession,
+        configuration: ApiParameters,
         logger: Logger,
     ) -> None:
-        self.session = session
-        self.api_root = parameters.api_root
-        self.verify_ssl = parameters.verify_ssl
+        super().__init__(
+            authenticated_session=authenticated_session,  # type: ignore[arg-type]
+            configuration=configuration,
+        )
+        self.api_root = configuration.api_root
+        self.verify_ssl = configuration.verify_ssl
         self.logger = logger
 
     def test_connectivity(self) -> None:
@@ -62,7 +69,7 @@ class ThreatConnectApiClient:
         self.logger.info(f"Testing connectivity via: {url}")  # noqa: G004
 
         params = {"resultLimit": 1}
-        response = self.session.get(url, params=params, verify=self.verify_ssl)
+        response = self.session.get(url, params=params)
         validate_response(response, error_msg="Failed to connect to the ThreatConnect server")
 
     def execute_request(  # noqa: PLR0913

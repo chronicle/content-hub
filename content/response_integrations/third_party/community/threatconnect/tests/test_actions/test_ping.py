@@ -26,9 +26,10 @@ from TIPCommon.base.action import ExecutionState
 if TYPE_CHECKING:
     from integration_testing.platform.script_output import MockActionOutput
     from integration_testing.request import MockRequest
-    from threatconnect_v3.tests.core.session import ThreatConnectSession
 
-from threatconnect_v3.actions import ping
+    from threatconnect.tests.core.session import ThreatConnectSession
+
+from threatconnect.actions import ping
 
 CONFIG_PATH = pathlib.Path(__file__).parent.parent / "config.json"
 
@@ -74,6 +75,7 @@ class TestPing:
                 content={"message": "Unauthorized", "status": "Error"},
                 status_code=401,
             )
+
         script_session.routes["GET"][r"/api/v3/indicators"] = mock_get_indicators
 
         ping.main()
