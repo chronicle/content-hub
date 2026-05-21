@@ -31,9 +31,7 @@ class TestVolumeOffline:
 
         assert len(script_session.request_history) >= 1
         offline_requests = [
-            req
-            for req in script_session.request_history
-            if "storage/take-volume-offline" in req.request.url.path
+            req for req in script_session.request_history if "storage/take-volume-offline" in req.request.url.path
         ]
         assert len(offline_requests) >= 1
 

@@ -397,11 +397,13 @@ def _read_image_files(metadata_content: NonBuiltIntegrationMetadata, path: Path)
 
     """
     if image_str := metadata_content.get("image_path"):
-        full_path = path / image_str
+        mp.core.file_utils.validate_safe_path(path, image_str)
+        full_path: Path = path / image_str
         metadata_content["image_path"] = mp.core.file_utils.png_path_to_bytes(full_path)
 
     if svg_path_str := metadata_content.get("svg_logo_path"):
-        full_path = path / svg_path_str
+        mp.core.file_utils.validate_safe_path(path, svg_path_str)
+        full_path: Path = path / svg_path_str
         metadata_content["svg_logo_path"] = mp.core.file_utils.svg_path_to_text(full_path)
 
 
