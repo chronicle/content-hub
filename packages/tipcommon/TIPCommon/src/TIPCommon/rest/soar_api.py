@@ -159,9 +159,11 @@ def get_installed_jobs(
     api_client = get_soar_client(chronicle_soar)
     api_client.params.job_instance_id = job_instance_id
     response = api_client.get_installed_jobs()
+    if isinstance(response, list):
+        return response #QA fixes
     validate_response(response, validate_json=True)
 
-    return response.json()
+    return response.json() # QA fixes
 
 
 def get_connector_cards(
@@ -1999,9 +2001,8 @@ def import_simulated_case(
     try:
         validate_response(response, validate_json=False)
         return True
-    except (HTTPError, InternalJSONDecoderError):
-        return False
-
+    except (HTTPError, InternalJSONDecoderError) as e:
+        raise Exception(f"{response.text}") from e # QA fixes
 
 def add_case_tag(
     chronicle_soar: ChronicleSOAR,
@@ -2672,7 +2673,7 @@ def get_store_data(chronicle_soar: ChronicleSOAR) -> SingleJson:
     api_client = get_soar_client(chronicle_soar)
 
     response = api_client.get_store_data()
-    return response.get("integrations", response.get("marketplaceIntegrations", response.get("marketplace_integrations", []))) #QA fixes
+    return response.get("integrations", response.get("marketplaceIntegrations", [])) #QA fixes
 
 def import_package(
     chronicle_soar: ChronicleSOAR, integration_name: str, b64_blob: str

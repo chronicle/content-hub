@@ -514,12 +514,15 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_installed_jobs(self) -> requests.Response:
+    def get_installed_jobs(self) -> list[SingleJson] | requests.Response:
         """Get installed jobs."""
-        endpoint: str = "/integrations/-/jobs/-/jobInstances/"
+        endpoint: str = "/integrations/-/jobs/-/jobInstances"
         if self.params.job_instance_id:
-            endpoint += f"{self.params.job_instance_id}"
-        return self._make_request(HttpMethod.GET, endpoint)
+            endpoint += f"/{self.params.job_instance_id}"
+            return self._make_request(HttpMethod.GET, endpoint)
+
+        endpoint += f"?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="job_instances")
 
     def get_case_wall_records(self) -> requests.Response:
         """Get case wall records using 1P API.
@@ -1001,13 +1004,13 @@ class OnePlatformSoarApi(BaseSoarApi):
         )
         return self._make_request(HttpMethod.GET, endpoint)
 
-    @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_installed_jobs(self) -> requests.Response:
-        """Get installed jobs."""
-        endpoint: str = "/integrations/-/jobs/-/jobInstances"
-        if self.params.job_instance_id:
-            endpoint += f"/{self.params.job_instance_id}"
-        return self._make_request(HttpMethod.GET, endpoint)
+    # @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    # def get_installed_jobs(self) -> requests.Response:
+    #     """Get installed jobs."""
+    #     endpoint: str = "/integrations/-/jobs/-/jobInstances"
+    #     if self.params.job_instance_id:
+    #         endpoint += f"/{self.params.job_instance_id}"
+    #     return self._make_request(HttpMethod.GET, endpoint) #QA fixes
 
     def _enrich_connector_instances_with_params(
         self,
@@ -1236,27 +1239,10 @@ class OnePlatformSoarApi(BaseSoarApi):
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_store_data(self) -> SingleJson:
-        """Get all store data and return it in the expected dictionary format."""
-        endpoint = "/marketplaceIntegrations"
-        all_integrations = []
-        next_page_token = None
-
-        while True:
-            params = {}
-            if next_page_token:
-                params["pageToken"] = next_page_token
-            response_json = self._make_request(
-                HttpMethod.GET, endpoint, params=params
-            ).json()
-            page_items = response_json.get("marketplaceIntegrations") or response_json.get("marketplace_integrations", []) #Qa fixes
-            all_integrations.extend(page_items)
-            next_page_token = response_json.get("nextPageToken")
-            if not next_page_token:
-                break
-        return {
-            "marketplaceIntegrations": all_integrations,
-            "nextPageToken": None
-        }
+        """Get store data."""
+        endpoint = f"/marketplaceIntegrations?pageSize={_PAGE_SIZE}"
+        results = self._paginate_results(initial_endpoint=endpoint, root_response_key="marketplaceIntegrations")
+        return {"marketplaceIntegrations": results} #QA fixes
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def import_package(self) -> requests.Response:
@@ -1507,10 +1493,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_installed_integrations(self) -> requests.Response:
+    def get_installed_integrations(self) -> list[SingleJson]:
         """Get installed integrations."""
-        endpoint: str = "/integrations"
-        return self._make_request(HttpMethod.GET, endpoint).json()["integrations"]
+        endpoint = f"/integrations?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="integrations") # QA fixes
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_case_close_comment(self, case_id: str | int) -> requests.Response:
