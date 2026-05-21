@@ -19,7 +19,7 @@ from abc import ABC
 from TIPCommon.base.action import Action
 
 from .auth import IntegrationParameters, build_auth_params
-from .client import GoogleSecretManagerClient
+from .manager import GoogleSecretManagerClient
 
 
 class GoogleSecretManagerAction(Action, ABC):

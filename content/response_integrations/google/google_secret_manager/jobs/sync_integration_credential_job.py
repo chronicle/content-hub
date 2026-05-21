@@ -27,7 +27,7 @@ from TIPCommon.rest.async_soar_platform_clients.async_credential_sync_api import
 from TIPCommon.rest.async_soar_platform_clients.secops_soar import AsyncChronicleSOAR
 
 from ..core.auth import IntegrationParameters, build_auth_params
-from ..core.client import GoogleSecretManagerClient
+from ..core.manager import GoogleSecretManagerClient
 from ..core.constants import (
     ANY_INTEGRATION_FILTER_VALUE,
     ASYNC_SEMAPHORE_LIMIT,

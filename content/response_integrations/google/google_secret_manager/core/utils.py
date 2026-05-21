@@ -15,6 +15,7 @@
 """Shared utility helpers for the Google Secret Manager integration."""
 
 from __future__ import annotations
+
 from typing import Any
 
 

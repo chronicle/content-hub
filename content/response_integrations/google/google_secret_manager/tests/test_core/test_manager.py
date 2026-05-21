@@ -21,7 +21,7 @@ from unittest.mock import MagicMock
 import pytest
 from google.cloud import secretmanager
 
-from google_secret_manager.core.client import (
+from google_secret_manager.core.manager import (
     GoogleSecretManagerClient,
 )
 from google_secret_manager.core.constants import DEFAULT_SECRET_VERSION

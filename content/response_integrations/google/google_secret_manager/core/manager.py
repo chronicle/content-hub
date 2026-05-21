@@ -237,6 +237,7 @@ class GoogleSecretManagerClient:
             raise SecretAccessError(f"Failed to access secret version '{version_id}': {e}") from e
 
         payload: bytes = response.payload.data
+
         try:
             return payload.decode("UTF-8")
         except UnicodeDecodeError as e:
