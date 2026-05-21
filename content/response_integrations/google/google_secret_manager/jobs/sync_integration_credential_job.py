@@ -589,7 +589,7 @@ class SyncIntegrationCredentialJob(Job):
             return None
 
         if not job_instances:
-            self.logger.warning("No jobs returned from platform.")
+            self.logger.warn("No jobs returned from platform.")
             return None
 
         return job_instances
@@ -654,7 +654,7 @@ class SyncIntegrationCredentialJob(Job):
         )
 
         if updated_count == 0:
-            self.logger.warning(f"No parameters updated for job '{job_name}' — skipping save.")
+            self.logger.warn(f"No parameters updated for job '{job_name}' — skipping save.")
             return
 
         job_data["parameters"] = parameters
@@ -705,7 +705,7 @@ class SyncIntegrationCredentialJob(Job):
             return None
 
         if not parameters:
-            self.logger.warning(
+            self.logger.warn(
                 f"Job '{job_name}' has an empty parameters list — nothing to update."
             )
             return None
