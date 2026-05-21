@@ -132,6 +132,50 @@ def get_case_overview_details(
     return CaseDetails.from_json(api.get_case_overview_details())
 
 
+def get_similar_cases(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int | str,
+    ports_filter: list[str],
+    category_outcome_filter: list[str],
+    rule_generator_filter: list[str],
+    entity_identifiers_filter: list[str],
+    start_time_unix_ms: str,
+    end_time_unix_ms: str,
+) -> list[str]:
+    """Get similar cases.
+
+    Args:
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        ports_filter: List of ports to filter by.
+        category_outcome_filter: List of category outcomes to filter by.
+        rule_generator_filter: List of rule generators to filter by.
+        entity_identifiers_filter: List of entity identifiers to filter by.
+        start_time_unix_ms: Start time in unix ms.
+        end_time_unix_ms: End time in unix ms.
+
+    Returns:
+        List of similar case IDs.
+    """
+    endpoint = "api/external/v1/sdk/GetSimilarCasesIds?format=snake"
+    url = urljoin(chronicle_soar.API_ROOT, endpoint)
+    payload = {
+        "case_id": case_id,
+        "ports_filter": ports_filter,
+        "category_outcome_filter": category_outcome_filter,
+        "rule_generator_filter": rule_generator_filter,
+        "entity_identifiers_filter": entity_identifiers_filter,
+        "start_time_unix_ms": start_time_unix_ms,
+        "end_time_unix_ms": end_time_unix_ms,
+    }
+
+    chronicle_soar.LOGGER.info(f"Calling endpoint {endpoint} with payload: {payload}")
+    response = chronicle_soar.session.post(url, json=payload)
+    validate_response(response, validate_json=True)
+
+    return response.json()
+
+
 def get_installed_jobs(
     chronicle_soar: ChronicleSOAR,
     job_instance_id: int | None = None,
@@ -690,6 +734,37 @@ def set_alert_priority(
     validate_response(response, validate_json=False)
 
 
+def set_case_alerts_priority(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    alert_identifiers: list[str],
+    alert_names: list[str],
+    priority: int,
+) -> tuple[list[str], list[str]]:
+    """Set alert priority for multiple alerts in a case.
+
+    Args:
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_identifiers: List of Chronicle SOAR Alert Identifiers.
+        alert_names: List of Chronicle SOAR Alert Names aligned with identifiers.
+        priority: Chronicle SOAR priority enum value.
+    Returns:
+        Success and failed alert identifiers.
+    """
+    success_alerts = []
+    failed_alerts = []
+    for alert_identifier, alert_name in zip(alert_identifiers, alert_names):
+        try:
+            set_alert_priority(chronicle_soar, case_id, alert_identifier, alert_name, priority)
+            success_alerts.append(alert_identifier)
+        except Exception as e:
+            chronicle_soar.LOGGER.error(f"Failed to set priority for alert {alert_identifier}: {e}")
+            failed_alerts.append(alert_identifier)
+
+    return success_alerts, failed_alerts
+
+
 def remove_case_tag(
     chronicle_soar: ChronicleSOAR,
     case_id: int,
@@ -1053,6 +1128,115 @@ def pause_case_alerts_sla(
             failed_alerts.append(alert_identifier)
 
     return success_alerts, failed_alerts
+
+
+def set_custom_fields_for_alerts(
+    chronicle_soar,
+    case_id: int,
+    alert_ids: list[int],
+    custom_fields_to_values: dict[CustomField, list[str]],
+    append_values: bool,
+    free_text_type_id: int,
+) -> tuple[list[dict[str, list[str]]], list[int]]:
+    """Set custom fields for multiple alerts in a case.
+
+    Args:
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_ids: List of Chronicle SOAR Alert IDs (integers).
+        custom_fields_to_values: Dict of CustomField to list of values.
+        append_values: Whether to append values or overwrite.
+        free_text_type_id: The type ID for free text fields.
+
+    Returns:
+        tuple[list[dict[str, list[str]]], list[int]]: Success results and failed alert
+        IDs.
+    """
+    success_results: list[dict[str, list[str]]] = []
+    failed_alerts: list[int] = []
+
+    for alert_id in alert_ids:
+        try:
+            result_dict: SingleJson = _set_custom_fields_for_single_alert(
+                chronicle_soar=chronicle_soar,
+                case_id=case_id,
+                alert_id=alert_id,
+                custom_fields_to_values=custom_fields_to_values,
+                append_values=append_values,
+                free_text_type_id=free_text_type_id,
+            )
+            success_results.append(result_dict)
+        except Exception as e:
+            chronicle_soar.LOGGER.error(
+                f"Failed to set custom fields for alert {alert_id}: {e}"
+            )
+            failed_alerts.append(alert_id)
+
+    return success_results, failed_alerts
+
+
+def _set_custom_fields_for_single_alert(
+    chronicle_soar,
+    case_id: int,
+    alert_id: int,
+    custom_fields_to_values: dict[CustomField, list[str]],
+    append_values: bool,
+    free_text_type_id: int,
+) -> SingleJson:
+    """Set custom fields for a single alert.
+
+    Args:
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_id: Chronicle SOAR Alert ID.
+        custom_fields_to_values: Dict of CustomField to list of values.
+        append_values: Whether to append values or overwrite.
+        free_text_type_id: The type ID for free text fields.
+
+    Returns:
+        SingleJson: Result dictionary for the alert.
+    """
+    try:
+        custom_field_values = list_custom_field_values(
+            chronicle_soar,
+            f"cases/{case_id}/alerts/{alert_id}",
+        )
+    except Exception:
+        custom_field_values = []
+
+    custom_field_values_map: SingleJson = {
+        field.custom_field_id: field.values for field in custom_field_values
+    }
+
+    custom_fields_values_mapping: SingleJson = {}
+    for field_id, (custom_field, field_value) in custom_fields_to_values.items():
+        existing_values = (
+            custom_field_values_map.get(custom_field.id, []) if append_values else []
+        )
+
+        if custom_field.type == free_text_type_id:
+            current_value = ["".join(existing_values + field_value)]
+        else:
+            current_value = existing_values + field_value
+
+        custom_fields_values_mapping[custom_field.id] = [
+            val for val in current_value if val
+        ]
+
+    batch_set_custom_field_values(
+        chronicle_soar,
+        identifier=alert_id,
+        parent=f"cases/{case_id}/alerts",
+        custom_fields_values_mapping=custom_fields_values_mapping,
+    )
+
+    return {
+        "alert_id": alert_id,
+        **{
+            custom_field.display_name: custom_fields_values_mapping[custom_field.id]
+            for custom_field, _ in custom_fields_to_values.values()
+        },
+    }
 
 
 def change_case_description(
