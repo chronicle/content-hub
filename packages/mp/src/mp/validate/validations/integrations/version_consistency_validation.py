@@ -69,7 +69,7 @@ class VersionConsistencyValidation:
 
         # Get the latest release note version
         latest_rn = rn_content[-1]
-        rn_version = str(latest_rn.get("integration_version", ""))
+        rn_version = str(latest_rn.get("version") or latest_rn.get("integration_version", ""))
 
         # Normalize versions by stripping trailing ".0" for comparison
         # e.g. "1.0" matches "1", "2.0" matches "2"

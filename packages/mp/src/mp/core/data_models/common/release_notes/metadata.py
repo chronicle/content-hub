@@ -82,7 +82,8 @@ class BuiltReleaseNote(TypedDict):
 class NonBuiltReleaseNote(TypedDict):
     description: str
     deprecated: NotRequired[bool]
-    integration_version: float
+    version: NotRequired[float]
+    integration_version: NotRequired[float]
     item_name: str
     item_type: str
     publish_time: NotRequired[str | None]
@@ -166,7 +167,7 @@ class ReleaseNote(SequentialMetadata[BuiltReleaseNote, NonBuiltReleaseNote]):
         return cls(
             description=non_built["description"],
             deprecated=non_built.get("deprecated", False),
-            version=non_built["integration_version"],
+            version=non_built.get("version") or non_built["integration_version"],
             item_name=non_built["item_name"],
             item_type=non_built["item_type"],
             new=non_built.get("new", False),
@@ -205,7 +206,7 @@ class ReleaseNote(SequentialMetadata[BuiltReleaseNote, NonBuiltReleaseNote]):
         """
         non_built: NonBuiltReleaseNote = NonBuiltReleaseNote(
             description=self.description,
-            integration_version=self.version,
+            version=self.version,
             item_name=self.item_name,
             item_type=self.item_type,
             publish_time=convert_epoch_to_iso(self.publish_time) if self.publish_time is not None else None,

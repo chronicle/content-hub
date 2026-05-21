@@ -116,13 +116,11 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built object failed to be loaded
 
         """
-        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
-
         try:
             metadata: Self = cls._from_built(built)
         except (KeyError, ValueError) as e:
-            msg: str = f"Failed to load built\n{built}"
-            raise ValueError(trim_values(msg)) from e
+            msg: str = f"Failed to load built component '{cls.__name__}'"
+            raise ValueError(msg) from e
         else:
             return metadata
 
@@ -140,13 +138,11 @@ class Buildable(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the non-built object failed to be loaded
 
         """
-        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
-
         try:
             metadata: Self = cls._from_non_built(non_built)
         except (KeyError, ValueError) as e:
-            msg: str = f"Failed to load non-built\n{non_built}"
-            raise ValueError(trim_values(msg)) from e
+            msg: str = f"Failed to load non-built component '{cls.__name__}'"
+            raise ValueError(msg) from e
         else:
             return metadata
 
@@ -215,13 +211,11 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the built object failed to be loaded
 
         """
-        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
-
         try:
             metadata: Self = cls._from_built(file_name, built)
         except (KeyError, ValueError) as e:
-            msg: str = f"Failed to load built\n{built}"
-            raise ValueError(trim_values(msg)) from e
+            msg: str = f"Failed to load built '{cls.__name__}' from '{file_name}'"
+            raise ValueError(msg) from e
         else:
             return metadata
 
@@ -240,13 +234,11 @@ class BuildableComponent(pydantic.BaseModel, abc.ABC, Generic[_BT, _NBT]):
             ValueError: when the non-built object failed to be loaded
 
         """
-        from mp.core.utils.common.utils import trim_values  # noqa: PLC0415
-
         try:
             metadata: Self = cls._from_non_built(file_name, non_built)
         except (KeyError, ValueError) as e:
-            msg: str = f"Failed to load non-built\n{non_built}"
-            raise ValueError(trim_values(msg)) from e
+            msg: str = f"Failed to load non-built '{cls.__name__}' from '{file_name}'"
+            raise ValueError(msg) from e
         else:
             return metadata
 

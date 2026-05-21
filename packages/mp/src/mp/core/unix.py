@@ -81,8 +81,10 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
     logger.debug("Running command: %s", command)
 
     try:
-        sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
+        result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
@@ -104,8 +106,10 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
     """
     logger.debug("Running pip command: %s in %s", command, cwd)
     try:
-        sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # noqa: S603
+        result = sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # noqa: S603
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         # Check if this is a safe-to-ignore error / marker issue
         if ignored_packages := _get_safe_to_ignore_packages(e):
             message = (
@@ -244,9 +248,10 @@ def _add_regular_dependencies_to_toml(deps_to_add: list[str], base_command: list
     deps_command: list[str] = base_command.copy()
     deps_command.extend(deps_to_add)
     try:
-        sp.run(deps_command, cwd=project_path, check=True, text=True)  # noqa: S603
-
+        result = sp.run(deps_command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
@@ -263,10 +268,12 @@ def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list
     dev_base_command.extend(_get_base_dev_dependencies())
     dev_base_command.extend(dev_deps_to_add)
     try:
-        sp.run(  # noqa: S603
-            dev_base_command, cwd=project_path, check=True, text=True
+        result = sp.run(  # noqa: S603
+            dev_base_command, cwd=project_path, check=True, text=True, capture_output=True
         )
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
@@ -332,8 +339,10 @@ def init_python_project(project_path: Path) -> None:
     logger.debug("Running command: %s", command)
 
     try:
-        sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
+        result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
@@ -421,9 +430,9 @@ def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **
     logger.debug("Executing command and capturing output: %s", command)
 
     try:
-        process: sp.Popen[bytes] = sp.Popen(command)  # noqa: S603
+        process: sp.Popen[bytes] = sp.Popen(command, stdout=sp.PIPE, stderr=sp.STDOUT)  # noqa: S603
         for line in _stream_process_output(process):
-            logger.info("%s", line.decode(errors="replace").rstrip())
+            logger.debug("%s", line.decode(errors="replace").rstrip())
 
         return process.wait()
 
@@ -556,11 +565,13 @@ def check_lock_file(project_path: Path) -> None:
     logger.debug("Checking lock file consistency: %s", command)
 
     try:
-        sp.run(  # noqa: S603
+        result = sp.run(  # noqa: S603
             command, cwd=project_path, check=True, text=True, capture_output=True
         )
+        _log_subprocess_result(result)
 
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         error_output = e.stderr.strip()
         error_output = f"{COMMAND_ERR_MSG.format('uv lock --check')}: {error_output}"
         raise NonFatalCommandError(error_output) from e
@@ -648,3 +659,16 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
 
 def _get_python_version() -> str:
     return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+
+
+def _log_subprocess_result(result: sp.CompletedProcess[str] | sp.CalledProcessError) -> None:
+    """Log the output of a subprocess command.
+
+    Args:
+        result: The result of the subprocess command.
+
+    """
+    for line in (result.stdout or "").splitlines():
+        logger.debug(line)
+    for line in (result.stderr or "").splitlines():
+        logger.debug(line)

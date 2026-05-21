@@ -243,7 +243,7 @@ class DeconstructIntegration:
                 content=[
                     NonBuiltReleaseNote(
                         description="",
-                        integration_version=self.integration.metadata.version,
+                        version=self.integration.metadata.version,
                         item_name=self.integration.metadata.identifier,
                         item_type="Integration",
                         publish_time=str(datetime.datetime.now(datetime.UTC).date()),

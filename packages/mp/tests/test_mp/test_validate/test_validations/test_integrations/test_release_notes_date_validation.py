@@ -31,41 +31,41 @@ if TYPE_CHECKING:
 VALIDATOR = ReleaseNotesDateValidation()
 
 VALID_RN = """\
-- integration_version: '1.0'
+- version: '1.0'
   publish_time: '2024-01-01'
   description: Initial release
 """
 
 INVALID_RN = """\
-- integration_version: '1.0'
+- version: '1.0'
   publish_time: ''
   description: Initial release
 """
 
 MISSING_PUBLISH_TIME_RN = """\
-- integration_version: '1.0'
+- version: '1.0'
   description: Initial release
 """
 
 TWO_ENTRY_RN_VALID = """\
-- integration_version: '2.0'
+- version: '2.0'
   publish_time: '2026-04-28'
   description: New feature
-- integration_version: '1.0'
+- version: '1.0'
   publish_time: '2024-01-01'
   description: Initial release
 """
 
 TWO_ENTRY_RN_OLD_MISSING = """\
-- integration_version: '2.0'
+- version: '2.0'
   publish_time: '2026-04-28'
   description: New feature
-- integration_version: '1.0'
+- version: '1.0'
   description: Initial release
 """
 
 OLD_MAIN_RN = """\
-- integration_version: '1.0'
+- version: '1.0'
   description: Initial release
 """
 
@@ -128,10 +128,10 @@ class TestReleaseNotesDateValidationCI:
     def test_new_invalid_entry_fails(self, temp_integration: Path) -> None:
         rn = temp_integration / "release_notes.yaml"
         new_rn = """\
-- integration_version: '2.0'
+- version: '2.0'
   publish_time: ''
   description: New feature
-- integration_version: '1.0'
+- version: '1.0'
   publish_time: '2024-01-01'
   description: Initial release
 """
@@ -208,14 +208,10 @@ class TestReleaseNotesDateValidationCI:
         so a pre-existing entry with version 1.0 (float) is skipped when comparing to a
         new entry at version 2.0, and the old float-versioned entry isn't re-validated."""
         # Main branch has unquoted 1.0 → parsed as float by yaml.safe_load
-        old_main_rn_unquoted = "- integration_version: 1.0\n  description: Initial\n"
+        old_main_rn_unquoted = "- version: 1.0\n  description: Initial\n"
         # Current file has new entry (2.0) plus pre-existing (1.0, no publish_time)
         current_rn = (
-            "- integration_version: 2.0\n"
-            "  publish_time: '2026-04-28'\n"
-            "  description: New\n"
-            "- integration_version: 1.0\n"
-            "  description: Initial\n"
+            "- version: 2.0\n  publish_time: '2026-04-28'\n  description: New\n- version: 1.0\n  description: Initial\n"
         )
         rn = temp_integration / "release_notes.yaml"
         rn.write_text(current_rn, encoding="utf-8")

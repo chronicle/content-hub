@@ -16,18 +16,18 @@ from __future__ import annotations
 
 import logging
 import shutil
-from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING
 
 import mp.core.config
 import mp.core.file_utils
+import mp.core.utils
 from mp.core.data_models.playbooks.playbook import Playbook
 
 from .restructure.playbooks.build import PlaybookBuilder
 from .restructure.playbooks.deconstruct import PlaybookDeconstructor
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable
     from pathlib import Path
 
 
@@ -60,10 +60,15 @@ class PlaybooksRepo:
             playbook_paths: The paths of playbooks to build
 
         """
-        paths: Iterator[Path] = (p for p in playbook_paths if p.exists())
+        paths: list[Path] = [p for p in playbook_paths if p.exists()]
         processes: int = mp.core.config.get_processes_number()
-        with ThreadPoolExecutor(max_workers=processes) as pool:
-            list(pool.map(self.build_playbook, paths))
+
+        mp.core.utils.run_in_parallel(
+            func=self.build_playbook,
+            items=paths,
+            max_workers=processes,
+            error_message_template="Failed to build playbook '%s'",
+        )
 
     def build_playbook(self, playbook_path: Path) -> None:
         """Build a single playbook provided by `playbook_path`.
@@ -101,10 +106,15 @@ class PlaybooksRepo:
             playbooks_paths: The paths of playbook to deconstruct
 
         """
-        paths: Iterator[Path] = (p for p in playbooks_paths if p.exists())
+        paths: list[Path] = [p for p in playbooks_paths if p.exists()]
         processes: int = mp.core.config.get_processes_number()
-        with ThreadPoolExecutor(max_workers=processes) as pool:
-            list(pool.map(self.deconstruct_playbook, paths))
+
+        mp.core.utils.run_in_parallel(
+            func=self.deconstruct_playbook,
+            items=paths,
+            max_workers=processes,
+            error_message_template="Failed to deconstruct playbook '%s'",
+        )
 
     def deconstruct_playbook(self, playbook_path: Path) -> None:
         """Deconstruct a single playbook provided by `playbook_path`.

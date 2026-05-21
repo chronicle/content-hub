@@ -33,6 +33,7 @@ DEFAULT_RUNTIME_INTERVAL: int = 900
 class BuiltJobMetadata(TypedDict):
     Creator: str
     Description: str
+    DocumentationLink: NotRequired[str | None]
     Integration: str
     IsCustom: bool
     IsEnabled: bool
@@ -45,6 +46,7 @@ class BuiltJobMetadata(TypedDict):
 class NonBuiltJobMetadata(TypedDict):
     creator: str
     description: str
+    documentation_link: NotRequired[str | None]
     integration: str
     is_custom: NotRequired[bool]
     is_enabled: NotRequired[bool]
@@ -61,6 +63,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
         str,
         pydantic.Field(max_length=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH),
     ]
+    documentation_link: pydantic.HttpUrl | pydantic.FileUrl | None = None
     integration: Annotated[
         str,
         pydantic.Field(
@@ -129,6 +132,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
             file_name=file_name,
             creator=built["Creator"],
             description=built["Description"],
+            documentation_link=built.get("DocumentationLink"),  # ty:ignore[invalid-argument-type]
             integration=built["Integration"],
             is_custom=built.get("IsCustom", False),
             is_enabled=built.get("IsEnabled", True),
@@ -144,6 +148,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
             file_name=file_name,
             creator=non_built["creator"],
             description=non_built["description"],
+            documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
             integration=non_built["integration"],
             is_custom=non_built.get("is_custom", False),
             is_enabled=non_built.get("is_enabled", True),
@@ -166,6 +171,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
         return BuiltJobMetadata(
             Creator=self.creator,
             Description=self.description,
+            DocumentationLink=(str(self.documentation_link) or None if self.documentation_link is not None else None),
             Integration=self.integration,
             IsCustom=self.is_custom,
             IsEnabled=self.is_enabled,
@@ -186,6 +192,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
             name=self.name,
             parameters=[param.to_non_built() for param in self.parameters],
             description=self.description,
+            documentation_link=(str(self.documentation_link) or None if self.documentation_link is not None else None),
             integration=self.integration,
             creator=self.creator,
         )
