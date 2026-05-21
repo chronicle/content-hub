@@ -54,27 +54,19 @@ def main():
         input_type=bool,
     )
 
-    siemplify.LOGGER.info(f"[JOB_LOG] Starting Push Playbook with Whitelists: Playbook Whitelist={playbooks_allowlist}, Folders Whitelist={folders_allowlist}")
-    siemplify.LOGGER.info(f"[JOB_LOG] Push Options: Commit={commit_msg}, Readme Addon={'Yes' if readme_addon else 'No'}, Include Playbook Blocks={include_blocks}")
-
     if not playbooks_allowlist and not folders_allowlist:
         raise Exception("Playbook or Folder allowlist not provided")
 
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
         installed_playbooks = gitsync.api.get_playbooks()
-        siemplify.LOGGER.info(f"[JOB_LOG] Retrieved {len(installed_playbooks)} installed playbooks/blocks from SOAR")
 
         for playbook in installed_playbooks:
-            name = playbook.get("name")
-            category = playbook.get("categoryName")
-            matched = (
-                name in playbooks_allowlist
-                or category in folders_allowlist
-            )
-            siemplify.LOGGER.info(f"  Checking playbook '{name}' (category '{category}'): Matched={matched}")
-            if matched:
-                siemplify.LOGGER.info(f"Pushing Playbook {name}")
+            if (
+                playbook.get("name") in playbooks_allowlist
+                or playbook.get("categoryName") in folders_allowlist
+            ):
+                siemplify.LOGGER.info(f"Pushing Playbook {playbook['name']}")
 
                 if readme_addon:
                     siemplify.LOGGER.info(
@@ -82,21 +74,17 @@ def main():
                     )
                     gitsync.content.metadata.set_readme_addon(
                         "Playbook",
-                        name,
+                        playbook.get("name"),
                         readme_addon,
                     )
 
-                siemplify.LOGGER.info(f"[JOB_LOG] Fetching full playbook data for '{name}' (id='{playbook.get('identifier')}')")
-                playbook_details = gitsync.api.get_playbook(playbook.get("identifier"))
-                workflow = Workflow(playbook_details)
+                playbook = gitsync.api.get_playbook(playbook.get("identifier"))
+                workflow = Workflow(playbook)
                 workflow.update_instance_name_in_steps(gitsync.api, siemplify)
                 gitsync.content.push_playbook(workflow)
-                siemplify.LOGGER.info(f"[JOB_LOG] Successfully pushed '{name}' to local content")
 
                 if include_blocks:
-                    involved_blocks = workflow.get_involved_blocks()
-                    siemplify.LOGGER.info(f"[JOB_LOG] Involved blocks for '{name}': {[b.get('name') for b in involved_blocks]}")
-                    for block in involved_blocks:
+                    for block in workflow.get_involved_blocks():
                         installed_block = next(
                             (
                                 x
@@ -110,20 +98,17 @@ def main():
                                 f"Block {block.get('name')} wasn't found in the repo, ignoring",
                             )
                             continue
-                        siemplify.LOGGER.info(f"[JOB_LOG] Fetching full block data for '{block.get('name')}' (id='{installed_block.get('identifier')}')")
-                        block_details = Workflow(
+                        block = Workflow(
                             gitsync.api.get_playbook(installed_block.get("identifier")),
                         )
-                        block_details.update_instance_name_in_steps(gitsync.api, siemplify)
-                        gitsync.content.push_playbook(block_details)
-                        siemplify.LOGGER.info(f"[JOB_LOG] Successfully pushed involved block '{block.get('name')}' to local content")
+                        block.update_instance_name_in_steps(gitsync.api, siemplify)
+                        gitsync.content.push_playbook(block)
             else:
                 siemplify.LOGGER.warn(
-                    f"Playbook {name} not found, Skipping",
+                    f"Playbook {playbook.get('name')} not found, Skipping",
                 )
 
         gitsync.update_readme(create_root_readme(gitsync), "Playbooks")
-        siemplify.LOGGER.info(f"[JOB_LOG] Commit and Push changes with message: '{commit_msg}'")
         gitsync.commit_and_push(commit_msg)
 
     except Exception as e:

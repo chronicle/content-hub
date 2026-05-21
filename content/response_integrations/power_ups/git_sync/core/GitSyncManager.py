@@ -710,12 +710,6 @@ class WorkflowInstaller:
             installed_workflow: Optional current installed playbooks to copy identifiers
 
         """
-        self.logger.info(f"[DEBUG_LOG] Starting _process_steps for workflow '{workflow.name}'")
-        if installed_workflow:
-            self.logger.info(f"[DEBUG_LOG] Installed workflow identifier: {installed_workflow.get('identifier')}")
-        else:
-            self.logger.info("[DEBUG_LOG] No installed_workflow provided (new workflow installation)")
-
         # A dict where the keys are the old step identifiers and values are the new step identifiers
         # Used for patching step relations
         identifier_mappings = {}
@@ -726,29 +720,7 @@ class WorkflowInstaller:
             else None
         )
 
-        if old_steps:
-            self.logger.info(f"[DEBUG_LOG] Found {len(old_steps)} old steps in installed workflow:")
-            for idx, s in enumerate(old_steps):
-                self.logger.info(
-                    f"  Installed Step [{idx}]: name='{s.get('instanceName')}', "
-                    f"id='{s.get('identifier')}', "
-                    f"parentStepContainerId='{s.get('parentStepContainerId')}', "
-                    f"parentStepIdentifier='{s.get('parentStepIdentifier')}', "
-                    f"parentStepIdentifiers={s.get('parentStepIdentifiers')}"
-                )
-
-        incoming_steps = self._flatten_playbook_steps(workflow.raw_data.get("steps"))
-        self.logger.info(f"[DEBUG_LOG] Found {len(incoming_steps)} incoming steps in Git playbook:")
-        for idx, s in enumerate(incoming_steps):
-            self.logger.info(
-                f"  Incoming Step [{idx}]: name='{s.get('instanceName')}', "
-                f"id='{s.get('identifier')}', "
-                f"parentStepContainerId='{s.get('parentStepContainerId')}', "
-                f"parentStepIdentifier='{s.get('parentStepIdentifier')}', "
-                f"parentStepIdentifiers={s.get('parentStepIdentifiers')}"
-            )
-
-        for step in incoming_steps:
+        for step in self._flatten_playbook_steps(workflow.raw_data.get("steps")):
             provider = step.get("actionProvider")
             step_type = step.get("type")
 
@@ -768,13 +740,14 @@ class WorkflowInstaller:
             )
             if existing_step:
                 old_steps.remove(existing_step)
+                self.logger.info(
+                    f"Step '{step.get('instanceName')}' was matched to local ID "
+                    f"'{existing_step.get('identifier')}' and removed from the "
+                    "search list to prevent duplicate matching."
+                )
                 old_step_identifier = step.get("identifier")
                 identifier_mappings[old_step_identifier] = existing_step.get(
                     "identifier",
-                )
-                self.logger.info(
-                    f"[DEBUG_LOG] Matched step name='{step.get('instanceName')}': "
-                    f"Git ID '{old_step_identifier}' -> Local ID '{existing_step.get('identifier')}'"
                 )
                 step["identifier"] = existing_step.get("identifier")
                 step["originalStepIdentifier"] = existing_step.get(
@@ -802,15 +775,7 @@ class WorkflowInstaller:
             elif step_type == 5:  # Nested Workflow
                 self._link_nested_block_step(step)
 
-        self.logger.info(f"[DEBUG_LOG] Completed step matching. Final identifier_mappings: {identifier_mappings}")
-
-        self.logger.info(f"[DEBUG_LOG] Processing stepsRelations:")
-        for relation in workflow.raw_data.get("stepsRelations", []):
-            old_from = relation.get("fromStep")
-            old_to = relation.get("toStep")
-            mapped_from = identifier_mappings.get(old_from, old_from)
-            mapped_to = identifier_mappings.get(old_to, old_to)
-            self.logger.info(f"  Relation: fromStep '{old_from}' -> '{mapped_from}', toStep '{old_to}' -> '{mapped_to}'")
+        for relation in workflow.raw_data.get("stepsRelations"):
             if relation.get("fromStep") in identifier_mappings:
                 relation["fromStep"] = identifier_mappings.get(relation.get("fromStep"))
             if relation.get("toStep") in identifier_mappings:
@@ -819,7 +784,6 @@ class WorkflowInstaller:
         self._adjust_loop_keys_and_parameters(identifier_mappings, workflow)
 
     def _adjust_loop_keys_and_parameters(self, identifier_mappings, workflow):
-        self.logger.info("[DEBUG_LOG] Starting _adjust_loop_keys_and_parameters")
         for step in self._flatten_playbook_steps(workflow.raw_data.get("steps")):
             if step.get("startLoopStepIdentifier"):
                 mapped_id = identifier_mappings.get(step["startLoopStepIdentifier"])
