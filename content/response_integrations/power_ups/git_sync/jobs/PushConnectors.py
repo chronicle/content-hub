@@ -81,10 +81,15 @@ def main():
                             )
                             def get_fields(rule):
                                 """Extract iterable fields from either response format."""
-                                if "familyFields" in rule or "systemFields" in rule:
-                                    return rule.get("familyFields", []) + rule.get("systemFields", [])
-                                elif "mapping_rules" in rule:
-                                    return rule.get("mapping_rules", [])
+                                if isinstance(rule, list):
+                                    return rule
+                                if isinstance(rule, dict):
+                                    if "familyFields" in rule or "systemFields" in rule:
+                                        return rule.get("familyFields", []) + rule.get("systemFields", [])
+                                    elif "mapping_rules" in rule:
+                                        return rule.get("mapping_rules", [])
+                                    elif "mappingRules" in rule:
+                                        return rule.get("mappingRules", [])
                                 return []
 
                             def get_mapping_rule(r, rule):
@@ -96,9 +101,12 @@ def main():
                             for r in get_fields(rule):
                                 mapping_rule = get_mapping_rule(r, rule)
                                 source = mapping_rule.get("source")
-                                if source and source.lower() == integration_name.lower():
-                                    rules.append(rule)
-                                    break
+                                if not source or source.lower() == integration_name.lower():
+                                    if isinstance(rule, list):
+                                        rules.append(r)
+                                    else:
+                                        rules.append(rule)
+                                        break
                         if not records and not rules:
                             siemplify.LOGGER.info(
                                 f"{integration_name} mappings don't exist. Skipping",

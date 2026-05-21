@@ -20,6 +20,7 @@ from urllib.parse import urljoin
 import requests
 from packaging import version
 from requests.exceptions import HTTPError
+from TIPCommon.utils import platform_supports_1p_api
 
 from TIPCommon.rest.soar_api import (
     add_case_stage,
@@ -590,6 +591,9 @@ class SiemplifyApiClient:
         res = get_installed_jobs(chronicle_soar=chronicle_soar)
         jobs = res if isinstance(res, list) else res.get("job_instances", [])
         
+        if not platform_supports_1p_api():
+            return jobs
+            
         enriched_jobs = []
         for job in jobs:
             job_id = job.get("id")

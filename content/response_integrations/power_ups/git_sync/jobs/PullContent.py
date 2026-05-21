@@ -307,10 +307,21 @@ def main():
                         gitsync.api.update_visual_family(validated_family, existing_vf, valid_record_id)
                     else:
                         siemplify.LOGGER.info(f"Installing visual family \"{name_to_check}\"")
-                        gitsync.api.add_custom_family(
+                        response_content = gitsync.api.add_custom_family(
                             {"visualFamilyDataModel": validated_family},
                             valid_record_id,
                         )
+                        try:
+                            created_vf = json.loads(response_content.decode('utf-8'))
+                            created_id = created_vf.get("id")
+                            if created_id:
+                                siemplify.LOGGER.info(f"Successfully created visual family \"{name_to_check}\" with ID {created_id}. Now updating image via PATCH.")
+                                new_existing_vf = {"id": created_id, "family": name_to_check}
+                                gitsync.api.update_visual_family(validated_family, new_existing_vf, valid_record_id)
+                            else:
+                                siemplify.LOGGER.warn(f"Created visual family response did not contain ID: {response_content}")
+                        except Exception as e:
+                            siemplify.LOGGER.error(f"Failed to parse response or update image for new family: {e}")
                 else:
                     gitsync.api.add_custom_family(
                         {
