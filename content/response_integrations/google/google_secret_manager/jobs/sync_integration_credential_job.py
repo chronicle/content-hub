@@ -311,7 +311,7 @@ class SyncIntegrationCredentialJob(Job):
             param_mapping (SingleJson): Param names to secret IDs.
 
         """
-        self.logger.info("Processing integration instance: %s", name)
+        self.logger.info(f"Processing integration instance: {name}")
 
         identifier: str | None = self._resolve_instance_identifier(name)
         if identifier is None:
@@ -550,7 +550,7 @@ class SyncIntegrationCredentialJob(Job):
                 return
             async with semaphore:
                 try:
-                    self.logger.info("Processing job: %s", job_name)
+                    self.logger.info(f"Processing job: {job_name}")
                     await self._update_single_job(
                         api, job_name, param_mapping, name_to_job,
                     )
