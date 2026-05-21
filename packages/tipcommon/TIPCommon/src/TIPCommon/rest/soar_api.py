@@ -999,6 +999,29 @@ def get_workflow_instance_card(
     return response.json()
 
 
+def get_workflow_instance_cards(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    alert_identifiers: list[str],
+) -> dict[str, list[dict]]:
+    """Get workflow instance cards for multiple alerts.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+        case_id (int): Chronicle SOAR case ID
+        alert_identifiers (list[str]): List of Chronicle SOAR Alert Identifiers
+    """
+    results = {}
+    for alert_identifier in alert_identifiers:
+        try:
+            results[alert_identifier] = get_workflow_instance_card(chronicle_soar, case_id, alert_identifier)
+        except Exception as e:
+            chronicle_soar.LOGGER.error(f"Failed to get workflow cards for alert {alert_identifier}: {e}")
+            results[alert_identifier] = []
+
+    return results
+
+
 # TODO: Divide this to some classes like Alert or Case related classes
 def patch_federation_cases(
     chronicle_soar: ChronicleSOAR,
