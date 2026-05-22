@@ -28,7 +28,11 @@ class PingAction(GoogleSecretManagerAction):
         self.error_output_message: str = "Failed to connect to the Google Secret Manager server!"
 
     def _perform_action(self, _: Any = None) -> None:
-        """Test connectivity to Google Secret Manager."""
+        """Test connectivity to Google Secret Manager.
+        
+        Raises:
+            ConnectivityError: If the connectivity tests fail.
+        """
         is_connected: bool = self.secret_manager_client.test_connectivity()
 
         self.output_message = (

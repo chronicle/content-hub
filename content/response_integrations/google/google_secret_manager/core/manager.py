@@ -113,6 +113,8 @@ class GoogleSecretManagerClient:
         """
         try:
             info: dict = yaml.safe_load(service_account_json)
+            if not instance(info, dict):
+                raise InvalidConfigurationError("Service Account JSON is empty or invalid.")
         except yaml.YAMLError as e:
             raise InvalidConfigurationError(
                 f"Invalid Service Account YAML/JSON provided: {e}"
