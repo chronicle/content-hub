@@ -21,6 +21,8 @@ import os
 import re
 import time
 import zipfile
+from enum import Enum
+from typing import Any
 
 import magic
 import requests
@@ -34,6 +36,14 @@ from TIPCommon.rest.soar_api import (
 )
 from TIPCommon.types import SingleJson
 
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
+
+CASE_EVIDENCE_ID = "evidenceId"
 ORIG_EMAIL_DESCRIPTION = "This is the original message as EML"
 
 
@@ -45,8 +55,9 @@ class AttachmentsManager:
         self.attachments = self._get_attachments()
 
     def get_alert_entities(self):
+        alerts = getattr(self.siemplify.case, "open_alerts", self.siemplify.case.alerts)
         return [
-            entity for alert in self.siemplify.case.alerts for entity in alert.entities
+            entity for alert in alerts for entity in alert.entities
         ]
 
     def get_attachments(self):
@@ -76,9 +87,81 @@ class AttachmentsManager:
             list[SingleJson]: List of attachments metadata
         """
         return [
-            attachment.to_json() for attachment in
-            get_attachments_metadata(self.siemplify, self.siemplify.case.identifier)
+            attachment.to_json()
+            for attachment in get_attachments_metadata(
+                self.siemplify, self.siemplify.case.identifier
+            )
         ]
+
+    def get_attachments_by_scope(
+        self,
+        execution_scope: Any,
+        attachment_scope_param: str = "Alert",
+    ) -> list[SingleJson]:
+        """Get attachments based on execution scope and parameter choice.
+
+        Args:
+            execution_scope: The current execution scope (Alert or Case).
+            attachment_scope_param: The 'Attachment Scope' parameter value
+            ('Alert' or 'Case').
+
+        Returns:
+            List of filtered attachments metadata.
+        """
+        if attachment_scope_param.lower() == "case":
+            return [
+                wall_item for wall_item in self.attachments if wall_item["type"] == 4
+            ]
+
+        if execution_scope.value == ExecutionScope.Alert.value:
+            return [
+                wall_item
+                for wall_item in self.attachments
+                if wall_item["type"] == 4
+                and wall_item.get("alertIdentifier")
+                == self.siemplify.current_alert.identifier
+            ]
+
+        target_alerts: list[Any] = getattr(self.siemplify.case, "open_alerts", self.siemplify.case.alerts)
+        alert_identifiers: set[str] = {alert.identifier for alert in target_alerts}
+
+        return [
+            wall_item
+            for wall_item in self.attachments
+            if wall_item["type"] == 4
+            and wall_item.get("alertIdentifier") in alert_identifiers
+        ]
+
+    def get_attachment_blobs(self, attachments: list[SingleJson]) -> list[SingleJson]:
+        """Retrieve file content/blobs for the given list of attachments.
+
+        Args:
+            attachments: List of attachments metadata.
+
+        Returns:
+            List of attachments with 'base64_blob' populated.
+        """
+        processed_attachments = []
+        for attachment in attachments:
+            try:
+                evidence_id = attachment.get(CASE_EVIDENCE_ID)
+                if not evidence_id:
+                    continue
+                attachment_record = self.siemplify.get_attachment(evidence_id)
+                attachment_content = attachment_record.getvalue()
+                b64 = base64.b64encode(attachment_content)
+                attachment["base64_blob"] = b64.decode("ascii")
+                processed_attachments.append(attachment)
+            except Exception as e:
+                att_name = attachment.get(
+                    "filename",
+                    attachment.get(CASE_EVIDENCE_ID),
+                )
+                self.logger.error(
+                    f"Failed to get content for attachment {att_name}: {e}"
+                )
+                continue
+        return processed_attachments
 
     def add_attachment(
         self,
