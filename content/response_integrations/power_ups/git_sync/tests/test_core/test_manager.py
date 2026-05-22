@@ -18,6 +18,7 @@ import json
 from unittest.mock import MagicMock
 from TIPCommon.types import ChronicleSOAR
 from git_sync.tests.common import MOCKS_PATH
+from git_sync.tests.core.product import GitSyncProduct
 from git_sync.core.definitions import Workflow
 from git_sync.core.GitSyncManager import WorkflowInstaller
 
@@ -36,11 +37,8 @@ def test_duplicate_step_names_matching_prevention() -> None:
     # Arrange
     git_workflow = Workflow(GIT_PLAYBOOK_DATA)
 
-    mock_api = MagicMock()
-    mock_api.get_playbooks.return_value = [LOCAL_PLAYBOOK_DATA]
-    mock_api.get_playbook.return_value = LOCAL_PLAYBOOK_DATA
-    mock_api.get_soc_roles.return_value = []
-    mock_api.get_playbook_categories.return_value = [{"id": 10, "name": "Default"}]
+    git_sync_product = GitSyncProduct()
+    git_sync_product.local_playbook = LOCAL_PLAYBOOK_DATA
 
     mock_cache = MagicMock()
     mock_cache.get.return_value = -1
@@ -48,7 +46,7 @@ def test_duplicate_step_names_matching_prevention() -> None:
     chronicle_soar = MagicMock(spec=ChronicleSOAR)
     installer = WorkflowInstaller(
         chronicle_soar=chronicle_soar,
-        api=mock_api,
+        api=git_sync_product,
         logger=MagicMock(),
         mod_time_cache=mock_cache
     )
@@ -57,10 +55,8 @@ def test_duplicate_step_names_matching_prevention() -> None:
     installer.update_local_workflow(git_workflow)
 
     # Assert
-    mock_api.save_playbook.assert_called_once()
-    saved_playbook_payload = mock_api.save_playbook.call_args[0][0]
-
-    steps = saved_playbook_payload["steps"]
+    assert git_sync_product.saved_playbook is not None
+    steps = git_sync_product.saved_playbook["steps"]
     step_1 = next(x for x in steps if x["identifier"] == "local_PA4_1")
     step_2 = next(x for x in steps if x["identifier"] == "local_PA4_2")
 
