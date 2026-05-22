@@ -223,16 +223,23 @@ def main() -> None:
         ExecutionScope.Alert,
     )
 
+    siemplify.LOGGER.info(f"Running in {execution_scope.name.lower()} scope")
+
     if execution_scope.value == ExecutionScope.Alert.value:
         target_alerts: list[Any] = [siemplify.current_alert]
     else:
-        target_alerts: list[Any] = getattr(siemplify.case, "alerts", [])
+        target_alerts: list[Any] = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
 
     updated_entities: list[Entity] = []
 
     for target_alert in target_alerts:
-        updated: list[Entity] = process_alert(siemplify, target_alert, execution_scope)
-        updated_entities.extend(updated)
+        try:
+            updated: list[Entity] = process_alert(siemplify, target_alert, execution_scope)
+            updated_entities.extend(updated)
+        except Exception as e:
+            siemplify.LOGGER.error(
+                f"Failed to process alert {getattr(target_alert, 'identifier', target_alert)}: {e}"
+            )
 
     siemplify.update_entities(updated_entities)
     status: int = EXECUTION_STATE_COMPLETED

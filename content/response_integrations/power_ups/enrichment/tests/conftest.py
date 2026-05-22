@@ -179,6 +179,7 @@ def mock_siemplify(
         return [build_alert_mock(adict) for adict in details.get("alerts", [])]
 
     LocalCaseMock.alerts = PropertyMock(side_effect=get_alerts)
+    LocalCaseMock.open_alerts = PropertyMock(side_effect=get_alerts)
     siemplify.case = case_mock
 
     LocalSiemplifyMock.execution_scope = PropertyMock(

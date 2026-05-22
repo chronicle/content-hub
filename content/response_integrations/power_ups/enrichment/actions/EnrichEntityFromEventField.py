@@ -122,24 +122,31 @@ def main() -> None:
         ExecutionScope.Alert,
     )
 
+    siemplify.LOGGER.info(f"Running in {execution_scope.name.lower()} scope")
+
     if execution_scope.value == ExecutionScope.Alert.value:
         target_alerts: list[Any] = [siemplify.current_alert]
     else:
-        target_alerts: list[Any] = getattr(siemplify.case, "alerts", [])
+        target_alerts: list[Any] = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
 
     fields: list[str] = siemplify.parameters.get("Fields to enrich").split(",")
     updated_entities: list[Any] = []
     all_fields_to_enrich: SingleJson = {}
 
     for alert in target_alerts:
-        updated, enriched_fields = process_alert(
-            siemplify, alert, fields, execution_scope
-        )
-        updated_entities.extend(updated)
-        if execution_scope.value == ExecutionScope.Case.value:
-            all_fields_to_enrich[alert.identifier] = enriched_fields
-        else:
-            all_fields_to_enrich.update(enriched_fields)
+        try:
+            updated, enriched_fields = process_alert(
+                siemplify, alert, fields, execution_scope
+            )
+            updated_entities.extend(updated)
+            if execution_scope.value == ExecutionScope.Case.value:
+                all_fields_to_enrich[alert.identifier] = enriched_fields
+            else:
+                all_fields_to_enrich.update(enriched_fields)
+        except Exception as e:
+            siemplify.LOGGER.error(
+                f"Failed to process alert {getattr(alert, 'identifier', alert)}: {e}"
+            )
 
     count_updated_entities: int = len(updated_entities)
 
