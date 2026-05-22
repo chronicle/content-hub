@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from typing import TYPE_CHECKING
 
@@ -69,6 +70,8 @@ class SyncIntegrationCredentialJob(Job):
         self.instance_name_to_identifier: NameIdentifierMap = {}
         self.connector_name_to_identifier: NameIdentifierMap = {}
         self.job_start_time: int = int(time.time() * 1000)
+        self.state_context: dict[str, str] = {}
+        self._secret_cache: dict[tuple[str, str], str] = {}
 
     def _init_api_clients(self) -> None:
         """No-op. Async API clients are initialized inside the async event loop."""
@@ -108,6 +111,7 @@ class SyncIntegrationCredentialJob(Job):
     async def _async_main(self) -> None:
         """Main async execution."""
         self._init_secret_manager_client()
+        self._load_context()
         async_soar = AsyncChronicleSOAR(self.soar_job)
         try:
             api = AsyncMarketplaceApi(async_soar)
@@ -125,8 +129,70 @@ class SyncIntegrationCredentialJob(Job):
 
             await self._sync_jobs(api, semaphore)
         finally:
+            self._save_context()
             self.logger.info("Closing async client session.")
             await async_soar.close()
+
+    def _load_context(self) -> None:
+        """Load job context property from SOAR platform."""
+        self.logger.info("Loading job context state...")
+        context_str: str = self.soar_job.get_job_context_property(
+            self.name_id,
+            "sync_credentials_state",
+        )
+        if not context_str:
+            self.logger.info("No existing sync state found. Starting fresh.")
+            self.state_context = {}
+            return
+
+        try:
+            self.state_context = json.loads(context_str)
+        except Exception as e:
+            self.logger.warn(f"Failed to parse job context JSON: {e}. Starting fresh.")
+            self.state_context = {}
+
+    def _save_context(self) -> None:
+        """Save job context property back to SOAR platform."""
+        self.logger.info("Saving job context state...")
+        try:
+            self.soar_job.set_job_context_property(
+                identifier=self.name_id,
+                property_key="sync_credentials_state",
+                property_value=json.dumps(self.state_context),
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to save job context state: {e}")
+
+    async def _fetch_secret_value_pre_resolved(
+        self,
+        secret_id: str,
+        version_id: str,
+        *,
+        context_label: str,
+    ) -> str:
+        """Fetch the secret value for a pre-resolved secret and version."""
+        cache_key = (secret_id, version_id)
+        if cache_key in self._secret_cache:
+            self.logger.info(
+                f"Using cached payload for secret '{mask_id(secret_id)}' (version '{version_id}')."
+            )
+            return self._secret_cache[cache_key]
+
+        try:
+            secret_value: str = await asyncio.to_thread(
+                self.secret_manager_client.get_secret_value,
+                secret_id=secret_id,
+                version_id=version_id,
+            )
+        except SecretAccessError:
+            raise
+        except Exception as e:
+            raise SecretAccessError(
+                f"Failed to fetch secret '{mask_id(secret_id)}' for {context_label}: {e}"
+            ) from e
+
+        self._secret_cache[cache_key] = secret_value
+        return secret_value
 
     def _is_approaching_timeout(self) -> bool:
         """Check if the job is approaching its timeout."""
@@ -216,6 +282,14 @@ class SyncIntegrationCredentialJob(Job):
         secret_id, version_id = self._resolve_secret_and_version(
             mapped_value,
         )
+
+        cache_key = (secret_id, version_id)
+        if cache_key in self._secret_cache:
+            self.logger.info(
+                f"Using cached payload for secret '{mask_id(secret_id)}' (version '{version_id}')."
+            )
+            return secret_id, version_id, self._secret_cache[cache_key]
+
         try:
             secret_value: str = await asyncio.to_thread(
                 self.secret_manager_client.get_secret_value,
@@ -229,6 +303,7 @@ class SyncIntegrationCredentialJob(Job):
                 f"Failed to fetch secret '{mask_id(secret_id)}' for {context_label}: {e}"
             ) from e
 
+        self._secret_cache[cache_key] = secret_value
         return secret_id, version_id, secret_value
 
     async def _sync_integration_instances(
@@ -363,8 +438,20 @@ class SyncIntegrationCredentialJob(Job):
         """
         for param_name, mapped_value in param_mapping.items():
             context: str = f"param '{param_name}' on instance '{name}' (id: {identifier})"
-            secret_id, version_id, secret_value = await self._fetch_secret_value(
-                mapped_value,
+            secret_id, version_id = self._resolve_secret_and_version(mapped_value)
+
+            state_key: str = f"instance:{identifier}:{param_name}"
+            state_val: str = f"{mapped_value}::{version_id}"
+            if self.state_context.get(state_key) == state_val:
+                self.logger.info(
+                    f"Skipping '{param_name}' on instance '{name}' — "
+                    f"already up-to-date with secret '{mask_id(secret_id)}' (version '{version_id}')."
+                )
+                continue
+
+            secret_value: str = await self._fetch_secret_value_pre_resolved(
+                secret_id,
+                version_id,
                 context_label=context,
             )
             try:
@@ -376,6 +463,7 @@ class SyncIntegrationCredentialJob(Job):
             except Exception as e:
                 raise ParameterUpdateError(f"Failed to set {context}: {e}") from e
 
+            self.state_context[state_key] = state_val
             self.logger.info(
                 f"Updated '{param_name}' on instance '{name}'"
                 f" from secret '{mask_id(secret_id)}'"
@@ -502,8 +590,20 @@ class SyncIntegrationCredentialJob(Job):
         """
         for param_name, mapped_value in param_mapping.items():
             context: str = f"param '{param_name}' on connector '{name}' (id: {identifier})"
-            secret_id, version_id, secret_value = await self._fetch_secret_value(
-                mapped_value,
+            secret_id, version_id = self._resolve_secret_and_version(mapped_value)
+
+            state_key: str = f"connector:{identifier}:{param_name}"
+            state_val: str = f"{mapped_value}::{version_id}"
+            if self.state_context.get(state_key) == state_val:
+                self.logger.info(
+                    f"Skipping '{param_name}' on connector '{name}' — "
+                    f"already up-to-date with secret '{mask_id(secret_id)}' (version '{version_id}')."
+                )
+                continue
+
+            secret_value: str = await self._fetch_secret_value_pre_resolved(
+                secret_id,
+                version_id,
                 context_label=context,
             )
             try:
@@ -515,6 +615,7 @@ class SyncIntegrationCredentialJob(Job):
             except Exception as e:
                 raise ParameterUpdateError(f"Failed to set {context}: {e}") from e
 
+            self.state_context[state_key] = state_val
             self.logger.info(
                 f"Updated '{param_name}' on connector '{name}'"
                 f" from secret '{mask_id(secret_id)}'"
@@ -810,13 +911,26 @@ class SyncIntegrationCredentialJob(Job):
                 continue
 
             context: str = f"param '{param_name}' on job '{job_name}'"
-            secret_id, version_id, secret_value = await self._fetch_secret_value(
-                mapped_value,
+            secret_id, version_id = self._resolve_secret_and_version(mapped_value)
+
+            state_key: str = f"job:{job_name}:{param_name}"
+            state_val: str = f"{mapped_value}::{version_id}"
+            if self.state_context.get(state_key) == state_val:
+                self.logger.info(
+                    f"Skipping '{param_name}' on job '{job_name}' — "
+                    f"already up-to-date with secret '{mask_id(secret_id)}' (version '{version_id}')."
+                )
+                continue
+
+            secret_value: str = await self._fetch_secret_value_pre_resolved(
+                secret_id,
+                version_id,
                 context_label=context,
             )
             idx: int = param_index[param_name]
             parameters[idx]["value"] = secret_value
             updated_count += 1
+            self.state_context[state_key] = state_val
             self.logger.info(
                 f"Set '{param_name}' on job '{job_name}'"
                 f" from secret '{mask_id(secret_id)}'"

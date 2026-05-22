@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, PropertyMock
 
 import pytest
 
@@ -38,7 +38,10 @@ def _make_job() -> SyncIntegrationCredentialJob:
     job.credential_mapping = {}
     job.instance_name_to_identifier = {}
     job.connector_name_to_identifier = {}
-    job.logger = MagicMock()
+    job.name_id = "SyncIntegrationCredentialJob"
+    job.state_context = {}
+    job._secret_cache = {}
+    type(job).logger = PropertyMock(return_value=MagicMock())
 
     # Mock self.params with attribute-style access.
     mock_params: MagicMock = MagicMock()
@@ -223,3 +226,164 @@ class TestBuildParamIndex:
 
         assert "Display" in index
         assert "legacy" not in index
+
+
+# -------------------------------------------------------------------
+# State Context Registry & Skipping Logic
+# -------------------------------------------------------------------
+
+
+class TestStateContextRegistry:
+    """Tests for persistent state context registry and skipping logic."""
+
+    def test_load_context_success(self) -> None:
+        """Loads valid JSON context state from soar_job."""
+        job = _make_job()
+        mock_soar_job = MagicMock()
+        mock_soar_job.get_job_context_property.return_value = '{"instance:id1:p1": "secret:1::10"}'
+        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
+
+        job._load_context()
+
+        assert job.state_context == {"instance:id1:p1": "secret:1::10"}
+
+    def test_load_context_empty(self) -> None:
+        """Handles empty context state string gracefully."""
+        job = _make_job()
+        mock_soar_job = MagicMock()
+        mock_soar_job.get_job_context_property.return_value = ""
+        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
+
+        job._load_context()
+
+        assert job.state_context == {}
+
+    def test_load_context_invalid_json(self) -> None:
+        """Handles invalid JSON string gracefully."""
+        job = _make_job()
+        mock_soar_job = MagicMock()
+        mock_soar_job.get_job_context_property.return_value = "invalid-json-{"
+        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
+
+        job._load_context()
+
+        assert job.state_context == {}
+
+    def test_save_context_success(self) -> None:
+        """Saves state_context as JSON string successfully."""
+        job = _make_job()
+        mock_soar_job = MagicMock()
+        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
+        job.state_context = {"instance:id1:p1": "secret:1::10"}
+
+        job._save_context()
+
+        mock_soar_job.set_job_context_property.assert_called_once_with(
+            identifier=job.name_id,
+            property_key="sync_credentials_state",
+            property_value='{"instance:id1:p1": "secret:1::10"}',
+        )
+
+    @pytest.mark.anyio
+    async def test_set_integration_params_skips_when_up_to_date(self) -> None:
+        """Skips fetching and setting configuration when parameter is up-to-date."""
+        job = _make_job()
+        job.state_context = {"instance:inst_id:param_x": "my-secret::5"}
+
+        mock_client = MagicMock()
+        mock_client.resolve_latest_enabled_version.return_value = "5"
+        job.secret_manager_client = mock_client
+
+        # Mock pre_resolved fetcher as AsyncMock to verify it is NOT called
+        job._fetch_secret_value_pre_resolved = AsyncMock()
+
+        mock_api = AsyncMock()
+
+        await job._set_integration_params(
+            api=mock_api,
+            name="Instance A",
+            identifier="inst_id",
+            param_mapping={"param_x": "my-secret"},
+        )
+
+        job._fetch_secret_value_pre_resolved.assert_not_called()
+        mock_api.set_configuration_property.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_set_integration_params_updates_when_outdated(self) -> None:
+        """Updates and saves to context when parameter is outdated (rotated secret)."""
+        job = _make_job()
+        # Old version was 5
+        job.state_context = {"instance:inst_id:param_x": "my-secret:latest::5"}
+
+        mock_client = MagicMock()
+        # New resolved version is 6
+        mock_client.resolve_latest_enabled_version.return_value = "6"
+        job.secret_manager_client = mock_client
+
+        # Mock fetching as AsyncMock and API
+        job._fetch_secret_value_pre_resolved = AsyncMock(return_value="new-secret-value")
+
+        mock_api = AsyncMock()
+
+        await job._set_integration_params(
+            api=mock_api,
+            name="Instance A",
+            identifier="inst_id",
+            param_mapping={"param_x": "my-secret"},
+        )
+
+        job._fetch_secret_value_pre_resolved.assert_called_once_with(
+            "my-secret", "6", context_label="param 'param_x' on instance 'Instance A' (id: inst_id)"
+        )
+        mock_api.set_configuration_property.assert_called_once_with(
+            integration_instance_identifier="inst_id",
+            property_name="param_x",
+            property_value="new-secret-value",
+        )
+        # Context must be updated
+        assert job.state_context["instance:inst_id:param_x"] == "my-secret::6"
+
+
+# -------------------------------------------------------------------
+# Secret Fetch Caching
+# -------------------------------------------------------------------
+
+
+class TestSecretFetchCaching:
+    """Tests for dictionary-based caching of secret fetches."""
+
+    @pytest.mark.anyio
+    async def test_caches_subsequent_fetches(self) -> None:
+        """Only fetches once and uses cached payload for subsequent requests."""
+        job = _make_job()
+        
+        mock_client = MagicMock()
+        mock_client.get_secret_value.return_value = "secret-payload"
+        job.secret_manager_client = mock_client
+
+        # First call
+        val1 = await job._fetch_secret_value_pre_resolved(
+            secret_id="secret-a",
+            version_id="3",
+            context_label="first call",
+        )
+        
+        # Second call (same secret and version)
+        val2 = await job._fetch_secret_value_pre_resolved(
+            secret_id="secret-a",
+            version_id="3",
+            context_label="second call",
+        )
+
+        assert val1 == "secret-payload"
+        assert val2 == "secret-payload"
+        
+        # The client's get_secret_value should have been called exactly once
+        mock_client.get_secret_value.assert_called_once_with(
+            secret_id="secret-a",
+            version_id="3",
+        )
+        
+        # The cache dictionary should have populated
+        assert job._secret_cache[("secret-a", "3")] == "secret-payload"
