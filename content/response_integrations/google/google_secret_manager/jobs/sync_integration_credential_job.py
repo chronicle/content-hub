@@ -247,65 +247,6 @@ class SyncIntegrationCredentialJob(Job):
 
         return secret_id, resolved_version
 
-    async def _fetch_secret_value(
-        self,
-        mapped_value: str,
-        *,
-        context_label: str,
-    ) -> tuple[str, str, str]:
-        """Resolve a mapping entry and fetch the secret value.
-
-        This is the shared logic used by integration instances,
-        connectors, and jobs to resolve a secret reference,
-        fetch the payload, and return all three pieces needed
-        by the caller.
-
-        The synchronous gRPC call to Google Secret Manager is
-        wrapped with ``asyncio.to_thread`` to avoid blocking
-        the event loop.
-
-        Args:
-            mapped_value: Raw mapping value (e.g. ``"my-secret"``
-                or ``"my-secret:3"``).
-            context_label: Human-readable label for error messages
-                (e.g. ``"param 'API Key' on instance 'Foo'"``).
-
-        Returns:
-            Tuple of ``(secret_id, version_id, secret_value)``.
-
-        Raises:
-            SecretAccessError: If the secret cannot be fetched.
-
-        """
-        secret_id: str
-        version_id: str
-        secret_id, version_id = self._resolve_secret_and_version(
-            mapped_value,
-        )
-
-        cache_key = (secret_id, version_id)
-        if cache_key in self._secret_cache:
-            self.logger.info(
-                f"Using cached payload for secret '{mask_id(secret_id)}' (version '{version_id}')."
-            )
-            return secret_id, version_id, self._secret_cache[cache_key]
-
-        try:
-            secret_value: str = await asyncio.to_thread(
-                self.secret_manager_client.get_secret_value,
-                secret_id=secret_id,
-                version_id=version_id,
-            )
-        except SecretAccessError:
-            raise
-        except Exception as e:
-            raise SecretAccessError(
-                f"Failed to fetch secret '{mask_id(secret_id)}' for {context_label}: {e}"
-            ) from e
-
-        self._secret_cache[cache_key] = secret_value
-        return secret_id, version_id, secret_value
-
     async def _sync_integration_instances(
         self,
         api: AsyncMarketplaceApi,
