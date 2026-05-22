@@ -84,7 +84,7 @@ def main():
         custom_regex=custom_regex,
     )
     attach_mgr = AttachmentsManager(siemplify=siemplify)
-    attachments = attach_mgr.get_alert_attachments()
+    attachments = attach_mgr.get_attachments_for_target_alerts()
 
     orig_email_attachment = {}
     attached_email = {}

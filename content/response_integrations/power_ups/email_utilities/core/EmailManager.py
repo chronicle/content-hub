@@ -1630,19 +1630,38 @@ class EmailManager:
 
     def get_alert_entity_identifiers(self):
         self.siemplify.load_case_data()
-        return [
-            self.get_entity_original_identifier(entity)
-            for alert in self.siemplify.case.alerts
-            for entity in alert.entities
-        ]
+        alerts = getattr(
+            self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+        )
+
+        identifiers = []
+        for alert in alerts:
+            try:
+                for entity in alert.entities:
+                    identifiers.append(self.get_entity_original_identifier(entity))
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to retrieve entities for alert {alert.identifier}: {e}"
+                )
+        return identifiers
 
     def get_alert_entity_identifiers_with_entity_type(self):
         self.siemplify.load_case_data()
-        return [
-            f"{entity.entity_type}:{self.get_entity_original_identifier(entity)}"
-            for alert in self.siemplify.case.alerts
-            for entity in alert.entities
-        ]
+        alerts = getattr(
+            self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+        )
+
+        identifiers = []
+        for alert in alerts:
+            try:
+                for entity in alert.entities:
+                    orig_id = self.get_entity_original_identifier(entity)
+                    identifiers.append(f"{entity.entity_type}:{orig_id}")
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to retrieve entities for alert {alert.identifier}: {e}"
+                )
+        return identifiers
 
     def get_entity_original_identifier(self, entity: EntityTypes) -> str:
         """Helper function for getting entity original identifier
@@ -1659,9 +1678,20 @@ class EmailManager:
 
     def get_alert_entities(self):
         self.siemplify.load_case_data()
-        return [
-            entity for alert in self.siemplify.case.alerts for entity in alert.entities
-        ]
+        alerts = getattr(
+            self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+        )
+
+        entities = []
+        for alert in alerts:
+            try:
+                for entity in alert.entities:
+                    entities.append(entity)
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to retrieve entities for alert {alert.identifier}: {e}"
+                )
+        return entities
 
     def create_entity_with_relation(
         self,

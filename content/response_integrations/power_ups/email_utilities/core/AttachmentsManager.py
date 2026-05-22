@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import base64
 import os
+from enum import Enum
+from typing import Any
 
 import requests
 from soar_sdk.SiemplifyDataModel import Attachment
@@ -28,17 +30,44 @@ from TIPCommon.types import SingleJson
 ORIG_EMAIL_DESCRIPTION = "This is the original message as EML"
 
 
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
+
 class AttachmentsManager:
     def __init__(self, siemplify):
         self.siemplify = siemplify
         self.logger = siemplify.LOGGER
         self.alert_entities = self.get_alert_entities()
-        self.attachments = self._get_attachments()
+        self._attachments = None
+
+    @property
+    def attachments(self) -> list[SingleJson]:
+        """Get attachments metadata lazily from case wall.
+
+        Returns:
+            The list of attachments.
+        """
+        if self._attachments is None:
+            self._attachments = self._get_attachments()
+        return self._attachments
 
     def get_alert_entities(self):
-        return [
-            entity for alert in self.siemplify.case.alerts for entity in alert.entities
-        ]
+        alerts = getattr(
+            self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+        )
+        entities = []
+        for alert in alerts:
+            try:
+                for entity in alert.entities:
+                    entities.append(entity)
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to retrieve entities for alert {alert.identifier}: {e}"
+                )
+        return entities
 
     def get_attachments(self):
         attachments = []
@@ -49,16 +78,49 @@ class AttachmentsManager:
 
         return attachments
 
-    def get_alert_attachments(self):
+    def get_alert_attachments(self, alert_identifier: str):
         attachments = []
         for wall_item in self.attachments:
             if wall_item["type"] == 4:
-                if (
-                    self.siemplify.current_alert.identifier
-                    == wall_item["alertIdentifier"]
-                ):
+                if alert_identifier == wall_item["alertIdentifier"]:
                     attachments.append(wall_item)
         return attachments
+
+    def get_target_alerts(self) -> list[Any]:
+        """Get the target alerts based on the execution scope.
+
+        Returns:
+            The target alerts.
+        """
+        execution_scope: Any = getattr(
+            getattr(self.siemplify, "soar_action", self.siemplify),
+            "execution_scope",
+            ExecutionScope.Alert,
+        )
+        if execution_scope.value == ExecutionScope.Alert.value:
+            return [self.siemplify.current_alert]
+
+        return getattr(
+            self.siemplify.case,
+            "open_alerts",
+            getattr(self.siemplify.case, "alerts", []),
+        )
+
+    def get_attachments_for_target_alerts(self) -> list[SingleJson]:
+        """Get attachments for the target alerts.
+
+        Returns:
+            The list of attachments.
+        """
+        target_alerts: list[Any] = self.get_target_alerts()
+        target_alert_ids: set[str] = {alert.identifier for alert in target_alerts}
+
+        return [
+            wall_item
+            for wall_item in self.attachments
+            if wall_item["type"] == 4
+            and wall_item.get("alertIdentifier") in target_alert_ids
+        ]
 
     def _get_attachments(self) -> list[SingleJson]:
         """Get attachments metadata from case wall and alert wall.
@@ -67,8 +129,10 @@ class AttachmentsManager:
             list[SingleJson]: List of attachments metadata
         """
         return [
-            attachment.to_json() for attachment in
-            get_attachments_metadata(self.siemplify, self.siemplify.case.identifier)
+            attachment.to_json()
+            for attachment in get_attachments_metadata(
+                self.siemplify, self.siemplify.case.identifier
+            )
         ]
 
     def add_attachment(
