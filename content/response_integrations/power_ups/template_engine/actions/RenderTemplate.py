@@ -88,7 +88,7 @@ def extract_context_data(
         target_alerts = [siemplify.current_alert]
     else:
         siemplify.LOGGER.info(f"Executing action {SCRIPT_NAME} in Case Scope.")
-        target_alerts = getattr(siemplify.case, "alerts", [])
+        target_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
 
     for alert in target_alerts:
         entities_source = (
@@ -120,6 +120,7 @@ def main():
         "execution_scope",
         ExecutionScope.Alert,
     )
+    siemplify.LOGGER.info(f"Running in {execution_scope.name.lower()} scope")
     case_data = extract_context_data(
         siemplify=siemplify,
         execution_scope=execution_scope,
