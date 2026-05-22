@@ -21,8 +21,8 @@ from typing import TYPE_CHECKING
 import yaml
 
 from TIPCommon.base.job import Job
-from TIPCommon.rest.async_soar_platform_clients.async_credential_sync_api import (
-    AsyncCredentialSyncApi,
+from TIPCommon.rest.async_soar_platform_clients.soar_api_client import (
+    AsyncMarketplaceApi,
 )
 from TIPCommon.rest.async_soar_platform_clients.secops_soar import AsyncChronicleSOAR
 
@@ -110,7 +110,7 @@ class SyncIntegrationCredentialJob(Job):
         self._init_secret_manager_client()
         async_soar = AsyncChronicleSOAR(self.soar_job)
         try:
-            api = AsyncCredentialSyncApi(async_soar)
+            api = AsyncMarketplaceApi(async_soar)
             semaphore = asyncio.Semaphore(ASYNC_SEMAPHORE_LIMIT)
 
             await self._sync_integration_instances(api, semaphore)
@@ -233,7 +233,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _sync_integration_instances(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
         semaphore: asyncio.Semaphore,
     ) -> None:
         """Sync credentials for integration instances concurrently."""
@@ -299,7 +299,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _update_single_integration_instance(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
         name: str,
         param_mapping: SingleJson,
     ) -> None:
@@ -347,7 +347,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _set_integration_params(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
         name: str,
         identifier: str,
         param_mapping: SingleJson,
@@ -384,7 +384,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _sync_connectors(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
         semaphore: asyncio.Semaphore,
     ) -> None:
         """Sync credentials for connectors concurrently."""
@@ -441,7 +441,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _update_single_connector(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
         name: str,
         param_mapping: SingleJson,
     ) -> None:
@@ -486,7 +486,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _set_connector_params(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
         name: str,
         identifier: str,
         param_mapping: SingleJson,
@@ -523,7 +523,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _sync_jobs(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
         semaphore: asyncio.Semaphore,
     ) -> None:
         """Sync credentials for jobs concurrently.
@@ -564,7 +564,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _fetch_job_instances(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
     ) -> list[SingleJson] | None:
         """Fetch and normalise the list of installed jobs.
 
@@ -620,7 +620,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _update_single_job(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
         job_name: str,
         param_mapping: SingleJson,
         name_to_job: SingleJson,
@@ -662,7 +662,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _resolve_job_data(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
         job_name: str,
         name_to_job: SingleJson,
     ) -> tuple[SingleJson, list[SingleJson]] | None:
@@ -714,7 +714,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _fetch_full_job_details(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
         job_name: str,
         job_data: SingleJson,
     ) -> tuple[SingleJson, list[SingleJson]] | None:
@@ -827,7 +827,7 @@ class SyncIntegrationCredentialJob(Job):
 
     async def _persist_job(
         self,
-        api: AsyncCredentialSyncApi,
+        api: AsyncMarketplaceApi,
         job_name: str,
         job_data: SingleJson,
         updated_count: int,
