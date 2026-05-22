@@ -754,7 +754,7 @@ def set_case_alerts_priority(
     """
     success_alerts = []
     failed_alerts = []
-    for alert_identifier, alert_name in zip(alert_identifiers, alert_names):
+    for alert_identifier, alert_name in zip(alert_identifiers, alert_names, strict=True):
         try:
             set_alert_priority(chronicle_soar, case_id, alert_identifier, alert_name, priority)
             success_alerts.append(alert_identifier)
@@ -1007,9 +1007,12 @@ def get_workflow_instance_cards(
     """Get workflow instance cards for multiple alerts.
 
     Args:
-        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
-        case_id (int): Chronicle SOAR case ID
-        alert_identifiers (list[str]): List of Chronicle SOAR Alert Identifiers
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+        case_id (int): Chronicle SOAR case ID.
+        alert_identifiers (list[str]): List of Chronicle SOAR Alert Identifiers.
+
+    Returns:
+        dict[str, list[dict]]: A dictionary mapping alert identifiers to workflow cards.
     """
     results = {}
     for alert_identifier in alert_identifiers:
@@ -1154,7 +1157,7 @@ def pause_case_alerts_sla(
 
 
 def set_custom_fields_for_alerts(
-    chronicle_soar,
+    chronicle_soar: ChronicleSOAR,
     case_id: int,
     alert_ids: list[int],
     custom_fields_to_values: dict[CustomField, list[str]],
@@ -1199,7 +1202,7 @@ def set_custom_fields_for_alerts(
 
 
 def _set_custom_fields_for_single_alert(
-    chronicle_soar,
+    chronicle_soar: ChronicleSOAR,
     case_id: int,
     alert_id: int,
     custom_fields_to_values: dict[CustomField, list[str]],
@@ -1232,7 +1235,7 @@ def _set_custom_fields_for_single_alert(
     }
 
     custom_fields_values_mapping: SingleJson = {}
-    for field_id, (custom_field, field_value) in custom_fields_to_values.items():
+    for _field_id, (custom_field, field_value) in custom_fields_to_values.items():
         existing_values = (
             custom_field_values_map.get(custom_field.id, []) if append_values else []
         )
