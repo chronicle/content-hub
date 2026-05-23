@@ -26,7 +26,7 @@ from __future__ import annotations
 AUTH_METHODS = ("spf", "dkim", "dmarc", "arc")
 
 
-def _as_entries(parsed):
+def _as_entries(parsed: list[dict] | dict | None) -> list[dict]:
     """Coerce parse_authentication_results output into a list of dicts."""
     if parsed is None:
         return []
@@ -35,7 +35,7 @@ def _as_entries(parsed):
     return [entry for entry in parsed if isinstance(entry, dict)]
 
 
-def _verdicts(entry):
+def _verdicts(entry: dict) -> dict[str, str]:
     """Return the {method: result} verdicts contributed by a single header."""
     verdicts = {}
     for method in AUTH_METHODS:
@@ -45,7 +45,9 @@ def _verdicts(entry):
     return verdicts
 
 
-def summarize_authentication_results(parsed):
+def summarize_authentication_results(
+    parsed: list[dict] | dict | None,
+) -> dict[str, str]:
     """Merge parsed Authentication-Results into a single {method: result} map.
 
     Headers are processed in order and the first verdict seen for a method wins.
@@ -60,7 +62,9 @@ def summarize_authentication_results(parsed):
     return summary
 
 
-def group_authentication_results_by_server(parsed):
+def group_authentication_results_by_server(
+    parsed: list[dict] | dict | None,
+) -> dict[str, dict[str, str]]:
     """Group the verdicts by authserv-id (each header's ``server`` field).
 
     Only Authentication-Results added by a trusted server should be believed, so
