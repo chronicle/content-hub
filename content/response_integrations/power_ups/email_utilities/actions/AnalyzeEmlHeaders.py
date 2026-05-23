@@ -12,6 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Analyze the headers of a base64-encoded EML (or raw header list) for spoofing
+indicators.
+
+Extracts and normalizes the headers, flags suspicious or mismatched headers
+(Return-Path, Reply-To, X-Distribution, Bcc, X-UIDL, Message-ID,
+X-Authenticated-User), and reports the SPF/DKIM/DMARC/ARC authentication results
+recorded in the message's Authentication-Results headers.
+"""
+
 from __future__ import annotations
 
 import base64
@@ -44,6 +53,14 @@ GREEN_DOT_HTML_SNIPPET = DOT_HTML_SNIPPET.format(GREEN_COLOR)
 
 
 def get_html_headers_table(headers: dict) -> str:
+    """Render the headers as a simple two-column HTML table.
+
+    Args:
+        headers: The email headers as a mapping of name to value.
+
+    Returns:
+        An HTML table string with one row per header.
+    """
     html_table = "<table><tbody>{}</tbody></table>"
     rows = []
     for k, v in headers.items():
@@ -54,6 +71,15 @@ def get_html_headers_table(headers: dict) -> str:
 
 
 def get_domains_and_addresses(headers: dict) -> list[tuple[str, str]]:
+    """Extract (domain, address) pairs from the Received headers.
+
+    Args:
+        headers: The email headers as a mapping of name to value.
+
+    Returns:
+        One (domain, IP address) tuple per Received header that yielded both,
+        excluding localhost/loopback entries.
+    """
     list_of_tuples = []
     for k, v in headers.items():
         if k.startswith("Received"):
@@ -65,6 +91,14 @@ def get_domains_and_addresses(headers: dict) -> list[tuple[str, str]]:
 
 
 def process_header_to_extract_domain_address(header: str) -> tuple[str, str] | None:
+    """Pull the reverse-DNS domain and IP address out of a Received header.
+
+    Args:
+        header: A single Received header value.
+
+    Returns:
+        A (domain, address) tuple, or None if either is missing or excluded.
+    """
     extracted_domains = re.findall(r"\s\((.*?)\.{0,1}\s\[", header)
     extracted_addresses = re.findall(r"\s\[(.*?)\]\)", header)
 
@@ -79,6 +113,17 @@ def process_header_to_extract_domain_address(header: str) -> tuple[str, str] | N
 
 
 def get_generic_siemplify_recommendations(headers: dict) -> list[dict]:
+    """Check headers for common spoofing and anomaly indicators.
+
+    Inspects Return-Path, Reply-To, X-Distribution, Bcc, X-UIDL, and Message-ID
+    for mismatches or suspicious presence/absence.
+
+    Args:
+        headers: The email headers as a mapping of name to value.
+
+    Returns:
+        Recommendation rows, each with a message, score, and status indicator.
+    """
     return_list = []
     lower_case_headers = {k.lower(): v for k, v in headers.items()}
 
@@ -232,6 +277,15 @@ def get_generic_siemplify_recommendations(headers: dict) -> list[dict]:
 
 
 def process_user_authenticated_header(headers: dict) -> dict:
+    """Check the X-Authenticated-User header against the From address.
+
+    Args:
+        headers: The email headers as a mapping of name to value.
+
+    Returns:
+        A dict with the authenticated-user domain (if present) and any
+        recommendation rows raised by a mismatch with the From header.
+    """
     return_dict = {}
     return_dict["siemplify_recommendations"] = []
     if "X-Authenticated-User" in headers:
@@ -316,6 +370,7 @@ def get_authentication_recommendations(
 
 @output_handler
 def main() -> None:
+    """Decode the EML or header list, analyze it, and emit the result JSON."""
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
     siemplify.LOGGER.info("================= Main - Param Init =================")
