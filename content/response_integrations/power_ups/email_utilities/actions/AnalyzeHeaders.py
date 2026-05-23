@@ -344,7 +344,16 @@ def buildResult(header: dict, siemplify: SiemplifyAction) -> dict:
     # whether the email passed authentication, rather than looking up the From
     # domain's published policy (which only describes what the domain enforces,
     # not whether this particular message passed it).
-    auth_results = header.get("authentication-results")
+    # Repeated headers may arrive either as a list under the
+    # "authentication-results" key (eml_parser shape) or as separate "_N"-suffixed
+    # keys (message_from_string shape); collect and flatten both into one list.
+    auth_results = []
+    for key, value in header.items():
+        if re.sub(r"_\d+$", "", key).lower() == "authentication-results":
+            if isinstance(value, list):
+                auth_results.extend(value)
+            else:
+                auth_results.append(value)
     if auth_results:
         try:
             result["AuthenticationResults"] = parse_authentication_results(
