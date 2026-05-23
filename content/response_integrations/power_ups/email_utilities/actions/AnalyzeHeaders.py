@@ -21,17 +21,17 @@ import json
 import re
 import socket
 
-import checkdmarc
 import dns.resolver
 import pydnsbl
 import tldextract
 from dateutil.parser import parse
 from ipwhois import IPWhois
+from mailsuite.utils import parse_authentication_results
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core import EmailParserRouting, EmailUtilitiesManager
+from ..core import AuthenticationResults, EmailParserRouting, EmailUtilitiesManager
 from ..core.IpLocation import DbIpCity
 
 
@@ -163,25 +163,6 @@ def return_domain(email):
     if domain == None:
         return None
     return domain.group(1)
-
-
-def ip_check(ip, domain):
-    spf_record = EmailUtilitiesManager.SpfRecord.from_domain(domain).record.split(" ")
-
-    includes = [x.split(":")[1] for x in spf_record if x.startswith("include")]
-    ips = [x.split(":")[1] for x in spf_record if x.startswith("ip")]
-    for include_domain in includes:
-        include_spf = EmailUtilitiesManager.SpfRecord.from_domain(
-            include_domain,
-        ).record.split(" ")
-        includes.extend(
-            [x.split(":")[1] for x in include_spf if x.startswith("include")],
-        )
-        ips.extend([x.split(":")[1] for x in include_spf if x.startswith("ip")])
-    for cidr in ips:
-        if ip_in_subnetwork(ip, cidr):
-            return True
-    return False
 
 
 def parseHops(received):
@@ -357,14 +338,37 @@ def buildResult(header, siemplify):
             result["SPFDomain"] = res.group(1)
     except:
         pass
-    domain_check = checkdmarc.check_domains(
-        [result["FromDomain"]],
-        include_tag_descriptions=True,
+    # The receiving MTA records the actual SPF/DKIM/DMARC verdict for *this*
+    # message in the Authentication-Results header(s). Parse those to report
+    # whether the email passed authentication, rather than looking up the From
+    # domain's published policy (which only describes what the domain enforces,
+    # not whether this particular message passed it).
+    auth_results = header.get("authentication-results")
+    if auth_results:
+        try:
+            result["AuthenticationResults"] = parse_authentication_results(
+                auth_results,
+                from_domain=result["FromDomain"],
+            )
+        except ValueError as e:
+            result["AuthenticationResults"] = {"error": str(e)}
+    else:
+        result["AuthenticationResults"] = {}
+
+    # A receiver may emit one combined Authentication-Results header or split the
+    # checks across several (e.g. Postfix with separate milters). Collapse them
+    # into a provider-independent summary, and also keep them grouped by
+    # authserv-id so a consumer can weigh which server's verdict to trust.
+    result["AuthenticationSummary"] = (
+        AuthenticationResults.summarize_authentication_results(
+            result["AuthenticationResults"],
+        )
     )
-    result["SPF"] = domain_check.get("spf")
-    result["DMARC"] = domain_check.get("dmarc")
-    result["MX"] = domain_check.get("mx")
-    result["DNSSec"] = domain_check.get("dnssec")
+    result["AuthenticationByServer"] = (
+        AuthenticationResults.group_authentication_results_by_server(
+            result["AuthenticationResults"],
+        )
+    )
 
     dkim = EmailUtilitiesManager.DKIM(logger=siemplify.LOGGER, headers=header)
     arc = EmailUtilitiesManager.ARC(logger=siemplify.LOGGER, headers=header)
@@ -411,10 +415,6 @@ def buildResult(header, siemplify):
     except Exception:
         pass
 
-    try:
-        result["SPF"]["Auth"] = ip_check(result["SourceServerIP"], result["FromDomain"])
-    except Exception:
-        result["SPF"]["Auth"] = False
     try:
         result["StrongSPF"] = EmailUtilitiesManager.SpfRecord.from_domain(
             result["FromDomain"],
