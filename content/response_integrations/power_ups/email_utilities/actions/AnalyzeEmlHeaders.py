@@ -251,7 +251,10 @@ def process_user_authenticated_header(headers: dict) -> dict:
     return return_dict
 
 
-def get_authentication_results(headers: dict) -> list[dict] | None:
+def get_authentication_results(
+    headers: dict,
+    siemplify: SiemplifyAction,
+) -> list[dict] | None:
     """Parse the Authentication-Results header(s) into the per-message SPF,
     DKIM, DMARC, and ARC verdicts recorded by the receiving mail servers.
 
@@ -277,8 +280,9 @@ def get_authentication_results(headers: dict) -> list[dict] | None:
     if from_value:
         try:
             from_domain = parse_email_address(from_value).get("domain")
-        except Exception:
+        except Exception as e:
             from_domain = None
+            siemplify.LOGGER.debug(f"Could not parse From domain: {e}")
 
     try:
         return parse_authentication_results(ar_values, from_domain=from_domain)
@@ -346,8 +350,8 @@ def main() -> None:
             try:
                 key = f"{item[0]}"
                 val = item[1]
-            except Exception:
-                raise Exception(item)
+            except Exception as e:
+                raise Exception(item) from e
             if key not in duplicate_key_dict:
                 duplicate_key_dict[key] = 1
                 headers_dict[key] = val
@@ -380,7 +384,7 @@ def main() -> None:
             user_authenticated_header["siemplify_recommendations"],
         )
 
-        authentication_results = get_authentication_results(real_headers)
+        authentication_results = get_authentication_results(real_headers, siemplify)
         if authentication_results:
             result_json["authentication_results"] = authentication_results
             result_json["authentication_summary"] = (

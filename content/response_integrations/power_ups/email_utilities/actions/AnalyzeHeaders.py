@@ -70,7 +70,8 @@ def ip_to_integer(ip_address: str) -> tuple[int, int]:
             ip_integer = int(binascii.hexlify(ip_hex), 16)
 
             return (ip_integer, 4 if version == socket.AF_INET else 6)
-        except Exception:
+        except OSError:
+            # not a valid address for this family; try the next one
             pass
 
     raise ValueError("invalid IP address")
@@ -102,9 +103,10 @@ def subnetwork_to_ip_range(subnetwork: str) -> tuple[int, int, int]:
                 ip_upper = ip_lower + suffix_mask
 
                 return (ip_lower, ip_upper, 4 if version == socket.AF_INET else 6)
-            except Exception:
+            except (OSError, ValueError):
+                # not a valid network for this family; try the next one
                 pass
-    except Exception:
+    except (ValueError, IndexError):
         pass
 
     raise ValueError("invalid subnetwork")
@@ -166,7 +168,7 @@ def return_domain(email: str) -> str | None:
     return domain.group(1)
 
 
-def parseHops(received: list[str]) -> list[dict]:
+def parseHops(received: list[str], siemplify: SiemplifyAction) -> list[dict]:
     previous_hop = {}
     hops = []
     ip_checker = pydnsbl.DNSBLIpChecker()
@@ -177,10 +179,7 @@ def parseHops(received: list[str]) -> list[dict]:
         hop_info["from_ip_whois"] = {}
         hop_info["by_ip_whois"] = {}
 
-        try:
-            parsed_route = EmailParserRouting.parserouting(hop)
-        except Exception:
-            raise
+        parsed_route = EmailParserRouting.parserouting(hop)
         if "date" not in parsed_route:
             continue
         hop_info["time"] = (
@@ -200,11 +199,10 @@ def parseHops(received: list[str]) -> list[dict]:
                         hop_info["from_ip_whois"] = obj.lookup_rdap(depth=1)
                         response = DbIpCity.get(f, api_key="free")
                         hop_info["from_geo"] = json.loads(response.to_json())
-                    except Exception as expe:
-                        template = (
-                            "An exception of type {0} occurred. Arguments:\n{1!r}"
+                    except Exception as e:
+                        siemplify.LOGGER.debug(
+                            f"WHOIS/geo enrichment failed for a from-hop IP: {e}",
                         )
-                        message = template.format(type(expe).__name__, expe.args)
 
                     denylist["blacklisted"] = ip_check.blacklisted
                     denylist["detected_by"] = ip_check.detected_by.copy()
@@ -225,26 +223,22 @@ def parseHops(received: list[str]) -> list[dict]:
                             )
                             hop_info["from_geo"] = json.loads(response.to_json())
                             hop_info["from_ip_whois"] = ip_whois
-                        except Exception as exp:
-                            template = (
-                                "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        except Exception as e:
+                            siemplify.LOGGER.debug(
+                                "WHOIS/geo enrichment failed for a resolved "
+                                f"from-hop host: {e}",
                             )
-                            message = template.format(type(exp).__name__, exp.args)
 
                         denylist["blacklisted"] = domain_check.blacklisted
                         denylist["detected_by"] = domain_check.detected_by.copy()
                         denylist["categories"] = domain_check.categories.copy()
                         hop_info["blacklist_info"].append(denylist)
                     except Exception as e:
-                        template = (
-                            "An exception of type {0} occurred. Arguments:\n{1!r}"
+                        siemplify.LOGGER.debug(
+                            f"Denylist/DNS lookup failed for a from-hop host: {e}",
                         )
-                        message = template.format(type(e).__name__, e.args)
-                        logger(message)
-                except Exception as ex:
-                    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-                    message = template.format(type(ex).__name__, ex.args)
-                    logger(message)
+                except Exception as e:
+                    siemplify.LOGGER.warn(f"Failed to analyze a from-hop: {e}")
 
                 if "blacklisted" in denylist:
                     if denylist["blacklisted"]:
@@ -262,7 +256,10 @@ def parseHops(received: list[str]) -> list[dict]:
                 hop_info["by_geo"] = json.loads(response.to_json())
                 hop_info["by_ip_whois"] = obj.lookup_rdap(depth=1)
 
-            except Exception:
+            except Exception as e:
+                siemplify.LOGGER.debug(
+                    f"by-hop is not a direct IP or enrichment failed, trying DNS: {e}",
+                )
                 try:
                     resolved_ip_answer = dns.resolver.resolve(hop_info["by"])
                     resolved_ip = resolved_ip_answer[0]
@@ -271,14 +268,15 @@ def parseHops(received: list[str]) -> list[dict]:
                         hop_info["by_ip_whois"] = obj.lookup_rdap(depth=1)
                         response = DbIpCity.get(resolved_ip, api_key="free")
                         hop_info["by_geo"] = json.loads(response.to_json())
-                    except Exception as expl:
-                        template = (
-                            "An exception of type {0} occurred. Arguments:\n{1!r}"
+                    except Exception as e:
+                        siemplify.LOGGER.debug(
+                            "WHOIS/geo enrichment failed for a resolved "
+                            f"by-hop host: {e}",
                         )
-                        message = template.format(type(expl).__name__, expl.args)
-                except Exception as exp:
-                    template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-                    message = template.format(type(exp).__name__, exp.args)
+                except Exception as e:
+                    siemplify.LOGGER.debug(
+                        f"Could not resolve/enrich a by-hop host: {e}",
+                    )
 
         if "with" in parsed_route:
             hop_info["with"] = parsed_route["with"].split(" ")[0]
@@ -329,16 +327,16 @@ def buildResult(header: dict, siemplify: SiemplifyAction) -> dict:
         res = re.search(r"header.i=@(.*?)\s", dmarc_sig)
         if res:
             result["DmarcDomain"] = res.group(1)
-    except Exception:
-        pass
+    except Exception as e:
+        siemplify.LOGGER.debug(f"Could not derive DmarcDomain from headers: {e}")
 
     try:
         received_spf = header.get("received-spf")[0]
         res = re.search(r"domain of (?:.*?@)?(.*?)\s", received_spf)
         if res:
             result["SPFDomain"] = res.group(1)
-    except Exception:
-        pass
+    except Exception as e:
+        siemplify.LOGGER.debug(f"Could not derive SPFDomain from headers: {e}")
     # The receiving MTA records the actual SPF/DKIM/DMARC verdict for *this*
     # message in the Authentication-Results header(s). Parse those to report
     # whether the email passed authentication, rather than looking up the From
@@ -394,14 +392,14 @@ def buildResult(header: dict, siemplify: SiemplifyAction) -> dict:
         arc_res["result"], arc_res["details"], arc_res["reason"] = arc.verify()
         arc_res["result"] = arc_res["result"].decode()
         result["ARCVerify"] = arc_res
-    except Exception:
-        result["ARCVerify"] = {}
-        result["ARCVerify"]["result"] = "error"
+    except Exception as e:
+        result["ARCVerify"] = {"result": "error"}
+        siemplify.LOGGER.debug(f"ARC verification failed: {e}")
     result["RelayInfo"] = []
     result["SourceServer"] = ""
 
     try:
-        result["RelayInfo"] = parseHops(header["received"])
+        result["RelayInfo"] = parseHops(header["received"], siemplify)
         for fromserver_str in reversed(header["received"]):
             if "by" in fromserver_str:
                 fromserver = EmailParserRouting.parserouting(fromserver_str)
@@ -410,7 +408,10 @@ def buildResult(header: dict, siemplify: SiemplifyAction) -> dict:
                         ipaddress.ip_address(fromserver["by"][0])
                         result["SourceServerIP"] = fromserver["by"][0]
                         result["SourceServer"] = fromserver["by"][0]
-                except Exception:
+                except Exception as e:
+                    siemplify.LOGGER.debug(
+                        f"Source server is not a direct IP, resolving by name: {e}",
+                    )
                     if "by" in fromserver:
                         result["SourceServer"] = fromserver["by"][0]
                         try:
@@ -419,18 +420,21 @@ def buildResult(header: dict, siemplify: SiemplifyAction) -> dict:
                                     result["SourceServer"],
                                 )[0][2]
                             )
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            siemplify.LOGGER.debug(
+                                f"Could not resolve source server IP: {e}",
+                            )
                 continue
-    except Exception:
-        pass
+    except Exception as e:
+        siemplify.LOGGER.warn(f"Failed to build relay/source-server info: {e}")
 
     try:
         result["StrongSPF"] = EmailUtilitiesManager.SpfRecord.from_domain(
             result["FromDomain"],
         ).is_record_strong()
-    except Exception:
+    except Exception as e:
         result["StrongSPF"] = False
+        siemplify.LOGGER.debug(f"Could not evaluate StrongSPF: {e}")
 
     return result
 
@@ -465,5 +469,4 @@ def main(siemplify: SiemplifyAction) -> None:
 if __name__ == "__main__":
     siemplify = SiemplifyAction()
     siemplify.script_name = "Analyze Headers"
-    logger = siemplify.LOGGER.info
     main(siemplify)
