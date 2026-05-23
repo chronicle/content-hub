@@ -23,7 +23,32 @@ per check. These helpers collapse either shape into a provider-independent view.
 
 from __future__ import annotations
 
+import re
+
 AUTH_METHODS = ("spf", "dkim", "dmarc", "arc")
+
+
+def collect_authentication_results(headers: dict) -> list:
+    """Collect every Authentication-Results header value from a headers mapping.
+
+    Repeated headers may arrive either as a list under the
+    "authentication-results" key (eml_parser shape) or as separate "_N"-suffixed
+    keys (message_from_string shape); both shapes are flattened into one list.
+
+    Args:
+        headers: The email headers as a mapping of name to value(s).
+
+    Returns:
+        The Authentication-Results header values as a single flat list.
+    """
+    values = []
+    for key, value in headers.items():
+        if re.sub(r"_\d+$", "", key).lower() == "authentication-results":
+            if isinstance(value, list):
+                values.extend(value)
+            else:
+                values.append(value)
+    return values
 
 
 def _as_entries(parsed: list[dict] | dict | None) -> list[dict]:

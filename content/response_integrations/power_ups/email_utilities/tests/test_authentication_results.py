@@ -100,3 +100,31 @@ def test_group_skips_entries_without_verdicts() -> None:
     assert AuthenticationResults.group_authentication_results_by_server(parsed) == {
         "b": {"spf": "pass"},
     }
+
+
+def test_collect_flattens_list_valued_header() -> None:
+    headers = {
+        "authentication-results": ["a; spf=pass", "b; dkim=pass"],
+        "received": ["relay"],
+    }
+    assert AuthenticationResults.collect_authentication_results(headers) == [
+        "a; spf=pass",
+        "b; dkim=pass",
+    ]
+
+
+def test_collect_gathers_suffixed_keys() -> None:
+    headers = {
+        "Authentication-Results": "a; spf=pass",
+        "Authentication-Results_1": "b; dkim=pass",
+    }
+    assert AuthenticationResults.collect_authentication_results(headers) == [
+        "a; spf=pass",
+        "b; dkim=pass",
+    ]
+
+
+def test_collect_returns_empty_when_absent() -> None:
+    assert (
+        AuthenticationResults.collect_authentication_results({"received": ["x"]}) == []
+    )
