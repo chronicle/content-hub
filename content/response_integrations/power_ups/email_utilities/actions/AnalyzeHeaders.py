@@ -12,6 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Analyze the headers of an email and report routing, authentication, and
+reputation findings.
+
+Accepts a JSON object of email headers and produces SPF/DKIM/DMARC/ARC
+authentication results (from the message's Authentication-Results headers),
+DKIM/ARC signature verification, per-hop relay enrichment (WHOIS, geo-location,
+denylist checks), and source-server details.
+"""
+
 from __future__ import annotations
 
 import binascii
@@ -44,6 +53,9 @@ def ip_in_subnetwork(ip_address: str, subnetwork: str) -> bool:
     Both IPv4 addresses/subnetworks (e.g. "1.1.1.1"
     and "1.1.1.1/24") and IPv6 addresses/subnetworks (e.g.
     "2a02:a448:ddb0::" and "2a02:a448:ddb0::/44") are accepted.
+
+    Raises:
+        ValueError: If the address and subnetwork are different IP versions.
     """
     (ip_integer, version1) = ip_to_integer(ip_address)
     (ip_lower, ip_upper, version2) = subnetwork_to_ip_range(subnetwork)
@@ -62,6 +74,9 @@ def ip_to_integer(ip_address: str) -> tuple[int, int]:
 
     Both IPv4 addresses (e.g. "1.1.1.1") and IPv6 addresses
     (e.g. "2a02:a448:ddb0::") are accepted.
+
+    Raises:
+        ValueError: If the string is not a valid IPv4 or IPv6 address.
     """
     # try parsing the IP address first as IPv4, then as IPv6
     for version in (socket.AF_INET, socket.AF_INET6):
@@ -85,6 +100,9 @@ def subnetwork_to_ip_range(subnetwork: str) -> tuple[int, int, int]:
 
     Both IPv4 subnetworks (e.g. "1.1.1.1/24") and IPv6
     subnetworks (e.g. "2a02:a448:ddb0::/44") are accepted.
+
+    Raises:
+        ValueError: If the string is not a valid CIDR subnetwork.
     """
     try:
         fragments = subnetwork.split("/")
@@ -112,10 +130,14 @@ def subnetwork_to_ip_range(subnetwork: str) -> tuple[int, int, int]:
     raise ValueError("invalid subnetwork")
 
 
-def dateParser(line: str) -> datetime.datetime:
-    """DateParser will read in a line and parse a date.
-    :param line:
-    :return: {str} string
+def date_parser(line: str) -> datetime.datetime:
+    """Parse a date out of a header line, tolerating fuzzy formats.
+
+    Args:
+        line: The header line to extract a date from.
+
+    Returns:
+        The parsed datetime.
     """
     try:
         r = parse(line, fuzzy=True)
@@ -128,12 +150,16 @@ def dateParser(line: str) -> datetime.datetime:
     return r
 
 
-def getHeaderVal(h: str, data: str, rex: str = "\\s*(.*?)\n\\S+:\\s") -> str | None:
-    """GetHeaderVal will get the value from one of the email headers.
-    :param h:
-    :param data:
-    :param rex:
-    :return:
+def get_header_val(h: str, data: str, rex: str = "\\s*(.*?)\n\\S+:\\s") -> str | None:
+    """Extract the value of a single header from raw header text.
+
+    Args:
+        h: The header name to search for.
+        data: The raw header text to search within.
+        rex: The regex fragment matching the header's value.
+
+    Returns:
+        The matched header value, or None if not found.
     """
     r = re.findall(f"{h}:{rex}", data, re.VERBOSE | re.DOTALL | re.IGNORECASE)
     if r:
@@ -141,13 +167,16 @@ def getHeaderVal(h: str, data: str, rex: str = "\\s*(.*?)\n\\S+:\\s") -> str | N
     return None
 
 
-def getAuthVal(a: str, data: str, rex: str = r"(\w+)\b") -> str | None:
-    """GetAuthVal parses the authentication-results header for values.
-    Not really used any more.
-    :param a:
-    :param data:
-    :param rex:
-    :return:
+def get_auth_val(a: str, data: str, rex: str = r"(\w+)\b") -> str | None:
+    """Parse a value out of the Authentication-Results header (legacy helper).
+
+    Args:
+        a: The authentication mechanism name to search for.
+        data: The header text to search within.
+        rex: The regex fragment matching the value.
+
+    Returns:
+        The matched value, or None if not found.
     """
     r = re.findall(rf"{a}={rex}", data, re.VERBOSE | re.DOTALL | re.IGNORECASE)
     if r:
@@ -156,6 +185,14 @@ def getAuthVal(a: str, data: str, rex: str = r"(\w+)\b") -> str | None:
 
 
 def return_domain(email: str) -> str | None:
+    """Return the domain portion of an email address.
+
+    Args:
+        email: An address, optionally in ``Display Name <local@domain>`` form.
+
+    Returns:
+        The domain after the ``@``, or None if no domain is present.
+    """
     f_domain = re.search("<(.*?)>", email)
 
     if f_domain:
@@ -168,7 +205,20 @@ def return_domain(email: str) -> str | None:
     return domain.group(1)
 
 
-def parseHops(received: list[str], siemplify: SiemplifyAction) -> list[dict]:
+def parse_hops(received: list[str], siemplify: SiemplifyAction) -> list[dict]:
+    """Build per-hop relay details from a message's Received headers.
+
+    Walks the Received headers oldest-first and, for each hop, records timing,
+    the from/by hosts, and best-effort WHOIS, geo-location, and denylist (RBL)
+    enrichment. Enrichment failures are logged and skipped rather than raised.
+
+    Args:
+        received: The message's Received header values.
+        siemplify: The action object, used for logging.
+
+    Returns:
+        One dict of relay details per hop.
+    """
     previous_hop = {}
     hops = []
     ip_checker = pydnsbl.DNSBLIpChecker()
@@ -295,6 +345,16 @@ def parseHops(received: list[str], siemplify: SiemplifyAction) -> list[dict]:
 
 
 def coalesce(input_dict: dict, *arg: str) -> Any:
+    """Return the first present key's value from a dict.
+
+    Args:
+        input_dict: The dict to look in.
+        *arg: Candidate keys, tried in order.
+
+    Returns:
+        The first matching value (its first element if that value is a list),
+        or None if no candidate key is present.
+    """
     for el in arg:
         if el in input_dict:
             if isinstance(input_dict[el], list):
@@ -303,11 +363,16 @@ def coalesce(input_dict: dict, *arg: str) -> Any:
     return None
 
 
-def buildResult(header: dict, siemplify: SiemplifyAction) -> dict:
-    """Creates the result object after parsing the email.
-    :param header:
-    :param mail_data:
-    :return:
+def build_result(header: dict, siemplify: SiemplifyAction) -> dict:
+    """Assemble the full analysis result for a set of email headers.
+
+    Args:
+        header: The email headers as a mapping of name to value(s).
+        siemplify: The action object, used for logging.
+
+    Returns:
+        The analysis result: sender metadata, authentication results and
+        summaries, DKIM/ARC verification, relay info, and source server.
     """
     result = {
         "From": coalesce(header, "from"),
@@ -399,7 +464,7 @@ def buildResult(header: dict, siemplify: SiemplifyAction) -> dict:
     result["SourceServer"] = ""
 
     try:
-        result["RelayInfo"] = parseHops(header["received"], siemplify)
+        result["RelayInfo"] = parse_hops(header["received"], siemplify)
         for fromserver_str in reversed(header["received"]):
             if "by" in fromserver_str:
                 fromserver = EmailParserRouting.parserouting(fromserver_str)
@@ -441,6 +506,7 @@ def buildResult(header: dict, siemplify: SiemplifyAction) -> dict:
 
 @output_handler
 def main(siemplify: SiemplifyAction) -> None:
+    """Parse the "Headers JSON" action parameter and emit the analysis result."""
     headers_json = siemplify.extract_action_param(
         "Headers JSON",
         default_value="{}",
@@ -456,7 +522,7 @@ def main(siemplify: SiemplifyAction) -> None:
     )
     h = json.loads(headers_json)
 
-    headers_res = buildResult(h, siemplify)
+    headers_res = build_result(h, siemplify)
     # print(json.dumps(headers_res, indent=4, sort_keys=True, default=str))
     siemplify.result.add_result_json(headers_res)
     siemplify.result.add_json("Headers", headers_res)
