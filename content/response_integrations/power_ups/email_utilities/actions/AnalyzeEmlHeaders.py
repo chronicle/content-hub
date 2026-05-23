@@ -259,11 +259,13 @@ def get_authentication_results(headers: dict) -> list[dict] | None:
     *this* message actually passed authentication. Returns a list of parsed
     results (one per Authentication-Results header) or None if none are present.
     """
-    ar_values = [
-        value
-        for key, value in headers.items()
-        if re.sub(r"_\d+$", "", key).lower() == "authentication-results"
-    ]
+    ar_values = []
+    for key, value in headers.items():
+        if re.sub(r"_\d+$", "", key).lower() == "authentication-results":
+            if isinstance(value, list):
+                ar_values.extend(value)
+            else:
+                ar_values.append(value)
     if not ar_values:
         return None
 

@@ -361,9 +361,9 @@ def buildResult(header: dict, siemplify: SiemplifyAction) -> dict:
                 from_domain=result["FromDomain"],
             )
         except ValueError as e:
-            result["AuthenticationResults"] = {"error": str(e)}
+            result["AuthenticationResults"] = [{"error": str(e)}]
     else:
-        result["AuthenticationResults"] = {}
+        result["AuthenticationResults"] = []
 
     # A receiver may emit one combined Authentication-Results header or split the
     # checks across several (e.g. Postfix with separate milters). Collapse them
