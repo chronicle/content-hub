@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO:
-# 1) Add DMARC, SPF, DKIM and ARC verification flags. If exists and if pass or not (pass/fail)
-
 from __future__ import annotations
 
 import base64
@@ -22,9 +19,12 @@ import json
 import re
 from email import message_from_string
 
+from mailsuite.utils import parse_authentication_results, parse_email_address
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+
+from ..core import AuthenticationResults
 
 INTEGRATION_NAME = "EmailUtilties"
 SCRIPT_NAME = "Analyze EML Headers"
@@ -254,6 +254,61 @@ def process_user_authenticated_header(headers):
     return return_dict
 
 
+def get_authentication_results(headers):
+    """Parse the Authentication-Results header(s) into the per-message SPF,
+    DKIM, DMARC, and ARC verdicts recorded by the receiving mail servers.
+
+    Unlike a DNS lookup of the sender's published policy, this reflects whether
+    *this* message actually passed authentication. Returns a list of parsed
+    results (one per Authentication-Results header) or None if none are present.
+    """
+    ar_values = [
+        value
+        for key, value in headers.items()
+        if re.sub(r"_\d+$", "", key).lower() == "authentication-results"
+    ]
+    if not ar_values:
+        return None
+
+    from_domain = None
+    from_value = next(
+        (value for key, value in headers.items() if key.lower() == "from"),
+        None,
+    )
+    if from_value:
+        try:
+            from_domain = parse_email_address(from_value).get("domain")
+        except Exception:
+            from_domain = None
+
+    try:
+        return parse_authentication_results(ar_values, from_domain=from_domain)
+    except ValueError:
+        return None
+
+
+def get_authentication_recommendations(authentication_results):
+    """Turn parsed Authentication-Results into pass/fail recommendation rows."""
+    summary = AuthenticationResults.summarize_authentication_results(
+        authentication_results,
+    )
+
+    recommendations = []
+    for method, result in summary.items():
+        passed = result == "pass"
+        recommendations.append(
+            {
+                "message": '{} authentication result: "{}"'.format(
+                    method.upper(),
+                    result,
+                ),
+                "score": 0 if passed else 5,
+                "status": GREEN_DOT_HTML_SNNIPET if passed else RED_DOT_HTML_SNNIPET,
+            },
+        )
+    return recommendations
+
+
 @output_handler
 def main():
     siemplify = SiemplifyAction()
@@ -323,6 +378,24 @@ def main():
         siemplify_recommendations.extend(
             user_authenticated_header["siemplify_recommendations"],
         )
+
+        authentication_results = get_authentication_results(real_headers)
+        if authentication_results:
+            result_json["authentication_results"] = authentication_results
+            result_json["authentication_summary"] = (
+                AuthenticationResults.summarize_authentication_results(
+                    authentication_results,
+                )
+            )
+            result_json["authentication_by_server"] = (
+                AuthenticationResults.group_authentication_results_by_server(
+                    authentication_results,
+                )
+            )
+            siemplify_recommendations.extend(
+                get_authentication_recommendations(authentication_results),
+            )
+
         result_json["header_analysis_result"] = siemplify_recommendations
         total_rules_matched = 0
         for item in siemplify_recommendations:
