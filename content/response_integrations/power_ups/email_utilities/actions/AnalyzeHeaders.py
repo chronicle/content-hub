@@ -20,6 +20,7 @@ import ipaddress
 import json
 import re
 import socket
+from typing import Any
 
 import dns.resolver
 import pydnsbl
@@ -35,7 +36,7 @@ from ..core import AuthenticationResults, EmailParserRouting, EmailUtilitiesMana
 from ..core.IpLocation import DbIpCity
 
 
-def ip_in_subnetwork(ip_address, subnetwork):
+def ip_in_subnetwork(ip_address: str, subnetwork: str) -> bool:
     """Returns True if the given IP address belongs to the
     subnetwork expressed in CIDR notation, otherwise False.
     Both parameters are strings.
@@ -53,7 +54,7 @@ def ip_in_subnetwork(ip_address, subnetwork):
     return ip_lower <= ip_integer <= ip_upper
 
 
-def ip_to_integer(ip_address):
+def ip_to_integer(ip_address: str) -> tuple[int, int]:
     """Converts an IP address expressed as a string to its
     representation as an integer value and returns a tuple
     (ip_integer, version), with version being the IP version
@@ -69,13 +70,13 @@ def ip_to_integer(ip_address):
             ip_integer = int(binascii.hexlify(ip_hex), 16)
 
             return (ip_integer, 4 if version == socket.AF_INET else 6)
-        except:
+        except Exception:
             pass
 
     raise ValueError("invalid IP address")
 
 
-def subnetwork_to_ip_range(subnetwork):
+def subnetwork_to_ip_range(subnetwork: str) -> tuple[int, int, int]:
     """Returns a tuple (ip_lower, ip_upper, version) containing the
     integer values of the lower and upper IP addresses respectively
     in a subnetwork expressed in CIDR notation (as a string), with
@@ -101,15 +102,15 @@ def subnetwork_to_ip_range(subnetwork):
                 ip_upper = ip_lower + suffix_mask
 
                 return (ip_lower, ip_upper, 4 if version == socket.AF_INET else 6)
-            except:
+            except Exception:
                 pass
-    except:
+    except Exception:
         pass
 
     raise ValueError("invalid subnetwork")
 
 
-def dateParser(line):
+def dateParser(line: str) -> datetime.datetime:
     """DateParser will read in a line and parse a date.
     :param line:
     :return: {str} string
@@ -125,7 +126,7 @@ def dateParser(line):
     return r
 
 
-def getHeaderVal(h, data, rex="\\s*(.*?)\n\\S+:\\s"):
+def getHeaderVal(h: str, data: str, rex: str = "\\s*(.*?)\n\\S+:\\s") -> str | None:
     """GetHeaderVal will get the value from one of the email headers.
     :param h:
     :param data:
@@ -138,7 +139,7 @@ def getHeaderVal(h, data, rex="\\s*(.*?)\n\\S+:\\s"):
     return None
 
 
-def getAuthVal(a, data, rex=r"(\w+)\b"):
+def getAuthVal(a: str, data: str, rex: str = r"(\w+)\b") -> str | None:
     """GetAuthVal parses the authentication-results header for values.
     Not really used any more.
     :param a:
@@ -152,7 +153,7 @@ def getAuthVal(a, data, rex=r"(\w+)\b"):
     return None
 
 
-def return_domain(email):
+def return_domain(email: str) -> str | None:
     f_domain = re.search("<(.*?)>", email)
 
     if f_domain:
@@ -160,12 +161,12 @@ def return_domain(email):
     else:
         domain = re.search("@(.*)", email)
 
-    if domain == None:
+    if domain is None:
         return None
     return domain.group(1)
 
 
-def parseHops(received):
+def parseHops(received: list[str]) -> list[dict]:
     previous_hop = {}
     hops = []
     ip_checker = pydnsbl.DNSBLIpChecker()
@@ -191,7 +192,7 @@ def parseHops(received):
                 denylist = {}
                 hop_info["from"] = f
                 try:
-                    test_ip = ipaddress.ip_address(f)
+                    ipaddress.ip_address(f)
                     ip_check = ip_checker.check(f)
                     # hop_info['from'] = f
                     try:
@@ -246,14 +247,14 @@ def parseHops(received):
                     logger(message)
 
                 if "blacklisted" in denylist:
-                    if denylist["blacklisted"] == True:
+                    if denylist["blacklisted"]:
                         hop_info["blacklisted"] = True
         else:
             hop_info["from"] = ""
         if "by" in parsed_route:
             hop_info["by"] = parsed_route["by"][0]
             try:
-                test_ip = ipaddress.ip_address(hop_info["by"])
+                ipaddress.ip_address(hop_info["by"])
 
                 obj = IPWhois(hop_info["by"])
 
@@ -295,7 +296,7 @@ def parseHops(received):
     return hops
 
 
-def coalesce(input_dict, *arg):
+def coalesce(input_dict: dict, *arg: str) -> Any:
     for el in arg:
         if el in input_dict:
             if isinstance(input_dict[el], list):
@@ -304,7 +305,7 @@ def coalesce(input_dict, *arg):
     return None
 
 
-def buildResult(header, siemplify):
+def buildResult(header: dict, siemplify: SiemplifyAction) -> dict:
     """Creates the result object after parsing the email.
     :param header:
     :param mail_data:
@@ -328,7 +329,7 @@ def buildResult(header, siemplify):
         res = re.search(r"header.i=@(.*?)\s", dmarc_sig)
         if res:
             result["DmarcDomain"] = res.group(1)
-    except:
+    except Exception:
         pass
 
     try:
@@ -336,7 +337,7 @@ def buildResult(header, siemplify):
         res = re.search(r"domain of (?:.*?@)?(.*?)\s", received_spf)
         if res:
             result["SPFDomain"] = res.group(1)
-    except:
+    except Exception:
         pass
     # The receiving MTA records the actual SPF/DKIM/DMARC verdict for *this*
     # message in the Authentication-Results header(s). Parse those to report
@@ -384,7 +385,7 @@ def buildResult(header, siemplify):
         arc_res["result"], arc_res["details"], arc_res["reason"] = arc.verify()
         arc_res["result"] = arc_res["result"].decode()
         result["ARCVerify"] = arc_res
-    except:
+    except Exception:
         result["ARCVerify"] = {}
         result["ARCVerify"]["result"] = "error"
     result["RelayInfo"] = []
@@ -397,7 +398,7 @@ def buildResult(header, siemplify):
                 fromserver = EmailParserRouting.parserouting(fromserver_str)
                 try:
                     if "by" in fromserver:
-                        test_ip = ipaddress.ip_address(fromserver["by"][0])
+                        ipaddress.ip_address(fromserver["by"][0])
                         result["SourceServerIP"] = fromserver["by"][0]
                         result["SourceServer"] = fromserver["by"][0]
                 except Exception:
@@ -409,7 +410,7 @@ def buildResult(header, siemplify):
                                     result["SourceServer"],
                                 )[0][2]
                             )
-                        except:
+                        except Exception:
                             pass
                 continue
     except Exception:
@@ -419,14 +420,14 @@ def buildResult(header, siemplify):
         result["StrongSPF"] = EmailUtilitiesManager.SpfRecord.from_domain(
             result["FromDomain"],
         ).is_record_strong()
-    except:
+    except Exception:
         result["StrongSPF"] = False
 
     return result
 
 
 @output_handler
-def main(siemplify):
+def main(siemplify: SiemplifyAction) -> None:
     headers_json = siemplify.extract_action_param(
         "Headers JSON",
         default_value="{}",
