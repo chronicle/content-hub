@@ -28,8 +28,13 @@ def main():
     falcon_manager = FalconSandboxManager(server_address, key)
     falcon_manager.test_connectivity()
 
-    siemplify.end("Connected successfully.", "true")
+    siemplify.end("Successfully connected to the Falcon Sandbox.", "true")
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the Falcon Sandbox.
+# Failed to connect to the Falcon Sandbox.
 
 if __name__ == "__main__":
     main()

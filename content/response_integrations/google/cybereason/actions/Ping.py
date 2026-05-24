@@ -61,7 +61,7 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
     status = EXECUTION_STATE_COMPLETED
-    output_message = f"Successfully connected to the {INTEGRATION_NAME} server with the provided connection parameters!"
+    output_message = "Successfully connected to the Cybereason."
     result_value = True
     try:
         CybereasonManager(
@@ -75,7 +75,7 @@ def main():
         )
 
     except Exception as e:
-        output_message = str(e)
+        output_message = f"Failed to connect to the Cybereason. Reason: " + str(str(e))
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED

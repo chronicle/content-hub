@@ -37,8 +37,13 @@ def main():
 
     cyberx_manager.get_all_devices()
 
-    siemplify.end("Connection established.", True)
+    siemplify.end("Successfully connected to the CyberX.", True)
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the CyberX.
+# Failed to connect to the CyberX.
 
 if __name__ == "__main__":
     main()

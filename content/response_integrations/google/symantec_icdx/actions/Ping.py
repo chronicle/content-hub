@@ -35,8 +35,13 @@ def main():
     )
 
     icdx_manager.test_connectivity()
-    siemplify.end("Connection Established", True)
+    siemplify.end("Successfully connected to the Symantec ICDX.", True)
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the Symantec ICDX.
+# Failed to connect to the Symantec ICDX.
 
 if __name__ == "__main__":
     main()

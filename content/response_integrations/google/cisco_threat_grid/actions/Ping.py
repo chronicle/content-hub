@@ -32,9 +32,14 @@ def main():
     cisco_threat_grid.test_connectivity()
 
     # If no exception occur - then connection is successful
-    output_message = f"Connected successfully to {server_addr}."
+    output_message = "Successfully connected to the Cisco Threat Grid."
     siemplify.end(output_message, True)
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the Cisco Threat Grid.
+# Failed to connect to the Cisco Threat Grid.
 
 if __name__ == "__main__":
     main()

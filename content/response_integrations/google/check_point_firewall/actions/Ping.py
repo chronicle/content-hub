@@ -64,7 +64,7 @@ def main():
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
     connectivity_result = True
-    output_message = "Connection Established."
+    output_message = "Successfully connected to the Check Point Firewall."
     status = EXECUTION_STATE_COMPLETED
 
     try:
@@ -79,7 +79,7 @@ def main():
         manager.discard()
         manager.log_out()
     except Exception as err:
-        output_message = f"Connection Failed. Error is {err}"
+        output_message = f"Failed to connect to the Check Point Firewall. Reason: Connection Failed. Error is {err}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(err)
         status = EXECUTION_STATE_FAILED

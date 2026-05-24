@@ -30,7 +30,7 @@ def main():
 
     connection = ca_manager.test_connectivity()
 
-    output_message = "Connection Established" if connection else "Connection Failed"
+    output_message = "Successfully connected to the CA Service Desk Manager." if connection else "Failed to connect to the CA Service Desk Manager."
     result_value = connection
     siemplify.end(output_message, result_value)
 

@@ -39,8 +39,13 @@ def main():
     # End session.
     nsm_manager.logout()
 
-    siemplify.end("Connection Established.", True)
+    siemplify.end("Successfully connected to the McAfeeNSM.", True)
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the McAfeeNSM.
+# Failed to connect to the McAfeeNSM.
 
 if __name__ == "__main__":
     main()

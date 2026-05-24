@@ -33,8 +33,13 @@ def main():
         conf.get("Private Key File Path"),
     )
 
-    siemplify.end("Connection Established.", True)
+    siemplify.end("Successfully connected to the McAfee Active Response.", True)
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the McAfee Active Response.
+# Failed to connect to the McAfee Active Response.
 
 if __name__ == "__main__":
     main()

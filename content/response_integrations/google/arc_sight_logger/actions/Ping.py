@@ -79,7 +79,7 @@ def main():
         arcsight_logger_manager.logout()
 
     except Exception as e:
-        output_message = f'Error executing action "Ping". Reason: {e}'
+        output_message = f'Failed to connect to the ArcSight Logger. Reason: Error executing action "Ping". Reason: {e}'
         connectivity_result = False
         siemplify.LOGGER.error(
             f"Connection to API failed, performing action {PING_SCRIPT_NAME}"

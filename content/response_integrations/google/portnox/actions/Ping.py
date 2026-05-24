@@ -29,11 +29,16 @@ def main():
     portnox_manager = PortnoxManager(api_root, username, password, use_ssl)
     portnox_manager.test_conectivity()
 
-    output_message = "Connection Established"
+    output_message = "Successfully connected to the Portnox."
     result_value = "true"
 
     siemplify.end(output_message, result_value)
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the Portnox.
+# Failed to connect to the Portnox.
 
 if __name__ == "__main__":
     main()

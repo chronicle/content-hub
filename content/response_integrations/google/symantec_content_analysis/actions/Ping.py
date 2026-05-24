@@ -36,9 +36,9 @@ def main():
     connected = symantec_manager.ping()
 
     if connected:
-        output_message = "Connection Established."
+        output_message = "Successfully connected to the Symantec Content Analysis."
     else:
-        output_message = "Connection Failed"
+        output_message = "Failed to connect to the Symantec Content Analysis."
 
     siemplify.end(output_message, True)
 

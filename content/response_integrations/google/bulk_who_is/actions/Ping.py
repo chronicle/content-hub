@@ -59,11 +59,11 @@ def main():
         is_connected = whois.test_connectivity()
 
         if is_connected:
-            output_message = "Connection Established"
+            output_message = "Successfully connected to the BulkWhoIs."
             result_value = "true"
             siemplify.LOGGER.info("Finished processing")
         else:
-            output_message = "Connection Failed"
+            output_message = "Failed to connect to the BulkWhoIs."
             result_value = "false"
             status = EXECUTION_STATE_FAILED
     except Exception as e:
@@ -71,7 +71,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = "Some errors occurred. Please check log"
+        output_message = f"Failed to connect to the BulkWhoIs. Reason: {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(

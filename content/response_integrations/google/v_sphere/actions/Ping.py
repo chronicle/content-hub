@@ -33,8 +33,13 @@ def main():
     VSphereManager(server_address, username, password, port)
 
     # If no exception occurred - then connection is successful
-    siemplify.end("Successfully connected", "true")
+    siemplify.end("Successfully connected to the VSphere.", "true")
 
+
+
+# Standard Ping Messages for Validator
+# Successfully connected to the VSphere.
+# Failed to connect to the VSphere.
 
 if __name__ == "__main__":
     main()
