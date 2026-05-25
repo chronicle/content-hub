@@ -591,7 +591,8 @@ class OnePlatformSoarApi(BaseSoarApi):
                     "Expected path to contain 'integrations/'"
                 ),
             )
-            endpoint = f"/{resource_path[segment_pos:]}"
+
+        endpoint = f"/{resource_path[segment_pos:]}"
 
         return self._make_request(
             HttpMethod.PATCH,

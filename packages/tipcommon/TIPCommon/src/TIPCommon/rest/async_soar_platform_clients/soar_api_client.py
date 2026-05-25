@@ -22,6 +22,7 @@ from TIPCommon.rest.async_soar_platform_clients.constants import (
     DEFAULT_PAGE_SIZE,
     STATUS_CODE_NO_CONTENT,
 )
+from TIPCommon.exceptions import EmptyMandatoryValues, ParameterValidationError
 from TIPCommon.utils import escape_odata_literal
 
 if TYPE_CHECKING:
@@ -311,7 +312,7 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         response: httpx.Response = await self.get(endpoint)
         if response.status_code == STATUS_CODE_NO_CONTENT:
-            return {"jobInstances": []}
+            return {} if job_instance_id else {"jobInstances": []}
 
         return response.json()
 
@@ -407,26 +408,36 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
-            ValueError: If ``job_data`` is missing required fields.
+            EmptyMandatoryValues: If ``job_data`` is missing required fields.
+            ParameterValidationError: If the resource path cannot be parsed.
 
         """
         resource_path: str | None = job_data.get("name")
         if resource_path is None:
-            raise ValueError(
-                "Job data must include a 'name' field with the resource path."
+            raise EmptyMandatoryValues(
+                "Job data must include a 'name' field with the resource path. "
+                "Example (1P resource path): "
+                "projects/{project}/locations/{location}/instances/{instance}/"
+                "integrations/{integrationId}/jobs/{jobId}/"
+                "jobInstances/{instanceId}. "
+                "Cannot determine the PATCH endpoint without the resource path."
             )
 
-        parameters = job_data.get("parameters")
+        parameters: list[SingleJson] | None = job_data.get("parameters")
         if parameters is None:
-            raise ValueError(
-                "Job data is missing 'parameters' field. Nothing to update."
+            raise EmptyMandatoryValues(
+                "Job data is missing 'parameters' field, Nothing to update."
             )
 
         segment_pos: int = resource_path.find("integrations/")
         if segment_pos == -1:
-            raise ValueError(
-                f"Cannot parse resource path: '{resource_path}'. "
-                "Expected path to contain 'integrations/'."
+            raise ParameterValidationError(
+                param_name="name",
+                value=resource_path,
+                message=(
+                    "Cannot parse resource path. "
+                    "Expected path to contain 'integrations/'"
+                ),
             )
         endpoint: str = f"/{resource_path[segment_pos:]}"
 
