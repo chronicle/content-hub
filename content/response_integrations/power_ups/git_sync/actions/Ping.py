@@ -104,7 +104,8 @@ def main():
     else:
         siemplify.LOGGER.info("No git server fingerprint provided - skipping fingerprint verification test")
 
-    siemplify.end("Successfully connected to the GitSync repository.", True)
+    output_message = "Successfully connected to the GitSync repository."
+    siemplify.end(output_message, True)
 
 
 def test_connectivity(gitsync: GitSyncManager, siemplify: SiemplifyAction) -> None:
