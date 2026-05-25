@@ -50,12 +50,11 @@ def main():
         ping_res = manager.ping()
 
         if ping_res:
-            output_message = f"Successfully connected to the thinkst_canary integration."
+            output_message = "Successfully connected to the thinkst_canary integration."
 
             result_value = True
         else:
-            output_message = f"Successfully connected to the thinkst_canary integration."
-
+            output_message = "Successfully connected to the thinkst_canary integration."
 
     except Exception as e:
         status = EXECUTION_STATE_FAILED

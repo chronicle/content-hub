@@ -13,12 +13,13 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-from ..core.Dome9Manager import Dome9Manager
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
 
+from ..core.Dome9Manager import Dome9Manager
 
 INTEGRATION_NAME = "CheckPointCloudGuard"
 SCRIPT_NAME = "Ping"
@@ -64,7 +65,7 @@ def main():
 
     except Exception as e:
         siemplify.LOGGER.error(
-            f"Failed to connect to the Check Point Cloud Guard server! Error is {e}"
+            "Failed to connect to the Check Point Cloud Guard server! Error is %s", e
         )
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
@@ -73,9 +74,9 @@ def main():
                           f"Error is {e}")
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(f"Status: {status}:")
-    siemplify.LOGGER.info(f"Result Value: {result_value}")
-    siemplify.LOGGER.info(f"Output Message: {output_message}")
+    siemplify.LOGGER.info("Status: %s:", status)
+    siemplify.LOGGER.info("Result Value: %s", result_value)
+    siemplify.LOGGER.info("Output Message: %s", output_message)
     siemplify.end(output_message, result_value, status)
 
 

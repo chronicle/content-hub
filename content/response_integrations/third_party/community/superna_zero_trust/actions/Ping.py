@@ -58,7 +58,6 @@ def main():
         result_value = response.text
         output_message = "Successfully connected to the superna_zero_trust integration."
 
-
     except requests.exceptions.Timeout:
         siemplify.LOGGER.info("The request timed out")
         status = EXECUTION_STATE_TIMEDOUT

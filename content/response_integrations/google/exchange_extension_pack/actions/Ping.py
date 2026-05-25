@@ -13,17 +13,19 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
-from ..core.ExchangeExtensionPackManager import ExchangeExtensionPackManager
-from ..core.constants import PROVIDER_NAME, PING_SCRIPT_NAME
+
+from ..core.constants import PING_SCRIPT_NAME, PROVIDER_NAME
 from ..core.ExchangeExtensionPackExceptions import (
-    ExchangeExtensionPackPowershellException,
     ExchangeExtensionPackGssntlmsspException,
     ExchangeExtensionPackIncompleteInfoException,
+    ExchangeExtensionPackPowershellException,
 )
+from ..core.ExchangeExtensionPackManager import ExchangeExtensionPackManager
 
 
 @output_handler
@@ -35,14 +37,14 @@ def main():
     server_address = extract_configuration_param(
         siemplify,
         provider_name=PROVIDER_NAME,
-        param_name="Exchange On-Prem " "Server Address",
+        param_name="Exchange On-Prem Server Address",
         is_mandatory=False,
         print_value=True,
     )
     connection_uri = extract_configuration_param(
         siemplify,
         provider_name=PROVIDER_NAME,
-        param_name="Exchange Office365" " Compliance Uri",
+        param_name="Exchange Office365 Compliance Uri",
         is_mandatory=False,
         print_value=True,
     )
@@ -132,7 +134,7 @@ def main():
             f" Please see the configuration instructions on how to install powershell. Error is {e}"
         )
     except Exception as e:
-        siemplify.LOGGER.error(f"General error performing action {PING_SCRIPT_NAME}")
+        siemplify.LOGGER.error("General error performing action %s", PING_SCRIPT_NAME)
         siemplify.LOGGER.exception(e)
         output_message = f"Failed to connect to the exchange_extension_pack integration. Failed to execute action! Error is {e}"
     finally:
@@ -140,14 +142,12 @@ def main():
             manager.disconnect()
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(f"Status: {status}")
-    siemplify.LOGGER.info(f"Result: {result}")
-    siemplify.LOGGER.info(f"Output Message: {output_message}")
+    siemplify.LOGGER.info("Status: %s", status)
+    siemplify.LOGGER.info("Result: %s", result)
+    siemplify.LOGGER.info("Output Message: %s", output_message)
 
     siemplify.end(output_message, result, status)
 
 
 if __name__ == "__main__":
     main()
-
-

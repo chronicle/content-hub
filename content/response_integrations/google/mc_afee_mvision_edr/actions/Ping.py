@@ -13,14 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
-
 from TIPCommon import extract_configuration_param
 
-from ..core.McAfeeMvisionEDRManager import McAfeeMvisionEDRManager
 from ..core.constants import PROVIDER_NAME
+from ..core.McAfeeMvisionEDRManager import McAfeeMvisionEDRManager
 
 SCRIPT_NAME = "McAfeeMvisionEDR - Ping"
 
@@ -79,7 +79,7 @@ def main():
         output_message = "Successfully connected to the McAfee Mvision EDR server with the provided connection parameters!"
         connectivity_result = True
         siemplify.LOGGER.info(
-            f"Connection to API established, performing action {SCRIPT_NAME}"
+            "Connection to API established, performing action %s", SCRIPT_NAME
         )
 
     except Exception as e:
@@ -88,7 +88,7 @@ def main():
         )
         connectivity_result = False
         siemplify.LOGGER.error(
-            f"Connection to API failed, performing action {SCRIPT_NAME}"
+            "Connection to API failed, performing action %s", SCRIPT_NAME
         )
 
         siemplify.LOGGER.exception(e)

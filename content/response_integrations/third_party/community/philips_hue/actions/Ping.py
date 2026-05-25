@@ -35,7 +35,7 @@ def main():
         connection_successful = philips_manager.test_connectivity()
         return_value = connection_successful
         output_message = "Successfully connected to the philips_hue integration."
-        status = 0 # Success
+        status = 0  # Success
 
     except Exception as e:
         siemplify.LOGGER.error(e)

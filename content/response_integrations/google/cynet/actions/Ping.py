@@ -13,10 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from ..core.CynetManager import CynetManager
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
+
+from ..core.CynetManager import CynetManager
 
 INTEGRATION_NAME = "Cynet"
 
@@ -52,5 +54,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

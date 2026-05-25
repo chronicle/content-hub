@@ -29,7 +29,6 @@ def main():
         result_value = True
         output_message = "Successfully connected to the zoom integration."
 
-
         siemplify.LOGGER.info(
             "Script execution completed: \n"
             f"    Output message: {output_message} \n"

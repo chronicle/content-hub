@@ -33,7 +33,7 @@ def main():
         response = vanilla_manager.test_connectivity()
         return_value = True
         output_message = "Successfully connected to the vanilla_forums integration."
-        status = 0 # Success
+        status = 0  # Success
 
     except Exception as e:
         siemplify.LOGGER.error(e)

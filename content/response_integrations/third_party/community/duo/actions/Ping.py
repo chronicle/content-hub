@@ -44,8 +44,7 @@ def main():
         check = auth_api.check()
 
         # If no exception occur - then connection is successful
-        output_message = f"Successfully connected to the duo integration."
-
+        output_message = "Successfully connected to the duo integration."
 
     except Exception as e:
         result = False

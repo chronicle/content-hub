@@ -13,13 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon import extract_configuration_param
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import extract_configuration_param
+
+from ..core.consts import INTEGRATION_DISPLAY_NAME, INTEGRATION_NAME
 from ..core.GoogleGRRManager import GoogleGRRManager
-from ..core.consts import INTEGRATION_NAME, INTEGRATION_DISPLAY_NAME
 
 SCRIPT_NAME = "Ping"
 
@@ -72,17 +73,15 @@ def main():
             verify_ssl=verify_ssl,
         )
 
-        siemplify.LOGGER.info(f"Connecting to {INTEGRATION_DISPLAY_NAME}")
+        siemplify.LOGGER.info("Connecting to %s", INTEGRATION_DISPLAY_NAME)
         manager.test_connectivity()
         siemplify.LOGGER.info(
-            f"Successfully connected to the {INTEGRATION_DISPLAY_NAME} server with the provided "
-            f"connection parameters!"
+            "Successfully connected to the %s server with the provided connection parameters!", INTEGRATION_DISPLAY_NAME
         )
 
         result_value = "true"
         status = EXECUTION_STATE_COMPLETED
-        output_message = f"Successfully connected to the google_grr integration."
-
+        output_message = "Successfully connected to the google_grr integration."
 
     except Exception as error:
         result_value = "false"
@@ -92,9 +91,9 @@ def main():
         siemplify.LOGGER.exception(error)
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(f"Status: {status}:")
-    siemplify.LOGGER.info(f"Result Value: {result_value}")
-    siemplify.LOGGER.info(f"Output Message: {output_message}")
+    siemplify.LOGGER.info("Status: %s:", status)
+    siemplify.LOGGER.info("Result Value: %s", result_value)
+    siemplify.LOGGER.info("Output Message: %s", output_message)
     siemplify.end(output_message, result_value, status)
 
 

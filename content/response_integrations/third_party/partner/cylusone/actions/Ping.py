@@ -40,8 +40,7 @@ def main():
         else:
             error_msg = api_manager.error or "Unknown connectivity error"
             status = EXECUTION_STATE_FAILED
-            output_message = f"Successfully connected to the cylusone integration."
-
+            output_message = f"Failed to connect to the cylusone integration. Error: {error_msg}"
             result_value = False
 
     except Exception as e:

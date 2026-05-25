@@ -13,8 +13,9 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
 
 
 @output_handler
@@ -30,5 +31,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

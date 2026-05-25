@@ -13,10 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.CiscoISEManager import CiscoISEManager
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
+
+from ..core.CiscoISEManager import CiscoISEManager
 
 INTEGRATION_NAME = "CiscoISE"
 
@@ -64,5 +66,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

@@ -13,13 +13,15 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.McAfeeMvisionEPOManager import McAfeeMvisionEPOManager
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
-from ..core.constants import PING_SCRIPT_NAME, INTEGRATION_NAME
+
+from ..core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
 from ..core.exceptions import GroupNotFoundException
+from ..core.McAfeeMvisionEPOManager import McAfeeMvisionEPOManager
 
 
 @output_handler
@@ -82,7 +84,7 @@ def main():
         siemplify.LOGGER.info(output_message)
         connectivity_result = True
         status = EXECUTION_STATE_COMPLETED
-    except GroupNotFoundException as e:
+    except GroupNotFoundException:
         output_message = f"Failed to connect to the mc_afee_mvision_epo integration. Group {group_name} was not found in McAfee Mvision ePO. Please check for any spelling mistakes."
         siemplify.LOGGER.error(output_message)
     except Exception as e:
@@ -90,7 +92,7 @@ def main():
             f"Failed to connect to the McAfee Mvision ePO server! Error is {e}"
         )
         siemplify.LOGGER.error(
-            f"Connection to API failed, performing action {PING_SCRIPT_NAME}"
+            "Connection to API failed, performing action %s", PING_SCRIPT_NAME
         )
         siemplify.LOGGER.exception(e)
 

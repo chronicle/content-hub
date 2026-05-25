@@ -73,7 +73,10 @@ def main():
         )
 
     except Exception as e:
-        output_message = f"Failed to connect to the recorded_future_intelligence integration. An error occurred when trying to connect to the API: {e}"
+        output_message = (
+            f"Failed to connect to the recorded_future_intelligence integration. "
+            f"An error occurred when trying to connect to the API: {e}"
+        )
         connectivity_result = False
         siemplify.LOGGER.error(
             f"Connection to API failed, performing action {PING_SCRIPT_NAME}",

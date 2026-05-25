@@ -13,16 +13,18 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
-from ..core.InternetStormCenterManager import InternetStormCenterManager
-from ..core.constants import INTEGRATION_NAME, INTEGRATION_DISPLAY_NAME, PING_SCRIPT_NAME
+
+from ..core.constants import INTEGRATION_DISPLAY_NAME, INTEGRATION_NAME, PING_SCRIPT_NAME
 from ..core.InternetStormCenterExceptions import (
-    InvalidResponseException,
     InternetStormCenterException,
+    InvalidResponseException,
 )
+from ..core.InternetStormCenterManager import InternetStormCenterManager
 
 
 @output_handler
@@ -65,7 +67,7 @@ def main():
         )
 
     except (InvalidResponseException, InternetStormCenterException) as e:
-        siemplify.LOGGER.error(f"General error performing action {PING_SCRIPT_NAME}")
+        siemplify.LOGGER.error("General error performing action %s", PING_SCRIPT_NAME)
         siemplify.LOGGER.exception(e)
         result = False
         status = EXECUTION_STATE_FAILED
@@ -74,9 +76,9 @@ def main():
         )
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(f"Output Message: {output_message}")
-    siemplify.LOGGER.info(f"Result: {result}")
-    siemplify.LOGGER.info(f"Status: {status}")
+    siemplify.LOGGER.info("Output Message: %s", output_message)
+    siemplify.LOGGER.info("Result: %s", result)
+    siemplify.LOGGER.info("Status: %s", status)
 
     siemplify.end(output_message, result, status)
 

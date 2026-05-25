@@ -13,13 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
 
+from ..core.FireEyeETPConstants import PING_SCRIPT_NAME, PROVIDER_NAME
 from ..core.FireEyeETPManager import FireEyeETPManager
-from ..core.FireEyeETPConstants import PROVIDER_NAME, PING_SCRIPT_NAME
 
 
 @output_handler
@@ -76,9 +77,9 @@ def main():
         siemplify.LOGGER.exception(e)
 
     siemplify.LOGGER.info("=" * 20 + " Main - Finished " + "=" * 20)
-    siemplify.LOGGER.info(f"Status: {status}")
-    siemplify.LOGGER.info(f"Result: {result}")
-    siemplify.LOGGER.info(f"Output Message: {output_message}")
+    siemplify.LOGGER.info("Status: %s", status)
+    siemplify.LOGGER.info("Result: %s", result)
+    siemplify.LOGGER.info("Output Message: %s", output_message)
 
     siemplify.end(output_message, result, status)
 

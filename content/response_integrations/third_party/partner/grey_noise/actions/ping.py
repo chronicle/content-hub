@@ -1,14 +1,16 @@
 from __future__ import annotations
-from greynoise.exceptions import RequestFailure, RateLimitError
+
+from greynoise.exceptions import RateLimitError, RequestFailure
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.api_manager import APIManager
 from ..core.constants import (
-    PING_SCRIPT_NAME,
-    RESULT_VALUE_TRUE,
-    RESULT_VALUE_FALSE,
     COMMON_ACTION_ERROR_MESSAGE,
+    PING_SCRIPT_NAME,
+    RESULT_VALUE_FALSE,
+    RESULT_VALUE_TRUE,
 )
 from ..core.utils import get_integration_params
 

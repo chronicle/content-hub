@@ -13,13 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon import extract_configuration_param
 
-from ..core.FreshworksFreshserviceManager import FreshworksFreshserviceManager
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from ..core.consts import INTEGRATION_IDENTIFIER, INTEGRATION_DISPLAY_NAME, PING_SCRIPT_NAME
+from TIPCommon import extract_configuration_param
+
+from ..core.consts import INTEGRATION_DISPLAY_NAME, INTEGRATION_IDENTIFIER, PING_SCRIPT_NAME
+from ..core.FreshworksFreshserviceManager import FreshworksFreshserviceManager
 
 
 @output_handler
@@ -76,9 +77,9 @@ def main():
         result_value = False
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(f"Status: {status}")
-    siemplify.LOGGER.info(f"Result Value: {result_value}")
-    siemplify.LOGGER.info(f"Output Message: {output_message}")
+    siemplify.LOGGER.info("Status: %s", status)
+    siemplify.LOGGER.info("Result Value: %s", result_value)
+    siemplify.LOGGER.info("Output Message: %s", output_message)
     siemplify.end(output_message, result_value, status)
 
 

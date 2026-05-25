@@ -13,12 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.VectraManager import VectraManager
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
+
 from ..core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
+from ..core.VectraManager import VectraManager
 
 
 @output_handler
@@ -65,23 +67,23 @@ def main():
         )
         connectivity_result = True
         siemplify.LOGGER.info(
-            f"Connection to API established, performing action {PING_SCRIPT_NAME}"
+            "Connection to API established, performing action %s", PING_SCRIPT_NAME
         )
 
     except Exception as e:
         output_message = f"Failed to connect to the Vectra server! Error is {e}"
         connectivity_result = False
         siemplify.LOGGER.error(
-            f"Connection to API failed, performing action {PING_SCRIPT_NAME}"
+            "Connection to API failed, performing action %s", PING_SCRIPT_NAME
         )
 
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
-    siemplify.LOGGER.info(f"Status: {status}")
-    siemplify.LOGGER.info(f"is_success: {connectivity_result}")
-    siemplify.LOGGER.info(f"Output Message: {output_message}")
+    siemplify.LOGGER.info("Status: %s", status)
+    siemplify.LOGGER.info("is_success: %s", connectivity_result)
+    siemplify.LOGGER.info("Output Message: %s", output_message)
     siemplify.end(output_message, connectivity_result, status)
 
 

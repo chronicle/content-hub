@@ -58,7 +58,7 @@ def main():
         manager.check_user(current_user=reviewer, approval_manager=reviewer_secondary)
         manager.log_slack_message(f"This is a test message. Posted by {SCRIPT_NAME}.")
         status = EXECUTION_STATE_COMPLETED
-        output_message = f"Successfully connected to the workflow_tools integration."
+        output_message = "Successfully connected to the workflow_tools integration."
 
     except Exception as e:
         siemplify.LOGGER.error(

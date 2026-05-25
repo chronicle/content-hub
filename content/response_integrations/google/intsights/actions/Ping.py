@@ -13,12 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from ..core.IntsightsManager import IntsightsManager
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.consts import PING_ACTION, INTEGRATION_NAME
-from TIPCommon import extract_configuration_param
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import extract_configuration_param
+
+from ..core.consts import INTEGRATION_NAME, PING_ACTION
+from ..core.IntsightsManager import IntsightsManager
 
 
 @output_handler
@@ -84,5 +86,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

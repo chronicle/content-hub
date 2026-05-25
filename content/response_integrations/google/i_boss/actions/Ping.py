@@ -13,12 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.IBossManager import IBossManager
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
-from ..core.constants import PING_SCRIPT_NAME, INTEGRATION_NAME
+
+from ..core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
+from ..core.IBossManager import IBossManager
 
 
 @output_handler
@@ -82,7 +84,7 @@ def main():
     except Exception as e:
         output_message = f"Failed to connect to the IBoss server! Error is {e}"
         siemplify.LOGGER.error(
-            f"Connection to API failed, performing action {PING_SCRIPT_NAME}"
+            "Connection to API failed, performing action %s", PING_SCRIPT_NAME
         )
         siemplify.LOGGER.exception(e)
 

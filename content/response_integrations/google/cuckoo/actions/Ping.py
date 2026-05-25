@@ -13,10 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.CuckooManager import CuckooManager
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon import extract_configuration_param
+
+from ..core.CuckooManager import CuckooManager
 
 INTEGRATION_NAME = "Cuckoo"
 
@@ -73,5 +75,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

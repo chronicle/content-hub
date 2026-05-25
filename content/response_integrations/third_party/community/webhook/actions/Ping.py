@@ -33,7 +33,7 @@ def main():
         response = webhookManager.test_connectivity()
         return_value = True
         output_message = "Successfully connected to the webhook integration."
-        status = 0 # Assuming 0 is success, or EXECUTION_STATE_COMPLETED if imported
+        status = 0  # Assuming 0 is success, or EXECUTION_STATE_COMPLETED if imported
 
     except Exception as e:
         siemplify.LOGGER.error(e)

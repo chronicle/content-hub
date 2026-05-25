@@ -13,17 +13,18 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from ..core.IronportManagerAPI import IronportManagerAPI
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from TIPCommon import extract_configuration_param
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import extract_configuration_param
 
 from ..core.IronportConstants import INTEGRATION_NAME, SCRIPT_PING
 from ..core.IronportExceptions import (
-    IronportManagerException,
     IronportAsyncOSConnectionException,
+    IronportManagerException,
 )
+from ..core.IronportManagerAPI import IronportManagerAPI
 
 
 @output_handler
