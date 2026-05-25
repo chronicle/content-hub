@@ -26,7 +26,7 @@ from .one_platform_soar_api import OnePlatformSoarApi
 if TYPE_CHECKING:
     import requests
 
-    from TIPCommon.types import ChronicleSOAR
+    from TIPCommon.types import ChronicleSOAR, SingleJson
 
 
 class SoarApiClient(Protocol):
@@ -50,10 +50,10 @@ class SoarApiClient(Protocol):
     def get_full_case_details(self) -> requests.Response:
         """Get full case details."""
 
-    def get_case_insights(self) -> requests.Response:
+    def get_case_insights(self) -> requests.Response | list[SingleJson]:
         """Get case insights."""
 
-    def get_installed_integrations_of_environment(self) -> requests.Response:
+    def get_installed_integrations_of_environment(self) -> requests.Response | list[SingleJson]:
         """Get installed integrations of environment."""
 
     def get_connector_cards(self) -> requests.Response:
@@ -125,7 +125,7 @@ class SoarApiClient(Protocol):
     def execute_bulk_close_case(self) -> requests.Response:
         """Execute bulk close case."""
 
-    def get_users_profile_cards(self) -> requests.Response:
+    def get_users_profile_cards(self) -> requests.Response | list[SingleJson]:
         """Get users profile cards."""
 
     def get_security_events(self) -> requests.Response:
@@ -156,7 +156,7 @@ class SoarApiClient(Protocol):
     def get_email_template(self) -> requests.Response:
         """Get email template."""
 
-    def get_siemplify_user_details(self) -> requests.Response:
+    def get_siemplify_user_details(self) -> requests.Response | list[SingleJson]:
         """Get siemplify user details."""
 
     def get_domain_alias(self) -> requests.Response:
@@ -198,13 +198,13 @@ class SoarApiClient(Protocol):
     def attach_playbook_to_the_case(self) -> requests.Response:
         """Attach playbook to the case."""
 
-    def search_cases_by_everything(self) -> requests.Response:
+    def search_cases_by_everything(self) -> requests.Response | list[SingleJson]:
         """Get Cases search by everything."""
 
     def get_case_activities(self) -> requests.Response:
         """Get case activities."""
 
-    def get_cases_by_timestamp_filter(self) -> requests.Response:
+    def get_cases_by_timestamp_filter(self) -> list[SingleJson]:
         """Get cases by timestamp filter."""
 
     def get_case_close_comment(self, case_id: str | int) -> requests.Response:
