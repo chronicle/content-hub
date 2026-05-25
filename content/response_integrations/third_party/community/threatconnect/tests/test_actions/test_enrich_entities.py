@@ -34,16 +34,21 @@ if TYPE_CHECKING:
     from threatconnect.tests.core.product import ThreatConnectProduct
     from threatconnect.tests.core.session import ThreatConnectSession
 
-URL_ENTITY = create_entity("http://markossolomon.com/f1q7qx.php", EntityTypesEnum.URL)
+URL_VAL = "http://markossolomon.com/f1q7qx.php"
+URL_ENTITY = create_entity(URL_VAL, EntityTypesEnum.URL)
 IP_ENTITY = create_entity("1.1.1.1", EntityTypesEnum.ADDRESS)
 HOST_ENTITY = create_entity("test.com", EntityTypesEnum.HOST_NAME)
-FILE_ENTITY = create_entity("f5a2496cf66cb8cffe66cb1b27d7dede", EntityTypesEnum.FILE_HASH)
+FILE_ENTITY = create_entity(
+    "f5a2496cf66cb8cffe66cb1b27d7dede",
+    EntityTypesEnum.FILE_HASH
+)
 
 
 def get_future_deadline_context() -> dict[str, int]:
     """Get a fresh script context with a future execution deadline."""
     deadline = datetime.datetime.now() + datetime.timedelta(minutes=10)
-    return {"execution_deadline_unix_time_ms": int(deadline.timestamp() * NUM_OF_MILLI_IN_SEC)}
+    ms_val = int(deadline.timestamp() * NUM_OF_MILLI_IN_SEC)
+    return {"execution_deadline_unix_time_ms": ms_val}
 
 
 class TestEnrichEntities:
@@ -65,7 +70,10 @@ class TestEnrichEntities:
         url_raw = INDICATOR_MOCK_RAW.copy()
         url_raw["summary"] = "http://markossolomon.com/f1q7qx.php"
         url_raw["type"] = "URL"
-        threatconnect.add_indicator("http://markossolomon.com/f1q7qx.php", IndicatorData.from_json(url_raw))
+        threatconnect.add_indicator(
+            "http://markossolomon.com/f1q7qx.php",
+            IndicatorData.from_json(url_raw),
+        )
 
         ip_raw = INDICATOR_MOCK_RAW.copy()
         ip_raw["summary"] = "1.1.1.1"
@@ -74,13 +82,32 @@ class TestEnrichEntities:
 
         enrich_entities.main()
 
-        tc_requests = [rec for rec in script_session.request_history if "/api/v3/" in rec.request.url.path]
+        tc_requests = [
+            rec
+            for rec in script_session.request_history
+            if "/api/v3/" in rec.request.url.path
+        ]
         assert len(tc_requests) == 2
 
         url_req = tc_requests[0].request
-        assert url_req.url.path == "/api/v3/indicators/http%3A%2F%2Fmarkossolomon.com%2Ff1q7qx.php"
+        expected_path = (
+            "/api/v3/indicators/"
+            "http%3A%2F%2Fmarkossolomon.com%2Ff1q7qx.php"
+        )
+        assert url_req.url.path == expected_path
         assert url_req.kwargs.get("params") == {
-            "fields": ["tags", "attributes", "associatedGroups", "securityLabels"],
+            "fields": [
+                "tags",
+                "attributes",
+                "securityLabels",
+                "associatedGroups",
+                "associatedGroups.tags",
+                "associatedGroups.attributes",
+                "associatedGroups.securityLabels",
+                "associatedIndicators",
+                "associatedIndicators.threatAssess",
+                "threatAssess",
+            ],
             "owner": "S",
         }
 
@@ -89,8 +116,15 @@ class TestEnrichEntities:
 
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert "Following entities were enriched by ThreatConnect." in action_output.results.output_message
-        assert re.search(r"HTTP://MARKOSSOLOMON\.COM/F1Q7QX\.PHP", action_output.results.output_message) is not None
+        msg = action_output.results.output_message
+        assert "Following entities were enriched by ThreatConnect." in msg
+        assert (
+            re.search(
+                r"HTTP://MARKOSSOLOMON\.COM/F1Q7QX\.PHP",
+                action_output.results.output_message,
+            )
+            is not None
+        )
         assert "1.1.1.1" in action_output.results.output_message
 
     @set_metadata(
@@ -105,7 +139,10 @@ class TestEnrichEntities:
         action_output: MockActionOutput,
         threatconnect: ThreatConnectProduct,
     ) -> None:
-        """Test execution when no matching indicator is found on the ThreatConnect backend."""
+        """Test execution when no matching indicator is found.
+
+        Checks backend response.
+        """
         enrich_entities.main()
 
         assert action_output.results is not None
@@ -125,18 +162,31 @@ class TestEnrichEntities:
         action_output: MockActionOutput,
         threatconnect: ThreatConnectProduct,
     ) -> None:
-        """Test execution when only a subset of entities is successfully enriched."""
+        """Test execution with partial enrichment.
+
+        Test execution when only a subset is successfully enriched.
+        """
         url_raw = INDICATOR_MOCK_RAW.copy()
         url_raw["summary"] = "http://markossolomon.com/f1q7qx.php"
         url_raw["type"] = "URL"
-        threatconnect.add_indicator("http://markossolomon.com/f1q7qx.php", IndicatorData.from_json(url_raw))
+        threatconnect.add_indicator(
+            "http://markossolomon.com/f1q7qx.php",
+            IndicatorData.from_json(url_raw),
+        )
 
         enrich_entities.main()
 
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert "Following entities were enriched by ThreatConnect." in action_output.results.output_message
-        assert re.search(r"HTTP://MARKOSSOLOMON\.COM/F1Q7QX\.PHP", action_output.results.output_message) is not None
+        msg = action_output.results.output_message
+        assert "Following entities were enriched by ThreatConnect." in msg
+        assert (
+            re.search(
+                r"HTTP://MARKOSSOLOMON\.COM/F1Q7QX\.PHP",
+                action_output.results.output_message,
+            )
+            is not None
+        )
         assert "1.1.1.1" not in action_output.results.output_message
         assert action_output.results.result_value is True
 
@@ -152,7 +202,7 @@ class TestEnrichEntities:
         action_output: MockActionOutput,
         threatconnect: ThreatConnectProduct,
     ) -> None:
-        """Test that entities are correctly flagged as suspicious based on threatAssessRating threshold."""
+        """Test that entities are flagged based on threatAssessRating."""
         host_raw = INDICATOR_MOCK_RAW.copy()
         host_raw["summary"] = "test.com"
         host_raw["type"] = "Host"
@@ -162,8 +212,12 @@ class TestEnrichEntities:
         enrich_entities.main()
 
         assert action_output.results is not None
-        assert re.search(r"TEST\.COM", action_output.results.output_message) is not None
+        assert (
+            re.search(r"TEST\.COM", action_output.results.output_message)
+            is not None
+        )
 
-        updated_entities = script_session.request_history[-1].request.kwargs.get("json", [])
+        req_history = script_session.request_history[-1]
+        updated_entities = req_history.request.kwargs.get("json", [])
         assert len(updated_entities) > 0
         assert updated_entities[0].get("is_suspicious") is True

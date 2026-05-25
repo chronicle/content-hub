@@ -16,13 +16,18 @@
 
 from __future__ import annotations
 
+# Inbuilt imports
 import dataclasses
 import urllib.parse
 from typing import TYPE_CHECKING, Any
 
+# Third-party imports
 import requests
+
+# TIPCommon imports
 from TIPCommon.base.interfaces import Apiable
 
+# Local imports
 from ..data_models import IndicatorData
 from .api_utils import get_full_url, validate_response
 
@@ -67,13 +72,16 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
     def test_connectivity(self) -> None:
         """Verify connectivity by calling the securityLabels API endpoint."""
         url = get_full_url(self.api_root, "ping")
-        self.logger.info(f"Testing connectivity via: {url}")  # noqa: G004
+        self.logger.info(f"Testing connectivity via: {url}")
 
         params = {"resultLimit": 1}
         response = self.session.get(url, params=params)
-        validate_response(response, error_msg="Failed to connect to the ThreatConnect server")
+        validate_response(
+            response,
+            error_msg="Failed to connect to the ThreatConnect server"
+        )
 
-    def execute_request(  # noqa: PLR0913
+    def execute_request(
         self,
         method: str,
         url: str,
@@ -85,22 +93,7 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
         verify: bool | None = None,
         timeout: int | None = None,
     ) -> requests.Response:
-        """Execute an arbitrary HTTP request.
-
-        Args:
-            method (str): HTTP method.
-            url (str): Full URL or path.
-            params (dict, optional): Query parameters.
-            headers (dict, optional): Headers.
-            cookies (dict, optional): Cookies.
-            data (str, optional): Body payload.
-            verify (bool, optional): SSL verification.
-            timeout (int, optional): Request timeout.
-
-        Returns:
-            requests.Response: The HTTP response.
-
-        """
+        """Execute an arbitrary HTTP request."""
         if verify is None:
             verify = self.verify_ssl
 
@@ -114,7 +107,10 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
             verify=verify,
             timeout=timeout,
         )
-        validate_response(response, error_msg=f"Failed to execute {method} request to {url}")
+        validate_response(
+            response,
+            error_msg=f"Failed to execute {method} request to {url}"
+        )
         return response
 
     def get_indicator_info(
@@ -122,21 +118,27 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
         indicator_value: str,
         owner_names: list[str] | None = None,
     ) -> list[IndicatorData]:
-        """Get enrichment info for a specific indicator value from V3 API.
-
-        Args:
-            indicator_value (str): The indicator value (summary) to fetch.
-            owner_names (list[str], optional): List of owner names.
-
-        Returns:
-            list[IndicatorData]: List of mapped IndicatorData objects.
-
-        """
+        """Get enrichment info for a specific indicator value from V3 API."""
         encoded_value = urllib.parse.quote(indicator_value, safe="")
-        url = get_full_url(self.api_root, "indicators")
-        url = f"{url}/{encoded_value}"
+        url = get_full_url(
+            self.api_root,
+            "indicator_details", encoded_value=encoded_value
+        )
 
-        params: dict[str, Any] = {"fields": ["tags", "attributes", "associatedGroups", "securityLabels"]}
+        params: dict[str, Any] = {
+            "fields": [
+                "tags",
+                "attributes",
+                "securityLabels",
+                "associatedGroups",
+                "associatedGroups.tags",
+                "associatedGroups.attributes",
+                "associatedGroups.securityLabels",
+                "associatedIndicators",
+                "associatedIndicators.threatAssess",
+                "threatAssess",
+            ]
+        }
 
         results: list[IndicatorData] = []
         owners: list[str | None] = list(owner_names) if owner_names else [None]
@@ -152,6 +154,9 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
                 if data:
                     results.append(IndicatorData(data))
             except Exception as e:
-                self.logger.warn(f"Failed to fetch data for indicator {indicator_value} from owner {owner}: {e}")
+                self.logger.warning(
+                    f"Failed to fetch data for indicator {indicator_value} "
+                    f"from owner {owner}: {e}"
+                )
 
         return results

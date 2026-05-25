@@ -26,4 +26,40 @@ ENDPOINTS: dict[str, str] = {
     "ping": INDICATORS_URI,
     "security_labels": SECURITY_LABELS_URI,
     "indicators": INDICATORS_URI,
+    "indicator_details": f"{INDICATORS_URI}/{{encoded_value}}",
+}
+
+MAX_INT_SENTINEL: int = 9223372036854775807
+
+EXCLUDE_FIELDS_SET: set[str] = {
+    "tags",
+    "attributes",
+    "associatedGroups",
+    "groups",
+    "associatedIndicators",
+    "indicators",
+    "securityLabels",
+    "observations",
+    "lastObserved",
+    "legacyLink",
+}
+
+PLURAL_MAPPING: dict[str, str] = {
+    "Adversary": "adversaries",
+    "Attack Pattern": "attackPatterns",
+    "Campaign": "campaigns",
+    "Course of Action": "coursesOfAction",
+    "Document": "documents",
+    "Email": "emails",
+    "Event": "events",
+    "Incident": "incidents",
+    "Intrusion Set": "intrusionSets",
+    "Malware": "malware",
+    "Report": "reports",
+    "Signature": "signatures",
+    "Tactic": "tactics",
+    "Task": "tasks",
+    "Threat": "threats",
+    "Tool": "tools",
+    "Vulnerability": "vulnerabilities",
 }
