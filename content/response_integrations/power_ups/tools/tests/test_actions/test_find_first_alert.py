@@ -44,6 +44,7 @@ def test_find_first_alert_success(
     mock_alert2.creation_time = 200
     
     mock_case.alerts = [mock_alert2, mock_alert1]
+    mock_case.open_alerts = mock_case.alerts
     
     mock_siemplify.case = mock_case
     mock_siemplify.current_alert = mock_alert1

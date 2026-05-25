@@ -254,6 +254,11 @@ def get_execution_scope(raw_scope: Any, logger: Any = None) -> ExecutionScope:
     return ExecutionScope.Case if val == ExecutionScope.Case.value else ExecutionScope.Alert
 
 
+def get_case_alerts(siemplify: Any) -> list[Any]:
+    """Retrieve the list of open alerts for the case safely, with fallback to all alerts."""
+    return getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+
+
 def get_target_alerts(
     siemplify: Any,
     execution_scope: ExecutionScope,
@@ -269,7 +274,7 @@ def get_target_alerts(
     """
     if execution_scope.value == ExecutionScope.Alert.value:
         return [siemplify.current_alert]
-    return getattr(siemplify.case, "alerts", [])
+    return get_case_alerts(siemplify)
 
 
 def _extract_case_entities(case_alerts: list[Any]) -> list[Any]:

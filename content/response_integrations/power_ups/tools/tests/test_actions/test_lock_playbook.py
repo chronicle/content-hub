@@ -45,6 +45,7 @@ def test_lock_playbook_success(
     
     mock_case: MagicMock = MagicMock()
     mock_case.alerts = [mock_alert]
+    mock_case.open_alerts = mock_case.alerts
     mock_siemplify.case = mock_case
     
     mock_execution_scope: MagicMock = MagicMock()

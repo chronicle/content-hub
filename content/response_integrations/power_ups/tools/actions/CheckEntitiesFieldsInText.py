@@ -25,6 +25,7 @@ from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_han
 
 from ..core.ToolsCommon import (
     ExecutionScope,
+    get_case_alerts,
     get_execution_scope,
     get_target_entities,
 )
@@ -69,10 +70,11 @@ def main() -> None:
 
         raw_scope = getattr(siemplify, "execution_scope", ExecutionScope.Alert.value)
         execution_scope = get_execution_scope(raw_scope, logger=siemplify.LOGGER)
+        
         target_entities = get_target_entities(
             execution_scope=execution_scope,
             target_entities=siemplify.target_entities,
-            case_alerts=getattr(siemplify.case, "alerts", []),
+            case_alerts=get_case_alerts(siemplify),
         )
 
         for entity in target_entities:

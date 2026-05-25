@@ -33,8 +33,9 @@ def main():
         siemplify, "execution_scope", ExecutionScope.Alert
     )
     
-    siemplify.case.alerts.sort(key=lambda x: x.creation_time)
-    first_alert: Any = siemplify.case.alerts[0]
+    alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+    alerts.sort(key=lambda x: x.creation_time)
+    first_alert: Any = alerts[0]
 
     if execution_scope.value == ExecutionScope.Alert.value:
         output_message: str = (
@@ -48,8 +49,9 @@ def main():
         if siemplify.current_alert.identifier == first_alert.identifier:
             output_message += "This is the first alert."
             siemplify.end(output_message, siemplify.current_alert.identifier)
-        output_message += "This is NOT the first alert."
-        siemplify.end(output_message, "false")
+        else:
+            output_message += "This is NOT the first alert."
+            siemplify.end(output_message, "false")
         
     else:
         output_message: str = (

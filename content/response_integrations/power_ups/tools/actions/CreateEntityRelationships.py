@@ -165,7 +165,11 @@ class CreateEntityRelationshipsAction(Action):
             return [self.soar_action.current_alert]
         
         self.output_message = ""
-        return getattr(self.soar_action.case, "alerts", [])
+        return getattr(
+            self.soar_action.case,
+            "open_alerts",
+            self.soar_action.case.alerts,
+        )
 
     def _process_alert(
         self,

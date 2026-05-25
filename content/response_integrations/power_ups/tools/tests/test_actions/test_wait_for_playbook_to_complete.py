@@ -36,6 +36,7 @@ def test_wait_for_playbook_to_complete_success(
     action_output: MockActionOutput,
 ) -> None:
     mock_siemplify: MagicMock = MagicMock()
+    mock_siemplify.case.open_alerts = mock_siemplify.case.alerts
     mock_siemplify_action_class.return_value = mock_siemplify
     
     mock_siemplify.parameters = {"Playbook Name": "MyPlaybook"}

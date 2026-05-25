@@ -20,6 +20,7 @@ from TIPCommon.rest.soar_api import rename_case
 
 from ..core.ToolsCommon import (
     ExecutionScope,
+    get_case_alerts,
     get_execution_scope,
 )
 
@@ -42,10 +43,11 @@ def main() -> None:
                 siemplify.parameters.get("Only If First Alert", "false").lower()
                 == "true"
             ):
-                siemplify.case.alerts.sort(key=lambda x: x.detected_time)
+                alerts = get_case_alerts(siemplify)
+                alerts.sort(key=lambda x: x.detected_time)
                 if (
                     siemplify.current_alert.identifier
-                    != siemplify.case.alerts[0].identifier
+                    != alerts[0].identifier
                 ):
                     change = False
 

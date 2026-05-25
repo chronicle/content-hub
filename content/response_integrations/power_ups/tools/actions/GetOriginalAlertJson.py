@@ -48,7 +48,8 @@ def main():
 
     else:
         combined_results: list = []
-        for alert in siemplify.case.alerts:
+        case_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        for alert in case_alerts:
             try:
                 if alert.entities:
                     case_data: Any = json.loads(

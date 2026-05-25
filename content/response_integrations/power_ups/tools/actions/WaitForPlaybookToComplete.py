@@ -130,7 +130,8 @@ def main():
         completed_count: int = 0
         not_found_count: int = 0
 
-        for alert in siemplify.case.alerts:
+        case_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        for alert in case_alerts:
             wf_status: int = get_wf_status(
                 siemplify,
                 playbook_name,
@@ -158,7 +159,7 @@ def main():
             )
             result_value = "false"
             status = EXECUTION_STATE_INPROGRESS
-        elif completed_count > 0 or not_found_count == len(siemplify.case.alerts):
+        elif completed_count > 0 or not_found_count == len(case_alerts):
             output_message = (
                 f"Playbook {playbook_name} Finished or not found for all alerts. Lock "
                 "Released."
