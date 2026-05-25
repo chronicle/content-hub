@@ -1,0 +1,53 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from ..core.RecordedFutureCommon import RecordedFutureCommon
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon import extract_configuration_param
+from ..core.constants import PROVIDER_NAME, GET_HOST_RELATED_ENTITIES_SCRIPT_NAME
+
+
+@output_handler
+def main():
+    siemplify = SiemplifyAction()
+    siemplify.script_name = GET_HOST_RELATED_ENTITIES_SCRIPT_NAME
+    siemplify.LOGGER.info("----------------- Main - Param Init -----------------")
+
+    api_url = extract_configuration_param(
+        siemplify, provider_name=PROVIDER_NAME, param_name="ApiUrl"
+    )
+    api_key = extract_configuration_param(
+        siemplify, provider_name=PROVIDER_NAME, param_name="ApiKey"
+    )
+    verify_ssl = extract_configuration_param(
+        siemplify,
+        provider_name=PROVIDER_NAME,
+        param_name="Verify SSL",
+        default_value=False,
+        input_type=bool,
+    )
+
+    recorded_future_common = RecordedFutureCommon(
+        siemplify, api_url, api_key, verify_ssl=verify_ssl
+    )
+    recorded_future_common.get_related_entities_logic(
+        [EntityTypes.HOSTNAME], GET_HOST_RELATED_ENTITIES_SCRIPT_NAME
+    )
+
+
+if __name__ == "__main__":
+    main()

@@ -26,6 +26,7 @@ jobs:
       mp: ${{ steps.filter.outputs.mp }}
       ci: ${{ steps.filter.outputs.ci }}
       integration_packages: ${{ steps.filter.outputs.integration_packages }}
+      tipcommon: ${{ steps.filter.outputs.tipcommon }}
       response_integrations_google: ${{ steps.filter.outputs.response_integrations_google }}
       response_integrations_third_party: ${{ steps.filter.outputs.response_integrations_third_party }}
       playbooks: ${{ steps.filter.outputs.playbooks }}
@@ -55,6 +56,8 @@ jobs:
           - 'packages/tipcommon/**'
           - 'packages/integration_testing/**'
           - 'packages/integration_testing_whls/**'
+          tipcommon:
+          - 'packages/tipcommon/**'
           response_integrations_google:
           - 'content/response_integrations/google/**'
           response_integrations_third_party:
@@ -128,6 +131,27 @@ jobs:
       working-directory: packages/mp
       run: python -m pytest tests -n 7 --cov
 
+  test-tipcommon-windows:
+    name: 1b. Test TIPCommon Package
+    needs: changes
+    if: ${{ needs.changes.outputs.tipcommon == 'true' || needs.changes.outputs.ci == 'true' }}
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        python -m pip install uv
+    - name: Run pytest
+      working-directory: packages/tipcommon/TIPCommon
+      run: |
+        uv sync --dev
+        uv run pytest
 
   validate-google-integrations-windows:
     name: 2a. Validate Google Integrations
