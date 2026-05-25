@@ -33,7 +33,7 @@ def main():
         if api_manager.test_connectivity():
             status = EXECUTION_STATE_COMPLETED
             output_message = (
-                f"Successfully connected to {INTEGRATION_NAME} with the provided "
+                f"Successfully connected to the {INTEGRATION_NAME} with the provided "
                 f"connection parameters!"
             )
             result_value = True
