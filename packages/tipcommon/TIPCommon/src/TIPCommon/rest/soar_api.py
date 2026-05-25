@@ -166,15 +166,17 @@ def save_or_update_job(
     """Save or update a job.
 
     Args:
-        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
-        job_data (SingleJson): Job data.
+        chronicle_soar: A Chronicle SOAR SDK object.
+        job_data: Job data.
 
     Returns:
-        (SingleJson): The response JSON from the platform.
+        The response JSON from the platform.
 
     Raises:
         requests.HTTPError: If the platform returns a
             non-success HTTP status code.
+        EmptyMandatoryValues: If job_data is missing required fields.
+        ParameterValidationError: If the resource path cannot be parsed.
 
     """
     api_client = get_soar_client(chronicle_soar)

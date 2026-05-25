@@ -154,12 +154,12 @@ class BaseAsyncSoarApi:
         """Make an asynchronous PUT request to the SOAR API.
 
         Args:
-            endpoint (str): API endpoint.
-            payload (SingleJson | None): Request body. Defaults to None.
-            params (SingleJson | None): Query parameters. Defaults to None.
+            endpoint: API endpoint.
+            payload: Request body. Defaults to None.
+            params: Query parameters. Defaults to None.
 
         Returns:
-            httpx.Response: The HTTP response object.
+            The HTTP response object.
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
