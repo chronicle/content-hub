@@ -31,9 +31,7 @@ class TestTakeSnapshot:
 
         assert len(script_session.request_history) >= 1
         snapshot_requests = [
-            req
-            for req in script_session.request_history
-            if "storage/take-snapshot" in req.request.url.path
+            req for req in script_session.request_history if "storage/take-snapshot" in req.request.url.path
         ]
         assert len(snapshot_requests) >= 1
 

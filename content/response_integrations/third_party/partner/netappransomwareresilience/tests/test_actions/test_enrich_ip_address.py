@@ -28,11 +28,7 @@ class TestEnrichIPAddress:
         enrich_ip_address.main()
 
         assert len(script_session.request_history) >= 1
-        enrich_requests = [
-            req
-            for req in script_session.request_history
-            if "enrich/ip-address" in req.request.url.path
-        ]
+        enrich_requests = [req for req in script_session.request_history if "enrich/ip-address" in req.request.url.path]
         assert len(enrich_requests) >= 1
 
         assert action_output.results.output_message == success_output_msg
