@@ -145,6 +145,33 @@ class BaseAsyncSoarApi:
             params=params,
         )
 
+    async def put(
+        self,
+        endpoint: str,
+        payload: SingleJson | None = None,
+        params: SingleJson | None = None,
+    ) -> httpx.Response:
+        """Make an asynchronous PUT request to the SOAR API.
+
+        Args:
+            endpoint (str): API endpoint.
+            payload (SingleJson | None): Request body. Defaults to None.
+            params (SingleJson | None): Query parameters. Defaults to None.
+
+        Returns:
+            httpx.Response: The HTTP response object.
+
+        Raises:
+            httpx.HTTPStatusError: If the API request fails.
+
+        """
+        return await self._make_request(
+            HttpMethod.PUT.value,
+            endpoint,
+            payload=payload,
+            params=params,
+        )
+
     async def delete(self, endpoint: str) -> httpx.Response:
         """Make an asynchronous DELETE request to the SOAR API.
 
