@@ -155,24 +155,14 @@ document.addEventListener('DOMContentLoaded', function() {
   let statusCharts = {};
 
   function initCharts() {
+    if (typeof Chart === 'undefined') return;
+
     const canvases = document.querySelectorAll('canvas[id^="statusChart-"]');
     
     canvases.forEach(canvas => {
-      const groupId = canvas.id.replace('statusChart-', '');
-      const groupContainer = document.getElementById(`group-${groupId}`);
-      if (!groupContainer) return;
-
-      const items = groupContainer.querySelectorAll('.integration-item');
-      let passCount = 0;
-      let warnCount = 0;
-      let failCount = 0;
-
-      items.forEach(item => {
-        const status = item.getAttribute('data-status');
-        if (status === 'pass') passCount++;
-        else if (status === 'warn') warnCount++;
-        else if (status === 'fail') failCount++;
-      });
+      const passCount = parseInt(canvas.dataset.passed || 0);
+      const warnCount = parseInt(canvas.dataset.warn || 0);
+      const failCount = parseInt(canvas.dataset.fail || 0);
 
       const ctx = canvas.getContext('2d');
       const isDark = html.classList.contains('dark');
