@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function toggleDarkMode() {
     const isDark = html.classList.toggle('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    if (typeof updateChartTheme === 'function') updateChartTheme();
   }
 
   // --- Accordion Logic ---
@@ -150,7 +151,92 @@ document.addEventListener('DOMContentLoaded', function() {
   window.collapseAll = collapseAll;
   window.downloadReport = downloadReport;
 
+  // --- Chart Initialization ---
+  let statusCharts = {};
+
+  function initCharts() {
+    const canvases = document.querySelectorAll('canvas[id^="statusChart-"]');
+    
+    canvases.forEach(canvas => {
+      const groupId = canvas.id.replace('statusChart-', '');
+      const groupContainer = document.getElementById(`group-${groupId}`);
+      if (!groupContainer) return;
+
+      const items = groupContainer.querySelectorAll('.integration-item');
+      let passCount = 0;
+      let warnCount = 0;
+      let failCount = 0;
+
+      items.forEach(item => {
+        const status = item.getAttribute('data-status');
+        if (status === 'pass') passCount++;
+        else if (status === 'warn') warnCount++;
+        else if (status === 'fail') failCount++;
+      });
+
+      const ctx = canvas.getContext('2d');
+      const isDark = html.classList.contains('dark');
+      
+      statusCharts[canvas.id] = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Passed', 'Warnings', 'Failures'],
+          datasets: [{
+            data: [passCount, warnCount, failCount],
+            backgroundColor: [
+              '#10b981',
+              '#f59e0b',
+              '#ef4444'
+            ],
+            borderWidth: 2,
+            borderColor: isDark ? '#0f172a' : '#ffffff',
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                boxWidth: 12,
+                padding: 15,
+                font: {
+                  family: "'Plus Jakarta Sans', sans-serif",
+                  size: 11,
+                  weight: 'bold'
+                },
+                color: isDark ? '#94a3b8' : '#475569'
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const total = passCount + warnCount + failCount;
+                  const percentage = Math.round((context.raw / total) * 100);
+                  return ` ${context.label}: ${context.raw} (${percentage}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    });
+  }
+
+  function updateChartTheme() {
+    const isDark = html.classList.contains('dark');
+    for (const key in statusCharts) {
+      const chart = statusCharts[key];
+      chart.data.datasets[0].borderColor = isDark ? '#0f172a' : '#ffffff';
+      chart.options.plugins.legend.labels.color = isDark ? '#94a3b8' : '#475569';
+      chart.update();
+    }
+  }
+
   // --- Initialization ---
   // If no search query, ensure all items are shown (redundant but safe)
   filterIntegrations('');
+  initCharts();
 });
