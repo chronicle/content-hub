@@ -16,13 +16,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from TIPCommon.exceptions import EmptyMandatoryValues, ParameterValidationError
 from TIPCommon.rest.async_soar_platform_clients.base_soar_api import BaseAsyncSoarApi
 from TIPCommon.rest.async_soar_platform_clients.constants import (
     CONNECTOR_INSTANCE_UPDATE_FIELDS,
     DEFAULT_PAGE_SIZE,
     STATUS_CODE_NO_CONTENT,
 )
-from TIPCommon.exceptions import EmptyMandatoryValues, ParameterValidationError
 from TIPCommon.utils import escape_odata_literal
 
 if TYPE_CHECKING:
