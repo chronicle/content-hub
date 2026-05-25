@@ -33,12 +33,16 @@ def main():
         conf.get("Verify SSL", "false").lower() == "true",
     )
 
-    rapid7_manager.test_connectivity()
-
-    output_message = f'Successfully connected to {conf["Api Root"]}.'
-
-    siemplify.end(output_message, "true")
+    try:
+        rapid7_manager.test_connectivity()
+        output_message = f'Successfully connected to the Rapid7 Insight VM at {conf["Api Root"]}.'
+        siemplify.end(output_message, True)
+    except Exception as e:
+        output_message = f"Failed to connect to the Rapid7 Insight VM. Error: {e}"
+        siemplify.end(output_message, False)
 
 
 if __name__ == "__main__":
     main()
+
+

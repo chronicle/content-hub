@@ -27,14 +27,18 @@ def main():
     cert_file_path = conf["Client Cert File Path"]
     private_key_path = conf["Client Key File Path"]
 
-    mcafee_dxl_manager = McAfeeTIEDXLManager(
-        server_addr, broker_ca_bundle_path, cert_file_path, private_key_path
-    )
-
-    # If no exception occur - then connection is successful
-    output_message = f"Successfully connected to {server_addr}."
-    siemplify.end(output_message, True)
+    try:
+        mcafee_dxl_manager = McAfeeTIEDXLManager(
+            server_addr, broker_ca_bundle_path, cert_file_path, private_key_path
+        )
+        output_message = f"Successfully connected to the McAfee TIE DXL server at {server_addr}."
+        siemplify.end(output_message, True)
+    except Exception as e:
+        output_message = f"Failed to connect to the McAfee TIE DXL server. Error: {e}"
+        siemplify.end(output_message, False)
 
 
 if __name__ == "__main__":
     main()
+
+

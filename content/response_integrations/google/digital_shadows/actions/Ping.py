@@ -49,7 +49,8 @@ def main():
     try:
         # If no exception occur - then connection is successful
         manager = DigitalShadowsManager(api_key, api_secret)
-        output_message = "Connection Established"
+        output_message = "Successfully connected to the digital_shadows integration."
+
         status = EXECUTION_STATE_COMPLETED
         result_value = "true"
 
@@ -58,7 +59,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = f"Error executing action 'Ping action'. Reason: {e}"
+        output_message = f"Failed to connect to the digital_shadows integration. Error executing action 'Ping action'. Reason: {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(
@@ -69,3 +70,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

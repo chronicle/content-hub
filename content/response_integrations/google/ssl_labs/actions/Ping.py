@@ -36,11 +36,14 @@ def main():
     )
 
     ssl_labs_manager = SSLLabsManager(verify_ssl)
-    ssl_labs_manager.test_connectivity()
-
-    # If no exception occurs - then connection is successful.
-    siemplify.end("Connected successfully.", "true")
+    try:
+        ssl_labs_manager.test_connectivity()
+        siemplify.end("Successfully connected to the SSL Labs.", True)
+    except Exception as e:
+        siemplify.end(f"Failed to connect to the SSL Labs. Error: {e}", False)
 
 
 if __name__ == "__main__":
     main()
+
+

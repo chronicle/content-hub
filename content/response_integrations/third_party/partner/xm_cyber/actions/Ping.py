@@ -40,7 +40,7 @@ def main():
         )
     else:
         status = EXECUTION_STATE_FAILED
-        output_message = f"{ERRORS['ACTION']['FAILED']} {response}"
+        output_message = f"Failed to connect to the xm_cyber integration. {ERRORS['ACTION']['FAILED']} {response}"
 
     result_value = is_success
 
@@ -53,3 +53,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

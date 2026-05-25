@@ -42,10 +42,10 @@ def main():
     try:
         client = ArcannaClient(api_key=api_key, base_url=arcanna_url, verify=ssl_verify)
         response_json = client.test_arcanna()
-        output_message = output_message + f"Arcanna-response: {response_json}"
+        output_message = "Successfully connected to the Arcanna AI integration. " + f"Arcanna-response: {response_json}"
         siemplify.result.add_result_json(response_json)
     except Exception as e:
-        output_message = f"Error executing {siemplify.script_name}. Reason {e}."
+        output_message = f"Failed to connect to the arcanna_ai integration. Error executing {siemplify.script_name}. Reason {e}."
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(traceback.format_exc())
         status = EXECUTION_STATE_FAILED
@@ -60,3 +60,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

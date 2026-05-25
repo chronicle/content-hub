@@ -34,13 +34,18 @@ def main():
             id=1,
             fields=["firstName", "middleName", "lastName", "department"],
         )
-        status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-        output_message = ""
-    except Exception:
-        raise
+        status = EXECUTION_STATE_COMPLETED
+        output_message = "Successfully connected to the Marketo integration."
+        result_value = True
+    except Exception as e:
+        status = EXECUTION_STATE_FAILED
+        output_message = f"Failed to connect to the Marketo integration. Reason: {e}"
+        result_value = False
 
-    siemplify.end("Success", True)
+    siemplify.end(output_message, result_value, status)
 
 
 if __name__ == "__main__":
     main()
+
+

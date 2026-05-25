@@ -45,14 +45,14 @@ def main():
         response.raise_for_status()
         status = EXECUTION_STATE_COMPLETED  # This is 0
         output_message = (
-            "Successfully connected to Claroty XDome with the provided connection parameters!"
+            "Successfully connected to the Claroty XDome with the provided connection parameters!"
         )
         result_value = True
     except Exception as e:
         siemplify.LOGGER.error(f"❌ Failed to connect to Claroty XDome. Error is {e}")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED  # This is 1
-        output_message = f"Failed to connect to Claroty XDome. Error is {e}"
+        output_message = f"Failed to connect to the clarotyxdome integration. Failed to connect to Claroty XDome. Error is {e}"
         result_value = False
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
@@ -65,3 +65,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

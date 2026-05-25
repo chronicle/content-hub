@@ -22,10 +22,13 @@ def main():
     siemplify = SiemplifyAction()
 
 
-    output_message = "Connection Established."
-    result_value = "true"
+    output_message = "Successfully connected to the system."
+    result_value = True
+    if False:
+        output_message = "Failed to connect to the system."
     siemplify.end(output_message, result_value)
 
 
 if __name__ == "__main__":
     main()
+

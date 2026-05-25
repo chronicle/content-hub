@@ -37,13 +37,13 @@ def main():
 
     except Exception as e:
         result_value = False
-        output_message = f"The Connection failed: {e}"
-        status = EXECUTION_STATE_COMPLETED
+        output_message = f"Failed to connect to the Azure DevOps integration. The Connection failed: {e}"
+        status = EXECUTION_STATE_FAILED
     else:
         result_value = True
-        output_message = "Connected successfully"
+        output_message = "Successfully connected to the Azure DevOps integration."
         siemplify.LOGGER.info("Connected successfully")
-        status = EXECUTION_STATE_FAILED
+        status = EXECUTION_STATE_COMPLETED
 
     siemplify.LOGGER.info(
         f"\n  result_value: {result_value}\n  output_message: {output_message}",
@@ -54,3 +54,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

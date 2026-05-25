@@ -56,31 +56,32 @@ def main():
         siemplify.LOGGER.info(response.text)
         status = EXECUTION_STATE_COMPLETED
         result_value = response.text
-        output_message = "Eyeglass Zero Trust API Call Successful"
+        output_message = "Successfully connected to the superna_zero_trust integration."
+
 
     except requests.exceptions.Timeout:
         siemplify.LOGGER.info("The request timed out")
         status = EXECUTION_STATE_TIMEDOUT
         result_value = "Timeout"
-        output_message = "Eyeglass Zero Trust API Call Timed Out"
+        output_message = "Failed to connect to the superna_zero_trust integration. Eyeglass Zero Trust API Call Timed Out"
 
     except requests.exceptions.ConnectionError:
         siemplify.LOGGER.info("Connection error occurred")
         status = EXECUTION_STATE_FAILED
         result_value = "Connection Error"
-        output_message = "Eyeglass Zero Trust API Call Connection Failed"
+        output_message = "Failed to connect to the superna_zero_trust integration. Eyeglass Zero Trust API Call Connection Failed"
 
     except requests.exceptions.HTTPError as e:
         siemplify.LOGGER.info(f"HTTP error occurred: {e}")
         status = EXECUTION_STATE_FAILED
         result_value = "HTTP Error"
-        output_message = f"Eyeglass Zero Trust API Call HTTP Error: {e}"
+        output_message = f"Failed to connect to the superna_zero_trust integration. Eyeglass Zero Trust API Call HTTP Error: {e}"
 
     except requests.exceptions.RequestException as e:
         siemplify.LOGGER.info(f"An error occurred: {e}")
         status = EXECUTION_STATE_FAILED
         result_value = "Request Error"
-        output_message = f"Eyeglass Zero Trust API Call Error: {e}"
+        output_message = f"Failed to connect to the superna_zero_trust integration. Eyeglass Zero Trust API Call Error: {e}"
 
     siemplify.LOGGER.info(
         f"\nstatus: {status}\nresult_value: {result_value}\noutput_message: {output_message}",
@@ -90,3 +91,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

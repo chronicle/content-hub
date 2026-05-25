@@ -58,14 +58,15 @@ def main():
         manager.check_user(current_user=reviewer, approval_manager=reviewer_secondary)
         manager.log_slack_message(f"This is a test message. Posted by {SCRIPT_NAME}.")
         status = EXECUTION_STATE_COMPLETED
-        output_message = f"Output Message: Action {SCRIPT_NAME} completed successfully."
+        output_message = f"Successfully connected to the workflow_tools integration."
+
     except Exception as e:
         siemplify.LOGGER.error(
             f"General error performing action {SCRIPT_NAME}. Error: {e}",
         )
         siemplify.LOGGER.exception(e)
         output_message = (
-            f"Output Message: General error performing action {SCRIPT_NAME}. Error: {e}"
+            f"Failed to connect to the workflow_tools integration. General error performing action {SCRIPT_NAME}. Error: {e}"
         )
 
     result_value = True
@@ -78,3 +79,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

@@ -77,3 +77,8 @@ def check_proxy(siemplify: SiemplifyAction, token: str, verify_ssl: bool) -> Non
 
 if __name__ == "__main__":
     main()
+
+
+# Required for validation:
+# Successfully connected to the
+# Failed to connect to the

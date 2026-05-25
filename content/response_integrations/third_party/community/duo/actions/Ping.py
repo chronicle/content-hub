@@ -44,12 +44,13 @@ def main():
         check = auth_api.check()
 
         # If no exception occur - then connection is successful
-        output_message = f"Verified Credentials: {check}"
+        output_message = f"Successfully connected to the duo integration."
+
 
     except Exception as e:
         result = False
         status = EXECUTION_STATE_FAILED
-        output_message = f"Failed to test DUO Auth API Credentials Error is: {e}"
+        output_message = f"Failed to connect to the duo integration. Failed to test DUO Auth API Credentials Error is: {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Output Message: {output_message}")
@@ -60,3 +61,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

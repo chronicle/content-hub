@@ -56,14 +56,14 @@ def main():
         vmray_manager.test_connectivity()
         status = EXECUTION_STATE_COMPLETED
         result_value = True
-        output_message = "Connection Established"
+        output_message = "Successfully connected to the VMRay instance."
         siemplify.LOGGER.info("Finished processing")
     except Exception as e:
         siemplify.LOGGER.error(f"General error performing action {PING_SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False
-        output_message = "Some errors occurred. Please check log"
+        output_message = "Failed to connect to the VMRay instance. Some errors occurred. Please check log"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(

@@ -27,13 +27,16 @@ def main():
     api_key = conf.get("API key", "")
     shodan = ShodanManager(api_key, verify_ssl=verify_ssl)
 
-    shodan.test_connectivity()
-
-    output_message = "Connection Established"
-    result_value = "true"
-
-    siemplify.end(output_message, result_value)
+    try:
+        shodan.test_connectivity()
+        output_message = "Successfully connected to the Shodan."
+        siemplify.end(output_message, True)
+    except Exception as e:
+        output_message = f"Failed to connect to the Shodan. Error: {e}"
+        siemplify.end(output_message, False)
 
 
 if __name__ == "__main__":
     main()
+
+

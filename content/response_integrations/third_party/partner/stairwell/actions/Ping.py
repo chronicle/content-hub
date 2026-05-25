@@ -44,7 +44,8 @@ def main():
         )
         status = EXECUTION_STATE_COMPLETED
         manager.test_connectivity()
-        output_message = "Connection Established"
+        output_message = "Successfully connected to the stairwell integration."
+
         result_value = True
         siemplify.LOGGER.info("Finished processing")
 
@@ -53,7 +54,7 @@ def main():
         siemplify.LOGGER.exception(e)
         result_value = False
         status = EXECUTION_STATE_FAILED
-        output_message = f"An error occurred while running action: {e}"
+        output_message = f"Failed to connect to the stairwell integration. An error occurred while running action: {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(
@@ -64,3 +65,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

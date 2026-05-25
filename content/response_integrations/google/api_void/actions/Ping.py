@@ -52,7 +52,7 @@ def main():
     )
 
     result_value = True
-    output_message = "Connected successfully."
+    output_message = "Successfully connected to the APIVoid."
     status = EXECUTION_STATE_COMPLETED
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
@@ -64,7 +64,7 @@ def main():
         apivoid_manager.test_connectivity()
 
     except Exception as e:
-        output_message = f'Error executing action "{PING_SCRIPT_NAME}". Reason: {e}'
+        output_message = f'Failed to connect to the api_void integration. Error executing action "{PING_SCRIPT_NAME}". Reason: {e}'
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
@@ -79,3 +79,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

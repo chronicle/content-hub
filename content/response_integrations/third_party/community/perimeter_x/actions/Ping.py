@@ -35,14 +35,15 @@ def main():
             connector_type="slack",
         )
         pX.auth()
-        output_message = "Connection to Slack established successfully."
+        output_message = "Successfully connected to the perimeter_x integration."
+
         result = "true"
         status = EXECUTION_STATE_COMPLETED
         siemplify.LOGGER.info(
             f"Script Name: {SCRIPT_NAME} | {output_message}",
         )
     except PerimeterXManagerException as e:
-        output_message = f"An error occurred when trying to connect to the API: {e}"
+        output_message = f"Failed to connect to the perimeter_x integration. An error occurred when trying to connect to the API: {e}"
         result = "false"
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(
@@ -60,3 +61,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

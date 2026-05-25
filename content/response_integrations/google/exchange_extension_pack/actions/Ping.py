@@ -134,7 +134,7 @@ def main():
     except Exception as e:
         siemplify.LOGGER.error(f"General error performing action {PING_SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
-        output_message = f"Failed to execute action! Error is {e}"
+        output_message = f"Failed to connect to the exchange_extension_pack integration. Failed to execute action! Error is {e}"
     finally:
         if manager:
             manager.disconnect()
@@ -149,3 +149,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

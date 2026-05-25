@@ -29,12 +29,14 @@ def main():
     password = conf["Password"]
     port = int(conf["Port"])
 
-    # Connect
-    VSphereManager(server_address, username, password, port)
-
-    # If no exception occurred - then connection is successful
-    siemplify.end("Successfully connected", "true")
+    try:
+        VSphereManager(server_address, username, password, port)
+        siemplify.end("Successfully connected to the vSphere.", True)
+    except Exception as e:
+        siemplify.end(f"Failed to connect to the vSphere. Error: {e}", False)
 
 
 if __name__ == "__main__":
     main()
+
+

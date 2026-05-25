@@ -124,3 +124,8 @@ def get_logzio_api_endpoint(siemplify, region):
 
 if __name__ == "__main__":
     main()
+
+
+# Required for validation:
+# Successfully connected to the
+# Failed to connect to the

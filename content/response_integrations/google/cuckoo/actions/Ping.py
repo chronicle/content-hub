@@ -62,13 +62,16 @@ def main():
         server_address, web_interface_address, ca_certificate, verify_ssl, api_token
     )
 
-    result = cuckoo_manager.test_connectivity()
-
-    # If no exception occur - then connection is successful
-    output_message = "Connected successfully."
-
-    siemplify.end(output_message, result)
+    try:
+        cuckoo_manager.test_connectivity()
+        output_message = "Successfully connected to the Cuckoo server."
+        siemplify.end(output_message, True)
+    except Exception as e:
+        output_message = f"Failed to connect to the Cuckoo server. Error: {e}"
+        siemplify.end(output_message, False)
 
 
 if __name__ == "__main__":
     main()
+
+

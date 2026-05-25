@@ -81,7 +81,8 @@ def main():
 
         result_value = "true"
         status = EXECUTION_STATE_COMPLETED
-        output_message = f"Successfully connected to {INTEGRATION_DISPLAY_NAME}"
+        output_message = f"Successfully connected to the google_grr integration."
+
 
     except Exception as error:
         result_value = "false"

@@ -50,14 +50,16 @@ def main():
         ping_res = manager.ping()
 
         if ping_res:
-            output_message = f"Successfully connected to Canary Console '{console_hash}'."
+            output_message = f"Successfully connected to the thinkst_canary integration."
+
             result_value = True
         else:
-            output_message = f"Failed to connect to Canary Console '{console_hash}'."
+            output_message = f"Successfully connected to the thinkst_canary integration."
+
 
     except Exception as e:
         status = EXECUTION_STATE_FAILED
-        output_message = f"Ping failed: {str(e)}"
+        output_message = f"Failed to connect to the thinkst_canary integration. Ping failed: {str(e)}"
         siemplify.LOGGER.exception(e)
 
     siemplify.LOGGER.info(f"Action finished: {output_message}")
@@ -66,3 +68,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

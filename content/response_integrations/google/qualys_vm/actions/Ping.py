@@ -33,13 +33,14 @@ def main():
     try:
         qualys_manager = create_qualys_manager_from_action(siemplify)
         qualys_manager.test_connectivity()
-        output_message = f"Successfully connected to {qualys_manager.server_address}."
+        output_message = f"Successfully connected to the qualys_vm integration."
+
     except Exception as e:
         siemplify.LOGGER.error(f"General error performing action {PING_SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
         result = False
         status = EXECUTION_STATE_FAILED
-        output_message = f'Error executing action "{PING_SCRIPT_NAME}". Reason: {e}'
+        output_message = f'Failed to connect to the qualys_vm integration. Error executing action "{PING_SCRIPT_NAME}". Reason: {e}'
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}")
@@ -51,3 +52,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

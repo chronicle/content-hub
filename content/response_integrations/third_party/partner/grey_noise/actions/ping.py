@@ -34,7 +34,7 @@ def main():
         )
 
     except RateLimitError as e:
-        output_message = f"Rate limit reached: {str(e)}"
+        output_message = f"Failed to connect to the grey_noise integration. Rate limit reached: {str(e)}"
         connectivity_result = RESULT_VALUE_FALSE
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)

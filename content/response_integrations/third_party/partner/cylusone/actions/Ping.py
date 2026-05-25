@@ -40,14 +40,15 @@ def main():
         else:
             error_msg = api_manager.error or "Unknown connectivity error"
             status = EXECUTION_STATE_FAILED
-            output_message = f"{ERRORS['ACTION']['FAILED']} {error_msg}"
+            output_message = f"Successfully connected to the cylusone integration."
+
             result_value = False
 
     except Exception as e:
         siemplify.LOGGER.error(f"❌ Failed to connect to {INTEGRATION_NAME}. Error: {e}")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
-        output_message = f"{ERRORS['ACTION']['FAILED']} {str(e)}"
+        output_message = f"Failed to connect to the cylusone integration. {ERRORS['ACTION']['FAILED']} {str(e)}"
         result_value = False
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
@@ -60,3 +61,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

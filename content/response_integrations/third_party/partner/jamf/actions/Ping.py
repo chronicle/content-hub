@@ -119,7 +119,8 @@ def main() -> NoReturn:
             protect_manager.test_connectivity()
             messages.append("Successfully connected to Jamf Protect")
 
-        output_message = "; ".join(messages)
+        output_message = "Successfully connected to the jamf integration."
+
         result_value = True
         status = EXECUTION_STATE_COMPLETED
 
@@ -130,7 +131,7 @@ def main() -> NoReturn:
         siemplify.LOGGER.exception(e)
         result_value = False
         status = EXECUTION_STATE_FAILED
-        output_message = str(e)
+        output_message = f"Failed to connect to the jamf integration. Reason: {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}")
@@ -141,3 +142,5 @@ def main() -> NoReturn:
 
 if __name__ == "__main__":
     main()
+
+

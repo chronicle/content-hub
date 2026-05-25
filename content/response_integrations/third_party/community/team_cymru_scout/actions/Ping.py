@@ -35,7 +35,7 @@ def main():
 
     if is_success is True:
         status = EXECUTION_STATE_COMPLETED
-        output_message = f"Successfully connected to the {INTEGRATION_NAME} server with the provided connection parameters."
+        output_message = f"Failed to connect to the team_cymru_scout integration. Successfully connected to the {INTEGRATION_NAME} server with the provided connection parameters."
     else:
         siemplify.LOGGER.error(
             f"Error occurred while performing action: {PING_SCRIPT_NAME}",

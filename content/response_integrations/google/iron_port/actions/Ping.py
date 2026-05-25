@@ -118,7 +118,7 @@ def main():
         status = EXECUTION_STATE_FAILED
 
     except (IronportManagerException, Exception) as e:
-        output_message = f"Something went wrong. Error is {e}"
+        output_message = f"Failed to connect to the iron_port integration. Something went wrong. Error is {e}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         is_success = False

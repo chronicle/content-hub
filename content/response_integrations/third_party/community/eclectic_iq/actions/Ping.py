@@ -32,7 +32,8 @@ def main():
         eiq_manager.test_connectivity()
 
         status = EXECUTION_STATE_COMPLETED
-        output_message = f"Connected successfully to {eiq_url}"
+        output_message = f"Successfully connected to the eclectic_iq integration."
+
         siemplify.LOGGER.info(output_message)
         result_value = "true"
 
@@ -52,3 +53,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

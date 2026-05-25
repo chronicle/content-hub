@@ -20,7 +20,7 @@ class PingAction(SignalSciencesAction):
             )
             self.result_value = True
         except Exception as e:
-            self.output_message = f'Error executing action: "{SCRIPT_NAME}". Reason: {e}'
+            self.output_message = f'Failed to connect to the signal_sciences integration. Error executing action: "{SCRIPT_NAME}". Reason: {e}'
             self.logger.error(self.output_message)
             self.result_value = False
             self.execution_state = ExecutionState.FAILED
@@ -32,3 +32,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

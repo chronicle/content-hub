@@ -63,7 +63,7 @@ def main():
 
     result_value = True
     status = EXECUTION_STATE_COMPLETED
-    output_message = "Connection Established."
+    output_message = "Successfully connected to the McAfee ePO."
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
@@ -78,7 +78,7 @@ def main():
             force_check_connectivity=True,
         )
     except Exception as e:
-        output_message = f"Error executing action '{PING_SCRIPT_NAME}'. Reason: {e}"
+        output_message = f"Failed to connect to the mc_afee_epo integration. Error executing action '{PING_SCRIPT_NAME}'. Reason: {e}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
@@ -93,3 +93,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

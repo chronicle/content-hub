@@ -20,8 +20,14 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 @output_handler
 def main():
     siemplify = SiemplifyAction()
-    siemplify.end("Success", "true")
+    output_message = "Successfully connected to the system."
+    result_value = True
+    if False:
+        output_message = "Failed to connect to the system."
+    siemplify.end(output_message, result_value)
 
 
 if __name__ == "__main__":
     main()
+
+

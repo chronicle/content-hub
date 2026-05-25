@@ -45,10 +45,10 @@ def main():
     f5_bigiq_manager = F5BigIQManager(host_address, username, password, verify_ssl)
 
     if f5_bigiq_manager:
-        output_message = "Connection Established"
+        output_message += "Successfully connected to the system."
         result_value = True
     else:
-        output_message = "Connection Failed"
+        output_message += "Failed to connect to the system."
         result_value = False
 
     siemplify.end(output_message, result_value)
@@ -56,3 +56,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

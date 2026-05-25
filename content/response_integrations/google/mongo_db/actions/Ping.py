@@ -36,13 +36,16 @@ def main():
         is_authenticate=is_authenticate,
     )
 
-    # Check if the connection is established or not.
-    mongodb_manager.test_connectivity()
-
-    # If no exception occur - then connection is successful
-    output_message = f"Successfully connected to MongoDB at {server}:{port}."
-    siemplify.end(output_message, True)
+    try:
+        mongodb_manager.test_connectivity()
+        output_message = f"Successfully connected to the MongoDB at {server}:{port}."
+        siemplify.end(output_message, True)
+    except Exception as e:
+        output_message = f"Failed to connect to the MongoDB. Error: {e}"
+        siemplify.end(output_message, False)
 
 
 if __name__ == "__main__":
     main()
+
+

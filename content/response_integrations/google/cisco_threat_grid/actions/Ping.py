@@ -29,12 +29,16 @@ def main():
     use_ssl = conf["Use SSL"].lower() == "true"
     cisco_threat_grid = CiscoThreatGridManager(server_addr, api_key, use_ssl)
 
-    cisco_threat_grid.test_connectivity()
-
-    # If no exception occur - then connection is successful
-    output_message = f"Connected successfully to {server_addr}."
-    siemplify.end(output_message, True)
+    try:
+        cisco_threat_grid.test_connectivity()
+        output_message = f"Successfully connected to the Cisco Threat Grid server at {server_addr}."
+        siemplify.end(output_message, True)
+    except Exception as e:
+        output_message = f"Failed to connect to the Cisco Threat Grid server. Error: {e}"
+        siemplify.end(output_message, False)
 
 
 if __name__ == "__main__":
     main()
+
+

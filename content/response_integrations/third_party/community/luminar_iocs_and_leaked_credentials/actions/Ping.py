@@ -37,8 +37,9 @@ def main():
             account_id,
             base_url,
         ).test_connectivity()
+        output_message = f"Successfully connected to the Luminar integration. {output_message}"
     except Exception as err:
-        output_message = f"Failed to connect to Luminar API... Error is {err}"
+        output_message = f"Failed to connect to the luminar_iocs_and_leaked_credentials integration. Failed to connect to Luminar API... Error is {err}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(err)
         status = EXECUTION_STATE_FAILED
@@ -52,3 +53,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

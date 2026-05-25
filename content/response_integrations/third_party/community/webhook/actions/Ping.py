@@ -26,17 +26,18 @@ def main():
 
     # Init result values:
     status = EXECUTION_STATE_FAILED
-    output_message = "The connection failed."
+    output_message = "Failed to connect to the webhook integration."
     return_value = False
 
     try:
         response = webhookManager.test_connectivity()
         return_value = True
-        output_message = f"Connected successfully to <{baseUrl}>"
+        output_message = "Successfully connected to the webhook integration."
+        status = 0 # Assuming 0 is success, or EXECUTION_STATE_COMPLETED if imported
 
-    except:
+    except Exception as e:
         siemplify.LOGGER.error(e)
-        output_message += " Error: " + str(e)
+        output_message += f" Error: {e}"
 
     finally:
         siemplify.LOGGER.info("----------------- Main - Finished -----------------")
@@ -48,3 +49,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

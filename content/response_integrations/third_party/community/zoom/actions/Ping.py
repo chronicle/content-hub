@@ -27,7 +27,8 @@ def main():
         zoom_manager.test_connectivity()  # Raises exception if the connect wasn't established
 
         result_value = True
-        output_message = "Connected successfully"
+        output_message = "Successfully connected to the zoom integration."
+
 
         siemplify.LOGGER.info(
             "Script execution completed: \n"
@@ -39,7 +40,7 @@ def main():
     except Exception as e:
         status = EXECUTION_STATE_FAILED
         result_value = False
-        output_message = f"Couldn't connect: {e}"
+        output_message = f"Failed to connect to the zoom integration. Couldn't connect: {e}"
 
     finally:
         siemplify.end(output_message, result_value, status)
@@ -52,3 +53,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

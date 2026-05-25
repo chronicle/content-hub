@@ -83,7 +83,7 @@ def main():
         connectivity_result = True
         status = EXECUTION_STATE_COMPLETED
     except GroupNotFoundException as e:
-        output_message = f"Group {group_name} was not found in McAfee Mvision ePO. Please check for any spelling mistakes."
+        output_message = f"Failed to connect to the mc_afee_mvision_epo integration. Group {group_name} was not found in McAfee Mvision ePO. Please check for any spelling mistakes."
         siemplify.LOGGER.error(output_message)
     except Exception as e:
         output_message = (

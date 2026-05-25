@@ -60,7 +60,7 @@ def main():
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
-    output_message = "Connection Established"
+    output_message = "Successfully connected to the intsights integration."
     result_value = True
     status = EXECUTION_STATE_COMPLETED
 
@@ -73,7 +73,7 @@ def main():
             force_check_connectivity=True,
         )
     except Exception as e:
-        output_message = f"Error executing action '{PING_ACTION}'. Reason: {e}"
+        output_message = f"Failed to connect to the intsights integration. Error executing action '{PING_ACTION}'. Reason: {e}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
@@ -84,3 +84,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

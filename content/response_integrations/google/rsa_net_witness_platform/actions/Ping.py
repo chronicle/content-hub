@@ -85,10 +85,11 @@ def main():
             verify_ssl=verify_ssl,
         )
         rsa_manager.test_connectivity()
-        output_message = "Connection Established."
+        output_message = "Successfully connected to the rsa_net_witness_platform integration."
+
 
     except Exception as e:
-        output_message = f"Error executing action {PING_ACTION}. Reason: {e}"
+        output_message = f"Failed to connect to the rsa_net_witness_platform integration. Error executing action {PING_ACTION}. Reason: {e}"
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
@@ -103,3 +104,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

@@ -44,15 +44,17 @@ def main():
         match_output = re.search(r"\bmail.send\b", sendgrid_permission)
 
         if match_output is None:
-            output_message = f"Error - {'Unable to connect to SendGrid'}"
+            output_message = f"Successfully connected to the send_grid integration."
+
             result_value = False
         else:
-            output_message = "Successfully connected to SendGrid - valid token"
+            output_message = "Successfully connected to the send_grid integration."
+
             result_value = True
 
     except Exception:
         # siemplify.LOGGER.error(e)
-        output_message = f"Error - {'Unable to connect to SendGrid'}"
+        output_message = f"Failed to connect to the send_grid integration. Error - {'Unable to connect to SendGrid'}"
 
     print(output_message)
     siemplify.end(output_message, result_value)
@@ -60,3 +62,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

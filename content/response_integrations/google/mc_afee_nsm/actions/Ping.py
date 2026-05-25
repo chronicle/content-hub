@@ -27,20 +27,22 @@ def main():
     # configurations.
     siemplify = SiemplifyAction()
     conf = siemplify.get_configuration(NSM_PROVIDER)
-    nsm_manager = NsmManager(
-        conf["API Root"],
-        conf["Username"],
-        conf["Password"],
-        conf["Domain ID"],
-        conf["Siemplify Policy Name"],
-        conf["Sensors Names List Comma Separated"],
-    )
-
-    # End session.
-    nsm_manager.logout()
-
-    siemplify.end("Connection Established.", True)
+    try:
+        nsm_manager = NsmManager(
+            conf["API Root"],
+            conf["Username"],
+            conf["Password"],
+            conf["Domain ID"],
+            conf["Siemplify Policy Name"],
+            conf["Sensors Names List Comma Separated"],
+        )
+        nsm_manager.logout()
+        siemplify.end("Successfully connected to the system.", True)
+    except Exception as e:
+        siemplify.end(f"Failed to connect to the system. Error: {e}", False)
 
 
 if __name__ == "__main__":
     main()
+
+

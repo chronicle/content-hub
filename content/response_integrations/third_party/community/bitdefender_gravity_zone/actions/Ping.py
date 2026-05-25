@@ -32,7 +32,8 @@ def main():
         apikey_details = mtm.apikey_details(access_url)
         siemplify.LOGGER.info("Connected successfully.")
 
-        output_message = "Connection Established"
+        output_message = "Successfully connected to the bitdefender_gravity_zone integration."
+
         result_value = "true"
         status = EXECUTION_STATE_COMPLETED
 
@@ -45,7 +46,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = f"Some errors occurred. Error: {e}"
+        output_message = f"Failed to connect to the bitdefender_gravity_zone integration. Some errors occurred. Error: {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}:")
@@ -56,3 +57,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

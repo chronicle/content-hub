@@ -47,7 +47,8 @@ def main():
         vt = VirusTotalManager(api_key, verify_ssl)
         status = EXECUTION_STATE_COMPLETED
         vt.test_connectivity()
-        output_message = "Connection Established"
+        output_message = "Successfully connected to the virus_total integration."
+
         result_value = "true"
         siemplify.LOGGER.info("Finished processing")
 
@@ -55,7 +56,7 @@ def main():
         siemplify.LOGGER.error("Invalid API key was provided. Access is forbidden.")
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = "Invalid API key was provided. Access is forbidden."
+        output_message = "Failed to connect to the virus_total integration. Invalid API key was provided. Access is forbidden."
 
     except Exception as e:
         siemplify.LOGGER.error(
@@ -64,7 +65,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = f"General error performing action {SCRIPT_NAME}. Error: {e}"
+        output_message = f"Failed to connect to the virus_total integration. General error performing action {SCRIPT_NAME}. Error: {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(
@@ -75,3 +76,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

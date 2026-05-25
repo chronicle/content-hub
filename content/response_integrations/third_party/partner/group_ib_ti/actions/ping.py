@@ -19,7 +19,7 @@ def main():
     # Get poller
     poller = GIBConnector(siemplify).init_action_poller()
 
-    output_message = "Connection Established."
+    output_message = "Successfully connected to the Group-IB TI integration."
     connectivity_result = True
     status = EXECUTION_STATE_COMPLETED
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
@@ -33,7 +33,7 @@ def main():
         siemplify.result.add_result_json(result_json)
 
     except Exception as e:
-        output_message = "An error occurred when trying to connect to the API: {}".format(e)
+        output_message = "Failed to connect to the group_ib_ti integration. An error occurred when trying to connect to the API: {}".format(e)
         connectivity_result = False
         siemplify.LOGGER.error(
             "Connection to API failed, performing action {}".format(Config.GC_PING)
@@ -46,3 +46,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

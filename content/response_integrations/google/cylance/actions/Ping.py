@@ -28,12 +28,16 @@ def main():
     application_id = conf["Application ID"]
     tenant_identifier = conf["Tenant Identifier"]
 
-    cm = CylanceManager(
-        server_address, application_id, application_secret, tenant_identifier
-    )
-
-    siemplify.end("Successfully connected.", "true")
+    try:
+        cm = CylanceManager(
+            server_address, application_id, application_secret, tenant_identifier
+        )
+        siemplify.end("Successfully connected to the Cylance.", True)
+    except Exception as e:
+        siemplify.end(f"Failed to connect to the Cylance. Error: {e}", False)
 
 
 if __name__ == "__main__":
     main()
+
+

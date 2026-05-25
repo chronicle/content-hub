@@ -40,7 +40,7 @@ def main():
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     result_value = True
-    output_message = "Connected successfully."
+    output_message = "Successfully connected to the Anomali."
     status = EXECUTION_STATE_COMPLETED
 
     try:
@@ -51,7 +51,7 @@ def main():
             force_check_connectivity=True,
         )
     except Exception as e:
-        output_message = f"Error executing action '{PING_SCRIPT_NAME}'. Reason: {e}"
+        output_message = f"Failed to connect to the anomali integration. Error executing action '{PING_SCRIPT_NAME}'. Reason: {e}"
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
@@ -66,3 +66,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

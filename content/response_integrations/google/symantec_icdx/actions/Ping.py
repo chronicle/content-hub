@@ -34,9 +34,14 @@ def main():
         verify_ssl=verify_ssl,
     )
 
-    icdx_manager.test_connectivity()
-    siemplify.end("Connection Established", True)
+    try:
+        icdx_manager.test_connectivity()
+        siemplify.end("Successfully connected to the system.", True)
+    except Exception as e:
+        siemplify.end(f"Failed to connect to the system. Error: {e}", False)
 
 
 if __name__ == "__main__":
     main()
+
+

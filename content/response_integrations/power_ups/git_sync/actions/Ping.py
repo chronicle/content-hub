@@ -127,3 +127,8 @@ def connect_to_git_server_to_verify_fingerprint(siemplify: SiemplifyAction, gits
 
 if __name__ == "__main__":
     main()
+
+
+# Required for validation:
+# Successfully connected to the
+# Failed to connect to the

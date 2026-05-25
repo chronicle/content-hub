@@ -36,12 +36,14 @@ def main():
     connected = symantec_manager.ping()
 
     if connected:
-        output_message = "Connection Established."
+        output_message += "Successfully connected to the system."
     else:
-        output_message = "Connection Failed"
+        output_message += "Failed to connect to the system."
 
     siemplify.end(output_message, True)
 
 
 if __name__ == "__main__":
     main()
+
+

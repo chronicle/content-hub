@@ -28,12 +28,16 @@ def main():
     instance_name = conf["Instance Name"]
     verify_ssl = conf.get("Verify SSL", "False").lower() == "true"
 
-    archer_manager = RSAArcherManager(
-        server_address, username, password, instance_name, verify_ssl, siemplify.LOGGER
-    )
-
-    siemplify.end("Connected successfully.", "true")
+    try:
+        archer_manager = RSAArcherManager(
+            server_address, username, password, instance_name, verify_ssl, siemplify.LOGGER
+        )
+        siemplify.end("Successfully connected to the RSA Archer.", True)
+    except Exception as e:
+        siemplify.end(f"Failed to connect to the RSA Archer. Error: {e}", False)
 
 
 if __name__ == "__main__":
     main()
+
+

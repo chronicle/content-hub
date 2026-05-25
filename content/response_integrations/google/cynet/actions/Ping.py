@@ -42,13 +42,15 @@ def main():
     cynet_manager = CynetManager(api_root, username, password, verify_ssl)
 
     if cynet_manager:
-        output_message = "Connection Established."
+        output_message += "Successfully connected to the system."
         result_value = True
     else:
-        output_message = "Connection Failed."
+        output_message += "Failed to connect to the system."
 
     siemplify.end(output_message, result_value)
 
 
 if __name__ == "__main__":
     main()
+
+

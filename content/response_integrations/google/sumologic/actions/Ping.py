@@ -71,7 +71,8 @@ def main():
         sumologic_manager.test_connectivity()
         result_value = True
         status = EXECUTION_STATE_COMPLETED
-        output_message = f"Successfully connected to {INTEGRATION_NAME} with the provided connection parameters!"
+        output_message = f"Successfully connected to the sumologic integration."
+
 
     except Exception as error:
         output_message = (
@@ -91,3 +92,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

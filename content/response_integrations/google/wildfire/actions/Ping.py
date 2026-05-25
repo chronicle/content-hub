@@ -31,8 +31,14 @@ def main():
     connectivity = wildfire_manager.test_connectivity()
 
     # If no exception occurs - then connection is successful
-    siemplify.end("Connected successfully.", connectivity)
+    if connectivity:
+        output_message = "Successfully connected to the Wildfire."
+    else:
+        output_message = "Failed to connect to the Wildfire."
+    siemplify.end(output_message, connectivity)
 
 
 if __name__ == "__main__":
     main()
+
+

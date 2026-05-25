@@ -26,10 +26,14 @@ def main():
     key = configurations["Api Key"]
 
     falcon_manager = FalconSandboxManager(server_address, key)
-    falcon_manager.test_connectivity()
-
-    siemplify.end("Connected successfully.", "true")
+    try:
+        falcon_manager.test_connectivity()
+        siemplify.end("Successfully connected to the Falcon Sandbox.", True)
+    except Exception as e:
+        siemplify.end(f"Failed to connect to the Falcon Sandbox. Error: {e}", False)
 
 
 if __name__ == "__main__":
     main()
+
+

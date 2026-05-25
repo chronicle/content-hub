@@ -28,17 +28,18 @@ def main():
     philips_manager = PhilipsManager(bridge_ip, user_name)
     # Init result values:
     status = EXECUTION_STATE_FAILED
-    output_message = "The connection failed."
+    output_message = "Failed to connect to the philips_hue integration."
     return_value = False
 
     try:
         connection_successful = philips_manager.test_connectivity()
         return_value = connection_successful
-        output_message = f"Connected successfully to <{bridge_ip}>"
+        output_message = "Successfully connected to the philips_hue integration."
+        status = 0 # Success
 
-    except:
+    except Exception as e:
         siemplify.LOGGER.error(e)
-        output_message += " Error: " + str(e)
+        output_message += f" Error: {e}"
 
     finally:
         siemplify.LOGGER.info("----------------- Main - Finished -----------------")
@@ -50,3 +51,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

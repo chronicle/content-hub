@@ -53,7 +53,8 @@ def main():
         cb_defense.test_connectivity()
 
         status = EXECUTION_STATE_COMPLETED
-        output_message = f"Connected successfully to {api_root}."
+        output_message = f"Successfully connected to the cb_defense integration."
+
         siemplify.LOGGER.info(output_message)
         result_value = "true"
 
@@ -77,3 +78,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

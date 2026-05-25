@@ -40,14 +40,12 @@ def main():
             connector.check_authorization()
 
     except RunTimeException as exception:
-        output_message = str(exception)
+        output_message = f"Failed to connect to the {Config.INTEGRATION_NAME} services! Reason: {exception}"
         siemplify.LOGGER.error(output_message)
         status = EXECUTION_STATE_FAILED
         is_succes = False
     else:
-        output_message = (
-            f"[ANY.RUN] Successful connection to the {Config.INTEGRATION_NAME} services!"
-        )
+        output_message = f"Successfully connected to the {Config.INTEGRATION_NAME} services!"
         siemplify.LOGGER.info(output_message)
         status = EXECUTION_STATE_COMPLETED
         is_succes = True
@@ -77,3 +75,6 @@ def check_proxy(siemplify: SiemplifyAction, token: str, verify_ssl: bool) -> Non
 
 if __name__ == "__main__":
     main()
+
+
+

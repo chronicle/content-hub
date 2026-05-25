@@ -37,14 +37,18 @@ def main():
         default_value=False,
     )
 
-    sep_manager = SymantecEp12(
-        root_url, client_id, client_secret, refresh_token, verify_ssl
-    )
-
-    # If no exception occur - then connection is successful
-    output_message = f"Connected successfully to {root_url}."
-    siemplify.end(output_message, True)
+    try:
+        sep_manager = SymantecEp12(
+            root_url, client_id, client_secret, refresh_token, verify_ssl
+        )
+        output_message = f"Successfully connected to the SEP12 server at {root_url}."
+        siemplify.end(output_message, True)
+    except Exception as e:
+        output_message = f"Failed to connect to the SEP12 server. Error: {e}"
+        siemplify.end(output_message, False)
 
 
 if __name__ == "__main__":
     main()
+
+

@@ -29,12 +29,12 @@ def main():
 
     if response:
         return_value = True
-        output_message = "Connected successfully"
+        output_message = "Successfully connected to the telegram integration."
         status = EXECUTION_STATE_COMPLETED
 
     else:
         return_value = False
-        output_message = "The Connection failed"
+        output_message = "Failed to connect to the telegram integration. The Connection failed"
         status = EXECUTION_STATE_FAILED
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
@@ -43,3 +43,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

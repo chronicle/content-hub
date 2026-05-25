@@ -27,13 +27,16 @@ def main():
     password = conf["Password"]
     use_ssl = conf.get("Verify SSL", "False").lower() == "true"
     portnox_manager = PortnoxManager(api_root, username, password, use_ssl)
-    portnox_manager.test_conectivity()
-
-    output_message = "Connection Established"
-    result_value = "true"
-
-    siemplify.end(output_message, result_value)
+    try:
+        portnox_manager.test_conectivity()
+        output_message = "Successfully connected to the Portnox."
+        siemplify.end(output_message, True)
+    except Exception as e:
+        output_message = f"Failed to connect to the Portnox. Error: {e}"
+        siemplify.end(output_message, False)
 
 
 if __name__ == "__main__":
     main()
+
+

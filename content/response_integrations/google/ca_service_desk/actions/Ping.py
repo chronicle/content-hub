@@ -30,10 +30,12 @@ def main():
 
     connection = ca_manager.test_connectivity()
 
-    output_message = "Connection Established" if connection else "Connection Failed"
+    output_message += "Successfully connected to the system." if connection else "Failed to connect to the system."
     result_value = connection
     siemplify.end(output_message, result_value)
 
 
 if __name__ == "__main__":
     main()
+
+

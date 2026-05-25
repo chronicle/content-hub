@@ -59,11 +59,13 @@ def main():
         is_connected = whois.test_connectivity()
 
         if is_connected:
-            output_message = "Connection Established"
+            output_message = "Successfully connected to the bulk_who_is integration."
+
             result_value = "true"
             siemplify.LOGGER.info("Finished processing")
         else:
-            output_message = "Connection Failed"
+            output_message = "Successfully connected to the bulk_who_is integration."
+
             result_value = "false"
             status = EXECUTION_STATE_FAILED
     except Exception as e:
@@ -71,7 +73,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = "Some errors occurred. Please check log"
+        output_message = "Failed to connect to the bulk_who_is integration. Some errors occurred. Please check log"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(
@@ -82,3 +84,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

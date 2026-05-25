@@ -72,7 +72,8 @@ def main():
         )
         _licence = manager.get_license()
         status = EXECUTION_STATE_COMPLETED
-        output_message = "Connection Established"
+        output_message = "Successfully connected to the cb_response integration."
+
         result_value = "true"
         siemplify.LOGGER.info("Finished processing")
     except Exception as e:
@@ -80,7 +81,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = "Some errors occurred. Please check log"
+        output_message = "Failed to connect to the cb_response integration. Some errors occurred. Please check log"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(
@@ -91,3 +92,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

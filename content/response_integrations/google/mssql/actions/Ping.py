@@ -108,7 +108,7 @@ def main():
         siemplify.LOGGER.info("Connected successfully.")
         status = EXECUTION_STATE_COMPLETED
         output_message = (
-            f"Successfully connected to {database} at {server_addr}:{port}."
+            f"Successfully connected to the database {database} at {server_addr}:{port}."
         )
         result_value = "true"
 
@@ -119,7 +119,7 @@ def main():
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = f"General error performing action {SCRIPT_NAME}. Error: {e}"
+        output_message = f"Failed to connect to the mssql integration. General error performing action {SCRIPT_NAME}. Error: {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}:")
@@ -130,3 +130,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

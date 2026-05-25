@@ -34,9 +34,11 @@ def main():
         print(whois_dict.get("message"))
         whois_dict = None
 
-    output_message = "Connection Established" if whois_dict else "Connection Failed"
+    output_message += "Successfully connected to the system." if whois_dict else "Failed to connect to the system."
     result_value = True if whois_dict else False
     siemplify.end(output_message, result_value)
 
 if __name__ == "__main__":
     main()
+
+

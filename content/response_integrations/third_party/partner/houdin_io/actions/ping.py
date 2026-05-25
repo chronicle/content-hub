@@ -29,7 +29,8 @@ def main():
         houdin = HoudinManager(api_key, verify_ssl)
         status = EXECUTION_STATE_COMPLETED
         houdin.test_connectivity()
-        output_message = "Connection Established"
+        output_message = "Successfully connected to the houdin_io integration."
+
         result_value = "true"
         siemplify.LOGGER.info("Finished processing")
 
@@ -37,7 +38,7 @@ def main():
         siemplify.LOGGER.error(f"{e}")
         status = EXECUTION_STATE_FAILED
         result_value = "false"
-        output_message = f"{e}"
+        output_message = f"Failed to connect to the houdin_io integration. {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(
@@ -48,3 +49,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

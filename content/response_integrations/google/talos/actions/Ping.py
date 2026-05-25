@@ -42,7 +42,8 @@ def main():
         manager.test_connectivity()
         result = True
         status = EXECUTION_STATE_COMPLETED
-        output_message = "Connected successfully."
+        output_message = "Successfully connected to the talos integration."
+
 
     except Exception as e:
         siemplify.LOGGER.error(f"General error performing action {PING_SCRIPT_NAME}")
@@ -63,3 +64,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
