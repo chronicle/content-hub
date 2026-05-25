@@ -29,11 +29,7 @@ class TestEnrichStorage:
         enrich_storage.main()
 
         assert len(script_session.request_history) >= 1
-        storage_requests = [
-            req
-            for req in script_session.request_history
-            if "enrich/storage" in req.request.url.path
-        ]
+        storage_requests = [req for req in script_session.request_history if "enrich/storage" in req.request.url.path]
         assert len(storage_requests) >= 1
 
         assert action_output.results.output_message == success_output_msg
