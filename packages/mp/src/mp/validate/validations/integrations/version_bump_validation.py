@@ -119,7 +119,7 @@ def _create_data_for_version_bump_validation(
     }
     new_files: NewIntegrationFiles = NewIntegrationFiles()
 
-    try:
+    try:  # noqa: PLW0717
         old_toml_content = mp.core.unix.get_file_content_from_main_branch(toml_path)
         existing_files["toml"]["old"] = PyProjectToml.from_toml_str(old_toml_content)
         existing_files["toml"]["new"] = PyProjectToml.from_toml_str(toml_path.read_text(encoding="utf-8"))

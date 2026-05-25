@@ -47,7 +47,7 @@ class HtmlFormat:
 
     def display(self) -> None:
         """Generate an HTML report for validation results."""
-        try:
+        try:  # noqa: PLW0717
             html_content: str = self._generate_validation_report_html()
 
             temp_report_path: Path
