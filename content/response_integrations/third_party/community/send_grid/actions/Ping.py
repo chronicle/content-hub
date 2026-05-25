@@ -44,7 +44,7 @@ def main():
         match_output = re.search(r"\bmail.send\b", sendgrid_permission)
 
         if match_output is None:
-            output_message = "Successfully connected to the send_grid integration."
+            output_message = "Failed to connect to the send_grid integration. Missing mail.send scope."
 
             result_value = False
         else:

@@ -60,12 +60,10 @@ def main():
 
         if is_connected:
             output_message = "Successfully connected to the bulk_who_is integration."
-
             result_value = "true"
             siemplify.LOGGER.info("Finished processing")
         else:
-            output_message = "Successfully connected to the bulk_who_is integration."
-
+            output_message = "Failed to connect to the bulk_who_is integration."
             result_value = "false"
             status = EXECUTION_STATE_FAILED
     except Exception as e:
