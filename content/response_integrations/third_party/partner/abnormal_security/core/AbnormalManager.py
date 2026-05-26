@@ -114,13 +114,11 @@ class AbnormalManager:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("http://", adapter)
         session.mount("https://", adapter)
-        session.headers.update(
-            {
-                HEADER_AUTHORIZATION: f"Bearer {self.api_key}",
-                HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON,
-                HEADER_USER_AGENT: USER_AGENT,
-            }
-        )
+        session.headers.update({
+            HEADER_AUTHORIZATION: f"Bearer {self.api_key}",
+            HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON,
+            HEADER_USER_AGENT: USER_AGENT,
+        })
         session.verify = self.verify_ssl
         return session
 
@@ -224,13 +222,9 @@ class AbnormalManager:
           subject, sender, received_time
         """
         if action not in VALID_REMEDIATION_ACTIONS:
-            raise AbnormalValidationError(
-                f"{ERROR_MSG_INVALID_ACTION} Valid: {', '.join(VALID_REMEDIATION_ACTIONS)}"
-            )
+            raise AbnormalValidationError(f"{ERROR_MSG_INVALID_ACTION} Valid: {', '.join(VALID_REMEDIATION_ACTIONS)}")
         if remediation_reason not in VALID_REMEDIATION_REASONS:
-            raise AbnormalValidationError(
-                f"{ERROR_MSG_INVALID_REASON} Valid: {', '.join(VALID_REMEDIATION_REASONS)}"
-            )
+            raise AbnormalValidationError(f"{ERROR_MSG_INVALID_REASON} Valid: {', '.join(VALID_REMEDIATION_REASONS)}")
         if not messages:
             raise AbnormalValidationError(ERROR_MSG_NO_MESSAGES)
 
@@ -317,9 +311,7 @@ class AbnormalManager:
         if not threat_id:
             raise AbnormalValidationError(ERROR_MSG_MISSING_THREAT_ID)
         if action not in VALID_THREAT_ACTIONS:
-            raise AbnormalValidationError(
-                f"{ERROR_MSG_INVALID_THREAT_ACTION} Valid: {', '.join(VALID_THREAT_ACTIONS)}"
-            )
+            raise AbnormalValidationError(f"{ERROR_MSG_INVALID_THREAT_ACTION} Valid: {', '.join(VALID_THREAT_ACTIONS)}")
         endpoint = THREAT_BY_ID_ENDPOINT.format(threat_id=threat_id)
         body: dict[str, Any] = {"action": action}
         if message_ids:
@@ -377,9 +369,7 @@ class AbnormalManager:
         if not case_id:
             raise AbnormalValidationError(ERROR_MSG_MISSING_CASE_ID)
         if action not in VALID_CASE_ACTIONS:
-            raise AbnormalValidationError(
-                f"{ERROR_MSG_INVALID_CASE_ACTION} Valid: {', '.join(VALID_CASE_ACTIONS)}"
-            )
+            raise AbnormalValidationError(f"{ERROR_MSG_INVALID_CASE_ACTION} Valid: {', '.join(VALID_CASE_ACTIONS)}")
         endpoint = CASE_BY_ID_ENDPOINT.format(case_id=case_id)
         body: dict[str, Any] = {"action": action}
         return self._make_request("POST", endpoint, json_data=body)
@@ -523,8 +513,7 @@ class AbnormalManager:
         """
         if report_type not in VALID_INQUIRY_REPORT_TYPES:
             raise AbnormalValidationError(
-                f"{ERROR_MSG_INVALID_INQUIRY_REPORT_TYPE} "
-                f"Valid: {', '.join(VALID_INQUIRY_REPORT_TYPES)}"
+                f"{ERROR_MSG_INVALID_INQUIRY_REPORT_TYPE} Valid: {', '.join(VALID_INQUIRY_REPORT_TYPES)}"
             )
         if not reporter:
             raise AbnormalValidationError(ERROR_MSG_MISSING_INQUIRY_REPORTER)

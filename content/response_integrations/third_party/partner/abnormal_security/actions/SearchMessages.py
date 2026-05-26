@@ -10,7 +10,6 @@ from __future__ import annotations
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.AbnormalManager import (
     AbnormalAuthenticationError,
@@ -31,21 +30,18 @@ def main() -> None:
     siemplify.script_name = SEARCH_MESSAGES_SCRIPT_NAME
     siemplify.LOGGER.info(f"Action: {SEARCH_MESSAGES_SCRIPT_NAME} started")
 
-    api_url = extract_configuration_param(
-        siemplify,
+    api_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="API URL",
         is_mandatory=True,
         print_value=True,
     )
-    api_key = extract_configuration_param(
-        siemplify,
+    api_key = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="API Key",
         is_mandatory=True,
     )
-    verify_ssl = extract_configuration_param(
-        siemplify,
+    verify_ssl = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="Verify SSL",
         input_type=bool,
@@ -53,26 +49,31 @@ def main() -> None:
         default_value=True,
     )
 
-    start_time = extract_action_param(
-        siemplify, param_name="Start Time", is_mandatory=True, print_value=True
+    start_time = siemplify.extract_action_param(
+        param_name="Start Time",
+        is_mandatory=True,
+        print_value=True,
     )
-    end_time = extract_action_param(
-        siemplify, param_name="End Time", is_mandatory=True, print_value=True
+    end_time = siemplify.extract_action_param(
+        param_name="End Time",
+        is_mandatory=True,
+        print_value=True,
     )
-    sender_email = extract_action_param(
-        siemplify, param_name="Sender Email", is_mandatory=False, print_value=True
+    sender_email = siemplify.extract_action_param(
+        param_name="Sender Email",
+        is_mandatory=False,
+        print_value=True,
     )
-    subject = extract_action_param(
-        siemplify, param_name="Subject", is_mandatory=False, print_value=True
+    subject = siemplify.extract_action_param(
+        param_name="Subject",
+        is_mandatory=False,
+        print_value=True,
     )
-    tenant_ids_raw = extract_action_param(
-        siemplify, param_name="Tenant IDs", is_mandatory=False
+    tenant_ids_raw = siemplify.extract_action_param(
+        param_name="Tenant IDs",
+        is_mandatory=False,
     )
-    tenant_ids = (
-        [t.strip() for t in tenant_ids_raw.split(",") if t.strip()]
-        if tenant_ids_raw
-        else None
-    )
+    tenant_ids = [t.strip() for t in tenant_ids_raw.split(",") if t.strip()] if tenant_ids_raw else None
 
     result_value = False
     status = EXECUTION_STATE_FAILED
@@ -102,9 +103,7 @@ def main() -> None:
         AbnormalConnectionError,
         Exception,
     ) as e:
-        output_message = (
-            f'Error executing action "{SEARCH_MESSAGES_SCRIPT_NAME}". Reason: {e}'
-        )
+        output_message = f'Error executing action "{SEARCH_MESSAGES_SCRIPT_NAME}". Reason: {e}'
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 

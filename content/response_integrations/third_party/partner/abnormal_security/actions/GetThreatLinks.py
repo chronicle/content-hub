@@ -5,7 +5,6 @@ from __future__ import annotations
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.AbnormalManager import (
     AbnormalAuthenticationError,
@@ -23,21 +22,18 @@ def main() -> None:
     siemplify.script_name = GET_THREAT_LINKS_SCRIPT_NAME
     siemplify.LOGGER.info(f"Action: {GET_THREAT_LINKS_SCRIPT_NAME} started")
 
-    api_url = extract_configuration_param(
-        siemplify,
+    api_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="API URL",
         is_mandatory=True,
         print_value=True,
     )
-    api_key = extract_configuration_param(
-        siemplify,
+    api_key = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="API Key",
         is_mandatory=True,
     )
-    verify_ssl = extract_configuration_param(
-        siemplify,
+    verify_ssl = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="Verify SSL",
         input_type=bool,
@@ -45,8 +41,7 @@ def main() -> None:
         default_value=True,
     )
 
-    threat_id = extract_action_param(
-        siemplify,
+    threat_id = siemplify.extract_action_param(
         param_name="Threat ID",
         is_mandatory=True,
         print_value=True,
@@ -68,9 +63,7 @@ def main() -> None:
         AbnormalConnectionError,
         Exception,
     ) as e:
-        output_message = (
-            f'Error executing action "{GET_THREAT_LINKS_SCRIPT_NAME}". Reason: {e}'
-        )
+        output_message = f'Error executing action "{GET_THREAT_LINKS_SCRIPT_NAME}". Reason: {e}'
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 
