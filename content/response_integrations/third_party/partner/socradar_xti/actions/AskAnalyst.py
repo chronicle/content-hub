@@ -14,9 +14,13 @@ def main() -> None:
     verify_ssl = siemplify.extract_configuration_param(INTEGRATION_NAME, "Verify SSL", input_type=bool, default_value=True)
     alarm_id = siemplify.extract_action_param("Alarm ID", is_mandatory=True)
     comment = siemplify.extract_action_param("Comment", is_mandatory=True)
-    manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
-    result = manager.ask_analyst(alarm_id, comment)
-    siemplify.result.add_result_json(result)
-    siemplify.end(f"Question sent to analyst for alarm {alarm_id}.", True)
+    try:
+        manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
+        result = manager.ask_analyst(alarm_id, comment)
+        siemplify.result.add_result_json(result)
+        siemplify.end(f"Question sent to analyst for alarm {alarm_id}.", True)
+    except Exception as e:
+        siemplify.end(f"Action failed: {e}", False)
+
 if __name__ == "__main__":
     main()

@@ -13,9 +13,13 @@ def main() -> None:
     company_id = siemplify.extract_configuration_param(INTEGRATION_NAME, "Company ID")
     verify_ssl = siemplify.extract_configuration_param(INTEGRATION_NAME, "Verify SSL", input_type=bool, default_value=True)
     alarm_id = siemplify.extract_action_param("Alarm ID", is_mandatory=True)
-    manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
-    result = manager.get_assignee(alarm_id)
-    siemplify.result.add_result_json(result)
-    siemplify.end(f"Retrieved assignee for alarm {alarm_id}.", True)
+    try:
+        manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
+        result = manager.get_assignee(alarm_id)
+        siemplify.result.add_result_json(result)
+        siemplify.end(f"Retrieved assignee for alarm {alarm_id}.", True)
+    except Exception as e:
+        siemplify.end(f"Action failed: {e}", False)
+
 if __name__ == "__main__":
     main()

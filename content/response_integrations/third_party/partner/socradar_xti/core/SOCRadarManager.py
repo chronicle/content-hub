@@ -187,8 +187,8 @@ class SOCRadarManager:
                 )
                 page_alarms, _, _ = self._extract_alarms_data(resp)
                 pages_data[pn] = page_alarms
-            except SOCRadarManagerError:
-                pages_data[pn] = []
+            except SOCRadarManagerError as e:
+                raise SOCRadarManagerError(f"Failed to fetch page {pn}: {e}")
             time.sleep(0.3)
 
         # Build result from oldest to newest — only include required pages
@@ -237,23 +237,27 @@ class SOCRadarManager:
         return self._request("POST", "alarm/add/comment/v2", body)
 
     def add_tag(self, alarm_id: int | str, tag: str) -> dict:
-        try:
-            alarm = self.get_alarm_details(alarm_id)
-            current_tags = alarm.get("tags", [])
-            if tag in current_tags:
-                return {"is_success": True, "message": f"Tag '{tag}' is already present."}
-        except Exception as e:  # noqa: F841
-            pass  # Fallback to direct toggle if details fetch fails
+        """Add a tag to an alarm. Checks current tags first to ensure idempotency.
+
+        Raises:
+            SOCRadarManagerError: If alarm details cannot be fetched or request fails.
+        """
+        alarm = self.get_alarm_details(alarm_id)
+        current_tags = alarm.get("tags", [])
+        if tag in current_tags:
+            return {"is_success": True, "message": f"Tag '{tag}' is already present."}
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
 
     def remove_tag(self, alarm_id: int | str, tag: str) -> dict:
-        try:
-            alarm = self.get_alarm_details(alarm_id)
-            current_tags = alarm.get("tags", [])
-            if tag not in current_tags:
-                return {"is_success": True, "message": f"Tag '{tag}' is not present."}
-        except Exception as e:  # noqa: F841
-            pass  # Fallback to direct toggle if details fetch fails
+        """Remove a tag from an alarm. Checks current tags first to ensure idempotency.
+
+        Raises:
+            SOCRadarManagerError: If alarm details cannot be fetched or request fails.
+        """
+        alarm = self.get_alarm_details(alarm_id)
+        current_tags = alarm.get("tags", [])
+        if tag not in current_tags:
+            return {"is_success": True, "message": f"Tag '{tag}' is not present."}
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
 
     def change_severity(self, alarm_id: int | str, severity: str) -> dict:
@@ -286,7 +290,7 @@ class SOCRadarManager:
         return self._request("GET", "alarm/assignee_options")
 
     # -- IOC Feeds --
-    def get_ioc_feed(self, collection_uuid):
+    def get_ioc_feed(self, collection_uuid: str) -> list:
         """Fetch IOCs from a SOCRadar Threat Feed collection.
 
         Uses a different URL pattern and auth mechanism than the Incident API:
@@ -312,7 +316,7 @@ class SOCRadarManager:
                 else:
                     raise SOCRadarManagerError(f"Feed request failed after {MAX_RETRIES} attempts: {e}")
 
-    def get_multiple_ioc_feeds(self, collection_uuids):
+    def get_multiple_ioc_feeds(self, collection_uuids: list[str]) -> dict[str, list | dict]:
         """Fetch IOCs from multiple feed collections. Returns dict keyed by UUID."""
         results = {}
         for uuid in collection_uuids:
@@ -327,7 +331,7 @@ class SOCRadarManager:
         return results
 
     # -- IOC Enrichment --
-    def _enrichment_request(self, endpoint, body, ioc_api_key=None):
+    def _enrichment_request(self, endpoint: str, body: dict, ioc_api_key: str | None = None) -> dict:
         """Send a request to the IOC Enrichment API.
 
         Uses a separate API key (credit-based add-on) and a different URL
@@ -339,8 +343,7 @@ class SOCRadarManager:
                    "Content-Type": "application/json"}
         for attempt in range(MAX_RETRIES):
             try:
-                resp = requests.post(url, json=body, headers=headers,
-                                     verify=self.verify_ssl, timeout=60)
+                resp = self.session.post(url, json=body, headers=headers, timeout=60)
                 if resp.status_code == 401:
                     raise SOCRadarManagerError("IOC Enrichment unauthorized - check your IOC API key")
                 if resp.status_code == 404:
@@ -356,7 +359,7 @@ class SOCRadarManager:
                     raise SOCRadarManagerError(
                         f"Enrichment request failed after {MAX_RETRIES} attempts: {e}")
 
-    def enrich_indicator(self, indicator, fields=None, ioc_api_key=None):
+    def enrich_indicator(self, indicator: str, fields: list[str] | None = None, ioc_api_key: str | None = None) -> dict:
         """Enrich an indicator (IP, domain, hash, URL) via SOCRadar IOC Enrichment API.
 
         Args:
@@ -377,13 +380,13 @@ class SOCRadarManager:
             body["fields"] = ["indicator_details", "indicator_history", "indicator_relations"]
         return self._enrichment_request("ioc_enrichment/get/indicator_details", body, ioc_api_key)
 
-    def enrich_indicator_stix(self, indicator, show_credit_details=False, ioc_api_key=None):
+    def enrich_indicator_stix(self, indicator: str, show_credit_details: bool = False, ioc_api_key: str | None = None) -> dict:
         """Enrich an indicator and return results in STIX format."""
         body = {"indicator": indicator, "show_credit_details": show_credit_details}
         return self._enrichment_request("ioc_enrichment/get/indicator_details_stix", body, ioc_api_key)
 
     # -- Rapid Reputation --
-    def rapid_reputation(self, entity_value, entity_type, rapid_api_key=None):
+    def rapid_reputation(self, entity_value: str, entity_type: str, rapid_api_key: str | None = None) -> dict:
         """Quick reputation lookup for an entity (IP, hostname, URL, or hash).
 
         Uses a separate API key (add-on) and header name 'Api-Key' (not 'API-Key').
@@ -395,8 +398,7 @@ class SOCRadarManager:
         headers = {"Api-Key": key, "Accept": "application/json"}
         for attempt in range(MAX_RETRIES):
             try:
-                resp = requests.get(url, params=params, headers=headers,
-                                    verify=self.verify_ssl, timeout=30)
+                resp = self.session.get(url, params=params, headers=headers, timeout=30)
                 if resp.status_code == 401:
                     raise SOCRadarManagerError("Rapid Reputation unauthorized - check your Rapid API key")
                 resp.raise_for_status()

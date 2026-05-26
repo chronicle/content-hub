@@ -12,10 +12,14 @@ def main() -> None:
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
     company_id = siemplify.extract_configuration_param(INTEGRATION_NAME, "Company ID")
     verify_ssl = siemplify.extract_configuration_param(INTEGRATION_NAME, "Verify SSL", input_type=bool, default_value=True)
-    manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
-    result = manager.get_assignee_options()
-    siemplify.result.add_result_json(result)
-    options = result.get("data", []) if isinstance(result, dict) else []
-    siemplify.end(f"Found {len(options)} assignable users.", True)
+    try:
+        manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
+        result = manager.get_assignee_options()
+        siemplify.result.add_result_json(result)
+        options = result.get("data", []) if isinstance(result, dict) else []
+        siemplify.end(f"Found {len(options)} assignable users.", True)
+    except Exception as e:
+        siemplify.end(f"Action failed: {e}", False)
+
 if __name__ == "__main__":
     main()

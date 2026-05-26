@@ -6,6 +6,7 @@ Uses SOAR SDK (SiemplifyConnectorExecution, AlertInfo).
 """
 from __future__ import annotations
 
+import ipaddress
 import re
 import sys
 import json
@@ -38,10 +39,6 @@ HASH_SHA1 = re.compile(r"\b[a-fA-F0-9]{40}\b")
 HASH_SHA256 = re.compile(r"\b[a-fA-F0-9]{64}\b")
 MAX_INDICATORS_PER_TYPE = 50
 
-_PRIVATE_IP_PREFIXES = ("10.", "172.16.", "172.17.", "172.18.", "172.19.", "172.20.", "172.21.",
-                       "172.22.", "172.23.", "172.24.", "172.25.", "172.26.", "172.27.",
-                       "172.28.", "172.29.", "172.30.", "172.31.", "192.168.", "127.", "169.254.", "0.")
-
 
 def _split_csv(val: str | list | None) -> list[str]:
     if val is None:
@@ -54,12 +51,10 @@ def _split_csv(val: str | list | None) -> list[str]:
 
 
 def _is_public_ip(ip: str) -> bool:
-    if not ip or ip.count(".") != 3:
+    try:
+        return ipaddress.ip_address(ip).is_global
+    except ValueError:
         return False
-    for prefix in _PRIVATE_IP_PREFIXES:
-        if ip.startswith(prefix):
-            return False
-    return True
 
 
 def _extract_indicators(alarm: dict) -> dict[str, list[str]]:
@@ -325,12 +320,16 @@ def _flatten_alarm(alarm: dict) -> dict:
     if isinstance(content, dict) and content:
         # Full content as JSON for fields we don't explicitly map
         try:
-            content_json = json.dumps(content, ensure_ascii=False)
+            pruned = {}
+            for k, v in content.items():
+                s = json.dumps(v, ensure_ascii=False) if isinstance(v, (list, dict)) else str(v)
+                pruned[k] = v if len(s) <= 2000 else str(v)[:2000] + "...[truncated]"
+            content_json = json.dumps(pruned, ensure_ascii=False)
             if len(content_json) > 8000:
-                content_json = content_json[:8000] + "...[truncated]"
+                content_json = json.dumps({k: v for k, v in list(pruned.items())[:20]}, ensure_ascii=False)
             event["content_json"] = content_json
         except (TypeError, ValueError):
-            event["content_json"] = str(content)[:8000]
+            event["content_json"] = "{}"
         # Common content fields flattened individually for queryability
         for k in [
             "compromised_ips", "compromised_domains", "compromised_emails",
@@ -392,14 +391,14 @@ def main(is_test_run: bool = False) -> None:
 
         # Timestamps are stored in milliseconds internally (SOAR convention).
         # SOCRadar API expects seconds, so divide by 1000 when calling.
-        last_run = siemplify.fetch_timestamp(datetime_format=False)
-        if not last_run or last_run == 0:
+        raw_ts = siemplify.fetch_timestamp(datetime_format=False)
+        try:
+            last_run = int(raw_ts) if raw_ts else 0
+        except (ValueError, TypeError):
+            last_run = 0
+        if last_run <= 0:
             last_run = (int(time.time()) - (DEFAULT_DAYS_BACKWARDS * 86400)) * 1000
             siemplify.LOGGER.info(f"No saved timestamp, defaulting to {DEFAULT_DAYS_BACKWARDS} day(s) back")
-        try:
-            last_run = int(last_run)
-        except (ValueError, TypeError):
-            last_run = (int(time.time()) - (DEFAULT_DAYS_BACKWARDS * 86400)) * 1000
         siemplify.LOGGER.info(f"Fetching alarms since epoch (ms): {last_run}")
 
         alarms, total = manager.get_all_incidents(

@@ -17,7 +17,8 @@ def main() -> None:
         manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
         result = manager.get_alarm_details(alarm_id)
         siemplify.result.add_result_json(result)
-        title = result.get("alarm_type_details", {}).get("alarm_generic_title", alarm_id)
+        atd = result.get("alarm_type_details") or {}
+        title = atd.get("alarm_generic_title", alarm_id) if isinstance(atd, dict) else alarm_id
         siemplify.end(f"Retrieved details for alarm: {title}", True)
     except Exception as e:
         siemplify.end(f"Action failed: {e}", False)

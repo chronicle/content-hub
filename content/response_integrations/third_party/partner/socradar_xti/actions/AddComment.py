@@ -15,9 +15,13 @@ def main() -> None:
     alarm_id = siemplify.extract_action_param("Alarm ID", is_mandatory=True)
     comment = siemplify.extract_action_param("Comment", is_mandatory=True)
     user_email = siemplify.extract_action_param("User Email", default_value="")
-    manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
-    result = manager.add_comment(alarm_id, comment, user_email)
-    siemplify.result.add_result_json(result)
-    siemplify.end(f"Comment added to alarm {alarm_id}.", True)
+    try:
+        manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
+        result = manager.add_comment(alarm_id, comment, user_email)
+        siemplify.result.add_result_json(result)
+        siemplify.end(f"Comment added to alarm {alarm_id}.", True)
+    except Exception as e:
+        siemplify.end(f"Action failed: {e}", False)
+
 if __name__ == "__main__":
     main()
