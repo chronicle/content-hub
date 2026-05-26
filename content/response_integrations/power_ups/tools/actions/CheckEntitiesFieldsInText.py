@@ -192,9 +192,14 @@ def main() -> None:
             unique_entity_identifiers = list(
                 set([x.identifier for x in successfull_entities]),
             )
-            output_message += "Successfully processed entities:\n   {}".format(
-                "\n   ".join(unique_entity_identifiers),
-            )
+            if execution_scope.value == ExecutionScope.Alert.value:
+                output_message += "Successfully processed entities:\n   {}".format(
+                    "\n   ".join(unique_entity_identifiers),
+                )
+            else:
+                output_message += "Successfully processed entities for all alert(s):\n   {}".format(
+                    "\n   ".join(unique_entity_identifiers),
+                )
         else:
             output_message += "No entities were processed."
 
