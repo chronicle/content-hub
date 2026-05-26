@@ -32,7 +32,8 @@ import json
 import os
 import uuid
 from soar_sdk.SiemplifyUtils import dict_to_flat
-from soar_sdk.SiemplifyConnectors import CaseInfo, SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
 from ..core.ArcsightManager import ArcsightManager
 from ..core.exceptions import ArcsightLoginError, UnableToParseException
 from soar_sdk.FileRetentionManager import FileRetentionManager

@@ -14,7 +14,7 @@
 
 # ============================= IMPORTS ===================================== #
 from __future__ import annotations
-from soar_sdk.SiemplifyConnectors import CaseInfo
+from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
 from TIPCommon import dict_to_flat
 
 from .constants import VENDOR, PRODUCT, DEFAULT_NAME, WILDCARD, PRIORITIES

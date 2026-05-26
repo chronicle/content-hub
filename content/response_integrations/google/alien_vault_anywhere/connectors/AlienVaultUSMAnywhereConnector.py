@@ -19,7 +19,8 @@ import sys
 import arrow
 
 from ..core.AlienVaultManagerLoader import AlienVaultManagerLoader
-from soar_sdk.SiemplifyConnectors import CaseInfo, SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
 from soar_sdk.SiemplifyUtils import unix_now
 from TIPCommon import (
     dict_to_flat,
