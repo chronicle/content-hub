@@ -19,7 +19,7 @@ def main() -> None:
         options = result.get("data", []) if isinstance(result, dict) else []
         siemplify.end(f"Found {len(options)} assignable users.", True)
     except Exception as e:
-        siemplify.end(f"Action failed: {e}", False)
+        siemplify.end(f'Error executing action "Get Assignee Options". Reason: {e}', False)
 
 if __name__ == "__main__":
     main()

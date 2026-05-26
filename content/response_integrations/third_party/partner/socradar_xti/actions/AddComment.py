@@ -21,7 +21,7 @@ def main() -> None:
         siemplify.result.add_result_json(result)
         siemplify.end(f"Comment added to alarm {alarm_id}.", True)
     except Exception as e:
-        siemplify.end(f"Action failed: {e}", False)
+        siemplify.end(f'Error executing action "Add Comment". Reason: {e}', False)
 
 if __name__ == "__main__":
     main()

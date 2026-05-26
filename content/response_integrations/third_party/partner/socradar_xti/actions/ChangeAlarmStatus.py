@@ -17,9 +17,12 @@ def main() -> None:
     comments = siemplify.extract_action_param("Comments", default_value="")
     email = siemplify.extract_action_param("Email", default_value="")
     update_related = siemplify.extract_action_param("Update Related Findings", input_type=bool, default_value=True)
-    manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
-    result = manager.change_status([alarm_id], status, comments, email, update_related)
-    siemplify.result.add_result_json(result)
-    siemplify.end(f"Alarm {alarm_id} status changed to {status}.", True)
+    try:
+        manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
+        result = manager.change_status([alarm_id], status, comments, email, update_related)
+        siemplify.result.add_result_json(result)
+        siemplify.end(f"Alarm {alarm_id} status changed to {status}.", True)
+    except Exception as e:
+        siemplify.end(f'Error executing action "Change Alarm Status". Reason: {e}', False)
 if __name__ == "__main__":
     main()

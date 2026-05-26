@@ -21,7 +21,7 @@ def main() -> None:
         title = atd.get("alarm_generic_title", alarm_id) if isinstance(atd, dict) else alarm_id
         siemplify.end(f"Retrieved details for alarm: {title}", True)
     except Exception as e:
-        siemplify.end(f"Action failed: {e}", False)
+        siemplify.end(f'Error executing action "Get Alarm Details". Reason: {e}', False)
 
 if __name__ == "__main__":
     main()

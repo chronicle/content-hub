@@ -20,7 +20,7 @@ def main() -> None:
         siemplify.result.add_result_json(result)
         siemplify.end(f"Alarm {alarm_id} severity changed to {severity}.", True)
     except Exception as e:
-        siemplify.end(f"Action failed: {e}", False)
+        siemplify.end(f'Error executing action "Change Severity". Reason: {e}', False)
 
 if __name__ == "__main__":
     main()

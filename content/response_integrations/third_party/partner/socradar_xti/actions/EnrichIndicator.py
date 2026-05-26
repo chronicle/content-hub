@@ -102,7 +102,7 @@ def main() -> None:
         siemplify.end(summary, True)
     
     except Exception as e:
-        siemplify.end(f"Action failed: {e}", False)
+        siemplify.end(f'Error executing action "Enrich Indicator". Reason: {e}', False)
 
 
 if __name__ == "__main__":

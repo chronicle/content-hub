@@ -19,7 +19,7 @@ def main() -> None:
         siemplify.result.add_result_json(result)
         siemplify.end(f"Retrieved assignee for alarm {alarm_id}.", True)
     except Exception as e:
-        siemplify.end(f"Action failed: {e}", False)
+        siemplify.end(f'Error executing action "Get Assignee". Reason: {e}', False)
 
 if __name__ == "__main__":
     main()

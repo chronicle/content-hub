@@ -76,7 +76,7 @@ def main() -> None:
     
         summary = f"Reputation for {entity_type}:{entity_value}"
         if score is not None:
-            summary += f" | Score: {round(float(score), 2)}"
+            summary += f" | Score: {result.get('risk_score', 0)}"
         summary += f" | Severity: {severity}"
         if whitelisted:
             summary += " | WHITELISTED"
@@ -85,7 +85,7 @@ def main() -> None:
         siemplify.end(summary, True)
     
     except Exception as e:
-        siemplify.end(f"Action failed: {e}", False)
+        siemplify.end(f'Error executing action "Rapid Reputation". Reason: {e}', False)
 
 
 if __name__ == "__main__":

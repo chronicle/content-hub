@@ -45,7 +45,7 @@ def main() -> None:
         siemplify.end(summary, obj_count > 0)
     
     except Exception as e:
-        siemplify.end(f"Action failed: {e}", False)
+        siemplify.end(f'Error executing action "Enrich Indicator STIX". Reason: {e}', False)
 
 
 if __name__ == "__main__":
