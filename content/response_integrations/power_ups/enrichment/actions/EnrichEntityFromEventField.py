@@ -145,7 +145,8 @@ def main() -> None:
                 all_fields_to_enrich.update(enriched_fields)
         except Exception as e:
             siemplify.LOGGER.error(
-                f"Failed to process alert {getattr(alert, 'identifier', alert)}: {e}"
+                "Failed to process alert "
+                f"{getattr(alert, 'identifier', alert)}: {e}"
             )
 
     count_updated_entities: int = len(updated_entities)
@@ -153,9 +154,19 @@ def main() -> None:
     if count_updated_entities > 0:
         siemplify.update_entities(updated_entities)
 
+    if execution_scope.value == ExecutionScope.Alert.value:
+        output_message = (
+            f"{count_updated_entities} entities were successfully enriched"
+        )
+    else:
+        output_message = (
+            f"{count_updated_entities} entities were successfully enriched "
+            "for all case open alerts"
+        )
+
     siemplify.result.add_result_json(json.dumps(all_fields_to_enrich))
     siemplify.end(
-        f"{count_updated_entities} entities were successfully were enriched",
+        output_message,
         count_updated_entities,
         EXECUTION_STATE_COMPLETED,
     )

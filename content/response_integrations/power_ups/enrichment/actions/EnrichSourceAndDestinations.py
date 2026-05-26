@@ -238,12 +238,18 @@ def main() -> None:
             updated_entities.extend(updated)
         except Exception as e:
             siemplify.LOGGER.error(
-                f"Failed to process alert {getattr(target_alert, 'identifier', target_alert)}: {e}"
+                "Failed to process alert "
+                f"{getattr(target_alert, 'identifier', target_alert)}: {e}"
             )
 
     siemplify.update_entities(updated_entities)
     status: int = EXECUTION_STATE_COMPLETED
-    output_message: str = "output message : Enrichment added."
+
+    if execution_scope.value == ExecutionScope.Alert.value:
+        output_message = "Enrichment added."
+    else:
+        output_message = "Enrichment added for all case open alerts."
+
     result_value: str | None = None
 
     siemplify.LOGGER.info(
