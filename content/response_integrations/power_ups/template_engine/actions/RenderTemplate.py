@@ -91,17 +91,23 @@ def extract_context_data(
         target_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
 
     for alert in target_alerts:
-        entities_source = (
-            getattr(siemplify, "target_entities", []) or []
-            if execution_scope.value == ExecutionScope.Alert.value
-            else getattr(alert, "entities", [])
-        )
-        extracted_events, extracted_entities = _extract_alert_data(
-            alert,
-            entities_source,
-        )
-        events.extend(extracted_events)
-        entities.update(extracted_entities)
+        try:
+            entities_source = (
+                getattr(siemplify, "target_entities", []) or []
+                if execution_scope.value == ExecutionScope.Alert.value
+                else getattr(alert, "entities", [])
+            )
+            extracted_events, extracted_entities = _extract_alert_data(
+                alert,
+                entities_source,
+            )
+            events.extend(extracted_events)
+            entities.update(extracted_entities)
+        except Exception as e:
+            siemplify.LOGGER.error(
+                "Failed to process alert "
+                f"{getattr(alert, 'identifier', alert)}: {e}"
+            )
 
     return {
         "SiemplifyEvents": events,
@@ -196,6 +202,12 @@ def main():
             siemplify.LOGGER.info("Unable to load CustomFilters")
             siemplify.LOGGER.info(e)
 
+        success_message = (
+            "Successfully rendered the template."
+            if execution_scope.value == ExecutionScope.Alert.value
+            else "Successfully rendered the template for all case open alerts."
+        )
+
         if isinstance(input_json, list):
             result_value = ""
             if jinja:
@@ -206,7 +218,7 @@ def main():
                 if include_case_data:
                     entry.update(case_data)
                 result_value += template.render(entry, input_json=entry)
-                output_message = "Successfully rendered the template."
+                output_message = success_message
         elif isinstance(input_json, dict):
             if include_case_data:
                 input_json.update(case_data)
@@ -215,7 +227,7 @@ def main():
             else:
                 template = jinja_env.from_string(template)
             result_value = template.render(input_json=input_json)
-            output_message = "Successfully rendered the template."
+            output_message = success_message
         else:
             siemplify.LOGGER.error("Incorrect type.  Needs to be a list or dict.")
 
