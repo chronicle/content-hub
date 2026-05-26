@@ -8,7 +8,7 @@ from ..core.SOCRadarManager import SOCRadarManager
 INTEGRATION_NAME = "SOCRadar"
 
 
-def _score_to_severity(score):
+def _score_to_severity(score: float | list | None) -> str:
     """Convert numeric score to severity label.
     CRITICAL: 75-100, HIGH: 50-74, MEDIUM: 25-49, LOW: 0-24
     """

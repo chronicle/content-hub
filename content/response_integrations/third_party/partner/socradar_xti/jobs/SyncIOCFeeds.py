@@ -23,7 +23,7 @@ REFERENCE_LIST_PREFIX = "SOCRadar_IOC"
 IOC_TYPES = ["ip", "domain", "hash", "url"]
 
 
-def _parse_uuids(raw):
+def _parse_uuids(raw: str | None) -> list[str]:
     """Parse comma/newline/semicolon separated UUIDs."""
     if not raw:
         return []
@@ -49,8 +49,11 @@ def main():
                                                   input_type=bool, default_value="true")
 
         uuids_raw = siemplify.extract_job_param(INTEGRATION_NAME, "Collection UUIDs")
-        max_iocs = int(siemplify.extract_job_param(INTEGRATION_NAME, "Max IOCs Per Feed",
-                                                    default_value="5000"))
+        try:
+            max_iocs = int(siemplify.extract_job_param(INTEGRATION_NAME, "Max IOCs Per Feed",
+                                                        default_value="5000"))
+        except (ValueError, TypeError):
+            max_iocs = 5000
         list_prefix = siemplify.extract_job_param(INTEGRATION_NAME, "Reference List Prefix",
                                                    default_value=REFERENCE_LIST_PREFIX)
 

@@ -8,7 +8,7 @@ INTEGRATION_NAME = "SOCRadar"
 VALID_ENTITY_TYPES = ["ip", "hostname", "url", "hash"]
 
 
-def _score_to_severity(score):
+def _score_to_severity(score: float | None) -> str:
     """Convert numeric score to severity label.
     CRITICAL: 75-100, HIGH: 50-74, MEDIUM: 25-49, LOW: 0-24
     """

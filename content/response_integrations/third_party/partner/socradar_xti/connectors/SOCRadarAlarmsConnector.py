@@ -43,7 +43,7 @@ _PRIVATE_IP_PREFIXES = ("10.", "172.16.", "172.17.", "172.18.", "172.19.", "172.
                        "172.28.", "172.29.", "172.30.", "172.31.", "192.168.", "127.", "169.254.", "0.")
 
 
-def _split_csv(val):
+def _split_csv(val: str | list | None) -> list[str]:
     if val is None:
         return []
     if isinstance(val, list):
@@ -53,7 +53,7 @@ def _split_csv(val):
     return [str(i).strip() for i in items if str(i).strip()]
 
 
-def _is_public_ip(ip):
+def _is_public_ip(ip: str) -> bool:
     if not ip or ip.count(".") != 3:
         return False
     for prefix in _PRIVATE_IP_PREFIXES:
@@ -62,7 +62,7 @@ def _is_public_ip(ip):
     return True
 
 
-def _extract_indicators(alarm):
+def _extract_indicators(alarm: dict) -> dict[str, list[str]]:
     """Extract IOCs from alarm content and alarm_text. Returns dict of sorted unique lists."""
     content = alarm.get("content") if isinstance(alarm, dict) else None
     if not isinstance(content, dict):
@@ -126,7 +126,7 @@ def _extract_indicators(alarm):
     }
 
 
-def _indicators_to_events(alarm, base_event):
+def _indicators_to_events(alarm: dict, base_event: dict) -> tuple[list[dict], dict]:
     """Create one event per indicator with Siemplify entity-recognized field names.
     These get picked up by the Ontology resolver and become Entities on the case."""
     indicators = _extract_indicators(alarm)
@@ -237,7 +237,7 @@ def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict, company_id:
     return alert_info
 
 
-def _parse_date(date_str):
+def _parse_date(date_str: str | None) -> int:
     if not date_str:
         return unix_now()
     try:
@@ -355,7 +355,10 @@ def main(is_test_run=False):
         api_key = siemplify.extract_connector_param("API Key")
         company_id = siemplify.extract_connector_param("Company ID")
         verify_ssl = siemplify.extract_connector_param("Verify SSL", default_value=True, input_type=bool)
-        max_alerts = int(siemplify.extract_connector_param("Max Alerts Per Cycle", default_value=str(DEFAULT_MAX_ALERTS)))
+        try:
+            max_alerts = int(siemplify.extract_connector_param("Max Alerts Per Cycle", default_value=str(DEFAULT_MAX_ALERTS)))
+        except (ValueError, TypeError):
+            max_alerts = DEFAULT_MAX_ALERTS
 
         extract_indicators = siemplify.extract_connector_param("Extract Indicators", default_value=True, input_type=bool)
 
@@ -381,10 +384,14 @@ def main(is_test_run=False):
         if not last_run or last_run == 0:
             last_run = (int(time.time()) - (DEFAULT_DAYS_BACKWARDS * 86400)) * 1000
             siemplify.LOGGER.info(f"No saved timestamp, defaulting to {DEFAULT_DAYS_BACKWARDS} day(s) back")
+        try:
+            last_run = int(last_run)
+        except (ValueError, TypeError):
+            last_run = (int(time.time()) - (DEFAULT_DAYS_BACKWARDS * 86400)) * 1000
         siemplify.LOGGER.info(f"Fetching alarms since epoch (ms): {last_run}")
 
         alarms, total = manager.get_all_incidents(
-            start_date=int(last_run / 1000),
+            start_date=last_run // 1000,
             limit=max_alerts,
             severities=severities, status=status,
             alarm_main_types=main_types, alarm_sub_types=sub_types,

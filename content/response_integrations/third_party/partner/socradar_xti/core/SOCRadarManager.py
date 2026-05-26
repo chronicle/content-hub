@@ -157,13 +157,16 @@ class SOCRadarManager:
         if not first_data and total_records == 0:
             return [], 0
 
-        # If API didn't give us a page count, infer from total_records
-        if total_pages <= 1:
-            try:
-                if int(total_records) > len(first_data):
-                    total_pages = math.ceil(int(total_records) / PAGE_LIMIT)
-            except (ValueError, TypeError):
+        # Always recalculate total_pages based on PAGE_LIMIT, since the API may
+        # return total_pages based on a different default limit (e.g. 5 vs 100).
+        try:
+            tr = int(total_records)
+            if tr > PAGE_LIMIT:
+                total_pages = math.ceil(tr / PAGE_LIMIT)
+            elif tr > 0:
                 total_pages = 1
+        except (ValueError, TypeError):
+            total_pages = max(total_pages, 1)
 
         pages_data: dict[int, list] = {1: first_data}
 
@@ -203,12 +206,16 @@ class SOCRadarManager:
         return alarms[0]
 
     # -- Actions --
-    def change_status(self, alarm_ids, status, comments="", email="",
-                      update_related_finding_status=True):
+    def change_status(self, alarm_ids: list | str | int, status: str | int, comments: str = "", email: str = "",
+                      update_related_finding_status: bool = True) -> dict:
         if isinstance(status, str):
             status_code = STATUS_CODES.get(status.upper())
             if status_code is None:
-                raise SOCRadarManagerError(f"Invalid status: {status}. Valid: {list(STATUS_CODES.keys())}")
+                # Try parsing as numeric string (e.g. "2")
+                try:
+                    status_code = int(status)
+                except ValueError:
+                    raise SOCRadarManagerError(f"Invalid status: {status}. Valid: {list(STATUS_CODES.keys())}")
         else:
             status_code = int(status)
         if isinstance(alarm_ids, (str, int)):

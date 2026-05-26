@@ -20,8 +20,11 @@ def main():
                                                        input_type=bool, default_value=True)
 
     uuids_raw = siemplify.extract_action_param("Collection UUIDs", is_mandatory=True)
-    max_iocs = int(siemplify.extract_action_param("Max IOCs Per Feed", is_mandatory=False,
-                                                   default_value="1000"))
+    try:
+        max_iocs = int(siemplify.extract_action_param("Max IOCs Per Feed", is_mandatory=False,
+                                                       default_value="1000"))
+    except (ValueError, TypeError):
+        max_iocs = 1000
     ioc_type_filter = siemplify.extract_action_param("IOC Type Filter", is_mandatory=False,
                                                       default_value="")
 
