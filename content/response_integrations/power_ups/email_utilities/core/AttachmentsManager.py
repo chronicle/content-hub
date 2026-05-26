@@ -41,18 +41,7 @@ class AttachmentsManager:
         self.siemplify = siemplify
         self.logger = siemplify.LOGGER
         self.alert_entities = self.get_alert_entities()
-        self._attachments = None
-
-    @property
-    def attachments(self) -> list[SingleJson]:
-        """Get attachments metadata lazily from case wall.
-
-        Returns:
-            The list of attachments.
-        """
-        if self._attachments is None:
-            self._attachments = self._get_attachments()
-        return self._attachments
+        self.attachments = self._get_attachments()
 
     def get_alert_entities(self):
         alerts = getattr(
@@ -65,7 +54,8 @@ class AttachmentsManager:
                     entities.append(entity)
             except Exception as e:
                 self.logger.error(
-                    f"Failed to retrieve entities for alert {alert.identifier}: {e}"
+                    "Failed to retrieve entities for alert "
+                    f"{alert.identifier}: {e}"
                 )
         return entities
 

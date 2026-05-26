@@ -1641,7 +1641,8 @@ class EmailManager:
                     identifiers.append(self.get_entity_original_identifier(entity))
             except Exception as e:
                 self.logger.error(
-                    f"Failed to retrieve entities for alert {alert.identifier}: {e}"
+                    "Failed to retrieve entities for alert "
+                    f"{alert.identifier}: {e}"
                 )
         return identifiers
 
@@ -1659,7 +1660,8 @@ class EmailManager:
                     identifiers.append(f"{entity.entity_type}:{orig_id}")
             except Exception as e:
                 self.logger.error(
-                    f"Failed to retrieve entities for alert {alert.identifier}: {e}"
+                    "Failed to retrieve entities for alert "
+                    f"{alert.identifier}: {e}"
                 )
         return identifiers
 
@@ -1689,7 +1691,8 @@ class EmailManager:
                     entities.append(entity)
             except Exception as e:
                 self.logger.error(
-                    f"Failed to retrieve entities for alert {alert.identifier}: {e}"
+                    "Failed to retrieve entities for alert "
+                    f"{alert.identifier}: {e}"
                 )
         return entities
 

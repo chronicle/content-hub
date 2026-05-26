@@ -88,7 +88,7 @@ class TestAttachmentsManagerScope:
         attachments_manager.siemplify.current_alert = MagicMock(identifier="alert_1")
 
         # Set up some dummy attachments
-        attachments_manager._attachments = [
+        attachments_manager.attachments = [
             {"type": 4, "alertIdentifier": "alert_1", "name": "att_1"},
             {
                 "type": 4,
@@ -112,7 +112,7 @@ class TestAttachmentsManagerScope:
         alert2 = MagicMock(identifier="alert_2")
         attachments_manager.siemplify.case.alerts = [alert1, alert2]
 
-        attachments_manager._attachments = [
+        attachments_manager.attachments = [
             {"type": 4, "alertIdentifier": "alert_1", "name": "att_1"},
             {"type": 4, "alertIdentifier": "alert_2", "name": "att_2"},
             {"type": 4, "alertIdentifier": "alert_3", "name": "att_3"},  # Not in case
