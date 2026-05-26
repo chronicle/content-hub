@@ -24,6 +24,7 @@ from TIPCommon.rest.soar_api import (
     get_installed_integrations_of_environment,
     get_siemplify_user_details,
     get_user_profile_cards,
+    save_or_update_job,
     search_cases_by_everything,
 )
 
@@ -236,3 +237,43 @@ def test_search_cases_by_everything_legacy(
     res = search_cases_by_everything(mock_chronicle_soar, {"query": "something"})
 
     assert res == {"results": [{"id": 1}, {"id": 2}]}
+
+
+def test_save_or_update_job_one_platform(
+    mocker: MockerFixture,
+    mock_get_soar_client_one_platform: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_oneplatform_client: "OnePlatformSoarApi",
+) -> None:
+    """Test save_or_update_job wrapper function validates and returns JSON under One Platform client."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"status": "success"}
+    mock_oneplatform_client.save_or_update_job = mocker.MagicMock(return_value=mock_response)
+
+    job_data = {"name": "projects/p/locations/l/instances/i/integrations/int/jobs/j/jobInstances/ji", "parameters": []}
+    res = save_or_update_job(mock_chronicle_soar, job_data)
+
+    assert res == {"status": "success"}
+    params: Any = mock_oneplatform_client.params
+    assert params.job_data == job_data
+
+
+def test_save_or_update_job_legacy(
+    mocker: MockerFixture,
+    mock_get_soar_client_legacy: MagicMock,
+    mock_chronicle_soar: MagicMock,
+    mock_legacy_client: "LegacySoarApi",
+) -> None:
+    """Test save_or_update_job wrapper function validates and returns JSON under Legacy client."""
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"status": "success"}
+    mock_legacy_client.save_or_update_job = mocker.MagicMock(return_value=mock_response)
+
+    job_data = {"name": "projects/p/locations/l/instances/i/integrations/int/jobs/j/jobInstances/ji", "parameters": []}
+    res = save_or_update_job(mock_chronicle_soar, job_data)
+
+    assert res == {"status": "success"}
+    params: Any = mock_legacy_client.params
+    assert params.job_data == job_data
