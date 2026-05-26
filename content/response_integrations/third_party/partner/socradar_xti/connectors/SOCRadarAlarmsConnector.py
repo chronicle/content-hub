@@ -371,14 +371,17 @@ def main(is_test_run=False):
 
         manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
 
+        # Timestamps are stored in milliseconds internally (SOAR convention).
+        # SOCRadar API expects seconds, so divide by 1000 when calling.
         last_run = siemplify.fetch_timestamp(datetime_format=False)
         if not last_run or last_run == 0:
-            last_run = int(time.time()) - (DEFAULT_DAYS_BACKWARDS * 86400)
+            last_run = (int(time.time()) - (DEFAULT_DAYS_BACKWARDS * 86400)) * 1000
             siemplify.LOGGER.info(f"No saved timestamp, defaulting to {DEFAULT_DAYS_BACKWARDS} day(s) back")
-        siemplify.LOGGER.info(f"Fetching alarms since epoch: {last_run}")
+        siemplify.LOGGER.info(f"Fetching alarms since epoch (ms): {last_run}")
 
         alarms, total = manager.get_all_incidents(
-            start_date=last_run,
+            start_date=int(last_run / 1000),
+            limit=max_alerts,
             severities=severities, status=status,
             alarm_main_types=main_types, alarm_sub_types=sub_types,
             tags=tags, assignees=assignees,
@@ -414,8 +417,8 @@ def main(is_test_run=False):
                 siemplify.save_timestamp(new_timestamp=last_processed_ts)
                 siemplify.LOGGER.info(f"Saved timestamp: {last_processed_ts} (last processed alarm)")
             elif total == 0:
-                # No alarms found at all, safe to advance to now
-                siemplify.save_timestamp(new_timestamp=int(time.time()))
+                # No alarms found at all, safe to advance to now (in ms)
+                siemplify.save_timestamp(new_timestamp=int(time.time() * 1000))
         siemplify.LOGGER.info(f"Returning {len(alerts)} alerts")
 
     except SOCRadarManagerError as e:

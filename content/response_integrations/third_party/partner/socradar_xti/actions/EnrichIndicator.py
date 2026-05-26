@@ -16,7 +16,10 @@ def _score_to_severity(score):
         return "LOW"
     if isinstance(score, list):
         score = score[0] if score else 0
-    score = float(score)
+    try:
+        score = float(score)
+    except (ValueError, TypeError):
+        return "LOW"
     if score >= 75:
         return "CRITICAL"
     if score >= 50:
@@ -65,7 +68,10 @@ def main():
         raw_score = details.get("score") if isinstance(details, dict) else None
         severity = _score_to_severity(raw_score)
         result["severity"] = severity
-        numeric_score = float(raw_score[0]) if isinstance(raw_score, list) and raw_score else (float(raw_score) if raw_score else 0)
+        try:
+            numeric_score = float(raw_score[0]) if isinstance(raw_score, list) and raw_score else (float(raw_score) if raw_score else 0)
+        except (ValueError, TypeError):
+            numeric_score = 0
         result["risk_score"] = round(numeric_score, 2)
 
     siemplify.result.add_result_json(result)

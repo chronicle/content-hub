@@ -33,12 +33,12 @@ class SOCRadarManagerError(Exception):
 
 
 class SOCRadarManager:
-    def __init__(self, api_root, api_key, company_id, verify_ssl=True):
-        self.api_root = api_root.rstrip("/")
-        self.api_key = api_key
-        self.company_id = str(company_id)
-        self.verify_ssl = verify_ssl
-        self.session = requests.Session()
+    def __init__(self, api_root: str, api_key: str, company_id: str | int, verify_ssl: bool = True) -> None:
+        self.api_root: str = api_root.rstrip("/")
+        self.api_key: str = api_key
+        self.company_id: str = str(company_id)
+        self.verify_ssl: bool = verify_ssl
+        self.session: requests.Session = requests.Session()
         self.session.headers.update({
             "API-Key": self.api_key,
             "Accept": "application/json",
@@ -46,10 +46,10 @@ class SOCRadarManager:
         })
         self.session.verify = self.verify_ssl
 
-    def _build_url(self, endpoint):
+    def _build_url(self, endpoint: str) -> str:
         return f"{self.api_root}/company/{self.company_id}/{endpoint}"
 
-    def _request(self, method, endpoint, body=None, params=None):
+    def _request(self, method: str, endpoint: str, body: dict | None = None, params: dict | None = None) -> dict:
         url = self._build_url(endpoint)
         for attempt in range(MAX_RETRIES):
             try:
@@ -147,7 +147,8 @@ class SOCRadarManager:
                 params[pname] = val
         return self._request("GET", "incidents/v4", params=params)
 
-    def get_all_incidents(self, start_date=None, end_date=None, **filters):
+    def get_all_incidents(self, start_date: int | None = None, end_date: int | None = None,
+                          limit: int | None = None, **filters) -> tuple[list, int]:
         if end_date is None:
             end_date = int(time.time())
         first_page = self.get_incidents_page(page=1, start_date=start_date, end_date=end_date, **filters)
@@ -165,7 +166,19 @@ class SOCRadarManager:
                 total_pages = 1
 
         pages_data = {1: first_data}
-        for pn in range(2, total_pages + 1):
+
+        # Determine which pages to fetch — oldest alarms are on the last pages
+        required_pages: set[int] = {1}
+        if limit is not None:
+            needed_pages = math.ceil(limit / PAGE_LIMIT) + 1
+            start_page = max(1, total_pages - needed_pages + 1)
+            required_pages.update(range(start_page, total_pages + 1))
+        else:
+            required_pages.update(range(2, total_pages + 1))
+
+        for pn in sorted(required_pages):
+            if pn == 1:
+                continue
             try:
                 resp = self.get_incidents_page(
                     page=pn, start_date=start_date, end_date=end_date, **filters
@@ -176,9 +189,10 @@ class SOCRadarManager:
                 pages_data[pn] = []
             time.sleep(0.3)
 
-        all_alarms = []
+        all_alarms: list = []
         for pn in range(total_pages, 0, -1):
-            all_alarms.extend(reversed(pages_data.get(pn, [])))
+            if pn in pages_data:
+                all_alarms.extend(reversed(pages_data[pn]))
         return all_alarms, total_records
 
     def get_alarm_details(self, alarm_id):
@@ -215,12 +229,24 @@ class SOCRadarManager:
             body["user_email"] = user_email
         return self._request("POST", "alarm/add/comment/v2", body)
 
-    def add_tag(self, alarm_id, tag):
+    def add_tag(self, alarm_id: int | str, tag: str) -> dict:
+        try:
+            alarm = self.get_alarm_details(alarm_id)
+            current_tags = alarm.get("tags", [])
+            if tag in current_tags:
+                return {"is_success": True, "message": f"Tag '{tag}' is already present."}
+        except Exception:
+            pass  # Fallback to direct toggle if details fetch fails
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
 
-    def remove_tag(self, alarm_id, tag):
-        # /alarm/tag is a single toggle endpoint per OpenAPI spec.
-        # The API resolves add-vs-remove based on whether the tag is currently present.
+    def remove_tag(self, alarm_id: int | str, tag: str) -> dict:
+        try:
+            alarm = self.get_alarm_details(alarm_id)
+            current_tags = alarm.get("tags", [])
+            if tag not in current_tags:
+                return {"is_success": True, "message": f"Tag '{tag}' is not present."}
+        except Exception:
+            pass  # Fallback to direct toggle if details fetch fails
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
 
     def change_severity(self, alarm_id, severity):

@@ -14,7 +14,10 @@ def _score_to_severity(score):
     """
     if score is None:
         return "LOW"
-    score = float(score)
+    try:
+        score = float(score)
+    except (ValueError, TypeError):
+        return "LOW"
     if score >= 75:
         return "CRITICAL"
     if score >= 50:
@@ -60,7 +63,10 @@ def main():
     severity = _score_to_severity(score)
     if isinstance(result, dict):
         result["severity"] = severity
-        result["risk_score"] = round(float(score), 2) if score is not None else 0
+        try:
+            result["risk_score"] = round(float(score), 2) if score is not None else 0
+        except (ValueError, TypeError):
+            result["risk_score"] = 0
 
     siemplify.result.add_result_json(result)
 
