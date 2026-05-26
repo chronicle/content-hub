@@ -36,7 +36,7 @@ def _parse_uuids(raw: str | None) -> list[str]:
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyJob()
     siemplify.script_name = JOB_NAME
 

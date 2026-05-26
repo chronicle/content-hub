@@ -75,7 +75,7 @@ class SOCRadarManager:
                     raise SOCRadarManagerError(f"Request failed after {MAX_RETRIES} attempts: {e}")
 
     @staticmethod
-    def _extract_alarms_data(response):
+    def _extract_alarms_data(response: dict) -> tuple[list, int, int]:
         """Extract (alarms_list, total_records, total_pages) from a SOCRadar API response.
 
         Handles both response shapes:
@@ -98,7 +98,7 @@ class SOCRadarManager:
         return [], 0, 1
 
     # -- Connectivity --
-    def test_connectivity(self):
+    def test_connectivity(self) -> bool:
         self._request("GET", "incidents/v4", params={"page": 1, "limit": 1})
         return True
 
@@ -198,7 +198,7 @@ class SOCRadarManager:
                 all_alarms.extend(reversed(pages_data[pn]))
         return all_alarms, total_records
 
-    def get_alarm_details(self, alarm_id):
+    def get_alarm_details(self, alarm_id: int | str) -> dict:
         resp = self.get_incidents_page(alarm_ids=[int(alarm_id)], limit=1)
         alarms, _, _ = self._extract_alarms_data(resp)
         if not alarms:
@@ -230,7 +230,7 @@ class SOCRadarManager:
             body["email"] = email
         return self._request("POST", "alarms/status/change", body)
 
-    def add_comment(self, alarm_id, comment, user_email=""):
+    def add_comment(self, alarm_id: int | str, comment: str, user_email: str = "") -> dict:
         body = {"alarm_id": int(alarm_id), "comment": comment}
         if user_email:
             body["user_email"] = user_email
@@ -242,7 +242,7 @@ class SOCRadarManager:
             current_tags = alarm.get("tags", [])
             if tag in current_tags:
                 return {"is_success": True, "message": f"Tag '{tag}' is already present."}
-        except Exception:
+        except Exception as e:  # noqa: F841
             pass  # Fallback to direct toggle if details fetch fails
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
 
@@ -252,11 +252,11 @@ class SOCRadarManager:
             current_tags = alarm.get("tags", [])
             if tag not in current_tags:
                 return {"is_success": True, "message": f"Tag '{tag}' is not present."}
-        except Exception:
+        except Exception as e:  # noqa: F841
             pass  # Fallback to direct toggle if details fetch fails
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
 
-    def change_severity(self, alarm_id, severity):
+    def change_severity(self, alarm_id: int | str, severity: str) -> dict:
         if not isinstance(severity, str):
             raise SOCRadarManagerError("Severity must be a string")
         severity = severity.upper()
@@ -264,13 +264,13 @@ class SOCRadarManager:
             raise SOCRadarManagerError(f"Invalid severity: {severity}. Valid: {VALID_SEVERITIES}")
         return self._request("POST", "alarm/severity", {"alarm_id": int(alarm_id), "severity": severity})
 
-    def ask_analyst(self, alarm_id, comment):
+    def ask_analyst(self, alarm_id: int | str, comment: str) -> dict:
         return self._request("POST", "incidents/ask/analyst/v2", {"alarm_id": int(alarm_id), "comment": comment})
 
-    def get_assignee(self, alarm_id):
+    def get_assignee(self, alarm_id: int | str) -> dict:
         return self._request("GET", f"alarm/{int(alarm_id)}/assignee")
 
-    def change_assignee(self, alarm_id, user_ids=None, user_emails=None):
+    def change_assignee(self, alarm_id: int | str, user_ids: list[int] | None = None, user_emails: list[str] | None = None) -> dict:
         if not user_ids and not user_emails:
             raise SOCRadarManagerError("At least user_ids or user_emails is required")
         body = {}
@@ -280,7 +280,7 @@ class SOCRadarManager:
             body["user_emails"] = list(user_emails)
         return self._request("POST", f"alarm/{int(alarm_id)}/assignee", body)
 
-    def get_assignee_options(self, alarm_id=None):
+    def get_assignee_options(self, alarm_id: int | str | None = None) -> dict:
         # Per OpenAPI spec the endpoint is company-scoped and does not accept alarm_id.
         # alarm_id kept as optional kwarg for backwards-compat with action signatures.
         return self._request("GET", "alarm/assignee_options")
@@ -291,6 +291,9 @@ class SOCRadarManager:
 
         Uses a different URL pattern and auth mechanism than the Incident API:
         GET /threat/intelligence/feed_list/{UUID}.json?key={api_key}&v=2
+
+        Raises:
+            SOCRadarManagerError: If the feed is not found or the request fails.
         """
         url = f"{self.api_root}/threat/intelligence/feed_list/{collection_uuid}.json"
         params = {"key": self.api_key, "v": "2"}
@@ -363,6 +366,9 @@ class SOCRadarManager:
                      indicator_relations, indicator_ai_insight.
                      None returns all except AI insight.
             ioc_api_key: Separate API key for enrichment (credit-based).
+
+        Raises:
+            SOCRadarManagerError: If the request fails or API key is invalid.
         """
         body = {"indicator": indicator}
         if fields:

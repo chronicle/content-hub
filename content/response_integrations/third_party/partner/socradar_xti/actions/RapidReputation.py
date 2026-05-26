@@ -28,7 +28,7 @@ def _score_to_severity(score: float | None) -> str:
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = "SOCRadar - Rapid Reputation"
 

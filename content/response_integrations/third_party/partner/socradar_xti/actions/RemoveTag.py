@@ -5,7 +5,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 from ..core.SOCRadarManager import SOCRadarManager
 INTEGRATION_NAME = "SOCRadar"
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = "SOCRadar - Remove Tag"
     api_root = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Root")

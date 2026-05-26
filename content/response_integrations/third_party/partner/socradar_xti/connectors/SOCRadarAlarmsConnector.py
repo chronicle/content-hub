@@ -357,7 +357,7 @@ def _flatten_alarm(alarm: dict) -> dict:
 
 
 @output_handler
-def main(is_test_run=False):
+def main(is_test_run: bool = False) -> None:
     siemplify = SiemplifyConnectorExecution()
     siemplify.script_name = CONNECTOR_NAME
     alerts = []

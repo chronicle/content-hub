@@ -8,7 +8,7 @@ INTEGRATION_NAME = "SOCRadar"
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = "SOCRadar - Enrich Indicator (STIX)"
 
