@@ -1,0 +1,366 @@
+"""
+SOCRadar Manager
+================
+API wrapper for SOCRadar REST API v4.
+Used by Connector, Actions, and Jobs.
+
+Base URL: https://platform.socradar.com/api
+Auth: Header -> API-Key: {api_key}
+"""
+
+import json
+import math
+import time
+import requests
+
+
+STATUS_CODES = {
+    "OPEN": 0, "INVESTIGATING": 1, "RESOLVED": 2, "PENDING_INFO": 4,
+    "LEGAL_REVIEW": 5, "VENDOR_ASSESSMENT": 6, "FALSE_POSITIVE": 9,
+    "DUPLICATE": 10, "PROCESSED_INTERNALLY": 11, "MITIGATED": 12,
+    "NOT_APPLICABLE": 13,
+}
+STATUS_NAMES = {v: k for k, v in STATUS_CODES.items()}
+VALID_SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+PAGE_LIMIT = 100
+MAX_RETRIES = 3
+RETRY_DELAY = 2
+
+
+class SOCRadarManagerError(Exception):
+    pass
+
+
+class SOCRadarManager:
+    def __init__(self, api_root, api_key, company_id, verify_ssl=True):
+        self.api_root = api_root.rstrip("/")
+        self.api_key = api_key
+        self.company_id = str(company_id)
+        self.verify_ssl = verify_ssl
+        self.session = requests.Session()
+        self.session.headers.update({
+            "API-Key": self.api_key,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        })
+        self.session.verify = self.verify_ssl
+
+    def _build_url(self, endpoint):
+        return f"{self.api_root}/company/{self.company_id}/{endpoint}"
+
+    def _request(self, method, endpoint, body=None, params=None):
+        url = self._build_url(endpoint)
+        for attempt in range(MAX_RETRIES):
+            try:
+                if method == "POST":
+                    resp = self.session.post(url, json=body, timeout=30)
+                else:
+                    resp = self.session.get(url, params=params, timeout=30)
+                if resp.status_code == 401:
+                    raise SOCRadarManagerError("Unauthorized - check your API key")
+                if resp.status_code == 403:
+                    raise SOCRadarManagerError("Forbidden - insufficient permissions")
+                if resp.status_code == 404:
+                    raise SOCRadarManagerError("Not Found - check company ID or endpoint")
+                resp.raise_for_status()
+                data = resp.json()
+                if "is_success" in data and not data["is_success"]:
+                    raise SOCRadarManagerError(f"API error: {data.get('message', 'Unknown')}")
+                return data
+            except requests.exceptions.RequestException as e:
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(RETRY_DELAY * (attempt + 1))
+                else:
+                    raise SOCRadarManagerError(f"Request failed after {MAX_RETRIES} attempts: {e}")
+
+    @staticmethod
+    def _extract_alarms_data(response):
+        """Extract (alarms_list, total_records, total_pages) from a SOCRadar API response.
+
+        Handles both response shapes:
+          A) { "data": [ {alarm}, {alarm}, ... ] }                              -- legacy/flat
+          B) { "data": { "alarms": [...], "total_records": N, "total_pages": M } } -- current
+        """
+        data_field = response.get("data", [])
+        if isinstance(data_field, list):
+            return data_field, response.get("total_records", len(data_field)), 1
+        if isinstance(data_field, dict):
+            alarms = (
+                data_field.get("alarms")
+                or data_field.get("incidents")
+                or data_field.get("items")
+                or []
+            )
+            total_records = data_field.get("total_records") or data_field.get("total") or len(alarms)
+            total_pages = data_field.get("total_pages") or 1
+            return alarms, total_records, total_pages
+        return [], 0, 1
+
+    # -- Connectivity --
+    def test_connectivity(self):
+        self._request("GET", "incidents/v4", params={"page": 1, "limit": 1})
+        return True
+
+    # -- Incidents --
+    def get_incidents_page(self, page=1, start_date=None, end_date=None,
+                           severities=None, status=None, alarm_main_types=None,
+                           alarm_sub_types=None, alarm_title=None,
+                           tags=None, assignees=None, alarm_type_ids=None,
+                           rule_ids=None, notification_ids=None, alarm_ids=None,
+                           excluded_status=None, excluded_alarm_main_types=None,
+                           excluded_alarm_sub_types=None, excluded_alarm_title=None,
+                           excluded_tags=None, excluded_assignees=None,
+                           excluded_alarm_type_ids=None,
+                           include_alarm_details=True, include_total_records=True,
+                           limit=PAGE_LIMIT):
+        params = {
+            "page": page, "limit": min(limit, PAGE_LIMIT),
+            "include_alarm_details": include_alarm_details,
+            "include_total_records": include_total_records,
+        }
+        if start_date is not None:
+            params["start_date"] = start_date
+        if end_date is not None:
+            params["end_date"] = end_date
+        for pname, val in [
+            ("severities", severities), ("alarm_main_types", alarm_main_types),
+            ("alarm_sub_types", alarm_sub_types), ("alarm_title", alarm_title),
+            ("tags", tags), ("assignees", assignees), ("alarm_type_ids", alarm_type_ids),
+            ("rule_ids", rule_ids), ("notification_ids", notification_ids),
+            ("alarm_ids", alarm_ids),
+        ]:
+            if val:
+                params[pname] = val
+        if status:
+            params["status"] = status
+        for pname, val in [
+            ("excluded_status", excluded_status),
+            ("excluded_alarm_main_types", excluded_alarm_main_types),
+            ("excluded_alarm_sub_types", excluded_alarm_sub_types),
+            ("excluded_alarm_title", excluded_alarm_title),
+            ("excluded_tags", excluded_tags),
+            ("excluded_assignees", excluded_assignees),
+            ("excluded_alarm_type_ids", excluded_alarm_type_ids),
+        ]:
+            if val:
+                params[pname] = val
+        return self._request("GET", "incidents/v4", params=params)
+
+    def get_all_incidents(self, start_date=None, end_date=None, **filters):
+        if end_date is None:
+            end_date = int(time.time())
+        first_page = self.get_incidents_page(page=1, start_date=start_date, end_date=end_date, **filters)
+        first_data, total_records, total_pages = self._extract_alarms_data(first_page)
+
+        if not first_data and total_records == 0:
+            return [], 0
+
+        # If API didn't give us a page count, infer from total_records
+        if total_pages <= 1 and total_records > len(first_data):
+            total_pages = math.ceil(total_records / PAGE_LIMIT)
+
+        pages_data = {1: first_data}
+        for pn in range(2, total_pages + 1):
+            try:
+                resp = self.get_incidents_page(
+                    page=pn, start_date=start_date, end_date=end_date, **filters
+                )
+                page_alarms, _, _ = self._extract_alarms_data(resp)
+                pages_data[pn] = page_alarms
+            except SOCRadarManagerError:
+                pages_data[pn] = []
+            time.sleep(0.3)
+
+        all_alarms = []
+        for pn in range(total_pages, 0, -1):
+            all_alarms.extend(reversed(pages_data.get(pn, [])))
+        return all_alarms, total_records
+
+    def get_alarm_details(self, alarm_id):
+        resp = self.get_incidents_page(alarm_ids=[int(alarm_id)], limit=1)
+        alarms, _, _ = self._extract_alarms_data(resp)
+        if not alarms:
+            raise SOCRadarManagerError(f"Alarm {alarm_id} not found")
+        return alarms[0]
+
+    # -- Actions --
+    def change_status(self, alarm_ids, status, comments="", email="",
+                      update_related_finding_status=True):
+        if isinstance(status, str):
+            status_code = STATUS_CODES.get(status.upper())
+            if status_code is None:
+                raise SOCRadarManagerError(f"Invalid status: {status}. Valid: {list(STATUS_CODES.keys())}")
+        else:
+            status_code = int(status)
+        if isinstance(alarm_ids, (str, int)):
+            alarm_ids = [str(alarm_ids)]
+        else:
+            alarm_ids = [str(a) for a in alarm_ids]
+        body = {"alarm_ids": alarm_ids, "status": status_code,
+                "update_related_finding_status": update_related_finding_status}
+        if comments:
+            body["comments"] = comments
+        if email:
+            body["email"] = email
+        return self._request("POST", "alarms/status/change", body)
+
+    def add_comment(self, alarm_id, comment, user_email=""):
+        body = {"alarm_id": int(alarm_id), "comment": comment}
+        if user_email:
+            body["user_email"] = user_email
+        return self._request("POST", "alarm/add/comment/v2", body)
+
+    def add_tag(self, alarm_id, tag):
+        return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
+
+    def remove_tag(self, alarm_id, tag):
+        # /alarm/tag is a single toggle endpoint per OpenAPI spec.
+        # The API resolves add-vs-remove based on whether the tag is currently present.
+        return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
+
+    def change_severity(self, alarm_id, severity):
+        severity = severity.upper()
+        if severity not in VALID_SEVERITIES:
+            raise SOCRadarManagerError(f"Invalid severity: {severity}. Valid: {VALID_SEVERITIES}")
+        return self._request("POST", "alarm/severity", {"alarm_id": int(alarm_id), "severity": severity})
+
+    def ask_analyst(self, alarm_id, comment):
+        return self._request("POST", "incidents/ask/analyst/v2", {"alarm_id": int(alarm_id), "comment": comment})
+
+    def get_assignee(self, alarm_id):
+        return self._request("GET", f"alarm/{int(alarm_id)}/assignee")
+
+    def change_assignee(self, alarm_id, user_ids=None, user_emails=None):
+        if not user_ids and not user_emails:
+            raise SOCRadarManagerError("At least user_ids or user_emails is required")
+        body = {}
+        if user_ids:
+            body["user_ids"] = [int(uid) for uid in user_ids]
+        if user_emails:
+            body["user_emails"] = list(user_emails)
+        return self._request("POST", f"alarm/{int(alarm_id)}/assignee", body)
+
+    def get_assignee_options(self, alarm_id=None):
+        # Per OpenAPI spec the endpoint is company-scoped and does not accept alarm_id.
+        # alarm_id kept as optional kwarg for backwards-compat with action signatures.
+        return self._request("GET", "alarm/assignee_options")
+
+    # -- IOC Feeds --
+    def get_ioc_feed(self, collection_uuid):
+        """Fetch IOCs from a SOCRadar Threat Feed collection.
+
+        Uses a different URL pattern and auth mechanism than the Incident API:
+        GET /threat/intelligence/feed_list/{UUID}.json?key={api_key}&v=2
+        """
+        url = f"{self.api_root}/threat/intelligence/feed_list/{collection_uuid}.json"
+        params = {"key": self.api_key, "v": "2"}
+        for attempt in range(MAX_RETRIES):
+            try:
+                resp = self.session.get(url, params=params, timeout=60)
+                if resp.status_code == 401:
+                    raise SOCRadarManagerError("Unauthorized - check your API key")
+                if resp.status_code == 404:
+                    raise SOCRadarManagerError(f"Feed not found: {collection_uuid}")
+                resp.raise_for_status()
+                return resp.json()
+            except requests.exceptions.RequestException as e:
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(RETRY_DELAY * (attempt + 1))
+                else:
+                    raise SOCRadarManagerError(f"Feed request failed after {MAX_RETRIES} attempts: {e}")
+
+    def get_multiple_ioc_feeds(self, collection_uuids):
+        """Fetch IOCs from multiple feed collections. Returns dict keyed by UUID."""
+        results = {}
+        for uuid in collection_uuids:
+            uuid = uuid.strip()
+            if not uuid:
+                continue
+            try:
+                results[uuid] = self.get_ioc_feed(uuid)
+            except SOCRadarManagerError as e:
+                results[uuid] = {"error": str(e)}
+            time.sleep(0.3)
+        return results
+
+    # -- IOC Enrichment --
+    def _enrichment_request(self, endpoint, body, ioc_api_key=None):
+        """Send a request to the IOC Enrichment API.
+
+        Uses a separate API key (credit-based add-on) and a different URL
+        pattern: POST /ioc_enrichment/... with header API-Key auth.
+        """
+        key = ioc_api_key or self.api_key
+        url = f"{self.api_root}/{endpoint}"
+        headers = {"API-Key": key, "Accept": "application/json",
+                   "Content-Type": "application/json"}
+        for attempt in range(MAX_RETRIES):
+            try:
+                resp = requests.post(url, json=body, headers=headers,
+                                     verify=self.verify_ssl, timeout=60)
+                if resp.status_code == 401:
+                    raise SOCRadarManagerError("IOC Enrichment unauthorized - check your IOC API key")
+                if resp.status_code == 404:
+                    data = resp.json() if resp.text else {}
+                    msg = data.get("message", "Indicator not found")
+                    raise SOCRadarManagerError(msg)
+                resp.raise_for_status()
+                return resp.json()
+            except requests.exceptions.RequestException as e:
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(RETRY_DELAY * (attempt + 1))
+                else:
+                    raise SOCRadarManagerError(
+                        f"Enrichment request failed after {MAX_RETRIES} attempts: {e}")
+
+    def enrich_indicator(self, indicator, fields=None, ioc_api_key=None):
+        """Enrich an indicator (IP, domain, hash, URL) via SOCRadar IOC Enrichment API.
+
+        Args:
+            indicator: The IOC value to enrich.
+            fields: List of fields to request. Options:
+                     indicator_details, indicator_history,
+                     indicator_relations, indicator_ai_insight.
+                     None returns all except AI insight.
+            ioc_api_key: Separate API key for enrichment (credit-based).
+        """
+        body = {"indicator": indicator}
+        if fields:
+            body["fields"] = fields
+        else:
+            body["fields"] = ["indicator_details", "indicator_history", "indicator_relations"]
+        return self._enrichment_request("ioc_enrichment/get/indicator_details", body, ioc_api_key)
+
+    def enrich_indicator_stix(self, indicator, show_credit_details=False, ioc_api_key=None):
+        """Enrich an indicator and return results in STIX format."""
+        body = {"indicator": indicator, "show_credit_details": show_credit_details}
+        return self._enrichment_request("ioc_enrichment/get/indicator_details_stix", body, ioc_api_key)
+
+    # -- Rapid Reputation --
+    def rapid_reputation(self, entity_value, entity_type, rapid_api_key=None):
+        """Quick reputation lookup for an entity (IP, hostname, URL, or hash).
+
+        Uses a separate API key (add-on) and header name 'Api-Key' (not 'API-Key').
+        GET /threatfeed/rapid/reputation?entity_value=X&entity_type=Y
+        """
+        key = rapid_api_key or self.api_key
+        url = f"{self.api_root}/threatfeed/rapid/reputation"
+        params = {"entity_value": entity_value, "entity_type": entity_type}
+        headers = {"Api-Key": key, "Accept": "application/json"}
+        for attempt in range(MAX_RETRIES):
+            try:
+                resp = requests.get(url, params=params, headers=headers,
+                                    verify=self.verify_ssl, timeout=30)
+                if resp.status_code == 401:
+                    raise SOCRadarManagerError("Rapid Reputation unauthorized - check your Rapid API key")
+                resp.raise_for_status()
+                data = resp.json()
+                if isinstance(data, dict) and "is_success" in data and not data["is_success"]:
+                    raise SOCRadarManagerError(f"Rapid Reputation error: {data.get('message', 'Unknown')}")
+                return data
+            except requests.exceptions.RequestException as e:
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(RETRY_DELAY * (attempt + 1))
+                else:
+                    raise SOCRadarManagerError(
+                        f"Rapid Reputation request failed after {MAX_RETRIES} attempts: {e}")
