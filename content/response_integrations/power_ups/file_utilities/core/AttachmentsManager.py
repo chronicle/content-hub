@@ -56,9 +56,17 @@ class AttachmentsManager:
 
     def get_alert_entities(self):
         alerts = getattr(self.siemplify.case, "open_alerts", self.siemplify.case.alerts)
-        return [
-            entity for alert in alerts for entity in alert.entities
-        ]
+        entities = []
+        for alert in alerts:
+            try:
+                for entity in alert.entities:
+                    entities.append(entity)
+            except Exception as e:
+                self.logger.error(
+                    "Failed to retrieve entities for alert "
+                    f"{alert.identifier}: {e}"
+                )
+        return entities
 
     def get_attachments(self):
         attachments = []
@@ -113,6 +121,7 @@ class AttachmentsManager:
                 wall_item for wall_item in self.attachments if wall_item["type"] == 4
             ]
 
+        self.logger.info(f"Running in {execution_scope.name.lower()} scope")
         if execution_scope.value == ExecutionScope.Alert.value:
             return [
                 wall_item
@@ -158,7 +167,8 @@ class AttachmentsManager:
                     attachment.get(CASE_EVIDENCE_ID),
                 )
                 self.logger.error(
-                    f"Failed to get content for attachment {att_name}: {e}"
+                    "Failed to get content for attachment "
+                    f"{att_name}: {e}"
                 )
                 continue
         return processed_attachments

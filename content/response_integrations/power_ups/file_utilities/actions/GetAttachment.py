@@ -46,7 +46,12 @@ def main() -> None:
 
     siemplify.result.add_result_json(json.dumps(attachments))
 
-    siemplify.end(f"{len(attachments)} attachment(s) found", len(attachments))
+    if execution_scope.value == ExecutionScope.Alert.value:
+        output_message = f"{len(attachments)} attachment(s) found"
+    else:
+        output_message = f"{len(attachments)} attachment(s) found for all case alerts"
+
+    siemplify.end(output_message, len(attachments))
 
 
 if __name__ == "__main__":
