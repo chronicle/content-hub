@@ -16,9 +16,11 @@ import copy
 from typing import Any
 from unittest.mock import MagicMock, call
 
+import pytest
 import requests
 from pytest_mock import MockerFixture
 
+from TIPCommon.exceptions import EmptyMandatoryValues, ParameterValidationError
 from TIPCommon.rest.soar_platform_clients.one_platform_soar_api import OnePlatformSoarApi
 
 
@@ -289,3 +291,81 @@ def test_search_cases_by_everything_error_stops_pagination(
 
     assert cases == [{"id": 1}, {"id": 2}]
     assert mock_chronicle_soar.session.request.call_count == 2
+
+
+def test_save_or_update_job_success(
+    mocker: MockerFixture, mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+) -> None:
+    """Test save_or_update_job makes the correct PATCH request to One Platform API on success."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    job_data = {
+        "name": "projects/p/locations/l/instances/i/integrations/int/jobs/j/jobInstances/ji",
+        "parameters": [{"displayName": "param1", "value": "val1"}],
+    }
+    params: Any = client.params
+    params.job_data = job_data
+
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"status": "success"}
+    mock_chronicle_soar.session.request.return_value = mock_response
+
+    res = client.save_or_update_job()
+
+    assert res == mock_response
+    mock_chronicle_soar.session.request.assert_called_once_with(
+        "PATCH",
+        "https://mock-soar-api.com/integrations/int/jobs/j/jobInstances/ji",
+        params={"updateMask": "parameters"},
+        json={"parameters": [{"displayName": "param1", "value": "val1"}]},
+    )
+
+
+def test_save_or_update_job_missing_name(
+    mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+) -> None:
+    """Test save_or_update_job raises EmptyMandatoryValues if 'name' is missing."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    params: Any = client.params
+    params.job_data = {
+        "parameters": [{"displayName": "param1", "value": "val1"}],
+    }
+
+    with pytest.raises(EmptyMandatoryValues) as exc_info:
+        client.save_or_update_job()
+
+    assert "Job data must include a 'name' field" in str(exc_info.value)
+
+
+def test_save_or_update_job_missing_parameters(
+    mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+) -> None:
+    """Test save_or_update_job raises EmptyMandatoryValues if 'parameters' is missing."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    params: Any = client.params
+    params.job_data = {
+        "name": "projects/p/locations/l/instances/i/integrations/int/jobs/j/jobInstances/ji",
+    }
+
+    with pytest.raises(EmptyMandatoryValues) as exc_info:
+        client.save_or_update_job()
+
+    assert "Job data is missing 'parameters' field" in str(exc_info.value)
+
+
+def test_save_or_update_job_invalid_resource_path(
+    mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
+) -> None:
+    """Test save_or_update_job raises ParameterValidationError if 'name' does not contain 'integrations/'."""
+    client = OnePlatformSoarApi(mock_chronicle_soar)
+    params: Any = client.params
+    params.job_data = {
+        "name": "projects/p/locations/l/instances/i/jobs/j/jobInstances/ji",
+        "parameters": [{"displayName": "param1", "value": "val1"}],
+    }
+
+    with pytest.raises(ParameterValidationError) as exc_info:
+        client.save_or_update_job()
+
+    assert "Cannot parse resource path" in str(exc_info.value)
+    assert 'Invalid parameter "name"' in str(exc_info.value)
