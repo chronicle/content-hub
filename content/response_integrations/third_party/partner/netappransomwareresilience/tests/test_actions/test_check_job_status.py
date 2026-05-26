@@ -30,9 +30,7 @@ class TestCheckJobStatus:
         check_job_status.main()
 
         assert len(script_session.request_history) >= 1
-        job_requests = [
-            req for req in script_session.request_history if "job/status" in req.request.url.path
-        ]
+        job_requests = [req for req in script_session.request_history if "job/status" in req.request.url.path]
         assert len(job_requests) >= 1
 
         assert action_output.results.output_message == success_output_msg

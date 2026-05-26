@@ -291,7 +291,9 @@ class Connector(BaseConnector, ABC):
 
     @nativemethod
     def process_alerts(
-        self, filtered_alerts: list[BaseAlert], timeout_threshold: float = TIMEOUT_THRESHOLD,
+        self,
+        filtered_alerts: list[BaseAlert],
+        timeout_threshold: float = TIMEOUT_THRESHOLD,
     ) -> tuple[list[AlertInfo], list[BaseAlert]]:
         """Main alert processing loop.
         Steps for each alert object:
