@@ -165,16 +165,15 @@ class SOCRadarManager:
             except (ValueError, TypeError):
                 total_pages = 1
 
-        pages_data = {1: first_data}
+        pages_data: dict[int, list] = {1: first_data}
 
         # Determine which pages to fetch — oldest alarms are on the last pages
-        required_pages: set[int] = {1}
         if limit is not None:
             needed_pages = math.ceil(limit / PAGE_LIMIT) + 1
             start_page = max(1, total_pages - needed_pages + 1)
-            required_pages.update(range(start_page, total_pages + 1))
+            required_pages: set[int] = set(range(start_page, total_pages + 1))
         else:
-            required_pages.update(range(2, total_pages + 1))
+            required_pages = set(range(1, total_pages + 1))
 
         for pn in sorted(required_pages):
             if pn == 1:
@@ -189,9 +188,10 @@ class SOCRadarManager:
                 pages_data[pn] = []
             time.sleep(0.3)
 
+        # Build result from oldest to newest — only include required pages
         all_alarms: list = []
         for pn in range(total_pages, 0, -1):
-            if pn in pages_data:
+            if pn in required_pages and pn in pages_data:
                 all_alarms.extend(reversed(pages_data[pn]))
         return all_alarms, total_records
 

@@ -187,11 +187,15 @@ def _indicators_to_events(alarm, base_event):
     return events, indicators
 
 
-def build_alert(siemplify, alarm, company_id="", extract_indicators=True):
+def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict, company_id: str = "", extract_indicators: bool = True) -> AlertInfo:
     alarm_id = str(alarm.get("alarm_id", ""))
     atd = alarm.get("alarm_type_details") or {}
+    if not isinstance(atd, dict):
+        atd = {}
     severity = (alarm.get("alarm_risk_level") or "MEDIUM").upper()
     content = alarm.get("content") or {}
+    if not isinstance(content, dict):
+        content = {}
 
     alert_info = AlertInfo()
     alert_info.display_id = alarm_id

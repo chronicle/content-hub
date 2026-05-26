@@ -15,7 +15,7 @@ def main():
     alarm_id = siemplify.extract_action_param("Alarm ID", is_mandatory=True)
     status = siemplify.extract_action_param("Status", is_mandatory=True)
     comments = siemplify.extract_action_param("Comments", default_value="")
-    email = siemplify.extract_action_param("Analyst Email", default_value="")
+    email = siemplify.extract_action_param("Email", default_value="")
     update_related = siemplify.extract_action_param("Update Related Findings", input_type=bool, default_value=True)
     manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
     result = manager.change_status([alarm_id], status, comments, email, update_related)
