@@ -59,46 +59,50 @@ def main():
                       "Please set it in the integration configuration.", False)
         return
 
-    manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
-    result = manager.enrich_indicator(indicator, fields=fields, ioc_api_key=ioc_api_key)
-
-    # Add severity based on score
-    if isinstance(result, dict):
-        details = result.get("details", {})
-        raw_score = details.get("score") if isinstance(details, dict) else None
-        severity = _score_to_severity(raw_score)
-        result["severity"] = severity
-        try:
-            numeric_score = float(raw_score[0]) if isinstance(raw_score, list) and raw_score else (float(raw_score) if raw_score else 0)
-        except (ValueError, TypeError):
-            numeric_score = 0
-        result["risk_score"] = round(numeric_score, 2)
-
-    siemplify.result.add_result_json(result)
-
-    # Build summary
-    score_val = result.get("risk_score", "") if isinstance(result, dict) else ""
-    severity_val = result.get("severity", "") if isinstance(result, dict) else ""
-
-    summary = f"Enriched indicator: {indicator}"
-    if score_val:
-        summary += f" | Score: {score_val}"
-    if severity_val:
-        summary += f" | Severity: {severity_val}"
-
-    # Categorization summary
-    if isinstance(result, dict):
-        cats = result.get("categorization", {})
-        if isinstance(cats, dict):
-            active = [k for k, v in cats.items() if v]
-            if active:
-                summary += f" | Categories: {', '.join(active)}"
-
-    credit = result.get("api_credit", {}) if isinstance(result, dict) else {}
-    if isinstance(credit, dict) and credit.get("remaining_credit") is not None:
-        summary += f" | Credits: {credit['remaining_credit']}"
-
-    siemplify.end(summary, True)
+    try:
+        manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
+        result = manager.enrich_indicator(indicator, fields=fields, ioc_api_key=ioc_api_key)
+    
+        # Add severity based on score
+        if isinstance(result, dict):
+            details = result.get("details", {})
+            raw_score = details.get("score") if isinstance(details, dict) else None
+            severity = _score_to_severity(raw_score)
+            result["severity"] = severity
+            try:
+                numeric_score = float(raw_score[0]) if isinstance(raw_score, list) and raw_score else (float(raw_score) if raw_score else 0)
+            except (ValueError, TypeError):
+                numeric_score = 0
+            result["risk_score"] = round(numeric_score, 2)
+    
+        siemplify.result.add_result_json(result)
+    
+        # Build summary
+        score_val = result.get("risk_score", "") if isinstance(result, dict) else ""
+        severity_val = result.get("severity", "") if isinstance(result, dict) else ""
+    
+        summary = f"Enriched indicator: {indicator}"
+        if score_val:
+            summary += f" | Score: {score_val}"
+        if severity_val:
+            summary += f" | Severity: {severity_val}"
+    
+        # Categorization summary
+        if isinstance(result, dict):
+            cats = result.get("categorization", {})
+            if isinstance(cats, dict):
+                active = [k for k, v in cats.items() if v]
+                if active:
+                    summary += f" | Categories: {', '.join(active)}"
+    
+        credit = result.get("api_credit", {}) if isinstance(result, dict) else {}
+        if isinstance(credit, dict) and credit.get("remaining_credit") is not None:
+            summary += f" | Credits: {credit['remaining_credit']}"
+    
+        siemplify.end(summary, True)
+    
+    except Exception as e:
+        siemplify.end(f"Action failed: {e}", False)
 
 
 if __name__ == "__main__":

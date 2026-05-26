@@ -81,8 +81,8 @@ def main():
                 for ioc in feed_data[:max_iocs]:
                     if not isinstance(ioc, dict):
                         continue
-                    ioc_type = ioc.get("feed_type", "").lower()
-                    ioc_value = ioc.get("feed", "").strip()
+                    ioc_type = str(ioc.get("feed_type") or "").lower()
+                    ioc_value = str(ioc.get("feed") or "").strip()
                     if ioc_type in iocs_by_type and ioc_value:
                         iocs_by_type[ioc_type].add(ioc_value)
                         count += 1

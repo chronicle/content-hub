@@ -247,7 +247,19 @@ def _parse_date(date_str: str | None) -> int:
         return unix_now()
 
 
-def _flatten_alarm(alarm):
+
+
+def _parse_date_safe(date_str: str | None) -> int:
+    """Parse date string to ms timestamp. Returns 0 on failure (safe for checkpoint comparison)."""
+    if not date_str:
+        return 0
+    try:
+        dt = datetime.strptime(str(date_str), "%Y-%m-%d %H:%M:%S")
+        return int(dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
+    except (ValueError, TypeError):
+        return 0
+
+def _flatten_alarm(alarm: dict) -> dict:
     atd = alarm.get("alarm_type_details") or {}
     content = alarm.get("content") or {}
     severity = (alarm.get("alarm_risk_level") or "MEDIUM").upper()
@@ -409,7 +421,7 @@ def main(is_test_run=False):
             if not alarm_id:
                 continue
             # Track newest processed alarm timestamp for save_timestamp
-            alarm_ts = _parse_date(alarm.get("date"))
+            alarm_ts = _parse_date_safe(alarm.get("date"))
             if alarm_ts and alarm_ts > last_processed_ts:
                 last_processed_ts = alarm_ts
             try:

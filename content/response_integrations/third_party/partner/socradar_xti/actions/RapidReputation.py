@@ -52,36 +52,40 @@ def main():
                       "Please set it in the integration configuration.", False)
         return
 
-    manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
-    result = manager.rapid_reputation(entity_value, entity_type, rapid_api_key=rapid_api_key)
-
-    # Add severity based on score
-    data = result.get("data") if isinstance(result, dict) else {}
-    if not isinstance(data, dict):
-        data = {}
-    score = data.get("score")
-    severity = _score_to_severity(score)
-    if isinstance(result, dict):
-        result["severity"] = severity
-        try:
-            result["risk_score"] = round(float(score), 2) if score is not None else 0
-        except (ValueError, TypeError):
-            result["risk_score"] = 0
-
-    siemplify.result.add_result_json(result)
-
-    whitelisted = data.get("is_whitelisted", False)
-    sources = data.get("finding_sources", [])
-
-    summary = f"Reputation for {entity_type}:{entity_value}"
-    if score is not None:
-        summary += f" | Score: {round(float(score), 2)}"
-    summary += f" | Severity: {severity}"
-    if whitelisted:
-        summary += " | WHITELISTED"
-    summary += f" | {len(sources)} source(s)"
-
-    siemplify.end(summary, True)
+    try:
+        manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
+        result = manager.rapid_reputation(entity_value, entity_type, rapid_api_key=rapid_api_key)
+    
+        # Add severity based on score
+        data = result.get("data") if isinstance(result, dict) else {}
+        if not isinstance(data, dict):
+            data = {}
+        score = data.get("score")
+        severity = _score_to_severity(score)
+        if isinstance(result, dict):
+            result["severity"] = severity
+            try:
+                result["risk_score"] = round(float(score), 2) if score is not None else 0
+            except (ValueError, TypeError):
+                result["risk_score"] = 0
+    
+        siemplify.result.add_result_json(result)
+    
+        whitelisted = data.get("is_whitelisted", False)
+        sources = data.get("finding_sources", [])
+    
+        summary = f"Reputation for {entity_type}:{entity_value}"
+        if score is not None:
+            summary += f" | Score: {round(float(score), 2)}"
+        summary += f" | Severity: {severity}"
+        if whitelisted:
+            summary += " | WHITELISTED"
+        summary += f" | {len(sources)} source(s)"
+    
+        siemplify.end(summary, True)
+    
+    except Exception as e:
+        siemplify.end(f"Action failed: {e}", False)
 
 
 if __name__ == "__main__":

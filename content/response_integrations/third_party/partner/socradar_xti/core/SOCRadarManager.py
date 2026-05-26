@@ -103,7 +103,7 @@ class SOCRadarManager:
         return True
 
     # -- Incidents --
-    def get_incidents_page(self, page=1, start_date=None, end_date=None,
+    def get_incidents_page(self, page: int = 1, start_date: int | None = None, end_date: int | None = None,
                            severities=None, status=None, alarm_main_types=None,
                            alarm_sub_types=None, alarm_title=None,
                            tags=None, assignees=None, alarm_type_ids=None,

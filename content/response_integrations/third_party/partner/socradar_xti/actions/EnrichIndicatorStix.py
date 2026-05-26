@@ -29,19 +29,23 @@ def main():
                       "Please set it in the integration configuration.", False)
         return
 
-    manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
-    result = manager.enrich_indicator_stix(
-        indicator,
-        show_credit_details=(show_credits.lower() == "true"),
-        ioc_api_key=ioc_api_key
-    )
-
-    siemplify.result.add_result_json(result)
-
-    obj_count = len(result.get("objects", [])) if isinstance(result, dict) else 0
-    summary = f"Enriched indicator (STIX): {indicator} | {obj_count} STIX objects returned"
-
-    siemplify.end(summary, obj_count > 0)
+    try:
+        manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
+        result = manager.enrich_indicator_stix(
+            indicator,
+            show_credit_details=(show_credits.lower() == "true"),
+            ioc_api_key=ioc_api_key
+        )
+    
+        siemplify.result.add_result_json(result)
+    
+        obj_count = len(result.get("objects", [])) if isinstance(result, dict) else 0
+        summary = f"Enriched indicator (STIX): {indicator} | {obj_count} STIX objects returned"
+    
+        siemplify.end(summary, obj_count > 0)
+    
+    except Exception as e:
+        siemplify.end(f"Action failed: {e}", False)
 
 
 if __name__ == "__main__":

@@ -51,7 +51,7 @@ def main():
         # Apply IOC type filter if specified
         if ioc_type_filter:
             allowed_types = [t.strip().lower() for t in ioc_type_filter.split(",")]
-            feed_data = [ioc for ioc in feed_data if isinstance(ioc, dict) and ioc.get("feed_type", "").lower() in allowed_types]
+            feed_data = [ioc for ioc in feed_data if isinstance(ioc, dict) and str(ioc.get("feed_type") or "").lower() in allowed_types]
 
         # Apply max limit
         feed_data = feed_data[:max_iocs]
