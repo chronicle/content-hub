@@ -1,8 +1,9 @@
 """Get Threat Feed - Fetch IOCs from one or more SOCRadar Threat Feed collections."""
+from __future__ import annotations
 import json
-from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import output_handler
-from SOCRadarManager import SOCRadarManager
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from ..core.SOCRadarManager import SOCRadarManager
 
 INTEGRATION_NAME = "SOCRadar"
 
@@ -32,30 +33,30 @@ def main():
     manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
     all_results = manager.get_multiple_ioc_feeds(uuids)
 
-    output = {}
+    output = []
     total_iocs = 0
 
     for uuid, feed_data in all_results.items():
         if isinstance(feed_data, dict) and "error" in feed_data:
-            output[uuid] = feed_data
+            output.append({"collection_uuid": uuid, "error": feed_data["error"]})
             continue
 
         if not isinstance(feed_data, list):
-            output[uuid] = {"error": "Unexpected response format"}
+            output.append({"collection_uuid": uuid, "error": "Unexpected response format"})
             continue
 
         # Apply IOC type filter if specified
         if ioc_type_filter:
             allowed_types = [t.strip().lower() for t in ioc_type_filter.split(",")]
-            feed_data = [ioc for ioc in feed_data if ioc.get("feed_type", "").lower() in allowed_types]
+            feed_data = [ioc for ioc in feed_data if isinstance(ioc, dict) and ioc.get("feed_type", "").lower() in allowed_types]
 
         # Apply max limit
         feed_data = feed_data[:max_iocs]
-        output[uuid] = {"ioc_count": len(feed_data), "iocs": feed_data}
+        output.append({"collection_uuid": uuid, "ioc_count": len(feed_data), "iocs": feed_data})
         total_iocs += len(feed_data)
 
     siemplify.result.add_result_json(output)
-    siemplify.end(f"Fetched {total_iocs} IOCs from {len(uuids)} feed(s).", total_iocs > 0)
+    siemplify.end(f"Fetched {total_iocs} IOCs from {len(uuids)} feed(s).", True)
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ Used by Connector, Actions, and Jobs.
 Base URL: https://platform.socradar.com/api
 Auth: Header -> API-Key: {api_key}
 """
+from __future__ import annotations
 
 import json
 import math
@@ -156,8 +157,12 @@ class SOCRadarManager:
             return [], 0
 
         # If API didn't give us a page count, infer from total_records
-        if total_pages <= 1 and total_records > len(first_data):
-            total_pages = math.ceil(total_records / PAGE_LIMIT)
+        if total_pages <= 1:
+            try:
+                if int(total_records) > len(first_data):
+                    total_pages = math.ceil(int(total_records) / PAGE_LIMIT)
+            except (ValueError, TypeError):
+                total_pages = 1
 
         pages_data = {1: first_data}
         for pn in range(2, total_pages + 1):
@@ -219,6 +224,8 @@ class SOCRadarManager:
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
 
     def change_severity(self, alarm_id, severity):
+        if not isinstance(severity, str):
+            raise SOCRadarManagerError("Severity must be a string")
         severity = severity.upper()
         if severity not in VALID_SEVERITIES:
             raise SOCRadarManagerError(f"Invalid severity: {severity}. Valid: {VALID_SEVERITIES}")

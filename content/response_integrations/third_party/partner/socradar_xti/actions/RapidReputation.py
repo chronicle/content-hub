@@ -1,7 +1,8 @@
 """Rapid Reputation - Quick reputation check for an entity from SOCRadar."""
-from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import output_handler
-from SOCRadarManager import SOCRadarManager
+from __future__ import annotations
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from ..core.SOCRadarManager import SOCRadarManager
 
 INTEGRATION_NAME = "SOCRadar"
 VALID_ENTITY_TYPES = ["ip", "hostname", "url", "hash"]
@@ -52,7 +53,9 @@ def main():
     result = manager.rapid_reputation(entity_value, entity_type, rapid_api_key=rapid_api_key)
 
     # Add severity based on score
-    data = result.get("data", {}) if isinstance(result, dict) else {}
+    data = result.get("data") if isinstance(result, dict) else {}
+    if not isinstance(data, dict):
+        data = {}
     score = data.get("score")
     severity = _score_to_severity(score)
     if isinstance(result, dict):

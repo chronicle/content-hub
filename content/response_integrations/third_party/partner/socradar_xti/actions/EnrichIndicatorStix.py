@@ -1,7 +1,8 @@
 """Enrich Indicator (STIX) - Get threat intelligence in STIX format from SOCRadar."""
-from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import output_handler
-from SOCRadarManager import SOCRadarManager
+from __future__ import annotations
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from ..core.SOCRadarManager import SOCRadarManager
 
 INTEGRATION_NAME = "SOCRadar"
 

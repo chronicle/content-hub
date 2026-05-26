@@ -1,7 +1,8 @@
 """Ping - Test SOCRadar API connectivity."""
-from SiemplifyAction import SiemplifyAction
-from SiemplifyUtils import output_handler
-from SOCRadarManager import SOCRadarManager
+from __future__ import annotations
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+from ..core.SOCRadarManager import SOCRadarManager
 INTEGRATION_NAME = "SOCRadar"
 @output_handler
 def main():
@@ -11,8 +12,11 @@ def main():
     api_key = siemplify.extract_configuration_param(INTEGRATION_NAME, "API Key")
     company_id = siemplify.extract_configuration_param(INTEGRATION_NAME, "Company ID")
     verify_ssl = siemplify.extract_configuration_param(INTEGRATION_NAME, "Verify SSL", input_type=bool, default_value=True)
-    manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
-    manager.test_connectivity()
-    siemplify.end("Successfully connected to SOCRadar API.", True)
+    try:
+        manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
+        manager.test_connectivity()
+        siemplify.end("Successfully connected to the SOCRadar server with the provided connection parameters!", True)
+    except Exception as e:
+        siemplify.end(f"Failed to connect to the SOCRadar server! Error is {e}", False)
 if __name__ == "__main__":
     main()

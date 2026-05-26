@@ -4,6 +4,7 @@ SOCRadar Alarms Connector
 Chronicle SOAR native connector. Ingests SOCRadar alarms as alerts.
 Uses SOAR SDK (SiemplifyConnectorExecution, AlertInfo).
 """
+from __future__ import annotations
 
 import re
 import sys
@@ -11,11 +12,11 @@ import json
 import time
 from datetime import datetime, timezone
 
-from SiemplifyConnectors import SiemplifyConnectorExecution
-from SiemplifyConnectorsDataModel import AlertInfo
-from SiemplifyUtils import output_handler, unix_now
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
+from soar_sdk.SiemplifyUtils import output_handler, unix_now
 
-from SOCRadarManager import SOCRadarManager, SOCRadarManagerError
+from ..core.SOCRadarManager import SOCRadarManager, SOCRadarManagerError
 
 CONNECTOR_NAME = "SOCRadar Alarms Connector"
 VENDOR = "SOCRadar"
@@ -331,8 +332,10 @@ def _flatten_alarm(alarm):
         creds = content.get("credential_details")
         if creds and isinstance(creds, list) and len(creds) > 0:
             event["credential_details"] = json.dumps(creds)
-            event["credential_url"] = str(creds[0].get("URL", ""))
-            event["credential_user"] = str(creds[0].get("User", ""))
+            first_cred = creds[0]
+            if isinstance(first_cred, dict):
+                event["credential_url"] = str(first_cred.get("URL", ""))
+                event["credential_user"] = str(first_cred.get("User", ""))
 
     return event
 

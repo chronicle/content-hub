@@ -7,10 +7,11 @@ collections and writes them to Chronicle SIEM reference lists.
 Runs daily (or at configured interval). Groups IOCs by type
 (ip, domain, hash, url) and updates one reference list per type.
 """
+from __future__ import annotations
 import json
-from SiemplifyJob import SiemplifyJob
-from SiemplifyUtils import output_handler
-from SOCRadarManager import SOCRadarManager, SOCRadarManagerError
+from soar_sdk.SiemplifyJob import SiemplifyJob
+from soar_sdk.SiemplifyUtils import output_handler
+from ..core.SOCRadarManager import SOCRadarManager, SOCRadarManagerError
 
 INTEGRATION_NAME = "SOCRadar"
 JOB_NAME = "SOCRadar - Sync IOC Feeds"
