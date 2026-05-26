@@ -33,6 +33,8 @@ class SOCRadarManagerError(Exception):
 
 
 class SOCRadarManager:
+    """Manager class for interacting with the SOCRadar REST API v4."""
+
     def __init__(self, api_root: str, api_key: str, company_id: str | int, verify_ssl: bool = True) -> None:
         self.api_root: str = api_root.rstrip("/")
         self.api_key: str = api_key
@@ -64,7 +66,10 @@ class SOCRadarManager:
                 if resp.status_code == 404:
                     raise SOCRadarManagerError("Not Found - check company ID or endpoint")
                 resp.raise_for_status()
-                data = resp.json()
+                try:
+                    data = resp.json()
+                except (ValueError, json.JSONDecodeError):
+                    raise SOCRadarManagerError(f"Invalid JSON response from {url}")
                 if "is_success" in data and not data["is_success"]:
                     raise SOCRadarManagerError(f"API error: {data.get('message', 'Unknown')}")
                 return data
@@ -103,17 +108,33 @@ class SOCRadarManager:
         return True
 
     # -- Incidents --
-    def get_incidents_page(self, page: int = 1, start_date: int | None = None, end_date: int | None = None,
-                           severities=None, status=None, alarm_main_types=None,
-                           alarm_sub_types=None, alarm_title=None,
-                           tags=None, assignees=None, alarm_type_ids=None,
-                           rule_ids=None, notification_ids=None, alarm_ids=None,
-                           excluded_status=None, excluded_alarm_main_types=None,
-                           excluded_alarm_sub_types=None, excluded_alarm_title=None,
-                           excluded_tags=None, excluded_assignees=None,
-                           excluded_alarm_type_ids=None,
-                           include_alarm_details=True, include_total_records=True,
-                           limit=PAGE_LIMIT):
+    def get_incidents_page(
+        self,
+        page: int = 1,
+        start_date: int | None = None,
+        end_date: int | None = None,
+        severities: list[str] | str | None = None,
+        status: str | None = None,
+        alarm_main_types: list[str] | None = None,
+        alarm_sub_types: list[str] | None = None,
+        alarm_title: list[str] | None = None,
+        tags: list[str] | None = None,
+        assignees: list[str] | None = None,
+        alarm_type_ids: list[int] | None = None,
+        rule_ids: list[int] | None = None,
+        notification_ids: list[int] | None = None,
+        alarm_ids: list[int] | None = None,
+        excluded_status: str | None = None,
+        excluded_alarm_main_types: list[str] | None = None,
+        excluded_alarm_sub_types: list[str] | None = None,
+        excluded_alarm_title: list[str] | None = None,
+        excluded_tags: list[str] | None = None,
+        excluded_assignees: list[str] | None = None,
+        excluded_alarm_type_ids: list[int] | None = None,
+        include_alarm_details: bool = True,
+        include_total_records: bool = True,
+        limit: int = PAGE_LIMIT,
+    ) -> dict:
         params = {
             "page": page, "limit": min(limit, PAGE_LIMIT),
             "include_alarm_details": include_alarm_details,
@@ -402,7 +423,10 @@ class SOCRadarManager:
                 if resp.status_code == 401:
                     raise SOCRadarManagerError("Rapid Reputation unauthorized - check your Rapid API key")
                 resp.raise_for_status()
-                data = resp.json()
+                try:
+                    data = resp.json()
+                except (ValueError, json.JSONDecodeError):
+                    raise SOCRadarManagerError(f"Invalid JSON response from {url}")
                 if isinstance(data, dict) and "is_success" in data and not data["is_success"]:
                     raise SOCRadarManagerError(f"Rapid Reputation error: {data.get('message', 'Unknown')}")
                 return data

@@ -46,7 +46,7 @@ def main() -> None:
         api_key = siemplify.extract_job_param(INTEGRATION_NAME, "API Key")
         company_id = siemplify.extract_job_param(INTEGRATION_NAME, "Company ID")
         verify_ssl = siemplify.extract_job_param(INTEGRATION_NAME, "Verify SSL",
-                                                  input_type=bool, default_value="true")
+                                                  input_type=bool, default_value=True)
 
         uuids_raw = siemplify.extract_job_param(INTEGRATION_NAME, "Collection UUIDs")
         try:
