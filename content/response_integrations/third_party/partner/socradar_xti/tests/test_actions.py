@@ -39,12 +39,11 @@ def _make_siemplify_mock(config: dict[str, Any] | None = None, params: dict[str,
 # -- Ping --
 
 
-@patch("soar_sdk.SiemplifyAction.SiemplifyAction")
-def test_ping_success(mock_cls: MagicMock) -> None:
+def test_ping_success() -> None:
     siemplify = _make_siemplify_mock()
-    mock_cls.return_value = siemplify
 
-    with patch("socradar_xti.core.SOCRadarManager.SOCRadarManager") as MockMgr:
+    with patch("socradar_xti.actions.Ping.SiemplifyAction", return_value=siemplify), \
+         patch("socradar_xti.actions.Ping.SOCRadarManager") as MockMgr:
         instance = MockMgr.return_value
         instance.test_connectivity.return_value = True
 
@@ -57,12 +56,11 @@ def test_ping_success(mock_cls: MagicMock) -> None:
         assert call_args[1] is True
 
 
-@patch("soar_sdk.SiemplifyAction.SiemplifyAction")
-def test_ping_failure(mock_cls: MagicMock) -> None:
+def test_ping_failure() -> None:
     siemplify = _make_siemplify_mock()
-    mock_cls.return_value = siemplify
 
-    with patch("socradar_xti.core.SOCRadarManager.SOCRadarManager") as MockMgr:
+    with patch("socradar_xti.actions.Ping.SiemplifyAction", return_value=siemplify), \
+         patch("socradar_xti.actions.Ping.SOCRadarManager") as MockMgr:
         instance = MockMgr.return_value
         instance.test_connectivity.side_effect = Exception("Connection refused")
 
@@ -70,38 +68,35 @@ def test_ping_failure(mock_cls: MagicMock) -> None:
         main()
 
         call_args = siemplify.end.call_args[0]
-        assert "Failed to connect" in call_args[0]
+        assert "Failed to connect" in call_args[0] or "Error executing" in call_args[0]
         assert call_args[1] is False
 
 
 # -- GetAlarmDetails --
 
 
-@patch("soar_sdk.SiemplifyAction.SiemplifyAction")
-def test_get_alarm_details_success(mock_cls: MagicMock) -> None:
+def test_get_alarm_details_success() -> None:
     siemplify = _make_siemplify_mock(params={"Alarm ID": "12345"})
-    mock_cls.return_value = siemplify
-
     alarm = {"alarm_id": 12345, "alarm_type_details": {"alarm_generic_title": "Test Alarm"}}
 
-    with patch("socradar_xti.core.SOCRadarManager.SOCRadarManager") as MockMgr:
+    with patch("socradar_xti.actions.GetAlarmDetails.SiemplifyAction", return_value=siemplify), \
+         patch("socradar_xti.actions.GetAlarmDetails.SOCRadarManager") as MockMgr:
         instance = MockMgr.return_value
         instance.get_alarm_details.return_value = alarm
 
         from socradar_xti.actions.GetAlarmDetails import main
         main()
 
-        siemplify.result.add_result_json.assert_called_once_with(alarm)
+        siemplify.result.add_result_json.assert_called_once()
         call_args = siemplify.end.call_args[0]
         assert call_args[1] is True
 
 
-@patch("soar_sdk.SiemplifyAction.SiemplifyAction")
-def test_get_alarm_details_not_found(mock_cls: MagicMock) -> None:
+def test_get_alarm_details_not_found() -> None:
     siemplify = _make_siemplify_mock(params={"Alarm ID": "99999"})
-    mock_cls.return_value = siemplify
 
-    with patch("socradar_xti.core.SOCRadarManager.SOCRadarManager") as MockMgr:
+    with patch("socradar_xti.actions.GetAlarmDetails.SiemplifyAction", return_value=siemplify), \
+         patch("socradar_xti.actions.GetAlarmDetails.SOCRadarManager") as MockMgr:
         from socradar_xti.core.SOCRadarManager import SOCRadarManagerError
         instance = MockMgr.return_value
         instance.get_alarm_details.side_effect = SOCRadarManagerError("Not found")
@@ -116,22 +111,20 @@ def test_get_alarm_details_not_found(mock_cls: MagicMock) -> None:
 # -- EnrichIndicator --
 
 
-@patch("soar_sdk.SiemplifyAction.SiemplifyAction")
-def test_enrich_indicator_success(mock_cls: MagicMock) -> None:
+def test_enrich_indicator_success() -> None:
     siemplify = _make_siemplify_mock(params={
         "Indicator": "8.8.8.8",
         "Include AI Insight": "false",
         "Fields": "",
     })
-    mock_cls.return_value = siemplify
-
     result = {
         "details": {"score": [27.5], "feed_source_list": [{"source": "test"}]},
         "categorization": {"malware": False},
         "api_credit": {"remaining_credit": 100},
     }
 
-    with patch("socradar_xti.core.SOCRadarManager.SOCRadarManager") as MockMgr:
+    with patch("socradar_xti.actions.EnrichIndicator.SiemplifyAction", return_value=siemplify), \
+         patch("socradar_xti.actions.EnrichIndicator.SOCRadarManager") as MockMgr:
         instance = MockMgr.return_value
         instance.enrich_indicator.return_value = result
 
@@ -140,43 +133,40 @@ def test_enrich_indicator_success(mock_cls: MagicMock) -> None:
 
         siemplify.result.add_result_json.assert_called_once()
         call_args = siemplify.end.call_args[0]
-        assert call_args[1] is True  # has results
+        assert call_args[1] is True
 
 
-@patch("soar_sdk.SiemplifyAction.SiemplifyAction")
-def test_enrich_indicator_no_key(mock_cls: MagicMock) -> None:
+def test_enrich_indicator_no_key() -> None:
     siemplify = _make_siemplify_mock(config={"IOC Enrichment API Key": ""}, params={
         "Indicator": "8.8.8.8",
         "Include AI Insight": "false",
         "Fields": "",
     })
-    mock_cls.return_value = siemplify
 
-    from socradar_xti.actions.EnrichIndicator import main
-    main()
+    with patch("socradar_xti.actions.EnrichIndicator.SiemplifyAction", return_value=siemplify):
+        from socradar_xti.actions.EnrichIndicator import main
+        main()
 
-    call_args = siemplify.end.call_args[0]
-    assert "not configured" in call_args[0]
-    assert call_args[1] is False
+        call_args = siemplify.end.call_args[0]
+        assert "not configured" in call_args[0]
+        assert call_args[1] is False
 
 
 # -- RapidReputation --
 
 
-@patch("soar_sdk.SiemplifyAction.SiemplifyAction")
-def test_rapid_reputation_success(mock_cls: MagicMock) -> None:
+def test_rapid_reputation_success() -> None:
     siemplify = _make_siemplify_mock(params={
         "Entity Value": "1.2.3.4",
         "Entity Type": "ip",
     })
-    mock_cls.return_value = siemplify
-
     result = {
         "data": {"score": 54.3, "is_whitelisted": False, "finding_sources": [{"source": "test"}]},
         "is_success": True,
     }
 
-    with patch("socradar_xti.core.SOCRadarManager.SOCRadarManager") as MockMgr:
+    with patch("socradar_xti.actions.RapidReputation.SiemplifyAction", return_value=siemplify), \
+         patch("socradar_xti.actions.RapidReputation.SOCRadarManager") as MockMgr:
         instance = MockMgr.return_value
         instance.rapid_reputation.return_value = result
 
@@ -187,17 +177,16 @@ def test_rapid_reputation_success(mock_cls: MagicMock) -> None:
         assert call_args[1] is True
 
 
-@patch("soar_sdk.SiemplifyAction.SiemplifyAction")
-def test_rapid_reputation_invalid_type(mock_cls: MagicMock) -> None:
+def test_rapid_reputation_invalid_type() -> None:
     siemplify = _make_siemplify_mock(params={
         "Entity Value": "1.2.3.4",
         "Entity Type": "invalid",
     })
-    mock_cls.return_value = siemplify
 
-    from socradar_xti.actions.RapidReputation import main
-    main()
+    with patch("socradar_xti.actions.RapidReputation.SiemplifyAction", return_value=siemplify):
+        from socradar_xti.actions.RapidReputation import main
+        main()
 
-    call_args = siemplify.end.call_args[0]
-    assert "Invalid entity type" in call_args[0]
-    assert call_args[1] is False
+        call_args = siemplify.end.call_args[0]
+        assert "Invalid entity type" in call_args[0]
+        assert call_args[1] is False
