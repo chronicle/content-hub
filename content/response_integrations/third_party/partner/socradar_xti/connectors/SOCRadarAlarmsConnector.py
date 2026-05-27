@@ -484,8 +484,9 @@ def main(is_test_run: bool = False) -> None:
             # Save the newest processed alarm's timestamp (not "now") so we
             # correctly resume from where we left off even if capped by max_alerts
             if last_processed_ts > last_run:
-                siemplify.save_timestamp(new_timestamp=last_processed_ts + 1)
-                siemplify.LOGGER.info(f"Saved timestamp: {last_processed_ts + 1} (last processed alarm + 1ms)")
+                # Advance by 1 second (1000ms) since API has second-level precision
+                siemplify.save_timestamp(new_timestamp=last_processed_ts + 1000)
+                siemplify.LOGGER.info(f"Saved timestamp: {last_processed_ts + 1000} (last processed alarm + 1s)")
             elif total > 0 and last_processed_ts == last_run:
                 # All alarms are at or before last_run (rounding edge case) — advance by 1s
                 siemplify.save_timestamp(new_timestamp=last_run + 1000)
