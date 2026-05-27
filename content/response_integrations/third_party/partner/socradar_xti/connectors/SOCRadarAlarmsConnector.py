@@ -54,7 +54,7 @@ def _split_csv(val: str | list[str] | None) -> list[str]:
 def _is_public_ip(ip: str) -> bool:
     try:
         return ipaddress.ip_address(ip).is_global
-    except ValueError:
+    except (ValueError, TypeError):
         return False
 
 
@@ -88,7 +88,7 @@ def _extract_indicators(alarm: dict[str, Any]) -> dict[str, list[str]]:
     for e in _split_csv(content.get("compromised_emails")):
         emails.add(e.lower())
     if content.get("email"):
-        for e in _split_csv(_safe_str(content.get("email"))):
+        for e in _split_csv(content.get("email")):
             emails.add(e.lower())
     if content.get("url"):
         val = _safe_str(content.get("url"))
