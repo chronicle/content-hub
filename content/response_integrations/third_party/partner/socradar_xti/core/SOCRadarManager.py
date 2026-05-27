@@ -8,6 +8,7 @@ Base URL: https://platform.socradar.com/api
 Auth: Header -> API-Key: {api_key}
 """
 from __future__ import annotations
+from typing import Any
 
 import json
 import math
@@ -52,7 +53,7 @@ class SOCRadarManager:
         """Build full API URL for a company-scoped endpoint."""
         return f"{self.api_root}/company/{self.company_id}/{endpoint}"
 
-    def _request(self, method: str, endpoint: str, body: dict | None = None, params: dict | None = None) -> dict:
+    def _request(self, method: str, endpoint: str, body: dict[str, Any] | None = None, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """Send an HTTP request to the SOCRadar API with retry logic.
 
         Raises:
@@ -92,7 +93,7 @@ class SOCRadarManager:
                     raise SOCRadarManagerError(f"Request failed after {MAX_RETRIES} attempts: {e}")
 
     @staticmethod
-    def _extract_alarms_data(response: dict) -> tuple[list, int, int]:
+    def _extract_alarms_data(response: dict[str, Any]) -> tuple[list[dict[str, Any]], int, int]:
         """Extract (alarms_list, total_records, total_pages) from a SOCRadar API response.
 
         Handles both response shapes:

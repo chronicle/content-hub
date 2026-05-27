@@ -5,6 +5,7 @@ Chronicle SOAR native connector. Ingests SOCRadar alarms as alerts.
 Uses SOAR SDK (SiemplifyConnectorExecution, AlertInfo).
 """
 from __future__ import annotations
+from typing import Any
 
 import ipaddress
 import re
@@ -64,7 +65,7 @@ def _safe_str(val: str | list | None) -> str:
         return str(val[0]).strip() if val else ""
     return str(val).strip() if val else ""
 
-def _extract_indicators(alarm: dict) -> dict[str, list[str]]:
+def _extract_indicators(alarm: dict[str, Any]) -> dict[str, list[str]]:
     """Extract IOCs from alarm content and alarm_text. Returns dict of sorted unique lists."""
     content = alarm.get("content") if isinstance(alarm, dict) else None
     if not isinstance(content, dict):
@@ -139,7 +140,7 @@ def _extract_indicators(alarm: dict) -> dict[str, list[str]]:
     }
 
 
-def _indicators_to_events(alarm: dict, base_event: dict) -> tuple[list[dict], dict]:
+def _indicators_to_events(alarm: dict[str, Any], base_event: dict[str, Any]) -> tuple[list[dict], dict]:
     """Create one event per indicator with Siemplify entity-recognized field names.
     These get picked up by the Ontology resolver and become Entities on the case."""
     indicators = _extract_indicators(alarm)
@@ -200,7 +201,7 @@ def _indicators_to_events(alarm: dict, base_event: dict) -> tuple[list[dict], di
     return events, indicators
 
 
-def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict, company_id: str = "", extract_indicators: bool = True) -> AlertInfo:
+def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict[str, Any], company_id: str = "", extract_indicators: bool = True) -> AlertInfo:
     alarm_id = str(alarm.get("alarm_id", ""))
     atd = alarm.get("alarm_type_details") or {}
     if not isinstance(atd, dict):
@@ -282,7 +283,7 @@ def _parse_date_safe(date_str: str | None) -> int:
     except (ValueError, TypeError):
         return 0
 
-def _flatten_alarm(alarm: dict) -> dict:
+def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
     atd = alarm.get("alarm_type_details") or {}
     if not isinstance(atd, dict):
         atd = {}

@@ -1,5 +1,6 @@
 """Enrich Indicator - Get threat intelligence details for an IOC from SOCRadar."""
 from __future__ import annotations
+from typing import Any
 import json
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
@@ -8,7 +9,7 @@ from ..core.SOCRadarManager import SOCRadarManager
 INTEGRATION_NAME = "SOCRadar"
 
 
-def _score_to_severity(score: float | list | None) -> str:
+def _score_to_severity(score: float | list[Any] | None) -> str:
     """Convert numeric score to severity label.
     CRITICAL: 75-100, HIGH: 50-74, MEDIUM: 25-49, LOW: 0-24
     """
