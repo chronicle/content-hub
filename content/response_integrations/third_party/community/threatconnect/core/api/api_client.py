@@ -154,7 +154,7 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
                 if data:
                     results.append(IndicatorData(data))
             except Exception as e:
-                self.logger.warning(
+                self.logger.warn(
                     f"Failed to fetch data for indicator {indicator_value} "
                     f"from owner {owner}: {e}"
                 )
