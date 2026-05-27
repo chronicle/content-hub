@@ -201,7 +201,7 @@ def _indicators_to_events(alarm: dict[str, Any], base_event: dict[str, Any]) -> 
     return events, indicators
 
 
-def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict[str, Any], company_id: str = "", extract_indicators: bool = True) -> AlertInfo:
+def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict[str, Any], company_id: str = "", extract_indicators: bool = True, env_field: str = "", env_regex: str = ".*") -> AlertInfo:
     alarm_id = str(alarm.get("alarm_id", ""))
     atd = alarm.get("alarm_type_details") or {}
     if not isinstance(atd, dict):
@@ -229,9 +229,7 @@ def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict[str, Any], c
     alert_info.start_time = _parse_date(alarm.get("date"))
     alert_info.end_time = _parse_date(alarm.get("date"))
     base_event = _flatten_alarm(alarm)
-    # Environment routing from connector params
-    env_field = siemplify.extract_connector_param("Environment Field Name", default_value="")
-    env_regex = siemplify.extract_connector_param("Environment Regex Pattern", default_value=".*")
+    # Environment routing — env_field and env_regex passed as parameters
     if env_field and base_event.get(env_field):
         env_val = str(base_event[env_field])
         try:
@@ -418,6 +416,9 @@ def main(is_test_run: bool = False) -> None:
         tags = [s.strip() for s in (tags_str or "").split(",") if s.strip()] or None
         assignees = [s.strip() for s in (assignees_str or "").split(",") if s.strip()] or None
 
+        env_field = siemplify.extract_connector_param("Environment Field Name", default_value="")
+        env_regex = siemplify.extract_connector_param("Environment Regex Pattern", default_value=".*")
+
         manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
 
         # Timestamps are stored in milliseconds internally (SOAR convention).
@@ -455,7 +456,7 @@ def main(is_test_run: bool = False) -> None:
             if not alarm_id or alarm_id in processed_set:
                 continue
             try:
-                alert = build_alert(siemplify, alarm, company_id=company_id, extract_indicators=extract_indicators)
+                alert = build_alert(siemplify, alarm, company_id=company_id, extract_indicators=extract_indicators, env_field=env_field, env_regex=env_regex)
                 # Track newest processed alarm timestamp only after successful build
                 alarm_ts = _parse_date_safe(alarm.get("date"))
                 if alarm_ts and alarm_ts > last_processed_ts:
@@ -470,7 +471,7 @@ def main(is_test_run: bool = False) -> None:
         # Update processed IDs for dedup (keep last 1000)
         for alert in alerts:
             processed_set.add(alert.display_id)
-        trimmed = list(processed_set)[-1000:]
+        trimmed = sorted(processed_set)[-1000:]
         siemplify.set_connector_context_property("processed_ids", ",".join(trimmed))
 
         if not is_test_run:
