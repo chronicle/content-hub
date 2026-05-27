@@ -483,7 +483,11 @@ def main(is_test_run: bool = False) -> None:
             # correctly resume from where we left off even if capped by max_alerts
             if last_processed_ts > last_run:
                 siemplify.save_timestamp(new_timestamp=last_processed_ts + 1)
-                siemplify.LOGGER.info(f"Saved timestamp: {last_processed_ts} (last processed alarm)")
+                siemplify.LOGGER.info(f"Saved timestamp: {last_processed_ts + 1} (last processed alarm + 1ms)")
+            elif total > 0 and last_processed_ts == last_run:
+                # All alarms are at or before last_run (rounding edge case) — advance by 1s
+                siemplify.save_timestamp(new_timestamp=last_run + 1000)
+                siemplify.LOGGER.info(f"Advancing checkpoint by 1s to avoid stall")
             elif total == 0:
                 # No alarms found at all, safe to advance to now (in ms)
                 siemplify.save_timestamp(new_timestamp=int(time.time() * 1000))
