@@ -424,7 +424,7 @@ def main(is_test_run: bool = False) -> None:
 
         siemplify.LOGGER.info(f"Fetched {len(alarms)} alarms (total: {total})")
 
-        last_processed_ts = 0
+        last_processed_ts = last_run
         for alarm in alarms[:max_alerts]:
             if not isinstance(alarm, dict):
                 siemplify.LOGGER.warn(f"Skipping non-dict alarm entry: {type(alarm).__name__}")
@@ -448,7 +448,7 @@ def main(is_test_run: bool = False) -> None:
         if not is_test_run:
             # Save the newest processed alarm's timestamp (not "now") so we
             # correctly resume from where we left off even if capped by max_alerts
-            if last_processed_ts > 0:
+            if last_processed_ts > last_run:
                 siemplify.save_timestamp(new_timestamp=last_processed_ts)
                 siemplify.LOGGER.info(f"Saved timestamp: {last_processed_ts} (last processed alarm)")
             elif total == 0:

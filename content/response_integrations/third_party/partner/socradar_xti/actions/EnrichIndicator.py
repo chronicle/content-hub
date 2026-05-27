@@ -99,7 +99,8 @@ def main() -> None:
         if isinstance(credit, dict) and credit.get("remaining_credit") is not None:
             summary += f" | Credits: {credit['remaining_credit']}"
     
-        has_results = bool(result.get("details", {}).get("feed_source_list")) if isinstance(result, dict) else False
+        details = result.get("details") if isinstance(result, dict) else None
+        has_results = bool(details.get("feed_source_list")) if isinstance(details, dict) else False
         siemplify.end(summary, has_results)
     
     except Exception as e:
