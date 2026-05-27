@@ -453,7 +453,13 @@ def main(is_test_run: bool = False) -> None:
                 siemplify.LOGGER.warning(f"Skipping non-dict alarm entry: {type(alarm).__name__}")
                 continue
             alarm_id = str(alarm.get("alarm_id", ""))
-            if not alarm_id or alarm_id in processed_set:
+            if not alarm_id:
+                continue
+            # Always track timestamp even for deduped alarms
+            alarm_ts = _parse_date_safe(alarm.get("date"))
+            if alarm_ts and alarm_ts > last_processed_ts:
+                last_processed_ts = alarm_ts
+            if alarm_id in processed_set:
                 continue
             try:
                 alert = build_alert(siemplify, alarm, company_id=company_id, extract_indicators=extract_indicators, env_field=env_field, env_regex=env_regex)
@@ -471,7 +477,7 @@ def main(is_test_run: bool = False) -> None:
         # Update processed IDs for dedup (keep last 1000)
         for alert in alerts:
             processed_set.add(alert.display_id)
-        trimmed = sorted(processed_set)[-1000:]
+        trimmed = sorted(processed_set, key=lambda x: int(x) if x.isdigit() else 0)[-1000:]
         siemplify.set_connector_context_property("processed_ids", ",".join(trimmed))
 
         if not is_test_run:

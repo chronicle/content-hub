@@ -15,7 +15,7 @@ from ..core.SOCRadarManager import (
 
 
 @pytest.fixture
-def manager():
+def manager() -> SOCRadarManager:
     return SOCRadarManager(
         api_root="https://platform.socradar.com/api",
         api_key="test-api-key",
