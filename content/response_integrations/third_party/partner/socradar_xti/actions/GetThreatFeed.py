@@ -33,33 +33,36 @@ def main() -> None:
         siemplify.end("No valid UUIDs provided.", False)
         return
 
-    manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
-    all_results = manager.get_multiple_ioc_feeds(uuids)
+    try:
+        manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
+        all_results = manager.get_multiple_ioc_feeds(uuids)
 
-    output = []
-    total_iocs = 0
+        output = []
+        total_iocs = 0
 
-    for uuid, feed_data in all_results.items():
-        if isinstance(feed_data, dict) and "error" in feed_data:
-            output.append({"collection_uuid": uuid, "error": feed_data["error"]})
-            continue
+        for uuid, feed_data in all_results.items():
+            if isinstance(feed_data, dict) and "error" in feed_data:
+                output.append({"collection_uuid": uuid, "error": feed_data["error"]})
+                continue
 
-        if not isinstance(feed_data, list):
-            output.append({"collection_uuid": uuid, "error": "Unexpected response format"})
-            continue
+            if not isinstance(feed_data, list):
+                output.append({"collection_uuid": uuid, "error": "Unexpected response format"})
+                continue
 
-        # Apply IOC type filter if specified
-        if ioc_type_filter:
-            allowed_types = [t.strip().lower() for t in ioc_type_filter.split(",")]
-            feed_data = [ioc for ioc in feed_data if isinstance(ioc, dict) and str(ioc.get("feed_type") or "").lower() in allowed_types]
+            # Apply IOC type filter if specified
+            if ioc_type_filter:
+                allowed_types = [t.strip().lower() for t in ioc_type_filter.split(",")]
+                feed_data = [ioc for ioc in feed_data if isinstance(ioc, dict) and str(ioc.get("feed_type") or "").lower() in allowed_types]
 
-        # Apply max limit
-        feed_data = feed_data[:max_iocs]
-        output.append({"collection_uuid": uuid, "ioc_count": len(feed_data), "iocs": feed_data})
-        total_iocs += len(feed_data)
+            # Apply max limit
+            feed_data = feed_data[:max_iocs]
+            output.append({"collection_uuid": uuid, "ioc_count": len(feed_data), "iocs": feed_data})
+            total_iocs += len(feed_data)
 
-    siemplify.result.add_result_json(output)
-    siemplify.end(f"Fetched {total_iocs} IOCs from {len(uuids)} feed(s).", True)
+        siemplify.result.add_result_json(output)
+        siemplify.end(f"Fetched {total_iocs} IOCs from {len(uuids)} feed(s).", True)
+    except Exception as e:
+        siemplify.end(f'Error executing action "Get Threat Feed". Reason: {e}', False)
 
 
 if __name__ == "__main__":

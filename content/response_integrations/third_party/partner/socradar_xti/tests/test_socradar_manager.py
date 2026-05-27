@@ -145,17 +145,33 @@ def test_add_comment(manager):
 
 
 def test_add_tag(manager):
-    with patch.object(manager, "_request", return_value={"is_success": True}) as mock:
-        manager.add_tag(123, "test-tag")
-        call_body = mock.call_args[0][2]
-        assert call_body["tag"] == "test-tag"
+    with patch.object(manager, "get_alarm_details", return_value={"tags": []}):
+        with patch.object(manager, "_request", return_value={"is_success": True}) as mock:
+            manager.add_tag(123, "test-tag")
+            call_body = mock.call_args[0][2]
+            assert call_body["tag"] == "test-tag"
 
 
-def test_remove_tag_is_toggle(manager):
-    with patch.object(manager, "_request", return_value={"is_success": True}) as mock:
-        manager.remove_tag(123, "test-tag")
-        call_body = mock.call_args[0][2]
-        assert call_body["tag"] == "test-tag"
+def test_add_tag_already_present(manager):
+    with patch.object(manager, "get_alarm_details", return_value={"tags": ["test-tag"]}):
+        result = manager.add_tag(123, "test-tag")
+        assert result["is_success"] is True
+        assert "already present" in result["message"]
+
+
+def test_remove_tag(manager):
+    with patch.object(manager, "get_alarm_details", return_value={"tags": ["test-tag"]}):
+        with patch.object(manager, "_request", return_value={"is_success": True}) as mock:
+            manager.remove_tag(123, "test-tag")
+            call_body = mock.call_args[0][2]
+            assert call_body["tag"] == "test-tag"
+
+
+def test_remove_tag_not_present(manager):
+    with patch.object(manager, "get_alarm_details", return_value={"tags": []}):
+        result = manager.remove_tag(123, "test-tag")
+        assert result["is_success"] is True
+        assert "not present" in result["message"]
 
 
 # -- change_assignee --

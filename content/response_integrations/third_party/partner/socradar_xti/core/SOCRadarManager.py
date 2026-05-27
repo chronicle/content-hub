@@ -68,7 +68,7 @@ class SOCRadarManager:
                 if 400 <= resp.status_code < 500:
                     try:
                         err_msg = resp.json().get("message", resp.text[:200])
-                    except Exception:
+                    except Exception as e:  # noqa: F841
                         err_msg = resp.text[:200]
                     raise SOCRadarManagerError(f"Client error {resp.status_code}: {err_msg}")
                 resp.raise_for_status()
@@ -377,7 +377,7 @@ class SOCRadarManager:
                     try:
                         err_data = resp.json() if resp.text else {}
                         err_msg = err_data.get("message", resp.text[:200])
-                    except Exception:
+                    except Exception as e:  # noqa: F841
                         err_msg = resp.text[:200]
                     raise SOCRadarManagerError(f"Enrichment error {resp.status_code}: {err_msg}")
                 resp.raise_for_status()
@@ -432,7 +432,7 @@ class SOCRadarManager:
                 if 400 <= resp.status_code < 500:
                     try:
                         err_msg = resp.json().get("message", resp.text[:200])
-                    except Exception:
+                    except Exception as e:  # noqa: F841
                         err_msg = resp.text[:200]
                     raise SOCRadarManagerError(f"Rapid Reputation error {resp.status_code}: {err_msg}")
                 resp.raise_for_status()

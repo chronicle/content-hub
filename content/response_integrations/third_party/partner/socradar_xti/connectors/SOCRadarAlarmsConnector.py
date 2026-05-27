@@ -215,17 +215,16 @@ def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict, company_id:
     alert_info.severity = severity
     alert_info.start_time = _parse_date(alarm.get("date"))
     alert_info.end_time = _parse_date(alarm.get("date"))
+    base_event = _flatten_alarm(alarm)
     # Environment routing from connector params
     env_field = siemplify.extract_connector_param("Environment Field Name", default_value="")
     env_regex = siemplify.extract_connector_param("Environment Regex Pattern", default_value=".*")
     if env_field and base_event.get(env_field):
-        import re as _re
         env_val = str(base_event[env_field])
-        match = _re.search(env_regex, env_val)
+        match = re.search(env_regex, env_val)
         alert_info.environment = match.group(0) if match else siemplify.context.connector_info.environment
     else:
         alert_info.environment = siemplify.context.connector_info.environment
-    base_event = _flatten_alarm(alarm)
     if company_id:
         base_event["company_id"] = str(company_id)
 
