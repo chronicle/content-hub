@@ -59,11 +59,13 @@ def _is_public_ip(ip: str) -> bool:
 
 
 
-def _safe_str(val: str | list[str] | None) -> str:
-    """Extract a string value from a field that may be a string or list."""
+def _safe_str(val: str | list[str] | int | bool | None) -> str:
+    """Safely convert a value to string. Returns empty string for None."""
+    if val is None:
+        return ""
     if isinstance(val, list):
         return str(val[0]).strip() if val and val[0] is not None else ""
-    return str(val).strip() if val else ""
+    return str(val).strip()
 
 def _extract_indicators(alarm: dict[str, Any]) -> dict[str, list[str]]:
     """Extract IOCs from alarm content and alarm_text. Returns dict of sorted unique lists."""
@@ -203,7 +205,7 @@ def _indicators_to_events(alarm: dict[str, Any], base_event: dict[str, Any]) -> 
 
 def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict[str, Any], company_id: str = "", extract_indicators: bool = True, env_field: str = "", env_regex: str = ".*") -> AlertInfo:
     """Build a Chronicle SOAR AlertInfo from a SOCRadar alarm dict."""
-    alarm_id = str(alarm.get("alarm_id", ""))
+    alarm_id = _safe_str(alarm.get("alarm_id"))
     atd = alarm.get("alarm_type_details") or {}
     if not isinstance(atd, dict):
         atd = {}
@@ -293,26 +295,26 @@ def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
     # Compute timestamps once — SOAR expects millisecond unix timestamps
     event_time_ms = _parse_date(alarm.get("date"))
     last_notif_ms = _parse_date(alarm.get("last_notification_date"), default=event_time_ms)
-    title = str(atd.get("alarm_generic_title", "")) or str(alarm.get("alarm_text", ""))[:120]
-    desc = str(alarm.get("alarm_text", ""))
-    response = str(alarm.get("alarm_response", ""))
-    mitigation = str(atd.get("alarm_default_mitigation_plan", ""))
-    detection = str(atd.get("alarm_detection_and_analysis", ""))
+    title = _safe_str(atd.get("alarm_generic_title")) or _safe_str(alarm.get("alarm_text"))[:120]
+    desc = _safe_str(alarm.get("alarm_text"))
+    response = _safe_str(alarm.get("alarm_response"))
+    mitigation = _safe_str(atd.get("alarm_default_mitigation_plan"))
+    detection = _safe_str(atd.get("alarm_detection_and_analysis"))
 
     event = {
         # --- Raw SOCRadar fields ---
-        "alarm_id": str(alarm.get("alarm_id", "")),
+        "alarm_id": _safe_str(alarm.get("alarm_id")),
         "alarm_text": desc,
-        "alarm_risk_level": str(alarm.get("alarm_risk_level", "")),
-        "alarm_asset": str(alarm.get("alarm_asset", "")),
+        "alarm_risk_level": _safe_str(alarm.get("alarm_risk_level")),
+        "alarm_asset": _safe_str(alarm.get("alarm_asset")),
         "alarm_response": response,
-        "status": str(alarm.get("status", "")),
-        "date": str(alarm.get("date", "")),
-        "notification_id": str(alarm.get("notification_id", "")),
-        "alarm_generic_title": str(atd.get("alarm_generic_title", "")),
-        "alarm_main_type": str(atd.get("alarm_main_type", "")),
-        "alarm_sub_type": str(atd.get("alarm_sub_type", "")),
-        "alarm_default_risk_level": str(atd.get("alarm_default_risk_level", "")),
+        "status": _safe_str(alarm.get("status")),
+        "date": _safe_str(alarm.get("date")),
+        "notification_id": _safe_str(alarm.get("notification_id")),
+        "alarm_generic_title": _safe_str(atd.get("alarm_generic_title")),
+        "alarm_main_type": _safe_str(atd.get("alarm_main_type")),
+        "alarm_sub_type": _safe_str(atd.get("alarm_sub_type")),
+        "alarm_default_risk_level": _safe_str(atd.get("alarm_default_risk_level")),
         "alarm_default_mitigation_plan": mitigation,
         "alarm_detection_and_analysis": detection,
         "tags": json.dumps(alarm.get("tags", [])),
@@ -320,7 +322,7 @@ def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
         "alarm_related_assets": json.dumps(alarm.get("alarm_related_assets", [])),
         "alarm_related_entities": json.dumps(alarm.get("alarm_related_entities", [])),
         "alarm_compliance_list": json.dumps(atd.get("alarm_compliance_list", [])),
-        "is_approved": str(alarm.get("is_approved", False)),
+        "is_approved": _safe_str(alarm.get("is_approved")),
         "risk_score": str(RISK_SCORE_MAP.get(severity, 50)),
         "device_vendor": VENDOR,
         "device_product": PRODUCT,
@@ -332,7 +334,7 @@ def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
         "DeviceVendor": VENDOR,
         "DeviceProduct": PRODUCT,
         "EventType": str(atd.get("alarm_sub_type", "SOCRadar Alarm")),
-        "CategoryOutcome": str(atd.get("alarm_main_type", "")),
+        "CategoryOutcome": _safe_str(atd.get("alarm_main_type")),
         "Severity": severity,
         "Priority": str(RISK_SCORE_MAP.get(severity, 50)),
         "RuleGenerator": str(atd.get("alarm_sub_type", "SOCRadar Alarm")),
@@ -341,7 +343,7 @@ def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
         "EndTime": str(last_notif_ms),
         "managerReceiptTime": str(event_time_ms),
         # --- Overview enrichment fields ---
-        "AffectedAsset": str(alarm.get("alarm_asset", "")),
+        "AffectedAsset": _safe_str(alarm.get("alarm_asset")),
         "RecommendedResponse": response[:2000] if response else "",
         "MitigationPlan": mitigation[:2000] if mitigation else "",
         "DetectionGuidance": detection[:2000] if detection else "",
@@ -380,8 +382,8 @@ def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
             event["credential_details"] = json.dumps(creds)
             first_cred = creds[0]
             if isinstance(first_cred, dict):
-                event["credential_url"] = str(first_cred.get("URL", ""))
-                event["credential_user"] = str(first_cred.get("User", ""))
+                event["credential_url"] = _safe_str(first_cred.get("URL"))
+                event["credential_user"] = _safe_str(first_cred.get("User"))
 
     return event
 
@@ -454,7 +456,7 @@ def main(is_test_run: bool = False) -> None:
             if not isinstance(alarm, dict):
                 siemplify.LOGGER.warning(f"Skipping non-dict alarm entry: {type(alarm).__name__}")
                 continue
-            alarm_id = str(alarm.get("alarm_id", ""))
+            alarm_id = _safe_str(alarm.get("alarm_id"))
             if not alarm_id:
                 continue
             # Always track timestamp even for deduped alarms

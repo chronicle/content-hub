@@ -16,7 +16,7 @@ def main() -> None:
         manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
         result = manager.get_assignee_options()
         siemplify.result.add_result_json(result)
-        options = result.get("data", []) if isinstance(result, dict) else []
+        options = (result.get("data") or []) if isinstance(result, dict) else []
         siemplify.end(f"Found {len(options)} assignable users.", True)
     except Exception as e:
         siemplify.end(f'Error executing action "Get Assignee Options". Reason: {e}', False)
