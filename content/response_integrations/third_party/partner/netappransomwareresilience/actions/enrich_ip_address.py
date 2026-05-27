@@ -40,9 +40,7 @@ def main() -> None:
 
     except RrsException as e:
         output_message = str(e)
-        siemplify.LOGGER.error(
-            f"Enrich IP: RrsException: Failed to enrich IP - {ip_address}. Error: {e}"
-        )
+        siemplify.LOGGER.error(f"Enrich IP: RrsException: Failed to enrich IP - {ip_address}. Error: {e}")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = False
@@ -58,8 +56,7 @@ def main() -> None:
 
     siemplify.LOGGER.info("----------------- RRS - Enrich IP: End -----------------")
     siemplify.LOGGER.info(
-        f"Enrich IP output: \n  status: {status}\n  result_value: {result_value}"
-        f"\n  output_message: {output_message}"
+        f"Enrich IP output: \n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}"
     )
 
     # Add result to action output.
