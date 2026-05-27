@@ -73,7 +73,7 @@ def main() -> None:
             try:
                 feed_data = manager.get_ioc_feed(uuid)
                 if not isinstance(feed_data, list):
-                    siemplify.LOGGER.warn(f"Unexpected response for UUID {uuid}: {type(feed_data)}")
+                    siemplify.LOGGER.warning(f"Unexpected response for UUID {uuid}: {type(feed_data)}")
                     feed_stats["error"] += 1
                     continue
 

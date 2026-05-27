@@ -49,9 +49,15 @@ class SOCRadarManager:
         self.session.verify = self.verify_ssl
 
     def _build_url(self, endpoint: str) -> str:
+        """Build full API URL for a company-scoped endpoint."""
         return f"{self.api_root}/company/{self.company_id}/{endpoint}"
 
     def _request(self, method: str, endpoint: str, body: dict | None = None, params: dict | None = None) -> dict:
+        """Send an HTTP request to the SOCRadar API with retry logic.
+
+        Raises:
+            SOCRadarManagerError: On auth failure, client errors, or after max retries.
+        """
         url = self._build_url(endpoint)
         for attempt in range(MAX_RETRIES):
             try:
@@ -68,8 +74,8 @@ class SOCRadarManager:
                 if 400 <= resp.status_code < 500:
                     try:
                         err_msg = resp.json().get("message", resp.text[:200])
-                    except Exception as e:  # noqa: F841
-                        err_msg = resp.text[:200]
+                    except Exception as e:
+                        err_msg = f"{resp.text[:200]} (parse error: {e})"
                     raise SOCRadarManagerError(f"Client error {resp.status_code}: {err_msg}")
                 resp.raise_for_status()
                 try:
@@ -110,6 +116,7 @@ class SOCRadarManager:
 
     # -- Connectivity --
     def test_connectivity(self) -> bool:
+        """Test API connectivity by fetching a single incident."""
         self._request("GET", "incidents/v4", params={"page": 1, "limit": 1})
         return True
 
@@ -226,6 +233,11 @@ class SOCRadarManager:
         return all_alarms, total_records
 
     def get_alarm_details(self, alarm_id: int | str) -> dict:
+        """Fetch full details of a single alarm by ID.
+
+        Raises:
+            SOCRadarManagerError: If alarm is not found.
+        """
         resp = self.get_incidents_page(alarm_ids=[int(alarm_id)], limit=1)
         alarms, _, _ = self._extract_alarms_data(resp)
         if not alarms:
@@ -377,8 +389,8 @@ class SOCRadarManager:
                     try:
                         err_data = resp.json() if resp.text else {}
                         err_msg = err_data.get("message", resp.text[:200])
-                    except Exception as e:  # noqa: F841
-                        err_msg = resp.text[:200]
+                    except Exception as e:
+                        err_msg = f"{resp.text[:200]} (parse error: {e})"
                     raise SOCRadarManagerError(f"Enrichment error {resp.status_code}: {err_msg}")
                 resp.raise_for_status()
                 return resp.json()
@@ -432,8 +444,8 @@ class SOCRadarManager:
                 if 400 <= resp.status_code < 500:
                     try:
                         err_msg = resp.json().get("message", resp.text[:200])
-                    except Exception as e:  # noqa: F841
-                        err_msg = resp.text[:200]
+                    except Exception as e:
+                        err_msg = f"{resp.text[:200]} (parse error: {e})"
                     raise SOCRadarManagerError(f"Rapid Reputation error {resp.status_code}: {err_msg}")
                 resp.raise_for_status()
                 try:

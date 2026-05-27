@@ -269,6 +269,8 @@ def _parse_date_safe(date_str: str | None) -> int:
 
 def _flatten_alarm(alarm: dict) -> dict:
     atd = alarm.get("alarm_type_details") or {}
+    if not isinstance(atd, dict):
+        atd = {}
     content = alarm.get("content") or {}
     severity = (alarm.get("alarm_risk_level") or "MEDIUM").upper()
 
@@ -427,7 +429,7 @@ def main(is_test_run: bool = False) -> None:
         last_processed_ts = last_run
         for alarm in alarms[:max_alerts]:
             if not isinstance(alarm, dict):
-                siemplify.LOGGER.warn(f"Skipping non-dict alarm entry: {type(alarm).__name__}")
+                siemplify.LOGGER.warning(f"Skipping non-dict alarm entry: {type(alarm).__name__}")
                 continue
             alarm_id = str(alarm.get("alarm_id", ""))
             if not alarm_id:
