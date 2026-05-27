@@ -248,7 +248,7 @@ class SOCRadarManager:
 
     # -- Actions --
     def change_status(self, alarm_ids: list[str | int] | str | int, status: str | int, comments: str = "", email: str = "",
-                      update_related_finding_status: bool = True) -> dict:
+                      update_related_finding_status: bool = True) -> dict[str, Any]:
         if isinstance(status, str):
             status_code = STATUS_CODES.get(status.upper())
             if status_code is None:
@@ -271,13 +271,13 @@ class SOCRadarManager:
             body["email"] = email
         return self._request("POST", "alarms/status/change", body)
 
-    def add_comment(self, alarm_id: int | str, comment: str, user_email: str = "") -> dict:
+    def add_comment(self, alarm_id: int | str, comment: str, user_email: str = "") -> dict[str, Any]:
         body = {"alarm_id": int(alarm_id), "comment": comment}
         if user_email:
             body["user_email"] = user_email
         return self._request("POST", "alarm/add/comment/v2", body)
 
-    def add_tag(self, alarm_id: int | str, tag: str) -> dict:
+    def add_tag(self, alarm_id: int | str, tag: str) -> dict[str, Any]:
         """Add a tag to an alarm. Checks current tags first to ensure idempotency.
 
         Raises:
@@ -289,7 +289,7 @@ class SOCRadarManager:
             return {"is_success": True, "message": f"Tag '{tag}' is already present."}
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
 
-    def remove_tag(self, alarm_id: int | str, tag: str) -> dict:
+    def remove_tag(self, alarm_id: int | str, tag: str) -> dict[str, Any]:
         """Remove a tag from an alarm. Checks current tags first to ensure idempotency.
 
         Raises:
@@ -301,7 +301,7 @@ class SOCRadarManager:
             return {"is_success": True, "message": f"Tag '{tag}' is not present."}
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
 
-    def change_severity(self, alarm_id: int | str, severity: str) -> dict:
+    def change_severity(self, alarm_id: int | str, severity: str) -> dict[str, Any]:
         if not isinstance(severity, str):
             raise SOCRadarManagerError("Severity must be a string")
         severity = severity.upper()
@@ -309,13 +309,13 @@ class SOCRadarManager:
             raise SOCRadarManagerError(f"Invalid severity: {severity}. Valid: {VALID_SEVERITIES}")
         return self._request("POST", "alarm/severity", {"alarm_id": int(alarm_id), "severity": severity})
 
-    def ask_analyst(self, alarm_id: int | str, comment: str) -> dict:
+    def ask_analyst(self, alarm_id: int | str, comment: str) -> dict[str, Any]:
         return self._request("POST", "incidents/ask/analyst/v2", {"alarm_id": int(alarm_id), "comment": comment})
 
-    def get_assignee(self, alarm_id: int | str) -> dict:
+    def get_assignee(self, alarm_id: int | str) -> dict[str, Any]:
         return self._request("GET", f"alarm/{int(alarm_id)}/assignee")
 
-    def change_assignee(self, alarm_id: int | str, user_ids: list[int] | None = None, user_emails: list[str] | None = None) -> dict:
+    def change_assignee(self, alarm_id: int | str, user_ids: list[int] | None = None, user_emails: list[str] | None = None) -> dict[str, Any]:
         if not user_ids and not user_emails:
             raise SOCRadarManagerError("At least user_ids or user_emails is required")
         body = {}
@@ -325,7 +325,7 @@ class SOCRadarManager:
             body["user_emails"] = list(user_emails)
         return self._request("POST", f"alarm/{int(alarm_id)}/assignee", body)
 
-    def get_assignee_options(self, alarm_id: int | str | None = None) -> dict:
+    def get_assignee_options(self, alarm_id: int | str | None = None) -> dict[str, Any]:
         # Per OpenAPI spec the endpoint is company-scoped and does not accept alarm_id.
         # alarm_id kept as optional kwarg for backwards-compat with action signatures.
         return self._request("GET", "alarm/assignee_options")

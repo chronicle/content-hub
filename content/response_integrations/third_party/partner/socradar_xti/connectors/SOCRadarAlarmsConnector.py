@@ -259,14 +259,14 @@ def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict[str, Any], c
     return alert_info
 
 
-def _parse_date(date_str: str | None) -> int:
+def _parse_date(date_str: str | None, default: int | None = None) -> int:
     if not date_str:
-        return unix_now()
+        return default if default is not None else unix_now()
     try:
         dt = datetime.strptime(str(date_str), "%Y-%m-%d %H:%M:%S")
         return int(dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
     except (ValueError, TypeError):
-        return unix_now()
+        return default if default is not None else unix_now()
 
 
 
@@ -290,7 +290,7 @@ def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
 
     # Compute timestamps once — SOAR expects millisecond unix timestamps
     event_time_ms = _parse_date(alarm.get("date"))
-    last_notif_ms = _parse_date(alarm.get("last_notification_date")) or event_time_ms
+    last_notif_ms = _parse_date(alarm.get("last_notification_date"), default=event_time_ms)
     title = str(atd.get("alarm_generic_title", "")) or str(alarm.get("alarm_text", ""))[:120]
     desc = str(alarm.get("alarm_text", ""))
     response = str(alarm.get("alarm_response", ""))
