@@ -90,7 +90,10 @@ def _extract_indicators(alarm: dict) -> dict[str, list[str]]:
             hashes.add(h.lower())
 
     # From credential_details (each may have URL field)
-    for cred in content.get("credential_details") or []:
+    creds_iter = content.get("credential_details") or []
+    if not isinstance(creds_iter, list):
+        creds_iter = []
+    for cred in creds_iter:
         if isinstance(cred, dict):
             if cred.get("URL"):
                 urls.add(str(cred["URL"]).strip())
@@ -110,7 +113,10 @@ def _extract_indicators(alarm: dict) -> dict[str, list[str]]:
     # Filter
     ips = {ip for ip in ips if _is_public_ip(ip)}
     urls = {u for u in urls if u.startswith(("http://", "https://"))}
-    domains = {d for d in domains if "." in d and 3 < len(d) <= 253}
+    domains = {d for d in domains if "." in d and 3 < len(d) <= 253
+              and not d.replace(".", "").isdigit()  # exclude IPs
+              and "@" not in d  # exclude emails
+              and "/" not in d}  # exclude URLs/paths
 
     return {
         "ips": sorted(ips)[:MAX_INDICATORS_PER_TYPE],
@@ -209,8 +215,16 @@ def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict, company_id:
     alert_info.severity = severity
     alert_info.start_time = _parse_date(alarm.get("date"))
     alert_info.end_time = _parse_date(alarm.get("date"))
-    # environment fallback — modern Chronicle SOAR uses this for case routing
-    alert_info.environment = "Default Environment"
+    # Environment routing from connector params
+    env_field = siemplify.extract_connector_param("Environment Field Name", default_value="")
+    env_regex = siemplify.extract_connector_param("Environment Regex Pattern", default_value=".*")
+    if env_field and base_event.get(env_field):
+        import re as _re
+        env_val = str(base_event[env_field])
+        match = _re.search(env_regex, env_val)
+        alert_info.environment = match.group(0) if match else siemplify.context.connector_info.environment
+    else:
+        alert_info.environment = siemplify.context.connector_info.environment
     base_event = _flatten_alarm(alarm)
     if company_id:
         base_event["company_id"] = str(company_id)

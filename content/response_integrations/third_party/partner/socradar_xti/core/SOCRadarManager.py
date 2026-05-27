@@ -65,6 +65,12 @@ class SOCRadarManager:
                     raise SOCRadarManagerError("Forbidden - insufficient permissions")
                 if resp.status_code == 404:
                     raise SOCRadarManagerError("Not Found - check company ID or endpoint")
+                if 400 <= resp.status_code < 500:
+                    try:
+                        err_msg = resp.json().get("message", resp.text[:200])
+                    except Exception:
+                        err_msg = resp.text[:200]
+                    raise SOCRadarManagerError(f"Client error {resp.status_code}: {err_msg}")
                 resp.raise_for_status()
                 try:
                     data = resp.json()
@@ -367,10 +373,13 @@ class SOCRadarManager:
                 resp = self.session.post(url, json=body, headers=headers, timeout=60)
                 if resp.status_code == 401:
                     raise SOCRadarManagerError("IOC Enrichment unauthorized - check your IOC API key")
-                if resp.status_code == 404:
-                    data = resp.json() if resp.text else {}
-                    msg = data.get("message", "Indicator not found")
-                    raise SOCRadarManagerError(msg)
+                if 400 <= resp.status_code < 500:
+                    try:
+                        err_data = resp.json() if resp.text else {}
+                        err_msg = err_data.get("message", resp.text[:200])
+                    except Exception:
+                        err_msg = resp.text[:200]
+                    raise SOCRadarManagerError(f"Enrichment error {resp.status_code}: {err_msg}")
                 resp.raise_for_status()
                 return resp.json()
             except requests.exceptions.RequestException as e:
@@ -420,8 +429,12 @@ class SOCRadarManager:
         for attempt in range(MAX_RETRIES):
             try:
                 resp = self.session.get(url, params=params, headers=headers, timeout=30)
-                if resp.status_code == 401:
-                    raise SOCRadarManagerError("Rapid Reputation unauthorized - check your Rapid API key")
+                if 400 <= resp.status_code < 500:
+                    try:
+                        err_msg = resp.json().get("message", resp.text[:200])
+                    except Exception:
+                        err_msg = resp.text[:200]
+                    raise SOCRadarManagerError(f"Rapid Reputation error {resp.status_code}: {err_msg}")
                 resp.raise_for_status()
                 try:
                     data = resp.json()
