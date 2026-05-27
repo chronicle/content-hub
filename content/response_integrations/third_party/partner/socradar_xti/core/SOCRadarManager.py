@@ -204,7 +204,10 @@ class SOCRadarManager:
             elif tr > 0:
                 total_pages = 1
         except (ValueError, TypeError):
-            total_pages = max(total_pages, 1)
+            try:
+                total_pages = max(int(total_pages), 1)
+            except (ValueError, TypeError):
+                total_pages = 1
 
         pages_data: dict[int, list] = {1: first_data}
 
@@ -255,7 +258,7 @@ class SOCRadarManager:
 
         Raises:
             SOCRadarManagerError: If status is invalid.
-        """"""
+        """
         if isinstance(status, str):
             status_code = STATUS_CODES.get(status.upper())
             if status_code is None:
@@ -314,7 +317,7 @@ class SOCRadarManager:
 
         Raises:
             SOCRadarManagerError: If severity is invalid or not a string.
-        """"""
+        """
         if not isinstance(severity, str):
             raise SOCRadarManagerError("Severity must be a string")
         severity = severity.upper()
@@ -335,7 +338,7 @@ class SOCRadarManager:
 
         Raises:
             SOCRadarManagerError: If neither user_ids nor user_emails provided.
-        """"""
+        """
         if not user_ids and not user_emails:
             raise SOCRadarManagerError("At least user_ids or user_emails is required")
         body = {}

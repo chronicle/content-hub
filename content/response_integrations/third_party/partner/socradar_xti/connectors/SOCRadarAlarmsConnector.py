@@ -489,8 +489,9 @@ def main(is_test_run: bool = False) -> None:
                 siemplify.save_timestamp(new_timestamp=last_run + 1000)
                 siemplify.LOGGER.info(f"Advancing checkpoint by 1s to avoid stall")
             elif total == 0:
-                # No alarms — advance by 5 minutes to avoid skipping delayed ingestion
-                siemplify.save_timestamp(new_timestamp=last_run + (5 * 60 * 1000))
+                # No alarms — advance conservatively, capped at current time
+                advance_to = min(last_run + (5 * 60 * 1000), int(time.time() * 1000))
+                siemplify.save_timestamp(new_timestamp=advance_to)
         siemplify.LOGGER.info(f"Returning {len(alerts)} alerts")
 
     except SOCRadarManagerError as e:
