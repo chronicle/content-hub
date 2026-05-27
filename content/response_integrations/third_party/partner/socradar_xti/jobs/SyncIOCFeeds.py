@@ -104,7 +104,7 @@ def main() -> None:
 
             list_name = f"{list_prefix}_{ioc_type}"
             try:
-                siemplify.send_items_to_list(list_name, values)
+                siemplify.add_items_to_list(list_name, values)
                 siemplify.LOGGER.info(f"Updated reference list '{list_name}' with {len(values)} entries")
             except Exception as e:
                 siemplify.LOGGER.error(f"Failed to update reference list '{list_name}': {e}")

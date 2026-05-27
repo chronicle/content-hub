@@ -82,7 +82,8 @@ def main() -> None:
             summary += " | WHITELISTED"
         summary += f" | {len(sources)} source(s)"
     
-        siemplify.end(summary, True)
+        has_results = bool(data.get("finding_sources")) or (score is not None and score > 0)
+        siemplify.end(summary, has_results)
     
     except Exception as e:
         siemplify.end(f'Error executing action "Rapid Reputation". Reason: {e}', False)

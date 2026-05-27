@@ -99,7 +99,8 @@ def main() -> None:
         if isinstance(credit, dict) and credit.get("remaining_credit") is not None:
             summary += f" | Credits: {credit['remaining_credit']}"
     
-        siemplify.end(summary, True)
+        has_results = bool(result.get("details", {}).get("feed_source_list")) if isinstance(result, dict) else False
+        siemplify.end(summary, has_results)
     
     except Exception as e:
         siemplify.end(f'Error executing action "Enrich Indicator". Reason: {e}', False)
