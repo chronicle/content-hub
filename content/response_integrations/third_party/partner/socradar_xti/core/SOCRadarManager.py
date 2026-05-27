@@ -82,7 +82,7 @@ class SOCRadarManager:
                     data = resp.json()
                 except (ValueError, json.JSONDecodeError):
                     raise SOCRadarManagerError(f"Invalid JSON response from {url}")
-                if "is_success" in data and not data["is_success"]:
+                if isinstance(data, dict) and "is_success" in data and not data["is_success"]:
                     raise SOCRadarManagerError(f"API error: {data.get('message', 'Unknown')}")
                 return data
             except requests.exceptions.RequestException as e:
@@ -345,8 +345,8 @@ class SOCRadarManager:
                 resp = self.session.get(url, params=params, timeout=60)
                 if resp.status_code == 401:
                     raise SOCRadarManagerError("Unauthorized - check your API key")
-                if resp.status_code == 404:
-                    raise SOCRadarManagerError(f"Feed not found: {collection_uuid}")
+                if 400 <= resp.status_code < 500:
+                    raise SOCRadarManagerError(f"Feed request error {resp.status_code} for {collection_uuid}")
                 resp.raise_for_status()
                 return resp.json()
             except requests.exceptions.RequestException as e:
@@ -393,7 +393,10 @@ class SOCRadarManager:
                         err_msg = f"{resp.text[:200]} (parse error: {e})"
                     raise SOCRadarManagerError(f"Enrichment error {resp.status_code}: {err_msg}")
                 resp.raise_for_status()
-                return resp.json()
+                try:
+                    return resp.json()
+                except (ValueError, json.JSONDecodeError):
+                    raise SOCRadarManagerError(f"Invalid JSON from enrichment endpoint: {endpoint}")
             except requests.exceptions.RequestException as e:
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(RETRY_DELAY * (attempt + 1))

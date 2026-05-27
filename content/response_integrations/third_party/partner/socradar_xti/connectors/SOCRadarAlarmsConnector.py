@@ -233,7 +233,10 @@ def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict, company_id:
     env_regex = siemplify.extract_connector_param("Environment Regex Pattern", default_value=".*")
     if env_field and base_event.get(env_field):
         env_val = str(base_event[env_field])
-        match = re.search(env_regex, env_val)
+        try:
+            match = re.search(env_regex, env_val)
+        except re.error:
+            match = None
         alert_info.environment = match.group(0) if match else siemplify.context.connector_info.environment
     else:
         alert_info.environment = siemplify.context.connector_info.environment
@@ -420,7 +423,7 @@ def main(is_test_run: bool = False) -> None:
         # SOCRadar API expects seconds, so divide by 1000 when calling.
         raw_ts = siemplify.fetch_timestamp(datetime_format=False)
         try:
-            last_run = int(raw_ts) if raw_ts else 0
+            last_run = int(float(raw_ts)) if raw_ts else 0
         except (ValueError, TypeError):
             last_run = 0
         if last_run <= 0:
@@ -463,7 +466,7 @@ def main(is_test_run: bool = False) -> None:
             # Save the newest processed alarm's timestamp (not "now") so we
             # correctly resume from where we left off even if capped by max_alerts
             if last_processed_ts > last_run:
-                siemplify.save_timestamp(new_timestamp=last_processed_ts)
+                siemplify.save_timestamp(new_timestamp=last_processed_ts + 1)
                 siemplify.LOGGER.info(f"Saved timestamp: {last_processed_ts} (last processed alarm)")
             elif total == 0:
                 # No alarms found at all, safe to advance to now (in ms)
