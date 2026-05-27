@@ -72,6 +72,12 @@ class SOCRadarManager:
                     raise SOCRadarManagerError("Forbidden - insufficient permissions")
                 if resp.status_code == 404:
                     raise SOCRadarManagerError("Not Found - check company ID or endpoint")
+                if resp.status_code == 429:
+                    # Rate limited — retry after delay
+                    if attempt < MAX_RETRIES - 1:
+                        time.sleep(RETRY_DELAY * (attempt + 2))
+                        continue
+                    raise SOCRadarManagerError("Rate limit exceeded - too many requests")
                 if 400 <= resp.status_code < 500:
                     try:
                         err_msg = resp.json().get("message", resp.text[:200])
