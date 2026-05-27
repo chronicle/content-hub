@@ -194,7 +194,11 @@ class SOCRadarManager:
 
     def get_all_incidents(self, start_date: int | None = None, end_date: int | None = None,
                           limit: int | None = None, **filters: Any) -> tuple[list[dict[str, Any]], int]:
-        """Fetch all incidents across pages, optionally limited."""
+        """Fetch all incidents across pages, optionally limited.
+
+        Raises:
+            SOCRadarManagerError: If a page fetch fails.
+        """
         if end_date is None:
             end_date = int(time.time())
         first_page = self.get_incidents_page(page=1, start_date=start_date, end_date=end_date, **filters)
@@ -412,6 +416,9 @@ class SOCRadarManager:
 
         Uses a separate API key (credit-based add-on) and a different URL
         pattern: POST /ioc_enrichment/... with header API-Key auth.
+
+        Raises:
+            SOCRadarManagerError: On auth failure, client errors, or after max retries.
         """
         key = ioc_api_key or self.api_key
         url = f"{self.api_root}/{endpoint}"
@@ -473,6 +480,9 @@ class SOCRadarManager:
 
         Uses a separate API key (add-on) and header name 'Api-Key' (not 'API-Key').
         GET /threatfeed/rapid/reputation?entity_value=X&entity_type=Y
+
+        Raises:
+            SOCRadarManagerError: On auth failure, client errors, or after max retries.
         """
         key = rapid_api_key or self.api_key
         url = f"{self.api_root}/threatfeed/rapid/reputation"
