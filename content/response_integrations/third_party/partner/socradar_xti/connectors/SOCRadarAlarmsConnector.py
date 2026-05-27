@@ -48,7 +48,7 @@ def _split_csv(val: str | list[str] | None) -> list[str]:
         items = val
     else:
         items = re.split(r"[,;\s]+", str(val))
-    return [str(i).strip() for i in items if str(i).strip()]
+    return [str(i).strip() for i in items if i is not None and str(i).strip()]
 
 
 def _is_public_ip(ip: str) -> bool:
@@ -62,7 +62,7 @@ def _is_public_ip(ip: str) -> bool:
 def _safe_str(val: str | list[str] | None) -> str:
     """Extract a string value from a field that may be a string or list."""
     if isinstance(val, list):
-        return str(val[0]).strip() if val else ""
+        return str(val[0]).strip() if val and val[0] is not None else ""
     return str(val).strip() if val else ""
 
 def _extract_indicators(alarm: dict[str, Any]) -> dict[str, list[str]]:
@@ -489,8 +489,8 @@ def main(is_test_run: bool = False) -> None:
                 siemplify.save_timestamp(new_timestamp=last_run + 1000)
                 siemplify.LOGGER.info(f"Advancing checkpoint by 1s to avoid stall")
             elif total == 0:
-                # No alarms found at all, safe to advance to now (in ms)
-                siemplify.save_timestamp(new_timestamp=int(time.time() * 1000))
+                # No alarms — advance by 5 minutes to avoid skipping delayed ingestion
+                siemplify.save_timestamp(new_timestamp=last_run + (5 * 60 * 1000))
         siemplify.LOGGER.info(f"Returning {len(alerts)} alerts")
 
     except SOCRadarManagerError as e:

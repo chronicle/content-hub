@@ -251,7 +251,11 @@ class SOCRadarManager:
     # -- Actions --
     def change_status(self, alarm_ids: list[str | int] | str | int, status: str | int, comments: str = "", email: str = "",
                       update_related_finding_status: bool = True) -> dict[str, Any]:
-        """Change the status of one or more alarms."""
+        """Change the status of one or more alarms.
+
+        Raises:
+            SOCRadarManagerError: If status is invalid.
+        """"""
         if isinstance(status, str):
             status_code = STATUS_CODES.get(status.upper())
             if status_code is None:
@@ -306,7 +310,11 @@ class SOCRadarManager:
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
 
     def change_severity(self, alarm_id: int | str, severity: str) -> dict[str, Any]:
-        """Change the severity of an alarm."""
+        """Change the severity of an alarm.
+
+        Raises:
+            SOCRadarManagerError: If severity is invalid or not a string.
+        """"""
         if not isinstance(severity, str):
             raise SOCRadarManagerError("Severity must be a string")
         severity = severity.upper()
@@ -323,7 +331,11 @@ class SOCRadarManager:
         return self._request("GET", f"alarm/{int(alarm_id)}/assignee")
 
     def change_assignee(self, alarm_id: int | str, user_ids: list[int] | None = None, user_emails: list[str] | None = None) -> dict[str, Any]:
-        """Assign user(s) to an alarm."""
+        """Assign user(s) to an alarm.
+
+        Raises:
+            SOCRadarManagerError: If neither user_ids nor user_emails provided.
+        """"""
         if not user_ids and not user_emails:
             raise SOCRadarManagerError("At least user_ids or user_emails is required")
         body = {}

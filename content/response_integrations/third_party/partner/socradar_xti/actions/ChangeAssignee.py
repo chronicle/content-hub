@@ -13,8 +13,8 @@ def main() -> None:
     company_id = siemplify.extract_configuration_param(INTEGRATION_NAME, "Company ID")
     verify_ssl = siemplify.extract_configuration_param(INTEGRATION_NAME, "Verify SSL", input_type=bool, default_value=True)
     alarm_id = siemplify.extract_action_param("Alarm ID", is_mandatory=True)
-    user_emails_str = siemplify.extract_action_param("User Emails", default_value="")
-    user_ids_str = siemplify.extract_action_param("User IDs", default_value="")
+    user_emails_str = siemplify.extract_action_param("User Emails", default_value="") or ""
+    user_ids_str = siemplify.extract_action_param("User IDs", default_value="") or ""
     user_emails = [e.strip() for e in user_emails_str.split(",") if e.strip()] or None
     user_ids = [int(i.strip()) for i in user_ids_str.split(",") if i.strip().isdigit()] or None
     try:
