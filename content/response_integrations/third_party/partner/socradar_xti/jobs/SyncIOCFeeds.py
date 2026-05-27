@@ -41,20 +41,20 @@ def main() -> None:
     siemplify.script_name = JOB_NAME
 
     try:
-        api_root = siemplify.extract_job_param(INTEGRATION_NAME, "API Root",
+        api_root = siemplify.extract_job_param("API Root",
                                                 default_value="https://platform.socradar.com/api")
-        api_key = siemplify.extract_job_param(INTEGRATION_NAME, "API Key")
-        company_id = siemplify.extract_job_param(INTEGRATION_NAME, "Company ID")
-        verify_ssl = siemplify.extract_job_param(INTEGRATION_NAME, "Verify SSL",
+        api_key = siemplify.extract_job_param("API Key")
+        company_id = siemplify.extract_job_param("Company ID")
+        verify_ssl = siemplify.extract_job_param("Verify SSL",
                                                   input_type=bool, default_value=True)
 
-        uuids_raw = siemplify.extract_job_param(INTEGRATION_NAME, "Collection UUIDs")
+        uuids_raw = siemplify.extract_job_param("Collection UUIDs")
         try:
-            max_iocs = int(siemplify.extract_job_param(INTEGRATION_NAME, "Max IOCs Per Feed",
+            max_iocs = int(siemplify.extract_job_param("Max IOCs Per Feed",
                                                         default_value="5000"))
         except (ValueError, TypeError):
             max_iocs = 5000
-        list_prefix = siemplify.extract_job_param(INTEGRATION_NAME, "Reference List Prefix",
+        list_prefix = siemplify.extract_job_param("Reference List Prefix",
                                                    default_value=REFERENCE_LIST_PREFIX)
 
         uuids = _parse_uuids(uuids_raw)

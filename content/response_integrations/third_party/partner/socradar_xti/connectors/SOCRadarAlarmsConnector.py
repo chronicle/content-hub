@@ -57,6 +57,13 @@ def _is_public_ip(ip: str) -> bool:
         return False
 
 
+
+def _safe_str(val) -> str:
+    """Extract a string value from a field that may be a string or list."""
+    if isinstance(val, list):
+        return str(val[0]).strip() if val else ""
+    return str(val).strip() if val else ""
+
 def _extract_indicators(alarm: dict) -> dict[str, list[str]]:
     """Extract IOCs from alarm content and alarm_text. Returns dict of sorted unique lists."""
     content = alarm.get("content") if isinstance(alarm, dict) else None
@@ -80,11 +87,16 @@ def _extract_indicators(alarm: dict) -> dict[str, list[str]]:
     for e in _split_csv(content.get("compromised_emails")):
         emails.add(e.lower())
     if content.get("email"):
-        emails.add(str(content.get("email")).strip().lower())
+        for e in _split_csv(_safe_str(content.get("email"))):
+            emails.add(e.lower())
     if content.get("url"):
-        urls.add(str(content.get("url")).strip())
+        val = _safe_str(content.get("url"))
+        if val:
+            urls.add(val)
     if content.get("log_content_link"):
-        urls.add(str(content.get("log_content_link")).strip())
+        val = _safe_str(content.get("log_content_link"))
+        if val:
+            urls.add(val)
     if content.get("hash_value"):
         for h in _split_csv(content.get("hash_value")):
             hashes.add(h.lower())
@@ -434,12 +446,12 @@ def main(is_test_run: bool = False) -> None:
             alarm_id = str(alarm.get("alarm_id", ""))
             if not alarm_id:
                 continue
-            # Track newest processed alarm timestamp for save_timestamp
-            alarm_ts = _parse_date_safe(alarm.get("date"))
-            if alarm_ts and alarm_ts > last_processed_ts:
-                last_processed_ts = alarm_ts
             try:
                 alert = build_alert(siemplify, alarm, company_id=company_id, extract_indicators=extract_indicators)
+                # Track newest processed alarm timestamp only after successful build
+                alarm_ts = _parse_date_safe(alarm.get("date"))
+                if alarm_ts and alarm_ts > last_processed_ts:
+                    last_processed_ts = alarm_ts
                 if is_test_run:
                     siemplify.LOGGER.info(f"[TEST] Alert built: {alarm_id}")
                 alerts.append(alert)
