@@ -442,13 +442,17 @@ def main(is_test_run: bool = False) -> None:
 
         siemplify.LOGGER.info(f"Fetched {len(alarms)} alarms (total: {total})")
 
+        # Deduplication — skip already-ingested alarm IDs
+        existing_ids = siemplify.get_connector_context_property("processed_ids") or ""
+        processed_set = set(existing_ids.split(",")) if existing_ids else set()
+
         last_processed_ts = last_run
         for alarm in alarms[:max_alerts]:
             if not isinstance(alarm, dict):
                 siemplify.LOGGER.warning(f"Skipping non-dict alarm entry: {type(alarm).__name__}")
                 continue
             alarm_id = str(alarm.get("alarm_id", ""))
-            if not alarm_id:
+            if not alarm_id or alarm_id in processed_set:
                 continue
             try:
                 alert = build_alert(siemplify, alarm, company_id=company_id, extract_indicators=extract_indicators)
@@ -462,6 +466,12 @@ def main(is_test_run: bool = False) -> None:
             except Exception as e:
                 siemplify.LOGGER.error(f"Failed to build alert for {alarm_id}: {e}")
                 continue
+
+        # Update processed IDs for dedup (keep last 1000)
+        for alert in alerts:
+            processed_set.add(alert.display_id)
+        trimmed = list(processed_set)[-1000:]
+        siemplify.set_connector_context_property("processed_ids", ",".join(trimmed))
 
         if not is_test_run:
             # Save the newest processed alarm's timestamp (not "now") so we

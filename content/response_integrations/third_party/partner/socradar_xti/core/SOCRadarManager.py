@@ -148,7 +148,8 @@ class SOCRadarManager:
         include_alarm_details: bool = True,
         include_total_records: bool = True,
         limit: int = PAGE_LIMIT,
-    ) -> dict:
+    ) -> dict[str, Any]:
+        """Fetch a single page of incidents with optional filters."""
         params = {
             "page": page, "limit": min(limit, PAGE_LIMIT),
             "include_alarm_details": include_alarm_details,
@@ -183,7 +184,7 @@ class SOCRadarManager:
         return self._request("GET", "incidents/v4", params=params)
 
     def get_all_incidents(self, start_date: int | None = None, end_date: int | None = None,
-                          limit: int | None = None, **filters) -> tuple[list, int]:
+                          limit: int | None = None, **filters: Any) -> tuple[list[dict[str, Any]], int]:
         if end_date is None:
             end_date = int(time.time())
         first_page = self.get_incidents_page(page=1, start_date=start_date, end_date=end_date, **filters)
@@ -246,7 +247,7 @@ class SOCRadarManager:
         return alarms[0]
 
     # -- Actions --
-    def change_status(self, alarm_ids: list | str | int, status: str | int, comments: str = "", email: str = "",
+    def change_status(self, alarm_ids: list[str | int] | str | int, status: str | int, comments: str = "", email: str = "",
                       update_related_finding_status: bool = True) -> dict:
         if isinstance(status, str):
             status_code = STATUS_CODES.get(status.upper())
@@ -330,7 +331,7 @@ class SOCRadarManager:
         return self._request("GET", "alarm/assignee_options")
 
     # -- IOC Feeds --
-    def get_ioc_feed(self, collection_uuid: str) -> list:
+    def get_ioc_feed(self, collection_uuid: str) -> list[dict[str, Any]]:
         """Fetch IOCs from a SOCRadar Threat Feed collection.
 
         Uses a different URL pattern and auth mechanism than the Incident API:
@@ -356,7 +357,7 @@ class SOCRadarManager:
                 else:
                     raise SOCRadarManagerError(f"Feed request failed after {MAX_RETRIES} attempts: {e}")
 
-    def get_multiple_ioc_feeds(self, collection_uuids: list[str]) -> dict[str, list | dict]:
+    def get_multiple_ioc_feeds(self, collection_uuids: list[str]) -> dict[str, list[dict[str, Any]] | dict[str, Any]]:
         """Fetch IOCs from multiple feed collections. Returns dict keyed by UUID."""
         results = {}
         for uuid in collection_uuids:
@@ -371,7 +372,7 @@ class SOCRadarManager:
         return results
 
     # -- IOC Enrichment --
-    def _enrichment_request(self, endpoint: str, body: dict, ioc_api_key: str | None = None) -> dict:
+    def _enrichment_request(self, endpoint: str, body: dict[str, Any], ioc_api_key: str | None = None) -> dict[str, Any]:
         """Send a request to the IOC Enrichment API.
 
         Uses a separate API key (credit-based add-on) and a different URL
@@ -405,7 +406,7 @@ class SOCRadarManager:
                     raise SOCRadarManagerError(
                         f"Enrichment request failed after {MAX_RETRIES} attempts: {e}")
 
-    def enrich_indicator(self, indicator: str, fields: list[str] | None = None, ioc_api_key: str | None = None) -> dict:
+    def enrich_indicator(self, indicator: str, fields: list[str] | None = None, ioc_api_key: str | None = None) -> dict[str, Any]:
         """Enrich an indicator (IP, domain, hash, URL) via SOCRadar IOC Enrichment API.
 
         Args:
@@ -426,13 +427,13 @@ class SOCRadarManager:
             body["fields"] = ["indicator_details", "indicator_history", "indicator_relations"]
         return self._enrichment_request("ioc_enrichment/get/indicator_details", body, ioc_api_key)
 
-    def enrich_indicator_stix(self, indicator: str, show_credit_details: bool = False, ioc_api_key: str | None = None) -> dict:
+    def enrich_indicator_stix(self, indicator: str, show_credit_details: bool = False, ioc_api_key: str | None = None) -> dict[str, Any]:
         """Enrich an indicator and return results in STIX format."""
         body = {"indicator": indicator, "show_credit_details": show_credit_details}
         return self._enrichment_request("ioc_enrichment/get/indicator_details_stix", body, ioc_api_key)
 
     # -- Rapid Reputation --
-    def rapid_reputation(self, entity_value: str, entity_type: str, rapid_api_key: str | None = None) -> dict:
+    def rapid_reputation(self, entity_value: str, entity_type: str, rapid_api_key: str | None = None) -> dict[str, Any]:
         """Quick reputation lookup for an entity (IP, hostname, URL, or hash).
 
         Uses a separate API key (add-on) and header name 'Api-Key' (not 'API-Key').
