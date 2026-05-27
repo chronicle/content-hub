@@ -8,7 +8,6 @@ Runs daily (or at configured interval). Groups IOCs by type
 (ip, domain, hash, url) and updates one reference list per type.
 """
 from __future__ import annotations
-import json
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
 from ..core.SOCRadarManager import SOCRadarManager, SOCRadarManagerError

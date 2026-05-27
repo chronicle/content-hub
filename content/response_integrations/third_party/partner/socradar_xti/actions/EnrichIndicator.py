@@ -1,7 +1,6 @@
 """Enrich Indicator - Get threat intelligence details for an IOC from SOCRadar."""
 from __future__ import annotations
 from typing import Any
-import json
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from ..core.SOCRadarManager import SOCRadarManager

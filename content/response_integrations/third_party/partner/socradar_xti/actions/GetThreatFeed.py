@@ -1,6 +1,5 @@
 """Get Threat Feed - Fetch IOCs from one or more SOCRadar Threat Feed collections."""
 from __future__ import annotations
-import json
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from ..core.SOCRadarManager import SOCRadarManager

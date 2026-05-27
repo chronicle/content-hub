@@ -202,6 +202,7 @@ def _indicators_to_events(alarm: dict[str, Any], base_event: dict[str, Any]) -> 
 
 
 def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict[str, Any], company_id: str = "", extract_indicators: bool = True, env_field: str = "", env_regex: str = ".*") -> AlertInfo:
+    """Build a Chronicle SOAR AlertInfo from a SOCRadar alarm dict."""
     alarm_id = str(alarm.get("alarm_id", ""))
     atd = alarm.get("alarm_type_details") or {}
     if not isinstance(atd, dict):
@@ -282,6 +283,7 @@ def _parse_date_safe(date_str: str | None) -> int:
         return 0
 
 def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
+    """Flatten alarm fields into a single event dict for SOAR ingestion."""
     atd = alarm.get("alarm_type_details") or {}
     if not isinstance(atd, dict):
         atd = {}
