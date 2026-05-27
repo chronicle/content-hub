@@ -41,7 +41,7 @@ HASH_SHA256 = re.compile(r"\b[a-fA-F0-9]{64}\b")
 MAX_INDICATORS_PER_TYPE = 50
 
 
-def _split_csv(val: str | list | None) -> list[str]:
+def _split_csv(val: str | list[str] | None) -> list[str]:
     if val is None:
         return []
     if isinstance(val, list):
@@ -59,7 +59,7 @@ def _is_public_ip(ip: str) -> bool:
 
 
 
-def _safe_str(val: str | list | None) -> str:
+def _safe_str(val: str | list[str] | None) -> str:
     """Extract a string value from a field that may be a string or list."""
     if isinstance(val, list):
         return str(val[0]).strip() if val else ""
@@ -140,7 +140,7 @@ def _extract_indicators(alarm: dict[str, Any]) -> dict[str, list[str]]:
     }
 
 
-def _indicators_to_events(alarm: dict[str, Any], base_event: dict[str, Any]) -> tuple[list[dict], dict]:
+def _indicators_to_events(alarm: dict[str, Any], base_event: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
     """Create one event per indicator with Siemplify entity-recognized field names.
     These get picked up by the Ontology resolver and become Entities on the case."""
     indicators = _extract_indicators(alarm)
@@ -463,10 +463,6 @@ def main(is_test_run: bool = False) -> None:
                 continue
             try:
                 alert = build_alert(siemplify, alarm, company_id=company_id, extract_indicators=extract_indicators, env_field=env_field, env_regex=env_regex)
-                # Track newest processed alarm timestamp only after successful build
-                alarm_ts = _parse_date_safe(alarm.get("date"))
-                if alarm_ts and alarm_ts > last_processed_ts:
-                    last_processed_ts = alarm_ts
                 if is_test_run:
                     siemplify.LOGGER.info(f"[TEST] Alert built: {alarm_id}")
                 alerts.append(alert)

@@ -234,7 +234,7 @@ class SOCRadarManager:
                 all_alarms.extend(reversed(pages_data[pn]))
         return all_alarms, total_records
 
-    def get_alarm_details(self, alarm_id: int | str) -> dict:
+    def get_alarm_details(self, alarm_id: int | str) -> dict[str, Any]:
         """Fetch full details of a single alarm by ID.
 
         Raises:
@@ -284,7 +284,7 @@ class SOCRadarManager:
             SOCRadarManagerError: If alarm details cannot be fetched or request fails.
         """
         alarm = self.get_alarm_details(alarm_id)
-        current_tags = alarm.get("tags", [])
+        current_tags = alarm.get("tags") or []
         if tag in current_tags:
             return {"is_success": True, "message": f"Tag '{tag}' is already present."}
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
@@ -296,7 +296,7 @@ class SOCRadarManager:
             SOCRadarManagerError: If alarm details cannot be fetched or request fails.
         """
         alarm = self.get_alarm_details(alarm_id)
-        current_tags = alarm.get("tags", [])
+        current_tags = alarm.get("tags") or []
         if tag not in current_tags:
             return {"is_success": True, "message": f"Tag '{tag}' is not present."}
         return self._request("POST", "alarm/tag", {"alarm_id": int(alarm_id), "tag": tag})
