@@ -42,6 +42,7 @@ MAX_INDICATORS_PER_TYPE = 50
 
 
 def _split_csv(val: str | list[str] | None) -> list[str]:
+    """Split a comma/semicolon/whitespace-separated value into a list of strings."""
     if val is None:
         return []
     if isinstance(val, list):
@@ -52,6 +53,7 @@ def _split_csv(val: str | list[str] | None) -> list[str]:
 
 
 def _is_public_ip(ip: str) -> bool:
+    """Check if an IP address is globally routable."""
     try:
         return ipaddress.ip_address(ip).is_global
     except (ValueError, TypeError):
@@ -263,6 +265,7 @@ def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict[str, Any], c
 
 
 def _parse_date(date_str: str | None, default: int | None = None) -> int:
+    """Parse a date string to millisecond unix timestamp."""
     if not date_str:
         return default if default is not None else unix_now()
     try:
@@ -275,7 +278,7 @@ def _parse_date(date_str: str | None, default: int | None = None) -> int:
 
 
 def _parse_date_safe(date_str: str | None) -> int:
-    """Parse date string to ms timestamp. Returns 0 on failure (safe for checkpoint comparison)."""
+    """Parse date string to ms timestamp. Returns 0 on failure (safe for checkpoint)."""
     if not date_str:
         return 0
     try:
@@ -390,6 +393,7 @@ def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
 
 @output_handler
 def main(is_test_run: bool = False) -> None:
+    """Main connector execution loop."""
     siemplify = SiemplifyConnectorExecution()
     siemplify.script_name = CONNECTOR_NAME
     alerts = []

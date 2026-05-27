@@ -37,6 +37,7 @@ class SOCRadarManager:
     """Manager class for interacting with the SOCRadar REST API v4."""
 
     def __init__(self, api_root: str, api_key: str, company_id: str | int, verify_ssl: bool = True) -> None:
+        """Initialize SOCRadarManager with API credentials."""
         self.api_root: str = api_root.rstrip("/")
         self.api_key: str = api_key
         self.company_id: str = str(company_id)
@@ -193,6 +194,7 @@ class SOCRadarManager:
 
     def get_all_incidents(self, start_date: int | None = None, end_date: int | None = None,
                           limit: int | None = None, **filters: Any) -> tuple[list[dict[str, Any]], int]:
+        """Fetch all incidents across pages, optionally limited."""
         if end_date is None:
             end_date = int(time.time())
         first_page = self.get_incidents_page(page=1, start_date=start_date, end_date=end_date, **filters)

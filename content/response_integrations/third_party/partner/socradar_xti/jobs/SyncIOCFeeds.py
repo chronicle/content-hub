@@ -36,6 +36,7 @@ def _parse_uuids(raw: str | None) -> list[str]:
 
 @output_handler
 def main() -> None:
+    """Main execution function for the Sync IOC Feeds job."""
     siemplify = SiemplifyJob()
     siemplify.script_name = JOB_NAME
 
