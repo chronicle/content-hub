@@ -15,8 +15,8 @@ def main() -> None:
     try:
         manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
         manager.test_connectivity()
-        siemplify.end("Successfully connected to the SOCRadar CTI server with the provided connection parameters!", True)
+        siemplify.end("Successfully connected to the SOCRadar server with the provided connection parameters!", True)
     except Exception as e:
-        siemplify.end(f"Failed to connect to the SOCRadar CTI server! Error is {e}", False)
+        siemplify.end(f"Failed to connect to the SOCRadar server! Error is {e}", False)
 if __name__ == "__main__":
     main()
