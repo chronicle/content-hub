@@ -13,6 +13,11 @@
 # limitations under the License.
 
 from __future__ import annotations
+import sys
+import os
+# Ensure the parent directory is in sys.path so we can import the integration as a package
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
+
 
 import importlib
 import pathlib
@@ -43,7 +48,7 @@ def _get_integration_modules_import_strings(integration: pathlib.Path) -> list[s
             if not module.is_file() or module.suffix not in VALID_SUFFIXES:
                 continue
 
-            import_: str = _get_import_string(integration.stem, package.stem, module.stem)
+            import_: str = _get_import_string(integration.name, package.stem, module.stem)
             results.append(import_)
 
     return results
