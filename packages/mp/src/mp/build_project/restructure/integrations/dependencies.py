@@ -54,7 +54,7 @@ class Dependencies(Restructurable):
             ) as f,
         ):
             requirements: Path = pathlib.Path(f.name)
-        try:
+        try:  # noqa: PLW0717
             mp.core.unix.compile_core_integration_dependencies(
                 project_path=self.path,
                 requirements_path=requirements,

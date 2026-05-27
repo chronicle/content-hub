@@ -60,7 +60,7 @@ def minor_version_bump(
         typer.Exit: If the 'packages/mp' folder cannot be found in a parent directory.
 
     """
-    try:
+    try:  # noqa: PLW0717
         pyproject_path: Path = integration_dir_non_built / mp.core.constants.PROJECT_FILE
         pyproject_data: dict[str, Any] = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
 
