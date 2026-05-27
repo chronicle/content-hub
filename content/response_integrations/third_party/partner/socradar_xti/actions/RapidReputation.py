@@ -82,7 +82,7 @@ def main() -> None:
             summary += " | WHITELISTED"
         summary += f" | {len(sources)} source(s)"
     
-        has_results = bool(data.get("finding_sources")) or result.get("risk_score", 0) > 0
+        has_results = bool(data.get("finding_sources")) or (result.get("risk_score", 0) if isinstance(result, dict) else 0) > 0
         siemplify.end(summary, has_results)
     
     except Exception as e:

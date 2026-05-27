@@ -91,8 +91,8 @@ def main() -> None:
                 feed_stats["total_iocs"] += count
                 siemplify.LOGGER.info(f"UUID {uuid}: {count} IOCs fetched")
 
-            except SOCRadarManagerError as e:
-                siemplify.LOGGER.error(f"Failed to fetch UUID {uuid}: {e}")
+            except Exception as e:
+                siemplify.LOGGER.error(f"Failed to process UUID {uuid}: {e}")
                 feed_stats["error"] += 1
 
         # Update Chronicle SIEM reference lists

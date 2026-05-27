@@ -100,6 +100,8 @@ class SOCRadarManager:
           A) { "data": [ {alarm}, {alarm}, ... ] }                              -- legacy/flat
           B) { "data": { "alarms": [...], "total_records": N, "total_pages": M } } -- current
         """
+        if not isinstance(response, dict):
+            return [], 0, 1
         data_field = response.get("data", [])
         if isinstance(data_field, list):
             return data_field, response.get("total_records", len(data_field)), 1
@@ -350,7 +352,10 @@ class SOCRadarManager:
                 if 400 <= resp.status_code < 500:
                     raise SOCRadarManagerError(f"Feed request error {resp.status_code} for {collection_uuid}")
                 resp.raise_for_status()
-                return resp.json()
+                try:
+                    return resp.json()
+                except (ValueError, json.JSONDecodeError):
+                    raise SOCRadarManagerError(f"Invalid JSON from feed {collection_uuid}")
             except requests.exceptions.RequestException as e:
                 if attempt < MAX_RETRIES - 1:
                     time.sleep(RETRY_DELAY * (attempt + 1))
