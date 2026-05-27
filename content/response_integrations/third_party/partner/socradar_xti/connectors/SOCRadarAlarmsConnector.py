@@ -58,7 +58,7 @@ def _is_public_ip(ip: str) -> bool:
 
 
 
-def _safe_str(val) -> str:
+def _safe_str(val: str | list | None) -> str:
     """Extract a string value from a field that may be a string or list."""
     if isinstance(val, list):
         return str(val[0]).strip() if val else ""
@@ -407,12 +407,12 @@ def main(is_test_run: bool = False) -> None:
         tags_str = siemplify.extract_connector_param("Tags Filter", default_value="")
         assignees_str = siemplify.extract_connector_param("Assignees Filter", default_value="")
 
-        severities = [s.strip() for s in severities_str.split(",") if s.strip()] or None
-        status = status_str.strip() if status_str.strip() else None
-        main_types = [s.strip() for s in main_types_str.split(",") if s.strip()] or None
-        sub_types = [s.strip() for s in sub_types_str.split(",") if s.strip()] or None
-        tags = [s.strip() for s in tags_str.split(",") if s.strip()] or None
-        assignees = [s.strip() for s in assignees_str.split(",") if s.strip()] or None
+        severities = [s.strip() for s in (severities_str or "").split(",") if s.strip()] or None
+        status = status_str.strip() if status_str and status_str.strip() else None
+        main_types = [s.strip() for s in (main_types_str or "").split(",") if s.strip()] or None
+        sub_types = [s.strip() for s in (sub_types_str or "").split(",") if s.strip()] or None
+        tags = [s.strip() for s in (tags_str or "").split(",") if s.strip()] or None
+        assignees = [s.strip() for s in (assignees_str or "").split(",") if s.strip()] or None
 
         manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
 
