@@ -393,7 +393,7 @@ class SOCRadarManager:
         """
         # Validate UUID format to prevent injection
         if not re.match(
-            r"^[a-fA-F0-9]{8}-?[a-fA-F0-9]{4}-?[a-fA-F0-9]{4}"
+            r"^(pf-\d+--)?[a-fA-F0-9]{8}-?[a-fA-F0-9]{4}-?[a-fA-F0-9]{4}"
             r"-?[a-fA-F0-9]{4}-?[a-fA-F0-9]{12}$",
             collection_uuid,
         ):
