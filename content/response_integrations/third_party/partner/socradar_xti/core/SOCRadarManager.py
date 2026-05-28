@@ -269,9 +269,13 @@ class SOCRadarManager:
 
     # -- Actions --
     def change_status(
-        self, alarm_ids: list[str | int] | str | int,
-        status: str | int, comments: str = "", email: str = "",
-                      update_related_finding_status: bool = True) -> dict[str, Any]:
+        self,
+        alarm_ids: list[str | int] | str | int,
+        status: str | int,
+        comments: str = "",
+        email: str = "",
+        update_related_finding_status: bool = True,
+    ) -> dict[str, Any]:
         """Change the status of one or more alarms.
 
         Raises:
