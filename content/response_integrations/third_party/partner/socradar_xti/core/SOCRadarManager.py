@@ -251,8 +251,8 @@ class SOCRadarManager:
 
         # Build result from oldest to newest — only include required pages
         all_alarms: list = []
-        for pn in range(total_pages, 0, -1):
-            if pn in required_pages and pn in pages_data:
+        for pn in sorted(required_pages, reverse=True):
+            if pn in pages_data:
                 all_alarms.extend(reversed(pages_data[pn]))
         return all_alarms, total_records
 

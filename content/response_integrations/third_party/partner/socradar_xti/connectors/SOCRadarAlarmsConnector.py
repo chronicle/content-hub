@@ -299,6 +299,8 @@ def _parse_date_safe(date_str: str | None) -> int:
 
 def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
     """Flatten alarm fields into a single event dict for SOAR ingestion."""
+    if not isinstance(alarm, dict):
+        return {}
     atd = alarm.get("alarm_type_details") or {}
     if not isinstance(atd, dict):
         atd = {}
