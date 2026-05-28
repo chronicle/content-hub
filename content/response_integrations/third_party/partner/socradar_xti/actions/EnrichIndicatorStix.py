@@ -35,7 +35,7 @@ def main() -> None:
         manager = SOCRadarManager(api_root, api_key, company_id, verify_ssl)
         result = manager.enrich_indicator_stix(
             indicator,
-            show_credit_details=(show_credits.lower() == "true"),
+            show_credit_details=(str(show_credits or "").lower() == "true"),
             ioc_api_key=ioc_api_key
         )
     

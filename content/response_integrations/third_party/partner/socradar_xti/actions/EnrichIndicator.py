@@ -54,7 +54,7 @@ def main() -> None:
         fields = [f.strip() for f in fields_raw.split(",") if f.strip()]
     else:
         fields = ["indicator_details", "indicator_history", "indicator_relations"]
-        if include_ai.lower() == "true":
+        if str(include_ai or "").lower() == "true":
             fields.append("indicator_ai_insight")
 
     if not ioc_api_key:
