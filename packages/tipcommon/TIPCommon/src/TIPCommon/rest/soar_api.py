@@ -1230,7 +1230,7 @@ def _set_custom_fields_for_single_alert(
         "alert_id": alert_id,
         **{
             custom_field.display_name: custom_fields_values_mapping[custom_field.id]
-            for custom_field in custom_fields_to_values.keys()
+            for custom_field in custom_fields_to_values
         },
     }
 
