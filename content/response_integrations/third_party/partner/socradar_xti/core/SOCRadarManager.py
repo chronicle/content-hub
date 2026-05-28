@@ -39,7 +39,7 @@ class SOCRadarManager:
 
     def __init__(self, api_root: str, api_key: str, company_id: str | int, verify_ssl: bool = True) -> None:
         """Initialize SOCRadarManager with API credentials."""
-        self.api_root: str = api_root.rstrip("/")
+        self.api_root: str = (api_root or "https://platform.socradar.com/api").rstrip("/")
         self.api_key: str = api_key
         self.company_id: str = str(company_id)
         self.verify_ssl: bool = verify_ssl
