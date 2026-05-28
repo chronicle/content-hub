@@ -205,7 +205,7 @@ def main():
         success_message = (
             "Successfully rendered the template."
             if execution_scope.value == ExecutionScope.Alert.value
-            else "Successfully rendered the template for all case open alerts."
+            else "Successfully rendered the template for all alert(s)."
         )
 
         if isinstance(input_json, list):
