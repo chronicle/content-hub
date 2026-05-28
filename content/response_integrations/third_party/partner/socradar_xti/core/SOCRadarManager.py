@@ -442,6 +442,13 @@ class SOCRadarManager:
                 resp = self.session.post(url, json=body, headers=headers, timeout=60)
                 if resp.status_code == 401:
                     raise SOCRadarManagerError("IOC Enrichment unauthorized - check your IOC API key")
+                if resp.status_code == 429:
+                    if attempt < MAX_RETRIES - 1:
+                        time.sleep(RETRY_DELAY * (attempt + 2))
+                        continue
+                    raise SOCRadarManagerError(
+                        "Enrichment rate limit exceeded"
+                    )
                 if 400 <= resp.status_code < 500:
                     try:
                         err_data = resp.json() if resp.text else {}

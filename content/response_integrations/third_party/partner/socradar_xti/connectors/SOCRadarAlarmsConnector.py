@@ -32,7 +32,10 @@ RISK_SCORE_MAP = {"CRITICAL": 90, "HIGH": 70, "MEDIUM": 50, "LOW": 30, "INFO": 1
 
 # --- Indicator extraction patterns ---
 IP_PATTERN = re.compile(r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b")
-URL_PATTERN = re.compile(r"https?://[^\s\'\"<>]+", re.IGNORECASE)
+URL_PATTERN = re.compile(
+    r"https?://[^\s\'\"<>]+[^\s\'\"<>.,:;!?)\]]",
+    re.IGNORECASE,
+)
 EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 HASH_MD5 = re.compile(r"\b[a-fA-F0-9]{32}\b")
 HASH_SHA1 = re.compile(r"\b[a-fA-F0-9]{40}\b")
