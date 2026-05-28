@@ -81,7 +81,7 @@ class GetEnvironmentCommonFactory:
             approach. Defaults to "map.json".
         Returns:
             EnvironmentHandle: An instance of EnvironmentHandle appropriate for the platform's capabilities.
-         """
+        """
         if platform_supports_db(siemplify):
             return EnvironmentHandleForDBSystem(
                 logger=siemplify.LOGGER,
