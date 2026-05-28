@@ -110,6 +110,18 @@ def test_change_status_integer(manager: SOCRadarManager) -> None:
         assert call_body["status"] == 2
 
 
+def test_change_status_numeric_string(manager: SOCRadarManager) -> None:
+    with patch.object(manager, "_request", return_value={"is_success": True}) as mock:
+        manager.change_status(123, "2")
+        call_body = mock.call_args[0][2]
+        assert call_body["status"] == 2
+
+
+def test_change_status_invalid_numeric_string(manager: SOCRadarManager) -> None:
+    with pytest.raises(SOCRadarManagerError, match="Invalid status"):
+        manager.change_status(123, "NOT_A_STATUS")
+
+
 # -- change_severity --
 
 
@@ -198,7 +210,7 @@ def test_get_ioc_feed(manager: SOCRadarManager) -> None:
         mock_resp.status_code = 200
         mock_resp.json.return_value = mock_data
         mock_get.return_value = mock_resp
-        result = manager.get_ioc_feed("test-uuid")
+        result = manager.get_ioc_feed("12345678-1234-1234-1234-123456789abc")
         assert len(result) == 1
         assert result[0]["feed_type"] == "ip"
 
