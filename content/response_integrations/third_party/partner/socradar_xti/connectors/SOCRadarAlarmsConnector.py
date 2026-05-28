@@ -511,7 +511,7 @@ def main(is_test_run: bool = False) -> None:
             if last_processed_ts > last_run:
                 # Only advance past the timestamp if we processed all available alarms.
                 # If capped by max_alerts, save exact timestamp to resume from same point.
-                if len(alerts) < max_alerts:
+                if len(alarms) < max_alerts:
                     save_ts = last_processed_ts + 1000  # +1s (API second precision)
                 else:
                     save_ts = last_processed_ts  # More alarms remain at this timestamp
