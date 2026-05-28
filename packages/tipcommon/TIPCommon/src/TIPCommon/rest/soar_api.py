@@ -132,48 +132,7 @@ def get_case_overview_details(
     return CaseDetails.from_json(api.get_case_overview_details())
 
 
-def get_similar_cases(
-    chronicle_soar: ChronicleSOAR,
-    case_id: int | str,
-    ports_filter: list[str],
-    category_outcome_filter: list[str],
-    rule_generator_filter: list[str],
-    entity_identifiers_filter: list[str],
-    start_time_unix_ms: str,
-    end_time_unix_ms: str,
-) -> list[str]:
-    """Get similar cases.
 
-    Args:
-        chronicle_soar: A chronicle soar SDK object.
-        case_id: Chronicle SOAR case ID.
-        ports_filter: List of ports to filter by.
-        category_outcome_filter: List of category outcomes to filter by.
-        rule_generator_filter: List of rule generators to filter by.
-        entity_identifiers_filter: List of entity identifiers to filter by.
-        start_time_unix_ms: Start time in unix ms.
-        end_time_unix_ms: End time in unix ms.
-
-    Returns:
-        List of similar case IDs.
-    """
-    endpoint = "api/external/v1/sdk/GetSimilarCasesIds?format=snake"
-    url = urljoin(chronicle_soar.API_ROOT, endpoint)
-    payload = {
-        "case_id": case_id,
-        "ports_filter": ports_filter,
-        "category_outcome_filter": category_outcome_filter,
-        "rule_generator_filter": rule_generator_filter,
-        "entity_identifiers_filter": entity_identifiers_filter,
-        "start_time_unix_ms": start_time_unix_ms,
-        "end_time_unix_ms": end_time_unix_ms,
-    }
-
-    chronicle_soar.LOGGER.info(f"Calling endpoint {endpoint} with payload: {payload}")
-    response = chronicle_soar.session.post(url, json=payload)
-    validate_response(response, validate_json=True)
-
-    return response.json()
 
 
 def get_installed_jobs(
@@ -1022,12 +981,12 @@ def get_workflow_instance_cards(
     """Get workflow instance cards for multiple alerts.
 
     Args:
-        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
-        case_id (int): Chronicle SOAR case ID.
-        alert_identifiers (list[str]): List of Chronicle SOAR Alert Identifiers.
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_identifiers: List of Chronicle SOAR Alert Identifiers.
 
     Returns:
-        dict[str, list[dict]]: A dictionary mapping alert identifiers to workflow cards.
+        A dictionary mapping alert identifiers to workflow cards.
     """
     results = {}
     for alert_identifier in alert_identifiers:
@@ -1190,8 +1149,7 @@ def set_custom_fields_for_alerts(
         free_text_type_id: The type ID for free text fields.
 
     Returns:
-        tuple[list[dict[str, list[str]]], list[int]]: Success results and failed alert
-        IDs.
+        Success results and failed alert IDs.
     """
     success_results: list[dict[str, list[str]]] = []
     failed_alerts: list[int] = []
@@ -1235,7 +1193,7 @@ def _set_custom_fields_for_single_alert(
         free_text_type_id: The type ID for free text fields.
 
     Returns:
-        SingleJson: Result dictionary for the alert.
+        Result dictionary for the alert.
     """
     try:
         custom_field_values = list_custom_field_values(
@@ -1250,7 +1208,7 @@ def _set_custom_fields_for_single_alert(
     }
 
     custom_fields_values_mapping: SingleJson = {}
-    for _field_id, (custom_field, field_value) in custom_fields_to_values.items():
+    for custom_field, field_value in custom_fields_to_values.items():
         existing_values = (
             custom_field_values_map.get(custom_field.id, []) if append_values else []
         )
@@ -1275,7 +1233,7 @@ def _set_custom_fields_for_single_alert(
         "alert_id": alert_id,
         **{
             custom_field.display_name: custom_fields_values_mapping[custom_field.id]
-            for custom_field, _ in custom_fields_to_values.values()
+            for custom_field in custom_fields_to_values.keys()
         },
     }
 
