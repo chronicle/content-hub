@@ -132,9 +132,6 @@ def get_case_overview_details(
     return CaseDetails.from_json(api.get_case_overview_details())
 
 
-
-
-
 def get_installed_jobs(
     chronicle_soar: ChronicleSOAR,
     job_instance_id: int | None = None,
