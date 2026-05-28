@@ -15,10 +15,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
-import rich
 import yaml
 
 import mp.core.constants
@@ -38,6 +38,9 @@ if TYPE_CHECKING:
     from mp.core.data_models.playbooks.playbook import BuiltPlaybook
     from mp.core.data_models.playbooks.step.metadata import BuiltStep
     from mp.core.data_models.playbooks.step.step_parameter import BuiltStepParameter
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ReleaseNotesDisplayInfo(NamedTuple):
@@ -75,7 +78,7 @@ def _generate_playbooks_display_info(repo_paths: list[Path], out_path: Path) -> 
                 non_built_playbook_path.name, out_path
             )
             if not built_playbook_path:
-                rich.print(f"{non_built_playbook_path.stem} could not be found in the out folder.")
+                logger.info("%s could not be found in the out folder.", non_built_playbook_path.stem)
                 continue
 
             built_display_info: BuiltPlaybookDisplayInfo = PlaybookDisplayInfo.from_non_built(
@@ -110,7 +113,7 @@ def _update_display_info(
     built_display_info["CreateTime"] = rn_values.creation_time
     built_display_info["UpdateTime"] = rn_values.update_time
     built_display_info["Version"] = rn_values.version
-    built_display_info["Type"] = PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE[built_playbook["Definition"]["PlaybookType"]]
+    built_display_info["Type"] = PLAYBOOK_TYPE_TO_DISPLAY_INFO_TYPE[int(built_playbook["Definition"]["PlaybookType"])]
     built_display_info["Integrations"] = _extract_integrations(built_playbook, out_path)
     built_display_info["DependentPlaybookIds"] = list(
         mp.core.utils.get_playbook_dependent_blocks_ids(non_built_playbook_path)
@@ -132,7 +135,7 @@ def _extract_integrations(built_playbook: BuiltPlaybook, parent_folder: Path) ->
 
 def _extract_from_step(step: BuiltStep, result: set[str]) -> None:
     integration_name: str | None = step.get("Integration")
-    if integration_name not in {"Flow", None}:
+    if integration_name is not None and integration_name != "Flow":
         result.add(integration_name)
 
 
@@ -144,10 +147,7 @@ def _extract_from_block(step: BuiltStep, parent_folder: Path, result: set[str]) 
             result.update(temp)
 
 
-def _extract_integrations_from_nested_block(
-    block_identifier: str | None,
-    base_folder: Path,
-) -> set[str]:
+def _extract_integrations_from_nested_block(block_identifier: str | None, base_folder: Path) -> set[str]:
     result: set[str] = set()
     for file in base_folder.iterdir():
         if file.is_dir() or file.suffix == ".zip":
@@ -159,10 +159,10 @@ def _extract_integrations_from_nested_block(
         if not _is_specific_block(block_json, block_identifier):
             continue
 
-        steps: list[dict] = block_json.get("Definition").get("Steps")
+        steps: list[dict] = block_json.get("Definition", {}).get("Steps", [])
         for step in steps:
-            integration_name: str = step.get("Integration")
-            if integration_name not in {"Flow", None}:
+            integration_name: str | None = step.get("Integration")
+            if integration_name is not None and integration_name != "Flow":
                 result.add(integration_name)
 
         break
@@ -179,7 +179,7 @@ def _is_specific_block(block_json: dict, block_identifier: str | None) -> bool:
 
 def _extract_display_info_from_rn(rn_path: Path) -> ReleaseNotesDisplayInfo:
     release_notes: list[ReleaseNote] = ReleaseNote.from_non_built_path(rn_path)
-    latest_version: float = max(float(rn.version) for rn in release_notes)
+    latest_version: float = max(rn.version for rn in release_notes)
     creation_time: int = min(rn.publish_time for rn in release_notes if rn.publish_time is not None)
     update_time: int = max(rn.publish_time for rn in release_notes if rn.publish_time is not None)
     return ReleaseNotesDisplayInfo(creation_time, update_time, latest_version)

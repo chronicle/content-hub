@@ -106,7 +106,7 @@ def track_command(mp_command_function: MpCommand[P]) -> MpCommand[P]:
                 command=_determine_command_name(mp_command_function.__name__, **kwargs),
                 command_args=command_args_str,
                 duration_ms=duration_ms,
-                success=bool(not command_vars.unexpected_exit),
+                success=not command_vars.unexpected_exit,
                 exit_code=command_vars.exit_code,
                 error_type=type(command_vars.error).__name__ if command_vars.error else None,
                 stack=command_vars.stack,

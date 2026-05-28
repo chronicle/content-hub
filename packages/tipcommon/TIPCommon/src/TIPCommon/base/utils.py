@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 import asyncio
+import operator
 import sys
-from collections.abc import Coroutine, Iterable
 from typing import TYPE_CHECKING
 
 import requests
@@ -24,16 +24,20 @@ import SiemplifyVaultUtils
 from SiemplifyAction import SiemplifyAction
 from SiemplifyConnectors import SiemplifyConnectorExecution
 from SiemplifyJob import SiemplifyJob
-from SiemplifyLogger import SiemplifyLogger
 from SiemplifyUtils import my_stdout
 
-from ..data_models import Container
-from ..exceptions import ActionSetupError
-from ..types import ChronicleSOAR, Entity, GeneralFunction, SingleJson
+from TIPCommon.data_models import Container
+from TIPCommon.exceptions import ActionSetupError
+
 from .interfaces.logger import Logger, ScriptLogger
 
 if TYPE_CHECKING:
-    from typing import Any, Iterable
+    from collections.abc import Coroutine, Iterable
+    from typing import Any
+
+    from SiemplifyLogger import SiemplifyLogger
+
+    from TIPCommon.types import ChronicleSOAR, Entity, GeneralFunction, SingleJson
 
 
 class CreateSession:
@@ -93,12 +97,14 @@ def is_native(method: GeneralFunction) -> bool:
 
 def validate_manager(manager: Any) -> None:
     if manager is None:
-        raise ActionSetupError("Cannot run this action without a manager! (manager is None)\n")
+        msg = "Cannot run this action without a manager! (manager is None)\n"
+        raise ActionSetupError(msg)
 
 
 def validate_entity(entity: Entity) -> None:
     if entity is None:
-        raise ActionSetupError("Cannot run this action on null entity! (entity is None\n")
+        msg = "Cannot run this action on null entity! (entity is None)\n"
+        raise ActionSetupError(msg)
 
 
 class NewLineLogger(Logger):
@@ -188,12 +194,9 @@ def merge_ids_by_timestamp(
 
     Returns:
         A merged and timestamp-sorted list of (id, timestamp) pairs.
+
     """
+    merged: dict[str, int] = dict(list_1)
+    merged.update(dict(list_2))
 
-    merged: dict[str, int] = {}
-    for _id, ts in list_1:
-        merged[_id] = ts
-    for _id, ts in list_2:
-        merged[_id] = ts
-
-    return sorted(merged.items(), key=lambda x: x[1])
+    return sorted(merged.items(), key=operator.itemgetter(1))
