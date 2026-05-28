@@ -392,7 +392,11 @@ class SOCRadarManager:
             SOCRadarManagerError: If the feed is not found or the request fails.
         """
         # Validate UUID format to prevent injection
-        if not re.match(r"^[a-fA-F0-9]{32}$", collection_uuid):
+        if not re.match(
+            r"^[a-fA-F0-9]{8}-?[a-fA-F0-9]{4}-?[a-fA-F0-9]{4}"
+            r"-?[a-fA-F0-9]{4}-?[a-fA-F0-9]{12}$",
+            collection_uuid,
+        ):
             raise SOCRadarManagerError(
                 f"Invalid collection UUID format: {collection_uuid}"
             )
