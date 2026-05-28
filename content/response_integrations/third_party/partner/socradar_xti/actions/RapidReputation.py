@@ -1,7 +1,9 @@
 """Rapid Reputation - Quick reputation check for an entity from SOCRadar."""
 from __future__ import annotations
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.SOCRadarManager import SOCRadarManager
 
 INTEGRATION_NAME = "SOCRadar"
@@ -82,7 +84,8 @@ def main() -> None:
             summary += " | WHITELISTED"
         summary += f" | {len(sources)} source(s)"
     
-        has_results = bool(data.get("finding_sources")) or (result.get("risk_score", 0) if isinstance(result, dict) else 0) > 0
+        risk = result.get("risk_score", 0) if isinstance(result, dict) else 0
+        has_results = bool(data.get("finding_sources")) or risk > 0
         siemplify.end(summary, has_results)
     
     except Exception as e:

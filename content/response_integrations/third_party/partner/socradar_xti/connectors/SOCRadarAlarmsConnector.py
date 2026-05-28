@@ -5,14 +5,14 @@ Chronicle SOAR native connector. Ingests SOCRadar alarms as alerts.
 Uses SOAR SDK (SiemplifyConnectorExecution, AlertInfo).
 """
 from __future__ import annotations
-from typing import Any
 
 import ipaddress
+import json
 import re
 import sys
-import json
 import time
 from datetime import datetime, timezone
+from typing import Any
 
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
@@ -28,7 +28,6 @@ DEFAULT_MAX_ALERTS = 100
 # Alarm severity → SOAR risk score (midpoint of each band)
 # CRITICAL: 80-100 → 90, HIGH: 60-79 → 70, MEDIUM: 40-59 → 50, LOW: 20-39 → 30, INFO: 0-19 → 10
 RISK_SCORE_MAP = {"CRITICAL": 90, "HIGH": 70, "MEDIUM": 50, "LOW": 30, "INFO": 10}
-
 
 
 # --- Indicator extraction patterns ---
@@ -60,7 +59,6 @@ def _is_public_ip(ip: str) -> bool:
         return False
 
 
-
 def _safe_str(val: str | list[str] | int | bool | None) -> str:
     """Safely convert a value to string. Returns empty string for None."""
     if val is None:
@@ -68,6 +66,7 @@ def _safe_str(val: str | list[str] | int | bool | None) -> str:
     if isinstance(val, list):
         return str(val[0]).strip() if val and val[0] is not None else ""
     return str(val).strip()
+
 
 def _extract_indicators(alarm: dict[str, Any]) -> dict[str, list[str]]:
     """Extract IOCs from alarm content and alarm_text. Returns dict of sorted unique lists."""
@@ -144,7 +143,9 @@ def _extract_indicators(alarm: dict[str, Any]) -> dict[str, list[str]]:
     }
 
 
-def _indicators_to_events(alarm: dict[str, Any], base_event: dict[str, Any]) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
+def _indicators_to_events(
+    alarm: dict[str, Any], base_event: dict[str, Any],
+) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
     """Create one event per indicator with Siemplify entity-recognized field names.
     These get picked up by the Ontology resolver and become Entities on the case."""
     indicators = _extract_indicators(alarm)
@@ -205,7 +206,14 @@ def _indicators_to_events(alarm: dict[str, Any], base_event: dict[str, Any]) -> 
     return events, indicators
 
 
-def build_alert(siemplify: SiemplifyConnectorExecution, alarm: dict[str, Any], company_id: str = "", extract_indicators: bool = True, env_field: str = "", env_regex: str = ".*") -> AlertInfo:
+def build_alert(
+    siemplify: SiemplifyConnectorExecution,
+    alarm: dict[str, Any],
+    company_id: str = "",
+    extract_indicators: bool = True,
+    env_field: str = "",
+    env_regex: str = ".*",
+) -> AlertInfo:
     """Build a Chronicle SOAR AlertInfo from a SOCRadar alarm dict."""
     alarm_id = _safe_str(alarm.get("alarm_id"))
     atd = alarm.get("alarm_type_details") or {}
@@ -275,8 +283,6 @@ def _parse_date(date_str: str | None, default: int | None = None) -> int:
         return default if default is not None else unix_now()
 
 
-
-
 def _parse_date_safe(date_str: str | None) -> int:
     """Parse date string to ms timestamp. Returns 0 on failure (safe for checkpoint)."""
     if not date_str:
@@ -286,6 +292,7 @@ def _parse_date_safe(date_str: str | None) -> int:
         return int(dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
     except (ValueError, TypeError):
         return 0
+
 
 def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
     """Flatten alarm fields into a single event dict for SOAR ingestion."""
@@ -350,7 +357,10 @@ def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
         "RecommendedResponse": response[:2000] if response else "",
         "MitigationPlan": mitigation[:2000] if mitigation else "",
         "DetectionGuidance": detection[:2000] if detection else "",
-        "SOCRadarAlarmURL": f"https://platform.socradar.com/app/alarm-management/alarm-detail/{alarm.get('alarm_id', '')}",
+        "SOCRadarAlarmURL": (
+            f"https://platform.socradar.com/app/alarm-management/alarm-detail/"
+            f"{alarm.get('alarm_id', '')}"
+        ),
     }
 
     if isinstance(content, dict) and content:
@@ -404,11 +414,15 @@ def main(is_test_run: bool = False) -> None:
         company_id = siemplify.extract_connector_param("Company ID")
         verify_ssl = siemplify.extract_connector_param("Verify SSL", default_value=True, input_type=bool)
         try:
-            max_alerts = int(siemplify.extract_connector_param("Max Alerts Per Cycle", default_value=str(DEFAULT_MAX_ALERTS)))
+            max_alerts = int(siemplify.extract_connector_param(
+                "Max Alerts Per Cycle", default_value=str(DEFAULT_MAX_ALERTS)
+            ))
         except (ValueError, TypeError):
             max_alerts = DEFAULT_MAX_ALERTS
 
-        extract_indicators = siemplify.extract_connector_param("Extract Indicators", default_value=True, input_type=bool)
+        extract_indicators = siemplify.extract_connector_param(
+            "Extract Indicators", default_value=True, input_type=bool
+        )
 
         severities_str = siemplify.extract_connector_param("Severity Filter", default_value="")
         status_str = siemplify.extract_connector_param("Status Filter", default_value="OPEN")
@@ -470,7 +484,11 @@ def main(is_test_run: bool = False) -> None:
             if alarm_id in processed_set:
                 continue
             try:
-                alert = build_alert(siemplify, alarm, company_id=company_id, extract_indicators=extract_indicators, env_field=env_field, env_regex=env_regex)
+                alert = build_alert(
+                    siemplify, alarm, company_id=company_id,
+                    extract_indicators=extract_indicators,
+                    env_field=env_field, env_regex=env_regex
+                )
                 if is_test_run:
                     siemplify.LOGGER.info(f"[TEST] Alert built: {alarm_id}")
                 alerts.append(alert)
@@ -499,7 +517,7 @@ def main(is_test_run: bool = False) -> None:
             elif total > 0 and last_processed_ts == last_run:
                 # All alarms are at or before last_run (rounding edge case) — advance by 1s
                 siemplify.save_timestamp(new_timestamp=last_run + 1000)
-                siemplify.LOGGER.info(f"Advancing checkpoint by 1s to avoid stall")
+                siemplify.LOGGER.info("Advancing checkpoint by 1s to avoid stall")
             elif total == 0:
                 # No alarms — advance conservatively, capped at current time
                 advance_to = min(last_run + (5 * 60 * 1000), int(time.time() * 1000))

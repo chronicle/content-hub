@@ -1,8 +1,11 @@
 """Enrich Indicator - Get threat intelligence details for an IOC from SOCRadar."""
 from __future__ import annotations
+
 from typing import Any
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.SOCRadarManager import SOCRadarManager
 
 INTEGRATION_NAME = "SOCRadar"
@@ -70,7 +73,12 @@ def main() -> None:
             severity = _score_to_severity(raw_score)
             result["severity"] = severity
             try:
-                numeric_score = float(raw_score[0]) if isinstance(raw_score, list) and raw_score else (float(raw_score) if raw_score else 0)
+                if isinstance(raw_score, list) and raw_score:
+                    numeric_score = float(raw_score[0])
+                elif raw_score:
+                    numeric_score = float(raw_score)
+                else:
+                    numeric_score = 0
             except (ValueError, TypeError):
                 numeric_score = 0
             result["risk_score"] = round(numeric_score, 2)

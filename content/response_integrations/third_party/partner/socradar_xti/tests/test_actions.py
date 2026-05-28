@@ -4,8 +4,6 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 def _make_siemplify_mock(config: dict[str, Any] | None = None, params: dict[str, Any] | None = None) -> MagicMock:
     """Create a mock SiemplifyAction with configuration and action params."""

@@ -1,7 +1,9 @@
 """Get Threat Feed - Fetch IOCs from one or more SOCRadar Threat Feed collections."""
 from __future__ import annotations
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.SOCRadarManager import SOCRadarManager
 
 INTEGRATION_NAME = "SOCRadar"
@@ -51,7 +53,11 @@ def main() -> None:
             # Apply IOC type filter if specified
             if ioc_type_filter:
                 allowed_types = [t.strip().lower() for t in ioc_type_filter.split(",")]
-                feed_data = [ioc for ioc in feed_data if isinstance(ioc, dict) and str(ioc.get("feed_type") or "").lower() in allowed_types]
+                feed_data = [
+                ioc for ioc in feed_data
+                if isinstance(ioc, dict)
+                and str(ioc.get("feed_type") or "").lower() in allowed_types
+            ]
 
             # Apply max limit
             feed_data = feed_data[:max_iocs]

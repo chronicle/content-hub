@@ -8,13 +8,13 @@ Base URL: https://platform.socradar.com/api
 Auth: Header -> API-Key: {api_key}
 """
 from __future__ import annotations
-from typing import Any
 
 import json
 import math
 import time
-import requests
+from typing import Any
 
+import requests
 
 STATUS_CODES = {
     "OPEN": 0, "INVESTIGATING": 1, "RESOLVED": 2, "PENDING_INFO": 4,
@@ -54,7 +54,11 @@ class SOCRadarManager:
         """Build full API URL for a company-scoped endpoint."""
         return f"{self.api_root}/company/{self.company_id}/{endpoint}"
 
-    def _request(self, method: str, endpoint: str, body: dict[str, Any] | None = None, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _request(
+        self, method: str, endpoint: str,
+        body: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Send an HTTP request to the SOCRadar API with retry logic.
 
         Raises:
@@ -264,7 +268,9 @@ class SOCRadarManager:
         return alarms[0]
 
     # -- Actions --
-    def change_status(self, alarm_ids: list[str | int] | str | int, status: str | int, comments: str = "", email: str = "",
+    def change_status(
+        self, alarm_ids: list[str | int] | str | int,
+        status: str | int, comments: str = "", email: str = "",
                       update_related_finding_status: bool = True) -> dict[str, Any]:
         """Change the status of one or more alarms.
 
@@ -345,7 +351,11 @@ class SOCRadarManager:
         """Get current assignee(s) of an alarm."""
         return self._request("GET", f"alarm/{int(alarm_id)}/assignee")
 
-    def change_assignee(self, alarm_id: int | str, user_ids: list[int] | None = None, user_emails: list[str] | None = None) -> dict[str, Any]:
+    def change_assignee(
+        self, alarm_id: int | str,
+        user_ids: list[int] | None = None,
+        user_emails: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Assign user(s) to an alarm.
 
         Raises:
@@ -411,7 +421,10 @@ class SOCRadarManager:
         return results
 
     # -- IOC Enrichment --
-    def _enrichment_request(self, endpoint: str, body: dict[str, Any], ioc_api_key: str | None = None) -> dict[str, Any]:
+    def _enrichment_request(
+        self, endpoint: str, body: dict[str, Any],
+        ioc_api_key: str | None = None,
+    ) -> dict[str, Any]:
         """Send a request to the IOC Enrichment API.
 
         Uses a separate API key (credit-based add-on) and a different URL
@@ -448,7 +461,11 @@ class SOCRadarManager:
                     raise SOCRadarManagerError(
                         f"Enrichment request failed after {MAX_RETRIES} attempts: {e}")
 
-    def enrich_indicator(self, indicator: str, fields: list[str] | None = None, ioc_api_key: str | None = None) -> dict[str, Any]:
+    def enrich_indicator(
+        self, indicator: str,
+        fields: list[str] | None = None,
+        ioc_api_key: str | None = None,
+    ) -> dict[str, Any]:
         """Enrich an indicator (IP, domain, hash, URL) via SOCRadar IOC Enrichment API.
 
         Args:
@@ -469,13 +486,20 @@ class SOCRadarManager:
             body["fields"] = ["indicator_details", "indicator_history", "indicator_relations"]
         return self._enrichment_request("ioc_enrichment/get/indicator_details", body, ioc_api_key)
 
-    def enrich_indicator_stix(self, indicator: str, show_credit_details: bool = False, ioc_api_key: str | None = None) -> dict[str, Any]:
+    def enrich_indicator_stix(
+        self, indicator: str,
+        show_credit_details: bool = False,
+        ioc_api_key: str | None = None,
+    ) -> dict[str, Any]:
         """Enrich an indicator and return results in STIX format."""
         body = {"indicator": indicator, "show_credit_details": show_credit_details}
         return self._enrichment_request("ioc_enrichment/get/indicator_details_stix", body, ioc_api_key)
 
     # -- Rapid Reputation --
-    def rapid_reputation(self, entity_value: str, entity_type: str, rapid_api_key: str | None = None) -> dict[str, Any]:
+    def rapid_reputation(
+        self, entity_value: str, entity_type: str,
+        rapid_api_key: str | None = None,
+    ) -> dict[str, Any]:
         """Quick reputation lookup for an entity (IP, hostname, URL, or hash).
 
         Uses a separate API key (add-on) and header name 'Api-Key' (not 'API-Key').

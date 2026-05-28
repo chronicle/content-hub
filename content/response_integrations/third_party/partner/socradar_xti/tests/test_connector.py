@@ -1,11 +1,9 @@
 """Unit tests for SOCRadar Alarms Connector."""
 from __future__ import annotations
 
-from typing import Any
-from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
-
-import pytest
+from typing import Any
+from unittest.mock import MagicMock
 
 
 def _make_alarm(alarm_id: int = 12345, risk: str = "HIGH", status: str = "OPEN",

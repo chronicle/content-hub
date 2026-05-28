@@ -1,16 +1,15 @@
 """Unit tests for SOCRadarManager."""
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from ..core.SOCRadarManager import (
-    SOCRadarManager,
-    SOCRadarManagerError,
     STATUS_CODES,
     VALID_SEVERITIES,
+    SOCRadarManager,
+    SOCRadarManagerError,
 )
 
 
