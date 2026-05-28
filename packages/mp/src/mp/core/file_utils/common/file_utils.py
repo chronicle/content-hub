@@ -14,17 +14,21 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
+from pathlib import Path
 from typing import TYPE_CHECKING
 
+import typer
 import yaml
 
 import mp.core.config
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
-    from pathlib import Path
     from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 VALID_REPEATED_FILES: set[str] = {"__init__.py"}
@@ -144,3 +148,28 @@ def save_yaml(data: Mapping[str, Any] | Sequence[Mapping[str, Any]], path: Path)
     except yaml.YAMLError as e:
         msg = "Failed to serialize data to YAML format."
         raise ValueError(msg) from e
+
+
+def validate_safe_path(base_path: Path, path_to_join: str | Path) -> None:
+    """Validate that the path to join is relative and stays within the base path.
+
+    Args:
+        base_path: The base directory path.
+        path_to_join: The path to append to the base directory.
+
+    Raises:
+        typer.Exit: If path traversal is detected.
+
+    """
+    path_to_join_obj: Path = Path(path_to_join)
+
+    if path_to_join_obj.is_absolute():
+        logger.error("Path traversal detected: %s is an absolute path.", path_to_join)
+        raise typer.Exit(1)
+
+    full_path: Path = (base_path / path_to_join_obj).resolve()
+    base_path_resolved: Path = base_path.resolve()
+
+    if not full_path.is_relative_to(base_path_resolved):
+        logger.error("Path traversal detected: %s attempts to escape the base directory.", path_to_join)
+        raise typer.Exit(1)

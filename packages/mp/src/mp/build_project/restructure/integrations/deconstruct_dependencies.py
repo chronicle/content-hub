@@ -99,7 +99,7 @@ class DependencyDeconstructor:
         core_modules_path: Path = self.integration_path / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
         manager_modules: set[str] = {p.stem for p in core_modules_path.glob("*.py")}
         for path in self.integration_path.rglob("*.py"):
-            try:
+            try:  # noqa: PLW0717
                 tree = ast.parse(path.read_text(encoding="utf-8"))
                 for node in ast.walk(tree):
                     match node:
@@ -260,8 +260,12 @@ def _find_package_file(package_dir: Path, wheel_name_prefix: str) -> Path:
 
     """
     for extension in PACAKGE_SUFFIXES:
-        for file in package_dir.glob(f"{wheel_name_prefix}{extension}"):
-            return file
+        ext_suffix = extension.lstrip("*")
+        wheel_prefix_with_dash = f"{wheel_name_prefix}-"
+        exact_match_name = f"{wheel_name_prefix}{ext_suffix}"
+        for file in package_dir.glob(f"{wheel_name_prefix}*{ext_suffix}"):
+            if file.name.startswith(wheel_prefix_with_dash) or file.name == exact_match_name:
+                return file
 
     msg: str = f"No wheel or source distribution found in {package_dir}"
     raise FileNotFoundError(msg)
