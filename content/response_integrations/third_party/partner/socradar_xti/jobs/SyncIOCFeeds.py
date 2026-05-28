@@ -60,6 +60,7 @@ def main() -> None:
                                                    default_value=REFERENCE_LIST_PREFIX)
 
         uuids = _parse_uuids(uuids_raw)
+        uuids = list(dict.fromkeys(uuids))  # Deduplicate, preserve order
         if not uuids:
             siemplify.LOGGER.error("No Collection UUIDs configured. Nothing to sync.")
             return

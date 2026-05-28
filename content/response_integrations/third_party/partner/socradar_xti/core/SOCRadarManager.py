@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import time
 from typing import Any
 
@@ -390,6 +391,11 @@ class SOCRadarManager:
         Raises:
             SOCRadarManagerError: If the feed is not found or the request fails.
         """
+        # Validate UUID format to prevent injection
+        if not re.match(r"^[a-fA-F0-9]{32}$", collection_uuid):
+            raise SOCRadarManagerError(
+                f"Invalid collection UUID format: {collection_uuid}"
+            )
         url = f"{self.api_root}/threat/intelligence/feed_list/{collection_uuid}.json"
         params = {"key": self.api_key, "v": "2"}
         for attempt in range(MAX_RETRIES):
@@ -413,10 +419,12 @@ class SOCRadarManager:
     def get_multiple_ioc_feeds(self, collection_uuids: list[str]) -> dict[str, list[dict[str, Any]] | dict[str, Any]]:
         """Fetch IOCs from multiple feed collections. Returns dict keyed by UUID."""
         results = {}
+        seen: set[str] = set()
         for uuid in collection_uuids:
             uuid = uuid.strip()
-            if not uuid:
+            if not uuid or uuid in seen:
                 continue
+            seen.add(uuid)
             try:
                 results[uuid] = self.get_ioc_feed(uuid)
             except SOCRadarManagerError as e:
