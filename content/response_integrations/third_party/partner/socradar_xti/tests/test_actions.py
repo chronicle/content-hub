@@ -106,6 +106,41 @@ def test_get_alarm_details_not_found() -> None:
         assert call_args[1] is False
 
 
+# -- ChangeAlarmStatus --
+
+
+def test_change_alarm_status_no_email_skips_related() -> None:
+    """When Update Related Findings=True but Email is empty, auto-disable."""
+    siemplify = _make_siemplify_mock(params={
+        "Alarm ID": "12345",
+        "Status": "INVESTIGATING",
+        "Comments": "",
+        "Email": "",
+        "Update Related Findings": True,
+    })
+
+    with patch(
+        "socradar_xti.actions.ChangeAlarmStatus.SiemplifyAction",
+        return_value=siemplify,
+    ), patch(
+        "socradar_xti.actions.ChangeAlarmStatus.SOCRadarManager",
+    ) as MockMgr:
+        instance = MockMgr.return_value
+        instance.change_status.return_value = {"is_success": True}
+
+        from socradar_xti.actions.ChangeAlarmStatus import main
+        main()
+
+        # Verify update_related was set to False (5th positional arg)
+        call_args = instance.change_status.call_args[0]
+        assert call_args[4] is False  # update_related_finding_status
+
+        # Verify output mentions no email
+        end_args = siemplify.end.call_args[0]
+        assert "no email" in end_args[0].lower()
+        assert end_args[1] is True
+
+
 # -- EnrichIndicator --
 
 
