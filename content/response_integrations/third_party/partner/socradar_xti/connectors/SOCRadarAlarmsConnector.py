@@ -327,11 +327,11 @@ def _flatten_alarm(alarm: dict[str, Any]) -> dict[str, Any]:
         "alarm_default_risk_level": _safe_str(atd.get("alarm_default_risk_level")),
         "alarm_default_mitigation_plan": mitigation,
         "alarm_detection_and_analysis": detection,
-        "tags": json.dumps(alarm.get("tags", [])),
-        "alarm_assignees": json.dumps(alarm.get("alarm_assignees", [])),
-        "alarm_related_assets": json.dumps(alarm.get("alarm_related_assets", [])),
-        "alarm_related_entities": json.dumps(alarm.get("alarm_related_entities", [])),
-        "alarm_compliance_list": json.dumps(atd.get("alarm_compliance_list", [])),
+        "tags": json.dumps(alarm.get("tags") or []),
+        "alarm_assignees": json.dumps(alarm.get("alarm_assignees") or []),
+        "alarm_related_assets": json.dumps(alarm.get("alarm_related_assets") or []),
+        "alarm_related_entities": json.dumps(alarm.get("alarm_related_entities") or []),
+        "alarm_compliance_list": json.dumps(atd.get("alarm_compliance_list") or []),
         "is_approved": _safe_str(alarm.get("is_approved")),
         "risk_score": str(RISK_SCORE_MAP.get(severity, 50)),
         "device_vendor": VENDOR,
@@ -467,7 +467,7 @@ def main(is_test_run: bool = False) -> None:
 
         # Deduplication — skip already-ingested alarm IDs
         existing_ids = siemplify.get_connector_context_property("processed_ids") or ""
-        processed_set = set(existing_ids.split(",")) if existing_ids else set()
+        processed_set = {x for x in existing_ids.split(",") if x} if existing_ids else set()
 
         last_processed_ts = last_run
         for alarm in alarms[:max_alerts]:
