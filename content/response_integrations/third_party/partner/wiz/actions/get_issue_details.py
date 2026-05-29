@@ -50,8 +50,7 @@ class GetIssueDetails(Action):
     def _perform_action(self, _) -> None:
         self.json_results: SingleJson = self._get_issue_details().to_json()
         self.output_message: str = (
-            "Successfully returned information about the issue "
-            f"{self.params.issue_id} in {constants.INTEGRATION_NAME}."
+            f"Successfully returned information about the issue {self.params.issue_id} in {constants.INTEGRATION_NAME}."
         )
 
     def _get_issue_details(self) -> datamodels.Issue:
@@ -60,8 +59,7 @@ class GetIssueDetails(Action):
 
         except exceptions.IssueNotFoundError as e:
             raise exceptions.IssueNotFoundError(
-                f"Issue with ID {self.params.issue_id} wasn't found in "
-                f"{constants.INTEGRATION_NAME}."
+                f"Issue with ID {self.params.issue_id} wasn't found in {constants.INTEGRATION_NAME}."
             ) from e
 
 

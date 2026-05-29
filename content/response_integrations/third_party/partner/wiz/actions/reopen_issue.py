@@ -50,8 +50,7 @@ class ReopenIssue(Action):
     def _perform_action(self, _) -> None:
         self.json_results: SingleJson = self._reopen_issue().to_json()
         self.output_message: str = (
-            "Successfully reopened issue with ID "
-            f"{self.params.issue_id} in {constants.INTEGRATION_NAME}."
+            f"Successfully reopened issue with ID {self.params.issue_id} in {constants.INTEGRATION_NAME}."
         )
 
     def _reopen_issue(self) -> datamodels.Issue:
@@ -60,8 +59,7 @@ class ReopenIssue(Action):
 
         except exceptions.IssueNotFoundError as e:
             raise exceptions.IssueNotFoundError(
-                f"Issue with ID {self.params.issue_id} wasn't found in "
-                f"{constants.INTEGRATION_NAME}."
+                f"Issue with ID {self.params.issue_id} wasn't found in {constants.INTEGRATION_NAME}."
             ) from e
 
 
