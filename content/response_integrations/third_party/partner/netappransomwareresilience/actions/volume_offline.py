@@ -57,8 +57,7 @@ def main() -> None:
 
     siemplify.LOGGER.info("----------------- RRS - Volume Offline: End -----------------")
     siemplify.LOGGER.info(
-        f"Volume Offline: \n  status: {status}\n  result_value: {result_value}"
-        f"\n  output_message: {output_message}"
+        f"Volume Offline: \n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}"
     )
 
     # Add result to action output.

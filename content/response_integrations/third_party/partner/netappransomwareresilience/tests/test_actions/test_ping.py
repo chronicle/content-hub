@@ -18,7 +18,9 @@ class TestPing:
         rrs: RansomwareResilience,
     ) -> None:
         """Test that Ping action succeeds with valid token."""
-        success_output_msg = "Successfully connected to Ransomware Resilience server!"
+        success_output_msg = (
+            "Successfully connected to the NetApp Ransomware Resilience server with the provided connection parameters!"
+        )
 
         ping.main()
 
