@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import os
 import re
@@ -60,12 +61,10 @@ def _versions_on_main(rn_path: Path) -> set[str]:
         when the file does not yet exist on main or cannot be parsed.
 
     """
-    try:
+    with contextlib.suppress(mp.core.unix.NonFatalCommandError):
         base_content = yaml.safe_load(mp.core.unix.get_file_content_from_main_branch(rn_path))
         if isinstance(base_content, list):
-            return {_normalize_version(note.get("integration_version", "")) for note in base_content}
-    except mp.core.unix.NonFatalCommandError:
-        pass  # File doesn't exist on main — new integration, validate all entries
+            return {_normalize_version(note.get("version") or note["integration_version"]) for note in base_content}
     return set()
 
 
@@ -101,7 +100,7 @@ def _perform_validation(content: list[dict], head_sha: str | None, existing_vers
     date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
     invalid: list[str] = []
     for note in content:
-        version = _normalize_version(note.get("integration_version", "?"))
+        version = _normalize_version(note.get("version") or note.get("integration_version", "?"))
         if head_sha and version in existing_versions:
             continue  # Pre-existing entry — skip
 
