@@ -83,18 +83,27 @@ def main() -> None:
 
         siemplify.result.add_result_json(aggregated)
         if successes and not failures:
-            output_message = f"MarkCaseNotAnAttack succeeded for {len(successes)} case(s): {', '.join(successes)}."
+            output_message = (
+                f"Successfully marked cases as 'not an attack' on the following entities using Abnormal Security: "
+                f"{', '.join(successes)}"
+            )
             result_value = True
             status = EXECUTION_STATE_COMPLETED
         elif successes and failures:
-            output_message = f"MarkCaseNotAnAttack: {len(successes)} succeeded, {len(failures)} failed. " + "; ".join(
-                f"{c}: {e}" for c, e in failures
+            failed_ids = ", ".join(c for c, _ in failures)
+            output_message = (
+                f"Successfully marked cases as 'not an attack' on the following entities using Abnormal Security: "
+                f"{', '.join(successes)}. "
+                f"Action wasn't able to mark cases as 'not an attack' on the following entities using "
+                f"Abnormal Security: {failed_ids}"
             )
             result_value = True
             status = EXECUTION_STATE_COMPLETED
         else:
-            output_message = f"MarkCaseNotAnAttack failed for all {len(failures)} case(s): " + "; ".join(
-                f"{c}: {e}" for c, e in failures
+            failed_ids = ", ".join(c for c, _ in failures)
+            output_message = (
+                f"Action wasn't able to mark cases as 'not an attack' on the following entities using "
+                f"Abnormal Security: {failed_ids}"
             )
 
     except (

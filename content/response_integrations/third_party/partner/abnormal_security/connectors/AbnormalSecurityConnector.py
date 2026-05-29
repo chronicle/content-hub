@@ -244,7 +244,7 @@ def main(test_handler: bool = False) -> None:
             else:
                 alert_id = f"case_{alert.get('caseId', '')}"
                 time_field = (
-                    alert.get("firstObserved") or alert.get("customerVisibleTime") or alert.get("last_modified")
+                    alert.get("firstObserved") or alert.get("customerVisibleTime") or alert.get("lastModifiedTime")
                 )
 
             if not alert_id or alert_id in existing_ids:

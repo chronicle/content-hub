@@ -104,20 +104,26 @@ def main() -> None:
         siemplify.result.add_result_json(aggregated)
         if successes and not failures:
             output_message = (
-                f"Successfully applied action '{action}' to {len(successes)} threat(s): {', '.join(successes)}."
+                f"Successfully applied action '{action}' on the following entities using Abnormal Security: "
+                f"{', '.join(successes)}"
             )
             result_value = True
             status = EXECUTION_STATE_COMPLETED
         elif successes and failures:
+            failed_ids = ", ".join(t for t, _ in failures)
             output_message = (
-                f"Action '{action}' applied to {len(successes)} threat(s) but "
-                f"failed for {len(failures)}: " + "; ".join(f"{t}: {e}" for t, e in failures)
+                f"Successfully applied action '{action}' on the following entities using Abnormal Security: "
+                f"{', '.join(successes)}. "
+                f"Action wasn't able to apply '{action}' on the following entities using Abnormal Security: "
+                f"{failed_ids}"
             )
             result_value = True
             status = EXECUTION_STATE_COMPLETED
         else:
-            output_message = f"Failed to apply action '{action}' to all {len(failures)} threat(s): " + "; ".join(
-                f"{t}: {e}" for t, e in failures
+            failed_ids = ", ".join(t for t, _ in failures)
+            output_message = (
+                f"Action wasn't able to apply '{action}' on the following entities using Abnormal Security: "
+                f"{failed_ids}"
             )
 
     except (

@@ -467,7 +467,7 @@ class AbnormalManager:
         """
         params: dict[str, Any] = {"pageSize": page_size, "pageNumber": page_number}
         if tenant_ids:
-            params["tenant_ids"] = ",".join(tenant_ids)
+            params["tenantIds"] = ",".join(tenant_ids)
         return self._make_request("GET", ACTIVITIES_LIST_ENDPOINT, params=params)
 
     # ── Inquiry ───────────────────────────────────────────────────────────────

@@ -90,18 +90,27 @@ def main() -> None:
 
         siemplify.result.add_result_json(aggregated)
         if successes and not failures:
-            output_message = f"RemediateThreat succeeded for {len(successes)} threat(s): {', '.join(successes)}."
+            output_message = (
+                f"Successfully remediated threats on the following entities using Abnormal Security: "
+                f"{', '.join(successes)}"
+            )
             result_value = True
             status = EXECUTION_STATE_COMPLETED
         elif successes and failures:
-            output_message = f"RemediateThreat: {len(successes)} succeeded, {len(failures)} failed. " + "; ".join(
-                f"{t}: {e}" for t, e in failures
+            failed_ids = ", ".join(t for t, _ in failures)
+            output_message = (
+                f"Successfully remediated threats on the following entities using Abnormal Security: "
+                f"{', '.join(successes)}. "
+                f"Action wasn't able to remediate threats on the following entities using Abnormal Security: "
+                f"{failed_ids}"
             )
             result_value = True
             status = EXECUTION_STATE_COMPLETED
         else:
-            output_message = f"RemediateThreat failed for all {len(failures)} threat(s): " + "; ".join(
-                f"{t}: {e}" for t, e in failures
+            failed_ids = ", ".join(t for t, _ in failures)
+            output_message = (
+                f"Action wasn't able to remediate threats on the following entities using Abnormal Security: "
+                f"{failed_ids}"
             )
 
     except (
