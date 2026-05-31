@@ -18,7 +18,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from .capabilities import ActionCapabilities  # noqa: TC001
+from .ai_categories import AiCategories  # noqa: TC001
+from .capabilities import ActionCapabilities
 from .entity_usage import EntityUsage  # noqa: TC001
 from .outcome_categories import OutcomeCategories  # noqa: TC001
 
@@ -70,6 +71,14 @@ class ActionAiMetadata(BaseModel):
             ),
         ),
     ]
+    categories: Annotated[
+        AiCategories,
+        Field(
+            description=(
+                "Categories that describe the action's capabilities. These tags are inferred based on the fields."
+            ),
+        ),
+    ]
     entity_usage: Annotated[
         EntityUsage,
         Field(
@@ -80,14 +89,14 @@ class ActionAiMetadata(BaseModel):
         ),
     ]
     outcome_categories: Annotated[
-        OutcomeCategories,
+        OutcomeCategories | None,
         Field(
             description=(
                 "Describes what the action achieves - its expected outcomes."
                 " This field classifies the action based on what it does, rather than how it operates."
             ),
         ),
-    ]
+    ] = None
     capabilities: Annotated[
         ActionCapabilities,
         Field(

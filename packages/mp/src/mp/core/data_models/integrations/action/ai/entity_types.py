@@ -57,6 +57,7 @@ class EntityTypesUsage(BaseModel):
     user: bool = False
 
 
+
 class EntityType(StrEnum):
     ADDRESS = "ADDRESS"
     ALERT = "ALERT"

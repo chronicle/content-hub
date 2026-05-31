@@ -350,6 +350,71 @@ class OutcomeCategories(BaseModel):
             ),
         ),
     ]
+    force_identity_mfa: Annotated[
+        bool,
+        Field(
+            title="Force Identity MFA",
+            description=(
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
+                " When performing identity verification, this actions will force an MFA verification process,"
+                " increasing the confidence and reducing risk. The action will turn on a process for user IDs "
+                "or accounts, making sure the next time their identity is verified - the MFA process will take place."
+            ),
+        ),
+    ]
+    block_ip: Annotated[
+        bool,
+        Field(
+            title="Block IP",
+            description=(
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
+                " Actions that will run in different contexts, using a specific IP, and making sure this IP wont be "
+                "able to perform operations in the tool. It can be a firewall, adding an IP to a blocklist, or an "
+                "EDR solution, preventing a specific IP from communicating with other endpoints. The actions sometimes "
+                "will be named “Block IP”, “Add IP to blocklist” and similar."
+            ),
+        ),
+    ]
+    block_malicious_domain: Annotated[
+        bool,
+        Field(
+            title="Block Malicious Domain",
+            description=(
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
+                " For tools like firewalls, mail security and EDRs, actions like these will block network communication"
+                " with a specific domain, in case it was identified as malicious, making sure communications are kept"
+                " safe. These actions will be called “Add Domain to block list”, “Block domain”, and similar"
+            ),
+        ),
+    ]
+    block_malicious_url: Annotated[
+        bool,
+        Field(
+            title="Block Malicious URL",
+            description=(
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
+                " For tools like firewalls, mail security and EDRs, actions like these will block network communication"
+                " with a specific URL, in case it was identified as malicious, making sure communications are kept"
+                " safe. These actions will be called “Add URL to block list”, “Block URL”, and similar"
+            ),
+        ),
+    ]
+    quarantine_email: Annotated[
+        bool,
+        Field(
+            title="Quarantine Email",
+            description=(
+                "Mark as true for actions that match the expected outcome."
+                " Expected Outcome:"
+                " Isolates suspicious or harmful incoming emails in a secure holding area to prevent them from reaching"
+                " the recipient's inbox."
+            ),
+        ),
+    ]
 
 
 class OutcomeCategoriesEnum(enum.StrEnum):
@@ -380,6 +445,11 @@ class OutcomeCategoriesEnum(enum.StrEnum):
     SEND_MESSAGE = "Send Message"
     SEARCH_ASSET = "Search Asset"
     GET_ALERT_INFORMATION = "Get Alert Information"
+    FORCE_IDENTITY_MFA = "Force Identity MFA"
+    BLOCK_IP = "Block IP"
+    BLOCK_MALICIOUS_DOMAIN = "Block Malicious Domain"
+    BLOCK_MALICIOUS_URL = "Block Malicious URL"
+    QUARANTINE_EMAIL = "Quarantine Email"
 
 
 OUTCOME_CATEGORIES_TO_DEF_OUTCOME_CATEGORIES_ENUM: dict[str, OutcomeCategoriesEnum] = {
@@ -410,4 +480,9 @@ OUTCOME_CATEGORIES_TO_DEF_OUTCOME_CATEGORIES_ENUM: dict[str, OutcomeCategoriesEn
     "send_message": OutcomeCategoriesEnum.SEND_MESSAGE,
     "search_asset": OutcomeCategoriesEnum.SEARCH_ASSET,
     "get_alert_information": OutcomeCategoriesEnum.GET_ALERT_INFORMATION,
+    "force_identity_mfa": OutcomeCategoriesEnum.FORCE_IDENTITY_MFA,
+    "block_ip": OutcomeCategoriesEnum.BLOCK_IP,
+    "block_malicious_domain": OutcomeCategoriesEnum.BLOCK_MALICIOUS_DOMAIN,
+    "block_malicious_url": OutcomeCategoriesEnum.BLOCK_MALICIOUS_URL,
+    "quarantine_email": OutcomeCategoriesEnum.QUARANTINE_EMAIL,
 }

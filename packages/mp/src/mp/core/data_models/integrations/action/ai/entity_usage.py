@@ -65,7 +65,15 @@ simply process general data.
 * **The `GenericEntity` Distinction:** `GenericEntity` is a specific, standalone entity type.
   Do **not** use it as a placeholder for "all types." Only set it to true if the action explicitly
   supports the `GenericEntity` type or if no filters are applied (as part of the full list).
-"""
+
+#### **3. Logic Summary Table**
+
+| If the code... | Then `entity_types` should be... |
+| --- | --- |
+| Does not reference `target_entities` | All flags false |
+| Filters for specific types (IP, Host) | Only the specific types identified set to true |
+| Processes all entities without any filtering | **All** possible entity types set to true |
+| Explicitly checks for "Generic" type only | `generic` set to true |"""
             )
         ),
     ]
