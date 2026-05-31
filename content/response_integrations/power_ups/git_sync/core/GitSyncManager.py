@@ -1008,18 +1008,19 @@ class WorkflowInstaller:
         integration_name: str,
         environment: str,
     ) -> list[dict]:
-        """Find integration instances available for integration per environment.
+        """Find configured integration instances for an integration per environment.
 
-        Returns configured instances if any exist; otherwise falls back to
-        unconfigured instances to preserve backward compatibility while still
-        enabling a fallback when no configured instances are available.
+        Only configured instances (those with API keys set up) are returned.
+        Unconfigured instances are excluded because assigning them to playbook
+        steps causes the SOAR engine to crash on automated triggers.
 
         Args:
             integration_name: The integration name to look for
             environment: The environment to fetch the integration instances
 
         Returns:
-            A list of integration instances, preferring configured ones.
+            A list of configured integration instances, sorted by name.
+            Empty list if no configured instances exist.
 
         """
         cache_key = f"integration_instances_{environment}"
@@ -1035,12 +1036,7 @@ class WorkflowInstaller:
         ]
 
         configured_instances = [x for x in filtered_instances if x.get("isConfigured")]
-        if configured_instances:
-            return sorted(configured_instances, key=lambda x: x.get("instanceName") or "")
-
-        # Fallback: return unconfigured instances sorted by name when no configured
-        # instances are available, so callers can still find something to assign.
-        return sorted(filtered_instances, key=lambda x: x.get("instanceName") or "")
+        return sorted(configured_instances, key=lambda x: x.get("instanceName") or "")
 
     def _is_valid_existing_instance(
         self,
