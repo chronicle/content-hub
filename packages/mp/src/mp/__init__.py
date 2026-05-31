@@ -21,6 +21,8 @@ them onto the main Typer instance.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Benign comment for testing Windows 'validate everything' logic alignment.
+
 from __future__ import annotations
 
 from . import build_project, check, config, describe, dev_env, run_pre_build_tests, validate
