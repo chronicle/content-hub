@@ -28,7 +28,7 @@ class AiCategories(BaseModel):
             title="Categorization Reasoning",
             description=(
                 "Step-by-step reasoning evaluating the action against all available AI "
-                "categories (e.g. enrichment). Explicitly state why the action matches or "
+                "categories. Explicitly state why the action matches or "
                 "does not match the criteria before setting their boolean flags."
             ),
         ),
@@ -101,12 +101,49 @@ def is_enrichment_action(action):
             )
         ),
     ]
+    remediation: Annotated[
+        bool,
+        Field(
+            description=(
+                """Field Definition: A Remediation Action is a specialized task designed to mitigate or resolve a
+ security threat or incident. An action is classified as "Remediation" if it matches one of the following criteria:
+ Here's a pseudocode example of how to determine whether an action is a remediation action:
+```
+def is_remediation_action(action):
+    # Rule 1: Check for Identity-Based Remediation
+    # Disables authentication, forces MFA setups, or invalidates current credentials
+    if action.disables_identity or action.forces_identity_mfa or action.resets_identity_password:
+        return True
+
+    # Rule 2: Check for Infrastructure-Based Blocking (IPs)
+    # Blocks specific IPs from performing operations via firewall rules, EDR constraints, or blocklists
+    if action.blocks_ip:
+        return True
+
+    # Rule 3: Check for Network/Web-Based Blocking (Domains & URLs)
+    # Prevents network communication with domains or URLs identified as malicious
+    if action.blocks_malicious_domain or action.blocks_malicious_url:
+        return True
+
+    # Rule 4: Check for Email-Based Isolation
+    # Isolates suspicious emails into a secure area to protect the recipient's inbox
+    if action.quarantines_email:
+        return True
+
+    # If the action does not execute any of the above defensive behaviors, it is not remediation
+    return False
+```"""
+            )
+        ),
+    ]  # TODO change description
 
 
 class ActionAiCategory(RepresentableEnum):
     ENRICHMENT = "Enrichment"
+    REMEDIATION = "Remediation"
 
 
 AI_CATEGORY_TO_DEF_AI_CATEGORY: dict[str, ActionAiCategory] = {
     "enrichment": ActionAiCategory.ENRICHMENT,
+    "remediation": ActionAiCategory.REMEDIATION,
 }

@@ -26,7 +26,7 @@ I have provided the following files for a Google SecOps action:
     * https://docs.cloud.google.com/chronicle/docs/soar/reference/script-result-module
     * https://docs.cloud.google.com/chronicle/docs/soar/reference/script-result-module
 
-**Action Product Categories Definitions:**
+**Outcome Categories Definitions:**
 Review these categories carefully. An action can belong to one or more categories if it matches the expected outcome.
 
 - **Enrich IOC**: Returns reputation, prevalence, and threat intelligence for the indicator.
@@ -56,22 +56,25 @@ Review these categories carefully. An action can belong to one or more categorie
 - **Send Message**: Sends a message to a communication app (e.g., Google Chat, Microsoft Teams).
 - **Search Asset**: Searches for the asset associated with the alert within the product.
 - **Get Alert Information**: Fetches information about the alert from the 3rd party product.
+- **Force Identity MFA**: Forces an MFA verification process for user IDs or accounts.
+- **Block IP**: Blocks network communication with a specific IP address (e.g., Firewall, EDR).
+- **Block Malicious Domain**: Blocks network communication with a specific domain.
+- **Block Malicious URL**: Blocks network communication with a specific URL.
+- **Quarantine Email**: Isolates suspicious incoming emails in a secure holding area.
 
 **Instructions:**
 
-1. **Analyze the Description:** Synthesize the `Script Code` logic and`Script Settings` description.
+1. **Analyze the Description:** Synthesize the `Script Code` logic and `Script Settings` description.
     * *Style:* Active voice. Start with the action verb.
-    *
-   *Content:* Explain inputs, the external service interaction, key configuration parameters (like thresholds), and the resulting outputs (enrichment data, insights, etc.).
+    * *Content:* Explain inputs, the external service interaction, key configuration parameters (like thresholds), and the resulting outputs (enrichment data, insights, etc.).
+    * Produce three distinct fields: `ai_description` (detailed, divided into 'General Description', 'Flow Description', and 'Additional Notes'), `ai_short_description` (concise summary), and `parameters_description` (markdown table).
 2. **Determine Capabilities:**
     * Check for `fetches_data`: Does it call an external API (GET)?
-    * Check for
-      `can_mutate_external_data`: Does it perform POST/PUT/DELETE actions that change the state of the external tool (e.g., block, quarantine)?
-    * Check for SOAR interactions: Look for `add_entity_insight`, `add_data_table`,
-      `update_entities`, `add_case_comment`.
-3. **Extract Entity Scopes:** Look at the `Supported entities` in the JSON description or the
-   `SimulationDataJson` to see if it targets `ADDRESS`, `FILEHASH`, `USER`, etc.
-4. **Action Product Categories & Reasoning:** You MUST write out your step-by-step reasoning in the `reasoning` field of the `action_product_categories` object BEFORE populating the boolean flags. Discuss why the action matches or fails to match specific categories based on the expected outcomes defined above.
+    * Check for `can_mutate_external_data`: Does it perform POST/PUT/DELETE actions that change the state of the external tool (e.g., block, quarantine)?
+    * Check for SOAR interactions: Look for `add_entity_insight`, `add_data_table`, `update_entities`, `add_case_comment`.
+3. **Extract Entity Scopes:** Instead of a list, populate the `entity_types` object with boolean flags for each entity type processed by the action (e.g., `address`, `file_hash`, `user`). Set flags to true if the action specifically processes that entity type.
+4. **Outcome Categories & Reasoning:** You MUST write out your step-by-step reasoning in the `reasoning` field of the `outcome_categories` object BEFORE populating the boolean flags. Discuss why the action matches or fails to match specific categories based on the expected outcomes defined above.
+5. **AI Categories:** Set `enrichment` and `remediation` flags in the `categories` object based on the action's behavior.
 
 **Golden Dataset (Few-Shot Examples):**
 
@@ -107,8 +110,11 @@ for entity in suitable_entities:
 
 ```json
 {
-    "fields": {
-        "description": "Enriches IP Address entities using VirusTotal. This action retrieves threat intelligence including ASN, country, and reputation scores. It evaluates risk based on thresholds, updates the entity's suspicious status, and generates an insight with the analysis results.",
+    "ai_description": "Enriches IP Address entities using VirusTotal. This action retrieves threat intelligence including ASN, country, and reputation scores. It evaluates risk based on thresholds, updates the entity's suspicious status, and generates an insight with the analysis results.",
+    "ai_short_description": "Enriches IP Address entities using VirusTotal.",
+    "parameters_description": "| Parameter | Type | Mandatory | Description |\n| --- | --- | --- | --- |\n| api_key | String | Yes | VirusTotal API Key |",
+    "capabilities": {
+        "reasoning": "The action makes a GET request to VirusTotal API to fetch IP data. It does not mutate external data but updates internal entities and creates insights.",
         "fetches_data": true,
         "can_mutate_external_data": false,
         "external_data_mutation_explanation": "null",
@@ -121,9 +127,43 @@ for entity in suitable_entities:
     },
     "entity_usage": {
         "reasoning": "The code iterates over `siemplify.target_entities` and filters using `entity.entity_type == EntityTypes.ADDRESS and entity.is_internal`. This means it targets ADDRESS entities, filtering by entity_type and is_internal.",
-        "run_on_entity_types": [
-            "ADDRESS"
-        ],
+        "entity_types": {
+            "address": true,
+            "alert": false,
+            "application": false,
+            "child_hash": false,
+            "child_process": false,
+            "cluster": false,
+            "container": false,
+            "credit_card": false,
+            "cve": false,
+            "cve_id": false,
+            "database": false,
+            "deployment": false,
+            "destination_domain": false,
+            "domain": false,
+            "email_message": false,
+            "event": false,
+            "file_hash": false,
+            "file_name": false,
+            "generic": false,
+            "host_name": false,
+            "ip_set": false,
+            "mac_address": false,
+            "parent_hash": false,
+            "parent_process": false,
+            "phone_number": false,
+            "pod": false,
+            "process": false,
+            "service": false,
+            "source_domain": false,
+            "threat_actor": false,
+            "threat_campaign": false,
+            "threat_signature": false,
+            "url": false,
+            "usb": false,
+            "user": false
+        },
         "filters_by_identifier": false,
         "filters_by_creation_time": false,
         "filters_by_modification_time": false,
@@ -139,37 +179,44 @@ for entity in suitable_entities:
         "filters_by_is_pivot": false
     },
     "categories": {
-        "enrichment": true
+        "reasoning": "The action fetches IP data from VirusTotal, returning threat intelligence and evaluating risk. This matches the 'Enrich IOC' expected outcome.",
+        "enrichment": true,
+        "remediation": false
     },
-    "action_product_categories": {
+    "outcome_categories": {
         "reasoning": "The action fetches IP data from VirusTotal, returning threat intelligence and evaluating risk. This matches the 'Enrich IOC' expected outcome. It does not mutate data on external systems, so it is not a Contain Host or Blocklist action.",
-        "add_alert_comment": false,
-        "add_ioc_to_allowlist": false,
-        "add_ioc_to_blocklist": false,
-        "contain_host": false,
-        "create_ticket": false,
-        "delete_email": false,
-        "disable_identity": false,
-        "download_file": false,
-        "enable_identity": false,
-        "enrich_asset": false,
         "enrich_ioc": true,
-        "execute_command_on_the_host": false,
-        "get_alert_information": false,
-        "remove_ioc_from_allowlist": false,
-        "remove_ioc_from_blocklist": false,
-        "reset_identity_password": false,
-        "search_asset": false,
-        "search_email": false,
-        "search_events": false,
-        "send_email": false,
-        "send_message": false,
-        "submit_file": false,
-        "uncontain_host": false,
+        "enrich_asset": false,
         "update_alert": false,
-        "update_email": false,
+        "add_alert_comment": false,
+        "create_ticket": false,
+        "update_ticket": false,
+        "add_ioc_to_blocklist": false,
+        "remove_ioc_from_blocklist": false,
+        "add_ioc_to_allowlist": false,
+        "remove_ioc_from_allowlist": false,
+        "disable_identity": false,
+        "enable_identity": false,
+        "contain_host": false,
+        "uncontain_host": false,
+        "reset_identity_password": false,
         "update_identity": false,
-        "update_ticket": false
+        "search_events": false,
+        "execute_command_on_the_host": false,
+        "download_file": false,
+        "send_email": false,
+        "search_email": false,
+        "delete_email": false,
+        "update_email": false,
+        "submit_file": false,
+        "send_message": false,
+        "search_asset": false,
+        "get_alert_information": false,
+        "force_identity_mfa": false,
+        "block_ip": false,
+        "block_malicious_domain": false,
+        "block_malicious_url": false,
+        "quarantine_email": false
     }
 }
 ```
@@ -203,8 +250,11 @@ if result['success']:
 
 ```json
 {
-    "fields": {
-        "description": "Blocks a specific IP address on the target Firewall. This action initiates a state change on the external device to prevent network traffic to or from the specified entity.",
+    "ai_description": "Blocks a specific IP address on the target Firewall. This action initiates a state change on the external device to prevent network traffic to or from the specified entity.",
+    "ai_short_description": "Blocks a specific IP address on the target Firewall.",
+    "parameters_description": "| Parameter | Type | Mandatory | Description |\n| --- | --- | --- | --- |\n| api_key | String | Yes | API Key for Firewall |",
+    "capabilities": {
+        "reasoning": "The action performs a POST to a firewall to block an IP address. This directly aligns with the 'Block IP' expected outcome of isolating an endpoint.",
         "fetches_data": false,
         "can_mutate_external_data": true,
         "external_data_mutation_explanation": "Adds the IP address to the active blocklist configuration on the firewall.",
@@ -217,9 +267,43 @@ if result['success']:
     },
     "entity_usage": {
         "reasoning": "The code processes `entities` looking for `e.entity_type == \"ADDRESS\"`, filtering strictly by entity_type.",
-        "run_on_entity_types": [
-            "ADDRESS"
-        ],
+        "entity_types": {
+            "address": true,
+            "alert": false,
+            "application": false,
+            "child_hash": false,
+            "child_process": false,
+            "cluster": false,
+            "container": false,
+            "credit_card": false,
+            "cve": false,
+            "cve_id": false,
+            "database": false,
+            "deployment": false,
+            "destination_domain": false,
+            "domain": false,
+            "email_message": false,
+            "event": false,
+            "file_hash": false,
+            "file_name": false,
+            "generic": false,
+            "host_name": false,
+            "ip_set": false,
+            "mac_address": false,
+            "parent_hash": false,
+            "parent_process": false,
+            "phone_number": false,
+            "pod": false,
+            "process": false,
+            "service": false,
+            "source_domain": false,
+            "threat_actor": false,
+            "threat_campaign": false,
+            "threat_signature": false,
+            "url": false,
+            "usb": false,
+            "user": false
+        },
         "filters_by_identifier": false,
         "filters_by_creation_time": false,
         "filters_by_modification_time": false,
@@ -235,37 +319,44 @@ if result['success']:
         "filters_by_is_pivot": false
     },
     "categories": {
-        "enrichment": false
+        "reasoning": "The action creates external data (a block rule) rather than retrieving data, so it cannot be an Enrichment action. It is a Remediation action because it blocks an IP.",
+        "enrichment": false,
+        "remediation": true
     },
-    "action_product_categories": {
-        "reasoning": "The action performs a POST to a firewall to block an IP address. This directly aligns with the 'Contain Host' expected outcome of isolating an endpoint, or 'Add IOC To Blocklist' depending on exact definition. Based on the JSON snippet, 'Contain Host' is true.",
-        "add_alert_comment": false,
-        "add_ioc_to_allowlist": false,
-        "add_ioc_to_blocklist": false,
-        "contain_host": true,
-        "create_ticket": false,
-        "delete_email": false,
-        "disable_identity": false,
-        "download_file": false,
-        "enable_identity": false,
-        "enrich_asset": false,
+    "outcome_categories": {
+        "reasoning": "The action performs a POST to a firewall to block an IP address. This directly aligns with the 'Block IP' expected outcome.",
         "enrich_ioc": false,
-        "execute_command_on_the_host": false,
-        "get_alert_information": false,
-        "remove_ioc_from_allowlist": false,
-        "remove_ioc_from_blocklist": false,
-        "reset_identity_password": false,
-        "search_asset": false,
-        "search_email": false,
-        "search_events": false,
-        "send_email": false,
-        "send_message": false,
-        "submit_file": false,
-        "uncontain_host": false,
+        "enrich_asset": false,
         "update_alert": false,
-        "update_email": false,
+        "add_alert_comment": false,
+        "create_ticket": false,
+        "update_ticket": false,
+        "add_ioc_to_blocklist": false,
+        "remove_ioc_from_blocklist": false,
+        "add_ioc_to_allowlist": false,
+        "remove_ioc_from_allowlist": false,
+        "disable_identity": false,
+        "enable_identity": false,
+        "contain_host": false,
+        "uncontain_host": false,
+        "reset_identity_password": false,
         "update_identity": false,
-        "update_ticket": false
+        "search_events": false,
+        "execute_command_on_the_host": false,
+        "download_file": false,
+        "send_email": false,
+        "search_email": false,
+        "delete_email": false,
+        "update_email": false,
+        "submit_file": false,
+        "send_message": false,
+        "search_asset": false,
+        "get_alert_information": false,
+        "force_identity_mfa": false,
+        "block_ip": true,
+        "block_malicious_domain": false,
+        "block_malicious_url": false,
+        "quarantine_email": false
     }
 }
 ```
@@ -294,6 +385,8 @@ results = ticket_manager.create_ticket(title, description)
 ```json
 {
     "ai_description": "Opens a new ticket in the ticket service by a post request.",
+    "ai_short_description": "Opens a new ticket in the ticket service.",
+    "parameters_description": "| Parameter | Type | Mandatory | Description |\n| --- | --- | --- | --- |\n| title | String | Yes | Ticket Title |\n| description | String | Yes | Ticket Description |",
     "capabilities": {
         "reasoning": "The action makes a POST request to create a ticket (can_mutate_external_data=true). It does not fetch context data or update internal entities.",
         "fetches_data": false,
@@ -307,7 +400,44 @@ results = ticket_manager.create_ticket(title, description)
         "can_create_case_comments": false
     },
     "entity_usage": {
-        "run_on_entity_types": [],
+        "reasoning": "The action works on other data sources without referencing specific entities, so all flags must be false.",
+        "entity_types": {
+            "address": false,
+            "alert": false,
+            "application": false,
+            "child_hash": false,
+            "child_process": false,
+            "cluster": false,
+            "container": false,
+            "credit_card": false,
+            "cve": false,
+            "cve_id": false,
+            "database": false,
+            "deployment": false,
+            "destination_domain": false,
+            "domain": false,
+            "email_message": false,
+            "event": false,
+            "file_hash": false,
+            "file_name": false,
+            "generic": false,
+            "host_name": false,
+            "ip_set": false,
+            "mac_address": false,
+            "parent_hash": false,
+            "parent_process": false,
+            "phone_number": false,
+            "pod": false,
+            "process": false,
+            "service": false,
+            "source_domain": false,
+            "threat_actor": false,
+            "threat_campaign": false,
+            "threat_signature": false,
+            "url": false,
+            "usb": false,
+            "user": false
+        },
         "filters_by_identifier": false,
         "filters_by_creation_time": false,
         "filters_by_modification_time": false,
@@ -324,37 +454,43 @@ results = ticket_manager.create_ticket(title, description)
     },
     "categories": {
         "reasoning": "The action creates external data (a ticket) rather than retrieving data, so it cannot be an Enrichment action.",
-        "enrichment": false
+        "enrichment": false,
+        "remediation": false
     },
-    "action_product_categories": {
+    "outcome_categories": {
         "reasoning": "The action creates a new ticket in an external ticket service. This directly aligns with the 'Create Ticket' category.",
-        "add_alert_comment": false,
-        "add_ioc_to_allowlist": false,
-        "add_ioc_to_blocklist": false,
-        "contain_host": false,
-        "create_ticket": true,
-        "delete_email": false,
-        "disable_identity": false,
-        "download_file": false,
-        "enable_identity": false,
-        "enrich_asset": false,
         "enrich_ioc": false,
-        "execute_command_on_the_host": false,
-        "get_alert_information": false,
-        "remove_ioc_from_allowlist": false,
-        "remove_ioc_from_blocklist": false,
-        "reset_identity_password": false,
-        "search_asset": false,
-        "search_email": false,
-        "search_events": false,
-        "send_email": false,
-        "send_message": false,
-        "submit_file": false,
-        "uncontain_host": false,
+        "enrich_asset": false,
         "update_alert": false,
-        "update_email": false,
+        "add_alert_comment": false,
+        "create_ticket": true,
+        "update_ticket": false,
+        "add_ioc_to_blocklist": false,
+        "remove_ioc_from_blocklist": false,
+        "add_ioc_to_allowlist": false,
+        "remove_ioc_from_allowlist": false,
+        "disable_identity": false,
+        "enable_identity": false,
+        "contain_host": false,
+        "uncontain_host": false,
+        "reset_identity_password": false,
         "update_identity": false,
-        "update_ticket": false
+        "search_events": false,
+        "execute_command_on_the_host": false,
+        "download_file": false,
+        "send_email": false,
+        "search_email": false,
+        "delete_email": false,
+        "update_email": false,
+        "submit_file": false,
+        "send_message": false,
+        "search_asset": false,
+        "get_alert_information": false,
+        "force_identity_mfa": false,
+        "block_ip": false,
+        "block_malicious_domain": false,
+        "block_malicious_url": false,
+        "quarantine_email": false
     }
 }
 ```

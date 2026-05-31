@@ -16,6 +16,47 @@ from __future__ import annotations
 
 from enum import StrEnum
 
+from pydantic import BaseModel
+
+
+class EntityTypesUsage(BaseModel):
+    address: bool = False
+    alert: bool = False
+    application: bool = False
+    child_hash: bool = False
+    child_process: bool = False
+    cluster: bool = False
+    container: bool = False
+    credit_card: bool = False
+    cve: bool = False
+    cve_id: bool = False
+    database: bool = False
+    deployment: bool = False
+    destination_domain: bool = False
+    domain: bool = False
+    email_message: bool = False
+    event: bool = False
+    file_hash: bool = False
+    file_name: bool = False
+    generic: bool = False
+    host_name: bool = False
+    ip_set: bool = False
+    mac_address: bool = False
+    parent_hash: bool = False
+    parent_process: bool = False
+    phone_number: bool = False
+    pod: bool = False
+    process: bool = False
+    service: bool = False
+    source_domain: bool = False
+    threat_actor: bool = False
+    threat_campaign: bool = False
+    threat_signature: bool = False
+    url: bool = False
+    usb: bool = False
+    user: bool = False
+
+
 
 class EntityType(StrEnum):
     ADDRESS = "ADDRESS"
@@ -53,3 +94,42 @@ class EntityType(StrEnum):
     URL = "DestinationURL"
     USB = "USB"
     USER = "USERUNIQNAME"
+
+
+ENTITY_TYPE_TO_DEF_ENTITY_TYPE: dict[str, EntityType] = {
+    "address": EntityType.ADDRESS,
+    "alert": EntityType.ALERT,
+    "application": EntityType.APPLICATION,
+    "child_hash": EntityType.CHILD_HASH,
+    "child_process": EntityType.CHILD_PROCESS,
+    "cluster": EntityType.CLUSTER,
+    "container": EntityType.CONTAINER,
+    "credit_card": EntityType.CREDIT_CARD,
+    "cve": EntityType.CVE,
+    "cve_id": EntityType.CVE_ID,
+    "database": EntityType.DATABASE,
+    "deployment": EntityType.DEPLOYMENT,
+    "destination_domain": EntityType.DESTINATION_DOMAIN,
+    "domain": EntityType.DOMAIN,
+    "email_message": EntityType.EMAIL_MESSAGE,
+    "event": EntityType.EVENT,
+    "file_hash": EntityType.FILE_HASH,
+    "file_name": EntityType.FILE_NAME,
+    "generic": EntityType.GENERIC,
+    "host_name": EntityType.HOST_NAME,
+    "ip_set": EntityType.IP_SET,
+    "mac_address": EntityType.MAC_ADDRESS,
+    "parent_hash": EntityType.PARENT_HASH,
+    "parent_process": EntityType.PARENT_PROCESS,
+    "phone_number": EntityType.PHONE_NUMBER,
+    "pod": EntityType.POD,
+    "process": EntityType.PROCESS,
+    "service": EntityType.SERVICE,
+    "source_domain": EntityType.SOURCE_DOMAIN,
+    "threat_actor": EntityType.THREAT_ACTOR,
+    "threat_campaign": EntityType.THREAT_CAMPAIGN,
+    "threat_signature": EntityType.THREAT_SIGNATURE,
+    "url": EntityType.URL,
+    "usb": EntityType.USB,
+    "user": EntityType.USER,
+}
