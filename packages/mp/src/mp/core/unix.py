@@ -437,6 +437,7 @@ def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **
                 logger.info("%s", line.decode(errors="replace").rstrip())
 
             return process.wait()
+
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
