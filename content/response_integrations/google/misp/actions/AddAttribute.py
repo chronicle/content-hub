@@ -14,60 +14,61 @@
 
 from __future__ import annotations
 
+import re
 from enum import Enum
 from typing import Any
 
-from ..core.MISPManager import (
-    MISPManager,
-    URL,
-    HOSTNAME,
-    DOMAIN,
-    USER,
-    EMAIL_SUBJECT,
-    THREAT_ACTOR,
-    PHONE_NUMBER,
-    FILENAME,
-)
 from soar_sdk.ScriptResult import (
-    EXECUTION_STATE_FAILED,
     EXECUTION_STATE_COMPLETED,
+    EXECUTION_STATE_FAILED,
     EXECUTION_STATE_TIMEDOUT,
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import (
+    convert_unixtime_to_datetime,
     output_handler,
     unix_now,
-    convert_unixtime_to_datetime,
 )
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
+
 from ..core.constants import (
     ADD_ATTRIBUTE_SCRIPT_NAME,
-    INTEGRATION_NAME,
-    ATTRIBUTES_EXISTING_CATEGORY_TYPES,
-    FALLBACK_IP_TYPES_MAPPER,
-    FALLBACK_EMAIL_TYPES_MAPPER,
-    COMMUNITY,
     ATTRIBUTE_DISTRIBUTION,
-    IP_TYPES,
-    EMAIL_TYPES,
-    EMAIL_TYPE,
+    ATTRIBUTES_EXISTING_CATEGORY_TYPES,
+    COMMUNITY,
     DOMAIN_TYPE,
+    EMAIL_TYPE,
+    EMAIL_TYPES,
+    FALLBACK_EMAIL_TYPES_MAPPER,
+    FALLBACK_IP_TYPES_MAPPER,
+    INTEGRATION_NAME,
+    IP_TYPES,
 )
 from ..core.exceptions import (
     MISPManagerError,
-    MISPManagerInvalidCategoryError,
     MISPManagerEventIdNotFoundError,
+    MISPManagerInvalidCategoryError,
     MISPNotAcceptableNumberOrStringError,
 )
+from ..core.MISPManager import (
+    DOMAIN,
+    EMAIL_SUBJECT,
+    FILENAME,
+    HOSTNAME,
+    PHONE_NUMBER,
+    THREAT_ACTOR,
+    URL,
+    USER,
+    MISPManager,
+)
 from ..core.utils import (
-    get_hash_type,
+    adjust_categories,
     get_domain_from_entity,
     get_entity_original_identifier,
     get_entity_type,
+    get_hash_type,
 )
-from ..core.utils import adjust_categories
-import re
 
 
 class ExecutionScope(Enum):
