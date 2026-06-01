@@ -719,6 +719,7 @@ class WorkflowInstaller:
             if installed_workflow
             else None
         )
+
         for step in self._flatten_playbook_steps(workflow.raw_data.get("steps")):
             provider = step.get("actionProvider")
             step_type = step.get("type")
@@ -738,6 +739,12 @@ class WorkflowInstaller:
                 else None
             )
             if existing_step:
+                old_steps.remove(existing_step)
+                self.logger.info(
+                    f"Step '{step.get('instanceName')}' was matched to local ID "
+                    f"'{existing_step.get('identifier')}' and removed from the "
+                    "search list to prevent duplicate matching."
+                )
                 old_step_identifier = step.get("identifier")
                 identifier_mappings[old_step_identifier] = existing_step.get(
                     "identifier",
