@@ -324,7 +324,9 @@ class CreateEntityRelationshipsAction(Action):
                 f"to {linked_entity} : {self.params.linked_entity_type} "
                 f"successfully\n",
             )
-            self._update_json_results(json_results, new_entity_identifier, linked_entity)
+            self._update_json_results(
+                json_results, new_entity_identifier, linked_entity
+            )
             return True
         except Exception as e:
             self.soar_action.LOGGER.error(

@@ -197,9 +197,9 @@ def main() -> None:
                     "\n   ".join(unique_entity_identifiers),
                 )
             else:
-                output_message += "Successfully processed entities for all alert(s):\n   {}".format(
-                    "\n   ".join(unique_entity_identifiers),
-                )
+                output_message += (
+                    "Successfully processed entities for all alert(s):\n   {}"
+                ).format("\n   ".join(unique_entity_identifiers))
         else:
             output_message += "No entities were processed."
 

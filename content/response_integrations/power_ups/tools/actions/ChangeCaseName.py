@@ -59,9 +59,15 @@ def main() -> None:
             )
 
             if execution_scope.value == ExecutionScope.Alert.value:
-                output_message = f"Case's title changed to: {siemplify.parameters['New Name']}"
+                output_message = (
+                    "Case's title changed to: "
+                    f"{siemplify.parameters['New Name']}"
+                )
             else:
-                output_message = f"Case's title changed to: {siemplify.parameters['New Name']} for all alert(s)"
+                output_message = (
+                    "Case's title changed to: "
+                    f"{siemplify.parameters['New Name']} for all alert(s)"
+                )
             result_value = "true"
         else:
             output_message = "Case's title not changed, not first alert in the case."

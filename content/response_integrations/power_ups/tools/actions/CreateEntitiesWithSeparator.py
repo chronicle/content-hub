@@ -36,8 +36,7 @@ def check_if_entity_exists(target_entities, entity_identifier):
 
 
 def get_alert_entities(siemplify):
-    case_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
-    return [entity for alert in case_alerts for entity in alert.entities]
+    return [entity for alert in siemplify.case.alerts for entity in alert.entities]
 
 
 @output_handler
@@ -93,7 +92,7 @@ def main():
                     properties["is_new_entity"] = True
                     if entity_type == "ADDRESS":
                         try:
-                            ipaddress.ip_address(entity_identifier)
+                            test_ip = ipaddress.ip_address(entity_identifier)
                             siemplify.add_entity_to_case(
                                 entity_identifier,
                                 entity_type,

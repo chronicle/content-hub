@@ -92,7 +92,10 @@ def main() -> None:
     if execution_scope.value == ExecutionScope.Alert.value:
         output_message = "Alert data attached as JSON to the action result."
     else:
-        output_message = "Alert data attached as JSON to the action result for all alert(s)."
+        output_message = (
+            "Alert data attached as JSON to the action result for "
+            "all alert(s)."
+        )
     result_value = len(updates)
     siemplify.result.add_result_json(last_processed_data or {})
     siemplify.end(output_message, result_value)

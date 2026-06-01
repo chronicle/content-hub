@@ -72,7 +72,8 @@ def main():
 
     output_message = "Action result: "
 
-    # Check if the 'SourceFileContent' property exists in the alert data before trying to load it.
+    # Check if the 'SourceFileContent' property exists in the alert data before
+    # trying to load it.
     if "SourceFileContent" in siemplify.current_alert.entities[0].additional_properties:
         # Load the alert data from the 'SourceFileContent' property.
         case_data = json.loads(
@@ -116,7 +117,8 @@ def main():
     # Prepare the data to be pushed or saved.
     myJson = {"cases": [case_data]}
 
-    # Push the data to the simulator or save it as a JSON file, depending on the parameters.
+    # Push the data to the simulator or save it as a JSON file, depending on
+    # the parameters.
     if pushToSimulated:
         import_simulator_custom_case(siemplify, myJson)
         output_message += " Pushed to Simulated "
