@@ -12,8 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO:
-# 1) Add DMARC, SPF, DKIM and ARC verification flags. If exists and if pass or not (pass/fail)
+"""Analyze the headers of a base64-encoded EML (or raw header list) for spoofing
+indicators.
+
+Extracts and normalizes the headers, flags suspicious or mismatched headers
+(Return-Path, Reply-To, X-Distribution, Bcc, X-UIDL, Message-ID,
+X-Authenticated-User), and reports the SPF/DKIM/DMARC/ARC authentication results
+recorded in the message's Authentication-Results headers.
+"""
 
 from __future__ import annotations
 
@@ -22,25 +28,39 @@ import json
 import re
 from email import message_from_string
 
+from mailsuite.utils import parse_authentication_results, parse_email_address
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+
+from ..core import AuthenticationResults
 
 INTEGRATION_NAME = "EmailUtilties"
 SCRIPT_NAME = "Analyze EML Headers"
 EXCLUDED_DOMAINS_ADDRESSES = ["127.0.0.1", "localhost"]
 
-EMAIL_ADDRESS_REGEX = r"""(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])"""
+EMAIL_ADDRESS_REGEX = r"""(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])"""  # noqa: E501
 
 RED_COLOR = "FF0000"
 GREEN_COLOR = "00FF00"
-DOT_HTML_SNNIPET = """<div style="text-align:center"><span style="height: 5px;  width: 5px;  background-color: #{};  border-radius: 50%;  display: inline-block;"></span></div>"""
-# DOT_HTML_SNNIPET = """<style>.dot_insight {{{{  height: 5px;  width: 5px;  background-color: #{};  border-radius: 50%;  display: inline-block;}}}}</style><div style="text-align:center">  <span class="dot_insight"></span>{{}}</div>"""
-RED_DOT_HTML_SNNIPET = DOT_HTML_SNNIPET.format(RED_COLOR)
-GREEN_DOT_HTML_SNNIPET = DOT_HTML_SNNIPET.format(GREEN_COLOR)
+DOT_HTML_SNIPPET = (
+    '<div style="text-align:center">'
+    '<span style="height: 5px;  width: 5px;  background-color: #{};  '
+    'border-radius: 50%;  display: inline-block;"></span></div>'
+)
+RED_DOT_HTML_SNIPPET = DOT_HTML_SNIPPET.format(RED_COLOR)
+GREEN_DOT_HTML_SNIPPET = DOT_HTML_SNIPPET.format(GREEN_COLOR)
 
 
-def get_html_headers_table(headers):
+def get_html_headers_table(headers: dict) -> str:
+    """Render the headers as a simple two-column HTML table.
+
+    Args:
+        headers: The email headers as a mapping of name to value.
+
+    Returns:
+        An HTML table string with one row per header.
+    """
     html_table = "<table><tbody>{}</tbody></table>"
     rows = []
     for k, v in headers.items():
@@ -50,7 +70,16 @@ def get_html_headers_table(headers):
     return html_table
 
 
-def get_domains_and_addresses(headers):
+def get_domains_and_addresses(headers: dict) -> list[tuple[str, str]]:
+    """Extract (domain, address) pairs from the Received headers.
+
+    Args:
+        headers: The email headers as a mapping of name to value.
+
+    Returns:
+        One (domain, IP address) tuple per Received header that yielded both,
+        excluding localhost/loopback entries.
+    """
     list_of_tuples = []
     for k, v in headers.items():
         if k.startswith("Received"):
@@ -61,7 +90,15 @@ def get_domains_and_addresses(headers):
     return list_of_tuples
 
 
-def process_header_to_extract_domain_address(header):
+def process_header_to_extract_domain_address(header: str) -> tuple[str, str] | None:
+    """Pull the reverse-DNS domain and IP address out of a Received header.
+
+    Args:
+        header: A single Received header value.
+
+    Returns:
+        A (domain, address) tuple, or None if either is missing or excluded.
+    """
     extracted_domains = re.findall(r"\s\((.*?)\.{0,1}\s\[", header)
     extracted_addresses = re.findall(r"\s\[(.*?)\]\)", header)
 
@@ -75,7 +112,18 @@ def process_header_to_extract_domain_address(header):
     return None
 
 
-def get_generic_siemplify_recommendations(headers):
+def get_generic_siemplify_recommendations(headers: dict) -> list[dict]:
+    """Check headers for common spoofing and anomaly indicators.
+
+    Inspects Return-Path, Reply-To, X-Distribution, Bcc, X-UIDL, and Message-ID
+    for mismatches or suspicious presence/absence.
+
+    Args:
+        headers: The email headers as a mapping of name to value.
+
+    Returns:
+        Recommendation rows, each with a message, score, and status indicator.
+    """
     return_list = []
     lower_case_headers = {k.lower(): v for k, v in headers.items()}
 
@@ -90,7 +138,7 @@ def get_generic_siemplify_recommendations(headers):
                     {
                         "message": '"Return-Path" header does not match "From" header',
                         "score": 6,
-                        "status": RED_DOT_HTML_SNNIPET,
+                        "status": RED_DOT_HTML_SNIPPET,
                     },
                 )
 
@@ -106,7 +154,7 @@ def get_generic_siemplify_recommendations(headers):
                     {
                         "message": '"Return-Path" header does not match "X-Original-Sender" header',
                         "score": 5,
-                        "status": RED_DOT_HTML_SNNIPET,
+                        "status": RED_DOT_HTML_SNIPPET,
                     },
                 )
 
@@ -115,7 +163,7 @@ def get_generic_siemplify_recommendations(headers):
                 {
                     "message": '"Return-Path" header checked',
                     "score": 0,
-                    "status": GREEN_DOT_HTML_SNNIPET,
+                    "status": GREEN_DOT_HTML_SNIPPET,
                 },
             )
     else:  # Return path does not exist
@@ -123,7 +171,7 @@ def get_generic_siemplify_recommendations(headers):
             {
                 "message": '"Return-Path" header does not exist',
                 "score": 5,
-                "status": RED_DOT_HTML_SNNIPET,
+                "status": RED_DOT_HTML_SNIPPET,
             },
         )
 
@@ -138,7 +186,7 @@ def get_generic_siemplify_recommendations(headers):
                     {
                         "message": '"Reply-To" header does not match "From" header',
                         "score": 4,
-                        "status": RED_DOT_HTML_SNNIPET,
+                        "status": RED_DOT_HTML_SNIPPET,
                     },
                 )
         if flag:
@@ -146,11 +194,10 @@ def get_generic_siemplify_recommendations(headers):
                 {
                     "message": '"Reply-To" header checked',
                     "score": 0,
-                    "status": GREEN_DOT_HTML_SNNIPET,
+                    "status": GREEN_DOT_HTML_SNIPPET,
                 },
             )
     else:  # "Reply-To" does bit exist
-        # return_list.append({"message": "\"Reply-To\" header does not exist", "score": 4, "status": RED_DOT_HTML_SNNIPET})
         pass
 
     if "X-Distribution".lower() in lower_case_headers:
@@ -160,7 +207,7 @@ def get_generic_siemplify_recommendations(headers):
                     lower_case_headers["X-Distribution".lower()],
                 ),
                 "score": 1,
-                "status": RED_DOT_HTML_SNNIPET,
+                "status": RED_DOT_HTML_SNIPPET,
             },
         )
     else:
@@ -168,21 +215,16 @@ def get_generic_siemplify_recommendations(headers):
             {
                 "message": '"X-Distribution" header checked (does not exist)',
                 "score": 0,
-                "status": GREEN_DOT_HTML_SNNIPET,
+                "status": GREEN_DOT_HTML_SNIPPET,
             },
         )
-
-    # if "X-Mailer".lower() in lower_case_headers:
-    #     return_list.append({"message": "\"X-Mailer\" header exists and with value: {}".format(lower_case_headers['X-Mailer'.lower()]), "score": 1, "status": RED_DOT_HTML_SNNIPET})
-    # else:
-    #     return_list.append({"message": "\"X-Mailer\" header checked (does not exist)", "score": 0, "status": GREEN_DOT_HTML_SNNIPET})
 
     if "Bcc".lower() in lower_case_headers:
         return_list.append(
             {
                 "message": '"Bcc" heaedr exists',
                 "score": 1,
-                "status": RED_DOT_HTML_SNNIPET,
+                "status": RED_DOT_HTML_SNIPPET,
             },
         )
     else:
@@ -190,7 +232,7 @@ def get_generic_siemplify_recommendations(headers):
             {
                 "message": '"Bcc" header checked (does not exist)',
                 "score": 0,
-                "status": GREEN_DOT_HTML_SNNIPET,
+                "status": GREEN_DOT_HTML_SNIPPET,
             },
         )
 
@@ -199,7 +241,7 @@ def get_generic_siemplify_recommendations(headers):
             {
                 "message": '"X-UIDL" header exists',
                 "score": 1,
-                "status": RED_DOT_HTML_SNNIPET,
+                "status": RED_DOT_HTML_SNIPPET,
             },
         )
     else:
@@ -207,7 +249,7 @@ def get_generic_siemplify_recommendations(headers):
             {
                 "message": '"X-UIDL" header checked (does not exist)',
                 "score": 0,
-                "status": GREEN_DOT_HTML_SNNIPET,
+                "status": GREEN_DOT_HTML_SNIPPET,
             },
         )
 
@@ -219,7 +261,7 @@ def get_generic_siemplify_recommendations(headers):
             {
                 "message": '"Message-ID" header missing from original EML',
                 "score": 5,
-                "status": RED_DOT_HTML_SNNIPET,
+                "status": RED_DOT_HTML_SNIPPET,
             },
         )
     else:
@@ -227,18 +269,27 @@ def get_generic_siemplify_recommendations(headers):
             {
                 "message": '"Message-ID" header checked - Nothing abnormal',
                 "score": 0,
-                "status": GREEN_DOT_HTML_SNNIPET,
+                "status": GREEN_DOT_HTML_SNIPPET,
             },
         )
 
     return return_list
 
 
-def process_user_authenticated_header(headers):
+def process_user_authenticated_header(headers: dict) -> dict:
+    """Check the X-Authenticated-User header against the From address.
+
+    Args:
+        headers: The email headers as a mapping of name to value.
+
+    Returns:
+        A dict with the authenticated-user domain (if present) and any
+        recommendation rows raised by a mismatch with the From header.
+    """
     return_dict = {}
     return_dict["siemplify_recommendations"] = []
     if "X-Authenticated-User" in headers:
-        raw = hedaers["X-Authenticated-User"]
+        raw = headers["X-Authenticated-User"]
         domain = raw[raw.index("@") + 1 :] if "@" in raw else None
         return_dict["domain"] = domain
 
@@ -254,8 +305,66 @@ def process_user_authenticated_header(headers):
     return return_dict
 
 
+def get_authentication_results(
+    headers: dict,
+    siemplify: SiemplifyAction,
+) -> list[dict] | None:
+    """Parse the Authentication-Results header(s) into the per-message SPF,
+    DKIM, DMARC, and ARC verdicts recorded by the receiving mail servers.
+
+    Unlike a DNS lookup of the sender's published policy, this reflects whether
+    *this* message actually passed authentication. Returns a list of parsed
+    results (one per Authentication-Results header) or None if none are present.
+    """
+    ar_values = AuthenticationResults.collect_authentication_results(headers)
+    if not ar_values:
+        return None
+
+    from_domain = None
+    from_value = next(
+        (value for key, value in headers.items() if key.lower() == "from"),
+        None,
+    )
+    if from_value:
+        try:
+            from_domain = parse_email_address(from_value).get("domain")
+        except Exception as e:
+            from_domain = None
+            siemplify.LOGGER.debug(f"Could not parse From domain: {e}")
+
+    try:
+        return parse_authentication_results(ar_values, from_domain=from_domain)
+    except ValueError:
+        return None
+
+
+def get_authentication_recommendations(
+    authentication_results: list[dict] | None,
+) -> list[dict]:
+    """Turn parsed Authentication-Results into pass/fail recommendation rows."""
+    summary = AuthenticationResults.summarize_authentication_results(
+        authentication_results,
+    )
+
+    recommendations = []
+    for method, result in summary.items():
+        passed = result == "pass"
+        recommendations.append(
+            {
+                "message": '{} authentication result: "{}"'.format(
+                    method.upper(),
+                    result,
+                ),
+                "score": 0 if passed else 5,
+                "status": GREEN_DOT_HTML_SNIPPET if passed else RED_DOT_HTML_SNIPPET,
+            },
+        )
+    return recommendations
+
+
 @output_handler
-def main():
+def main() -> None:
+    """Decode the EML or header list, analyze it, and emit the result JSON."""
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
     siemplify.LOGGER.info("================= Main - Param Init =================")
@@ -290,8 +399,8 @@ def main():
             try:
                 key = f"{item[0]}"
                 val = item[1]
-            except:
-                raise Exception(item)
+            except Exception as e:
+                raise Exception(item) from e
             if key not in duplicate_key_dict:
                 duplicate_key_dict[key] = 1
                 headers_dict[key] = val
@@ -323,6 +432,24 @@ def main():
         siemplify_recommendations.extend(
             user_authenticated_header["siemplify_recommendations"],
         )
+
+        authentication_results = get_authentication_results(real_headers, siemplify)
+        if authentication_results:
+            result_json["authentication_results"] = authentication_results
+            result_json["authentication_summary"] = (
+                AuthenticationResults.summarize_authentication_results(
+                    authentication_results,
+                )
+            )
+            result_json["authentication_by_server"] = (
+                AuthenticationResults.group_authentication_results_by_server(
+                    authentication_results,
+                )
+            )
+            siemplify_recommendations.extend(
+                get_authentication_recommendations(authentication_results),
+            )
+
         result_json["header_analysis_result"] = siemplify_recommendations
         total_rules_matched = 0
         for item in siemplify_recommendations:
