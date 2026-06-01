@@ -19,7 +19,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from .ai_categories import AiCategories  # noqa: TC001
-from .capabilities import ActionCapabilities
+from .capabilities import ActionCapabilities  # noqa: TC001
 from .entity_usage import EntityUsage  # noqa: TC001
 from .outcome_categories import OutcomeCategories  # noqa: TC001
 
