@@ -14,15 +14,11 @@
 
 from __future__ import annotations
 import sys
-from EnvironmentCommon import GetEnvironmentCommonFactory
-from TIPCommon import (
-    extract_connector_param,
-    get_last_success_time,
-    save_timestamp,
-    is_overflowed,
-    read_ids,
-    write_ids,
-)
+from TIPCommon.envcommon import GetEnvironmentCommonFactory
+from TIPCommon.extraction import extract_connector_param
+from TIPCommon.smp_io import read_ids, write_ids
+from TIPCommon.smp_time import get_last_success_time, save_timestamp
+from TIPCommon.utils import is_overflowed
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyUtils import output_handler, unix_now, convert_datetime_to_unix_time
 from ..core.utils import is_approaching_timeout
