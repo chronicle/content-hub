@@ -25,14 +25,9 @@ jobs:
     outputs:
       mp: ${{ steps.filter.outputs.mp }}
       ci: ${{ steps.filter.outputs.ci }}
-      integration_packages: ${{ steps.filter.outputs.integration_packages }}
-      response_integrations_google: ${{ steps.filter.outputs.response_integrations_google }}
-      response_integrations_third_party: ${{ steps.filter.outputs.response_integrations_third_party }}
-      playbooks: ${{ steps.filter.outputs.playbooks }}
-      # New outputs for targeted runs
-      google_integrations: ${{ steps.compute.outputs.google_integrations }}
-      third_party_integrations: ${{ steps.compute.outputs.third_party_integrations }}
-      playbooks_list: ${{ steps.compute.outputs.playbooks_list }}
+      tipcommon: ${{ steps.filter.outputs.tipcommon }}
+      validate_command: ${{ steps.compute.outputs.validate_command }}
+      should_validate: ${{ steps.compute.outputs.should_validate }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -43,67 +38,87 @@ jobs:
       uses: dorny/paths-filter@v3
       id: filter
       with:
-        base: ${{ github.event.pull_request.base.sha || github.event.before }}
-        # language=yaml
         filters: |
           mp:
-          - 'packages/mp/**'
+            - 'packages/mp/**'
           ci:
-          - '.github/workflows/**'
-          integration_packages:
-          - 'packages/envcommon/**'
-          - 'packages/tipcommon/**'
-          - 'packages/integration_testing/**'
-          - 'packages/integration_testing_whls/**'
-          response_integrations_google:
-          - 'content/response_integrations/google/**'
-          response_integrations_third_party:
-          - 'content/response_integrations/third_party/**'
-          - 'content/response_integrations/power_ups/**'
-          playbooks:
-          - 'content/playbooks/**'
+            - '.github/workflows/**'
+          tipcommon:
+            - 'packages/tipcommon/**'
 
-    - name: Get all changed files
+    - name: Get all changed content files
       id: changed-files
       uses: tj-actions/changed-files@v44
+      with:
+        files: content/**
 
     - name: Compute targets
       id: compute
       shell: bash
       # language=bash
       run: |
-        FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+        # 1. If the mp CLI itself changed, validate everything
+        if [[ "${{ steps.filter.outputs.mp }}" == "true" ]]; then
+          echo "validate_command=wmp validate repository google third_party playbooks"  >> $GITHUB_OUTPUT
+          echo "should_validate=true" >> $GITHUB_OUTPUT
+          exit 0
+        fi
         
-        G_INTS=()
-        TP_INTS=()
-        PBs=()
+        FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+        if [[ -z "$FILES" ]]; then
+          echo "should_validate=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        INTS=()
+        PLAYBOOKS=()
         
         for file in $FILES; do
           IFS='/' read -ra ADDR <<< "$file"
-        
-          # Integration names
-          if [[ $file == content/response_integrations/google/* ]]; then
-            [[ -n "${ADDR[3]}" ]] && G_INTS+=("${ADDR[3]}")
-          elif [[ $file == content/response_integrations/third_party/* ]]; then
-            # content/response_integrations/third_party/[community|partner]/NAME
-            [[ -n "${ADDR[4]}" ]] && TP_INTS+=("${ADDR[4]}")
-          elif [[ $file == content/response_integrations/power_ups/* ]]; then
-            # content/response_integrations/power_ups/NAME
-            [[ -n "${ADDR[3]}" ]] && TP_INTS+=("${ADDR[3]}")
-          elif [[ $file == content/playbooks/* ]]; then
+          if [[ $file == content/response_integrations/* ]]; then
+            # content/response_integrations/[google|third_party|power_ups]/...
             if [[ ${ADDR[2]} == "third_party" ]]; then
-               [[ -n "${ADDR[4]}" ]] && PBs+=("${ADDR[4]}")
+              # content/response_integrations/third_party/[community|partner]/NAME
+              [[ -n "${ADDR[4]}" ]] && INTS+=("${ADDR[4]}")
             else
+              # content/response_integrations/[google|power_ups]/NAME
+              [[ -n "${ADDR[3]}" ]] && INTS+=("${ADDR[3]}")
+            fi
+          elif [[ $file == content/playbooks/* ]]; then
+            # content/playbooks/[commercial|third_party]/...
+            if [[ ${ADDR[2]} == "third_party" ]]; then
+               # content/playbooks/third_party/[community|partner]/NAME
+               [[ -n "${ADDR[4]}" ]] && PLAYBOOKS+=("${ADDR[4]}")
+            else
+               # content/playbooks/commercial/NAME.json
+               # Strip .json if present
                NAME="${ADDR[3]%.json}"
-               [[ -n "$NAME" ]] && PBs+=("$NAME")
+               [[ -n "$NAME" ]] && PLAYBOOKS+=("$NAME")
             fi
           fi
         done
         
-        # Deduplicate and format
-        echo "google_integrations=$(echo "${G_INTS[@]}" | tr ' ' '\n' | sort -u | xargs)" >> $GITHUB_OUTPUT
-        echo "third_party_integrations=$(echo "${TP_INTS[@]}" | tr ' ' '\n' | sort -u | xargs)" >> $GITHUB_OUTPUT
-        echo "playbooks_list=$(echo "${PBs[@]}" | tr ' ' '\n' | sort -u | xargs)" >> $GITHUB_OUTPUT
+        # Deduplicate lists
+        UNIQ_INTS=$(echo "${INTS[@]}" | tr ' ' '\n' | sort -u | xargs)
+        UNIQ_PBs=$(echo "${PLAYBOOKS[@]}" | tr ' ' '\n' | sort -u | xargs)
+        
+        # Build the commands
+        COMMAND=""
+        if [[ -n "$UNIQ_INTS" ]]; then
+          COMMAND="wmp validate integration $UNIQ_INTS"
+        fi
+        
+        if [[ -n "$UNIQ_PBs" ]]; then
+          [[ -n "$COMMAND" ]] && COMMAND="$COMMAND && "
+          COMMAND="${COMMAND}wmp validate playbook $UNIQ_PBs"
+        fi
+        
+        if [[ -n "$COMMAND" ]]; then
+          echo "validate_command=$COMMAND" >> $GITHUB_OUTPUT
+          echo "should_validate=true" >> $GITHUB_OUTPUT
+        else
+          echo "should_validate=false" >> $GITHUB_OUTPUT
+        fi
 
   test-mp-windows:
     name: 1. Test mp Package
@@ -128,14 +143,33 @@ jobs:
       working-directory: packages/mp
       run: python -m pytest tests -n 7 --cov
 
+  test-tipcommon-windows:
+    name: 1b. Test TIPCommon Package
+    needs: changes
+    if: ${{ needs.changes.outputs.tipcommon == 'true' || needs.changes.outputs.ci == 'true' }}
+    runs-on: windows-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        python -m pip install uv
+    - name: Run pytest
+      working-directory: packages/tipcommon/TIPCommon
+      run: |
+        uv sync --dev
+        uv run pytest
 
-  validate-google-integrations-windows:
-    name: 2a. Validate Google Integrations
+  validate-content-windows:
+    name: 2. Validate Content
     needs: changes
     if: >-
-      (needs.changes.outputs.mp == 'true' ||
-       needs.changes.outputs.integration_packages == 'true' ||
-       needs.changes.outputs.response_integrations_google == 'true') &&
+      needs.changes.outputs.should_validate == 'true' &&
       (github.event_name != 'pull_request' ||
        (!contains(github.event.pull_request.labels.*.name, 'skip-windows') &&
         !contains(github.event.pull_request.labels.*.name, 'ci-minimal')))
@@ -159,71 +193,15 @@ jobs:
       env:
         PYTHONIOENCODING: utf-8
         GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
-        IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
-        GOOGLE_INTEGRATIONS: ${{ needs.changes.outputs.google_integrations }}
+        VALIDATE_COMMAND: ${{ needs.changes.outputs.validate_command }}
       # language=bash
       run: |
         wmp config --root-path . --processes 7 --display-config
-        if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
-          wmp validate repository google
-        } else {
-          $integrations = $env:GOOGLE_INTEGRATIONS.Trim()
-          if ($integrations) {
-            $integrationList = $integrations.Split(" ")
-            wmp validate integration $integrationList
-          }
-        }
-
-  validate-third-party-integrations-windows:
-    name: 2a. Validate Third Party Integrations
-    needs: changes
-    if: >-
-      (needs.changes.outputs.mp == 'true' ||
-       needs.changes.outputs.integration_packages == 'true' ||
-       needs.changes.outputs.response_integrations_third_party == 'true') &&
-      (github.event_name != 'pull_request' ||
-       (!contains(github.event.pull_request.labels.*.name, 'skip-windows') &&
-        !contains(github.event.pull_request.labels.*.name, 'ci-minimal')))
-    runs-on: windows-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install mp
-      # language=bash
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validations
-      shell: pwsh
-      env:
-        PYTHONIOENCODING: utf-8
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
-        IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
-        THIRD_PARTY_INTEGRATIONS: ${{ needs.changes.outputs.third_party_integrations }}
-      # language=bash
-      run: |
-        wmp config --root-path . --processes 7 --display-config
-        if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
-          wmp validate repository third_party
-        } else {
-          $integrations = $env:THIRD_PARTY_INTEGRATIONS.Trim()
-          if ($integrations) {
-            $integrationList = $integrations.Split(" ")
-            wmp validate integration $integrationList
-          }
-        }
+        Invoke-Expression $env:VALIDATE_COMMAND
 
   run-integrations-tests-windows:
-    name: 2b. Test Integrations
-    needs: [ validate-third-party-integrations-windows, validate-google-integrations-windows ]
+    name: 3. Test Integrations
+    needs: [ validate-content-windows ]
     runs-on: windows-latest
     steps:
     - name: Checkout repository
@@ -245,7 +223,7 @@ jobs:
         wmp test --repository third_party --repository google --raise-error-on-violations
 
   mp-build-integrations-windows:
-    name: 2c. Build Integrations
+    name: 4. Build Integrations
     needs: run-integrations-tests-windows
     runs-on: windows-latest
     steps:
@@ -267,52 +245,9 @@ jobs:
         wmp config --root-path . --processes 7 --display-config
         wmp build repository google third_party 
 
-
-
-  validate-playbooks-windows:
-    name: 3a. Validate Playbooks
-    needs: changes
-    if: >-
-      (needs.changes.outputs.mp == 'true' ||
-       needs.changes.outputs.playbooks == 'true') &&
-      (github.event_name != 'pull_request' ||
-       (!contains(github.event.pull_request.labels.*.name, 'skip-windows') &&
-        !contains(github.event.pull_request.labels.*.name, 'ci-minimal')))
-    runs-on: windows-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install mp
-      # language=bash
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validations
-      shell: pwsh
-      env:
-        IS_MP_CHANGED: ${{ needs.changes.outputs.mp }}
-        IS_PACKAGES_CHANGED: ${{ needs.changes.outputs.integration_packages }}
-        PLAYBOOKS_LIST: ${{ needs.changes.outputs.playbooks_list }}
-      # language=bash
-      run: |
-        wmp config --root-path . --processes 7 --display-config
-        if ($env:IS_MP_CHANGED -eq "true" -or $env:IS_PACKAGES_CHANGED -eq "true") {
-          wmp validate repository playbooks
-        } else {
-          $playbooks = $env:PLAYBOOKS_LIST.Trim()
-          if ($playbooks) {
-            $playbookList = $playbooks.Split(" ")
-            wmp validate playbook $playbookList
-          }
-        }
-
   mp-build-playbooks-windows:
-    name: 3b. Build Playbooks
-    needs: validate-playbooks-windows
+    name: 5. Build Playbooks
+    needs: validate-content-windows
     runs-on: windows-latest
     steps:
     - name: Checkout repository

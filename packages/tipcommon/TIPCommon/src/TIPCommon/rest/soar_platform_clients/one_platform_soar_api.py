@@ -20,6 +20,7 @@ import json
 from typing import TYPE_CHECKING
 
 from TIPCommon.consts import DATAPLANE_1P_HEADER, DEFAULT_1P_PAGE_SIZE
+from TIPCommon.exceptions import EmptyMandatoryValues, ParameterValidationError
 from TIPCommon.rest.custom_types import HttpMethod
 from TIPCommon.utils import escape_odata_literal, safe_json_for_204, temporarily_remove_header
 
@@ -88,21 +89,20 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         return self._make_request(HttpMethod.GET, endpoint, params=params)
 
-    def get_case_insights(self) -> requests.Response:
+    def get_case_insights(self) -> list[SingleJson]:
         """Get case insights using 1P API."""
-        endpoint = f"/cases/{self.params.case_id}/activities"
-        query_params = {
-            "$filter": "activityType eq 'CaseInsight'",
-            "pageSize": DEFAULT_1P_PAGE_SIZE,
-        }
-        return self._make_request(HttpMethod.GET, endpoint, params=query_params)
+        query_string = f"$filter=activityType eq 'CaseInsight'&pageSize={DEFAULT_1P_PAGE_SIZE}"
+        endpoint = f"/cases/{self.params.case_id}/activities?{query_string}"
 
-    def get_installed_integrations_of_environment(self) -> requests.Response:
+        return self._paginate_results(endpoint, "activities")
+
+    def get_installed_integrations_of_environment(self) -> list[SingleJson]:
         """Get installed integrations of environment using legacy API."""
-        endpoint = f"/integrations/{self.params.integration_identifier}/integrationInstances"
         name = "*" if self.params.environment == "Shared Instances" else self.params.environment
-        params = {"$filter": f"environment eq '{escape_odata_literal(name)}'"}
-        return self._make_request(HttpMethod.GET, endpoint, params=params)
+        query_string = f"$filter=environment eq '{escape_odata_literal(name)}'&pageSize={_PAGE_SIZE}"
+        endpoint = f"/integrations/{self.params.integration_identifier}/integrationInstances?{query_string}"
+
+        return self._paginate_results(endpoint, "integrationInstances")
 
     def get_connector_cards(self) -> requests.Response:
         """Get connector cards using legacy API."""
@@ -436,10 +436,11 @@ class OnePlatformSoarApi(BaseSoarApi):
         }
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
-    def get_users_profile_cards(self) -> requests.Response:
+    def get_users_profile_cards(self) -> list[SingleJson]:
         """Get users profile cards."""
-        endpoint = "/legacySoarUsers"
-        return self._make_request(HttpMethod.GET, endpoint)
+        page_size = getattr(self.params, "page_size", _PAGE_SIZE)
+        endpoint = f"/legacySoarUsers?pageSize={page_size}"
+        return self._paginate_results(endpoint, "legacySoarUsers")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_security_events(self) -> requests.Response:
@@ -497,10 +498,11 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = f"/system/settings/emailTemplates?pageSize={_EMAIL_TEMPLATES_PAGE_SIZE}"
         return self._paginate_results(endpoint, "emailTemplates")
 
-    def get_siemplify_user_details(self) -> requests.Response:
+    def get_siemplify_user_details(self) -> list[SingleJson]:
         """Get siemplify user details."""
-        endpoint = "/legacySoarUsers"
-        return self._make_request(HttpMethod.GET, endpoint)
+        page_size = getattr(self.params, "page_size", _PAGE_SIZE)
+        endpoint = f"/legacySoarUsers?pageSize={page_size}"
+        return self._paginate_results(endpoint, "legacySoarUsers")
 
     def get_domain_alias(self) -> requests.Response:
         """Get domain alias."""
@@ -523,6 +525,85 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         endpoint += f"?pageSize={_PAGE_SIZE}"
         return self._paginate_results(initial_endpoint=endpoint, root_response_key="job_instances")
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def save_or_update_job(self) -> requests.Response:
+        """Save or update job data using 1P API.
+
+        The ``job_data`` dict must contain at least:
+
+        - **name** (``str``): The full GCP resource path of
+          the job instance, e.g.::
+
+              projects/{project}/locations/{location}/
+              instances/{instance}/integrations/{integrationId}/
+              jobs/{jobId}/jobInstances/{instanceId}
+
+        - **parameters** (``list[dict]``): A list of parameter
+          dicts, each containing at minimum ``name`` (or
+          ``displayName``) and ``value`` keys.
+
+        Example ``job_data``::
+
+            {
+                "name": "projects/my-proj/locations/us/"
+                        "instances/abc/integrations/MyInt/"
+                        "jobs/j1/jobInstances/ji1",
+                "parameters": [
+                    {
+                        "displayName": "API Key",
+                        "value": "new-value"
+                    }
+                ]
+            }
+
+        Raises:
+            EmptyMandatoryValues: If ``job_data`` is missing
+                required fields (``name``, ``parameters``).
+            ParameterValidationError: If the resource path
+                cannot be parsed.
+        """
+        job_data = self.params.job_data
+
+        resource_path = job_data.get("name")
+        if resource_path is None:
+            raise EmptyMandatoryValues(
+                "Job data must include a 'name' field with the resource path. "
+                "Example (1P resource path): "
+                "projects/{project}/locations/{location}/instances/{instance}/"
+                "integrations/{integrationId}/jobs/{jobId}/"
+                "jobInstances/{instanceId}. "
+                "Cannot determine the PATCH endpoint without the resource path."
+            )
+
+        parameters = job_data.get("parameters")
+        if parameters is None:
+            raise EmptyMandatoryValues(
+                "Job data is missing 'parameters' field, Nothing to update."
+            )
+        # The resource path is a full GCP resource name, e.g.:
+        # projects/X/locations/Y/instances/Z/integrations/.../jobInstances/{id}
+        # The API base URL already includes up to instances/Z, so we need
+        # just the relative path starting from /integrations/...
+        segment_pos = resource_path.find("integrations/")
+        if segment_pos == -1:
+            raise ParameterValidationError(
+                param_name="name",
+                value=resource_path,
+                message=(
+                    "Cannot parse resource path. "
+                    "Expected path to contain 'integrations/'"
+                ),
+            )
+
+        endpoint = f"/{resource_path[segment_pos:]}"
+
+        return self._make_request(
+            HttpMethod.PATCH,
+            endpoint,
+            params={"updateMask": "parameters"},
+            json_payload={"parameters": parameters},
+        )
 
     def get_case_wall_records(self) -> requests.Response:
         """Get case wall records using 1P API.
@@ -705,15 +786,50 @@ class OnePlatformSoarApi(BaseSoarApi):
         )
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def search_cases_by_everything(self) -> requests.Response:
-        """Get Cases search by everything."""
-        endpoint: str = "/legacySearches:legacyCaseSearchEverything"
-        return self._make_request(
-            HttpMethod.POST,
-            endpoint,
-            json_payload=self.params.search_payload,
-            params={"format": "camel"},
-        )
+    def search_cases_by_everything(self) -> list[SingleJson]:
+        """
+        Retrieves all cases using the legacy search endpoint.
+
+        Returns:
+            list[SingleJson]: The complete set of cases found.
+        """
+        all_cases = []
+        page_number = 0
+        has_more_pages = True
+
+        # Make a copy to avoid mutating the instance-wide search_payload
+        request_payload = self.params.search_payload.copy()
+
+        # Making sure that there is a page_size set, default to 50
+        page_size = request_payload.get("pageSize", 50)
+
+        while has_more_pages:
+            request_payload.update({
+                "requestedPage": page_number,
+                "pageSize": page_size,
+            })
+
+            try:
+                response = self._make_request(
+                    HttpMethod.POST,
+                    "/legacySearches:legacyCaseSearchEverything",
+                    json_payload=request_payload,
+                    params={"format": "camel"},
+                )
+                response.raise_for_status()
+                payload = response.json()
+            except Exception as e:
+                self.chronicle_soar.LOGGER.error(f"Request failed at page {page_number}: {e}")
+                return all_cases
+
+            results = payload.get("results", [])
+            if results:
+                all_cases.extend(results)
+
+            has_more_pages = bool(results) and len(all_cases) < payload.get("totalCount", 0)
+            page_number += 1
+
+        return all_cases
 
     def get_case_activities(self) -> requests.Response:
         """Get case activities using 1P API."""

@@ -89,7 +89,7 @@ def update_component_def(file_path: pathlib.Path, new_id: str, *, is_connector: 
         is_connector: True if the component is a connector.
 
     """
-    try:
+    try:  # noqa: PLW0717
         with file_path.open("r+", encoding="utf-8") as f:
             data = json.load(f)
 
