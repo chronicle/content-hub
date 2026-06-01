@@ -809,6 +809,7 @@ class WorkflowInstaller:
             if installed_workflow
             else None
         )
+
         for step in self._flatten_playbook_steps(workflow.raw_data.get("steps")):
             provider = step.get("actionProvider")
             step_type = step.get("type")
