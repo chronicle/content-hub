@@ -40,7 +40,12 @@ ACTION_ALERT_SCOPE_CONTEXT = copy.deepcopy(ALERT_1_CONTEXT)
 ACTION_CASE_SCOPE_PARAMS = MOCK_DATA["action_case_scope_parameters"]
 ACTION_CASE_SCOPE_CONTEXT = copy.deepcopy(ALERT_1_CONTEXT)
 
-SUCCESS_OUTPUT_MESSAGE_1 = "1 entities were successfully were enriched\n"
-SUCCESS_OUTPUT_MESSAGE_2 = "2 entities were successfully were enriched\n"
-SUCCESS_OUTPUT_MESSAGE_0 = "0 entities were successfully were enriched\n"
-SUCCESS_OUTPUT_MESSAGE_ENRICH_SD = "output message : Enrichment added.\n"
+SUCCESS_OUTPUT_MESSAGE_1 = "1 entities were successfully enriched\n"
+SUCCESS_OUTPUT_MESSAGE_2 = (
+    "2 entities were successfully enriched for all case open alerts\n"
+)
+SUCCESS_OUTPUT_MESSAGE_0 = "0 entities were successfully enriched\n"
+SUCCESS_OUTPUT_MESSAGE_ENRICH_SD_ALERT = "Enrichment added.\n"
+SUCCESS_OUTPUT_MESSAGE_ENRICH_SD_CASE = (
+    "Enrichment added for all case open alerts.\n"
+)

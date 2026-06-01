@@ -49,6 +49,7 @@ def build_alert_mock(adict: dict[str, Any]) -> MagicMock:
     for endict in adict.get("entities", []):
         en = MagicMock()
         en.identifier = endict.get("identifier")
+        en.entity_type = endict.get("entity_type", "ADDRESS")
         en.additional_properties = endict.get("additional_properties", {})
         if "alert_identifier" in endict:
             en.alert_identifier = endict["alert_identifier"]

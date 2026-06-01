@@ -162,6 +162,8 @@ def enrich_entities_with_sources_and_dests(
     updated_entities_map: dict[str, Entity] = {}
 
     for entity in entities:
+        if entity.entity_type not in ("ADDRESS", "HOSTNAME"):
+            continue
         ident = entity.identifier.casefold()
         if ident in source_set:
             entity.additional_properties.update({"isSource": "true"})
@@ -228,13 +230,17 @@ def main() -> None:
     if execution_scope.value == ExecutionScope.Alert.value:
         target_alerts: list[Any] = [siemplify.current_alert]
     else:
-        target_alerts: list[Any] = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        target_alerts: list[Any] = getattr(
+            siemplify.case, "open_alerts", siemplify.case.alerts
+        )
 
     updated_entities: list[Entity] = []
 
     for target_alert in target_alerts:
         try:
-            updated: list[Entity] = process_alert(siemplify, target_alert, execution_scope)
+            updated: list[Entity] = process_alert(
+                siemplify, target_alert, execution_scope
+            )
             updated_entities.extend(updated)
         except Exception as e:
             siemplify.LOGGER.error(
@@ -242,7 +248,8 @@ def main() -> None:
                 f"{getattr(target_alert, 'identifier', target_alert)}: {e}"
             )
 
-    siemplify.update_entities(updated_entities)
+    if updated_entities:
+        siemplify.update_entities(updated_entities)
     status: int = EXECUTION_STATE_COMPLETED
 
     if execution_scope.value == ExecutionScope.Alert.value:

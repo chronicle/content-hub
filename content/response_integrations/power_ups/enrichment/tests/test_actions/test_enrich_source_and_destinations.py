@@ -29,7 +29,8 @@ from ..common import (
     ALERTS_EMPTY_EVENTS_KEY,
     CASE_METADATA_KEY,
     MOCK_DATA,
-    SUCCESS_OUTPUT_MESSAGE_ENRICH_SD,
+    SUCCESS_OUTPUT_MESSAGE_ENRICH_SD_ALERT,
+    SUCCESS_OUTPUT_MESSAGE_ENRICH_SD_CASE,
 )
 from ..core.product import EnrichmentProduct
 from ..core.session import EnrichmentMockSession
@@ -52,7 +53,10 @@ def test_enrich_source_and_destinations_alert_scope(
     EnrichSourceAndDestinations.main()
 
     assert len(script_session.request_history) == 1
-    assert action_output.results.output_message == SUCCESS_OUTPUT_MESSAGE_ENRICH_SD
+    assert (
+        action_output.results.output_message
+        == SUCCESS_OUTPUT_MESSAGE_ENRICH_SD_ALERT
+    )
     assert action_output.results.result_value is None
     assert action_output.results.execution_state == ExecutionState.COMPLETED
 
@@ -74,7 +78,10 @@ def test_enrich_source_and_destinations_case_scope(
     EnrichSourceAndDestinations.main()
 
     assert len(script_session.request_history) == 1
-    assert action_output.results.output_message == SUCCESS_OUTPUT_MESSAGE_ENRICH_SD
+    assert (
+        action_output.results.output_message
+        == SUCCESS_OUTPUT_MESSAGE_ENRICH_SD_CASE
+    )
     assert action_output.results.result_value is None
     assert action_output.results.execution_state == ExecutionState.COMPLETED
 
@@ -95,7 +102,41 @@ def test_enrich_source_and_destinations_empty_events(
 
     EnrichSourceAndDestinations.main()
 
-    assert len(script_session.request_history) == 1
-    assert action_output.results.output_message == SUCCESS_OUTPUT_MESSAGE_ENRICH_SD
+    assert len(script_session.request_history) == 0
+    assert (
+        action_output.results.output_message
+        == SUCCESS_OUTPUT_MESSAGE_ENRICH_SD_ALERT
+    )
     assert action_output.results.result_value is None
     assert action_output.results.execution_state == ExecutionState.COMPLETED
+
+
+@pytest.mark.execution_scope("Alert")
+@set_metadata(
+    parameters=ACTION_ALERT_SCOPE_PARAMS,
+    input_context=ACTION_ALERT_SCOPE_CONTEXT,
+)
+def test_enrich_source_and_destinations_unsupported_entity_type(
+    product: EnrichmentProduct,
+    script_session: EnrichmentMockSession,
+    action_output: MockActionOutput,
+) -> None:
+    """Test EnrichSourceAndDestinations ignores unsupported entity types."""
+    import copy
+
+    product.set_case_metadata(MOCK_DATA[CASE_METADATA_KEY])
+
+    custom_alert_details = copy.deepcopy(MOCK_DATA[ALERTS_ALERT_SCOPE_KEY])
+    custom_alert_details["alerts"][0]["entities"][0]["entity_type"] = "URL"
+
+    product.set_alerts_full_details(custom_alert_details)
+
+    EnrichSourceAndDestinations.main()
+
+    assert len(script_session.request_history) == 0
+    assert (
+        action_output.results.output_message
+        == SUCCESS_OUTPUT_MESSAGE_ENRICH_SD_ALERT
+    )
+    assert action_output.results.result_value is None
+

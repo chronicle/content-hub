@@ -127,7 +127,9 @@ def main() -> None:
     if execution_scope.value == ExecutionScope.Alert.value:
         target_alerts: list[Any] = [siemplify.current_alert]
     else:
-        target_alerts: list[Any] = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        target_alerts: list[Any] = getattr(
+            siemplify.case, "open_alerts", siemplify.case.alerts
+        )
 
     fields: list[str] = siemplify.parameters.get("Fields to enrich").split(",")
     updated_entities: list[Any] = []
