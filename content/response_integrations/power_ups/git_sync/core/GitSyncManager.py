@@ -247,7 +247,7 @@ class GitSyncManager:
             else:
                 self.logger.warning(
                     "Unexpected response format from get_ide_cards "
-                    "for integration '{integration.identifier}'. "
+                    f"for integration '{integration.identifier}'. "
                     f"Expected dict or list, but got {type(response).__name__}."
                 )
             for script in integration.get_all_items():
@@ -326,7 +326,19 @@ class GitSyncManager:
 
 
         existing_connectors = self.api.get_connectors(chronicle_soar=self._siemplify)
+        connector_definition_id = None
         if platform_supports_1p_api():
+            try:
+                integration_connectors = self.api.get_integration_connectors(self._siemplify, connector.integration)
+                connector_def = next(
+                    (x for x in integration_connectors if x.get("displayName") == connector.raw_data.get("displayName") or x.get("displayName") == connector.name),
+                    None
+                )
+                if connector_def:
+                    connector_definition_id = str(connector_def.get("id"))
+            except Exception as e:
+                self.logger.warn(f"Failed to retrieve connector definition for {connector.name}: {e}")
+
             existing_connector = next(
                 (
                     c
@@ -345,7 +357,7 @@ class GitSyncManager:
                 self.api.update_existing_connector(connector.raw_data, existing_connector)
             else:
                 self.logger.info(f"Installing {connector.name}")
-                self.api.update_connector(connector.raw_data)
+                self.api.update_connector(connector.raw_data, connector_definition_id=connector_definition_id)
         else:
             self.api.update_connector(connector.raw_data)
 
@@ -449,26 +461,19 @@ class GitSyncManager:
             )
             return
         # Try to find and fix the jobDefinitionId field
-        integration_cards = next(
-            (
-                x for x in self.api.get_ide_cards(job.integration)
-                if x["identifier"] == job.integration
-            ),
-            {},
-        ).get("cards", None)
-        if integration_cards:
-            job_def_id = next(
-                (
-                    x
-                    for x in integration_cards
-                    if x.get("type") == 2 and x.get("name") == job.name
-                ),
-                None,
-            )
-            if job_def_id:
-                job.raw_data["jobDefinitionId"] = job_def_id.get("id")
-
+        job_definition_id = None
         if platform_supports_1p_api():
+            try:
+                integration_jobs = self.api.get_integration_jobs(self._siemplify, job.integration)
+                job_def = next(
+                    (x for x in integration_jobs if x.get("displayName") == job.raw_data.get("displayName") or x.get("displayName") == job.name),
+                    None
+                )
+                if job_def:
+                    job_definition_id = str(job_def.get("id"))
+            except Exception as e:
+                self.logger.warn(f"Failed to retrieve job definition for {job.name}: {e}")
+
             existing_job = next(
                 (
                     x
@@ -486,6 +491,25 @@ class GitSyncManager:
                 else:
                     self.logger.warn(f"Job {job.name} exists but has no resource name.")
         else:
+            integration_cards = next(
+                (
+                    x for x in self.api.get_ide_cards(job.integration)
+                    if x["identifier"] == job.integration
+                ),
+                {},
+            ).get("cards", None)
+            if integration_cards:
+                job_def_id = next(
+                    (
+                        x
+                        for x in integration_cards
+                        if x.get("type") == 2 and x.get("name") == job.name
+                    ),
+                    None,
+                )
+                if job_def_id:
+                    job.raw_data["jobDefinitionId"] = job_def_id.get("id")
+
             existing_job = next(
                 (
                     x
@@ -497,7 +521,7 @@ class GitSyncManager:
             if existing_job:
                 job.raw_data["id"] = existing_job.get("id")
                 
-        self.api.add_job(job.raw_data)
+        self.api.add_job(job.raw_data, job_definition_id=job_definition_id)
 
 
     def generate_root_readme(self) -> str:

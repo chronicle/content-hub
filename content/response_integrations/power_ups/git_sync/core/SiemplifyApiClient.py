@@ -56,6 +56,8 @@ from TIPCommon.rest.soar_api import (
     get_installed_connectors,
     get_installed_integrations_of_environment,
     get_installed_jobs,
+    get_integration_jobs,
+    get_integration_connectors,
     get_mapping_rules,
     get_networks,
     get_ontology_records,
@@ -467,8 +469,8 @@ class SiemplifyApiClient:
             list[SingleJson]: List of connectors."""
         return get_installed_connectors(chronicle_soar=chronicle_soar)
 
-    def update_connector(self, connector_data):
-        return update_connector(self.siemplify_soar, connector_data)
+    def update_connector(self, connector_data, connector_definition_id=None):
+        return update_connector(self.siemplify_soar, connector_data, connector_definition_id)
 
     def update_existing_connector(self, connector_data, existing_connector):
         return update_existing_connector(self.siemplify_soar, connector_data, existing_connector)
@@ -587,6 +589,12 @@ class SiemplifyApiClient:
         res = update_sla_record(siemplify, definition)
         return res
 
+    def get_integration_jobs(self, chronicle_soar: ChronicleSoar, integration_name: str) -> list[SingleJson]:
+        return get_integration_jobs(chronicle_soar=chronicle_soar, integration_name=integration_name)
+
+    def get_integration_connectors(self, chronicle_soar: ChronicleSoar, integration_name: str) -> list[SingleJson]:
+        return get_integration_connectors(chronicle_soar=chronicle_soar, integration_name=integration_name)
+
     def get_jobs(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
         res = get_installed_jobs(chronicle_soar=chronicle_soar)
         jobs = res if isinstance(res, list) else res.get("job_instances", [])
@@ -611,8 +619,8 @@ class SiemplifyApiClient:
             
         return enriched_jobs
 
-    def add_job(self, job):
-        return add_job(self.siemplify_soar, job)
+    def add_job(self, job, job_definition_id=None):
+        return add_job(self.siemplify_soar, job, job_definition_id)
 
     def update_job_instance(self, job_instance_name, job):
         return update_job_instance(self.siemplify_soar, job_instance_name, job)

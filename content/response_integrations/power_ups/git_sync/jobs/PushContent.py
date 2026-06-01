@@ -15,8 +15,6 @@
 from __future__ import annotations
 
 from io import BytesIO
-import time
-import threading
 
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import output_handler
@@ -88,46 +86,22 @@ def main():
         if features["Playbooks"]:
             siemplify.LOGGER.info("========== Playbooks ==========")
             installed_playbooks = gitsync.api.get_playbooks(chronicle_soar=siemplify)
-            for playbook in installed_playbooks:
-                siemplify.LOGGER.info(f"Pushing {playbook['name']}")
-                playbook = gitsync.api.get_playbook(
-                    chronicle_soar=siemplify,
-                    identifier=playbook["identifier"],
-                )
-                workflow = Workflow(playbook)
-                workflow.update_instance_name_in_steps(gitsync.api, siemplify)
-                if workflow.type == WorkflowTypes.BLOCK:
-                    gitsync.content.push_block(workflow)
-                else:
-                    gitsync.content.push_playbook(workflow)
-
-                if include_blocks:
-                    for block_step in workflow.get_involved_blocks():
-                        installed_block = next(
-                            (
-                                x
-                                for x in installed_playbooks
-                                if x.get("name") == block_step.get("name")
-                            ),
-                            None,
-                        )
-
-                        if not installed_block:
-                            siemplify.LOGGER.warn(
-                                f"Block '{block_step.get('name')}' not found in installed playbooks. Skipping."
-                            )
-                            continue
-
-                        block_definition = gitsync.api.get_playbook(
-                            chronicle_soar=siemplify,
-                            identifier=installed_block.get("identifier"),
-                        )
-
-                        if block_definition:
-                            block = Workflow(block_definition)
-                            block.update_instance_name_in_steps(gitsync.api, siemplify)
-                            gitsync.content.push_block(block, category=workflow.category)
-
+            for playbook_summary in installed_playbooks:
+                siemplify.LOGGER.info(f"Pushing {playbook_summary['name']}")
+                try:
+                    playbook_definition = gitsync.api.get_playbook(
+                        chronicle_soar=siemplify,
+                        identifier=playbook_summary["identifier"],
+                    )
+                    workflow = Workflow(playbook_definition)
+                    workflow.update_instance_name_in_steps(gitsync.api, siemplify)
+                    if workflow.type == WorkflowTypes.BLOCK:
+                        gitsync.content.push_block(workflow)
+                    else:
+                        gitsync.content.push_playbook(workflow)
+                except Exception as e:
+                    siemplify.LOGGER.error(f"Couldn't upload playbook {playbook_summary['name']}. ERROR: {e}")
+                    siemplify.LOGGER.exception(e)
         # Jobs
         if features["Jobs"]:
             siemplify.LOGGER.info("========== Jobs ==========")
@@ -260,7 +234,7 @@ def main():
                     rules = []
                     for record in records:
                         record["exampleEventFields"] = []  # remove event assets
-                        rule = gitsync.api.get_mapping_rules(# ng
+                        rule = gitsync.api.get_mapping_rules(
                             source=record["source"],
                             mr_id=record["id"], 
                             product=record["product"],
