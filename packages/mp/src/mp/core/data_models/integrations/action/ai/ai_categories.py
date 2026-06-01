@@ -105,37 +105,40 @@ def is_enrichment_action(action):
         bool,
         Field(
             description=(
-                """Field Definition: A Remediation Action is a specialized task designed to mitigate or resolve a
- security threat or incident. An action is classified as "Remediation" if it matches one of the following criteria:
- Here's a pseudocode example of how to determine whether an action is a remediation action:
+                """Remediation actions actively neutralize threats, eliminate attacker footprints, or restore assets.
+
+An action qualifies as remediation if it meets at least one of the following criteria:
+* **Infrastructure Control**: Terminates processes, isolates hosts, or blocks network access (e.g., ports, IPs).
+* **Identity Control**: Revokes or invalidates active authentication states (e.g., tokens, passwords).
+* **Eradication**: Deletes payload artifacts or unauthorized system modifications (e.g., malware, registry keys).
+* **Mitigation Triggers**: Serves as the gate that triggers external mitigation workflows (e.g., patch deployment).
+
+Generally, strictly passive or analytical actions (like threat intel lookups) do not qualify.
+
+Here's a pseudocode example of how to determine whether an action is a remediation action:
 ```
 def is_remediation_action(action):
-    # Rule 1: Check for Identity-Based Remediation
-    # Disables authentication, forces MFA setups, or invalidates current credentials
-    if action.disables_identity or action.forces_identity_mfa or action.resets_identity_password:
+    # Rule 1: Infrastructure Control
+    if action.blocks_ip or action.blocks_domain or action.isolates_host or action.terminates_process:
         return True
 
-    # Rule 2: Check for Infrastructure-Based Blocking (IPs)
-    # Blocks specific IPs from performing operations via firewall rules, EDR constraints, or blocklists
-    if action.blocks_ip:
+    # Rule 2: Identity Control
+    if action.disables_account or action.invalidates_tokens or action.forces_password_reset:
         return True
 
-    # Rule 3: Check for Network/Web-Based Blocking (Domains & URLs)
-    # Prevents network communication with domains or URLs identified as malicious
-    if action.blocks_malicious_domain or action.blocks_malicious_url:
+    # Rule 3: Eradication
+    if action.deletes_files or action.cleans_registry:
         return True
 
-    # Rule 4: Check for Email-Based Isolation
-    # Isolates suspicious emails into a secure area to protect the recipient's inbox
-    if action.quarantines_email:
+    # Rule 4: Mitigation Triggers
+    if action.triggers_workflow or action.initiates_patching:
         return True
 
-    # If the action does not execute any of the above defensive behaviors, it is not remediation
     return False
 ```"""
             )
         ),
-    ]  # TODO change description
+    ]
 
 
 class ActionAiCategory(RepresentableEnum):
