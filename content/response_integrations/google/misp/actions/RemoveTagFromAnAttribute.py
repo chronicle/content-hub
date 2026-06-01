@@ -18,7 +18,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from ..core.utils import string_to_multi_value, adjust_categories
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from ..core.MISPManager import MISPManager, REMOVE_ACTION
-from TIPCommon import extract_configuration_param, extract_action_param
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from ..core.constants import (
     INTEGRATION_NAME,
     REMOVE_TAG_FROM_AN_ATTRIBUTE,

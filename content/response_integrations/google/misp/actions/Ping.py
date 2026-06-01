@@ -17,7 +17,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED, EXECUTION_STATE_COMPLETED
 from ..core.MISPManager import MISPManager
-from TIPCommon import extract_configuration_param
+from TIPCommon.extraction import extract_configuration_param
 
 
 INTEGRATION_NAME = "MISP"

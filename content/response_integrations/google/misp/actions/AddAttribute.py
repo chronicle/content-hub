@@ -13,6 +13,10 @@
 # limitations under the License.
 
 from __future__ import annotations
+
+from enum import Enum
+from typing import Any
+
 from ..core.MISPManager import (
     MISPManager,
     URL,
@@ -31,8 +35,12 @@ from soar_sdk.ScriptResult import (
 )
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyUtils import output_handler, unix_now, convert_unixtime_to_datetime
-from TIPCommon import extract_action_param, extract_configuration_param
+from soar_sdk.SiemplifyUtils import (
+    output_handler,
+    unix_now,
+    convert_unixtime_to_datetime,
+)
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from ..core.constants import (
     ADD_ATTRIBUTE_SCRIPT_NAME,
     INTEGRATION_NAME,
@@ -47,6 +55,7 @@ from ..core.constants import (
     DOMAIN_TYPE,
 )
 from ..core.exceptions import (
+    MISPManagerError,
     MISPManagerInvalidCategoryError,
     MISPManagerEventIdNotFoundError,
     MISPNotAcceptableNumberOrStringError,
@@ -59,6 +68,13 @@ from ..core.utils import (
 )
 from ..core.utils import adjust_categories
 import re
+
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
 
 SUITABLE_ENTITY_TYPES = [
     EntityTypes.HOSTNAME,
@@ -100,36 +116,51 @@ def is_valid_domain(domain_name):
 
 
 def get_entity_type_for_request(
-    siemplify, entity, identifier, extract_domain, entity_type_mapper
-):
-    entity_type = entity_type_mapper[get_entity_type(entity, extract_domain)]
+    alert_obj: Any,
+    entity: Any,
+    identifier: str,
+    extract_domain: bool,
+    entity_type_mapper: dict[str, str],
+) -> str | None:
+    """Get the corresponding MISP entity type for a specific request.
 
-    if entity.entity_type == EntityTypes.HOSTNAME or entity.entity_type == DOMAIN_TYPE:
-        # So, first action should try to add the domain type. If it fails for “domain“ attribute type,
-        # it should do it for target-user.
+    Args:
+        alert_obj: The alert object (current alert or alert from case).
+        entity: The entity object.
+        identifier: The entity identifier.
+        extract_domain: Whether to extract domain from URL.
+        entity_type_mapper: A dictionary mapping entity types to MISP types.
+
+    Returns:
+        The MISP entity type or None if not identified.
+    """
+    entity_type = entity_type_mapper.get(get_entity_type(entity, extract_domain))
+
+    if (
+        entity.entity_type == EntityTypes.HOSTNAME
+        or entity.entity_type == DOMAIN_TYPE
+    ):
         entity_type = (
             entity_type
             if is_valid_domain(identifier)
-            else entity_type_mapper[EntityTypes.USER]
+            else entity_type_mapper.get(EntityTypes.USER)
         )
-    # If Siemplify current alert has relations use entity type by checking from siemplify's alert and set the type
-    # otherwise let as is
+
     if entity.entity_type == EntityTypes.ADDRESS:
-        if siemplify.current_alert.relations:
-            if is_src(siemplify.current_alert, identifier):
+        if alert_obj.relations:
+            if is_src(alert_obj, identifier):
                 entity_type = IP_TYPES[FALLBACK_IP_TYPES_MAPPER["ip-src"]]
-            if is_dst(siemplify.current_alert, identifier):
+            if is_dst(alert_obj, identifier):
                 entity_type = IP_TYPES[FALLBACK_IP_TYPES_MAPPER["ip-dst"]]
 
     if entity.entity_type == EMAIL_TYPE:
-        if siemplify.current_alert.relations:
-            if is_src(siemplify.current_alert, identifier):
+        if alert_obj.relations:
+            if is_src(alert_obj, identifier):
                 entity_type = FALLBACK_EMAIL_TYPES_MAPPER["email-src"]
-            if is_dst(siemplify.current_alert, identifier):
+            if is_dst(alert_obj, identifier):
                 entity_type = FALLBACK_IP_TYPES_MAPPER["email-dst"]
 
     if not entity_type and entity.entity_type == EntityTypes.FILEHASH:
-        # In case of filehash we should get entity_type by filehash length or in case of ssdeep hash with regexp
         entity_type = get_hash_type(identifier)
 
     return entity_type
@@ -169,7 +200,10 @@ def main():
         extract_action_param(siemplify, param_name="Category", print_value=True)
     )
     distribution = extract_action_param(
-        siemplify, param_name="Distribution", print_value=True, default_value=COMMUNITY
+        siemplify,
+        param_name="Distribution",
+        print_value=True,
+        default_value=COMMUNITY,
     )
     to_ids = extract_action_param(
         siemplify,
@@ -178,7 +212,9 @@ def main():
         input_type=bool,
         default_value=False,
     )
-    comment = extract_action_param(siemplify, param_name="Comment", print_value=True)
+    comment = extract_action_param(
+        siemplify, param_name="Comment", print_value=True
+    )
     fallback_ip_type = extract_action_param(
         siemplify,
         param_name="Fallback IP Type",
@@ -260,81 +296,159 @@ def main():
         manager = MISPManager(api_root, api_token, use_ssl, ca_certificate)
         event_id = manager.get_event_by_id_or_raise(event_id).id
 
-        for entity in suitable_entities:
-            if unix_now() >= siemplify.execution_deadline_unix_time_ms:
-                siemplify.LOGGER.error(
-                    f"Timed out. execution deadline ({convert_unixtime_to_datetime(siemplify.execution_deadline_unix_time_ms)}) has passed"
-                )
-                status = EXECUTION_STATE_TIMEDOUT
-                break
-
-            # Get original identifier from entity
-            identifier = (
-                get_entity_original_identifier(entity)
-                if not (extract_domain and entity.entity_type == EntityTypes.URL)
-                else get_domain_from_entity(get_entity_original_identifier(entity))
-            )
-
-            # Get entity type
-            entity_type = get_entity_type_for_request(
-                siemplify, entity, identifier, extract_domain, entity_type_mapper
-            )
-            try:
-                siemplify.LOGGER.info(f"Started processing entity: {identifier}")
-
-                siemplify.LOGGER.info(
-                    f"Adding {identifier} attribute for event {event_id}"
-                )
-                if entity_type:
-                    attribute = manager.add_attribute(
-                        event_id=event_id,
-                        value=identifier,
-                        type=entity_type,
-                        category=category,
-                        to_ids=to_ids,
-                        distribution=distribution,
-                        comment=comment,
+        def _process_alert_entities(
+            alert_obj: Any,
+            entities_to_process: list[Any],
+        ) -> int:
+            for entity in entities_to_process:
+                if unix_now() >= siemplify.execution_deadline_unix_time_ms:
+                    deadline_str = convert_unixtime_to_datetime(
+                        siemplify.execution_deadline_unix_time_ms
                     )
-                    json_results.append(attribute)
-                    successful_entities.append(identifier)
-                else:
-                    failed_entities.append(identifier)
-                siemplify.LOGGER.info(f"Finished processing entity {identifier}")
+                    siemplify.LOGGER.error(
+                        f"Timed out. execution deadline ({deadline_str}) has passed"
+                    )
+                    return EXECUTION_STATE_TIMEDOUT
 
-            except Exception as e:
-                failed_entities.append(identifier)
-                siemplify.LOGGER.error(
-                    f"An error occurred on entity: {identifier}.\n{e}."
+                identifier = (
+                    get_entity_original_identifier(entity)
+                    if not (
+                        extract_domain and entity.entity_type == EntityTypes.URL
+                    )
+                    else get_domain_from_entity(
+                        get_entity_original_identifier(entity)
+                    )
                 )
-                siemplify.LOGGER.exception(e)
+
+                entity_type = get_entity_type_for_request(
+                    alert_obj,
+                    entity,
+                    identifier,
+                    extract_domain,
+                    entity_type_mapper,
+                )
+                try:
+                    siemplify.LOGGER.info(
+                        f"Started processing entity: {identifier}"
+                    )
+                    siemplify.LOGGER.info(
+                        f"Adding {identifier} attribute for event {event_id}"
+                    )
+
+                    if entity_type:
+                        attribute = manager.add_attribute(
+                            event_id=event_id,
+                            value=identifier,
+                            type=entity_type,
+                            category=category,
+                            to_ids=to_ids,
+                            distribution=distribution,
+                            comment=comment,
+                        )
+                        json_results.append(attribute)
+                        successful_entities.append(identifier)
+                    else:
+                        failed_entities.append(identifier)
+                    siemplify.LOGGER.info(
+                        f"Finished processing entity {identifier}"
+                    )
+
+                except MISPManagerError as e:
+                    failed_entities.append(identifier)
+                    siemplify.LOGGER.error(
+                        f"An error occurred on entity: {identifier}.\n{e}."
+                    )
+                    siemplify.LOGGER.exception(e)
+
+            return EXECUTION_STATE_COMPLETED
+
+        execution_scope = getattr(
+            siemplify,
+            "execution_scope",
+            ExecutionScope.Alert,
+        )
+
+        status: int = EXECUTION_STATE_COMPLETED
+
+        if execution_scope.value == ExecutionScope.Alert.value:
+            siemplify.LOGGER.info("Processing in Alert scope.")
+            status = _process_alert_entities(
+                siemplify.current_alert,
+                suitable_entities,
+            )
+        else:
+            siemplify.LOGGER.info("Processing in Case scope.")
+            for alert_obj in getattr(
+                siemplify.case, "open_alerts", siemplify.case.alerts
+            ):
+                alert_entities: list = [
+                    entity
+                    for entity in alert_obj.entities
+                    if entity.entity_type in SUITABLE_ENTITY_TYPES
+                ]
+                status = _process_alert_entities(alert_obj, alert_entities)
+                if status == EXECUTION_STATE_TIMEDOUT:
+                    break
 
         if json_results:
             siemplify.result.add_result_json(
                 [{"Attribute": result.as_json()} for result in json_results]
             )
 
-        if successful_entities:
-            output_message += (
-                "Successfully added the following attributes based on entities to the event with "
-                "{} {} in {}: \n {} \n".format(
-                    id_type, event_id, INTEGRATION_NAME, ", ".join(successful_entities)
+        if execution_scope.value == ExecutionScope.Alert.value:
+            if successful_entities:
+                output_message += (
+                    "Successfully added the following attributes based on "
+                    "entities to the event with "
+                    f"{id_type} {event_id} in {INTEGRATION_NAME}: \n"
+                    f" {', '.join(sorted(set(successful_entities)))} \n"
                 )
-            )
 
-        if failed_entities:
-            output_message += (
-                "Action wasn’t able to add the following attributes based on entities to the event "
-                "with {} {} in {}: \n {} \n".format(
-                    id_type, event_id, INTEGRATION_NAME, ", ".join(failed_entities)
+            if failed_entities:
+                output_message += (
+                    "Action wasn’t able to add the following attributes based "
+                    "on entities to the event "
+                    f"with {id_type} {event_id} in {INTEGRATION_NAME}: \n"
+                    f" {', '.join(sorted(set(failed_entities)))} \n"
                 )
-            )
 
-        if not successful_entities:
-            output_message = f"No attributes based on entities were added to the event with {id_type} {event_id} in {INTEGRATION_NAME}"
-            result_value = False
+            if not successful_entities:
+                output_message = (
+                    "No attributes based on entities were added to the event "
+                    f"with {id_type} {event_id} in {INTEGRATION_NAME}"
+                )
+                result_value = False
+        else:
+            if successful_entities:
+                output_message += (
+                    "Successfully added the following attributes based on "
+                    "entities to the event with "
+                    f"{id_type} {event_id} in {INTEGRATION_NAME} for all "
+                    f"alert(s) in case {siemplify.case_id}: \n"
+                    f" {', '.join(sorted(set(successful_entities)))} \n"
+                )
+
+            if failed_entities:
+                output_message += (
+                    "Action wasn’t able to add the following attributes based "
+                    "on entities to the event "
+                    f"with {id_type} {event_id} in {INTEGRATION_NAME} for all "
+                    f"alert(s) in case {siemplify.case_id}: \n"
+                    f" {', '.join(sorted(set(failed_entities)))} \n"
+                )
+
+            if not successful_entities:
+                output_message = (
+                    "No attributes based on entities were added to the event "
+                    f"with {id_type} {event_id} in {INTEGRATION_NAME} for all "
+                    f"alert(s) in case {siemplify.case_id}"
+                )
+                result_value = False
 
     except Exception as e:
-        output_message = f"Error executing action {ADD_ATTRIBUTE_SCRIPT_NAME}. Reason: "
+        output_message = (
+            f"Error executing action {ADD_ATTRIBUTE_SCRIPT_NAME}. Reason: "
+        )
         output_message += (
             f"Event with {id_type} {event_id} was not found in {INTEGRATION_NAME}"
             if isinstance(e, MISPManagerEventIdNotFoundError)
@@ -347,7 +461,9 @@ def main():
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(
-        f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}"
+        f"\n  status: {status}\n"
+        f"  result_value: {result_value}\n"
+        f"  output_message: {output_message}"
     )
     siemplify.end(output_message, result_value, status)
 
