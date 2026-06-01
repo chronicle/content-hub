@@ -1,4 +1,4 @@
-"""List Cases action for Abnormal Security Google SecOps SOAR Integration."""
+"""List Activities action for Abnormal Security Google SecOps SOAR Integration."""
 
 from __future__ import annotations
 
@@ -12,15 +12,15 @@ from ..core.AbnormalManager import (
     AbnormalManager,
     AbnormalValidationError,
 )
-from ..core.constants import INTEGRATION_NAME, LIST_CASES_SCRIPT_NAME
+from ..core.constants import INTEGRATION_NAME, LIST_ACTIVITIES_SCRIPT_NAME
 
 
 @output_handler
 def main() -> None:
-    """Main execution logic for the List Cases action."""
+    """Main execution logic for the List Activities action."""
     siemplify = SiemplifyAction()
-    siemplify.script_name = LIST_CASES_SCRIPT_NAME
-    siemplify.LOGGER.info(f"Action: {LIST_CASES_SCRIPT_NAME} started")
+    siemplify.script_name = LIST_ACTIVITIES_SCRIPT_NAME
+    siemplify.LOGGER.info(f"Action: {LIST_ACTIVITIES_SCRIPT_NAME} started")
 
     api_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
@@ -40,10 +40,9 @@ def main() -> None:
         is_mandatory=False,
         default_value=True,
     )
-    filter_str = siemplify.extract_action_param(
-        param_name="Filter",
+    tenant_ids_raw = siemplify.extract_action_param(
+        param_name="Tenant IDs",
         is_mandatory=False,
-        print_value=True,
     )
     page_size = int(
         siemplify.extract_action_param(
@@ -62,18 +61,20 @@ def main() -> None:
         or 1
     )
 
+    tenant_ids = [t.strip() for t in tenant_ids_raw.split(",") if t.strip()] if tenant_ids_raw else None
+
     result_value = False
     status = EXECUTION_STATE_FAILED
     try:
         manager = AbnormalManager(api_url=api_url, api_key=api_key, verify_ssl=verify_ssl)
-        response = manager.list_cases(
-            filter_str=filter_str or None,
+        response = manager.list_activities(
+            tenant_ids=tenant_ids,
             page_size=page_size,
             page_number=page_number,
         )
-        cases = response.get("cases", [])
+        activities = response.get("activities", [])
         siemplify.result.add_result_json(response)
-        output_message = f"Retrieved {len(cases)} case(s)."
+        output_message = f"Retrieved {len(activities)} activity record(s)."
         result_value = True
         status = EXECUTION_STATE_COMPLETED
 
@@ -83,7 +84,7 @@ def main() -> None:
         AbnormalConnectionError,
         Exception,
     ) as e:
-        output_message = f'Error executing action "{LIST_CASES_SCRIPT_NAME}". Reason: {e}'
+        output_message = f'Error executing action "{LIST_ACTIVITIES_SCRIPT_NAME}". Reason: {e}'
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 

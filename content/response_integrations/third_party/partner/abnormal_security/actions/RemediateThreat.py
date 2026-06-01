@@ -1,8 +1,7 @@
-"""Post Case Action for Abnormal Security Google SecOps SOAR Integration.
+"""RemediateThreat action for Abnormal Security Google SecOps SOAR Integration.
 
-Supports single-target invocation (Case ID parameter) and multi-entity batch
-execution when the action is scoped to ThreatCampaign entities and multiple
-are selected from the case view.
+Supports single-target invocation (Threat ID parameter) and multi-entity
+batch execution when scoped to ThreatSignature entities.
 """
 
 from __future__ import annotations
@@ -17,15 +16,15 @@ from ..core.AbnormalManager import (
     AbnormalManager,
     AbnormalValidationError,
 )
-from ..core.constants import INTEGRATION_NAME, POST_CASE_ACTION_SCRIPT_NAME
+from ..core.constants import INTEGRATION_NAME, REMEDIATE_THREAT_SCRIPT_NAME
 
 
 @output_handler
 def main() -> None:
-    """Main execution logic for the Post Case Action."""
+    """Main execution logic for the RemediateThreat action."""
     siemplify = SiemplifyAction()
-    siemplify.script_name = POST_CASE_ACTION_SCRIPT_NAME
-    siemplify.LOGGER.info(f"Action: {POST_CASE_ACTION_SCRIPT_NAME} started")
+    siemplify.script_name = REMEDIATE_THREAT_SCRIPT_NAME
+    siemplify.LOGGER.info(f"Action: {REMEDIATE_THREAT_SCRIPT_NAME} started")
 
     api_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
@@ -45,27 +44,27 @@ def main() -> None:
         is_mandatory=False,
         default_value=True,
     )
-    case_id_param = siemplify.extract_action_param(
-        param_name="Case ID",
+    threat_id_param = siemplify.extract_action_param(
+        param_name="Threat ID",
         is_mandatory=False,
         print_value=True,
     )
-    action = siemplify.extract_action_param(
-        param_name="Action",
-        is_mandatory=True,
-        print_value=True,
+    message_ids_raw = siemplify.extract_action_param(
+        param_name="Message IDs",
+        is_mandatory=False,
     )
+    message_ids = [m.strip() for m in message_ids_raw.split(",") if m.strip()] if message_ids_raw else None
 
     _all_entities = getattr(siemplify, "target_entities", None) or []
-    target_entities = [e for e in _all_entities if str(getattr(e, "entity_type", "")).upper() == "THREATCAMPAIGN"]
-    case_ids: list[str] = []
+    target_entities = [e for e in _all_entities if str(getattr(e, "entity_type", "")).upper() == "THREATSIGNATURE"]
+    threat_ids: list[str] = []
     if target_entities:
         for entity in target_entities:
             ident = getattr(entity, "identifier", "")
             if ident:
-                case_ids.append(ident)
-    elif case_id_param:
-        case_ids.append(case_id_param)
+                threat_ids.append(ident)
+    elif threat_id_param:
+        threat_ids.append(threat_id_param)
 
     result_value = False
     status = EXECUTION_STATE_FAILED
@@ -74,41 +73,43 @@ def main() -> None:
     aggregated: dict[str, dict] = {}
 
     try:
-        if not case_ids:
-            raise AbnormalValidationError("No case IDs provided. Pass a Case ID or run on ThreatCampaign entities.")
+        if not threat_ids:
+            raise AbnormalValidationError(
+                "No threat IDs provided. Pass a Threat ID or run on ThreatSignature entities."
+            )
 
         manager = AbnormalManager(api_url=api_url, api_key=api_key, verify_ssl=verify_ssl)
-        for cid in case_ids:
+        for tid in threat_ids:
             try:
-                response = manager.post_case_action(case_id=cid, action=action)
-                successes.append(cid)
-                aggregated[cid] = response
+                response = manager.post_threat_action(threat_id=tid, action="remediate", message_ids=message_ids)
+                successes.append(tid)
+                aggregated[tid] = response
             except Exception as inner:
-                failures.append((cid, str(inner)))
-                siemplify.LOGGER.error(f"Case {cid} action failed: {inner}")
+                failures.append((tid, str(inner)))
+                siemplify.LOGGER.error(f"Threat {tid} remediate failed: {inner}")
 
         siemplify.result.add_result_json(aggregated)
         if successes and not failures:
             output_message = (
-                f"Successfully applied action '{action}' on the following entities using Abnormal Security: "
+                f"Successfully remediated threats on the following entities using Abnormal Security: "
                 f"{', '.join(successes)}"
             )
             result_value = True
             status = EXECUTION_STATE_COMPLETED
         elif successes and failures:
-            failed_ids = ", ".join(c for c, _ in failures)
+            failed_ids = ", ".join(t for t, _ in failures)
             output_message = (
-                f"Successfully applied action '{action}' on the following entities using Abnormal Security: "
+                f"Successfully remediated threats on the following entities using Abnormal Security: "
                 f"{', '.join(successes)}. "
-                f"Action wasn't able to apply '{action}' on the following entities using Abnormal Security: "
+                f"Action wasn't able to remediate threats on the following entities using Abnormal Security: "
                 f"{failed_ids}"
             )
             result_value = True
             status = EXECUTION_STATE_COMPLETED
         else:
-            failed_ids = ", ".join(c for c, _ in failures)
+            failed_ids = ", ".join(t for t, _ in failures)
             output_message = (
-                f"Action wasn't able to apply '{action}' on the following entities using Abnormal Security: "
+                f"Action wasn't able to remediate threats on the following entities using Abnormal Security: "
                 f"{failed_ids}"
             )
 
@@ -118,7 +119,7 @@ def main() -> None:
         AbnormalConnectionError,
         Exception,
     ) as e:
-        output_message = f'Error executing action "{POST_CASE_ACTION_SCRIPT_NAME}". Reason: {e}'
+        output_message = f'Error executing action "{REMEDIATE_THREAT_SCRIPT_NAME}". Reason: {e}'
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 

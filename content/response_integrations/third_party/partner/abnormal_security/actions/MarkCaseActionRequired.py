@@ -1,8 +1,7 @@
-"""Post Case Action for Abnormal Security Google SecOps SOAR Integration.
+"""MarkCaseActionRequired action for Abnormal Security Google SecOps SOAR Integration.
 
-Supports single-target invocation (Case ID parameter) and multi-entity batch
-execution when the action is scoped to ThreatCampaign entities and multiple
-are selected from the case view.
+Supports single-target invocation (Case ID parameter) and multi-entity
+batch execution when scoped to ThreatCampaign entities.
 """
 
 from __future__ import annotations
@@ -17,15 +16,15 @@ from ..core.AbnormalManager import (
     AbnormalManager,
     AbnormalValidationError,
 )
-from ..core.constants import INTEGRATION_NAME, POST_CASE_ACTION_SCRIPT_NAME
+from ..core.constants import INTEGRATION_NAME, MARK_CASE_ACTION_REQUIRED_SCRIPT_NAME
 
 
 @output_handler
 def main() -> None:
-    """Main execution logic for the Post Case Action."""
+    """Main execution logic for the MarkCaseActionRequired action."""
     siemplify = SiemplifyAction()
-    siemplify.script_name = POST_CASE_ACTION_SCRIPT_NAME
-    siemplify.LOGGER.info(f"Action: {POST_CASE_ACTION_SCRIPT_NAME} started")
+    siemplify.script_name = MARK_CASE_ACTION_REQUIRED_SCRIPT_NAME
+    siemplify.LOGGER.info(f"Action: {MARK_CASE_ACTION_REQUIRED_SCRIPT_NAME} started")
 
     api_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
@@ -48,11 +47,6 @@ def main() -> None:
     case_id_param = siemplify.extract_action_param(
         param_name="Case ID",
         is_mandatory=False,
-        print_value=True,
-    )
-    action = siemplify.extract_action_param(
-        param_name="Action",
-        is_mandatory=True,
         print_value=True,
     )
 
@@ -80,17 +74,17 @@ def main() -> None:
         manager = AbnormalManager(api_url=api_url, api_key=api_key, verify_ssl=verify_ssl)
         for cid in case_ids:
             try:
-                response = manager.post_case_action(case_id=cid, action=action)
+                response = manager.post_case_action(case_id=cid, action="action_required")
                 successes.append(cid)
                 aggregated[cid] = response
             except Exception as inner:
                 failures.append((cid, str(inner)))
-                siemplify.LOGGER.error(f"Case {cid} action failed: {inner}")
+                siemplify.LOGGER.error(f"Case {cid} action_required failed: {inner}")
 
         siemplify.result.add_result_json(aggregated)
         if successes and not failures:
             output_message = (
-                f"Successfully applied action '{action}' on the following entities using Abnormal Security: "
+                f"Successfully marked cases as 'action required' on the following entities using Abnormal Security: "
                 f"{', '.join(successes)}"
             )
             result_value = True
@@ -98,18 +92,18 @@ def main() -> None:
         elif successes and failures:
             failed_ids = ", ".join(c for c, _ in failures)
             output_message = (
-                f"Successfully applied action '{action}' on the following entities using Abnormal Security: "
+                f"Successfully marked cases as 'action required' on the following entities using Abnormal Security: "
                 f"{', '.join(successes)}. "
-                f"Action wasn't able to apply '{action}' on the following entities using Abnormal Security: "
-                f"{failed_ids}"
+                f"Action wasn't able to mark cases as 'action required' on the following entities using "
+                f"Abnormal Security: {failed_ids}"
             )
             result_value = True
             status = EXECUTION_STATE_COMPLETED
         else:
             failed_ids = ", ".join(c for c, _ in failures)
             output_message = (
-                f"Action wasn't able to apply '{action}' on the following entities using Abnormal Security: "
-                f"{failed_ids}"
+                f"Action wasn't able to mark cases as 'action required' on the following entities using "
+                f"Abnormal Security: {failed_ids}"
             )
 
     except (
@@ -118,7 +112,7 @@ def main() -> None:
         AbnormalConnectionError,
         Exception,
     ) as e:
-        output_message = f'Error executing action "{POST_CASE_ACTION_SCRIPT_NAME}". Reason: {e}'
+        output_message = f'Error executing action "{MARK_CASE_ACTION_REQUIRED_SCRIPT_NAME}". Reason: {e}'
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 

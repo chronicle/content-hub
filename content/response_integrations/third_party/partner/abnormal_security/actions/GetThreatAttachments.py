@@ -1,8 +1,4 @@
-"""
-Ping action for Abnormal Security Google SecOps SOAR Integration.
-
-Tests connectivity and authentication to the Abnormal Security API.
-"""
+"""Get Threat Attachments action for Abnormal Security Google SecOps SOAR Integration."""
 
 from __future__ import annotations
 
@@ -14,20 +10,17 @@ from ..core.AbnormalManager import (
     AbnormalAuthenticationError,
     AbnormalConnectionError,
     AbnormalManager,
+    AbnormalValidationError,
 )
-from ..core.constants import (
-    INTEGRATION_DISPLAY_NAME,
-    INTEGRATION_NAME,
-    PING_SCRIPT_NAME,
-)
+from ..core.constants import GET_THREAT_ATTACHMENTS_SCRIPT_NAME, INTEGRATION_NAME
 
 
 @output_handler
 def main() -> None:
-    """Main execution logic for the Ping action."""
+    """Main execution logic for the Get Threat Attachments action."""
     siemplify = SiemplifyAction()
-    siemplify.script_name = PING_SCRIPT_NAME
-    siemplify.LOGGER.info(f"Action: {PING_SCRIPT_NAME} started")
+    siemplify.script_name = GET_THREAT_ATTACHMENTS_SCRIPT_NAME
+    siemplify.LOGGER.info(f"Action: {GET_THREAT_ATTACHMENTS_SCRIPT_NAME} started")
 
     api_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
@@ -46,25 +39,31 @@ def main() -> None:
         input_type=bool,
         is_mandatory=False,
         default_value=True,
+    )
+
+    threat_id = siemplify.extract_action_param(
+        param_name="Threat ID",
+        is_mandatory=True,
         print_value=True,
     )
 
     result_value = False
     status = EXECUTION_STATE_FAILED
-
     try:
         manager = AbnormalManager(api_url=api_url, api_key=api_key, verify_ssl=verify_ssl)
-        manager.test_connectivity()
-
-        output_message = (
-            f"Successfully connected to the {INTEGRATION_DISPLAY_NAME} server with the provided connection parameters!"
-        )
+        response = manager.get_threat_attachments(threat_id=threat_id)
+        siemplify.result.add_result_json(response)
+        output_message = f"Successfully retrieved attachments for threat {threat_id}."
         result_value = True
         status = EXECUTION_STATE_COMPLETED
-        siemplify.LOGGER.info(output_message)
 
-    except (AbnormalAuthenticationError, AbnormalConnectionError, Exception) as e:
-        output_message = f"Failed to connect to the {INTEGRATION_DISPLAY_NAME} server! Error is {e}"
+    except (
+        AbnormalValidationError,
+        AbnormalAuthenticationError,
+        AbnormalConnectionError,
+        Exception,
+    ) as e:
+        output_message = f'Error executing action "{GET_THREAT_ATTACHMENTS_SCRIPT_NAME}". Reason: {e}'
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 

@@ -1,9 +1,4 @@
-"""
-Search Messages action for Abnormal Security Google SecOps SOAR Integration.
-
-Searches for email messages across your organization based on threat indicators.
-Results are stored as a JSON result and can be passed to Remediate Messages.
-"""
+"""Submit Inquiry action for Abnormal Security Google SecOps SOAR Integration."""
 
 from __future__ import annotations
 
@@ -17,18 +12,15 @@ from ..core.AbnormalManager import (
     AbnormalManager,
     AbnormalValidationError,
 )
-from ..core.constants import (
-    INTEGRATION_NAME,
-    SEARCH_MESSAGES_SCRIPT_NAME,
-)
+from ..core.constants import INTEGRATION_NAME, SUBMIT_INQUIRY_SCRIPT_NAME
 
 
 @output_handler
 def main() -> None:
-    """Main execution logic for the Search Messages action."""
+    """Main execution logic for the Submit Inquiry action."""
     siemplify = SiemplifyAction()
-    siemplify.script_name = SEARCH_MESSAGES_SCRIPT_NAME
-    siemplify.LOGGER.info(f"Action: {SEARCH_MESSAGES_SCRIPT_NAME} started")
+    siemplify.script_name = SUBMIT_INQUIRY_SCRIPT_NAME
+    siemplify.LOGGER.info(f"Action: {SUBMIT_INQUIRY_SCRIPT_NAME} started")
 
     api_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
@@ -49,53 +41,61 @@ def main() -> None:
         default_value=True,
     )
 
-    start_time = siemplify.extract_action_param(
-        param_name="Start Time",
+    report_type = siemplify.extract_action_param(
+        param_name="Report Type",
         is_mandatory=True,
         print_value=True,
     )
-    end_time = siemplify.extract_action_param(
-        param_name="End Time",
+    reporter = siemplify.extract_action_param(
+        param_name="Reporter",
         is_mandatory=True,
         print_value=True,
     )
+    subject = siemplify.extract_action_param(param_name="Subject", is_mandatory=False)
     sender_email = siemplify.extract_action_param(
         param_name="Sender Email",
         is_mandatory=False,
-        print_value=True,
     )
-    subject = siemplify.extract_action_param(
-        param_name="Subject",
-        is_mandatory=False,
-        print_value=True,
-    )
-    tenant_ids_raw = siemplify.extract_action_param(
-        param_name="Tenant IDs",
+    sender_display_name = siemplify.extract_action_param(
+        param_name="Sender Display Name",
         is_mandatory=False,
     )
-    tenant_ids = [t.strip() for t in tenant_ids_raw.split(",") if t.strip()] if tenant_ids_raw else None
+    recipient_email = siemplify.extract_action_param(
+        param_name="Recipient Email",
+        is_mandatory=False,
+    )
+    recipient_display_name = siemplify.extract_action_param(
+        param_name="Recipient Display Name",
+        is_mandatory=False,
+    )
+    received_time = siemplify.extract_action_param(
+        param_name="Received Time",
+        is_mandatory=False,
+    )
+    description = siemplify.extract_action_param(
+        param_name="Description",
+        is_mandatory=False,
+    )
 
     result_value = False
     status = EXECUTION_STATE_FAILED
-
     try:
         manager = AbnormalManager(api_url=api_url, api_key=api_key, verify_ssl=verify_ssl)
-
-        response = manager.search_messages(
-            start_time=start_time,
-            end_time=end_time,
-            sender_email=sender_email or None,
+        response = manager.submit_inquiry(
+            report_type=report_type,
+            reporter=reporter,
             subject=subject or None,
-            tenant_ids=tenant_ids,
+            sender_email=sender_email or None,
+            sender_display_name=sender_display_name or None,
+            recipient_email=recipient_email or None,
+            recipient_display_name=recipient_display_name or None,
+            received_time=received_time or None,
+            description=description or None,
         )
-
-        messages = response.get("messages", [])
         siemplify.result.add_result_json(response)
-
-        output_message = f"Found {len(messages)} message(s) matching search criteria."
+        output_message = f"Inquiry submitted as '{report_type}' by {reporter}."
         result_value = True
         status = EXECUTION_STATE_COMPLETED
-        siemplify.LOGGER.info(output_message)
 
     except (
         AbnormalValidationError,
@@ -103,7 +103,7 @@ def main() -> None:
         AbnormalConnectionError,
         Exception,
     ) as e:
-        output_message = f'Error executing action "{SEARCH_MESSAGES_SCRIPT_NAME}". Reason: {e}'
+        output_message = f'Error executing action "{SUBMIT_INQUIRY_SCRIPT_NAME}". Reason: {e}'
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 
