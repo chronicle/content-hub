@@ -411,6 +411,7 @@ class LegacySoarApi(BaseSoarApi):
             json_payload=self.params.job_data,
         )
 
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_all_case_overview_details(self) -> requests.Response:
         """Get case overview details."""
         self.params.format = "camel"

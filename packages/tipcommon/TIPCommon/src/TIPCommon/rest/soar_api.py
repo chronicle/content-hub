@@ -160,10 +160,10 @@ def get_installed_jobs(
     api_client.params.job_instance_id = job_instance_id
     response = api_client.get_installed_jobs()
     if isinstance(response, list):
-        return response #QA fixes
+        return response
     validate_response(response, validate_json=True)
 
-    return response.json() # QA fixes
+    return response.json()
 
 
 def save_or_update_job(
@@ -193,6 +193,51 @@ def save_or_update_job(
 
     return safe_json_for_204(response, default_for_204={})
 
+
+def get_integration_jobs(
+    chronicle_soar: ChronicleSOAR,
+    integration_name: str,
+) -> list[SingleJson]:
+    """Retrieve jobs for a particular integration.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+        integration_name (str): Integration name to filter the results.
+
+    Returns:
+        list[SingleJson]: A list of jobs.
+
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.integration_name = integration_name
+    response = api_client.get_integration_jobs()
+    validate_response(response, validate_json=True)
+
+    res_json = response.json()
+    return res_json.get("jobs", []) if isinstance(res_json, dict) else []
+
+
+def get_integration_connectors(
+    chronicle_soar: ChronicleSOAR,
+    integration_name: str,
+) -> list[SingleJson]:
+    """Retrieve connectors for a particular integration.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object
+        integration_name (str): Integration name to filter the results.
+
+    Returns:
+        list[SingleJson]: A list of connectors.
+
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.integration_name = integration_name
+    response = api_client.get_integration_connectors()
+    validate_response(response, validate_json=True)
+
+    res_json = response.json()
+    return res_json.get("connectors", []) if isinstance(res_json, dict) else []
 
 def get_connector_cards(
     chronicle_soar: ChronicleSOAR,
@@ -2830,13 +2875,15 @@ def get_playbook_categories(chronicle_soar: ChronicleSOAR) -> SingleJson:
 
 
 def update_connector(
-    chronicle_soar: ChronicleSOAR, connector_data: SingleJson
+    chronicle_soar: ChronicleSOAR, connector_data: SingleJson, connector_definition_id: str = None
 ) -> SingleJson:
     """Update connector."""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.connector_data = connector_data
     api_client.params.integration_name = connector_data.get("integration")
     api_client.params.connector_id = connector_data.get("connectorId")
+    if connector_definition_id:
+        api_client.params.connector_definition_id = connector_definition_id
     response = api_client.update_connector()
     validate_response(response, validate_json=False)
     return response
@@ -2862,13 +2909,14 @@ def update_existing_connector(
 #     validate_response(response, validate_json=False)
 #     return response.content
 
-#QA fixes
-def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson) -> SingleJson:
+def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson, job_definition_id: str = None) -> SingleJson:
     """Add job."""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.job = job
     api_client.params.integration_name = job.get("integration")
     api_client.params.job_name = job.get("name")
+    if job_definition_id:
+        api_client.params.job_definition_id = job_definition_id
     response = api_client.add_job()
     validate_response(response, validate_json=False)
     return response.content
@@ -2913,11 +2961,13 @@ def update_email_template(
 def get_denylists(
     chronicle_soar: ChronicleSOAR,
     is_expand: bool = False,
-) -> SingleJson:
+) -> list[SingleJson] | SingleJson:
     """Get denylists."""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.is_expand = is_expand
     response = api_client.get_denylists()
+    if isinstance(response, list):
+        return response
     return safe_json_for_204(response, default_for_204={})
 
 

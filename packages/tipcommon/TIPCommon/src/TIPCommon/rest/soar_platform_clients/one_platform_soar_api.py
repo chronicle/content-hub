@@ -605,6 +605,18 @@ class OnePlatformSoarApi(BaseSoarApi):
             json_payload={"parameters": parameters},
         )
 
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_integration_jobs(self) -> requests.Response:
+        """Get jobs for a specific integration."""
+        endpoint: str = f"/integrations/{self.params.integration_name}/jobs"
+        return self._make_request(HttpMethod.GET, endpoint)
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def get_integration_connectors(self) -> requests.Response:
+        """Get connectors for a specific integration."""
+        endpoint: str = f"/integrations/{self.params.integration_name}/connectors"
+        return self._make_request(HttpMethod.GET, endpoint)
+
     def get_case_wall_records(self) -> requests.Response:
         """Get case wall records using 1P API.
 
@@ -943,18 +955,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_domains(self) -> requests.Response:
-        """Create integrations instance"""
-        endpoint = "/system/settings/domains"
-        response = self._make_request(HttpMethod.GET, endpoint)
-        raw = response.text.strip()
-        if not raw:
-            return []
-        try:
-            data = response.json()
-        except json.JSONDecodeError:
-            return []
-        return data.get("domains", [])
+    def get_domains(self) -> list[SingleJson]:
+        """Get domains."""
+        endpoint = f"/system/settings/domains?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="domains")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_domain(self) -> requests.Response:
@@ -974,12 +978,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         ]
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_environments(self) -> requests.Response:
-        """Get environments"""
-        endpoint = (
-            "/system/settings/environments"
-        )
-        return self._make_request(HttpMethod.GET, endpoint).json()["environments"]
+    def get_environments(self) -> list[SingleJson]:
+        """Get environments."""
+        endpoint = f"/system/settings/environments?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="environments")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def import_environment(self) -> requests.Response:
@@ -1158,21 +1160,19 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Get installed connectors."""
         instance_id: str = getattr(self.params, "connector_instance_id", None)
         endpoint: str = "/integrations/-/connectors/-/connectorInstances"
-        
+
         if instance_id:
             endpoint += f"/{instance_id}"
             return self._make_request(HttpMethod.GET, endpoint)
 
-        response = self._make_request(HttpMethod.GET, endpoint)
+        endpoint_with_page_size = f"{endpoint}?pageSize={_PAGE_SIZE}"
 
-        if not response.text or not response.text.strip():
-            return []
+        results = self._paginate_results(
+            initial_endpoint=endpoint_with_page_size,
+            root_response_key="connector_instances"
+        )
 
-        try:
-            json_data = response.json()
-            return self._enrich_connector_instances_with_params(json_data)
-        except (ValueError, requests.exceptions.JSONDecodeError):
-            return []
+        return self._enrich_connector_instances_with_params({"connector_instances": results})
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_connector_params(self) -> requests.Response:
@@ -1225,16 +1225,16 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_case_tags(self) -> requests.Response:
-        """Get case tags"""
-        endpoint = "/system/settings/caseTagDefinitions"
-        return self._make_request(HttpMethod.GET, endpoint)
+    def get_case_tags(self) -> list[SingleJson]:
+        """Get case tags."""
+        endpoint = f"/system/settings/caseTagDefinitions?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="case_tag_definitions")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_case_stages(self) -> requests.Response:
-        """Get case stages"""
-        endpoint = "/system/settings/caseStageDefinitions"
-        return self._make_request(HttpMethod.GET, endpoint)
+    def get_case_stages(self) -> list[SingleJson]:
+        """Get case stages."""
+        endpoint = f"/system/settings/caseStageDefinitions?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="case_stage_definitions")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_case_close_reasons(self) -> requests.Response:
@@ -1522,14 +1522,14 @@ class OnePlatformSoarApi(BaseSoarApi):
     def update_connector(self) -> requests.Response:
         """Update connector (Create new instance)."""
         name = self.params.integration_name
-        connector = self.params.connector_id
+        connector = getattr(self.params, "connector_definition_id", None) or self.params.connector_id
         connector_data = self.params.connector_data
         endpoint = f"/integrations/{name}/connectors/{connector}/connectorInstances/"
         return self._make_request(
             HttpMethod.POST, endpoint, json_payload=connector_data
         )
 
-    @temporarily_remove_header(DATAPLANE_1P_HEADER) #qa fixes
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_existing_connector(self) -> requests.Response:
         """Update existing connector."""
         connector_data = self.params.connector_data
@@ -1543,21 +1543,29 @@ class OnePlatformSoarApi(BaseSoarApi):
                 HttpMethod.PATCH, endpoint, json_payload=connector_data
             )
         raise Exception("Existing connector has no resource name")
-    # QA fixes
+
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def add_job(self) -> requests.Response:
         """Add job."""
         integration = self.params.integration_name
-        job_full_name = self.params.job_name
-        try:
-            job_id = job_full_name.split("jobs/")[1].split("/")[0]
-        except (IndexError, AttributeError):
-            job_id = job_full_name
+        job_data = self.params.job
+
+        job_id = getattr(self.params, "job_definition_id", None)
+
+        if not job_id:
+            job_id = job_data.get("jobDefinitionId")
+
+        if not job_id:
+            job_full_name = self.params.job_name
+            try:
+                job_id = job_full_name.split("jobs/")[1].split("/")[0]
+            except (IndexError, AttributeError):
+                job_id = job_full_name
 
         endpoint = f"/integrations/{integration}/jobs/{job_id}/jobInstances/"
-        return self._make_request(HttpMethod.POST, endpoint, json_payload=self.params.job)
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=job_data)
 
-    @temporarily_remove_header(DATAPLANE_1P_HEADER) #QA fixes
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_job_instance(self) -> requests.Response:
         """Update job instance."""
         resource_name = self.params.job_instance_name
@@ -1566,11 +1574,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = f"/{clean_path}"
         return self._make_request(HttpMethod.PATCH, endpoint, json_payload=self.params.job)
 
-    # def add_job(self) -> requests.Response:
-    #     """Add job."""
-    #     endpoint = "/jobs/SaveOrUpdateJobData"
-    #     #integrations/{integration}/jobs/{job}/jonInstances/{jobInstance}
-    #     return self._make_request(HttpMethod.POST, endpoint, json_payload=self.params.job)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def add_email_template(self) -> requests.Response:
@@ -1596,11 +1599,12 @@ class OnePlatformSoarApi(BaseSoarApi):
         raise Exception("Existing email template has no resource name")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_denylists(self) -> requests.Response:
+    def get_denylists(self) -> list[SingleJson]:
         """Get denylists."""
-        endpoint = "/system/settings/soarBlockEntities"
-        params = {"expand": "*"} if self.params.is_expand else None
-        return self._make_request(HttpMethod.GET, endpoint, params=params)
+        endpoint = f"/system/settings/soarBlockEntities?pageSize={_PAGE_SIZE}"
+        if self.params.is_expand:
+            endpoint += "&expand=*"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="soar_block_entities")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_simulated_cases(self) -> requests.Response:
