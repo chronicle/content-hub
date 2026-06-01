@@ -78,29 +78,54 @@ class QualysVMParser:
             comment=host_data.get("COMMENTS"),
         )
 
-    def filter_hostname(self, raw_data, hostname):
-        raw_host_data = raw_data.get("HOST")
-        hostname_data = None
-        if type(raw_host_data) is dict:
-            if raw_host_data.get("NETBIOS") == hostname:
-                return raw_host_data
-        else:
-            hostname_data = []
-            for host_data in raw_host_data:
-                if host_data.get("NETBIOS") == hostname:
-                    hostname_data.append(host_data)
-            return hostname_data
+    def _get_hosts_list(self, raw_data) -> list[dict]:
+        if not raw_data:
+            return []
 
+        hosts_list = []
+        if isinstance(raw_data, dict):
+            host_data = raw_data.get("HOST")
+            if isinstance(host_data, list):
+                hosts_list.extend(host_data)
+            elif isinstance(host_data, dict):
+                hosts_list.append(host_data)
+
+        elif isinstance(raw_data, list):
+            for item in raw_data:
+                if isinstance(item, dict):
+                    if "HOST" in item:
+                        sub_host = item.get("HOST")
+                        if isinstance(sub_host, list):
+                            hosts_list.extend(sub_host)
+                        elif isinstance(sub_host, dict):
+                            hosts_list.append(sub_host)
+                    else:
+                        hosts_list.append(item)
+
+        return hosts_list
+
+    def filter_hostname(self, raw_data, hostname):
+        hosts_list = self._get_hosts_list(raw_data)
+        hostname_data = []
+        for host_data in hosts_list:
+            netbios = host_data.get("NETBIOS")
+            dns_hostname = host_data.get("DNS_DATA", {}).get("HOSTNAME")
+            if netbios == hostname or dns_hostname == hostname:
+                hostname_data.append(host_data)
+
+        if len(hostname_data) == 1:
+            return hostname_data[0]
         return hostname_data
 
     def get_ip_for_hostname(self, raw_data, hostname):
-        raw_host_data = raw_data.get("HOST")
-        hostname_data = None
-        for host_data in raw_host_data:
-            if host_data.get("NETBIOS") == hostname:
+        hosts_list = self._get_hosts_list(raw_data)
+        for host_data in hosts_list:
+            netbios = host_data.get("NETBIOS")
+            dns_hostname = host_data.get("DNS_DATA", {}).get("HOSTNAME")
+            if netbios == hostname or dns_hostname == hostname:
                 return host_data.get("IP")
 
-        return hostname_data
+        return None
 
     def build_endpointdetection_object(self, raw_data):
 
@@ -140,17 +165,15 @@ class QualysVMParser:
 
     def get_detection_quids(self, raw_data):
         quids = []
-        if type(raw_data) is list and len(raw_data) == 0:
-            return quids
-
-        raw_host_data = raw_data.get("HOST")
-        quids = []
-        detection_list = raw_host_data.get("DETECTION_LIST").get("DETECTION")
-        if type(detection_list) is list:
-            for detection in detection_list:
-                quids.append(detection.get("QID"))
-
-        elif type(detection_list) is dict:
-            quids.append(detection_list.get("QID"))
+        hosts_list = self._get_hosts_list(raw_data)
+        for host_data in hosts_list:
+            detection_list = host_data.get("DETECTION_LIST", {}).get("DETECTION")
+            if not detection_list:
+                continue
+            if isinstance(detection_list, list):
+                for detection in detection_list:
+                    quids.append(detection.get("QID"))
+            elif isinstance(detection_list, dict):
+                quids.append(detection_list.get("QID"))
 
         return quids
