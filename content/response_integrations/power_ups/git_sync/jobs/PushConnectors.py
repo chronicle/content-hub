@@ -43,7 +43,7 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
-        for connector in gitsync.api.get_connectors():
+        for connector in gitsync.api.get_connectors(chronicle_soar=siemplify):
             if connector.get("displayName") in connector_names:
                 siemplify.LOGGER.info(f"Pushing {connector.get('displayName')}")
                 if readme_addon:
@@ -65,7 +65,7 @@ def main():
                     integration_name = connector.get("integration")
                     records = [
                         x
-                        for x in gitsync.api.get_ontology_records()
+                        for x in gitsync.api.get_ontology_records(chronicle_soar=siemplify)
                         if x.get("source") == integration_name
                     ]
                     visual_families = set([x.get("familyName") for x in records])
@@ -74,19 +74,39 @@ def main():
                         for record in records:
                             record["exampleEventFields"] = []  # remove event assets
                             rule = gitsync.api.get_mapping_rules(
-                                record["source"],
-                                record["product"],
-                                record["eventName"],
+                                source=record["source"],
+                                mr_id=record["id"], 
+                                product=record["product"],
+                                event_name=record["eventName"],
                             )
-                            for r in rule["familyFields"] + rule["systemFields"]:
-                                # remove bad rules with no source
-                                if (
-                                    r["mappingRule"]["source"]
-                                    and r["mappingRule"]["source"].lower()
-                                    == integration_name.lower()
-                                ):
-                                    rules.append(rule)
-                                    break
+                            def get_fields(rule):
+                                """Extract iterable fields from either response format."""
+                                if isinstance(rule, list):
+                                    return rule
+                                if isinstance(rule, dict):
+                                    if "familyFields" in rule or "systemFields" in rule:
+                                        return rule.get("familyFields", []) + rule.get("systemFields", [])
+                                    elif "mapping_rules" in rule:
+                                        return rule.get("mapping_rules", [])
+                                    elif "mappingRules" in rule:
+                                        return rule.get("mappingRules", [])
+                                return []
+
+                            def get_mapping_rule(r, rule):
+                                """Get the mappingRule dict from either format."""
+                                if "mappingRule" in r:
+                                    return r["mappingRule"]
+                                return r
+
+                            for r in get_fields(rule):
+                                mapping_rule = get_mapping_rule(r, rule)
+                                source = mapping_rule.get("source")
+                                if not source or source.lower() == integration_name.lower():
+                                    if isinstance(rule, list):
+                                        rules.append(r)
+                                    else:
+                                        rules.append(rule)
+                                        break
                         if not records and not rules:
                             siemplify.LOGGER.info(
                                 f"{integration_name} mappings don't exist. Skipping",
@@ -100,7 +120,7 @@ def main():
                             )
 
                     if include_vf:
-                        for visualFamily in gitsync.api.get_custom_families():
+                        for visualFamily in gitsync.api.get_custom_families(chronicle_soar=siemplify):
                             if visualFamily["family"] in visual_families:
                                 siemplify.LOGGER.info(
                                     f"Pushing Visual Family - {visualFamily['family']}",
@@ -108,7 +128,8 @@ def main():
                                 gitsync.content.push_visual_family(
                                     VisualFamily(
                                         gitsync.api.get_custom_family(
-                                            visualFamily["id"],
+                                            chronicle_soar=siemplify,
+                                            family_id=visualFamily["id"],
                                         ),
                                     ),
                                 )

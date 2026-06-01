@@ -95,8 +95,23 @@ class Metadata:
                 "Playbook": {},
                 "Connector": {},
                 "Job": {},
+                "Block": {},
             },
         )
+        # Ensure all expected keys exist
+        defaults = {
+            "Integration": {},
+            "Mappings": {},
+            "Visual Family": {},
+            "Playbook": {},
+            "Connector": {},
+            "Job": {},
+            "Block": {},
+        }
+        for k, v in defaults.items():
+            if k not in self.readme_addons:
+                self.readme_addons[k] = v
+
         self.settings = kwargs.get("settings", {"update_root_readme": True})
 
     def get_readme_addon(self, content_type: str, content_name: str) -> str | None:
@@ -191,12 +206,21 @@ class Mapping(Content):
             rec["id"] = 0
             rec["familyId"] = 0
         for rule in self.rules:
-            for fam_fields in rule["familyFields"] + rule["systemFields"]:
-                fam_fields["mappingRule"]["id"] = 0
-                fam_fields["mappingRule"]["creationTimeUnixTimeInMs"] = 0
-                fam_fields["mappingRule"]["modificationTimeUnixTimeInMs"] = 0
-                fam_fields["creationTimeUnixTimeInMs"] = 0
-                fam_fields["modificationTimeUnixTimeInMs"] = 0
+            if isinstance(rule, dict) and ("familyFields" in rule or "systemFields" in rule):
+                for fam_fields in rule.get("familyFields", []) + rule.get("systemFields", []):
+                    if isinstance(fam_fields, dict) and "mappingRule" in fam_fields:
+                        fam_fields["mappingRule"]["id"] = 0
+                        fam_fields["mappingRule"]["creationTimeUnixTimeInMs"] = 0
+                        fam_fields["mappingRule"]["modificationTimeUnixTimeInMs"] = 0
+                    if isinstance(fam_fields, dict):
+                        fam_fields["creationTimeUnixTimeInMs"] = 0
+                        fam_fields["modificationTimeUnixTimeInMs"] = 0
+            elif isinstance(rule, dict):
+                rule["id"] = 0
+                if "creationTimeUnixTimeInMs" in rule:
+                    rule["creationTimeUnixTimeInMs"] = 0
+                if "modificationTimeUnixTimeInMs" in rule:
+                    rule["modificationTimeUnixTimeInMs"] = 0
 
     def iter_files(self) -> Iterator[File]:
         yield File("README.md", self.readme)
@@ -226,9 +250,14 @@ class Integration(Content):
         self.zipfile = ZipFile(zip_buffer)
         self.identifier = self.integration_card.get("identifier")
         self.isCustom = self.integration_card.get("isCustomIntegration")
-        self.definition = json.loads(
-            self.zipfile.read(f"Integration-{self.identifier}.def"),
-        )
+        try:
+            self.definition = json.loads(
+                self.zipfile.read(f"Integration-{self.identifier}.def"),
+            )
+        except KeyError:
+            self.definition = json.loads(
+                self.zipfile.read(f"Integration-{self.identifier}.json"),
+            )
         self.version = self.definition.get("Version")
         if not self.isCustom:
             self.definition["IsCustom"] = False
@@ -240,26 +269,31 @@ class Integration(Content):
         self.dependencies = []
         self.has_resources = False
         for file in [x for x in self.zipfile.namelist() if not x.endswith("/")]:
-            if file.startswith("ActionsDefinitions"):
-                self.actions.append(json.loads(self.zipfile.read(file)))
-            elif file.startswith("Jobs") and not file.startswith("JobsScrips"):
-                self.jobs.append(json.loads(self.zipfile.read(file)))
-            elif file.startswith("Connectors") and not file.startswith(
-                "ConnectorsScripts",
-            ):
-                self.connectors.append(json.loads(self.zipfile.read(file)))
-            elif (
-                not self.isCustom
-                and file.startswith("Managers")
-                and file.endswith(".managerdef")
-            ):
-                self.managers.append(json.loads(self.zipfile.read(file)))
-            elif self.isCustom and file.startswith("Managers"):
-                self.managers.append(file)
-            elif file.startswith("Dependencies"):
-                self.dependencies.append(file)
-            elif file.startswith("Resources/" + self.identifier + ".svg"):
-                self.has_resources = True
+            try:
+                if file.startswith("ActionsDefinitions") or (
+                    file.startswith("Actions") and not file.startswith("ActionsScripts")
+                ):
+                    self.actions.append(json.loads(self.zipfile.read(file)))
+                elif file.startswith("Jobs") and not file.startswith("JobsScrips"):
+                    self.jobs.append(json.loads(self.zipfile.read(file)))
+                elif file.startswith("Connectors") and not file.startswith(
+                    "ConnectorsScripts",
+                ):
+                    self.connectors.append(json.loads(self.zipfile.read(file)))
+                elif (
+                    not self.isCustom
+                    and file.startswith("Managers")
+                    and file.endswith(".managerdef")
+                ):
+                    self.managers.append(json.loads(self.zipfile.read(file)))
+                elif self.isCustom and file.startswith("Managers"):
+                    self.managers.append(file)
+                elif file.startswith("Dependencies"):
+                    self.dependencies.append(file)
+                elif file.startswith("Resources/" + self.identifier + ".svg"):
+                    self.has_resources = True
+            except json.JSONDecodeError:
+                pass
 
     def get_all_items(self):
         return self.actions + self.jobs + self.connectors + self.managers
@@ -296,9 +330,9 @@ class Integration(Content):
             integration = {
                 "dependencies": self.dependencies,
                 "definition": self.definition,
-                "actions": [x for x in self.actions if x["IsCustom"]],
-                "jobs": [x for x in self.jobs if x["IsCustom"]],
-                "connectors": [x for x in self.connectors if x["IsCustom"]],
+                "actions": self.actions,
+                "jobs": self.jobs,
+                "connectors": self.connectors,
                 "has_resources": self.has_resources,
             }
             self.readme = readme.render(integration=integration)
@@ -323,6 +357,7 @@ class Integration(Content):
         """
         yield File("README.md", self.readme)
         if not self.isCustom:
+            self.definition["Custom"] = False
             yield File(
                 f"Integration-{self.identifier}.def",
                 json.dumps(self.definition, indent=4),
@@ -333,8 +368,8 @@ class Integration(Content):
                     if file.startswith("Resources/") and not file.endswith("/"):
                         yield File(file, self.zipfile.read(file))
 
-            for card in self.integration_card["cards"]:
-                if card["isCustom"]:
+            for card in self.integration_card.get("cards", []):
+                if card.get("isCustom"):
                     definition = api.get_ide_item(card["id"], card["type"])
                     definition["id"] = 0
 
@@ -398,19 +433,20 @@ class Workflow(Content):
         super().__init__()
         self.raw_data = raw_data
         self.raw_data["id"] = 0
-        self.raw_data["trigger"]["id"] = 0
+        if "trigger" in self.raw_data and self.raw_data["trigger"] is not None:
+            self.raw_data["trigger"]["id"] = 0
         self.name = self.raw_data.get("name")
         self.description = self.raw_data.get("description")
-        self.type = WorkflowTypes(self.raw_data.get("playbookType"))
+        self.type = WorkflowTypes(self.raw_data.get("playbookType", WorkflowTypes.PLAYBOOK.value))
         self.priority = self.raw_data.get("priority")
         self.isDebugMode = self.raw_data.get("isDebugMode", None)
         self.version = self.raw_data.get("version")
         self.trigger = self.raw_data.get("trigger")
-        self.steps = self.raw_data.get("steps")
+        self.steps = self.raw_data.get("steps") or []
         self.isEnabled = self.raw_data.get("isEnabled")
         self.category = self.raw_data.get("categoryName", "Default")
         self.environments = self.raw_data.get("environments")
-        self.modification_time = self.raw_data["modificationTimeUnixTimeInMs"]
+        self.modification_time = self.raw_data.get("modificationTimeUnixTimeInMs", 0)
 
     def __hash__(self):
         """Used to remove duplicates in workflow lists"""
@@ -555,4 +591,42 @@ class Job(Content):
         self.readme = readme.render(job=self.__dict__)
 
     def iter_files(self) -> Iterator[File]:
-        yield File(f"Jobs/{self.name}.json", json.dumps(self.raw_data, indent=4))
+        name = self.raw_data.get("displayName") or self.name
+        name = name.replace("/", "_")
+        yield File(f"Jobs/{name}.json", json.dumps(self.raw_data, indent=4))
+
+
+class IntegrationInstance(Content):
+    def __init__(self, raw_data: dict):
+        super().__init__()
+        self.raw_data = raw_data
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(data)
+
+    def to_1p(self, identifier: str) -> dict:
+        settings_payload = self.raw_data.get("settings", {})
+        params = []
+        for s in settings_payload.get("settings", []):
+            params.append({
+                "description": s.get("propertyDescription") or None,
+                "mandatory": s.get("isMandatory") or False,
+                "type": s.get("propertyType"),
+                "id": s.get("id"),
+                "displayName": s.get("propertyDisplayName"),
+                "propertyName": s.get("propertyName"),
+                "value": s.get("value")
+            })
+        
+        return {
+            "name": f"projects/project/locations/location/instances/instance/integrations/{self.raw_data.get('integrationIdentifier')}/integrationInstances/{identifier}",
+            "environment": self.raw_data.get("environment"),
+            "identifier": identifier,
+            "configured": True,
+            "remote": None,
+            "parameters": params,
+            "integrationIdentifier": self.raw_data.get("integrationIdentifier"),
+            "description": settings_payload.get("instanceDescription") or None,
+            "displayName": settings_payload.get("instanceName")
+        }

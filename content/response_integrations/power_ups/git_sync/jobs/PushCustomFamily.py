@@ -42,7 +42,7 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
-        for visualFamily in gitsync.api.get_custom_families():
+        for visualFamily in gitsync.api.get_custom_families(chronicle_soar=siemplify):
             if visualFamily["family"] in family_names:
                 if readme_addon:
                     siemplify.LOGGER.info(
@@ -58,7 +58,11 @@ def main():
                     f"Pushing Visual Family - {visualFamily.get('family')}",
                 )
                 gitsync.content.push_visual_family(
-                    VisualFamily(gitsync.api.get_custom_family(visualFamily["id"])),
+                    VisualFamily(
+                        gitsync.api.get_custom_family(
+                            chronicle_soar=siemplify, family_id=visualFamily["id"]
+                        ),
+                    ),
                 )
 
         gitsync.commit_and_push(commit_msg)
