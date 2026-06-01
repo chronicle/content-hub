@@ -354,7 +354,7 @@ def ruff_check(paths: Iterable[Path], /, **flags: bool | str) -> int:
 
     """
     command: list[str] = [sys.executable, "-m", "ruff", "check"]
-    return execute_command_and_get_output(command, paths, **flags)
+    return execute_command_and_get_output(command, paths, check=False, **flags)
 
 
 def ruff_format(paths: Iterable[Path], /, **flags: bool | str) -> int:
@@ -365,7 +365,7 @@ def ruff_format(paths: Iterable[Path], /, **flags: bool | str) -> int:
 
     """
     command: list[str] = [sys.executable, "-m", "ruff", "format"]
-    return execute_command_and_get_output(command, paths, **flags)
+    return execute_command_and_get_output(command, paths, check=False, **flags)
 
 
 def ty_check(paths: Iterable[Path], /, **flags: bool | str) -> int:
@@ -376,7 +376,7 @@ def ty_check(paths: Iterable[Path], /, **flags: bool | str) -> int:
 
     """
     command: list[str] = [sys.executable, "-m", "ty", "check"]
-    return execute_command_and_get_output(command, paths, **flags)
+    return execute_command_and_get_output(command, paths, check=False, **flags)
 
 
 def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
@@ -411,13 +411,14 @@ def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **
     Args:
         command: the command values to execute
         paths: path values for the command
-        **flags: any command flags as keyword arguments
+        **flags: any command flags as keyword arguments.
+            Use `check=False` to disable raising `FatalCommandError` on non-zero exit code.
 
     Returns:
         The status code of the process
 
     Raises:
-        FatalCommandError: if a project is already initialized
+        FatalCommandError: if the command fails and `check` is True.
 
     """
     c: list[str] = list(command)
@@ -433,17 +434,11 @@ def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **
     try:
         with sp.Popen(c, stdout=sp.PIPE, stderr=sp.STDOUT) as process:  # noqa: S603
             for line in _stream_process_output(process):
-                logger.debug("%s", line.decode(errors="replace").rstrip())
+                logger.info("%s", line.decode(errors="replace").rstrip())
 
-            return_code: int = process.wait()
-    except OSError as e:
+            return process.wait()
+    except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
-
-    if return_code != 0:
-        error: sp.CalledProcessError = sp.CalledProcessError(return_code, c)
-        raise FatalCommandError(COMMAND_ERR_MSG.format(error)) from error
-
-    return return_code
 
 
 def _stream_process_output(process: sp.Popen[bytes]) -> Iterator[bytes]:
