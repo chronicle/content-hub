@@ -158,7 +158,7 @@ def get_entity_type_for_request(
             if is_src(alert_obj, identifier):
                 entity_type = FALLBACK_EMAIL_TYPES_MAPPER["email-src"]
             if is_dst(alert_obj, identifier):
-                entity_type = FALLBACK_IP_TYPES_MAPPER["email-dst"]
+                entity_type = FALLBACK_EMAIL_TYPES_MAPPER["email-dst"]
 
     if not entity_type and entity.entity_type == EntityTypes.FILEHASH:
         entity_type = get_hash_type(identifier)
@@ -367,10 +367,16 @@ def main():
             "execution_scope",
             ExecutionScope.Alert,
         )
+        scope_value = getattr(execution_scope, "value", execution_scope)
+        scope_value_val = (
+            scope_value.value
+            if hasattr(scope_value, "value")
+            else scope_value
+        )
 
         status: int = EXECUTION_STATE_COMPLETED
 
-        if execution_scope.value == ExecutionScope.Alert.value:
+        if scope_value_val == ExecutionScope.Alert.value:
             siemplify.LOGGER.info("Processing in Alert scope.")
             status = _process_alert_entities(
                 siemplify.current_alert,
@@ -378,12 +384,18 @@ def main():
             )
         else:
             siemplify.LOGGER.info("Processing in Case scope.")
-            for alert_obj in getattr(
-                siemplify.case, "open_alerts", siemplify.case.alerts
-            ):
+            alerts = []
+            if getattr(siemplify, "case", None):
+                alerts = (
+                    getattr(siemplify.case, "open_alerts", None)
+                    or getattr(siemplify.case, "alerts", [])
+                    or []
+                )
+
+            for alert_obj in alerts:
                 alert_entities: list = [
                     entity
-                    for entity in alert_obj.entities
+                    for entity in getattr(alert_obj, "entities", []) or []
                     if entity.entity_type in SUITABLE_ENTITY_TYPES
                 ]
                 status = _process_alert_entities(alert_obj, alert_entities)
@@ -395,7 +407,7 @@ def main():
                 [{"Attribute": result.as_json()} for result in json_results]
             )
 
-        if execution_scope.value == ExecutionScope.Alert.value:
+        if scope_value_val == ExecutionScope.Alert.value:
             if successful_entities:
                 output_message += (
                     "Successfully added the following attributes based on "
