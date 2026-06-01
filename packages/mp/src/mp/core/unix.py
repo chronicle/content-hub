@@ -420,24 +420,30 @@ def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **
         FatalCommandError: if a project is already initialized
 
     """
-    command.extend(str(path) for path in paths)
+    c: list[str] = list(command)
+    c.extend(str(path) for path in paths)
 
     flags_: list[str] = get_flags_to_command(**flags)
-    command.extend(flags_)
+    c.extend(flags_)
 
     runtime_config: list[str] = _get_runtime_config()
-    command.extend(runtime_config)
-    logger.debug("Executing command and capturing output: %s", command)
+    c.extend(runtime_config)
+    logger.debug("Executing command and capturing output: %s", c)
 
     try:
-        process: sp.Popen[bytes] = sp.Popen(command, stdout=sp.PIPE, stderr=sp.STDOUT)  # noqa: S603
-        for line in _stream_process_output(process):
-            logger.debug("%s", line.decode(errors="replace").rstrip())
+        with sp.Popen(c, stdout=sp.PIPE, stderr=sp.STDOUT) as process:  # noqa: S603
+            for line in _stream_process_output(process):
+                logger.debug("%s", line.decode(errors="replace").rstrip())
 
-        return process.wait()
-
-    except sp.CalledProcessError as e:
+            return_code: int = process.wait()
+    except OSError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
+
+    if return_code != 0:
+        error: sp.CalledProcessError = sp.CalledProcessError(return_code, c)
+        raise FatalCommandError(COMMAND_ERR_MSG.format(error)) from error
+
+    return return_code
 
 
 def _stream_process_output(process: sp.Popen[bytes]) -> Iterator[bytes]:
