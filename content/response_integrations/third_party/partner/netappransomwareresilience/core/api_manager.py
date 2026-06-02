@@ -328,9 +328,7 @@ class ApiManager:
             requests.HTTPError: If the API call returns a non-2xx status code.
 
         """
-        self.siemplify.LOGGER.info(
-            f"ApiManager.volume_online: Bringing volume online for volume_id: {volume_id}"
-        )
+        self.siemplify.LOGGER.info(f"ApiManager.volume_online: Bringing volume online for volume_id: {volume_id}")
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_VOLUME_ONLINE)

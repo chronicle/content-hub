@@ -35,9 +35,7 @@ def main() -> None:
         # used to flag back to siemplify system, the action final status
         status = EXECUTION_STATE_COMPLETED
         # human readable message, showed in UI as the action result
-        output_message = (
-            f"Successfully brought volume online on the following entities using NetApp Ransomware Resilience: {volume_id}"
-        )
+        output_message = f"Successfully brought volume online on the following entities using NetApp Ransomware Resilience: {volume_id}"
         # Set a simple result value, used for playbook if\else and placeholders.
         result_value = True
 
