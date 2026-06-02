@@ -25,6 +25,7 @@ class RansomwareResilience:
     check_job_status_response: Optional[SingleJson] = None
     take_snapshot_response: Optional[SingleJson] = None
     volume_offline_response: Optional[SingleJson] = None
+    volume_online_response: Optional[SingleJson] = None
     block_user_response: Optional[SingleJson] = None
 
     # Error simulation — set to a non-2xx code to trigger error responses
@@ -34,6 +35,7 @@ class RansomwareResilience:
     check_job_status_status_code: Optional[int] = None
     take_snapshot_status_code: Optional[int] = None
     volume_offline_status_code: Optional[int] = None
+    volume_online_status_code: Optional[int] = None
     block_user_status_code: Optional[int] = None
 
     def get_token(self) -> SingleJson:
@@ -89,6 +91,17 @@ class RansomwareResilience:
         """Return mock volume offline response."""
         if self.volume_offline_response:
             return self.volume_offline_response
+        return {
+            "job_id": "mock-job-id",
+            "status": "queued",
+            "source": "ontap",
+            "agent_id": "mock-agent-id",
+        }
+
+    def get_volume_online(self) -> SingleJson:
+        """Return mock volume online response."""
+        if self.volume_online_response:
+            return self.volume_online_response
         return {
             "job_id": "mock-job-id",
             "status": "queued",
