@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon import dict_to_flat, add_prefix_to_dict, flat_dict_to_csv
+from TIPCommon.transformation import dict_to_flat, add_prefix_to_dict, flat_dict_to_csv
 from collections import defaultdict
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import convert_unixtime_to_datetime, unix_now
