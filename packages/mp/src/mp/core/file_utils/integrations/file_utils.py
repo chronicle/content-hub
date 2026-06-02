@@ -24,7 +24,7 @@ import contextlib
 import dataclasses
 import json
 import pathlib
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import yaml
 
@@ -37,6 +37,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.custom_types import JsonString, ManagerName, RepositoryType
+
+
+Json: TypeAlias = dict[str, Any] | list[dict[str, Any]]
 
 
 def get_integrations_repo_base_path(integrations_classification: RepositoryType) -> Path:
@@ -509,7 +512,7 @@ def write_str_to_json_file(json_path: Path, json_content: JsonString) -> None:
         json.dump(json_content, f_json, indent=4)
 
 
-def load_yaml_file(path: Path) -> Any:  # noqa: ANN401
+def load_yaml_file(path: Path) -> Json:
     """Read a file and loads its content as YAML.
 
     Returns:
@@ -530,7 +533,7 @@ def load_yaml_file(path: Path) -> Any:  # noqa: ANN401
         raise ValueError(msg) from e
 
 
-def load_json_file(path: Path) -> Any:  # noqa: ANN401
+def load_json_file(path: Path) -> Json:
     """Read a file and loads its content as JSON.
 
     Returns:

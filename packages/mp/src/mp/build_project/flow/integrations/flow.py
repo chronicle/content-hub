@@ -37,24 +37,25 @@ class Repos(NamedTuple):
     custom: IntegrationsRepo
 
 
-def build_integrations(  # noqa: PLR0913
-    integrations: Iterable[str],
-    repositories: Iterable[RepositoryType],
-    src: Path | None = None,
-    dst: Path | None = None,
-    *,
-    deconstruct: bool = False,
-    custom_integration: bool = False,
-) -> None:
-    """Entry point of the build or deconstruct integration operation."""
-    repos: Repos = _create_repos(src, dst)
+class BuildIntegrationsParams(NamedTuple):
+    integrations: Iterable[str]
+    repositories: Iterable[RepositoryType]
+    src: Path | None = None
+    dst: Path | None = None
+    deconstruct: bool = False
+    custom_integration: bool = False
 
-    if integrations:
-        if custom_integration or src:
+
+def build_integrations(p: BuildIntegrationsParams, /) -> None:
+    """Entry point of the build or deconstruct integration operation."""
+    repos: Repos = _create_repos(p.src, p.dst)
+
+    if p.integrations:
+        if p.custom_integration or p.src:
             not_founds = _build_integrations_from_repos(
-                integrations,
+                p.integrations,
                 [repos.custom],
-                deconstruct=deconstruct,
+                deconstruct=p.deconstruct,
                 start_msg="Building custom integrations...",
                 end_msg="Done building custom integrations.",
             )
@@ -65,9 +66,9 @@ def build_integrations(  # noqa: PLR0913
 
         else:
             not_founds = _build_integrations_from_repos(
-                integrations,
+                p.integrations,
                 [repos.commercial, repos.community],
-                deconstruct=deconstruct,
+                deconstruct=p.deconstruct,
                 start_msg="Building integrations...",
                 end_msg="Done building integrations.",
             )
@@ -75,8 +76,8 @@ def build_integrations(  # noqa: PLR0913
             if commercial_not_found.intersection(community_not_found):
                 logger.info(mp.core.constants.RECONFIGURE_MP_MSG)
 
-    elif repositories:
-        _build_integration_repositories(repositories, repos)
+    elif p.repositories:
+        _build_integration_repositories(p.repositories, repos)
 
 
 def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos:

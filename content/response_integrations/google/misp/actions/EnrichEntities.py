@@ -23,7 +23,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict
 from soar_sdk.SiemplifyUtils import output_handler, unix_now, convert_unixtime_to_datetime
-from TIPCommon import extract_action_param, extract_configuration_param
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
 from ..core.constants import (
     INTEGRATION_NAME,
     ENRICH_ENTITIES_SCRIPT_NAME,
