@@ -245,7 +245,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         return cls(
             file_name=file_name,
             creator=non_built.get("creator", "admin"),
-            description=non_built.get("description", ""),
+            description=non_built.get("description") or "",
             documentation_link=cast(
                 "pydantic.HttpUrl | pydantic.FileUrl | None",
                 non_built.get("documentation_link"),

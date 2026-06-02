@@ -142,7 +142,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
         return cls(
             file_name=file_name,
             creator=non_built["creator"],
-            description=non_built.get("description", ""),
+            description=non_built.get("description") or "",
             documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
             integration=non_built["integration"],
             is_connector_rules_supported=non_built["is_connector_rules_supported"],
