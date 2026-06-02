@@ -33,13 +33,13 @@ def main():
     try:
         qualys_manager = create_qualys_manager_from_action(siemplify)
         qualys_manager.test_connectivity()
-        output_message = f"Successfully connected to the {INTEGRATION_NAME} server."
+        output_message = f"Successfully connected to the {INTEGRATION_NAME} server with the provided connection parameters!"
     except Exception as e:
         siemplify.LOGGER.error(f"General error performing action {PING_SCRIPT_NAME}")
         siemplify.LOGGER.exception(e)
         result = False
         status = EXECUTION_STATE_FAILED
-        output_message = f'Failed to connect to the {INTEGRATION_NAME} server. Reason: {e}'
+        output_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error is {e}"
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}")

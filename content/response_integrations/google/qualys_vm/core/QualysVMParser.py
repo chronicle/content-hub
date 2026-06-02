@@ -26,7 +26,7 @@ class QualysVMParser:
         list_of_dicts = [dict(zip(headers, row)) for row in raw_list[1:]]
         return [self.build_detection_object(item) for item in list_of_dicts]
 
-    def build_detection_object(self, raw_data):
+    def build_detection_object(self, raw_data: dict) -> Detection:
         return Detection(
             raw_data=raw_data,
             id=raw_data.get("QID"),
@@ -41,44 +41,65 @@ class QualysVMParser:
             host_id=raw_data.get("Host_ID"),
         )
 
-    def build_host_object(self, raw_data):
+    def build_host_object(self, raw_data: dict | list[dict]) -> Host:
         host_data = raw_data
         os = None
 
-        if type(host_data) is list:
+        if isinstance(host_data, list):
             raw_data = [host for host in host_data]
 
             for host in host_data:
-                if host.get("OS") is not None:
+                if isinstance(host, dict) and host.get("OS") is not None:
                     os = host.get("OS")
-            host_data = host_data[0]
+            if host_data:
+                host_data = host_data[0]
 
         else:
             raw_data = host_data
-            os = host_data.get("OS")
+            os = host_data.get("OS") if isinstance(host_data, dict) else None
 
         tags = None
+        dns_domain = None
+        dns_fqdn = None
+        ip_address = None
+        netbios_name = None
+        comment = None
 
-        if host_data.get("TAGS", {}) is not None:
-            all_tags = host_data.get("TAGS", {}).get("TAG", {})
-            if type(all_tags) is list:
-                tags = [tag.get("NAME") for tag in all_tags]
-                tags = ",".join(tags)
-            else:
-                tags = all_tags.get("NAME")
+        if isinstance(host_data, dict):
+            ip_address = host_data.get("IP")
+            netbios_name = host_data.get("NETBIOS")
+            comment = host_data.get("COMMENTS")
+
+            dns_data = host_data.get("DNS_DATA")
+            if isinstance(dns_data, dict):
+                dns_domain = dns_data.get("DOMAIN")
+                dns_fqdn = dns_data.get("FQDN")
+
+            tags_data = host_data.get("TAGS")
+            if isinstance(tags_data, dict):
+                all_tags = tags_data.get("TAG")
+                if isinstance(all_tags, list):
+                    tags_list = [
+                        tag.get("NAME")
+                        for tag in all_tags
+                        if isinstance(tag, dict) and tag.get("NAME")
+                    ]
+                    tags = ",".join(tags_list)
+                elif isinstance(all_tags, dict):
+                    tags = all_tags.get("NAME")
 
         return Host(
             raw_data=raw_data,
-            ip_address=host_data.get("IP"),
-            netbios_name=host_data.get("NETBIOS"),
-            dns_domain=host_data.get("DNS_DATA", {}).get("DOMAIN"),
-            dns_fqdn=host_data.get("DNS_DATA", {}).get("FQDN"),
+            ip_address=ip_address,
+            netbios_name=netbios_name,
+            dns_domain=dns_domain,
+            dns_fqdn=dns_fqdn,
             os=os,
             tags=tags,
-            comment=host_data.get("COMMENTS"),
+            comment=comment,
         )
 
-    def _get_hosts_list(self, raw_data) -> list[dict]:
+    def _get_hosts_list(self, raw_data: dict | list[dict] | None) -> list[dict]:
         if not raw_data:
             return []
 
@@ -104,12 +125,17 @@ class QualysVMParser:
 
         return hosts_list
 
-    def filter_hostname(self, raw_data, hostname):
+    def filter_hostname(
+        self, raw_data: dict | list[dict] | None, hostname: str
+    ) -> dict | list[dict]:
         hosts_list = self._get_hosts_list(raw_data)
         hostname_data = []
         for host_data in hosts_list:
             netbios = host_data.get("NETBIOS")
-            dns_hostname = host_data.get("DNS_DATA", {}).get("HOSTNAME")
+            dns_data = host_data.get("DNS_DATA")
+            dns_hostname = (
+                dns_data.get("HOSTNAME") if isinstance(dns_data, dict) else None
+            )
             if netbios == hostname or dns_hostname == hostname:
                 hostname_data.append(host_data)
 
@@ -117,63 +143,82 @@ class QualysVMParser:
             return hostname_data[0]
         return hostname_data
 
-    def get_ip_for_hostname(self, raw_data, hostname):
+    def get_ip_for_hostname(
+        self, raw_data: dict | list[dict] | None, hostname: str
+    ) -> str | None:
         hosts_list = self._get_hosts_list(raw_data)
         for host_data in hosts_list:
             netbios = host_data.get("NETBIOS")
-            dns_hostname = host_data.get("DNS_DATA", {}).get("HOSTNAME")
+            dns_data = host_data.get("DNS_DATA")
+            dns_hostname = (
+                dns_data.get("HOSTNAME") if isinstance(dns_data, dict) else None
+            )
             if netbios == hostname or dns_hostname == hostname:
                 return host_data.get("IP")
 
         return None
 
-    def build_endpointdetection_object(self, raw_data):
+    def build_endpointdetection_object(
+        self, raw_data: dict
+    ) -> list[EndpointDetection]:
+        vuln_list_data = raw_data.get("VULN_LIST")
+        vulnerabilities = (
+            vuln_list_data.get("VULN") if isinstance(vuln_list_data, dict) else None
+        )
+        if not vulnerabilities:
+            return []
 
-        vulnerabilities = raw_data.get("VULN_LIST").get("VULN")
-        if type(vulnerabilities) is dict:
+        if isinstance(vulnerabilities, dict):
             return [
                 EndpointDetection(
                     raw_data=vulnerabilities,
                     qid=vulnerabilities.get("QID"),
-                    title=vulnerabilities.get("TITLE", {}),
-                    diagnosis=vulnerabilities.get("DIAGNOSIS", {}),
-                    consequence=vulnerabilities.get("CONSEQUENCE", {}),
-                    solution=vulnerabilities.get("SOLUTION", {}),
-                    patchable=vulnerabilities.get("PATCHABLE", {}),
-                    category=vulnerabilities.get("CATEGORY", {}),
+                    title=vulnerabilities.get("TITLE") or {},
+                    diagnosis=vulnerabilities.get("DIAGNOSIS") or {},
+                    consequence=vulnerabilities.get("CONSEQUENCE") or {},
+                    solution=vulnerabilities.get("SOLUTION") or {},
+                    patchable=vulnerabilities.get("PATCHABLE") or {},
+                    category=vulnerabilities.get("CATEGORY") or {},
                     criticality_level=vulnerabilities.get("SEVERITY_LEVEL"),
                 )
             ]
 
-        elif type(vulnerabilities) is list:
+        elif isinstance(vulnerabilities, list):
             return [
                 EndpointDetection(
                     raw_data=vulnerability,
                     qid=vulnerability.get("QID"),
-                    title=vulnerability.get("TITLE", {}),
-                    diagnosis=vulnerability.get("DIAGNOSIS", {}),
-                    consequence=vulnerability.get("CONSEQUENCE", {}),
-                    solution=vulnerability.get("SOLUTION", {}),
-                    patchable=vulnerability.get("PATCHABLE", {}),
-                    category=vulnerability.get("CATEGORY", {}),
+                    title=vulnerability.get("TITLE") or {},
+                    diagnosis=vulnerability.get("DIAGNOSIS") or {},
+                    consequence=vulnerability.get("CONSEQUENCE") or {},
+                    solution=vulnerability.get("SOLUTION") or {},
+                    patchable=vulnerability.get("PATCHABLE") or {},
+                    category=vulnerability.get("CATEGORY") or {},
                     criticality_level=vulnerability.get("SEVERITY_LEVEL"),
                 )
                 for vulnerability in vulnerabilities
+                if isinstance(vulnerability, dict)
             ]
-        else:
-            return []
 
-    def get_detection_quids(self, raw_data):
+        return []
+
+    def get_detection_quids(self, raw_data: dict | list[dict] | None) -> list[str]:
         quids = []
         hosts_list = self._get_hosts_list(raw_data)
         for host_data in hosts_list:
-            detection_list = host_data.get("DETECTION_LIST", {}).get("DETECTION")
+            detection_list_data = host_data.get("DETECTION_LIST")
+            detection_list = (
+                detection_list_data.get("DETECTION")
+                if isinstance(detection_list_data, dict)
+                else None
+            )
             if not detection_list:
                 continue
             if isinstance(detection_list, list):
                 for detection in detection_list:
-                    quids.append(detection.get("QID"))
-            elif isinstance(detection_list, dict):
-                quids.append(detection_list.get("QID"))
+                    if isinstance(detection, dict) and detection.get("QID"):
+                        quids.append(str(detection.get("QID")))
+            elif isinstance(detection_list, dict) and detection_list.get("QID"):
+                quids.append(str(detection_list.get("QID")))
 
         return quids
