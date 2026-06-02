@@ -421,7 +421,7 @@ def _get_ai_fields(integration_path: Path) -> AiFields:
     if not integration_desc.exists():
         return empty_results
 
-    integration_content: dict[str, Any] = mp.core.file_utils.load_yaml_file(integration_desc)
+    integration_content: dict[str, Any] = cast("dict[str, Any]", mp.core.file_utils.load_yaml_file(integration_desc))
     if integration_content is None:
         return empty_results
 

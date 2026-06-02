@@ -390,7 +390,7 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
     if not actions_desc.exists():
         return empty_results
 
-    content: dict[str, Any] = mp.core.file_utils.load_yaml_file(actions_desc)
+    content: dict[str, Any] = cast("dict[str, Any]", mp.core.file_utils.load_yaml_file(actions_desc))
     action_content: dict[str, Any] | None = content.get(action_name)
     if action_content is None:
         action_content = content.get(mp.core.utils.str_to_snake_case(action_name))
