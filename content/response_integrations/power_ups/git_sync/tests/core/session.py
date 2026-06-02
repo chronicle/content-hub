@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from integration_testing import router
 from integration_testing.common import get_request_payload
@@ -64,7 +64,7 @@ class GitSyncMockSession(MockSession[MockRequest, MockResponse, GitSyncProduct])
 
     @router.get(r".*/settings/GetSystemVersion")
     def get_system_version(self, _: MockRequest) -> MockResponse:
-        return MockResponse(content="\"6.1.38.77\"", status_code=200)
+        return MockResponse(content='"6.1.38.77"', status_code=200)
 
     @router.post(r".*/playbooks/GetWorkflowMenuCardsWithEnvFilter")
     def get_workflow_menu_cards_env_filter(self, _: MockRequest) -> MockResponse:
