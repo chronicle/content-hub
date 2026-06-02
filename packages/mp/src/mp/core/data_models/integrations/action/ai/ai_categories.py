@@ -118,20 +118,47 @@ Generally, strictly passive or analytical actions (like threat intel lookups) do
 Here's a pseudocode example of how to determine whether an action is a remediation action:
 ```
 def is_remediation_action(action):
-    # Rule 1: Infrastructure Control
-    if action.blocks_ip or action.blocks_domain or action.isolates_host or action.terminates_process:
+    # Rule 1: Infrastructure Control & Containment
+    if action.contain_host or action.uncontain_host or action.execute_command_on_the_host:
         return True
 
-    # Rule 2: Identity Control
-    if action.disables_account or action.invalidates_tokens or action.forces_password_reset:
+    # Rule 2: Blocklist / Allowlist Control
+    if (
+        action.add_ioc_to_blocklist
+        or action.remove_ioc_from_blocklist
+        or action.add_ioc_to_allowlist
+        or action.remove_ioc_from_allowlist
+    ):
         return True
 
-    # Rule 3: Eradication
-    if action.deletes_files or action.cleans_registry:
+    # Rule 3: Identity Access Control & Password Resets
+    if (
+        action.disable_identity
+        or action.enable_identity
+        or action.reset_identity_password
+        or action.update_identity
+    ):
         return True
 
-    # Rule 4: Mitigation Triggers
-    if action.triggers_workflow or action.initiates_patching:
+    # Rule 4: Ticket, Alert, and Communication Updates
+    if (
+        action.update_alert
+        or action.add_alert_comment
+        or action.create_ticket
+        or action.update_ticket
+        or action.send_email
+        or action.send_message
+    ):
+        return True
+
+    # Rule 5: File and Email Actions (Eradication / Analysis / Search)
+    if (
+        action.delete_email
+        or action.update_email
+        or action.search_email
+        or action.submit_file
+        or action.download_file
+    ):
         return True
 
     return False
