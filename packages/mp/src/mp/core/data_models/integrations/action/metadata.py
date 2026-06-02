@@ -103,7 +103,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
     description: Annotated[
         str,
         pydantic.AfterValidator(mp.core.validators.validate_param_long_description),
-    ]
+    ] = ""
     documentation_link: pydantic.HttpUrl | pydantic.FileUrl | None
     dynamic_results_metadata: list[DynamicResultsMetadata]
     integration_identifier: Annotated[
@@ -209,7 +209,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         return cls(
             file_name=file_name,
             creator=built["Creator"],
-            description=built["Description"],
+            description=built.get("Description") or "",
             documentation_link=cast("pydantic.HttpUrl | pydantic.FileUrl | None", built.get("DocumentationLink")),
             dynamic_results_metadata=[
                 DynamicResultsMetadata.from_built(drm) for drm in built.get("DynamicResultsMetadata", []) or []
@@ -245,7 +245,7 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         return cls(
             file_name=file_name,
             creator=non_built.get("creator", "admin"),
-            description=non_built["description"],
+            description=non_built.get("description", ""),
             documentation_link=cast(
                 "pydantic.HttpUrl | pydantic.FileUrl | None",
                 non_built.get("documentation_link"),

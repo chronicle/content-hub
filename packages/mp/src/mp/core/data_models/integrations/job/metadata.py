@@ -62,7 +62,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
     description: Annotated[
         str,
         pydantic.Field(max_length=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH),
-    ]
+    ] = ""
     documentation_link: pydantic.HttpUrl | pydantic.FileUrl | None = None
     integration: Annotated[
         str,
@@ -131,7 +131,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
         return cls(
             file_name=file_name,
             creator=built["Creator"],
-            description=built["Description"],
+            description=built.get("Description") or "",
             documentation_link=built.get("DocumentationLink"),  # ty:ignore[invalid-argument-type]
             integration=built["Integration"],
             is_custom=built.get("IsCustom", False),
@@ -147,7 +147,7 @@ class JobMetadata(ComponentMetadata[BuiltJobMetadata, NonBuiltJobMetadata]):
         return cls(
             file_name=file_name,
             creator=non_built["creator"],
-            description=non_built["description"],
+            description=non_built.get("description", ""),
             documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
             integration=non_built["integration"],
             is_custom=non_built.get("is_custom", False),
