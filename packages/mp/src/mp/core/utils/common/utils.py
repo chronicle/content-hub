@@ -144,12 +144,12 @@ def is_windows() -> bool:
     return sys.platform.startswith(WINDOWS_PLATFORM)
 
 
-def ensure_valid_list(value: list[_T] | Any) -> list[_T]:  # noqa: ANN401
+def ensure_valid_list(value: list[_T] | type) -> list[_T]:
     """Ensure that the input is a valid list.
 
     This function checks whether the given value is a valid list. If the value is
     the `type` object (e.g., `<class 'list'>`), which can happen in GitHub actions.
-    it returns an empty list Otherwise, it returns the value as-is.
+    it returns an empty list. Otherwise, it returns the value as-is.
 
     Args:
         value (list[str] | list[RepositoryType] | type): The value to validate.

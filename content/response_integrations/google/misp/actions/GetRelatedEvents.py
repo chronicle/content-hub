@@ -27,7 +27,8 @@ from soar_sdk.SiemplifyUtils import (
     convert_unixtime_to_datetime,
 )
 from ..core.MISPManager import MISPManager, URL, HOSTNAME, DOMAIN, SRC_IP, DST_IP
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
+from TIPCommon.transformation import construct_csv
 from ..core.constants import (
     GET_RELATED_EVENTS_SCRIPT_NAME,
     INTEGRATION_NAME,
