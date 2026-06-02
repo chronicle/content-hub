@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import yaml
 
@@ -28,9 +28,12 @@ from .prompt_constructors.built import BuiltPromptConstructor
 from .prompt_constructors.source import SourcePromptConstructor
 
 if TYPE_CHECKING:
+    import asyncio
     import pathlib
+    from collections.abc import Callable
 
     import anyio
+    from rich.progress import Progress
 
     from mp.core.data_models.integrations.action.metadata import BuiltActionMetadata, NonBuiltActionMetadata
 
@@ -73,10 +76,15 @@ class DescribeAction(DescribeBase[ActionAiMetadata]):
         """Get the response schema."""
         return ActionAiMetadata
 
-    async def describe_actions(self, **kwargs: Any) -> None:
+    async def describe_actions(
+        self,
+        sem: asyncio.Semaphore | None = None,
+        on_done: Callable[[], None] | None = None,
+        progress: Progress | None = None,
+    ) -> None:
         """Describe actions (compatibility method)."""
         # Compatibility method
-        await self.describe(**kwargs)
+        await self.describe(sem=sem, on_done=on_done, progress=progress)
 
     async def get_actions_count(self) -> int:
         """Get actions' count (compatibility method).

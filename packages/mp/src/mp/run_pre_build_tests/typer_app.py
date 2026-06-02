@@ -223,10 +223,7 @@ def _run_script_on_paths(script_path: Path, paths: Iterable[Path]) -> list[Integ
     tasks_arguments = [(script_path, p) for p in paths]
     with ThreadPoolExecutor(max_workers=processes) as pool:
         results_iterator = pool.map(lambda args: _run_tests_for_single_integration(*args), tasks_arguments)
-
-        for result in results_iterator:
-            if result is not None:
-                all_integration_results.append(result)
+        all_integration_results.extend(result for result in results_iterator if result is not None)
 
     return all_integration_results
 

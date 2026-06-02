@@ -106,7 +106,12 @@ def track_command(mp_command_function: MpCommand[P]) -> MpCommand[P]:
                 python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
                 platform=platform_name,
                 platform_version=platform_version,
-                command=_determine_command_name(mp_command_function.__name__, **kwargs),
+                command=_determine_command_name(
+                    mp_command_function.__name__,
+                    repositories=cast("list[RepositoryType] | None", kwargs.get("repositories")),
+                    integrations=cast("list[str] | None", kwargs.get("integrations")),
+                    playbooks=cast("list[str] | None", kwargs.get("playbooks")),
+                ),
                 command_args=command_args_str,
                 duration_ms=duration_ms,
                 success=not command_vars.unexpected_exit,
@@ -188,15 +193,21 @@ def _sanitize_traceback(raw_stack: str) -> str:
     return raw_stack.replace(str(home), "<HOME>")
 
 
-def _determine_command_name(command: str, **kwargs: list[RepositoryType | str]) -> str:
-    command: str = NAME_MAPPER[command]
+def _determine_command_name(
+    command: str,
+    repositories: list[RepositoryType] | None = None,
+    integrations: list[str] | None = None,
+    playbooks: list[str] | None = None,
+    **_: object,
+) -> str:
+    command = NAME_MAPPER[command]
 
     if command not in {"build", "validate"}:
         return command
 
-    repo_values: set[str] = {r.value for r in cast("list[RepositoryType]", kwargs.get("repositories", []))}
-    has_integrations = bool(kwargs.get("integrations"))
-    has_playbooks = bool(kwargs.get("playbooks"))
+    repo_values: set[str] = {r.value for r in (repositories or [])}
+    has_integrations = bool(integrations)
+    has_playbooks = bool(playbooks)
 
     if (
         has_integrations

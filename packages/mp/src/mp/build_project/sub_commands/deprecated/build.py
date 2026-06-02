@@ -187,6 +187,9 @@ def build(  # noqa: PLR0913, PLR0917
         quiet: quiet log options
         verbose: Verbose log options
 
+    Raises:
+        typer.Exit: If no arguments are provided.
+
     """
     if ctx.invoked_subcommand is not None:
         return

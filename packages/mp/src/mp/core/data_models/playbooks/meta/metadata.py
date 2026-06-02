@@ -125,7 +125,7 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
     creation_source: PlaybookCreationSource | None = None
     default_access_level: PlaybookAccessLevel | None = None
     simulation_clone: bool | None = None
-    environments: list[str] = []
+    environments: list[str] = pydantic.Field(default_factory=list)
 
     @classmethod
     def from_built_path(cls, path: Path) -> Self:

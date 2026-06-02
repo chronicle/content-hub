@@ -62,13 +62,11 @@ def _process_step(step: Step) -> dict[str, list[str]] | None:
 
     for param in step.parameters:
         match param.name:
-            case "AssignedUsers":
-                if param.value and step.is_automatic:
-                    step_result.append("AssignedUsers is not allowed for automatic steps.")
+            case "AssignedUsers" if param.value and step.is_automatic:
+                step_result.append("AssignedUsers is not allowed for automatic steps.")
 
-            case "PendingActionTimeout":
-                if param.value and int(param.value) < MIN_PENDING_ACTION_TIMEOUT:
-                    step_result.append("PendingActionTimeout must be at least 300 seconds.")
+            case "PendingActionTimeout" if param.value and int(param.value) < MIN_PENDING_ACTION_TIMEOUT:
+                step_result.append("PendingActionTimeout must be at least 300 seconds.")
 
             case "AsyncActionTimeout":
                 if param.value and not (0 < int(param.value) <= MAX_ASYNC_ACTION_TIMEOUT):

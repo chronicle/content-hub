@@ -42,11 +42,12 @@ def build_integrations(
     repositories: Iterable[RepositoryType],
     src: Path | None = None,
     dst: Path | None = None,
-    *,
-    deconstruct: bool = False,
-    custom_integration: bool = False,
+    **options: bool,
 ) -> None:
     """Entry point of the build or deconstruct integration operation."""
+    deconstruct = options.get("deconstruct", False)
+    custom_integration = options.get("custom_integration", False)
+
     repos: Repos = _create_repos(src, dst)
 
     if integrations:

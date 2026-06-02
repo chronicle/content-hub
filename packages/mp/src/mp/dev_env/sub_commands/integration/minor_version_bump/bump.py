@@ -61,18 +61,25 @@ def minor_version_bump(
 
     """
     try:
-        pyproject_path: Path = integration_dir_non_built / mp.core.constants.PROJECT_FILE
-        pyproject_data: dict[str, Any] = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
-
-        version: float = float(pyproject_data["project"]["version"])
-        cache_dir: Path = get_marketplace_path() / INTEGRATIONS_CACHE_DIR_NAME
-        cache: VersionCache | None = load_and_validate_cache(cache_dir, integration_id, math.floor(version))
-        updated_hash: str = calculate_dependencies_hash(pyproject_data)
-        updated_version_cache: VersionCache = update_version_cache(cache, updated_hash, version)
-
-        update_cache_file(cache_dir, integration_dir_built, updated_version_cache)
-        update_built_def_file(integration_dir_built, updated_version_cache)
-
+        _perform_minor_version_bump(integration_dir_built, integration_dir_non_built, integration_id)
     except FileNotFoundError as e:
         logger.exception("Failed to perform minor version bump for integration")
         raise typer.Exit(1) from e
+
+
+def _perform_minor_version_bump(
+    integration_dir_built: Path,
+    integration_dir_non_built: Path,
+    integration_id: str,
+) -> None:
+    pyproject_path: Path = integration_dir_non_built / mp.core.constants.PROJECT_FILE
+    pyproject_data: dict[str, Any] = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+
+    version: float = float(pyproject_data["project"]["version"])
+    cache_dir: Path = get_marketplace_path() / INTEGRATIONS_CACHE_DIR_NAME
+    cache: VersionCache | None = load_and_validate_cache(cache_dir, integration_id, math.floor(version))
+    updated_hash: str = calculate_dependencies_hash(pyproject_data)
+    updated_version_cache: VersionCache = update_version_cache(cache, updated_hash, version)
+
+    update_cache_file(cache_dir, integration_dir_built, updated_version_cache)
+    update_built_def_file(integration_dir_built, updated_version_cache)

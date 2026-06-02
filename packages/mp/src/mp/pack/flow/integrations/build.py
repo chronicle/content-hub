@@ -62,11 +62,16 @@ def set_is_custom(def_path: pathlib.Path) -> None:
 
     """
     try:
-        with def_path.open("r+", encoding="utf-8") as f:
+        with def_path.open("r", encoding="utf-8") as f:
             def_data: dict[str, Any] = json.load(f)
-            def_data["IsCustom"] = True
-            f.seek(0)
-            json.dump(def_data, f, indent=4)
-            f.truncate()
     except (OSError, json.JSONDecodeError) as e:
+        logger.warning("Failed to read def file %s: %s", def_path, e)
+        return
+
+    def_data["IsCustom"] = True
+
+    try:
+        with def_path.open("w", encoding="utf-8") as f:
+            json.dump(def_data, f, indent=4)
+    except OSError as e:
         logger.warning("Failed to set IsCustom in %s: %s", def_path, e)
