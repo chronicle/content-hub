@@ -20,8 +20,8 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
-from mp.build_project.flow.integrations.flow import build_integrations
-from mp.build_project.flow.playbooks.flow import build_playbooks
+from mp.build_project.flow.integrations.flow import BuildIntegrationsParams, build_integrations
+from mp.build_project.flow.playbooks.flow import BuildPlaybooksParams, build_playbooks
 from mp.core.custom_types import RepositoryType  # noqa: TC001
 from mp.core.utils import ensure_valid_list
 from mp.core.utils.common import is_integration_repo, is_playbook_repo
@@ -102,14 +102,7 @@ def build_repository(
     params.validate()
 
     if is_integration_repo(repositories):
-        build_integrations(
-            integrations=[],
-            repositories=repositories,
-            src=None,
-            dst=None,
-            deconstruct=False,
-            custom_integration=False,
-        )
+        build_integrations(BuildIntegrationsParams(integrations=[], repositories=repositories))
 
     if is_playbook_repo(repositories):
-        build_playbooks(playbooks=[], repositories=repositories, src=None, dst=None, deconstruct=False)
+        build_playbooks(BuildPlaybooksParams(playbooks=[], repositories=repositories))

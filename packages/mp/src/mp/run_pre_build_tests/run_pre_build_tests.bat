@@ -200,11 +200,11 @@ exit /b %ERRORLEVEL%
         exit /b 1
     )
     if /I "%VERBOSE%"=="true" (
-        "%VENV_PY%" -m pytest -vv .\tests
+        "%VENV_PY%" -m pytest --json-report --json-report-file=.report.json -vv .\tests
     ) else if /I "%QUIET%"=="true" (
-        "%VENV_PY%" -m pytest -qq .\tests
+        "%VENV_PY%" -m pytest --json-report --json-report-file=.report.json -qq .\tests
     ) else (
-        "%VENV_PY%" -m pytest .\tests
+        "%VENV_PY%" -m pytest --json-report --json-report-file=.report.json .\tests
     )
     exit /b %ERRORLEVEL%
 
