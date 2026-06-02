@@ -73,9 +73,9 @@ class BuiltActionMetadata(TypedDict):
     SimulationDataJson: NotRequired[str]
     DefaultResultValue: NotRequired[str | None]
     Version: float
-    AIDescription: NotRequired[str | None]
-    AIShortDescription: NotRequired[str | None]
-    AICategories: NotRequired[list[str] | None]
+    AiDescription: NotRequired[str | None]
+    AiShortDescription: NotRequired[str | None]
+    AiCategories: NotRequired[list[str] | None]
     ParametersDescription: NotRequired[str | None]
     EntityTypes: NotRequired[list[str] | None]
     OutcomeCategories: NotRequired[list[str] | None]
@@ -232,10 +232,10 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             simulation_data_json=(built.get("SimulationDataJson") or DEFAULT_SIMULATION_DATA),
             default_result_value=built.get("DefaultResultValue"),
             version=version,
-            ai_description=built.get("AIDescription"),
-            ai_short_description=built.get("AIShortDescription"),
+            ai_description=built.get("AiDescription"),
+            ai_short_description=built.get("AiShortDescription"),
             parameters_description=built.get("ParametersDescription"),
-            categories=[ActionAiCategory(c) for c in (built.get("AICategories") or [])],
+            categories=[ActionAiCategory(c) for c in (built.get("AiCategories") or [])],
             entity_types=[EntityType(e) for e in (built.get("EntityTypes") or [])],
             outcome_categories=[OutcomeCategoriesEnum(c) for c in (built.get("OutcomeCategories") or [])],
         )
@@ -306,10 +306,10 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             SimulationDataJson=self.simulation_data_json,
             DefaultResultValue=self.default_result_value,
             Version=self.version,
-            AIDescription=self.ai_description,
-            AIShortDescription=self.ai_short_description,
+            AiDescription=self.ai_description,
+            AiShortDescription=self.ai_short_description,
             ParametersDescription=self.parameters_description,
-            AICategories=[c.value for c in self.categories] or None,
+            AiCategories=[c.value for c in self.categories] or None,
             EntityTypes=[e.value for e in self.entity_types] or None,
             OutcomeCategories=[o.value for o in self.outcome_categories] or None,
         )
