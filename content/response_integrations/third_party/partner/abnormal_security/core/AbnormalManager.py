@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any
 from urllib.parse import urljoin
 
@@ -79,6 +80,63 @@ class AbnormalRateLimitError(AbnormalAPIManagerError):
 
 class AbnormalValidationError(AbnormalAPIManagerError):
     """Raised when input validation fails."""
+
+
+_SCIENTIFIC_NOTATION_RE = re.compile(r"-?\d+\.\d+e[+-]?\d+", re.IGNORECASE)
+
+
+def parse_messages_input(messages_json: str) -> list[dict[str, Any]]:
+    """Parse the "Messages JSON" action parameter into a list of message objects.
+
+    Accepts three forms so the Search & Respond actions work both from a prior
+    Search Messages step and directly on the message an analyst is viewing:
+
+    1. A JSON array of message objects (the output of Search Messages) — returned
+       as-is.
+    2. A single JSON object — wrapped into a one-element list.
+    3. A bare message identifier (the string ``abx_message_id_str`` of the current
+       message) — built into ``[{"message_id": "<id>"}]``. ``message_id`` is the
+       Abnormal message identifier the Search & Respond API expects (see
+       ALLOWED_PARAM_KEYS); it is distinct from ``raw_message_id``, the native
+       mail-system identifier.
+
+    Args:
+        messages_json: The raw value of the "Messages JSON" / "Message ID" action
+            parameter.
+
+    Returns:
+        A list of message-object dicts suitable for ``remediate_messages``.
+
+    Raises:
+        AbnormalValidationError: If the input is empty, or is a message ID passed
+            as a number in scientific notation (precision already lost — the
+            caller must use the string message-ID placeholder instead).
+    """
+    raw = (messages_json or "").strip()
+    if not raw:
+        raise AbnormalValidationError("Messages JSON is required: provide Search Messages output or a message ID.")
+
+    # Scientific notation means a 64-bit message ID was passed as a number and has
+    # already lost precision (e.g. -1.08e+18). Reject with actionable guidance.
+    if _SCIENTIFIC_NOTATION_RE.fullmatch(raw):
+        raise AbnormalValidationError(
+            "Message ID was passed as a number and lost precision. Use the string "
+            "message-ID placeholder [Event.event_extracted_event.abx_body.abx_message_id_str]."
+        )
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        # Not JSON — treat the value as a bare Abnormal message identifier.
+        return [{"message_id": raw}]
+
+    if isinstance(parsed, list):
+        return parsed
+    if isinstance(parsed, dict):
+        return [parsed]
+    # A bare JSON scalar (int/str) — coerce to a message_id, preserving the exact
+    # string form (Python ints are arbitrary precision, so no loss here).
+    return [{"message_id": str(parsed)}]
 
 
 class AbnormalManager:

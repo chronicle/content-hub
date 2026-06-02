@@ -13,6 +13,7 @@ from ..core.AbnormalManager import (
     AbnormalConnectionError,
     AbnormalManager,
     AbnormalValidationError,
+    parse_messages_input,
 )
 from ..core.constants import INTEGRATION_NAME, REMEDIATE_MESSAGES_SCRIPT_NAME
 
@@ -74,9 +75,7 @@ def main() -> None:
     status = EXECUTION_STATE_FAILED
 
     try:
-        messages = json.loads(messages_json)
-        if not isinstance(messages, list):
-            raise AbnormalValidationError("Messages JSON must be a JSON array of message objects.")
+        messages = parse_messages_input(messages_json)
 
         manager = AbnormalManager(api_url=api_url, api_key=api_key, verify_ssl=verify_ssl)
         response = manager.remediate_messages(
