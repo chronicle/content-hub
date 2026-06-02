@@ -17,7 +17,6 @@ import base64
 import os
 import arrow
 import requests
-from TIPCommon import SiemplifySession
 from .MISPParser import MISPParser
 from .constants import ATTRIBUTE_SEARCH_MAPPER, PROVIDED_EVENT
 from .datamodels import SIGHTING_LEVELS
@@ -101,7 +100,7 @@ class MISPManager:
         self.server_address = (
             server_address[:-1] if server_address.endswith("/") else server_address
         )
-        self.session = SiemplifySession()
+        self.session = requests.Session()
         self.use_ssl = use_ssl
         self.session.verify = self._verify_certificate(ca_certificate_file)
         self.session.headers = HEADERS
