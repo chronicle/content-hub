@@ -70,8 +70,9 @@ def get_backend_api(config: dict[str, str]) -> api.BackendAPI:
             )
 
         backend_api.login()
-        return backend_api  # noqa: TRY300
 
     except Exception as e:
         logger.exception("Authentication failed")
         raise typer.Exit(1) from e
+    else:
+        return backend_api
