@@ -27,6 +27,9 @@ jobs:
       ci: ${{ steps.filter.outputs.ci }}
       tipcommon: ${{ steps.filter.outputs.tipcommon }}
       validate_command: ${{ steps.compute.outputs.validate_command }}
+      test_command: ${{ steps.compute.outputs.test_command }}
+      build_command: ${{ steps.compute.outputs.build_command }}
+      build_playbooks_command: ${{ steps.compute.outputs.build_playbooks_command }}
       should_validate: ${{ steps.compute.outputs.should_validate }}
     steps:
       - name: Checkout repository
@@ -58,8 +61,11 @@ jobs:
         # language=bash
         run: |
           # 1. If the mp CLI itself changed, validate everything
-          if [[ "${{ steps.filter.outputs.mp }}" == "true" ]]; then
-            echo "validate_command=wmp validate repository google third_party playbooks"  >> $GITHUB_OUTPUT
+          if [[ "${{ steps.filter.outputs.mp }}" == "true" ]] || [[ "${{ steps.filter.outputs.tipcommon }}" == "true" ]]; then
+            echo "validate_command=wmp validate repository google third_party playbooks" >> $GITHUB_OUTPUT
+            echo "test_command=wmp test --repository third_party --repository google --raise-error-on-violations" >> $GITHUB_OUTPUT
+            echo "build_command=wmp build repository google third_party" >> $GITHUB_OUTPUT
+            echo "build_playbooks_command=wmp build repository playbooks" >> $GITHUB_OUTPUT
             echo "should_validate=true" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -104,17 +110,27 @@ jobs:
           
           # Build the commands
           COMMAND=""
+          TEST_COMMAND=""
+          BUILD_COMMAND=""
+          BUILD_PLAYBOOKS_COMMAND=""
+          
           if [[ -n "$UNIQ_INTS" ]]; then
             COMMAND="wmp validate integration $UNIQ_INTS"
+            TEST_COMMAND="wmp test --integration $UNIQ_INTS --raise-error-on-violations"
+            BUILD_COMMAND="wmp build integration $UNIQ_INTS"
           fi
           
           if [[ -n "$UNIQ_PBs" ]]; then
             [[ -n "$COMMAND" ]] && COMMAND="$COMMAND && "
             COMMAND="${COMMAND}wmp validate playbook $UNIQ_PBs"
+            BUILD_PLAYBOOKS_COMMAND="wmp build playbook $UNIQ_PBs"
           fi
           
           if [[ -n "$COMMAND" ]]; then
             echo "validate_command=$COMMAND" >> $GITHUB_OUTPUT
+            echo "test_command=$TEST_COMMAND" >> $GITHUB_OUTPUT
+            echo "build_command=$BUILD_COMMAND" >> $GITHUB_OUTPUT
+            echo "build_playbooks_command=$BUILD_PLAYBOOKS_COMMAND" >> $GITHUB_OUTPUT
             echo "should_validate=true" >> $GITHUB_OUTPUT
           else
             echo "should_validate=false" >> $GITHUB_OUTPUT
@@ -201,7 +217,7 @@ jobs:
 
   run-integrations-tests-windows:
     name: 3. Test Integrations
-    needs: [ validate-content-windows ]
+    needs: [ changes, validate-content-windows ]
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -219,14 +235,19 @@ jobs:
         shell: pwsh
         env:
           PYTHONIOENCODING: utf-8
+          TEST_COMMAND: ${{ needs.changes.outputs.test_command }}
         # language=powershell
         run: |
           wmp config --root-path . --processes 7 --display-config
-          wmp test --repository third_party --repository google --raise-error-on-violations
+          if ($env:TEST_COMMAND) {
+            Invoke-Expression $env:TEST_COMMAND
+          } else {
+            Write-Host "No tests to run."
+          }
 
   mp-build-integrations-windows:
     name: 4. Build Integrations
-    needs: run-integrations-tests-windows
+    needs: [ changes, run-integrations-tests-windows ]
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -242,14 +263,20 @@ jobs:
           uv pip install --system -e ./packages/mp
       - name: Build
         shell: pwsh
-        # language=bash
+        env:
+          BUILD_COMMAND: ${{ needs.changes.outputs.build_command }}
+        # language=powershell
         run: |
           wmp config --root-path . --processes 7 --display-config
-          wmp build repository google third_party 
+          if ($env:BUILD_COMMAND) {
+            Invoke-Expression $env:BUILD_COMMAND
+          } else {
+            Write-Host "No integrations to build."
+          }
 
   mp-build-playbooks-windows:
     name: 5. Build Playbooks
-    needs: validate-content-windows
+    needs: [ changes, validate-content-windows ]
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -265,7 +292,13 @@ jobs:
           uv pip install --system -e ./packages/mp
       - name: Build
         shell: pwsh
-        # language=bash
+        env:
+          BUILD_PLAYBOOKS_COMMAND: ${{ needs.changes.outputs.build_playbooks_command }}
+        # language=powershell
         run: |
           wmp config --root-path . --processes 7 --display-config
-          wmp build repository playbooks
+          if ($env:BUILD_PLAYBOOKS_COMMAND) {
+            Invoke-Expression $env:BUILD_PLAYBOOKS_COMMAND
+          } else {
+            Write-Host "No playbooks to build."
+          }
