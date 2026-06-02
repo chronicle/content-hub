@@ -187,7 +187,7 @@ def build(  # noqa: PLR0913, PLR0917
         quiet: quiet log options
         verbose: Verbose log options
 
-    """  # noqa: DOC501
+    """
     if ctx.invoked_subcommand is not None:
         return
 

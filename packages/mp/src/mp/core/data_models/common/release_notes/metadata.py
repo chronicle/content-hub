@@ -57,7 +57,7 @@ def convert_iso_to_epoch(iso_timestamp: str) -> int:
 
     """
     try:
-        dt_object: datetime = datetime.strptime(iso_timestamp, "%Y-%m-%d")  # noqa: DTZ007
+        dt_object: datetime = datetime.strptime(iso_timestamp, "%Y-%m-%d")
         # Make it timezone-aware (UTC) to the beginning of the day before getting the epoch time
         dt_object = dt_object.replace(tzinfo=UTC)
         return int(dt_object.timestamp())

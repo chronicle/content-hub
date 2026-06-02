@@ -73,7 +73,7 @@ class DescribeAction(DescribeBase[ActionAiMetadata]):
         """Get the response schema."""
         return ActionAiMetadata
 
-    async def describe_actions(self, **kwargs: Any) -> None:  # noqa: ANN401
+    async def describe_actions(self, **kwargs: Any) -> None:
         """Describe actions (compatibility method)."""
         # Compatibility method
         await self.describe(**kwargs)

@@ -40,7 +40,7 @@ class HtmlFormat:
 
     def display(self) -> None:
         """Generate an HTML report for integration test results."""
-        try:  # noqa: PLW0717
+        try:
             html_content: str = self._generate_validation_report_html()
 
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html", encoding="utf-8") as temp_file:

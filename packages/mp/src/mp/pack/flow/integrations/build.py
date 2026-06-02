@@ -61,7 +61,7 @@ def set_is_custom(def_path: pathlib.Path) -> None:
         def_path: The path to the integration definition file.
 
     """
-    try:  # noqa: PLW0717
+    try:
         with def_path.open("r+", encoding="utf-8") as f:
             def_data: dict[str, Any] = json.load(f)
             def_data["IsCustom"] = True

@@ -226,7 +226,7 @@ def _run_script_on_paths(script_path: Path, paths: Iterable[Path]) -> list[Integ
 
         for result in results_iterator:
             if result is not None:
-                all_integration_results.append(result)  # noqa: PERF401
+                all_integration_results.append(result)
 
     return all_integration_results
 

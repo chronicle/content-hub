@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any, Protocol, TypeAlias, TypeVar, cast, overload
 
 import requests
 import typer
@@ -39,6 +39,9 @@ from mp.telemetry.utils import (
     get_or_create_config_yaml,
     is_report_enabled,
 )
+
+T = TypeVar("T")
+SanitizedType: TypeAlias = str | int | float | bool | list["SanitizedType"] | None
 
 
 @dataclass(slots=True)
@@ -93,7 +96,7 @@ def track_command(mp_command_function: MpCommand[P]) -> MpCommand[P]:
 
             platform_name, platform_version = get_current_platform()
 
-            safe_args: dict[str, Any] = _filter_command_arguments(kwargs)
+            safe_args: dict[str, SanitizedType] = _filter_command_arguments(kwargs)
             command_args_str: str | None = json.dumps(safe_args) if safe_args else None
 
             payload = TelemetryPayload(
@@ -140,19 +143,33 @@ def send_telemetry_report(event_payload: TelemetryPayload) -> None:
         pass
 
 
-def _filter_command_arguments(kwargs: dict[Any, Any]) -> dict[str, Any]:
-    sanitized_args = {}
+def _filter_command_arguments(kwargs: dict[str, Any]) -> dict[str, SanitizedType]:
+    sanitized_args: dict[str, SanitizedType] = {}
     for key, value in kwargs.items():
         if key in ALLOWED_COMMAND_ARGUMENTS:
-            sanitized_value = _sanitize_argument_value(value)
+            sanitized_value: SanitizedType = _sanitize_argument_value(value)
             if isinstance(sanitized_value, Path):
                 sanitized_value = str(sanitized_value)
+
             if sanitized_value is not None:
                 sanitized_args[key] = sanitized_value
+
     return sanitized_args
 
 
-def _sanitize_argument_value(value: Enum | list[Any] | tuple[Any] | Any) -> Any:  # noqa: ANN401
+@overload
+def _sanitize_argument_value(value: Enum) -> SanitizedType: ...
+
+
+@overload
+def _sanitize_argument_value(value: list[Any] | tuple[Any, ...]) -> SanitizedType: ...
+
+
+@overload
+def _sanitize_argument_value(value: T) -> T: ...
+
+
+def _sanitize_argument_value(value: Any) -> Any:
     if isinstance(value, Enum):
         return value.value
 
@@ -171,7 +188,7 @@ def _sanitize_traceback(raw_stack: str) -> str:
     return raw_stack.replace(str(home), "<HOME>")
 
 
-def _determine_command_name(command: str, **kwargs: list[RepositoryType | str] | Any) -> str:  # noqa: ANN401
+def _determine_command_name(command: str, **kwargs: list[RepositoryType | str]) -> str:
     command: str = NAME_MAPPER[command]
 
     if command not in {"build", "validate"}:

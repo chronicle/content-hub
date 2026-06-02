@@ -54,7 +54,7 @@ class StepParamsValidation:
             raise NonFatalValidationError(msg)
 
 
-def _process_step(step: Step) -> dict[str, list[str]] | None:  # noqa: C901
+def _process_step(step: Step) -> dict[str, list[str]] | None:
     step_result: list[str] = []
 
     async_action_timeout: str | None = ""

@@ -176,7 +176,7 @@ class Integration:
         project_file_path: Path = path / mp.core.constants.PROJECT_FILE
         file_content: str = project_file_path.read_text(encoding="utf-8")
         pyproject_toml: PyProjectTomlFile = cast("PyProjectTomlFile", cast("object", tomllib.loads(file_content)))
-        try:  # noqa: PLW0717
+        try:
             integration_meta: IntegrationMetadata = IntegrationMetadata.from_non_built_path(path)
             _update_integration_meta_form_pyproject(
                 pyproject_toml_file=pyproject_toml,
