@@ -300,7 +300,7 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             name=name,
             identifier=non_built["identifier"],
             documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
-            description=non_built.get("description", ""),
+            description=non_built.get("description") or "",
             image_base64=non_built.get("image_path"),  # ty:ignore[invalid-argument-type]
             parameters=[IntegrationParameter.from_non_built(p) for p in non_built["parameters"]],
             should_install_in_system=non_built.get("should_install_in_system", False),
@@ -421,7 +421,7 @@ def _get_ai_fields(integration_path: Path) -> AiFields:
     if not integration_desc.exists():
         return empty_results
 
-    integration_content: dict[str, Any] = mp.core.file_utils.load_yaml_file(integration_desc)
+    integration_content: dict[str, Any] = cast("dict[str, Any]", mp.core.file_utils.load_yaml_file(integration_desc))
     if integration_content is None:
         return empty_results
 

@@ -37,14 +37,16 @@ if TYPE_CHECKING:
 def _update_yaml_file(file_path: pathlib.Path, updates: dict[str, Any]) -> None:
     """Read a YAML file, update its content, and write it back."""
     content = file_utils.load_yaml_file(file_path)
+    assert isinstance(content, dict)
     content.update(updates)
     file_utils.write_yaml_to_file(content, file_path)
 
 
 def _remove_key_from_yaml(file_path: pathlib.Path, key_to_remove: str) -> None:
     content = file_utils.load_yaml_file(file_path)
-    if key_to_remove in content:
-        del content[key_to_remove]
+    assert isinstance(content, dict)
+    content.pop(key_to_remove, None)
+
     file_utils.write_yaml_to_file(content, file_path)
 
 

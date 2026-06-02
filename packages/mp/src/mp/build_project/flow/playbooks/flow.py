@@ -38,29 +38,34 @@ class Repos(NamedTuple):
     custom: PlaybooksRepo | None = None
 
 
-def build_playbooks(
-    playbooks: Iterable[str],
-    repositories: Iterable[RepositoryType],
-    src: Path | None,
-    dst: Path | None,
-    *,
-    deconstruct: bool = False,
-) -> None:
-    """Entry point of the build or deconstruct playbook operation."""
-    repos: Repos = _create_repos(src, dst)
+class BuildPlaybooksParams(NamedTuple):
+    playbooks: Iterable[str]
+    repositories: Iterable[RepositoryType]
+    src: Path | None = None
+    dst: Path | None = None
+    deconstruct: bool = False
 
-    if playbooks:
+
+def build_playbooks(p: BuildPlaybooksParams, /) -> None:
+    """Entry point of the build or deconstruct playbook operation."""
+    repos: Repos = _create_repos(p.src, p.dst)
+
+    if p.playbooks:
         if repos.custom is not None:
-            _build_playbooks(set(playbooks), repos.custom, deconstruct=deconstruct)
+            _build_playbooks(set(p.playbooks), repos.custom, deconstruct=p.deconstruct)
 
         else:
-            commercial_not_found: set[str] = _build_playbooks(set(playbooks), repos.commercial, deconstruct=deconstruct)
-            community_not_found: set[str] = _build_playbooks(set(playbooks), repos.community, deconstruct=deconstruct)
+            commercial_not_found: set[str] = _build_playbooks(
+                set(p.playbooks), repos.commercial, deconstruct=p.deconstruct
+            )
+            community_not_found: set[str] = _build_playbooks(
+                set(p.playbooks), repos.community, deconstruct=p.deconstruct
+            )
 
             if commercial_not_found.intersection(community_not_found):
                 logger.info(mp.core.constants.RECONFIGURE_MP_MSG)
 
-    elif repositories:
+    elif p.repositories:
         _build_playbooks_repositories([repos.commercial, repos.community])
         write_playbooks_json(repos.commercial, repos.community)
 
