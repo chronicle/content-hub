@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 from integration_testing.common import use_live_api
 from soar_sdk.SiemplifyBase import SiemplifyBase
@@ -56,8 +58,6 @@ def script_session(
         )
 
         # Monkeypatch SiemplifyBase.__init__ to set valid local run folder paths
-        import sys
-
         for mod_name in ("SiemplifyBase", "soar_sdk.SiemplifyBase"):
             mod = sys.modules.get(mod_name)
             if mod:

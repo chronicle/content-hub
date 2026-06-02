@@ -24,7 +24,7 @@ from ...core.GitSyncManager import WorkflowInstaller
 from ..common import MOCKS_PATH
 from ..core.product import GitSyncProduct
 
-with open(MOCKS_PATH / "mock_data.json") as f:
+with open(MOCKS_PATH / "mock_data.json", encoding="utf-8") as f:
     MOCK_DATA = json.load(f)
 
 GIT_PLAYBOOK_DATA = MOCK_DATA["git_playbook"]
