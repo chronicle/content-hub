@@ -15,15 +15,17 @@
 from __future__ import annotations
 
 import json
+
 import pytest
-
 from integration_testing.set_meta import set_metadata
-from git_sync.jobs import PullPlaybook
-from git_sync.tests.common import CONFIG_PATH, MOCKS_PATH
-from git_sync.tests.core.product import GitSyncProduct
-from git_sync.tests.core.session import GitSyncMockSession
 
-with open(MOCKS_PATH / "mock_data.json", "r") as f:
+from ...core.definitions import File
+from ...jobs import PullPlaybook
+from ..common import CONFIG_PATH, MOCKS_PATH
+from ..core.product import GitSyncProduct
+from ..core.session import GitSyncMockSession
+
+with open(MOCKS_PATH / "mock_data.json") as f:
     MOCK_DATA = json.load(f)
 
 GIT_PLAYBOOK_DATA = MOCK_DATA["git_playbook"]
@@ -64,12 +66,11 @@ def test_pull_playbook_success(
 
         def get_file_objects_from_path(self, path):
             if path == "Playbooks":
-                from git_sync.core.definitions import File
                 return [
                     File(
                         "Playbooks/Default/Test Playbook.json",
                         json.dumps(GIT_PLAYBOOK_DATA),
-                    )
+                    ),
                 ]
             raise KeyError(f"Directory not found: {path}")
 
@@ -91,4 +92,7 @@ def test_pull_playbook_success(
 
     # Assert that duplicate steps matched DIFFERENT, UNIQUE local step IDs
     assert step_1["identifier"] != step_2["identifier"]
-    assert {step_1["identifier"], step_2["identifier"]} == {"local_PA4_1", "local_PA4_2"}
+    assert {step_1["identifier"], step_2["identifier"]} == {
+        "local_PA4_1",
+        "local_PA4_2",
+    }
