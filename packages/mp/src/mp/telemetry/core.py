@@ -41,7 +41,7 @@ from mp.telemetry.utils import (
 )
 
 T = TypeVar("T")
-SanitizedType: TypeAlias = str | int | float | bool | list["SanitizedType"] | None
+SanitizedType: TypeAlias = str | int | float | bool | list["SanitizedType"] | Path | None
 
 
 @dataclass(slots=True)

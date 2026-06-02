@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
-from mp.build_project.flow.integrations.flow import build_integrations
+from mp.build_project.flow.integrations.flow import BuildIntegrationsParams, build_integrations
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
@@ -167,12 +167,14 @@ def build_integration(  # noqa: PLR0913
         if integrations:
             logger.debug("Dispatching to build_integrations flow")
             build_integrations(
-                integrations=integrations,
-                repositories=[],
-                src=src,
-                dst=dst,
-                deconstruct=deconstruct,
-                custom_integration=custom_integration,
+                BuildIntegrationsParams(
+                    integrations=integrations,
+                    repositories=[],
+                    src=src,
+                    dst=dst,
+                    deconstruct=deconstruct,
+                    custom_integration=custom_integration,
+                )
             )
 
     finally:

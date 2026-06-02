@@ -18,7 +18,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
-from mp.build_project.flow.integrations.flow import build_integrations
+from mp.build_project.flow.integrations.flow import BuildIntegrationsParams, build_integrations
 
 if TYPE_CHECKING:
     import pathlib
@@ -40,17 +40,21 @@ def build_integration_for_pack(
     """
     if version is not None:
         build_integrations(
-            integrations=[integration_name],
-            repositories=[],
-            src=build_src.parent,
-            dst=temp_build_path,
-            custom_integration=True,
+            BuildIntegrationsParams(
+                integrations=[integration_name],
+                repositories=[],
+                src=build_src.parent,
+                dst=temp_build_path,
+                custom_integration=True,
+            )
         )
     else:
         build_integrations(
-            integrations=[integration_name],
-            repositories=[],
-            dst=temp_build_path,
+            BuildIntegrationsParams(
+                integrations=[integration_name],
+                repositories=[],
+                dst=temp_build_path,
+            )
         )
 
 
