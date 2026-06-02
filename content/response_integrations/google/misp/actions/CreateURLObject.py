@@ -18,7 +18,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from ..core.MISPManager import MISPManager
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
+from TIPCommon.transformation import construct_csv
 from ..core.exceptions import MISPManagerEventIdNotFoundError, MISPMissingParamError
 from ..core.utils import get_entity_original_identifier
 from ..core.constants import (

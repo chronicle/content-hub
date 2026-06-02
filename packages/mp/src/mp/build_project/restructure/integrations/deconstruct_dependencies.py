@@ -99,18 +99,19 @@ class DependencyDeconstructor:
         core_modules_path: Path = self.integration_path / mp.core.constants.OUT_MANAGERS_SCRIPTS_DIR
         manager_modules: set[str] = {p.stem for p in core_modules_path.glob("*.py")}
         for path in self.integration_path.rglob("*.py"):
-            try:  # noqa: PLW0717
+            try:
                 tree = ast.parse(path.read_text(encoding="utf-8"))
-                for node in ast.walk(tree):
-                    match node:
-                        case ast.Import(names=names):
-                            imported_modules.update(alias.name.split(".")[0] for alias in names)
-
-                        case ast.ImportFrom(module=module) if module:
-                            imported_modules.add(module.split(".")[0])
-
             except SyntaxError:
                 logger.warning("Warning: Could not parse %s, skipping for dependency analysis.", path)
+                continue
+
+            for node in ast.walk(tree):
+                match node:
+                    case ast.Import(names=names):
+                        imported_modules.update(alias.name.split(".")[0] for alias in names)
+
+                    case ast.ImportFrom(module=module) if module:
+                        imported_modules.add(module.split(".")[0])
 
         return {
             m
