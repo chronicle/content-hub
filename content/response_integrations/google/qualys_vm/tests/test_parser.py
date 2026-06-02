@@ -1,13 +1,13 @@
 from __future__ import annotations
 import json
-import os
+from pathlib import Path
 import pytest
 import xmltodict
 from ..core.QualysVMParser import QualysVMParser
 
 # Load mock data locally for unit tests
-MOCK_DATA_PATH = os.path.join(os.path.dirname(__file__), "mock_data.json")
-with open(MOCK_DATA_PATH, "r", encoding="utf-8") as f:
+MOCK_DATA_PATH = Path(__file__).parent / "mock_data.json"
+with MOCK_DATA_PATH.open("r", encoding="utf-8") as f:
     MOCK_DATA = json.load(f)
 
 
@@ -71,6 +71,35 @@ def test_get_hosts_list_empty(parser):
     assert parser._get_hosts_list([]) == []
 
 
+def test_get_hosts_list_non_dict_filtering(parser):
+    # Scenario F: Dictionary where HOST is a list containing non-dict values
+    raw_data = {
+        "HOST": [
+            {"IP": "1.1.1.1", "NETBIOS": "hostA"},
+            None,
+            "invalid_host",
+            {"IP": "2.2.2.2", "NETBIOS": "hostB"},
+        ]
+    }
+    hosts = parser._get_hosts_list(raw_data)
+    assert len(hosts) == 2
+    assert hosts[0]["IP"] == "1.1.1.1"
+    assert hosts[1]["IP"] == "2.2.2.2"
+
+    # Scenario G: List of raw items where some items or sub-hosts are non-dict
+    raw_data_list = [
+        {"HOST": [{"IP": "3.3.3.3"}, 123, {"IP": "4.4.4.4"}]},
+        {"HOST": "invalid_single"},
+        "completely_invalid_item",
+        {"IP": "5.5.5.5"},
+    ]
+    hosts_list = parser._get_hosts_list(raw_data_list)
+    assert len(hosts_list) == 3
+    assert hosts_list[0]["IP"] == "3.3.3.3"
+    assert hosts_list[1]["IP"] == "4.4.4.4"
+    assert hosts_list[2]["IP"] == "5.5.5.5"
+
+
 def test_get_ip_for_hostname(parser):
     raw_data = [
         {
@@ -122,6 +151,10 @@ def test_get_detection_quids(parser):
         }
     }
     assert parser.get_detection_quids(raw_data_list) == ["6276533", "6277463"]
+def test_build_endpointdetection_object_defensive(parser):
+    assert parser.build_endpointdetection_object(None) == []
+    assert parser.build_endpointdetection_object([]) == []
+    assert parser.build_endpointdetection_object("invalid") == []
 
 
 def test_parser_with_real_v5_host_xml(parser):

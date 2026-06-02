@@ -41,89 +41,100 @@ class QualysVMParser:
             host_id=raw_data.get("Host_ID"),
         )
 
-    def build_host_object(self, raw_data: dict | list[dict]) -> Host:
-        host_data = raw_data
-        os = None
-
-        if isinstance(host_data, list):
-            raw_data = [host for host in host_data]
-
-            for host in host_data:
+    def _extract_os_and_primary_host(
+        self, raw_data: dict | list[dict]
+    ) -> tuple[str | None, dict | None]:
+        """Extracts the operating system and primary host dictionary from raw data."""
+        if isinstance(raw_data, list):
+            os = None
+            for host in raw_data:
                 if isinstance(host, dict) and host.get("OS") is not None:
                     os = host.get("OS")
-            if host_data:
-                host_data = host_data[0]
+            host_dict = raw_data[0] if raw_data and isinstance(raw_data[0], dict) else None
+            return os, host_dict
 
-        else:
-            raw_data = host_data
-            os = host_data.get("OS") if isinstance(host_data, dict) else None
+        if isinstance(raw_data, dict):
+            return raw_data.get("OS"), raw_data
 
-        tags = None
+        return None, None
+
+    def _extract_tags(self, tags_data: dict | None) -> str | None:
+        """Extracts comma-separated tags from tags data structure."""
+        if not isinstance(tags_data, dict):
+            return None
+
+        all_tags = tags_data.get("TAG")
+        if isinstance(all_tags, list):
+            tags_list = [
+                tag.get("NAME")
+                for tag in all_tags
+                if isinstance(tag, dict) and tag.get("NAME")
+            ]
+            return ",".join(tags_list) if tags_list else None
+
+        if isinstance(all_tags, dict):
+            return all_tags.get("NAME")
+
+        return None
+
+    def build_host_object(self, raw_data: dict | list[dict]) -> Host:
+        os_value, host_dict = self._extract_os_and_primary_host(raw_data)
+
+        if not host_dict:
+            return Host(raw_data=raw_data, os=os_value)
+
         dns_domain = None
         dns_fqdn = None
-        ip_address = None
-        netbios_name = None
-        comment = None
-
-        if isinstance(host_data, dict):
-            ip_address = host_data.get("IP")
-            netbios_name = host_data.get("NETBIOS")
-            comment = host_data.get("COMMENTS")
-
-            dns_data = host_data.get("DNS_DATA")
-            if isinstance(dns_data, dict):
-                dns_domain = dns_data.get("DOMAIN")
-                dns_fqdn = dns_data.get("FQDN")
-
-            tags_data = host_data.get("TAGS")
-            if isinstance(tags_data, dict):
-                all_tags = tags_data.get("TAG")
-                if isinstance(all_tags, list):
-                    tags_list = [
-                        tag.get("NAME")
-                        for tag in all_tags
-                        if isinstance(tag, dict) and tag.get("NAME")
-                    ]
-                    tags = ",".join(tags_list)
-                elif isinstance(all_tags, dict):
-                    tags = all_tags.get("NAME")
+        dns_data = host_dict.get("DNS_DATA")
+        if isinstance(dns_data, dict):
+            dns_domain = dns_data.get("DOMAIN")
+            dns_fqdn = dns_data.get("FQDN")
 
         return Host(
             raw_data=raw_data,
-            ip_address=ip_address,
-            netbios_name=netbios_name,
+            ip_address=host_dict.get("IP"),
+            netbios_name=host_dict.get("NETBIOS"),
             dns_domain=dns_domain,
             dns_fqdn=dns_fqdn,
-            os=os,
-            tags=tags,
-            comment=comment,
+            os=os_value,
+            tags=self._extract_tags(host_dict.get("TAGS")),
+            comment=host_dict.get("COMMENTS"),
         )
+
+    def _parse_host_from_dict(self, raw_dict: dict) -> list[dict]:
+        """Parses host dictionaries from a root dictionary structure."""
+        host_data = raw_dict.get("HOST")
+        if isinstance(host_data, list):
+            return [h for h in host_data if isinstance(h, dict)]
+        if isinstance(host_data, dict):
+            return [host_data]
+        return []
+
+    def _parse_hosts_from_list(self, raw_list: list) -> list[dict]:
+        """Parses host dictionaries from a list structure."""
+        hosts_list = []
+        for item in raw_list:
+            if not isinstance(item, dict):
+                continue
+
+            if "HOST" in item:
+                hosts_list.extend(self._parse_host_from_dict(item))
+            else:
+                hosts_list.append(item)
+
+        return hosts_list
 
     def _get_hosts_list(self, raw_data: dict | list[dict] | None) -> list[dict]:
         if not raw_data:
             return []
 
-        hosts_list = []
         if isinstance(raw_data, dict):
-            host_data = raw_data.get("HOST")
-            if isinstance(host_data, list):
-                hosts_list.extend(host_data)
-            elif isinstance(host_data, dict):
-                hosts_list.append(host_data)
+            return self._parse_host_from_dict(raw_data)
 
-        elif isinstance(raw_data, list):
-            for item in raw_data:
-                if isinstance(item, dict):
-                    if "HOST" in item:
-                        sub_host = item.get("HOST")
-                        if isinstance(sub_host, list):
-                            hosts_list.extend(sub_host)
-                        elif isinstance(sub_host, dict):
-                            hosts_list.append(sub_host)
-                    else:
-                        hosts_list.append(item)
+        if isinstance(raw_data, list):
+            return self._parse_hosts_from_list(raw_data)
 
-        return hosts_list
+        return []
 
     def filter_hostname(
         self, raw_data: dict | list[dict] | None, hostname: str
@@ -159,8 +170,10 @@ class QualysVMParser:
         return None
 
     def build_endpointdetection_object(
-        self, raw_data: dict
+        self, raw_data: dict | None
     ) -> list[EndpointDetection]:
+        if not isinstance(raw_data, dict):
+            return []
         vuln_list_data = raw_data.get("VULN_LIST")
         vulnerabilities = (
             vuln_list_data.get("VULN") if isinstance(vuln_list_data, dict) else None
