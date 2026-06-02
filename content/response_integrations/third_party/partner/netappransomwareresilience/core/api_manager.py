@@ -322,7 +322,7 @@ class ApiManager:
             system_id: Storage system ID, extracted from action parameters.
 
         Returns:
-            dict: Response data from the volume online API.
+            Response data from the volume online API.
 
         Raises:
             requests.HTTPError: If the API call returns a non-2xx status code.

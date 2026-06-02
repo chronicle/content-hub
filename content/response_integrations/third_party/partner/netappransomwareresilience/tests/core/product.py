@@ -26,7 +26,7 @@ class RansomwareResilience:
     take_snapshot_response: Optional[SingleJson] = None
     volume_offline_response: Optional[SingleJson] = None
     volume_online_response: Optional[SingleJson] = None
-    block_user_response: Optional[SingleJson] = None
+    block_user_response: SingleJson | None = None
 
     # Error simulation — set to a non-2xx code to trigger error responses
     token_status_code: Optional[int] = None
@@ -35,7 +35,7 @@ class RansomwareResilience:
     check_job_status_status_code: Optional[int] = None
     take_snapshot_status_code: Optional[int] = None
     volume_offline_status_code: Optional[int] = None
-    volume_online_status_code: Optional[int] = None
+    volume_online_status_code: int | None = None
     block_user_status_code: Optional[int] = None
 
     def get_token(self) -> SingleJson:
