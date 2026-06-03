@@ -27,9 +27,9 @@ from urllib.parse import urlparse
 import requests
 from requests.auth import AuthBase
 from requests.structures import CaseInsensitiveDict
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
-from soar_sdk.SiemplifyJob import SiemplifyJob
+from SiemplifyAction import SiemplifyAction
+from SiemplifyConnectors import SiemplifyConnectorExecution
+from SiemplifyJob import SiemplifyJob
 from TIPCommon.base.interfaces import Authable
 from TIPCommon.base.utils import CreateSession
 from TIPCommon.extraction import extract_script_param
@@ -72,16 +72,15 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
         ThreatConnectError: If the SOAR instance type is not supported.
 
     """
-    sdk_class = type(soar_sdk_object).__name__
-    if sdk_class == SiemplifyAction.__name__:
-        input_dictionary = soar_sdk_object.get_configuration(INTEGRATION_NAME)  # type: ignore[union-attr]
-    elif sdk_class in (
-        SiemplifyConnectorExecution.__name__,
-        SiemplifyJob.__name__,
+    if isinstance(soar_sdk_object, SiemplifyAction):
+        input_dictionary = soar_sdk_object.get_configuration(INTEGRATION_NAME)
+    elif isinstance(
+        soar_sdk_object,
+        (SiemplifyConnectorExecution, SiemplifyJob),
     ):
         input_dictionary = soar_sdk_object.parameters
     else:
-        msg = f"Provided SOAR instance is not supported! type: {sdk_class}."
+        msg = f"Provided SOAR instance is not supported! type: {type(soar_sdk_object).__name__}."
         raise ThreatConnectError(msg)
 
     api_access_id = extract_script_param(
@@ -168,4 +167,7 @@ class AuthenticatedSession(Authable):
 
     def __getattr__(self, name: str) -> Any:
         """Delegate all missing attributes (e.g. get, post, request) to the underlying session."""
+        if name == "session":
+            msg = "session is not initialized"
+            raise AttributeError(msg)
         return getattr(self.session, name)

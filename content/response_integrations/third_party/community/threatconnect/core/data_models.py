@@ -133,7 +133,9 @@ class IndicatorData(BaseDataModel):
         if isinstance(tags_data, dict):
             tags_list = tags_data.get("data", []) or []
             self.tags = [
-                tag.get("name") for tag in tags_list if tag.get("name")
+                tag.get("name")
+                for tag in tags_list
+                if isinstance(tag, dict) and tag.get("name")
             ]
         elif isinstance(tags_data, list):
             for tag in tags_data:
@@ -148,6 +150,8 @@ class IndicatorData(BaseDataModel):
         self.raw_attributes = []
         if isinstance(attributes_data, dict):
             for attr in attributes_data.get("data", []) or []:
+                if not isinstance(attr, dict):
+                    continue
                 attr_type = attr.get("type")
                 attr_val = attr.get("value")
                 if attr_type and attr_val:
@@ -181,7 +185,7 @@ class IndicatorData(BaseDataModel):
                 "securityLabel": [
                     {"name": label.get("name")}
                     for label in labels_data.get("data", []) or []
-                    if label.get("name")
+                    if isinstance(label, dict) and label.get("name")
                 ]
             }
         else:

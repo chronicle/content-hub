@@ -74,9 +74,15 @@ def validate_response(
         response.raise_for_status()
 
     except requests.HTTPError as error:
-        content_str = error.response.content.decode("utf-8") if error.response.content else ""
+        response = error.response
+        content_str = (
+            response.content.decode("utf-8")
+            if response is not None and response.content
+            else ""
+        )
+        status_code = response.status_code if response is not None else None
         msg = f"{error_msg}: {error} {content_str}"
         raise ThreatConnectHTTPError(
             msg,
-            status_code=error.response.status_code,
+            status_code=status_code,
         ) from error

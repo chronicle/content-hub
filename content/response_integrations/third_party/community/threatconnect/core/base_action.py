@@ -55,11 +55,11 @@ class ThreatConnectAction(Action[ThreatConnectApiClient], ABC):
         )
 
     @property
-    def result_value(self) -> bool:
+    def result_value(self) -> bool | str:
         """Get the result value for the action."""
         return self._result_value
 
     @result_value.setter
-    def result_value(self, value: bool) -> None:
+    def result_value(self, value: bool | str) -> None:
         """Set the result value for the action."""
         self._result_value = value

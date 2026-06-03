@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from soar_sdk.SiemplifyLogger import SiemplifyLogger
     from TIPCommon.types import SingleJson
 
-from .exceptions import ThreatConnectFileError, ThreatConnectInvalidJsonError
+from .exceptions import ThreatConnectInvalidJsonError
 
 FILE_NAME = "threatconnect_response"
 ZIP_FILE_EXTENSION = ".zip"
@@ -114,8 +114,12 @@ def convert_to_base_64(data: Any) -> str:  # noqa: ANN401
         str: base 64 encoded string.
 
     """
-    base64_bytes: bytes = base64.b64encode(str(data).encode())
-    return base64_bytes.decode()
+    if isinstance(data, (dict, list)):
+        serialized = json.dumps(data)
+    else:
+        serialized = str(data)
+    base64_bytes: bytes = base64.b64encode(serialized.encode("utf-8"))
+    return base64_bytes.decode("utf-8")
 
 
 def save_attachment_to_case_wall(
@@ -183,21 +187,14 @@ def extract_file_extension(response_headers: CaseInsensitiveDict[str]) -> str:
     Returns:
         str: file extension.
 
-    Raises:
-        ThreatConnectFileError: If unable to extract file extension.
-
     """
     mimetype: str | None = response_headers.get("Content-Type")
 
     if not mimetype:
-        msg = "Unable to extract file extension from response headers"
-        raise ThreatConnectFileError(msg)
+        return ".bin"
 
     extension: str | None = mimetypes.guess_extension(mimetype.partition(";")[0].strip())
-    if not extension:
-        msg = f"Could not determine file extension for mimetype: {mimetype}"
-        raise ThreatConnectFileError(msg)
-    return extension
+    return extension or ".bin"
 
 
 def extract_file_name(response_headers: CaseInsensitiveDict[str]) -> str:
@@ -211,7 +208,7 @@ def extract_file_name(response_headers: CaseInsensitiveDict[str]) -> str:
 
     """
     content_disposition: str = response_headers.get("Content-Disposition", "")
-    file_name_match: list[str] = re.findall(r'filename="([^"]*)\.', content_disposition)
+    file_name_match: list[str] = re.findall(r'filename="?([^";\n]*)\.', content_disposition)
 
     if file_name_match:
         return file_name_match[0]

@@ -117,7 +117,7 @@ class TestEnrichEntities:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         msg = action_output.results.output_message
-        assert "Following entities were enriched by ThreatConnect." in msg
+        assert "Successfully enriched on the following entities using ThreatConnect" in msg
         assert (
             re.search(
                 r"HTTP://MARKOSSOLOMON\.COM/F1Q7QX\.PHP",
@@ -147,7 +147,10 @@ class TestEnrichEntities:
 
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert "No entities were enriched." in action_output.results.output_message
+        assert (
+            "Action wasn't able to enrich on the following entities using ThreatConnect."
+            in action_output.results.output_message
+        )
         assert action_output.results.result_value is False
 
     @set_metadata(
@@ -179,7 +182,7 @@ class TestEnrichEntities:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         msg = action_output.results.output_message
-        assert "Following entities were enriched by ThreatConnect." in msg
+        assert "Successfully enriched on the following entities using ThreatConnect" in msg
         assert (
             re.search(
                 r"HTTP://MARKOSSOLOMON\.COM/F1Q7QX\.PHP",

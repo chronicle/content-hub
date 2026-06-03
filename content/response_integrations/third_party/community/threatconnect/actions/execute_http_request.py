@@ -213,7 +213,7 @@ class ExecuteHttpRequest(ThreatConnectAction):
             if wait_for_expected_values:
                 self.output_message = "Successfully executed API request. Waiting for expected response values."
                 self.execution_state = ExecutionState.IN_PROGRESS
-                self.result_value = json.dumps(results)  # type: ignore[assignment]
+                self.result_value = json.dumps(results)
                 return
 
             if self.params.save_to_case_wall:
@@ -224,7 +224,7 @@ class ExecuteHttpRequest(ThreatConnectAction):
                     logger=self.logger,
                 )
 
-            self.result_value = True  # type: ignore[assignment]
+            self.result_value = True
 
         except ThreatConnectHTTPError as error:
             self.logger.exception("Failed to execute request.")
