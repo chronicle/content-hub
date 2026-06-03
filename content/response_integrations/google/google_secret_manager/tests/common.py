@@ -12,10 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-- description: 'New Integration Added - Akeyless'
-  version: 1.0
-  item_name: Akeyless
-  item_type: Integration
-  publish_time: '2026-06-03'
-  new: true
-  ticket_number: '470917810'
+from __future__ import annotations
+
+import pathlib
+
+from integration_testing.common import get_def_file_content
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
+CONFIG_PATH: pathlib.Path = pathlib.Path.joinpath(
+    INTEGRATION_PATH,
+    "tests",
+    "config.json",
+)
+CONFIG: SingleJson = get_def_file_content(CONFIG_PATH)
