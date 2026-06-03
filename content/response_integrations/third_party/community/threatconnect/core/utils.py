@@ -24,14 +24,13 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import pyzipper
+import requests
 from TIPCommon.data_models import CaseWallAttachment
 from TIPCommon.rest.soar_api import (
     save_attachment_to_case_wall as soar_save_attachment_to_case_wall,
 )
 
 if TYPE_CHECKING:
-    import requests
-    from requests.structures import CaseInsensitiveDict
     from soar_sdk.SiemplifyAction import SiemplifyAction
     from soar_sdk.SiemplifyLogger import SiemplifyLogger
     from TIPCommon.types import SingleJson
@@ -174,15 +173,17 @@ def save_attachment_to_case_wall(
         )
         logger.info(f"Successfully added file to {soar_action.case_id} case.")  # noqa: G004
 
-    except Exception:
-        logger.exception(f"Failed to attach file to {soar_action.case_id} case.")  # noqa: G004
+    except Exception as e:
+        logger.exception(
+            f"Failed to attach file to {soar_action.case_id} case. Error: {e}"
+        )
 
 
-def extract_file_extension(response_headers: CaseInsensitiveDict[str]) -> str:
+def extract_file_extension(response_headers: dict[str, str]) -> str:
     """Extract file extension from response headers.
 
     Args:
-        response_headers (CaseInsensitiveDict[str]): response headers.
+        response_headers (dict[str, str]): response headers.
 
     Returns:
         str: file extension.
@@ -197,11 +198,11 @@ def extract_file_extension(response_headers: CaseInsensitiveDict[str]) -> str:
     return extension or ".bin"
 
 
-def extract_file_name(response_headers: CaseInsensitiveDict[str]) -> str:
+def extract_file_name(response_headers: dict[str, str]) -> str:
     """Extract file name from response headers.
 
     Args:
-        response_headers (CaseInsensitiveDict[str]): response headers.
+        response_headers (dict[str, str]): response headers.
 
     Returns:
         str: file name.

@@ -261,9 +261,10 @@ class EnrichEntities(ThreatConnectAction):
             )
             self.result_value = True
         else:
+            ids = ", ".join(e.identifier for e in self.soar_action.target_entities)
             self.output_message = (
                 "Action wasn't able to enrich on the following entities using "
-                "ThreatConnect."
+                f"ThreatConnect: {ids}"
             )
             self.result_value = False
 

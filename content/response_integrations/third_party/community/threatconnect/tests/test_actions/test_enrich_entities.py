@@ -148,7 +148,8 @@ class TestEnrichEntities:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert (
-            "Action wasn't able to enrich on the following entities using ThreatConnect."
+            "Action wasn't able to enrich on the following entities using "
+            "ThreatConnect: HTTP://MARKOSSOLOMON.COM/F1Q7QX.PHP, 1.1.1.1"
             in action_output.results.output_message
         )
         assert action_output.results.result_value is False
