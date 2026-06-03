@@ -26,7 +26,10 @@ if TYPE_CHECKING:
 
     from ..core.api.api_client import ThreatConnectApiClient
 
-SUCCESS_MESSAGE: str = "Successfully connected to the ThreatConnect server with the provided connection parameters!"
+SUCCESS_MESSAGE: str = (
+    "Successfully connected to the ThreatConnect server with the provided "
+    "connection parameters!"
+)
 ERROR_MESSAGE: str = "Failed to connect to the ThreatConnect server! Error is {error}"
 
 

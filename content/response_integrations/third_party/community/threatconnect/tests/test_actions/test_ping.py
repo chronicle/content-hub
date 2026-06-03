@@ -27,9 +27,9 @@ if TYPE_CHECKING:
     from integration_testing.platform.script_output import MockActionOutput
     from integration_testing.request import MockRequest
 
-    from threatconnect.tests.core.session import ThreatConnectSession
+    from ..core.session import ThreatConnectSession
 
-from threatconnect.actions import ping
+from ...actions import ping
 
 CONFIG_PATH = pathlib.Path(__file__).parent.parent / "config.json"
 

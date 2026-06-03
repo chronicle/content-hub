@@ -113,11 +113,14 @@ def convert_to_base_64(data: Any) -> str:  # noqa: ANN401
         Base 64 encoded string.
 
     """
-    if isinstance(data, (dict, list)):
+    if isinstance(data, bytes):
+        base64_bytes = base64.b64encode(data)
+        return base64_bytes.decode("utf-8")
+    elif isinstance(data, (dict, list)):
         serialized = json.dumps(data)
     else:
         serialized = str(data)
-    base64_bytes: bytes = base64.b64encode(serialized.encode("utf-8"))
+    base64_bytes = base64.b64encode(serialized.encode("utf-8"))
     return base64_bytes.decode("utf-8")
 
 
@@ -217,6 +220,22 @@ def extract_file_name(response_headers: dict[str, str]) -> str:
     return FILE_NAME
 
 
+def get_response_data(response: requests.Response) -> Any:  # noqa: ANN401
+    """Get response data from requests.Response.
+
+    Args:
+        response: request response.
+
+    Returns:
+        Response data as parsed json dict/list or text string.
+
+    """
+    try:
+        return response.json()
+    except json.JSONDecodeError:
+        return response.text
+
+
 def get_results_from_response(
     response: requests.Response,
     fields_to_return: list[str],
@@ -234,14 +253,10 @@ def get_results_from_response(
         Results from response.
 
     """
-    response_data: Any
-    try:
-        response_data = response.json()
-    except json.JSONDecodeError:
-        response_data = response.text
+    response_data = get_response_data(response)
 
     results: dict[str, Any] = {
-        "response_data": (convert_to_base_64(response_data) if base64_output else response_data),
+        "response_data": (convert_to_base_64(response.content) if base64_output else response_data),
         "redirects": [item.url for item in response.history] + [response.url],
         "response_code": response.status_code,
         "response_cookies": response.cookies.get_dict(),

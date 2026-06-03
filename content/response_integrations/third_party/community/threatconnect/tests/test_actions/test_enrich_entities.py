@@ -26,13 +26,13 @@ from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import EntityTypesEnum, ExecutionState
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
 
-from threatconnect.actions import enrich_entities
-from threatconnect.core.data_models import IndicatorData
-from threatconnect.tests.common import CONFIG_PATH, INDICATOR_MOCK_RAW
+from ...actions import enrich_entities
+from ...core.data_models import IndicatorData
+from ..common import CONFIG_PATH, INDICATOR_MOCK_RAW
 
 if TYPE_CHECKING:
-    from threatconnect.tests.core.product import ThreatConnectProduct
-    from threatconnect.tests.core.session import ThreatConnectSession
+    from ..core.product import ThreatConnectProduct
+    from ..core.session import ThreatConnectSession
 
 URL_VAL = "http://markossolomon.com/f1q7qx.php"
 URL_ENTITY = create_entity(URL_VAL, EntityTypesEnum.URL)

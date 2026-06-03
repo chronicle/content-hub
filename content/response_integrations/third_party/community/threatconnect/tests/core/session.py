@@ -28,7 +28,7 @@ from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, Response, RouteFunction
 
-from threatconnect.tests.common import (
+from ..common import (
     ALERT_FULL_DETAILS_MOCK,
     INDICATOR_MOCK_RAW,
     INDICATORS_LIST_MOCK,

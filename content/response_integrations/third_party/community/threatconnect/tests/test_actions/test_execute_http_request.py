@@ -27,9 +27,9 @@ if TYPE_CHECKING:
     from integration_testing.platform.script_output import MockActionOutput
     from integration_testing.request import MockRequest
 
-    from threatconnect.tests.core.session import ThreatConnectSession
+    from ..core.session import ThreatConnectSession
 
-from threatconnect.actions import execute_http_request
+from ...actions import execute_http_request
 
 CONFIG_PATH = pathlib.Path(__file__).parent.parent / "config.json"
 
@@ -56,7 +56,10 @@ class TestExecuteHttpRequest:
 
         assert len(script_session.request_history) == 1
         request = script_session.request_history[0].request
-        assert request.url.geturl() == "https://partners.threatconnect.com/api/v3/indicators?resultLimit=1"
+        assert (
+            request.url.geturl()
+            == "https://partners.threatconnect.com/api/v3/indicators?resultLimit=1"
+        )
         assert request.method.value == "GET"
 
         assert action_output.results is not None

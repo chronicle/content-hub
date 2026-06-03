@@ -76,7 +76,7 @@ def validate_response(
     except requests.HTTPError as error:
         response = error.response
         content_str = (
-            response.content.decode("utf-8")
+            response.content.decode("utf-8", errors="replace")
             if response is not None and response.content
             else ""
         )

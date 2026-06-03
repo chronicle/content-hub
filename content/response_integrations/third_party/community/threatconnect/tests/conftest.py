@@ -21,8 +21,8 @@ from integration_testing.common import use_live_api
 from soar_sdk.SiemplifyBase import SiemplifyBase
 from TIPCommon.base.utils import CreateSession
 
-from threatconnect.tests.core.product import ThreatConnectProduct
-from threatconnect.tests.core.session import ThreatConnectSession
+from .core.product import ThreatConnectProduct
+from .core.session import ThreatConnectSession
 
 pytest_plugins = ("integration_testing.conftest",)
 

@@ -206,12 +206,14 @@ class ExecuteHttpRequest(ThreatConnectAction):
             wait_for_expected_values: bool = (
                 self.params.expected_response_values
                 and not utils.validate_expected_values(
-                    data=results.get("response_data"),
+                    data=utils.get_response_data(response),
                     expected_values=self.params.expected_response_values,
                 )
             )
             if wait_for_expected_values:
-                self.output_message = "Successfully executed API request. Waiting for expected response values."
+                self.output_message = (
+                    "Successfully executed API request. Waiting for expected response values."
+                )
                 self.execution_state = ExecutionState.IN_PROGRESS
                 self.result_value = json.dumps(results)
                 return
@@ -228,7 +230,11 @@ class ExecuteHttpRequest(ThreatConnectAction):
 
         except ThreatConnectHTTPError as error:
             self.logger.exception("Failed to execute request.")
-            if self.params.fail_on_error and error.status_code and error.status_code >= ERROR_STATUS_CODE_THRESHOLD:
+            if (
+                self.params.fail_on_error
+                and error.status_code
+                and error.status_code >= ERROR_STATUS_CODE_THRESHOLD
+            ):
                 raise
 
             self.output_message = (

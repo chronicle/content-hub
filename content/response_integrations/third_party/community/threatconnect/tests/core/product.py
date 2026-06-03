@@ -20,7 +20,7 @@ import dataclasses
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from threatconnect.core.data_models import IndicatorData
+    from ...core.data_models import IndicatorData
 
 
 @dataclasses.dataclass(slots=True)

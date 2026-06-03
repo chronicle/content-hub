@@ -28,7 +28,9 @@ class ThreatConnectAction(Action[ThreatConnectApiClient], ABC):
     """Base action class for ThreatConnect integration."""
 
     def _init_api_clients(self) -> ThreatConnectApiClient:
-        """Initialize and return the ThreatConnect V3 API client using the standard TIPCommon interfaces.
+        """Initialize and return the ThreatConnect V3 API client.
+
+        Uses the standard TIPCommon interfaces.
 
         Returns:
             The configured API client.

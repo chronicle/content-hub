@@ -29,12 +29,13 @@ from TIPCommon.base.interfaces import Apiable
 
 # Local imports
 from ..data_models import IndicatorData
+from ..exceptions import ThreatConnectHTTPError
 from .api_utils import get_full_url, validate_response
 
 if TYPE_CHECKING:
     from logging import Logger
 
-    from ...core.auth import AuthenticatedSession
+    from ..auth import AuthenticatedSession
 
 
 @dataclasses.dataclass(slots=True)
@@ -153,6 +154,16 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
                 data = response.json().get("data")
                 if data:
                     results.append(IndicatorData(data))
+            except ThreatConnectHTTPError as e:
+                if e.status_code == 404:
+                    self.logger.debug(
+                        f"Indicator {indicator_value} not found in owner {owner}."
+                    )
+                else:
+                    self.logger.warn(
+                        f"Failed to fetch data for indicator {indicator_value} "
+                        f"from owner {owner}: {e}"
+                    )
             except Exception as e:
                 self.logger.warn(
                     f"Failed to fetch data for indicator {indicator_value} "
