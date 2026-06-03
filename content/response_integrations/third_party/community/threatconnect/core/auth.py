@@ -60,10 +60,10 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
     """Extract configuration parameters for ThreatConnect integration.
 
     Args:
-        soar_sdk_object (ChronicleSOAR): ChronicleSOAR SDK object.
+        soar_sdk_object: ChronicleSOAR SDK object.
 
     Returns:
-        IntegrationParameters: Parsed integration parameters.
+        Parsed integration parameters.
 
     Raises:
         ThreatConnectError: If the SOAR instance type is not supported.

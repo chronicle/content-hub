@@ -31,7 +31,7 @@ class ThreatConnectAction(Action[ThreatConnectApiClient], ABC):
         """Initialize and return the ThreatConnect V3 API client using the standard TIPCommon interfaces.
 
         Returns:
-            ThreatConnectApiClient: The configured API client.
+            The configured API client.
 
         """
         auth_params = build_auth_params(self.soar_action)

@@ -181,10 +181,10 @@ class IndicatorData(BaseDataModel):
         """Parse security labels and mapped envelope count."""
         if isinstance(labels_data, dict):
             self.security_labels = {
-                "resultCount": len(labels_data.get("data", [])),
+                "resultCount": len(labels_data.get("data") or []),
                 "securityLabel": [
                     {"name": label.get("name")}
-                    for label in labels_data.get("data", []) or []
+                    for label in labels_data.get("data") or []
                     if isinstance(label, dict) and label.get("name")
                 ]
             }

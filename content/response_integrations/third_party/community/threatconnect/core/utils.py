@@ -49,7 +49,7 @@ def parse_string_to_dict(string: str) -> SingleJson:
         string: string to parse.
 
     Returns:
-        SingleJson: parsed dict.
+        Parsed dict.
 
     Raises:
         ThreatConnectInvalidJsonError: If provided JSON string is invalid.
@@ -69,11 +69,11 @@ def validate_expected_values(  # noqa: PLR0911
     """Validate data by recursively checking expected values.
 
     Args:
-        data (Any): data to validate.
-        expected_values (dict[str, Any]): expected values.
+        data: data to validate.
+        expected_values: expected values.
 
     Returns:
-        bool: True if expected values are in data False otherwise.
+        True if expected values are in data False otherwise.
 
     """
     if not isinstance(data, dict):
@@ -107,10 +107,10 @@ def convert_to_base_64(data: Any) -> str:  # noqa: ANN401
     """Convert data to base 64 encoded string.
 
     Args:
-        data (Any): data to convert.
+        data: data to convert.
 
     Returns:
-        str: base 64 encoded string.
+        Base 64 encoded string.
 
     """
     if isinstance(data, (dict, list)):
@@ -131,10 +131,10 @@ def save_attachment_to_case_wall(
     """Save attachment to case wall.
 
     Args:
-        soar_action (SiemplifyAction): SiemplifyAction object.
-        response (requests.Response): requests.Response object.
-        password_protect_zip (bool): specifies if zip should be password protected.
-        logger (SiemplifyLogger): SiemplifyLogger object.
+        soar_action: SiemplifyAction object.
+        response: requests.Response object.
+        password_protect_zip: specifies if zip should be password protected.
+        logger: SiemplifyLogger object.
 
     """
     try:
@@ -183,10 +183,10 @@ def extract_file_extension(response_headers: dict[str, str]) -> str:
     """Extract file extension from response headers.
 
     Args:
-        response_headers (dict[str, str]): response headers.
+        response_headers: response headers.
 
     Returns:
-        str: file extension.
+        File extension.
 
     """
     mimetype: str | None = response_headers.get("Content-Type")
@@ -202,13 +202,13 @@ def extract_file_name(response_headers: dict[str, str]) -> str:
     """Extract file name from response headers.
 
     Args:
-        response_headers (dict[str, str]): response headers.
+        response_headers: response headers.
 
     Returns:
-        str: file name.
+        File name.
 
     """
-    content_disposition: str = response_headers.get("Content-Disposition", "")
+    content_disposition: str = response_headers.get("Content-Disposition") or ""
     file_name_match: list[str] = re.findall(r'filename="?([^";\n]*)\.', content_disposition)
 
     if file_name_match:
@@ -226,12 +226,12 @@ def get_results_from_response(
     """Get results from response.
 
     Args:
-        response (requests.Response): request response.
-        fields_to_return (list[str]): list of fields to return in results.
-        base64_output (bool): specifies if response data should be converted to base64.
+        response: request response.
+        fields_to_return: list of fields to return in results.
+        base64_output: specifies if response data should be converted to base64.
 
     Returns:
-        SingleJson: results from response.
+        Results from response.
 
     """
     response_data: Any

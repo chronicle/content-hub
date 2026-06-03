@@ -37,13 +37,13 @@ def get_full_url(
     """Construct the full URL using a URL identifier and optional variables.
 
     Args:
-        api_root (str): The root of the API endpoint.
-        endpoint_id (str): The identifier for the specific URL.
-        endpoints (dict[str, str], optional): endpoints dictionary object.
-        kwargs (dict): Variables passed for string formatting.
+        api_root: The root of the API endpoint.
+        endpoint_id: The identifier for the specific URL.
+        endpoints: endpoints dictionary object.
+        kwargs: Variables passed for string formatting.
 
     Returns:
-        str: The full URL constructed from API root, endpoint identifier and variables.
+        The full URL constructed from API root, endpoint identifier and variables.
 
     """
     endpoints = endpoints or ENDPOINTS
@@ -57,8 +57,8 @@ def validate_response(
     """Validate response.
 
     Args:
-        response (requests.Response): Response to validate.
-        error_msg (str): Default message to display on error.
+        response: Response to validate.
+        error_msg: Default message to display on error.
 
     Raises:
         InvalidRequestParametersError: If the response status code is 422.
