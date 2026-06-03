@@ -12,10 +12,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-- description: 'New Integration Added - Akeyless'
-  version: 1.0
-  item_name: Akeyless
-  item_type: Integration
-  publish_time: '2026-06-03'
-  new: true
-  ticket_number: '470917810'
