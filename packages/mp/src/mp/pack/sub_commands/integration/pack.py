@@ -40,6 +40,10 @@ def pack_integration(  # noqa: PLR0913
     src: Annotated[
         Path | None,
         typer.Option(
+            exists=True,
+            dir_okay=True,
+            file_okay=False,
+            resolve_path=True,
             help=(
                 "Source directory containing the integration. "
                 "If not specified, the command will search for the integration in the default 'content' directory."
@@ -67,6 +71,10 @@ def pack_integration(  # noqa: PLR0913
         typer.Option(
             "--dst",
             "-d",
+            exists=True,
+            dir_okay=True,
+            file_okay=False,
+            resolve_path=True,
             help="Destination directory to save the ZIP file. Defaults to 'out' directory.",
         ),
     ] = None,
