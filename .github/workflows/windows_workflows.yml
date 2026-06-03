@@ -138,7 +138,7 @@ jobs:
 
   test-mp-windows:
     name: 1. Test mp Package
-    needs: changes
+    needs: [ changes ]
     if: ${{ needs.changes.outputs.mp == 'true' || needs.changes.outputs.ci == 'true' }}
     runs-on: windows-latest
     steps:
@@ -154,14 +154,14 @@ jobs:
         run: |
           python -m pip install uv
           uv pip install --system -e ./packages/mp
-          uv pip install --system pytest pytest-cov pytest-xdist hypothesis
+          uv pip install --system pytest pytest-cov pytest-xdist hypothesis pytest-json-report
       - name: Run pytest
         working-directory: packages/mp
         run: python -m pytest tests -n 7 --cov
 
   test-tipcommon-windows:
     name: 1b. Test TIPCommon Package
-    needs: changes
+    needs: [ changes ]
     if: ${{ needs.changes.outputs.tipcommon == 'true' || needs.changes.outputs.ci == 'true' }}
     runs-on: windows-latest
     steps:
@@ -183,7 +183,7 @@ jobs:
 
   validate-content-windows:
     name: 2. Validate Content
-    needs: changes
+    needs: [ changes ]
     if: >-
       needs.changes.outputs.should_validate == 'true' &&
       (github.event_name != 'pull_request' ||
@@ -217,7 +217,8 @@ jobs:
 
   run-integrations-tests-windows:
     name: 3. Test Integrations
-    needs: [ changes, validate-content-windows ]
+    needs: [ changes ]
+    if: needs.changes.outputs.should_validate == 'true'
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -247,7 +248,8 @@ jobs:
 
   mp-build-integrations-windows:
     name: 4. Build Integrations
-    needs: [ changes, run-integrations-tests-windows ]
+    needs: [ changes ]
+    if: needs.changes.outputs.should_validate == 'true'
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -276,7 +278,8 @@ jobs:
 
   mp-build-playbooks-windows:
     name: 5. Build Playbooks
-    needs: [ changes, validate-content-windows ]
+    needs: [ changes ]
+    if: needs.changes.outputs.should_validate == 'true'
     runs-on: windows-latest
     steps:
       - name: Checkout repository
