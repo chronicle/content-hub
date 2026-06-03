@@ -17,15 +17,11 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import TYPE_CHECKING
 
 from TIPCommon.base.action import Action
 
 from ..core.api.api_client import ApiParameters, ThreatConnectApiClient
 from ..core.auth import AuthenticatedSession, SessionAuthenticationParameters, build_auth_params
-
-if TYPE_CHECKING:
-    import requests
 
 
 class ThreatConnectAction(Action[ThreatConnectApiClient], ABC):
@@ -46,7 +42,6 @@ class ThreatConnectAction(Action[ThreatConnectApiClient], ABC):
             verify_ssl=auth_params.verify_ssl,
         )
         authenticator.authenticate_session(auth_params_for_session)
-        authenticated_session: requests.Session = authenticator.session
 
         api_params = ApiParameters(
             api_root=auth_params.api_root,
@@ -54,7 +49,7 @@ class ThreatConnectAction(Action[ThreatConnectApiClient], ABC):
         )
 
         return ThreatConnectApiClient(
-            authenticated_session=authenticated_session,  # type: ignore[arg-type]
+            authenticated_session=authenticator,
             configuration=api_params,
             logger=self.logger,
         )

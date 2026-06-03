@@ -62,7 +62,7 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
         logger: Logger,
     ) -> None:
         super().__init__(
-            authenticated_session=authenticated_session,  # type: ignore[arg-type]
+            authenticated_session=authenticated_session,
             configuration=configuration,
         )
         self.api_root = configuration.api_root

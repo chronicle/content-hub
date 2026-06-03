@@ -32,8 +32,8 @@ from TIPCommon.rest.soar_api import (
 if TYPE_CHECKING:
     import requests
     from requests.structures import CaseInsensitiveDict
-    from SiemplifyAction import SiemplifyAction
-    from SiemplifyLogger import SiemplifyLogger
+    from soar_sdk.SiemplifyAction import SiemplifyAction
+    from soar_sdk.SiemplifyLogger import SiemplifyLogger
     from TIPCommon.types import SingleJson
 
 from .exceptions import ThreatConnectFileError, ThreatConnectInvalidJsonError

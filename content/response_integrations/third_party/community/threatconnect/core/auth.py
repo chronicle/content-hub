@@ -21,7 +21,7 @@ import dataclasses
 import hashlib
 import hmac
 import time
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 from urllib.parse import urlparse
 
 import requests
@@ -165,3 +165,7 @@ class AuthenticatedSession(Authable):
         session.verify = params.verify_ssl
         session.auth = ThreatConnectAuth(params.api_access_id, params.api_secret_key)
         self.session = session
+
+    def __getattr__(self, name: str) -> Any:
+        """Delegate all missing attributes (e.g. get, post, request) to the underlying session."""
+        return getattr(self.session, name)

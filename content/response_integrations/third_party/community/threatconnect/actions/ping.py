@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from ..core.api.api_client import ThreatConnectApiClient
 
 SUCCESS_MESSAGE: str = "Successfully connected to the ThreatConnect server with the provided connection parameters!"
-ERROR_MESSAGE: str = "Failed to connect to the ThreatConnect server!"
+ERROR_MESSAGE: str = "Failed to connect to the ThreatConnect server! Error is {error}"
 
 
 class Ping(ThreatConnectAction):
@@ -43,6 +43,10 @@ class Ping(ThreatConnectAction):
         client: ThreatConnectApiClient = self.api_client  # type: ignore[assignment]
         client.test_connectivity()
         self.result_value = True
+
+    def _finalize_action_on_failure(self, error: Exception) -> None:
+        """Set output message when execution fails."""
+        self.error_output_message = ERROR_MESSAGE.format(error=error)
 
 
 def main() -> None:
