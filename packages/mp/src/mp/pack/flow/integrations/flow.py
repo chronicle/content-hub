@@ -48,18 +48,6 @@ class PackConfig(NamedTuple):
     interactive: bool = True
 
 
-def pack_integration(integration_name: str, config: PackConfig) -> None:
-    """Flow for packing an integration into a SOAR-supported ZIP.
-
-    Args:
-        integration_name: The name of the integration to pack.
-        config: the pack configuration.
-
-    """
-    packer = IntegrationPacker(integration_name, config)
-    packer.pack()
-
-
 class IntegrationPacker:
     """Manages the packing flow of an integration."""
 

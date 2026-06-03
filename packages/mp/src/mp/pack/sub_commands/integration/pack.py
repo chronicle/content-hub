@@ -20,8 +20,7 @@ from typing import Annotated
 
 import typer
 
-from mp.pack.flow.integrations.flow import PackConfig
-from mp.pack.flow.integrations.flow import pack_integration as flow_pack_integration
+from mp.pack.flow.integrations.flow import IntegrationPacker, PackConfig
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -108,16 +107,14 @@ def pack_integration(  # noqa: PLR0913
 
     """
     try:
-        flow_pack_integration(
-            integration_name=integration,
-            config=PackConfig(
-                src=src,
-                version=version,
-                beta_name=beta,
-                zip_dst=zip_dst,
-                interactive=interactive,
-            ),
+        config = PackConfig(
+            src=src,
+            version=version,
+            beta_name=beta,
+            zip_dst=zip_dst,
+            interactive=interactive,
         )
+        IntegrationPacker(integration, config).pack()
     except Exception as e:
         logger.exception("Error occurred during integration packing")
         raise typer.Exit(code=1) from e
