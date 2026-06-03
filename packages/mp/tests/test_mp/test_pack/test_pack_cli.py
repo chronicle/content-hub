@@ -6,7 +6,7 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
+# Unless required by applicable law law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
@@ -20,6 +20,7 @@ from unittest import mock
 from typer.testing import CliRunner
 
 from mp.pack.typer_app import pack_app
+from mp.pack.flow.integrations.flow import PackConfig
 
 if TYPE_CHECKING:
     import pathlib
@@ -33,10 +34,13 @@ def test_pack_integration_cli() -> None:
         assert result.exit_code == 0
         mock_flow.assert_called_once_with(
             integration_name="cyber_x",
-            version=None,
-            beta_name=None,
-            zip_dst=None,
-            interactive=True,
+            config=PackConfig(
+                src=None,
+                version=None,
+                beta_name=None,
+                zip_dst=None,
+                interactive=True,
+            ),
         )
 
 
@@ -59,8 +63,37 @@ def test_pack_integration_options_cli(tmp_path: pathlib.Path) -> None:
         assert result.exit_code == 0
         mock_flow.assert_called_once_with(
             integration_name="cyber_x",
-            version="5.0",
-            beta_name="CyberXBeta",
-            zip_dst=tmp_path,
-            interactive=False,
+            config=PackConfig(
+                src=None,
+                version="5.0",
+                beta_name="CyberXBeta",
+                zip_dst=tmp_path,
+                interactive=False,
+            ),
+        )
+
+
+def test_pack_integration_with_src_cli(tmp_path: pathlib.Path) -> None:
+    with mock.patch("mp.pack.sub_commands.integration.pack.flow_pack_integration") as mock_flow:
+        src_path = tmp_path / "custom_integrations"
+        src_path.mkdir()
+        result = runner.invoke(
+            pack_app,
+            [
+                "integration",
+                "cyber_x",
+                "--src",
+                str(src_path),
+            ],
+        )
+        assert result.exit_code == 0
+        mock_flow.assert_called_once_with(
+            integration_name="cyber_x",
+            config=PackConfig(
+                src=src_path,
+                version=None,
+                beta_name=None,
+                zip_dst=None,
+                interactive=True,
+            ),
         )

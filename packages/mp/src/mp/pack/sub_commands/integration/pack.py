@@ -37,7 +37,16 @@ def pack_integration(  # noqa: PLR0913
         typer.Argument(help="The name of the integration to pack."),
     ],
     *,
-    source: Annotated[Path | None, typer.Option("--src", help="Source directory containing integrations.")] = None,
+    source: Annotated[
+        Path | None,
+        typer.Option(
+            "--src",
+            help=(
+                "Source directory containing the integration. "
+                "If not specified, the command will search for the integration in the default 'content' directory."
+            ),
+        ),
+    ] = None,
     version: Annotated[
         str | None,
         typer.Option(
@@ -72,13 +81,20 @@ def pack_integration(  # noqa: PLR0913
 ) -> None:
     """Run the `mp pack integration` command.
 
+    This command packs a specified integration into a SOAR-supported ZIP file.
+    It can be configured to use a specific source directory, pack a certain version,
+    apply a beta name, and specify an output directory for the ZIP file.
+
     Args:
         integration: The name of the integration to pack.
-        version: Old version to fetch from the repo.
-        beta: Name of the custom beta integration.
-        zip_dst: Destination directory to save the ZIP file.
-        interactive: Enable or disable interactive component selection.
-        source: The source directory of integrations.
+        source: Source directory containing the integration. If not provided,
+                the command searches in the default 'content' directory.
+        version: If specified, fetches the integration version from the repo.
+        beta: If specified, applies a custom beta name to the integration.
+        zip_dst: The destination directory for the created ZIP file.
+                 Defaults to the 'out/pack' directory.
+        interactive: Enables or disables the interactive component selection.
+                     Defaults to True.
 
     Raises:
         typer.Exit: If an error occurs during the packing process.
