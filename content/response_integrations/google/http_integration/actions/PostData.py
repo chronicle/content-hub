@@ -35,9 +35,7 @@ def main():
     siemplify.script_name = f"{INTEGRATION_NAME} - {POST_DATA_SCRIPT_NAME}"
     siemplify.LOGGER.info("================= Main - Param Init =================")
 
-    url = extract_action_param(
-        siemplify, param_name="URL", is_mandatory=True, print_value=True
-    )
+    url = extract_action_param(siemplify, param_name="URL", is_mandatory=True, print_value=True)
     username = extract_action_param(
         siemplify,
         param_name="Username",
@@ -63,12 +61,8 @@ def main():
         print_value=True,
     )
 
-    headers_str = extract_action_param(
-        siemplify, param_name="Headers JSON", is_mandatory=False, print_value=True
-    )
-    data = extract_action_param(
-        siemplify, param_name="Data", is_mandatory=True, print_value=True
-    )
+    headers_str = extract_action_param(siemplify, param_name="Headers JSON", is_mandatory=False, print_value=True)
+    data = extract_action_param(siemplify, param_name="Data", is_mandatory=True, print_value=True)
     content_type = extract_action_param(
         siemplify,
         param_name="Content Type",
@@ -90,7 +84,6 @@ def main():
         siemplify.LOGGER.error(f"Failed to load headers to json. Error is: {error}")
 
     try:
-
         request_attributes = {"url": url, "verify": ssl_verify}
 
         # Use basic auth
@@ -134,9 +127,7 @@ def main():
         output_message = "Response data: " + response.text
 
     except Exception as error:
-        output_message = (
-            f'Error execution action "{POST_DATA_SCRIPT_NAME}". Error is: {error}'
-        )
+        output_message = f'Error execution action "{POST_DATA_SCRIPT_NAME}". Error is: {error}'
         siemplify.LOGGER.info(output_message)
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED

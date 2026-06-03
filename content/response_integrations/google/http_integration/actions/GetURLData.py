@@ -91,9 +91,7 @@ def main():
 
                 try:
                     if not urllib.parse.urlparse(entity.identifier).scheme:
-                        siemplify.LOGGER.info(
-                            "No schema in the URL. Prepending http://"
-                        )
+                        siemplify.LOGGER.info("No schema in the URL. Prepending http://")
                         url = "http://" + entity.identifier
 
                     else:
@@ -103,25 +101,17 @@ def main():
 
                     if username and password:
                         try:
-                            response = requests.get(
-                                url, auth=(username, password), verify=ssl_verify
-                            )
+                            response = requests.get(url, auth=(username, password), verify=ssl_verify)
                         except requests.exceptions.InvalidSchema:
-                            siemplify.LOGGER.info(
-                                "No schema in the URL. Prepending http://"
-                            )
+                            siemplify.LOGGER.info("No schema in the URL. Prepending http://")
                             url = "http://" + entity.identifier
-                            response = requests.get(
-                                url, auth=(username, password), verify=ssl_verify
-                            )
+                            response = requests.get(url, auth=(username, password), verify=ssl_verify)
 
                     else:
                         try:
                             response = requests.get(url, verify=ssl_verify)
                         except requests.exceptions.InvalidSchema:
-                            siemplify.LOGGER.info(
-                                "No schema in the URL. Prepending http://"
-                            )
+                            siemplify.LOGGER.info("No schema in the URL. Prepending http://")
                             url = "http://" + entity.identifier
                             response = requests.get(url, verify=ssl_verify)
 
@@ -134,27 +124,19 @@ def main():
                     }
 
                     successful_entities.append(entity.identifier)
-                    siemplify.LOGGER.info(
-                        f"Finished processing entity {entity.identifier}"
-                    )
+                    siemplify.LOGGER.info(f"Finished processing entity {entity.identifier}")
 
                 except Exception as e:
                     failed_entities.append(entity.identifier)
-                    siemplify.LOGGER.error(
-                        f"An error occurred on entity {entity.identifier}"
-                    )
+                    siemplify.LOGGER.error(f"An error occurred on entity {entity.identifier}")
                     siemplify.LOGGER.exception(e)
 
         if successful_entities:
-            output_message += "Successfully processed entities:\n   {}".format(
-                "\n   ".join(successful_entities)
-            )
+            output_message += "Successfully processed entities:\n   {}".format("\n   ".join(successful_entities))
             result_value = "true"
 
         if failed_entities:
-            output_message += "\n\n Failed processing entities:\n   {}".format(
-                "\n   ".join(failed_entities)
-            )
+            output_message += "\n\n Failed processing entities:\n   {}".format("\n   ".join(failed_entities))
 
         if not failed_entities and not successful_entities:
             output_message = "No entities were processed."

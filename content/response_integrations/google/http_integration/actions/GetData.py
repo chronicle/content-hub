@@ -30,9 +30,7 @@ def main():
     siemplify.script_name = f"{INTEGRATION_NAME} - {GET_DATA_SCRIPT_NAME}"
     siemplify.LOGGER.info("================= Main - Param Init =================")
 
-    url = extract_action_param(
-        siemplify, param_name="URL", is_mandatory=True, print_value=True
-    )
+    url = extract_action_param(siemplify, param_name="URL", is_mandatory=True, print_value=True)
     username = extract_action_param(
         siemplify,
         param_name="Username",
@@ -57,9 +55,7 @@ def main():
         default_value=False,
         print_value=True,
     )
-    headers_str = extract_action_param(
-        siemplify, param_name="Headers JSON", is_mandatory=False, print_value=True
-    )
+    headers_str = extract_action_param(siemplify, param_name="Headers JSON", is_mandatory=False, print_value=True)
 
     ignore_http_error_codes = extract_action_param(
         siemplify,
@@ -113,9 +109,7 @@ def main():
         output_message = "Response data: " + response.text
 
     except Exception as error:
-        output_message = (
-            f'Error execution action "{GET_DATA_SCRIPT_NAME}". Error is: {error}'
-        )
+        output_message = f'Error execution action "{GET_DATA_SCRIPT_NAME}". Error is: {error}'
         siemplify.LOGGER.info(output_message)
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
