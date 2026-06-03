@@ -17,13 +17,9 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-
-from integration_testing import router
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable
 from urllib.parse import unquote
 
+from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, Response, RouteFunction
@@ -34,8 +30,10 @@ from ..common import (
     INDICATORS_LIST_MOCK,
     SECURITY_LABELS_MOCK,
 )
-
 from .product import ThreatConnectProduct
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 class ThreatConnectSession(MockSession[MockRequest, MockResponse, ThreatConnectProduct]):
