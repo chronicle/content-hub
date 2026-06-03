@@ -37,10 +37,9 @@ def pack_integration(  # noqa: PLR0913
         typer.Argument(help="The name of the integration to pack."),
     ],
     *,
-    source: Annotated[
+    src: Annotated[
         Path | None,
         typer.Option(
-            "--src",
             help=(
                 "Source directory containing the integration. "
                 "If not specified, the command will search for the integration in the default 'content' directory."
@@ -87,7 +86,7 @@ def pack_integration(  # noqa: PLR0913
 
     Args:
         integration: The name of the integration to pack.
-        source: Source directory containing the integration. If not provided,
+        src: Source directory containing the integration. If not provided,
                 the command searches in the default 'content' directory.
         version: If specified, fetches the integration version from the repo.
         beta: If specified, applies a custom beta name to the integration.
@@ -104,7 +103,7 @@ def pack_integration(  # noqa: PLR0913
         flow_pack_integration(
             integration_name=integration,
             config=PackConfig(
-                src=source,
+                src=src,
                 version=version,
                 beta_name=beta,
                 zip_dst=zip_dst,
