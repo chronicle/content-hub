@@ -168,6 +168,12 @@ def get_marketplace_integration_path(name: str) -> Path | None:
         if (p := base_path / name).exists() and is_integration(p):
             return p
 
+        # Check if the name matches a suffixed integration (e.g. 'http' -> 'http_integration')
+        suffixed_name: str = f"{name}_integration"
+        if suffixed_name in constants.INTEGRATIONS_WITH_INTEGRATION_SUFFIX:
+            if (p := base_path / suffixed_name).exists() and is_integration(p):
+                return p
+
     return None
 
 

@@ -237,6 +237,10 @@ class IntegrationMetadata(SingularComponentMetadata[BuiltIntegrationMetadata, No
             "NonBuiltIntegrationMetadata",
             cast("object", mp.core.file_utils.load_yaml_file(metadata_path)),
         )
+
+        if path.name in mp.core.constants.INTEGRATIONS_WITH_INTEGRATION_SUFFIX:
+            metadata_content["identifier"] = path.name.replace("_integration", "")
+
         _read_image_files(metadata_content, path)
 
         ai_fields: AiFields = _get_ai_fields(path)
