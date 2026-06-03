@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-- description: 'New Integration Added - Akeyless'
-  version: 1.0
-  item_name: Akeyless
-  item_type: Integration
-  publish_time: '2026-06-03'
-  new: true
-  ticket_number: '470917810'
+from __future__ import annotations
+
+from integration_testing.default_tests.import_test import import_all_integration_modules
+
+from .. import common
+
+
+def test_imports() -> None:
+    import_all_integration_modules(common.INTEGRATION_PATH)
