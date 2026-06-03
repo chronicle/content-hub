@@ -55,7 +55,9 @@ def test_pack_current_version(
 @mock.patch("mp.pack.flow.integrations.flow.get_current_version")
 @mock.patch("mp.pack.flow.integrations.flow.IntegrationPacker._checkout_version_from_git")
 @mock.patch("mp.pack.flow.integrations.flow.IntegrationPacker._build_and_process_integration")
+@mock.patch("mp.pack.flow.integrations.flow.remove_git_worktree")
 def test_pack_different_version(
+    mock_remove_worktree: mock.Mock,
     mock_build: mock.Mock,
     mock_checkout: mock.Mock,
     mock_get_version: mock.Mock,
@@ -73,6 +75,7 @@ def test_pack_different_version(
 
     mock_checkout.assert_called_once()
     mock_build.assert_called_once()
+    mock_remove_worktree.assert_called_once()
 
 
 def test_get_current_version_from_def(tmp_path: Path) -> None:
