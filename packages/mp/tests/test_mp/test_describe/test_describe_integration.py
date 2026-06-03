@@ -59,8 +59,8 @@ def test_describe_integration_command(tmp_path: Path, non_built_integration: Pat
                     asset_inventory=False,
                     collaboration=False,
                     reasoning="Some reason",
-                )
-            )
+                ),
+            ),
         ]
 
         # We need to mock get_integration_path and get_out_path

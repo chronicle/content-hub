@@ -18,7 +18,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
-from mp.build_project.flow.integrations.flow import build_integrations
+from mp.build_project.flow.integrations.flow import BuildIntegrationsParams, build_integrations
 
 if TYPE_CHECKING:
     import pathlib
@@ -40,17 +40,21 @@ def build_integration_for_pack(
     """
     if version is not None:
         build_integrations(
-            integrations=[integration_name],
-            repositories=[],
-            src=build_src.parent,
-            dst=temp_build_path,
-            custom_integration=True,
+            BuildIntegrationsParams(
+                integrations=[integration_name],
+                repositories=[],
+                src=build_src.parent,
+                dst=temp_build_path,
+                custom_integration=True,
+            )
         )
     else:
         build_integrations(
-            integrations=[integration_name],
-            repositories=[],
-            dst=temp_build_path,
+            BuildIntegrationsParams(
+                integrations=[integration_name],
+                repositories=[],
+                dst=temp_build_path,
+            )
         )
 
 
@@ -61,12 +65,17 @@ def set_is_custom(def_path: pathlib.Path) -> None:
         def_path: The path to the integration definition file.
 
     """
-    try:  # noqa: PLW0717
-        with def_path.open("r+", encoding="utf-8") as f:
+    try:
+        with def_path.open("r", encoding="utf-8") as f:
             def_data: dict[str, Any] = json.load(f)
-            def_data["IsCustom"] = True
-            f.seek(0)
-            json.dump(def_data, f, indent=4)
-            f.truncate()
     except (OSError, json.JSONDecodeError) as e:
+        logger.warning("Failed to read def file %s: %s", def_path, e)
+        return
+
+    def_data["IsCustom"] = True
+
+    try:
+        with def_path.open("w", encoding="utf-8") as f:
+            json.dump(def_data, f, indent=4)
+    except OSError as e:
         logger.warning("Failed to set IsCustom in %s: %s", def_path, e)
