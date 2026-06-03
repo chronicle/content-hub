@@ -19,8 +19,8 @@ from unittest import mock
 
 from typer.testing import CliRunner
 
-from mp.build_project.typer_app import build_app
 from mp.build_project.flow.integrations.flow import BuildIntegrationsParams
+from mp.build_project.typer_app import build_app
 
 if TYPE_CHECKING:
     import pathlib
