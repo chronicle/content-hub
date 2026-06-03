@@ -20,6 +20,7 @@ from typing import Annotated
 
 import typer
 
+from mp.pack.flow.integrations.flow import PackConfig
 from mp.pack.flow.integrations.flow import pack_integration as flow_pack_integration
 from mp.telemetry import track_command
 
@@ -30,12 +31,13 @@ app: typer.Typer = typer.Typer()
 
 @app.command(name="integration", help="Pack an integration into a SOAR supported ZIP")
 @track_command
-def pack_integration(
+def pack_integration(  # noqa: PLR0913
     integration: Annotated[
         str,
         typer.Argument(help="The name of the integration to pack."),
     ],
     *,
+    source: Annotated[Path | None, typer.Option("--src", help="Source directory containing integrations.")] = None,
     version: Annotated[
         str | None,
         typer.Option(
@@ -76,6 +78,7 @@ def pack_integration(
         beta: Name of the custom beta integration.
         zip_dst: Destination directory to save the ZIP file.
         interactive: Enable or disable interactive component selection.
+        source: The source directory of integrations.
 
     Raises:
         typer.Exit: If an error occurs during the packing process.
@@ -84,10 +87,13 @@ def pack_integration(
     try:
         flow_pack_integration(
             integration_name=integration,
-            version=version,
-            beta_name=beta,
-            zip_dst=zip_dst,
-            interactive=interactive,
+            config=PackConfig(
+                src=source,
+                version=version,
+                beta_name=beta,
+                zip_dst=zip_dst,
+                interactive=interactive,
+            ),
         )
     except Exception as e:
         logger.exception("Error occurred during integration packing")

@@ -41,10 +41,23 @@ class GitWorktreeContext(NamedTuple):
 class PackConfig(NamedTuple):
     """Configuration options for packing an integration."""
 
+    src: pathlib.Path | None = None
     version: str | None = None
     beta_name: str | None = None
     zip_dst: pathlib.Path | None = None
     interactive: bool = True
+
+
+def pack_integration(integration_name: str, config: PackConfig) -> None:
+    """Flow for packing an integration into a SOAR-supported ZIP.
+
+    Args:
+        integration_name: The name of the integration to pack.
+        config: the pack configuration.
+
+    """
+    packer = IntegrationPacker(integration_name, config)
+    packer.pack()
 
 
 class IntegrationPacker:
@@ -63,7 +76,12 @@ class IntegrationPacker:
 
     def pack(self) -> None:
         """Execute the packing flow."""
-        src_path, resolved_name = find_integration_src_path(self.integration_name)
+        src_path, resolved_name = find_integration_src_path(self.integration_name, self.config.src)
+        logger.info(
+            "Packing integration '%s' from source path '%s'...",
+            resolved_name,
+            src_path,
+        )
         self.integration_name = resolved_name
         repo_root: pathlib.Path = get_git_repo_root(src_path)
 
@@ -148,31 +166,3 @@ class IntegrationPacker:
 
             zip_path: pathlib.Path = create_zip(built_dir, identifier, zip_dst)
             logger.info("Successfully created integration zip: %s", zip_path)
-
-
-def pack_integration(
-    integration_name: str,
-    *,
-    version: str | None = None,
-    beta_name: str | None = None,
-    zip_dst: pathlib.Path | None = None,
-    interactive: bool = True,
-) -> None:
-    """Flow for packing an integration into a SOAR-supported ZIP.
-
-    Args:
-        integration_name: The name of the integration to pack.
-        version: Old version to fetch from the repo and create the ZIP.
-        beta_name: Name of the custom beta integration.
-        zip_dst: Destination directory to save the ZIP file.
-        interactive: Enable or disable interactive component selection.
-
-    """
-    config = PackConfig(
-        version=version,
-        beta_name=beta_name,
-        zip_dst=zip_dst,
-        interactive=interactive,
-    )
-    packer = IntegrationPacker(integration_name, config)
-    packer.pack()
