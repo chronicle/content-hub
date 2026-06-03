@@ -55,7 +55,9 @@ def test_build_built_playbook(
 
 
 def test_non_existing_playbook_raises_file_not_found(
-    tmp_path: Path, mock_get_marketplace_path: str, assert_build_playbook: Callable[[Path], None]
+    tmp_path: Path,
+    mock_get_marketplace_path: str,
+    assert_build_playbook: Callable[[Path], None],
 ) -> None:
     with (
         unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path),
@@ -65,7 +67,9 @@ def test_non_existing_playbook_raises_file_not_found(
 
 
 def test_save_values_while_deconstruct_and_build_playbook(
-    tmp_path: Path, built_playbook_path: Path, mock_get_marketplace_path: str
+    tmp_path: Path,
+    built_playbook_path: Path,
+    mock_get_marketplace_path: str,
 ) -> None:
     with unittest.mock.patch(mock_get_marketplace_path, return_value=tmp_path):
         mocked_repo: Path = tmp_path / built_playbook_path.parent.name

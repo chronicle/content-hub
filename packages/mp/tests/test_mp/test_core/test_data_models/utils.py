@@ -65,11 +65,11 @@ st_json_serializable = st.recursive(
 )
 
 st_pydantic_valid_https_url = urls().filter(
-    lambda u: urlparse(u).scheme == "https" and _is_pydantic_valid_url(u, TypeAdapter(HttpUrl))
+    lambda u: urlparse(u).scheme == "https" and _is_pydantic_valid_url(u, TypeAdapter(HttpUrl)),
 )
 
 st_pydantic_valid_file_url = urls().filter(
-    lambda u: urlparse(u).scheme == "file" and _is_pydantic_valid_url(u, TypeAdapter(FileUrl))
+    lambda u: urlparse(u).scheme == "file" and _is_pydantic_valid_url(u, TypeAdapter(FileUrl)),
 )
 
 st_valid_url = st.one_of(st_pydantic_valid_https_url, st_pydantic_valid_file_url)
@@ -82,17 +82,17 @@ st_valid_param_name = (
         lambda v: (
             0 < len(v) < mp.core.constants.PARAM_NAME_MAX_LENGTH
             and len(v.split()) <= mp.core.constants.PARAM_NAME_MAX_WORDS
-        )
+        ),
     )
 )
 st_excluded_param_name = st.sampled_from(sorted(exclusions.get_excluded_param_names_with_too_many_words()))
 
 st_valid_identifier_name = st.from_regex(SAFE_SCRIPT_IDENTIFIER_NAME_REGEX, fullmatch=True).filter(
-    lambda s: len(s) <= mp.core.constants.DISPLAY_NAME_MAX_LENGTH
+    lambda s: len(s) <= mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
 )
 
 st_valid_display_name = st.from_regex(SAFE_SCRIPT_DISPLAY_NAME_REGEX, fullmatch=True).filter(
-    lambda s: len(s) <= mp.core.constants.DISPLAY_NAME_MAX_LENGTH
+    lambda s: len(s) <= mp.core.constants.DISPLAY_NAME_MAX_LENGTH,
 )
 
 st_valid_short_description = st.text(max_size=mp.core.constants.SHORT_DESCRIPTION_MAX_LENGTH)
