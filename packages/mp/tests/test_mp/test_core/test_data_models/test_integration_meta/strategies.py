@@ -49,7 +49,7 @@ ST_VALID_BUILT_INTEGRATION_VISIBILITY_PROPERTY_DICT = st.fixed_dictionaries(
             "Kind": st.sampled_from(["SystemMode", "FeatureFlag"]),
             "Value": st.sampled_from(["Nexus", "featEnableFederationSecondary"]),
         },
-    )
+    ),
 )
 
 ST_VALID_NON_BUILT_INTEGRATION_VISIBILITY_PROPERTY_DICT = st.fixed_dictionaries(
@@ -59,7 +59,7 @@ ST_VALID_NON_BUILT_INTEGRATION_VISIBILITY_PROPERTY_DICT = st.fixed_dictionaries(
             "kind": st.sampled_from(["SystemMode", "FeatureFlag"]),
             "value": st.sampled_from(["Nexus", "featEnableFederationSecondary"]),
         },
-    )
+    ),
 )
 
 # Strategies for FeatureTags
@@ -69,7 +69,7 @@ ST_VALID_BUILT_FEATURE_TAGS_DICT = st.fixed_dictionaries(
         {
             "IntegrationVisibilityProperties": st.lists(ST_VALID_BUILT_INTEGRATION_VISIBILITY_PROPERTY_DICT),
         },
-    )
+    ),
 )
 
 ST_VALID_NON_BUILT_FEATURE_TAGS_DICT = st.fixed_dictionaries(
@@ -78,7 +78,7 @@ ST_VALID_NON_BUILT_FEATURE_TAGS_DICT = st.fixed_dictionaries(
         {
             "integration_visibility_properties": st.lists(ST_VALID_NON_BUILT_INTEGRATION_VISIBILITY_PROPERTY_DICT),
         },
-    )
+    ),
 )
 
 # Strategies for IntegrationParameter

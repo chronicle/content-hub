@@ -87,7 +87,7 @@ class TestSSLParameterValidation:
             {
                 "name": "Verify SSL",
                 "type": "string",
-            }
+            },
         ]
         _update_yaml_file(integration_file, {"parameters": params})
 
@@ -102,7 +102,7 @@ class TestSSLParameterValidation:
                 "name": "Verify SSL",
                 "type": "boolean",
                 "default_value": False,
-            }
+            },
         ]
         _update_yaml_file(integration_file, {"parameters": params})
 
@@ -117,7 +117,7 @@ class TestSSLParameterValidation:
                 "name": "Verify SSL",
                 "type": "boolean",
                 "default_value": False,
-            }
+            },
         ]
         _update_yaml_file(integration_file, {"parameters": params})
         with mock.patch(
@@ -135,7 +135,7 @@ class TestSSLParameterValidation:
                 "name": ssl_param_name,
                 "type": "boolean",
                 "default_value": True,
-            }
+            },
         ]
         _update_yaml_file(integration_file, {"parameters": params})
 

@@ -73,7 +73,9 @@ def test_get_integrations_from_paths(tmp_path: Path) -> None:
     (powerups_dir / "integration5" / mp.core.constants.PROJECT_FILE).touch()
 
     integrations: set[Path] = mp.core.file_utils.get_integrations_from_paths(
-        commercial_dir, community_dir, powerups_dir
+        commercial_dir,
+        community_dir,
+        powerups_dir,
     )
 
     assert integrations == {
@@ -127,7 +129,7 @@ def test_get_integration_base_folders_paths(tmp_path: Path) -> None:
         return_value=tmp_path,
     ):
         third_party_paths = mp.core.file_utils.get_integration_base_folders_paths(
-            mp.core.constants.THIRD_PARTY_REPO_NAME
+            mp.core.constants.THIRD_PARTY_REPO_NAME,
         )
         commercial_paths = mp.core.file_utils.get_integration_base_folders_paths(mp.core.constants.COMMERCIAL_REPO_NAME)
 
@@ -279,7 +281,8 @@ def test_svg_path_to_text(tmp_path: Path) -> None:
 def test_png_path_to_bytes(tmp_path: Path) -> None:
     sample_bytes = b"valid png bytes"
     with unittest.mock.patch(
-        "mp.core.file_utils.integrations.file_utils.validate_png_content", return_value=sample_bytes
+        "mp.core.file_utils.integrations.file_utils.validate_png_content",
+        return_value=sample_bytes,
     ):
         input_file = tmp_path / "test.png"
         input_file.write_bytes(sample_bytes)

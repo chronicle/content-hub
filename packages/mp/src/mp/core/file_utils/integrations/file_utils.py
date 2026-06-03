@@ -24,6 +24,7 @@ import contextlib
 import dataclasses
 import json
 import pathlib
+import tomllib
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 import yaml
@@ -548,6 +549,27 @@ def load_json_file(path: Path) -> Json:
         return json.loads(content)
     except json.JSONDecodeError as e:
         msg = f"Failed to load or parse JSON from file: {path}"
+        raise ValueError(msg) from e
+    except FileNotFoundError as e:
+        msg = f"File {path} does not exist"
+        raise ValueError(msg) from e
+
+
+def load_toml_file(path: Path) -> Json:
+    """Read a file and loads its content as TOML.
+
+    Returns:
+        The decoded JSON content of the TOML file if it exists.
+
+    Raises:
+        ValueError: If the file doesn't exist or is an invalid TOML.
+
+    """
+    try:
+        content: str = path.read_text(encoding="utf-8")
+        return tomllib.loads(content)
+    except tomllib.TOMLDecodeError as e:
+        msg = f"Failed to load or parse TOML from file: {path}"
         raise ValueError(msg) from e
     except FileNotFoundError as e:
         msg = f"File {path} does not exist"
