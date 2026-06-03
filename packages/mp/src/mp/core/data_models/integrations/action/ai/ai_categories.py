@@ -142,12 +142,9 @@ def is_remediation_action(action):
 
     # Rule 4: Ticket, Alert, and Communication Updates
     if (
-        action.update_alert
-        or action.add_alert_comment
         or action.create_ticket
         or action.update_ticket
         or action.send_email
-        or action.send_message
     ):
         return True
 
@@ -155,9 +152,7 @@ def is_remediation_action(action):
     if (
         action.delete_email
         or action.update_email
-        or action.search_email
         or action.submit_file
-        or action.download_file
     ):
         return True
 
