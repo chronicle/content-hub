@@ -254,18 +254,26 @@ class EnrichEntities(ThreatConnectAction):
 
     def _finalize_action_on_success(self) -> None:
         if self.enriched_entities:
-            ids = ", ".join(e.identifier for e in self.enriched_entities)
+            success_ids = ", ".join(e.identifier for e in self.enriched_entities)
             self.output_message = (
-                "Successfully enriched on the following entities using "
-                f"ThreatConnect: {ids}"
+                "Successfully enriched the following entities using ThreatConnect: "
+                f"{success_ids}"
             )
+            enriched_identifiers = {e.identifier for e in self.enriched_entities}
+            failed_entities = [
+                e.identifier
+                for e in self.soar_action.target_entities
+                if e.identifier not in enriched_identifiers
+            ]
+            if failed_entities:
+                failed_ids = ", ".join(failed_entities)
+                self.output_message += (
+                    "\nAction wasn't able to enrich the following entities using "
+                    f"ThreatConnect: {failed_ids}"
+                )
             self.result_value = True
         else:
-            ids = ", ".join(e.identifier for e in self.soar_action.target_entities)
-            self.output_message = (
-                "Action wasn't able to enrich on the following entities using "
-                f"ThreatConnect: {ids}"
-            )
+            self.output_message = "None of the provided entities were enriched."
             self.result_value = False
 
 

@@ -117,7 +117,7 @@ class TestEnrichEntities:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         msg = action_output.results.output_message
-        assert "Successfully enriched on the following entities using ThreatConnect" in msg
+        assert "Successfully enriched the following entities using ThreatConnect" in msg
         assert (
             re.search(
                 r"HTTP://MARKOSSOLOMON\.COM/F1Q7QX\.PHP",
@@ -148,9 +148,8 @@ class TestEnrichEntities:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert (
-            "Action wasn't able to enrich on the following entities using "
-            "ThreatConnect: HTTP://MARKOSSOLOMON.COM/F1Q7QX.PHP, 1.1.1.1"
-            in action_output.results.output_message
+            action_output.results.output_message
+            == "None of the provided entities were enriched."
         )
         assert action_output.results.result_value is False
 
@@ -183,7 +182,7 @@ class TestEnrichEntities:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         msg = action_output.results.output_message
-        assert "Successfully enriched on the following entities using ThreatConnect" in msg
+        assert "Successfully enriched the following entities using ThreatConnect" in msg
         assert (
             re.search(
                 r"HTTP://MARKOSSOLOMON\.COM/F1Q7QX\.PHP",
@@ -191,7 +190,11 @@ class TestEnrichEntities:
             )
             is not None
         )
-        assert "1.1.1.1" not in action_output.results.output_message
+        assert (
+            "Action wasn't able to enrich the following entities using "
+            "ThreatConnect: 1.1.1.1"
+            in action_output.results.output_message
+        )
         assert action_output.results.result_value is True
 
     @set_metadata(
