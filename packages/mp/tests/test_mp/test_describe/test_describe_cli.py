@@ -98,7 +98,10 @@ def test_describe_integration_cli(mock_describe_all_integrations: mock.MagicMock
     result = runner.invoke(app, ["integration", "int1", "int2"])
     assert result.exit_code == 0
     mock_describe_all_integrations.assert_called_once_with(
-        src=None, dst=None, override=False, integrations=["int1", "int2"]
+        src=None,
+        dst=None,
+        override=False,
+        integrations=["int1", "int2"],
     )
 
 
