@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 def _update_yaml_file(file_path: pathlib.Path, updates: dict[str, Any]) -> None:
     """Read a YAML file, update its content, and write it back."""
     content = file_utils.load_yaml_file(file_path)
+    assert isinstance(content, dict)
     content.update(updates)
     file_utils.write_yaml_to_file(content, file_path)
 
@@ -69,7 +70,7 @@ class TestActionParameterValidation:
                 "type": "MULTI_CHOICE_PARAMETER",
                 "optional_values": ["a", "b", "c"],
                 "default_value": default_value,
-            }
+            },
         ]
         _update_yaml_file(action_file, {PARAMETERS_KEY: params})
         self.validator_runner.run(temp_integration)
@@ -102,7 +103,7 @@ class TestActionParameterValidation:
                 "type": "ddl",
                 "optional_values": [],
                 "default_value": None,
-            }
+            },
         ]
         _update_yaml_file(action_file, {PARAMETERS_KEY: params})
         self.validator_runner.run(temp_integration)
@@ -115,7 +116,7 @@ class TestActionParameterValidation:
                 "name": "invalid_param",
                 "type": "MULTI_VALUES",
                 "optional_values": None,
-            }
+            },
         ]
         _update_yaml_file(action_file, {PARAMETERS_KEY: params})
 
@@ -133,7 +134,7 @@ class TestActionParameterValidation:
                 "name": "invalid_param",
                 "type": "string",
                 "optional_values": ["a", "b"],
-            }
+            },
         ]
         _update_yaml_file(action_file, {PARAMETERS_KEY: params})
 
@@ -152,7 +153,7 @@ class TestActionParameterValidation:
                 "type": "ddl",
                 "optional_values": ["a", "b"],
                 "default_value": "c",
-            }
+            },
         ]
         _update_yaml_file(action_file, {PARAMETERS_KEY: params})
 
@@ -163,7 +164,8 @@ class TestActionParameterValidation:
             self.validator_runner.run(temp_integration)
 
     def test_failure_on_default_value_and_non_optional_values_validations_failures(
-        self, temp_integration: pathlib.Path
+        self,
+        temp_integration: pathlib.Path,
     ) -> None:
         """Test failure when both default_value check and the non-optional values check fail."""
         action_file = temp_integration / constants.ACTIONS_DIR / "ping.yaml"
@@ -173,7 +175,7 @@ class TestActionParameterValidation:
                 "type": "string",
                 "optional_values": ["a", "b"],
                 "default_value": "c",
-            }
+            },
         ]
         _update_yaml_file(action_file, {PARAMETERS_KEY: params})
 
@@ -190,7 +192,7 @@ class TestActionParameterValidation:
                 "type": "ddl",
                 "optional_values": ["Option1", "Option2"],
                 "default_value": "option1",
-            }
+            },
         ]
         _update_yaml_file(action_file, {PARAMETERS_KEY: params})
 
@@ -208,7 +210,7 @@ class TestActionParameterValidation:
                 "type": "ddl",
                 "optional_values": ["1", "2", "3"],  # List of strings
                 "default_value": 1,  # Integer
-            }
+            },
         ]
         _update_yaml_file(action_file, {PARAMETERS_KEY: params})
 

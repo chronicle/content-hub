@@ -38,6 +38,7 @@ def _remove_file(file_path: pathlib.Path) -> None:
 def _update_yaml_file(file_path: pathlib.Path, updates: dict[str, Any]) -> None:
     """Read a YAML file, update its content, and write it back."""
     content = file_utils.load_yaml_file(file_path)
+    assert isinstance(content, dict)
     content.update(updates)
     file_utils.write_yaml_to_file(content, file_path)
 

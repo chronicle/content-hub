@@ -100,7 +100,7 @@ class TestStepParamsValidation:
                 "parameters": [
                     {"name": "AsyncActionTimeout", "value": "299"},
                     {"name": "AsyncPollingInterval", "value": "300"},
-                ]
+                ],
             },
         )
 

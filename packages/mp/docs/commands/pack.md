@@ -18,6 +18,7 @@ Pack an integration into a SOAR-supported ZIP file.
 - `INTEGRATION`: The name of the integration to pack. [required]
 
 **Options**:
+- `--src PATH`: Source directory containing the integration. If not specified, the command will search for the integration in the default 'content' directory.
 - `-v, --version FLOAT`: Old version to fetch from the repo (via Git) and create the ZIP.
 - `-b, --beta TEXT`: Name of the custom beta integration (renames identifier and display name).
 - `-d, --dst PATH`: Destination directory to save the ZIP file. Defaults to the configured `out` directory.
@@ -29,6 +30,12 @@ Pack an integration into a SOAR-supported ZIP file.
 Packages the current version of the integration.
 ```bash
 mp pack integration CyberX --non-interactive
+```
+
+### Packaging from a Custom Source
+Packages the integration from a specified source directory.
+```bash
+mp pack integration CyberX --src /path/to/my/integrations --non-interactive
 ```
 
 ### Custom Beta Identifier
