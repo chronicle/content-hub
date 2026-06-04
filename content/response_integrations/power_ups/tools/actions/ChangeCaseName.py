@@ -15,10 +15,19 @@
 from __future__ import annotations
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import rename_case
 
+from ..core.ToolsCommon import (
+    ExecutionScope,
+    get_case_alerts,
+    get_execution_scope,
+)
 
-def main():
+
+@output_handler
+def main() -> None:
+    """Execute ChangeCaseName action."""
     siemplify = SiemplifyAction()
     siemplify.script_name = "ChangeCaseName"
 
@@ -26,29 +35,47 @@ def main():
     result_value = "false"
     try:
         change = True
-        siemplify.case.alerts.sort(key=lambda x: x.detected_time)
-        if siemplify.parameters.get("Only If First Alert", "false").lower() == "true":
+        raw_scope = getattr(siemplify, "execution_scope", ExecutionScope.Alert.value)
+        execution_scope = get_execution_scope(raw_scope, logger=siemplify.LOGGER)
+
+        if execution_scope.value == ExecutionScope.Alert.value:
             if (
-                siemplify.current_alert.identifier
-                != siemplify.case.alerts[0].identifier
+                siemplify.parameters.get("Only If First Alert", "false").lower()
+                == "true"
             ):
-                change = False
+                alerts = get_case_alerts(siemplify)
+                alerts.sort(key=lambda x: x.detected_time)
+                if (
+                    siemplify.current_alert.identifier
+                    != alerts[0].identifier
+                ):
+                    change = False
+
         if change:
             rename_case(
                 chronicle_soar=siemplify,
                 case_id=siemplify.case_id,
-                case_title=siemplify.parameters["New Name"]
+                case_title=siemplify.parameters["New Name"],
             )
 
-            output_message = (
-                f"Case's title changed to: {siemplify.parameters['New Name']}"
-            )
+            if execution_scope.value == ExecutionScope.Alert.value:
+                output_message = (
+                    "Case's title changed to: "
+                    f"{siemplify.parameters['New Name']}"
+                )
+            else:
+                output_message = (
+                    "Case's title changed to: "
+                    f"{siemplify.parameters['New Name']} for all alert(s)"
+                )
             result_value = "true"
         else:
-            output_message = "Case's title not changed, not first alert in the case"
+            output_message = "Case's title not changed, not first alert in the case."
             result_value = "true"
     except Exception as e:
-        output_message = "An error occured: " + e
+        output_message = (
+            f"Error executing action '{siemplify.script_name}'. Reason: {e}."
+        )
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 

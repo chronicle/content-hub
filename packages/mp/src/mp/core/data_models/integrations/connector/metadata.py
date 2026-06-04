@@ -66,7 +66,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
     description: Annotated[
         str,
         pydantic.Field(max_length=mp.core.constants.LONG_DESCRIPTION_MAX_LENGTH),
-    ]
+    ] = ""
     documentation_link: pydantic.HttpUrl | pydantic.FileUrl | None
     integration: str
     is_connector_rules_supported: bool
@@ -125,7 +125,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
         return cls(
             file_name=file_name,
             creator=built["Creator"],
-            description=built["Description"],
+            description=built.get("Description") or "",
             documentation_link=built.get("DocumentationLink"),  # ty:ignore[invalid-argument-type]
             integration=built["Integration"],
             is_connector_rules_supported=built["IsConnectorRulesSupported"],
@@ -142,7 +142,7 @@ class ConnectorMetadata(ComponentMetadata[BuiltConnectorMetadata, NonBuiltConnec
         return cls(
             file_name=file_name,
             creator=non_built["creator"],
-            description=non_built["description"],
+            description=non_built.get("description") or "",
             documentation_link=non_built.get("documentation_link"),  # ty:ignore[invalid-argument-type]
             integration=non_built["integration"],
             is_connector_rules_supported=non_built["is_connector_rules_supported"],
