@@ -354,4 +354,4 @@ class TestSecretFetchCaching:
             version_id="3",
         )
 
-        assert job._secret_cache[("secret-a", "3")] == "secret-payload"
+        assert job._secret_cache["secret-a", "3"] == "secret-payload"

@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 
@@ -28,12 +29,12 @@ def mask_id(value: str) -> str:
 
 
 def build_lookup_with_warnings(
-    items: list,
-    get_key: callable,
-    get_value: callable,
+    items: list[Any],
+    get_key: Callable[[Any], str],
+    get_value: Callable[[Any], Any],
     entity_type: str,
     logger: Any,
-) -> dict:
+) -> dict[str, Any]:
     """Generic helper to build a lookup dict and warn on duplicates.
 
     Args:
@@ -47,7 +48,7 @@ def build_lookup_with_warnings(
         The constructed dictionary mapping.
 
     """
-    lookup: dict = {}
+    lookup: dict[str, Any] = {}
     for item in items:
         key = get_key(item)
         if not key:

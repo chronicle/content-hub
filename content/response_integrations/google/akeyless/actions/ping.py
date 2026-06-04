@@ -32,13 +32,11 @@ class PingAction(AkeylessAction):
 
         Raises:
             ConnectivityError: If the connectivity tests fail.
+
         """
         is_connected: bool = self.akeyless_client.test_connectivity()
 
-        self.output_message = (
-            "Successfully connected to the Akeyless server with the provided "
-            "connection parameters!"
-        )
+        self.output_message = "Successfully connected to the Akeyless server with the provided connection parameters!"
         self.result_value = is_connected
 
 
