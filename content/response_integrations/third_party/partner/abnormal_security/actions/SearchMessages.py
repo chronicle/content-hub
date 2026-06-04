@@ -7,6 +7,8 @@ Results are stored as a JSON result and can be passed to Remediate Messages.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
@@ -51,14 +53,20 @@ def main() -> None:
 
     start_time = siemplify.extract_action_param(
         param_name="Start Time",
-        is_mandatory=True,
+        is_mandatory=False,
         print_value=True,
     )
     end_time = siemplify.extract_action_param(
         param_name="End Time",
-        is_mandatory=True,
+        is_mandatory=False,
         print_value=True,
     )
+    # Default to a trailing 24-hour window (UTC) when either bound is omitted.
+    now = datetime.now(timezone.utc)
+    if not (end_time or "").strip():
+        end_time = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    if not (start_time or "").strip():
+        start_time = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
     sender_email = siemplify.extract_action_param(
         param_name="Sender Email",
         is_mandatory=False,
