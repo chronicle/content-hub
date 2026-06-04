@@ -211,7 +211,7 @@ class GoogleSecretManagerClient:
             if latest_version_id is not None:
                 return latest_version_id
 
-        except Exception:
+        except Exception as e:
             # If we fail to list versions (e.g., permission issue), fall
             # through.  The subsequent get_secret_value call will raise a
             # proper SecretAccessError.

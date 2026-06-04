@@ -29,7 +29,7 @@ class PingAction(GoogleSecretManagerAction):
 
     def _perform_action(self, _: Any = None) -> None:
         """Test connectivity to Google Secret Manager.
-        
+
         Raises:
             ConnectivityError: If the connectivity tests fail.
         """

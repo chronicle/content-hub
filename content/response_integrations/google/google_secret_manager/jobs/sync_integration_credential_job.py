@@ -146,9 +146,9 @@ class SyncIntegrationCredentialJob(Job):
             return
 
         try:
-            self.state_context = json.loads(context_str)
+            self.state_context = yaml.safe_load(context_str)
         except Exception as e:
-            self.logger.warn(f"Failed to parse job context JSON: {e}. Starting fresh.")
+            self.logger.warn(f"Failed to parse job context: {e}. Starting fresh.")
             self.state_context = {}
 
     def _save_context(self) -> None:
@@ -205,7 +205,7 @@ class SyncIntegrationCredentialJob(Job):
 
         return False
 
-    def _resolve_secret_and_version(self, mapped_value: str) -> tuple[str, str]:
+    async def _resolve_secret_and_version(self, mapped_value: str) -> tuple[str, str]:
         """Parse the mapped string, resolving the version if not explicitly provided.
 
         Args:
@@ -228,7 +228,8 @@ class SyncIntegrationCredentialJob(Job):
 
         secret_id: str = mapped_value
         if self.secret_manager_client:
-            resolved_version: str = self.secret_manager_client.resolve_latest_enabled_version(
+            resolved_version: str = await asyncio.to_thread(
+                self.secret_manager_client.resolve_latest_enabled_version,
                 secret_id,
             )
         else:
@@ -379,7 +380,7 @@ class SyncIntegrationCredentialJob(Job):
         """
         for param_name, mapped_value in param_mapping.items():
             context: str = f"param '{param_name}' on instance '{name}' (id: {identifier})"
-            secret_id, version_id = self._resolve_secret_and_version(mapped_value)
+            secret_id, version_id = await self._resolve_secret_and_version(mapped_value)
 
             state_key: str = f"instance:{identifier}:{param_name}"
             state_val: str = f"{mapped_value}::{version_id}"
@@ -531,7 +532,7 @@ class SyncIntegrationCredentialJob(Job):
         """
         for param_name, mapped_value in param_mapping.items():
             context: str = f"param '{param_name}' on connector '{name}' (id: {identifier})"
-            secret_id, version_id = self._resolve_secret_and_version(mapped_value)
+            secret_id, version_id = await self._resolve_secret_and_version(mapped_value)
 
             state_key: str = f"connector:{identifier}:{param_name}"
             state_val: str = f"{mapped_value}::{version_id}"
@@ -852,7 +853,7 @@ class SyncIntegrationCredentialJob(Job):
                 continue
 
             context: str = f"param '{param_name}' on job '{job_name}'"
-            secret_id, version_id = self._resolve_secret_and_version(mapped_value)
+            secret_id, version_id = await self._resolve_secret_and_version(mapped_value)
 
             state_key: str = f"job:{job_name}:{param_name}"
             state_val: str = f"{mapped_value}::{version_id}"

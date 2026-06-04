@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 
@@ -29,8 +30,8 @@ def mask_id(value: str) -> str:
 
 def build_lookup_with_warnings(
     items: list,
-    get_key: callable,
-    get_value: callable,
+    get_key: Callable[[Any], Any],
+    get_value: Callable[[Any], Any],
     entity_type: str,
     logger: Any,
 ) -> dict:
