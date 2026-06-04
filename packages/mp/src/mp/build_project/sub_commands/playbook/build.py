@@ -72,11 +72,23 @@ def build_playbook(  # noqa: PLR0913
     ],
     src: Annotated[
         Path | None,
-        typer.Option(help="Customize source folder to build or deconstruct from."),
+        typer.Option(
+            exists=True,
+            dir_okay=True,
+            file_okay=False,
+            resolve_path=True,
+            help="Customize source folder to build or deconstruct from.",
+        ),
     ] = None,
     dst: Annotated[
         Path | None,
-        typer.Option(help="Customize destination folder to build or deconstruct to."),
+        typer.Option(
+            exists=True,
+            dir_okay=True,
+            file_okay=False,
+            resolve_path=True,
+            help="Customize destination folder to build or deconstruct to.",
+        ),
     ] = None,
     *,
     deconstruct: Annotated[

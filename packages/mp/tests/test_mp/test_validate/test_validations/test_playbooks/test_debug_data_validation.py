@@ -70,7 +70,7 @@ class TestDebugDataValidation:
             self.validator_runner.run(temp_non_built_playbook)
 
         assert ("Playbook Simulator (definition.yaml/'is_debug_mode') cannot be enabled. Please disable it.") in str(
-            excinfo.value
+            excinfo.value,
         )
 
     def test_all_errors_fail(self, temp_non_built_playbook: Path) -> None:

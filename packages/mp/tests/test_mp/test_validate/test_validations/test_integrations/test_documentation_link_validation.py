@@ -64,7 +64,9 @@ class TestIntegrationHasDocumentationLinkValidation:
 
     @pytest.mark.parametrize("invalid_value", ["", None])
     def test_failure_on_invalid_documentation_link(
-        self, temp_integration: pathlib.Path, invalid_value: str | None
+        self,
+        temp_integration: pathlib.Path,
+        invalid_value: str | None,
     ) -> None:
         """Test failure when the integration has an empty documentation link field."""
         integration_def_file = temp_integration / constants.DEFINITION_FILE
