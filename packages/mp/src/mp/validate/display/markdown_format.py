@@ -35,35 +35,44 @@ class MarkdownFormat:
 
     def display(self) -> None:
         """Generate a Markdown file with validation report tables."""
-        try:  # noqa: PLR1702, PLW0717
-            markdown_content_list: list[str] = ["# Validation Report\n\n"]
+        try:
+            markdown_content: str = self._generate_markdown_content()
+        except Exception:
+            logger.exception("❌ Error generating markdown content")
+            return
 
-            for content_type, full_report in self.validation_results.items():
-                if not _has_issues_to_display(full_report):
-                    continue
-
-                icon = ICON_MAP[content_type.value]
-                markdown_content_list.append(
-                    f"<details>\n<summary><h2>{icon} {content_type.value.capitalize()}s</h2></summary>\n\n"
-                )
-
-                for results_list in full_report.values():
-                    if results_list:
-                        for validation_result in results_list:
-                            table_data = _get_integration_validation_data(validation_result)
-
-                            if table_data:
-                                markdown_content_list.extend(
-                                    _format_table(table_data, validation_result.validation_report.content_name)
-                                )
-
-                markdown_content_list.append("</details>\n\n")
-
-            markdown_content: str = "".join(markdown_content_list)
+        try:
             _save_report_file(markdown_content, output_filename="validation_report.md")
-
         except Exception:
             logger.exception("❌ Error generating report")
+
+    def _generate_markdown_content(self) -> str:
+        markdown_content_list: list[str] = ["# Validation Report\n\n"]
+
+        for content_type, full_report in self.validation_results.items():
+            if not _has_issues_to_display(full_report):
+                continue
+
+            icon = ICON_MAP[content_type.value]
+            markdown_content_list.append(
+                f"<details>\n<summary><h2>{icon} {content_type.value.capitalize()}s</h2></summary>\n\n"
+            )
+
+            for results_list in full_report.values():
+                if not results_list:
+                    continue
+
+                for validation_result in results_list:
+                    table_data = _get_integration_validation_data(validation_result)
+
+                    if table_data:
+                        markdown_content_list.extend(
+                            _format_table(table_data, validation_result.validation_report.content_name)
+                        )
+
+            markdown_content_list.append("</details>\n\n")
+
+        return "".join(markdown_content_list)
 
 
 def _has_issues_to_display(full_report: FullReport) -> bool:

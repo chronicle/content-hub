@@ -28,7 +28,7 @@ from mp.validate.validations.integrations.required_dependencies_validation impor
 
 def test_required_dependencies_present_success(temp_integration: Path) -> None:
     pyproject_content = {
-        "dependency-groups": {"dev": ["soar-sdk>=1.0.0", "pytest>=7.0.0", "pytest-json-report==1.2.3"]}
+        "dependency-groups": {"dev": ["soar-sdk>=1.0.0", "pytest>=7.0.0", "pytest-json-report==1.2.3"]},
     }
     _create_pyproject_toml(temp_integration, pyproject_content)
     RequiredDevDependenciesValidation.run(path=temp_integration)

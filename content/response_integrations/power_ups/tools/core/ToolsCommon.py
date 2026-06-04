@@ -15,13 +15,13 @@
 from __future__ import annotations
 
 import json
+from enum import Enum
 from typing import Any
 
 from tldextract import extract
 from tldextract.tldextract import ExtractResult
 
 from .constants import LABEL_REGEX
-
 
 # CONSTS
 OPEN_PH_PARENTHASIS = "{"
@@ -232,3 +232,75 @@ def get_domain_from_string(identifier: str, extract_subdomain: bool) -> str | No
 
 def is_valid_label(label: str) -> bool:
     return bool(LABEL_REGEX.fullmatch(label))
+
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
+
+def get_execution_scope(raw_scope: Any, logger: Any = None) -> ExecutionScope:
+    """Retrieve and determine the active execution scope from the raw scope property.
+
+    Args:
+        raw_scope: The raw execution scope property value from the orchestration instance.
+        logger: Optional logger instance (accepted for signature compatibility).
+
+    Returns:
+        The determined ExecutionScope enum value (defaults to Alert).
+    """
+    val = getattr(raw_scope, "value", raw_scope)
+    return ExecutionScope.Case if val == ExecutionScope.Case.value else ExecutionScope.Alert
+
+
+def get_case_alerts(siemplify: Any) -> list[Any]:
+    """Retrieve the list of open alerts for the case safely, with fallback to all alerts."""
+    return getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+
+
+def get_target_alerts(
+    siemplify: Any,
+    execution_scope: ExecutionScope,
+) -> list[Any]:
+    """Retrieve the list of target alerts based on execution scope.
+
+    Args:
+        siemplify: The SiemplifyAction orchestration instance.
+        execution_scope: The determined active execution scope.
+
+    Returns:
+        List of target alert objects to be processed.
+    """
+    if execution_scope.value == ExecutionScope.Alert.value:
+        return [siemplify.current_alert]
+    return get_case_alerts(siemplify)
+
+
+def _extract_case_entities(case_alerts: list[Any]) -> list[Any]:
+    """Extract unique entities consolidated case-wide from all case alerts."""
+    unique_entities = {}
+    for alert in case_alerts:
+        for entity in getattr(alert, "entities", []):
+            unique_entities[entity.identifier.lower()] = entity
+    return list(unique_entities.values())
+
+
+def get_target_entities(
+    execution_scope: ExecutionScope,
+    target_entities: list[Any] | None = None,
+    case_alerts: list[Any] | None = None,
+) -> list[Any]:
+    """Retrieve the list of target entities to process based on execution scope.
+
+    Args:
+        execution_scope: The determined active execution scope.
+        target_entities: The target entities list from the context (optional).
+        case_alerts: The list of alerts associated with the case (optional).
+
+    Returns:
+        List of unique target entity objects to be processed.
+    """
+    if execution_scope.value == ExecutionScope.Alert.value:
+        return target_entities or []
+    return _extract_case_entities(case_alerts or [])

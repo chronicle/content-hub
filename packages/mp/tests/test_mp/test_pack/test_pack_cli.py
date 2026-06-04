@@ -19,6 +19,7 @@ from unittest import mock
 
 from typer.testing import CliRunner
 
+from mp.pack.flow.integrations.flow import PackConfig
 from mp.pack.typer_app import pack_app
 
 if TYPE_CHECKING:
@@ -28,20 +29,23 @@ runner = CliRunner()
 
 
 def test_pack_integration_cli() -> None:
-    with mock.patch("mp.pack.sub_commands.integration.pack.flow_pack_integration") as mock_flow:
+    with mock.patch("mp.pack.sub_commands.integration.pack.IntegrationPacker") as mock_packer:
         result = runner.invoke(pack_app, ["integration", "cyber_x"])
         assert result.exit_code == 0
-        mock_flow.assert_called_once_with(
-            integration_name="cyber_x",
-            version=None,
-            beta_name=None,
-            zip_dst=None,
-            interactive=True,
+        mock_packer.assert_called_once_with(
+            "cyber_x",
+            PackConfig(
+                src=None,
+                version=None,
+                beta_name=None,
+                zip_dst=None,
+                interactive=True,
+            ),
         )
 
 
 def test_pack_integration_options_cli(tmp_path: pathlib.Path) -> None:
-    with mock.patch("mp.pack.sub_commands.integration.pack.flow_pack_integration") as mock_flow:
+    with mock.patch("mp.pack.sub_commands.integration.pack.IntegrationPacker") as mock_packer:
         result = runner.invoke(
             pack_app,
             [
@@ -57,10 +61,39 @@ def test_pack_integration_options_cli(tmp_path: pathlib.Path) -> None:
             ],
         )
         assert result.exit_code == 0
-        mock_flow.assert_called_once_with(
-            integration_name="cyber_x",
-            version="5.0",
-            beta_name="CyberXBeta",
-            zip_dst=tmp_path,
-            interactive=False,
+        mock_packer.assert_called_once_with(
+            "cyber_x",
+            PackConfig(
+                src=None,
+                version="5.0",
+                beta_name="CyberXBeta",
+                zip_dst=tmp_path,
+                interactive=False,
+            ),
+        )
+
+
+def test_pack_integration_with_src_cli(tmp_path: pathlib.Path) -> None:
+    with mock.patch("mp.pack.sub_commands.integration.pack.IntegrationPacker") as mock_packer:
+        src_path = tmp_path / "custom_integrations"
+        src_path.mkdir()
+        result = runner.invoke(
+            pack_app,
+            [
+                "integration",
+                "cyber_x",
+                "--src",
+                str(src_path),
+            ],
+        )
+        assert result.exit_code == 0
+        mock_packer.assert_called_once_with(
+            "cyber_x",
+            PackConfig(
+                src=src_path,
+                version=None,
+                beta_name=None,
+                zip_dst=None,
+                interactive=True,
+            ),
         )
