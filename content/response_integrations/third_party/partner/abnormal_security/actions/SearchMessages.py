@@ -89,7 +89,11 @@ def main() -> None:
             tenant_ids=tenant_ids,
         )
 
-        messages = response.get("messages", [])
+        # The /v1/search API returns matches under "results" (SearchResult objects),
+        # each carrying the fields the remediate API requires (raw_message_id,
+        # mailbox_name, native_user_id, tenant_id, subject, sender, received_time).
+        # Fall back to "messages" for forward/backward compatibility.
+        messages = response.get("results", response.get("messages", []))
         siemplify.result.add_result_json(response)
 
         output_message = f"Found {len(messages)} message(s) matching search criteria."

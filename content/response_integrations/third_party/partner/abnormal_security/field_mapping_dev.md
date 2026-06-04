@@ -53,17 +53,24 @@ is then unusable against the API.
 
 ## Search & Respond requires full message objects
 
-`/v1/search/remediate` rejects bare message IDs. Each message object is **required**
-to carry all of: `tenant_id`, `raw_message_id`, `mailbox_name`, `native_user_id`,
-`subject`, `sender`, `received_time` (verified against the live API — HTTP 400
-otherwise). A threat event does **not** carry `tenant_id` or `raw_message_id`, so these
-objects can only come from a prior **Search Messages** step.
+The remediate request body is the `MessageToRemediate` model in
+`src/py/abnormal/apps/soar_search_and_respond/models.py`. Required fields (Pydantic
+`Field(...)`): `tenant_id`, `raw_message_id`, `mailbox_name`, `native_user_id`,
+`subject`, `sender`, `received_time`. `abnormal_message_id` is *optional* — the Abnormal
+ID alone does not satisfy the schema.
 
-Consequence: Delete/Move/Remediate/SubmitD360 Messages cannot run from a single threat
-event. `parse_messages_input` in `core/AbnormalManager.py` accepts only a JSON array or
-a single JSON object; any bare ID raises with guidance to use **Remediate Threat**
-(threat-based, `/v1/threats/{id}`) for single-message remediation, or to chain Search
-Messages first for the S&R batch flow.
+`raw_message_id` is the **native mail-system ID** (e.g. Graph/EWS `AAMkAGI2THVSAAA=`),
+which only exists in a `SearchResult` (the `SearchMessages` output) — **not** in the
+SIEM threat event. The event's `internet_message_id` (`<msg@host>`) is a different field
+the remediate model does not accept. Therefore Delete/Move/Remediate/SubmitD360 Messages
+**cannot be built from a threat event** and must be chained from `Search Messages`, whose
+`SearchResult` fields map 1:1 to `MessageToRemediate`.
+
+`parse_messages_input` in `core/AbnormalManager.py` accepts only a JSON array or a single
+JSON object; any bare ID raises with guidance to chain Search Messages, or to use
+**Remediate Threat** (`/v1/threats/{id}`) for single-message remediation.
+
+`SearchMessages` reads the API's `results` key (the `SearchResult` list), not `messages`.
 
 ## Why case actions do not auto-fill
 
