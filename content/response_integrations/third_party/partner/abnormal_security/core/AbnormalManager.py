@@ -85,58 +85,72 @@ class AbnormalValidationError(AbnormalAPIManagerError):
 _SCIENTIFIC_NOTATION_RE = re.compile(r"-?\d+\.\d+e[+-]?\d+", re.IGNORECASE)
 
 
+_REQUIRED_REMEDIATE_FIELDS = (
+    "tenant_id",
+    "raw_message_id",
+    "mailbox_name",
+    "native_user_id",
+    "subject",
+    "sender",
+    "received_time",
+)
+
+_BARE_ID_GUIDANCE = (
+    "Search & Respond remediation needs full message objects, not a single message ID. "
+    "The /v1/search/remediate API requires these fields per message: "
+    f"{', '.join(_REQUIRED_REMEDIATE_FIELDS)} — which a threat event does not carry. "
+    "Run the Search Messages action first and pass its JSON output here, or to remediate "
+    "the message behind a single threat use the Remediate Threat action instead."
+)
+
+
 def parse_messages_input(messages_json: str) -> list[dict[str, Any]]:
     """Parse the "Messages JSON" action parameter into a list of message objects.
 
-    Accepts three forms so the Search & Respond actions work both from a prior
-    Search Messages step and directly on the message an analyst is viewing:
+    The Search & Respond remediate endpoint (/v1/search/remediate) requires full
+    message objects — see ``_REQUIRED_REMEDIATE_FIELDS``. Those objects come from a
+    prior Search Messages step; a bare message ID cannot satisfy the API and a threat
+    event does not carry ``tenant_id`` / ``raw_message_id``, so single-message
+    remediation must go through the Remediate Threat action instead.
+
+    Accepts:
 
     1. A JSON array of message objects (the output of Search Messages) — returned
        as-is.
     2. A single JSON object — wrapped into a one-element list.
-    3. A bare message identifier (the string ``abx_message_id_str`` of the current
-       message) — built into ``[{"message_id": "<id>"}]``. ``message_id`` is the
-       Abnormal message identifier the Search & Respond API expects (see
-       ALLOWED_PARAM_KEYS); it is distinct from ``raw_message_id``, the native
-       mail-system identifier.
 
     Args:
-        messages_json: The raw value of the "Messages JSON" / "Message ID" action
-            parameter.
+        messages_json: The raw value of the "Messages JSON" action parameter.
 
     Returns:
         A list of message-object dicts suitable for ``remediate_messages``.
 
     Raises:
-        AbnormalValidationError: If the input is empty, or is a message ID passed
-            as a number in scientific notation (precision already lost — the
-            caller must use the string message-ID placeholder instead).
+        AbnormalValidationError: If the input is empty, is a scalar/bare message ID
+            (which cannot satisfy the remediate schema), or is a numeric ID in
+            scientific notation (precision already lost).
     """
     raw = (messages_json or "").strip()
     if not raw:
-        raise AbnormalValidationError("Messages JSON is required: provide Search Messages output or a message ID.")
+        raise AbnormalValidationError(f"Messages JSON is required. {_BARE_ID_GUIDANCE}")
 
     # Scientific notation means a 64-bit message ID was passed as a number and has
-    # already lost precision (e.g. -1.08e+18). Reject with actionable guidance.
+    # already lost precision (e.g. -1.08e+18).
     if _SCIENTIFIC_NOTATION_RE.fullmatch(raw):
-        raise AbnormalValidationError(
-            "Message ID was passed as a number and lost precision. Use the string "
-            "message-ID placeholder [Event.event_extracted_event.abx_body.abx_message_id_str]."
-        )
+        raise AbnormalValidationError(f"Message ID lost precision (rendered as a float). {_BARE_ID_GUIDANCE}")
 
     try:
         parsed = json.loads(raw)
-    except json.JSONDecodeError:
-        # Not JSON — treat the value as a bare Abnormal message identifier.
-        return [{"message_id": raw}]
+    except json.JSONDecodeError as e:
+        # Not JSON — a bare message ID can never satisfy the remediate schema.
+        raise AbnormalValidationError(_BARE_ID_GUIDANCE) from e
 
     if isinstance(parsed, list):
         return parsed
     if isinstance(parsed, dict):
         return [parsed]
-    # A bare JSON scalar (int/str) — coerce to a message_id, preserving the exact
-    # string form (Python ints are arbitrary precision, so no loss here).
-    return [{"message_id": str(parsed)}]
+    # A bare JSON scalar (int/str) — also insufficient for the remediate schema.
+    raise AbnormalValidationError(_BARE_ID_GUIDANCE)
 
 
 class AbnormalManager:

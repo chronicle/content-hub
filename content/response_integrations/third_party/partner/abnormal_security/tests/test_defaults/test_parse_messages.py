@@ -14,17 +14,18 @@ class TestParseMessagesInput:
         raw = '{"raw_message_id": "AAMkAGI2THVSAAA="}'
         assert parse_messages_input(raw) == [{"raw_message_id": "AAMkAGI2THVSAAA="}]
 
-    def test_bare_string_id_builds_message_object(self) -> None:
-        assert parse_messages_input("4551618356913732076") == [{"message_id": "4551618356913732076"}]
+    def test_non_json_bare_id_is_rejected(self) -> None:
+        # A non-JSON bare identifier hits the JSONDecodeError path; still insufficient.
+        with pytest.raises(AbnormalValidationError, match="Remediate Threat"):
+            parse_messages_input("AAMkAGI2THVSAAA=")
 
-    def test_bare_integer_id_preserves_precision(self) -> None:
-        # A 19-digit ID parses as a JSON int; Python ints are arbitrary precision,
-        # so str() round-trips the exact value with no float loss.
-        assert parse_messages_input("4551618356913732076") == [{"message_id": "4551618356913732076"}]
+    def test_bare_json_scalar_is_rejected(self) -> None:
+        # A JSON-parseable integer is still just an ID — insufficient for the schema.
+        with pytest.raises(AbnormalValidationError, match="Remediate Threat"):
+            parse_messages_input("4551618356913732076")
 
     def test_scientific_notation_is_rejected(self) -> None:
-        # A 64-bit ID passed as a number arrives as a lossy float; reject it and
-        # point the analyst at the string message-ID placeholder.
+        # A 64-bit ID passed as a number arrives as a lossy float.
         with pytest.raises(AbnormalValidationError, match="lost precision"):
             parse_messages_input("-1.0879728147833105e+18")
 

@@ -48,18 +48,22 @@ is then unusable against the API.
 |---|---|---|
 | Threat (Get/Post/Remediate/Unremediate Threat, Attachments, Links) | `abx_body.threat_id` | `threat_id` (UUID) on `/v1/threats/{id}` |
 | Threat "Message IDs" param | `abx_body.abx_message_id_str` | message id list |
-| Search & Respond (Delete/Move/Remediate/SubmitD360) | `abx_body.abx_message_id_str` | `message_id` per object on `/v1/search/remediate` |
+| Search & Respond (Delete/Move/Remediate/SubmitD360) | none — Search Messages output | full message objects on `/v1/search/remediate` |
 | Case (Get/Post/Resolve/Mark×3) | none — manual entry | `case_id` on `/v1/cases/{id}` |
 
-## Search & Respond message objects
+## Search & Respond requires full message objects
 
-The S&R remediate endpoint accepts a list of message objects, not bare IDs. Valid
-keys are defined in `src/py/abnormal/apps/soar/constants.py` (search for
-`ALLOWED_PARAM_KEYS`). The Abnormal message identifier key is **`message_id`** (what
-`abx_message_id_str` maps to); `raw_message_id` is the distinct native mail-system
-identifier. `parse_messages_input` in `core/AbnormalManager.py` accepts either a full
-JSON array (from a prior Search Messages step) or a bare ID it wraps as
-`[{"message_id": "<id>"}]`.
+`/v1/search/remediate` rejects bare message IDs. Each message object is **required**
+to carry all of: `tenant_id`, `raw_message_id`, `mailbox_name`, `native_user_id`,
+`subject`, `sender`, `received_time` (verified against the live API — HTTP 400
+otherwise). A threat event does **not** carry `tenant_id` or `raw_message_id`, so these
+objects can only come from a prior **Search Messages** step.
+
+Consequence: Delete/Move/Remediate/SubmitD360 Messages cannot run from a single threat
+event. `parse_messages_input` in `core/AbnormalManager.py` accepts only a JSON array or
+a single JSON object; any bare ID raises with guidance to use **Remediate Threat**
+(threat-based, `/v1/threats/{id}`) for single-message remediation, or to chain Search
+Messages first for the S&R batch flow.
 
 ## Why case actions do not auto-fill
 
