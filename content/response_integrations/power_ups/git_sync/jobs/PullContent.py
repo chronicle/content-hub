@@ -245,8 +245,16 @@ def main():
 
         if features["SLA Records"]:
             siemplify.LOGGER.info("Installing SLA definition")
+            current_sla = gitsync.api.get_sla_records()
             for definition in gitsync.content.get_sla_definitions():
-                gitsync.api.update_sla_record(definition)
+                gitsync.api.update_sla_record(
+                    id_validator(
+                        definition,
+                        ["value", "environments"],
+                        "id",
+                        current_sla,
+                    ),
+                )
 
         if features["Logo"]:
             if not gitsync.content.get_logo():
