@@ -255,7 +255,7 @@ def main():
                     else CaseCloseReasons.from_legacy_or_1p(current_cause).to_legacy()
                 )
 
-                if "forCloseReason" in cause: # QA fixes
+                if "forCloseReason" in cause:
                     current_cause["forCloseReason"] = cause["forCloseReason"]
                 gitsync.api.add_close_reason(siemplify, current_cause)
 
@@ -264,7 +264,6 @@ def main():
             case_title_settings = gitsync.content.get_case_titles()
             if case_title_settings:
                 siemplify.LOGGER.info("Installing case title settings")
-                siemplify.LOGGER.info(f"===================={case_title_settings}====================")
 
                 if isinstance(case_title_settings, dict) and "items" in case_title_settings:
                     for item in case_title_settings.get("items", []):

@@ -454,7 +454,7 @@ class GitSyncManager:
             job: A Job object instance to install
 
         """
-        if not self.get_installed_integration_version(job.integration):
+        if not self.get_installed_integration_version(job.integration) or self.get_installed_integration_version(job.integration) == "0.0":
             self.logger.warn(
                 f"Error installing job {job.name} - Job integration ({job.integration}) "
                 "is not installed",
