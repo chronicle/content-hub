@@ -14,6 +14,10 @@
 
 """Constants for the Akeyless integration."""
 
+from __future__ import annotations
+
+from typing import TypeAlias
+
 # Integration identifier
 INTEGRATION_IDENTIFIER: str = "Akeyless"
 INTEGRATION_NAME: str = "Akeyless"
@@ -30,6 +34,7 @@ API_GATEWAY_URL_PARAM: str = "API Gateway URL"
 
 # Akeyless API defaults
 DEFAULT_SECRET_VERSION: str = "latest"
+TOKEN_TTL_SECONDS: int = 50 * 60  # 50 minutes (conservative buffer under 60-min default)
 
 # Job parameter names
 ENVIRONMENT_NAME_PARAM: str = "Environment Name"
@@ -46,3 +51,8 @@ ANY_INTEGRATION_FILTER_VALUE: str = "-"
 # Async concurrency control
 ASYNC_SEMAPHORE_LIMIT: int = 10
 TIMEOUT_THRESHOLD_MS: int = 1000 * 540
+
+# Type aliases
+SecretCacheKey: TypeAlias = tuple[str, str]  # (secret_id, version_id)
+StateContext: TypeAlias = dict[str, str]  # state_key → state_val
+NameIdentifierMap: TypeAlias = dict[str, str]  # display_name → identifier

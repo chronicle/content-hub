@@ -15,10 +15,9 @@
 from __future__ import annotations
 
 import pathlib
+from typing import TYPE_CHECKING
 
 from integration_testing.common import get_def_file_content
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
