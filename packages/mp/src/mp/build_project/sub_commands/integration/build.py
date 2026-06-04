@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
-from mp.build_project.flow.integrations.flow import build_integrations
+from mp.build_project.flow.integrations.flow import BuildIntegrationsParams, build_integrations
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
@@ -85,11 +85,23 @@ def build_integration(  # noqa: PLR0913
     ],
     src: Annotated[
         Path | None,
-        typer.Option(help="Customize source folder to build or deconstruct from."),
+        typer.Option(
+            exists=True,
+            dir_okay=True,
+            file_okay=False,
+            resolve_path=True,
+            help="Customize source folder to build or deconstruct from.",
+        ),
     ] = None,
     dst: Annotated[
         Path | None,
-        typer.Option(help="Customize destination folder to build or deconstruct to."),
+        typer.Option(
+            exists=True,
+            dir_okay=True,
+            file_okay=False,
+            resolve_path=True,
+            help="Customize destination folder to build or deconstruct to.",
+        ),
     ] = None,
     *,
     deconstruct: Annotated[
@@ -167,12 +179,14 @@ def build_integration(  # noqa: PLR0913
         if integrations:
             logger.debug("Dispatching to build_integrations flow")
             build_integrations(
-                integrations=integrations,
-                repositories=[],
-                src=src,
-                dst=dst,
-                deconstruct=deconstruct,
-                custom_integration=custom_integration,
+                BuildIntegrationsParams(
+                    integrations=integrations,
+                    repositories=[],
+                    src=src,
+                    dst=dst,
+                    deconstruct=deconstruct,
+                    custom_integration=custom_integration,
+                )
             )
 
     finally:
