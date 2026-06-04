@@ -70,8 +70,8 @@ def script_session(
                     def new_init(self, *args, **kwargs):
                         original_init(self, *args, **kwargs)
                         self.RUN_FOLDER = tempfile.gettempdir()
-                        self.FILE_SYSTEM_CONTEXT_PATH = os.path.join(
-                            self.RUN_FOLDER, "context_file.json"
+                        self.FILE_SYSTEM_CONTEXT_PATH = str(
+                            pathlib.Path(self.RUN_FOLDER) / "context_file.json"
                         )
 
                     cls.__init__ = new_init
