@@ -36,7 +36,7 @@ def main():
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
         siemplify.LOGGER.info(f"Pushing mappings of {source}")
         all_records = gitsync.api.get_ontology_records(chronicle_soar=siemplify)
-        records_integrations = set([x["source"] for x in all_records])
+        records_integrations = {x.get("source") for x in all_records if x.get("source")}
         
         if source:
             matched_integration = None

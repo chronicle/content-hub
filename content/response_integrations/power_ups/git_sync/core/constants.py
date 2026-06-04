@@ -245,7 +245,7 @@ Timeout - {{ action.TimeoutSeconds }} Seconds\n
 |{{ param.Name or param.DisplayName }}|{{ param.Description|replace('\n', '') }}|{{ param.IsMandatory or param.Mandatory or 'False' }}|{{ (param.Type|action_param_type) or param.Type }}|{% if param.Type != 12 and param.Type != 'Password' %}{{ param.Value or param.DefaultValue }}{% else %}*****{% endif %}|
 {% endfor %}
 {% endif %}
-{% if action.DynamicResultsMetadata %}
+{% if action.DynamicResultsMetadata or action.DynamicResults %}
 {% for metadata in action.DynamicResultsMetadata -%}
 {% if metadata.ResultName == "JsonResult" -%}
 ##### JSON Results
@@ -290,7 +290,7 @@ Timeout - {{ action.TimeoutSeconds }} Seconds\n
 | |
 |-|
 {% for rule in connector.Rules -%}
-|{{ rule.RuleName }}|
+|{{ rule.RuleName or rule.DisplayName }}|
 {% endfor %}
 {% endif %}
 {% endfor %}
@@ -352,7 +352,7 @@ Event Name Field: {{ connector.eventNameField or connector.eventFieldName }}
 
 """
 
-JOB_README = """## {{ job.name }}
+JOB_README = """## {{ job.displayName }}
 {{ job.description }}\n
 
 **Run Interval In Seconds:** {{ job.runIntervalInSeconds }}

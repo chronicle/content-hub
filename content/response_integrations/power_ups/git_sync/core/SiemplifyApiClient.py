@@ -144,7 +144,7 @@ class SiemplifyApiClient:
         self._version = None
         self._bearer_token = None
         self.siemplify_soar = siemplify_soar
-        if smp_username and smp_password:
+        if smp_username and smp_password and not platform_supports_1p_api():
             self._bearer_token = self.get_bearer_token(smp_password, smp_username) # type: ignore
 
     def get_bearer_token(self, smp_password, smp_username):

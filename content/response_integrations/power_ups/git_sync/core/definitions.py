@@ -357,7 +357,7 @@ class Integration(Content):
         """
         yield File("README.md", self.readme)
         if not self.isCustom:
-            self.definition["Custom"] = False
+            self.definition["Custom"] = False #note
             yield File(
                 f"Integration-{self.identifier}.def",
                 json.dumps(self.definition, indent=4),
@@ -576,6 +576,7 @@ class Job(Content):
         raw_data["id"] = 0
         self.raw_data = raw_data
         self.name = self.raw_data.get("name")
+        self.displayName = self.raw_data.get("displayName") or self.raw_data.get("name")
         self.integration = self.raw_data.get("integration")
         self.description = self.raw_data.get("description")
         self.parameters = self.raw_data.get("parameters")

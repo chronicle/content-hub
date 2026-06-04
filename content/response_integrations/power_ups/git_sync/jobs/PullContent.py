@@ -269,12 +269,13 @@ def main():
                 if isinstance(case_title_settings, dict) and "items" in case_title_settings:
                     for item in case_title_settings.get("items", []):
                         val = item.get("value")
-                        normalized_value = val if val and val.strip() else "Null"
+                        if not val or not val.strip():
+                            continue
                         
                         gitsync.api.save_case_title_settings(
                             name=item.get("name"),
                             display_name=item.get("displayName"),
-                            value=normalized_value,
+                            value=val,
                             type_=item.get("type", 2),
                             settings=None
                         )
