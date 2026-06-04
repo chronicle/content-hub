@@ -15,25 +15,55 @@
 from __future__ import annotations
 
 import json
+from typing import TYPE_CHECKING
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+
+from ..core.ToolsCommon import ExecutionScope
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 @output_handler
 def main():
     try:
-        siemplify = SiemplifyAction(get_source_file=True)
+        siemplify: SiemplifyAction = SiemplifyAction(get_source_file=True)
     except TypeError:
-        siemplify = SiemplifyAction()
+        siemplify: SiemplifyAction = SiemplifyAction()
 
-    case_data = json.loads(
-        siemplify.current_alert.entities[0].additional_properties["SourceFileContent"],
+    execution_scope: ExecutionScope = getattr(
+        siemplify, "execution_scope", ExecutionScope.Alert
     )
 
-    siemplify.result.add_result_json(case_data)
+    if execution_scope.value == ExecutionScope.Alert.value:
+        case_data: Any = json.loads(
+            siemplify.current_alert.entities[0]
+            .additional_properties["SourceFileContent"],
+        )
 
-    siemplify.end("See technical details", json.dumps(case_data))
+        siemplify.result.add_result_json([case_data])
+        siemplify.end("See technical details", json.dumps([case_data]))
+
+    else:
+        combined_results: list = []
+        case_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        for alert in case_alerts:
+            try:
+                if alert.entities:
+                    case_data: Any = json.loads(
+                        alert.entities[0].additional_properties["SourceFileContent"],
+                    )
+                    combined_results.append(case_data)
+            except (KeyError, IndexError) as e:
+                siemplify.LOGGER.error(
+                    f"Error extracting SourceFileContent for alert {alert.identifier}:"
+                    f" {e}"
+                )
+                
+        siemplify.result.add_result_json(combined_results)
+        siemplify.end("See technical details", json.dumps(combined_results))
 
 
 if __name__ == "__main__":

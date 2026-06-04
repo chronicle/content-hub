@@ -49,7 +49,8 @@ def mock_integration_path(tmp_path: Path) -> Path:
     jobs_dir = integration_path / constants.JOBS_DIR
     jobs_dir.mkdir()
     (jobs_dir / "test_job.yaml").write_text(
-        yaml.safe_dump({"name": "Test Job", "description": "A test job"}), encoding="utf-8"
+        yaml.safe_dump({"name": "Test Job", "description": "A test job"}),
+        encoding="utf-8",
     )
     (jobs_dir / "test_job.py").write_text("class TestJob: pass", encoding="utf-8")
 
@@ -126,7 +127,8 @@ async def test_describe_integration(tmp_path: Path, mock_integration_path: Path)
         encoding="utf-8",
     )
     (ai_dir / constants.JOBS_AI_DESCRIPTION_FILE).write_text(
-        yaml.safe_dump({"test_job": {"description": "Job description"}}), encoding="utf-8"
+        yaml.safe_dump({"test_job": {"description": "Job description"}}),
+        encoding="utf-8",
     )
 
     # 2. Add description to definition.yaml

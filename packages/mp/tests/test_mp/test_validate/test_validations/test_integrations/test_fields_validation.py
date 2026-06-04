@@ -116,7 +116,7 @@ def test_fields_validation_invalid_connector_parameter_name(temp_integration: Pa
             "is_advanced": False,
             "mode": "script",
             "default_value": "",
-        }
+        },
     ]
 
     with Path(connector_path).open("w", encoding="utf-8") as f:

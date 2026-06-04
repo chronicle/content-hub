@@ -54,13 +54,15 @@ def mock_integration_full(tmp_path: Path) -> Path:
     jobs_dir = integration_path / constants.JOBS_DIR
     jobs_dir.mkdir()
     (jobs_dir / "test_job.yaml").write_text(
-        yaml.safe_dump({"name": "Test Job", "description": "A test job"}), encoding="utf-8"
+        yaml.safe_dump({"name": "Test Job", "description": "A test job"}),
+        encoding="utf-8",
     )
     (jobs_dir / "test_job.py").write_text("class Job: pass", encoding="utf-8")
 
     # Create definition.yaml
     (integration_path / constants.DEFINITION_FILE).write_text(
-        yaml.safe_dump({"description": "Mock integration description"}), encoding="utf-8"
+        yaml.safe_dump({"description": "Mock integration description"}),
+        encoding="utf-8",
     )
 
     # Create pyproject.toml
@@ -76,12 +78,14 @@ def mock_integration_another(tmp_path: Path) -> Path:
 
     # Only integration definition
     (integration_path / constants.DEFINITION_FILE).write_text(
-        yaml.safe_dump({"description": "Another integration"}), encoding="utf-8"
+        yaml.safe_dump({"description": "Another integration"}),
+        encoding="utf-8",
     )
 
     # Create pyproject.toml
     (integration_path / constants.PROJECT_FILE).write_text(
-        '[project]\nname = "another_integration"\n', encoding="utf-8"
+        '[project]\nname = "another_integration"\n',
+        encoding="utf-8",
     )
 
     return integration_path
