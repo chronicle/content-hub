@@ -25,11 +25,11 @@ from akeyless.core.auth import (
     build_auth_params,
 )
 from akeyless.core.constants import (
-    INTEGRATION_IDENTIFIER,
     ACCESS_ID_PARAM,
     ACCESS_KEY_PARAM,
     ACCESS_TYPE_PARAM,
     API_GATEWAY_URL_PARAM,
+    INTEGRATION_IDENTIFIER,
 )
 from akeyless.core.exceptions import (
     AkeylessError,

@@ -20,13 +20,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from akeyless.core.manager import AkeylessClient
-from akeyless.core.constants import DEFAULT_SECRET_VERSION
 from akeyless.core.exceptions import (
     ConnectivityError,
     InvalidConfigurationError,
     SecretAccessError,
 )
+from akeyless.core.manager import AkeylessClient
 
 
 class TestAkeylessClient:
@@ -108,11 +107,7 @@ class TestAkeylessClient:
         mock_auth_res.token = "fallback-access-key-token"
         mock_akeyless_api.auth.return_value = mock_auth_res
 
-        client = AkeylessClient(
-            access_id="test-access-id",
-            access_key="test-access-key",
-            access_type="gcp"
-        )
+        client = AkeylessClient(access_id="test-access-id", access_key="test-access-key", access_type="gcp")
         token = client.get_token()
 
         assert token == "fallback-access-key-token"
@@ -124,10 +119,6 @@ class TestAkeylessClient:
         """Raises ConnectivityError when GCP authentication fails and no access_key is provided."""
         mock_fetch_gcp.side_effect = Exception("Metadata server not reachable")
 
-        client = AkeylessClient(
-            access_id="test-access-id",
-            access_key=None,
-            access_type="gcp"
-        )
+        client = AkeylessClient(access_id="test-access-id", access_key=None, access_type="gcp")
         with pytest.raises(ConnectivityError, match="Failed to authenticate with Akeyless using GCP IAM"):
             client.get_token()

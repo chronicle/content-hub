@@ -23,11 +23,11 @@ from TIPCommon.extraction import extract_script_param
 from TIPCommon.types import ChronicleSOAR
 
 from .constants import (
-    INTEGRATION_IDENTIFIER,
     ACCESS_ID_PARAM,
     ACCESS_KEY_PARAM,
     ACCESS_TYPE_PARAM,
     API_GATEWAY_URL_PARAM,
+    INTEGRATION_IDENTIFIER,
 )
 from .exceptions import AkeylessError
 
