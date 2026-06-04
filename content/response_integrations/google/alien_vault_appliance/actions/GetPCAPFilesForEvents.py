@@ -55,7 +55,11 @@ def main():
     if execution_scope.value == ExecutionScope.Alert.value:
         target_alerts = [siemplify.current_alert]
     else:
-        target_alerts = getattr(siemplify.case, "alerts", [])
+        target_alerts = getattr(
+            siemplify.case,
+            "open_alerts",
+            siemplify.case.alerts,
+        )
 
     for alert in target_alerts:
         for event in alert.security_events:

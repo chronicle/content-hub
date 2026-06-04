@@ -34,8 +34,7 @@ import pytz
 import arrow
 import urllib.parse
 from soar_sdk.SiemplifyUtils import dict_to_flat
-from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
-from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
+from soar_sdk.SiemplifyConnectors import CaseInfo, SiemplifyConnectorExecution
 from ..core.AlienVaultManager import AlienVaultManager
 
 # ============================== CONSTS ===================================== #
