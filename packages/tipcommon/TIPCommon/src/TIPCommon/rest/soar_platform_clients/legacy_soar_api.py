@@ -270,6 +270,26 @@ class LegacySoarApi(BaseSoarApi):
         }
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
+    def execute_manual_action(self) -> requests.Response:
+        """Execute a manual action on a case using legacy API."""
+        endpoint = "/cases/ExecuteManualAction"
+        payload = {
+            "caseId": self.params.case_id,
+            "actionName": self.params.action_name,
+            "actionProvider": getattr(self.params, "action_provider", "Scripts"),
+            "properties": self.params.action_properties,
+            "alertGroupIdentifiers": getattr(self.params, "alert_group_identifiers", []),
+            "scope": getattr(self.params, "scope", None),
+            "targetEntities": getattr(self.params, "target_entities", []),
+            "isPredefinedScope": getattr(self.params, "is_predefined_scope", False),
+        }
+        return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
+
+    def get_action_result_by_id(self, result_id: str) -> requests.Response:
+        """Get the result of an action execution by its ID using legacy API."""
+        endpoint = f"/cases/GetActionResultById/{result_id}"
+        return self._make_request(HttpMethod.GET, endpoint)
+
     def get_users_profile_cards(self) -> requests.Response:
         """Get users profile cards."""
         endpoint = "/settings/GetUserProfileCards"

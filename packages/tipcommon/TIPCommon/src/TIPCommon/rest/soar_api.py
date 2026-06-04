@@ -664,6 +664,8 @@ def get_installed_integrations_of_environment(
         validate_response(result)
         instances_dict = safe_json_for_204(result, default_for_204={"integrationInstances": []})
         instances = instances_dict.get("instances", []) or instances_dict.get("integrationInstances", [])
+        if integration_identifier and integration_identifier != "-":
+            instances = [inst for inst in instances if inst.get("integrationIdentifier") == integration_identifier]
     else:
         instances = result
 
@@ -1990,3 +1992,66 @@ def get_case_close_comment(
     response = api_client.get_case_close_comment(case_id)
     validate_response(response, validate_json=True)
     return CaseCloseComment.from_json(response.json()).comment
+
+
+def execute_manual_action(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    action_name: str,
+    action_properties: dict,
+    alert_group_identifiers: list[str] | None = None,
+    scope: str | None = None,
+    target_entities: list[dict] | None = None,
+    is_predefined_scope: bool = False,
+    action_provider: str = "Scripts",
+) -> requests.Response:
+    """Execute a manual action on a case.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+        case_id (int): Chronicle SOAR case ID.
+        action_name (str): Chronicle SOAR Action Name.
+        action_properties (dict): Action properties to pass (ScriptName, ScriptParametersEntityFields, IntegrationInstance).
+        alert_group_identifiers (list[str]): Alert group identifiers (optional).
+        scope (str): Scope of the action (optional).
+        target_entities (list[dict]): List of target entities to run on (optional).
+        is_predefined_scope (bool): Whether predefined scope is used.
+        action_provider (str): Provider of the action (default: 'Scripts').
+
+    Returns:
+        requests.Response: Response from the API call.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.case_id = case_id
+    api_client.params.action_name = action_name
+    api_client.params.action_provider = action_provider
+    api_client.params.action_properties = action_properties
+    api_client.params.alert_group_identifiers = alert_group_identifiers or []
+    api_client.params.scope = scope
+    api_client.params.target_entities = target_entities or []
+    api_client.params.is_predefined_scope = is_predefined_scope
+
+    response = api_client.execute_manual_action()
+    validate_response(response)
+    return response
+
+
+def get_action_result_by_id(
+    chronicle_soar: ChronicleSOAR,
+    result_id: str,
+) -> requests.Response:
+    """Get the result of an action execution by its ID.
+
+    Args:
+        chronicle_soar (ChronicleSOAR): A chronicle soar SDK object.
+        result_id (str): The ID of the action result.
+
+    Returns:
+        requests.Response: Response from the API call.
+    """
+    api_client = get_soar_client(chronicle_soar)
+    response = api_client.get_action_result_by_id(result_id)
+    validate_response(response)
+    return response
+
+
