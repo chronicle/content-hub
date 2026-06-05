@@ -14,11 +14,15 @@
 
 from __future__ import annotations
 
+import base64
+import logging
 from typing import TYPE_CHECKING
 
 import google.auth
 import google.auth.impersonated_credentials
+import requests
 import yaml
+from google.auth.transport.requests import AuthorizedSession
 from google.cloud import secretmanager
 from google.oauth2 import service_account
 
@@ -38,6 +42,8 @@ if TYPE_CHECKING:
     )
     from google.cloud.secretmanager_v1.types import AccessSecretVersionResponse
 
+_SECRET_MANAGER_API_BASE: str = "https://secretmanager.googleapis.com/v1"
+
 
 class GoogleSecretManagerClient:
     """Client for interacting with Google Secret Manager."""
@@ -50,6 +56,7 @@ class GoogleSecretManagerClient:
         service_account_json: str | None = None,
         project_id: str | None = None,
         workload_identity_email: str | None = None,
+        logger: logging.Logger | None = None,
         *,
         verify_ssl: bool = True,
     ) -> None:
@@ -66,6 +73,7 @@ class GoogleSecretManagerClient:
             project_id (str | None): The Google Cloud Project ID.
             workload_identity_email (str | None): The service account email to
                 impersonate when using Workload Identity / ADC authentication.
+            logger (logging.Logger | None): Optional logger instance for logging.
             verify_ssl (bool): Whether to verify the server's SSL certificate.
                 Defaults to True.
 
@@ -74,6 +82,7 @@ class GoogleSecretManagerClient:
                 email is provided, or if Project ID is missing.
 
         """
+        self.logger: logging.Logger | None = logger
         self.verify_ssl: bool = verify_ssl
         self.project_id: str | None
         if workload_identity_email:
@@ -102,22 +111,29 @@ class GoogleSecretManagerClient:
             )
             raise InvalidConfigurationError(msg)
 
+        self._service_client: SecretManagerServiceClient | None = None
+        self._session: AuthorizedSession | None = None
+
         if self.verify_ssl:
-            self._service_client: SecretManagerServiceClient = (
-                secretmanager.SecretManagerServiceClient(credentials=self.credentials)
-            )
-        else:
-            # gRPC does not support disabling SSL verification.  Switch to
-            # the REST transport which is backed by ``requests.Session`` and
-            # then set ``session.verify = False`` — consistent with every
-            # other integration in this repository.
+            if self.logger:
+                self.logger.info("Initializing Google Secret Manager client with gRPC transport.")
             self._service_client = secretmanager.SecretManagerServiceClient(
                 credentials=self.credentials,
-                transport="rest",
             )
-            # The REST transport exposes the underlying AuthorizedSession
-            # (a requests.Session subclass) via ``_transport._session``.
-            self._service_client._transport._session.verify = False  # noqa: SLF001
+        else:
+            if self.logger:
+                self.logger.info(
+                    "Initializing Google Secret Manager client with direct REST transport "
+                    "(verify_ssl=False)."
+                )
+            # gRPC does not support disabling SSL verification, and the
+            # library's REST transport has protobuf/proto-plus compatibility
+            # issues in some environments.  Fall back to calling the Secret
+            # Manager REST API directly via ``AuthorizedSession`` (a
+            # ``requests.Session`` subclass) with ``verify=False`` —
+            # consistent with every other integration in this repository.
+            self._session = AuthorizedSession(self.credentials)
+            self._session.verify = False
 
     @staticmethod
     def _build_sa_credentials(
@@ -184,6 +200,35 @@ class GoogleSecretManagerClient:
             target_scopes=[self._SECRET_MANAGER_SCOPE],
         )
 
+    # ------------------------------------------------------------------
+    # REST API helpers (used when verify_ssl=False)
+    # ------------------------------------------------------------------
+
+    def _rest_get(self, path: str, params: dict | None = None) -> dict:
+        """Make an authenticated GET request to the Secret Manager REST API.
+
+        Args:
+            path (str): API path relative to the base URL (e.g.
+                ``projects/my-proj/secrets``).
+            params (dict | None): Optional query parameters.
+
+        Returns:
+            dict: The parsed JSON response body.
+
+        Raises:
+            requests.HTTPError: If the response status is not 2xx.
+
+        """
+        assert self._session is not None  # noqa: S101
+        url: str = f"{_SECRET_MANAGER_API_BASE}/{path}"
+        response: requests.Response = self._session.get(url, params=params)
+        response.raise_for_status()
+        return response.json()
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
     def test_connectivity(self) -> bool:
         """Test connectivity to Google Secret Manager.
 
@@ -195,18 +240,33 @@ class GoogleSecretManagerClient:
             ConnectivityError: If the connectivity tests fail.
 
         """
-        parent: str = f"projects/{self.project_id}"
-
+        if self.logger:
+            self.logger.info("Testing connectivity to Google Secret Manager.")
         try:
-            results = self._service_client.list_secrets(request={"parent": parent, "page_size": 1})
-            # Attempt to iterate to trigger the API call
-            next(iter(results), None)
-        except GoogleSecretManagerError:
+            if self._service_client:
+                parent: str = f"projects/{self.project_id}"
+                results = self._service_client.list_secrets(
+                    request={"parent": parent, "page_size": 1},
+                )
+                # Attempt to iterate to trigger the API call
+                next(iter(results), None)
+            else:
+                self._rest_get(
+                    f"projects/{self.project_id}/secrets",
+                    params={"pageSize": "1"},
+                )
+        except GoogleSecretManagerError as e:
+            if self.logger:
+                self.logger.error("Failed to connect to Google Secret Manager: %s", e)
             raise
         except Exception as e:
             msg: str = f"Failed to connect to Google Secret Manager: {e}"
+            if self.logger:
+                self.logger.error(msg)
             raise ConnectivityError(msg) from e
         else:
+            if self.logger:
+                self.logger.info("Successfully connected to Google Secret Manager.")
             return True
 
     def resolve_latest_enabled_version(self, secret_id: str) -> str:
@@ -226,22 +286,45 @@ class GoogleSecretManagerClient:
 
         """
         parent: str = f"projects/{self.project_id}/secrets/{secret_id}"
+        if self.logger:
+            self.logger.info("Resolving latest enabled version for secret '%s'.", secret_id)
 
         try:
-            versions = list(self._service_client.list_secret_versions(request={"parent": parent}))
-        except Exception:  # noqa: BLE001
+            if self._service_client:
+                versions = list(
+                    self._service_client.list_secret_versions(request={"parent": parent}),
+                )
+            else:
+                data: dict = self._rest_get(f"{parent}/versions")
+                versions = data.get("versions", [])
+        except Exception as e:  # noqa: BLE001
             # If we fail to list versions (e.g., permission issue), fall
             # through.  The subsequent get_secret_value call will raise a
             # proper SecretAccessError.
+            if self.logger:
+                self.logger.warning(
+                    "Failed to list secret versions for '%s' (%s). Falling back to default version '%s'.",
+                    secret_id,
+                    e,
+                    DEFAULT_SECRET_VERSION,
+                )
             return DEFAULT_SECRET_VERSION
 
         latest_version_number: int = -1
         latest_version_id: str | None = None
 
         for version in versions:
-            if version.state != secretmanager.SecretVersion.State.ENABLED:
-                continue
-            version_id: str = version.name.split("/")[-1]
+            # gRPC client returns protobuf objects with .state enum;
+            # REST API returns dicts with "state" string.
+            if self._service_client:
+                if version.state != secretmanager.SecretVersion.State.ENABLED:
+                    continue
+                version_id: str = version.name.split("/")[-1]
+            else:
+                if version.get("state") != "ENABLED":
+                    continue
+                version_id = version["name"].split("/")[-1]
+
             try:
                 version_number: int = int(version_id)
             except ValueError:
@@ -251,8 +334,20 @@ class GoogleSecretManagerClient:
                 latest_version_id = version_id
 
         if latest_version_id is not None:
+            if self.logger:
+                self.logger.info(
+                    "Resolved latest enabled version for '%s' to '%s'.",
+                    secret_id,
+                    latest_version_id,
+                )
             return latest_version_id
 
+        if self.logger:
+            self.logger.warning(
+                "No enabled versions found for secret '%s'. Falling back to default version '%s'.",
+                secret_id,
+                DEFAULT_SECRET_VERSION,
+            )
         return DEFAULT_SECRET_VERSION
 
     def get_secret_value(self, secret_id: str, version_id: str = DEFAULT_SECRET_VERSION) -> str:
@@ -271,16 +366,26 @@ class GoogleSecretManagerClient:
 
         """
         name: str = f"projects/{self.project_id}/secrets/{secret_id}/versions/{version_id}"
+        if self.logger:
+            self.logger.info("Accessing secret '%s' version '%s'.", secret_id, version_id)
 
         try:
-            response: AccessSecretVersionResponse = self._service_client.access_secret_version(
-                request={"name": name}
-            )
+            if self._service_client:
+                response: AccessSecretVersionResponse = (
+                    self._service_client.access_secret_version(request={"name": name})
+                )
+                payload: bytes = response.payload.data
+            else:
+                data: dict = self._rest_get(f"{name}:access")
+                # REST API returns payload.data as a base64-encoded string.
+                payload = base64.b64decode(data["payload"]["data"])
+            if self.logger:
+                self.logger.info("Successfully retrieved payload for secret '%s'.", secret_id)
         except Exception as e:
             msg: str = f"Failed to access secret version '{version_id}': {e}"
+            if self.logger:
+                self.logger.error("Failed to access secret '%s' version '%s': %s", secret_id, version_id, e)
             raise SecretAccessError(msg) from e
-
-        payload: bytes = response.payload.data
 
         try:
             return payload.decode("UTF-8")
@@ -291,4 +396,11 @@ class GoogleSecretManagerClient:
                 f"This integration only supports "
                 f"text-based secrets (UTF-8 encoded)."
             )
+            if self.logger:
+                self.logger.error(
+                    "Failed to decode secret '%s' version '%s' as UTF-8.",
+                    secret_id,
+                    version_id,
+                )
             raise SecretAccessError(msg) from e
+

@@ -43,6 +43,7 @@ class GoogleSecretManagerAction(Action, ABC):
             service_account_json=auth_params.service_account_json,
             project_id=auth_params.project_id,
             workload_identity_email=auth_params.workload_identity_email,
+            logger=self.logger,
             verify_ssl=auth_params.verify_ssl,
         )
 

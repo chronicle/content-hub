@@ -159,19 +159,17 @@ class TestClientInit:
         if call_kwargs is not None:
             assert call_kwargs.kwargs.get("transport") != "rest"
 
-    def test_verify_ssl_false_uses_rest_transport(
+    def test_verify_ssl_false_uses_direct_rest(
         self,
         mock_sa_credentials: MagicMock,
     ) -> None:
-        """When verify_ssl=False, REST transport is used with session.verify=False."""
-        mock_rest_instance: MagicMock = MagicMock()
-        mock_rest_instance._transport._session.verify = True  # will be set to False
+        """When verify_ssl=False, direct AuthorizedSession is used with verify=False."""
+        mock_session_instance = MagicMock()
 
         with patch(
-            "google.cloud.secretmanager.SecretManagerServiceClient",
-        ) as mock_cls:
-            mock_cls.return_value = mock_rest_instance
-
+            "google_secret_manager.core.manager.AuthorizedSession",
+            return_value=mock_session_instance,
+        ) as mock_auth_session_cls:
             client = GoogleSecretManagerClient(
                 service_account_json=make_sa_json(),
                 project_id="my-project",
@@ -179,12 +177,10 @@ class TestClientInit:
             )
 
         assert client.verify_ssl is False
-        # Verify the client was created with transport="rest"
-        mock_cls.assert_called_once()
-        call_kwargs = mock_cls.call_args
-        assert call_kwargs.kwargs.get("transport") == "rest"
-        # Verify session.verify was set to False
-        assert mock_rest_instance._transport._session.verify is False
+        mock_auth_session_cls.assert_called_once_with(mock_sa_credentials)
+        assert mock_session_instance.verify is False
+        assert client._session is mock_session_instance
+        assert client._service_client is None
 
 
 # -------------------------------------------------------------------
@@ -229,6 +225,39 @@ class TestConnectivity:
 
         with pytest.raises(ConnectivityError, match="Network error"):
             client.test_connectivity()
+
+    def test_connectivity_success_rest(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """Connectivity succeeds using REST transport."""
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+            verify_ssl=False,
+        )
+        with patch.object(client, "_rest_get") as mock_rest_get:
+            mock_rest_get.return_value = {}
+            result = client.test_connectivity()
+            assert result is True
+            mock_rest_get.assert_called_once_with(
+                "projects/test-project/secrets",
+                params={"pageSize": "1"},
+            )
+
+    def test_connectivity_failure_rest_raises(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """Raises ConnectivityError when REST call fails."""
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+            verify_ssl=False,
+        )
+        with patch.object(client, "_rest_get", side_effect=Exception("HTTP Error")):
+            with pytest.raises(ConnectivityError, match="HTTP Error"):
+                client.test_connectivity()
 
 
 # -------------------------------------------------------------------
@@ -291,6 +320,41 @@ class TestGetSecretValue:
             match="Permission denied",
         ):
             client.get_secret_value("restricted-secret")
+
+    def test_get_secret_value_success_rest(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """Returns decoded UTF-8 payload using REST transport."""
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+            verify_ssl=False,
+        )
+        import base64
+        encoded_data = base64.b64encode(b"my-password-123").decode("utf-8")
+        mock_response = {"payload": {"data": encoded_data}}
+
+        with patch.object(client, "_rest_get", return_value=mock_response) as mock_rest_get:
+            result = client.get_secret_value("db-password", "3")
+            assert result == "my-password-123"
+            mock_rest_get.assert_called_once_with(
+                "projects/test-project/secrets/db-password/versions/3:access"
+            )
+
+    def test_get_secret_value_api_error_rest_raises(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """Raises SecretAccessError when REST call fails."""
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+            verify_ssl=False,
+        )
+        with patch.object(client, "_rest_get", side_effect=Exception("HTTP Error")):
+            with pytest.raises(SecretAccessError, match="HTTP Error"):
+                client.get_secret_value("db-password", "3")
 
 
 # -------------------------------------------------------------------
@@ -394,3 +458,64 @@ class TestResolveLatestEnabledVersion:
         result: str = client.resolve_latest_enabled_version("my-secret")
 
         assert result == DEFAULT_SECRET_VERSION
+
+    def test_picks_highest_version_number_rest(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """Selects the highest enabled version regardless of API order using REST."""
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+            verify_ssl=False,
+        )
+        mock_response = {
+            "versions": [
+                {"name": "projects/test-project/secrets/my-secret/versions/3", "state": "ENABLED"},
+                {"name": "projects/test-project/secrets/my-secret/versions/7", "state": "ENABLED"},
+                {"name": "projects/test-project/secrets/my-secret/versions/1", "state": "ENABLED"},
+                {"name": "projects/test-project/secrets/my-secret/versions/5", "state": "ENABLED"},
+            ]
+        }
+        with patch.object(client, "_rest_get", return_value=mock_response) as mock_rest_get:
+            result = client.resolve_latest_enabled_version("my-secret")
+            assert result == "7"
+            mock_rest_get.assert_called_once_with(
+                "projects/test-project/secrets/my-secret/versions"
+            )
+
+    def test_skips_disabled_and_destroyed_rest(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """Only considers ENABLED versions using REST."""
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+            verify_ssl=False,
+        )
+        mock_response = {
+            "versions": [
+                {"name": "projects/test-project/secrets/my-secret/versions/10", "state": "DESTROYED"},
+                {"name": "projects/test-project/secrets/my-secret/versions/8", "state": "DISABLED"},
+                {"name": "projects/test-project/secrets/my-secret/versions/5", "state": "ENABLED"},
+                {"name": "projects/test-project/secrets/my-secret/versions/2", "state": "ENABLED"},
+            ]
+        }
+        with patch.object(client, "_rest_get", return_value=mock_response):
+            result = client.resolve_latest_enabled_version("my-secret")
+            assert result == "5"
+
+    def test_api_error_returns_default_rest(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """Falls back to DEFAULT on API failure instead of crashing using REST."""
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+            verify_ssl=False,
+        )
+        with patch.object(client, "_rest_get", side_effect=Exception("HTTP Error")):
+            result = client.resolve_latest_enabled_version("my-secret")
+            assert result == DEFAULT_SECRET_VERSION
