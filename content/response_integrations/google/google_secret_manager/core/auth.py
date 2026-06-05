@@ -26,6 +26,7 @@ from .constants import (
     INTEGRATION_IDENTIFIER,
     PROJECT_ID_PARAM,
     SERVICE_ACCOUNT_JSON_PARAM,
+    VERIFY_SSL_PARAM,
     WORKLOAD_IDENTITY_EMAIL_PARAM,
 )
 from .exceptions import GoogleSecretManagerError
@@ -35,6 +36,7 @@ class IntegrationParameters(NamedTuple):
     service_account_json: str | None
     project_id: str | None
     workload_identity_email: str | None
+    verify_ssl: bool
 
 
 def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
@@ -90,9 +92,19 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
         is_mandatory=False,
         print_value=True,
     )
+    verify_ssl: bool = extract_script_param(
+        soar_sdk_object,
+        input_dictionary=input_dictionary,
+        param_name=VERIFY_SSL_PARAM,
+        is_mandatory=True,
+        input_type=bool,
+        default_value=True,
+        print_value=True,
+    )
 
     return IntegrationParameters(
         service_account_json=service_account_json,
         project_id=project_id,
         workload_identity_email=workload_identity_email,
+        verify_ssl=verify_ssl,
     )

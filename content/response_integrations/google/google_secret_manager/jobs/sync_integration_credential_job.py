@@ -84,6 +84,7 @@ class SyncIntegrationCredentialJob(Job):
             service_account_json=auth_params.service_account_json,
             project_id=auth_params.project_id,
             workload_identity_email=auth_params.workload_identity_email,
+            verify_ssl=auth_params.verify_ssl,
         )
 
     def _validate_params(self) -> None:

@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 import google.auth
@@ -50,6 +51,7 @@ class GoogleSecretManagerClient:
         service_account_json: str | None = None,
         project_id: str | None = None,
         workload_identity_email: str | None = None,
+        verify_ssl: bool = True,
     ) -> None:
         """Initialize the Google Secret Manager Client.
 
@@ -64,7 +66,10 @@ class GoogleSecretManagerClient:
             project_id (str | None): The Google Cloud Project ID.
             workload_identity_email (str | None): The service account email to
                 impersonate when using Workload Identity / ADC authentication.
+            verify_ssl (bool): Whether to verify the server's SSL certificate.
+                Defaults to True.
         """
+        self.verify_ssl: bool = verify_ssl
         self.project_id: str | None
         if workload_identity_email:
             self.credentials: (
@@ -89,6 +94,9 @@ class GoogleSecretManagerClient:
                 "parameter explicitly. When using Workload Identity, 'Project ID' "
                 "must always be set explicitly as it cannot be inferred."
             )
+
+        if not self.verify_ssl:
+            os.environ["GRPC_DEFAULT_SSL_ROOTS_FILE_PATH"] = ""
 
         self._service_client: SecretManagerServiceClient = secretmanager.SecretManagerServiceClient(
             credentials=self.credentials

@@ -26,6 +26,7 @@ SYNC_CREDENTIAL_JOB_SCRIPT_NAME: str = "Sync Integration Credential Job"
 SERVICE_ACCOUNT_JSON_PARAM: str = "Service Account JSON"
 PROJECT_ID_PARAM: str = "Project ID"
 WORKLOAD_IDENTITY_EMAIL_PARAM: str = "Workload Identity Email"
+VERIFY_SSL_PARAM: str = "Verify SSL"
 
 # Secret Manager API defaults
 DEFAULT_SECRET_VERSION: str = "latest"
