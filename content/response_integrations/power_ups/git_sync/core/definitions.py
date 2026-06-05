@@ -580,7 +580,7 @@ class Job(Content):
         self.integration = self.raw_data.get("integration")
         self.description = self.raw_data.get("description")
         self.parameters = self.raw_data.get("parameters")
-        self.runIntervalInSeconds = self.raw_data.get("runIntervalInSeconds")
+        self.runIntervalInSeconds = self.raw_data.get("runIntervalInSeconds") or self.raw_data.get("intervalSeconds")
 
     def generate_readme(self, additional_info: str = None) -> None:
         env = JinjaEnvironment()

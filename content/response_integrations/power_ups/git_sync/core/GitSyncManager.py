@@ -466,11 +466,18 @@ class GitSyncManager:
             try:
                 integration_jobs = self.api.get_integration_jobs(self._siemplify, job.integration)
                 job_def = next(
-                    (x for x in integration_jobs if x.get("displayName") == job.raw_data.get("displayName") or x.get("displayName") == job.name),
-                    None
+                    (
+                        x
+                        for x in integration_jobs
+                        if x.get("displayName") == job.raw_data.get("job")
+                        or x.get("displayName") == job.raw_data.get("displayName")
+                        or x.get("displayName") == job.name
+                    ),
+                    None,
                 )
                 if job_def:
                     job_definition_id = str(job_def.get("id"))
+                    job.raw_data["jobDefinitionId"] = job_definition_id
             except Exception as e:
                 self.logger.warn(f"Failed to retrieve job definition for {job.name}: {e}")
 
