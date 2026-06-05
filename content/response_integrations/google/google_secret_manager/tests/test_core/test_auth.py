@@ -47,7 +47,7 @@ class TestBuildAuthParams:
             SERVICE_ACCOUNT_JSON_PARAM: "sa-json-value",
             PROJECT_ID_PARAM: "proj-123",
             WORKLOAD_IDENTITY_EMAIL_PARAM: None,
-            VERIFY_SSL_PARAM: True,
+            VERIFY_SSL_PARAM: "true",
         }
 
         result: IntegrationParameters = build_auth_params(
@@ -70,7 +70,7 @@ class TestBuildAuthParams:
             SERVICE_ACCOUNT_JSON_PARAM: "job-sa-json",
             PROJECT_ID_PARAM: "job-proj",
             WORKLOAD_IDENTITY_EMAIL_PARAM: "wi@proj.iam",
-            VERIFY_SSL_PARAM: True,
+            VERIFY_SSL_PARAM: "true",
         }
 
         result: IntegrationParameters = build_auth_params(mock_job)
@@ -88,7 +88,7 @@ class TestBuildAuthParams:
             SERVICE_ACCOUNT_JSON_PARAM: "conn-sa",
             PROJECT_ID_PARAM: "conn-proj",
             WORKLOAD_IDENTITY_EMAIL_PARAM: None,
-            VERIFY_SSL_PARAM: False,
+            VERIFY_SSL_PARAM: "false",
         }
 
         result: IntegrationParameters = build_auth_params(
@@ -118,7 +118,7 @@ class TestBuildAuthParams:
             SERVICE_ACCOUNT_JSON_PARAM: "x",
             PROJECT_ID_PARAM: "y",
             WORKLOAD_IDENTITY_EMAIL_PARAM: "z",
-            VERIFY_SSL_PARAM: True,
+            VERIFY_SSL_PARAM: "true",
         }
 
         result = build_auth_params(mock_job)
@@ -147,14 +147,14 @@ class TestBuildAuthParams:
         assert result.verify_ssl is True
 
     def test_verify_ssl_false_extracted_correctly(self) -> None:
-        """verify_ssl is False when the checkbox parameter is disabled."""
+        """verify_ssl is False when the checkbox sends the string 'false'."""
         mock_job: MagicMock = MagicMock()
         mock_job.__class__.__name__ = "SiemplifyJob"
         mock_job.parameters = {
             SERVICE_ACCOUNT_JSON_PARAM: "x",
             PROJECT_ID_PARAM: "y",
             WORKLOAD_IDENTITY_EMAIL_PARAM: None,
-            VERIFY_SSL_PARAM: False,
+            VERIFY_SSL_PARAM: "false",
         }
 
         result = build_auth_params(mock_job)

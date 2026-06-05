@@ -96,7 +96,7 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
         soar_sdk_object,
         input_dictionary=input_dictionary,
         param_name=VERIFY_SSL_PARAM,
-        is_mandatory=True,
+        is_mandatory=False,
         input_type=bool,
         default_value=True,
         print_value=True,
