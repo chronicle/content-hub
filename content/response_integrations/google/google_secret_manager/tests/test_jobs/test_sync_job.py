@@ -16,12 +16,14 @@
 
 from __future__ import annotations
 
+import time
 from unittest.mock import AsyncMock, MagicMock, PropertyMock
 
 import pytest
 
 from google_secret_manager.core.constants import DEFAULT_SECRET_VERSION
 from google_secret_manager.core.exceptions import (
+    IntegrationCredentialSyncError,
     InvalidConfigurationError,
 )
 from google_secret_manager.jobs.sync_integration_credential_job import (
@@ -41,6 +43,7 @@ def _make_job() -> SyncIntegrationCredentialJob:
     job.name_id = "SyncIntegrationCredentialJob"
     job.state_context = {}
     job._secret_cache = {}
+    job._job_start_time = int(time.time() * 1000)
     type(job).logger = PropertyMock(return_value=MagicMock())
 
     # Mock self.params with attribute-style access.
@@ -391,3 +394,78 @@ class TestSecretFetchCaching:
 
         # The cache dictionary should have populated
         assert job._secret_cache["secret-a", "3"] == "secret-payload"
+
+
+class TestAggregatedErrors:
+    """Tests for aggregated error collection and failure at the end of the sync job."""
+
+    @pytest.mark.anyio
+    async def test_sync_errors_collected_and_fails_job(self) -> None:
+        """Collects errors from various failing components and raises IntegrationCredentialSyncError."""
+        from unittest.mock import patch
+        import asyncio
+
+        job = _make_job()
+        job._soar_job = MagicMock()
+        job.params.credential_mapping = (
+            '{"integration_instances": {"inst1": {}}, "connectors": {"conn1": {}}, "jobs": {"job1": {}}}'
+        )
+        job._validate_params()
+        job._sync_errors = []
+
+        # Mock APIs to simulate components not found
+        job.instance_name_to_identifier = {}
+        job.connector_name_to_identifier = {}
+
+        mock_api = AsyncMock()
+        mock_api.get_installed_integrations_of_environment.return_value = {
+            "instances": [{"displayName": "other-inst", "identifier": "other-inst-id"}]
+        }
+        mock_api.get_connector_cards.return_value = {
+            "connectorInstances": [{"displayName": "other-conn", "identifier": "other-conn-id"}]
+        }
+        mock_api.get_installed_jobs.return_value = [
+            {"displayName": "other-job", "id": "other-job-id", "parameters": []}
+        ]
+
+        # We call the individual sync functions
+        await job._sync_integration_instances(mock_api, asyncio.Semaphore(1))
+        await job._sync_connectors(mock_api, asyncio.Semaphore(1))
+        await job._sync_jobs(mock_api, asyncio.Semaphore(1))
+
+        # Verify errors are collected
+        assert len(job._sync_errors) == 3
+        assert any("Integration instance 'inst1' not found" in err for err in job._sync_errors)
+        assert any("Connector 'conn1' not found" in err for err in job._sync_errors)
+        assert any("Job 'job1' not found" in err for err in job._sync_errors)
+
+        # Mock the entire _async_main calling flow with these sync errors
+        with patch.object(job, "_init_secret_manager_client"):
+            with patch.object(job, "_load_context"):
+                with patch.object(job, "_save_context"):
+                    with patch("google_secret_manager.jobs.sync_integration_credential_job.AsyncChronicleSOAR") as mock_soar_cls:
+                        mock_soar = AsyncMock()
+                        mock_soar_cls.return_value = mock_soar
+
+                        with patch("google_secret_manager.jobs.sync_integration_credential_job.AsyncMarketplaceApi") as mock_market_cls:
+                            # Mock the marketplace API methods
+                            mock_market = AsyncMock()
+                            mock_market.get_installed_integrations_of_environment.return_value = {
+                                "instances": [{"displayName": "other-inst", "identifier": "other-inst-id"}]
+                            }
+                            mock_market.get_connector_cards.return_value = {
+                                "connectorInstances": [{"displayName": "other-conn", "identifier": "other-conn-id"}]
+                            }
+                            mock_market.get_installed_jobs.return_value = [
+                                {"displayName": "other-job", "id": "other-job-id", "parameters": []}
+                            ]
+                            mock_market_cls.return_value = mock_market
+
+                            # Run _async_main and assert it raises IntegrationCredentialSyncError
+                            with pytest.raises(IntegrationCredentialSyncError) as exc_info:
+                                await job._async_main()
+
+                            assert "Credential synchronization completed with one or more errors" in str(exc_info.value)
+                            assert "Integration instance 'inst1' not found" in str(exc_info.value)
+                            assert "Connector 'conn1' not found" in str(exc_info.value)
+                            assert "Job 'job1' not found" in str(exc_info.value)

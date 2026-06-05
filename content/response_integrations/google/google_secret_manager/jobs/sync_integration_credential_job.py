@@ -38,6 +38,7 @@ from ..core.constants import (
     TIMEOUT_THRESHOLD_MS,
 )
 from ..core.exceptions import (
+    IntegrationCredentialSyncError,
     InvalidConfigurationError,
     JobFetchError,
     JobSaveError,
@@ -68,9 +69,11 @@ class SyncIntegrationCredentialJob(Job):
         self.credential_mapping: SingleJson = {}
         self.instance_name_to_identifier: NameIdentifierMap = {}
         self.connector_name_to_identifier: NameIdentifierMap = {}
+        self.job_name_to_identifier: NameIdentifierMap = {}
         self.job_start_time: int = int(time.time() * 1000)
         self.state_context: dict[str, str] = {}
         self._secret_cache: dict[tuple[str, str], str] = {}
+        self._sync_errors: list[str] = []
 
     def _init_api_clients(self) -> None:
         """No-op. Async API clients are initialized inside the async event loop."""
@@ -129,6 +132,12 @@ class SyncIntegrationCredentialJob(Job):
                 return
 
             await self._sync_jobs(api, semaphore)
+
+            if self._sync_errors:
+                summary = "\n".join(f"- {err}" for err in self._sync_errors)
+                msg = f"Credential synchronization completed with one or more errors:\n{summary}"
+                self.logger.error(msg)
+                raise IntegrationCredentialSyncError(msg)
         finally:
             self._save_context()
             self.logger.info("Closing async client session.")
@@ -303,6 +312,7 @@ class SyncIntegrationCredentialJob(Job):
                     self.logger.error(
                         f"Failed to update instance '{name}': {e}",
                     )
+                    self._sync_errors.append(f"Failed to update instance '{name}': {e}")
 
         tasks = [update_task(name, pm) for name, pm in instances.items()]
         await asyncio.gather(*tasks)
@@ -361,10 +371,12 @@ class SyncIntegrationCredentialJob(Job):
         if identifier is None:
             env: str = self.params.environment_name
             available: list[str] = list(self.instance_name_to_identifier.keys())
-            self.logger.error(
+            msg = (
                 f"Integration instance '{instance_name}' not found in environment "
                 f"'{env}'. Available instances: {available}."
             )
+            self.logger.error(msg)
+            self._sync_errors.append(msg)
 
         return identifier
 
@@ -458,6 +470,7 @@ class SyncIntegrationCredentialJob(Job):
                     self.logger.error(
                         f"Failed to update connector '{name}': {e}",
                     )
+                    self._sync_errors.append(f"Failed to update connector '{name}': {e}")
 
         tasks = [update_task(name, pm) for name, pm in connectors.items()]
         await asyncio.gather(*tasks)
@@ -514,9 +527,9 @@ class SyncIntegrationCredentialJob(Job):
         identifier: str | None = self.connector_name_to_identifier.get(connector_name)
         if identifier is None:
             available: list[str] = list(self.connector_name_to_identifier.keys())
-            self.logger.error(
-                f"Connector '{connector_name}' not found. Available connectors: {available}."
-            )
+            msg = f"Connector '{connector_name}' not found. Available connectors: {available}."
+            self.logger.error(msg)
+            self._sync_errors.append(msg)
 
         return identifier
 
@@ -607,6 +620,7 @@ class SyncIntegrationCredentialJob(Job):
                     self.logger.error(
                         f"Failed to update job '{job_name}': {e}",
                     )
+                    self._sync_errors.append(f"Failed to update job '{job_name}': {e}")
 
         tasks = [update_task(name, pm) for name, pm in jobs.items()]
         await asyncio.gather(*tasks)
@@ -730,7 +744,9 @@ class SyncIntegrationCredentialJob(Job):
         job_data: SingleJson | None = name_to_job.get(job_name)
         if job_data is None:
             available: list[str] = list(name_to_job.keys())
-            self.logger.error(f"Job '{job_name}' not found. Available jobs: {available}.")
+            msg = f"Job '{job_name}' not found. Available jobs: {available}."
+            self.logger.error(msg)
+            self._sync_errors.append(msg)
             return None
 
         # Shallow copy to avoid mutating the original dict in the lookup.
@@ -850,11 +866,13 @@ class SyncIntegrationCredentialJob(Job):
         updated_count: int = 0
         for param_name, mapped_value in param_mapping.items():
             if param_name not in param_index:
-                self.logger.error(
+                msg = (
                     f"Parameter '{param_name}' not found on "
                     f"job '{job_name}'. Available parameters: "
                     f"{list(param_index.keys())}."
                 )
+                self.logger.error(msg)
+                self._sync_errors.append(msg)
                 continue
 
             context: str = f"param '{param_name}' on job '{job_name}'"

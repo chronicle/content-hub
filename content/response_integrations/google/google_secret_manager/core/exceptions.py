@@ -50,3 +50,7 @@ class JobFetchError(GoogleSecretManagerError):
 
 class JobSaveError(GoogleSecretManagerError):
     """Raised when persisting an updated job back to the SOAR platform fails."""
+
+
+class IntegrationCredentialSyncError(GoogleSecretManagerError):
+    """Raised when one or more credentials/parameters fail to sync during the sync job."""
