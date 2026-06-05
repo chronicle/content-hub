@@ -32,6 +32,7 @@ class PingAction(GoogleSecretManagerAction):
 
         Raises:
             ConnectivityError: If the connectivity tests fail.
+
         """
         is_connected: bool = self.secret_manager_client.test_connectivity()
 

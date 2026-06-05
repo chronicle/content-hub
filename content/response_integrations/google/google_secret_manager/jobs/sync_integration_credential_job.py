@@ -20,15 +20,13 @@ import time
 from typing import TYPE_CHECKING
 
 import yaml
-
 from TIPCommon.base.job import Job
+from TIPCommon.rest.async_soar_platform_clients.secops_soar import AsyncChronicleSOAR
 from TIPCommon.rest.async_soar_platform_clients.soar_api_client import (
     AsyncMarketplaceApi,
 )
-from TIPCommon.rest.async_soar_platform_clients.secops_soar import AsyncChronicleSOAR
 
 from ..core.auth import IntegrationParameters, build_auth_params
-from ..core.manager import GoogleSecretManagerClient
 from ..core.constants import (
     ANY_INTEGRATION_FILTER_VALUE,
     ASYNC_SEMAPHORE_LIMIT,
@@ -46,6 +44,7 @@ from ..core.exceptions import (
     ParameterUpdateError,
     SecretAccessError,
 )
+from ..core.manager import GoogleSecretManagerClient
 from ..core.utils import build_lookup_with_warnings, mask_id
 
 if TYPE_CHECKING:
@@ -658,7 +657,6 @@ class SyncIntegrationCredentialJob(Job):
             Mapping of display name to job dict.
 
         """
-
         return build_lookup_with_warnings(
             items=job_instances,
             get_key=lambda j: j.get("displayName") or j.get("name", ""),

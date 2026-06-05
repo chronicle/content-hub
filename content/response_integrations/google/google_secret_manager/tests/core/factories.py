@@ -22,7 +22,6 @@ from unittest.mock import MagicMock
 
 from google.cloud import secretmanager
 
-
 # ---------------------------------------------------------------------------
 # Fake Service Account JSON
 # ---------------------------------------------------------------------------

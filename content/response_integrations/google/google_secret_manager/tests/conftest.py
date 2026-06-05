@@ -21,7 +21,7 @@ import pytest
 pytest_plugins = ("integration_testing.conftest",)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_sm_service_client() -> MagicMock:
     """Patch the gRPC SecretManagerServiceClient.
 
@@ -37,7 +37,7 @@ def mock_sm_service_client() -> MagicMock:
         yield mock_instance
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_sa_credentials() -> MagicMock:
     """Patch ``service_account.Credentials.from_service_account_info``.
 

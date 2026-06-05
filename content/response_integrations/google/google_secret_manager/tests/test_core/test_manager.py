@@ -22,21 +22,20 @@ from unittest.mock import MagicMock
 import pytest
 from google.cloud import secretmanager
 
-from google_secret_manager.core.manager import (
-    GoogleSecretManagerClient,
-)
 from google_secret_manager.core.constants import DEFAULT_SECRET_VERSION
 from google_secret_manager.core.exceptions import (
     ConnectivityError,
     InvalidConfigurationError,
     SecretAccessError,
 )
+from google_secret_manager.core.manager import (
+    GoogleSecretManagerClient,
+)
 from google_secret_manager.tests.core.factories import (
     make_access_response,
     make_sa_json,
     make_secret_version,
 )
-
 
 # -------------------------------------------------------------------
 # Initialization

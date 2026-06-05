@@ -24,7 +24,6 @@ from TIPCommon.base.action import ExecutionState
 
 from google_secret_manager.actions import ping
 from google_secret_manager.tests.common import CONFIG_PATH
-from google_secret_manager.tests.core.factories import make_sa_json
 
 
 class TestPing:

@@ -361,7 +361,7 @@ class TestSecretFetchCaching:
     async def test_caches_subsequent_fetches(self) -> None:
         """Only fetches once and uses cached payload for subsequent requests."""
         job = _make_job()
-        
+
         mock_client = MagicMock()
         mock_client.get_secret_value.return_value = "secret-payload"
         job.secret_manager_client = mock_client
@@ -372,7 +372,7 @@ class TestSecretFetchCaching:
             version_id="3",
             context_label="first call",
         )
-        
+
         # Second call (same secret and version)
         val2 = await job._fetch_secret_value_pre_resolved(
             secret_id="secret-a",
@@ -382,12 +382,12 @@ class TestSecretFetchCaching:
 
         assert val1 == "secret-payload"
         assert val2 == "secret-payload"
-        
+
         # The client's get_secret_value should have been called exactly once
         mock_client.get_secret_value.assert_called_once_with(
             secret_id="secret-a",
             version_id="3",
         )
-        
+
         # The cache dictionary should have populated
-        assert job._secret_cache[("secret-a", "3")] == "secret-payload"
+        assert job._secret_cache["secret-a", "3"] == "secret-payload"
