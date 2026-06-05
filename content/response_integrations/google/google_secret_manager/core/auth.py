@@ -14,13 +14,15 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from TIPCommon.extraction import extract_script_param
-from TIPCommon.types import ChronicleSOAR
+
+if TYPE_CHECKING:
+    from TIPCommon.types import ChronicleSOAR
 
 from .constants import (
     INTEGRATION_IDENTIFIER,
@@ -61,15 +63,14 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
     sdk_class: str = type(soar_sdk_object).__name__
     if sdk_class == SiemplifyAction.__name__:
         input_dictionary: dict = soar_sdk_object.get_configuration(INTEGRATION_IDENTIFIER)
-    elif sdk_class in (
+    elif sdk_class in {
         SiemplifyConnectorExecution.__name__,
         SiemplifyJob.__name__,
-    ):
+    }:
         input_dictionary = soar_sdk_object.parameters
     else:
-        raise GoogleSecretManagerError(
-            f"Provided SOAR instance is not supported! type: {sdk_class}.",
-        )
+        msg: str = f"Provided SOAR instance is not supported! type: {sdk_class}."
+        raise GoogleSecretManagerError(msg)
 
     service_account_json: str | None = extract_script_param(
         soar_sdk_object,
