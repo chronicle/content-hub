@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import os
 from unittest.mock import MagicMock
 
 import pytest
@@ -124,6 +125,54 @@ class TestClientInit:
                 service_account_json="not-valid-json{{{",
                 project_id="my-project",
             )
+
+    def test_verify_ssl_defaults_to_true(
+        self,
+        mock_sm_service_client: MagicMock,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """verify_ssl is True by default."""
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="my-project",
+        )
+
+        assert client.verify_ssl is True
+
+    def test_verify_ssl_true_does_not_set_env_var(
+        self,
+        mock_sm_service_client: MagicMock,
+        mock_sa_credentials: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When verify_ssl=True, GRPC_DEFAULT_SSL_ROOTS_FILE_PATH is not set."""
+        monkeypatch.delenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", raising=False)
+
+        GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="my-project",
+            verify_ssl=True,
+        )
+
+        assert "GRPC_DEFAULT_SSL_ROOTS_FILE_PATH" not in os.environ
+
+    def test_verify_ssl_false_sets_env_var(
+        self,
+        mock_sm_service_client: MagicMock,
+        mock_sa_credentials: MagicMock,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When verify_ssl=False, GRPC_DEFAULT_SSL_ROOTS_FILE_PATH is set to empty string."""
+        monkeypatch.delenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", raising=False)
+
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="my-project",
+            verify_ssl=False,
+        )
+
+        assert client.verify_ssl is False
+        assert os.environ.get("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH") == ""
 
 
 # -------------------------------------------------------------------

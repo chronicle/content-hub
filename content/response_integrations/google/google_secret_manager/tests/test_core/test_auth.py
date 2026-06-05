@@ -28,6 +28,7 @@ from google_secret_manager.core.constants import (
     INTEGRATION_IDENTIFIER,
     PROJECT_ID_PARAM,
     SERVICE_ACCOUNT_JSON_PARAM,
+    VERIFY_SSL_PARAM,
     WORKLOAD_IDENTITY_EMAIL_PARAM,
 )
 from google_secret_manager.core.exceptions import (
@@ -46,6 +47,7 @@ class TestBuildAuthParams:
             SERVICE_ACCOUNT_JSON_PARAM: "sa-json-value",
             PROJECT_ID_PARAM: "proj-123",
             WORKLOAD_IDENTITY_EMAIL_PARAM: None,
+            VERIFY_SSL_PARAM: True,
         }
 
         result: IntegrationParameters = build_auth_params(
@@ -58,6 +60,7 @@ class TestBuildAuthParams:
         assert result.service_account_json == "sa-json-value"
         assert result.project_id == "proj-123"
         assert result.workload_identity_email is None
+        assert result.verify_ssl is True
 
     def test_job_extracts_from_parameters(self) -> None:
         """For SiemplifyJob, reads from .parameters dict."""
@@ -67,6 +70,7 @@ class TestBuildAuthParams:
             SERVICE_ACCOUNT_JSON_PARAM: "job-sa-json",
             PROJECT_ID_PARAM: "job-proj",
             WORKLOAD_IDENTITY_EMAIL_PARAM: "wi@proj.iam",
+            VERIFY_SSL_PARAM: True,
         }
 
         result: IntegrationParameters = build_auth_params(mock_job)
@@ -74,6 +78,7 @@ class TestBuildAuthParams:
         assert result.service_account_json == "job-sa-json"
         assert result.project_id == "job-proj"
         assert result.workload_identity_email == "wi@proj.iam"
+        assert result.verify_ssl is True
 
     def test_connector_extracts_from_parameters(self) -> None:
         """For SiemplifyConnectorExecution, reads from .parameters."""
@@ -83,6 +88,7 @@ class TestBuildAuthParams:
             SERVICE_ACCOUNT_JSON_PARAM: "conn-sa",
             PROJECT_ID_PARAM: "conn-proj",
             WORKLOAD_IDENTITY_EMAIL_PARAM: None,
+            VERIFY_SSL_PARAM: False,
         }
 
         result: IntegrationParameters = build_auth_params(
@@ -91,6 +97,7 @@ class TestBuildAuthParams:
 
         assert result.service_account_json == "conn-sa"
         assert result.project_id == "conn-proj"
+        assert result.verify_ssl is False
 
     def test_unsupported_type_raises(self) -> None:
         """Raises GoogleSecretManagerError for unknown SDK types."""
@@ -111,6 +118,7 @@ class TestBuildAuthParams:
             SERVICE_ACCOUNT_JSON_PARAM: "x",
             PROJECT_ID_PARAM: "y",
             WORKLOAD_IDENTITY_EMAIL_PARAM: "z",
+            VERIFY_SSL_PARAM: True,
         }
 
         result = build_auth_params(mock_job)
@@ -120,4 +128,35 @@ class TestBuildAuthParams:
             service_account_json="x",
             project_id="y",
             workload_identity_email="z",
+            verify_ssl=True,
         )
+
+    def test_verify_ssl_defaults_to_true(self) -> None:
+        """verify_ssl defaults to True when the parameter is absent."""
+        mock_job: MagicMock = MagicMock()
+        mock_job.__class__.__name__ = "SiemplifyJob"
+        mock_job.parameters = {
+            SERVICE_ACCOUNT_JSON_PARAM: "x",
+            PROJECT_ID_PARAM: "y",
+            WORKLOAD_IDENTITY_EMAIL_PARAM: None,
+            # VERIFY_SSL_PARAM intentionally omitted
+        }
+
+        result = build_auth_params(mock_job)
+
+        assert result.verify_ssl is True
+
+    def test_verify_ssl_false_extracted_correctly(self) -> None:
+        """verify_ssl is False when the checkbox parameter is disabled."""
+        mock_job: MagicMock = MagicMock()
+        mock_job.__class__.__name__ = "SiemplifyJob"
+        mock_job.parameters = {
+            SERVICE_ACCOUNT_JSON_PARAM: "x",
+            PROJECT_ID_PARAM: "y",
+            WORKLOAD_IDENTITY_EMAIL_PARAM: None,
+            VERIFY_SSL_PARAM: False,
+        }
+
+        result = build_auth_params(mock_job)
+
+        assert result.verify_ssl is False
