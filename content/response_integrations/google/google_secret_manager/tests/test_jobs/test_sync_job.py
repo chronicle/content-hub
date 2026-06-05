@@ -110,36 +110,39 @@ class TestValidateParams:
 class TestResolveSecretAndVersion:
     """Tests for _resolve_secret_and_version."""
 
-    def test_explicit_version(self) -> None:
+    @pytest.mark.anyio
+    async def test_explicit_version(self) -> None:
         """'my-secret:5' returns ('my-secret', '5')."""
         job = _make_job()
 
-        secret_id, version_id = job._resolve_secret_and_version(
+        secret_id, version_id = await job._resolve_secret_and_version(
             "my-secret:5",
         )
 
         assert secret_id == "my-secret"
         assert version_id == "5"
 
-    def test_explicit_version_with_colon_in_id(self) -> None:
+    @pytest.mark.anyio
+    async def test_explicit_version_with_colon_in_id(self) -> None:
         """Splits on first colon only: 'a:b:c' → ('a', 'b:c')."""
         job = _make_job()
 
-        secret_id, version_id = job._resolve_secret_and_version(
+        secret_id, version_id = await job._resolve_secret_and_version(
             "a:b:c",
         )
 
         assert secret_id == "a"
         assert version_id == "b:c"
 
-    def test_auto_version_with_client(self) -> None:
+    @pytest.mark.anyio
+    async def test_auto_version_with_client(self) -> None:
         """Calls resolve_latest_enabled_version when no colon."""
         job = _make_job()
         mock_client: MagicMock = MagicMock()
         mock_client.resolve_latest_enabled_version.return_value = "7"
         job.secret_manager_client = mock_client
 
-        secret_id, version_id = job._resolve_secret_and_version(
+        secret_id, version_id = await job._resolve_secret_and_version(
             "my-secret",
         )
 
@@ -149,12 +152,13 @@ class TestResolveSecretAndVersion:
             "my-secret",
         )
 
-    def test_auto_version_no_client_fallback(self) -> None:
+    @pytest.mark.anyio
+    async def test_auto_version_no_client_fallback(self) -> None:
         """Falls back to DEFAULT_SECRET_VERSION when client is None."""
         job = _make_job()
         job.secret_manager_client = None
 
-        secret_id, version_id = job._resolve_secret_and_version(
+        secret_id, version_id = await job._resolve_secret_and_version(
             "my-secret",
         )
 
