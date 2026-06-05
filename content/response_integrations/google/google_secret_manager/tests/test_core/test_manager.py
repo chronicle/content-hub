@@ -16,8 +16,7 @@
 
 from __future__ import annotations
 
-import os
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from google.cloud import secretmanager
@@ -138,40 +137,54 @@ class TestClientInit:
 
         assert client.verify_ssl is True
 
-    def test_verify_ssl_true_does_not_set_env_var(
+    def test_verify_ssl_true_uses_grpc_transport(
         self,
         mock_sm_service_client: MagicMock,
         mock_sa_credentials: MagicMock,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """When verify_ssl=True, GRPC_DEFAULT_SSL_ROOTS_FILE_PATH is not set."""
-        monkeypatch.delenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", raising=False)
-
+        """When verify_ssl=True (default), the standard gRPC transport is used."""
         GoogleSecretManagerClient(
             service_account_json=make_sa_json(),
             project_id="my-project",
             verify_ssl=True,
         )
 
-        assert "GRPC_DEFAULT_SSL_ROOTS_FILE_PATH" not in os.environ
-
-    def test_verify_ssl_false_sets_env_var(
-        self,
-        mock_sm_service_client: MagicMock,
-        mock_sa_credentials: MagicMock,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """When verify_ssl=False, GRPC_DEFAULT_SSL_ROOTS_FILE_PATH is set to empty string."""
-        monkeypatch.delenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", raising=False)
-
-        client = GoogleSecretManagerClient(
-            service_account_json=make_sa_json(),
-            project_id="my-project",
-            verify_ssl=False,
+        # Standard constructor call – no ``transport`` keyword.
+        mock_sm_service_client_cls = (
+            secretmanager.SecretManagerServiceClient
         )
+        # The fixture patches the class; the class was called to produce the mock.
+        # We verify the call did NOT include transport="rest".
+        call_kwargs = mock_sm_service_client_cls.call_args
+        if call_kwargs is not None:
+            assert call_kwargs.kwargs.get("transport") != "rest"
+
+    def test_verify_ssl_false_uses_rest_transport(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """When verify_ssl=False, REST transport is used with session.verify=False."""
+        mock_rest_instance: MagicMock = MagicMock()
+        mock_rest_instance._transport._session.verify = True  # will be set to False
+
+        with patch(
+            "google.cloud.secretmanager.SecretManagerServiceClient",
+        ) as mock_cls:
+            mock_cls.return_value = mock_rest_instance
+
+            client = GoogleSecretManagerClient(
+                service_account_json=make_sa_json(),
+                project_id="my-project",
+                verify_ssl=False,
+            )
 
         assert client.verify_ssl is False
-        assert os.environ.get("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH") == ""
+        # Verify the client was created with transport="rest"
+        mock_cls.assert_called_once()
+        call_kwargs = mock_cls.call_args
+        assert call_kwargs.kwargs.get("transport") == "rest"
+        # Verify session.verify was set to False
+        assert mock_rest_instance._transport._session.verify is False
 
 
 # -------------------------------------------------------------------

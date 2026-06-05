@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
 import google.auth
@@ -103,12 +102,22 @@ class GoogleSecretManagerClient:
             )
             raise InvalidConfigurationError(msg)
 
-        if not self.verify_ssl:
-            os.environ["GRPC_DEFAULT_SSL_ROOTS_FILE_PATH"] = ""
-
-        self._service_client: SecretManagerServiceClient = secretmanager.SecretManagerServiceClient(
-            credentials=self.credentials
-        )
+        if self.verify_ssl:
+            self._service_client: SecretManagerServiceClient = (
+                secretmanager.SecretManagerServiceClient(credentials=self.credentials)
+            )
+        else:
+            # gRPC does not support disabling SSL verification.  Switch to
+            # the REST transport which is backed by ``requests.Session`` and
+            # then set ``session.verify = False`` — consistent with every
+            # other integration in this repository.
+            self._service_client = secretmanager.SecretManagerServiceClient(
+                credentials=self.credentials,
+                transport="rest",
+            )
+            # The REST transport exposes the underlying AuthorizedSession
+            # (a requests.Session subclass) via ``_transport._session``.
+            self._service_client._transport._session.verify = False  # noqa: SLF001
 
     @staticmethod
     def _build_sa_credentials(
