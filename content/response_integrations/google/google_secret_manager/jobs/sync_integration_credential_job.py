@@ -147,7 +147,12 @@ class SyncIntegrationCredentialJob(Job):
             return
 
         try:
-            self.state_context = yaml.safe_load(context_str)
+            loaded = yaml.safe_load(context_str)
+            if isinstance(loaded, dict):
+                self.state_context = loaded
+            else:
+                self.logger.warn("Parsed job context is not a dictionary. Starting fresh.")
+                self.state_context = {}
         except Exception as e:
             self.logger.warn(f"Failed to parse job context: {e}. Starting fresh.")
             self.state_context = {}
