@@ -163,13 +163,13 @@ class TestClientInit:
         self,
         mock_sa_credentials: MagicMock,
     ) -> None:
-        """When verify_ssl=False, direct AuthorizedSession is used with verify=False."""
+        """When verify_ssl=False, create_authorized_session is used."""
         mock_session_instance = MagicMock()
 
         with patch(
-            "google_secret_manager.core.manager.AuthorizedSession",
+            "google_secret_manager.core.manager.create_authorized_session",
             return_value=mock_session_instance,
-        ) as mock_auth_session_cls:
+        ) as mock_create_session:
             client = GoogleSecretManagerClient(
                 service_account_json=make_sa_json(),
                 project_id="my-project",
@@ -177,8 +177,10 @@ class TestClientInit:
             )
 
         assert client.verify_ssl is False
-        mock_auth_session_cls.assert_called_once_with(mock_sa_credentials)
-        assert mock_session_instance.verify is False
+        mock_create_session.assert_called_once_with(
+            credentials=mock_sa_credentials,
+            verify_ssl=False,
+        )
         assert client._session is mock_session_instance
         assert client._service_client is None
 
@@ -519,3 +521,77 @@ class TestResolveLatestEnabledVersion:
         with patch.object(client, "_rest_get", side_effect=Exception("HTTP Error")):
             result = client.resolve_latest_enabled_version("my-secret")
             assert result == DEFAULT_SECRET_VERSION
+
+
+class TestRestGetErrorHandling:
+    """Tests for _rest_get error validation and parsing."""
+
+    def test_rest_get_success(self, mock_sa_credentials: MagicMock) -> None:
+        """_rest_get returns parsed JSON response on success."""
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+            verify_ssl=False,
+        )
+        client._session = MagicMock()
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"key": "value"}
+        client._session.get.return_value = mock_response
+
+        result = client._rest_get("some-path")
+        assert result == {"key": "value"}
+        mock_response.raise_for_status.assert_called_once()
+
+    def test_rest_get_detailed_error_raising(self, mock_sa_credentials: MagicMock) -> None:
+        """_rest_get raises HTTPError with detailed Google API error message."""
+        import requests
+
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+            verify_ssl=False,
+        )
+        client._session = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 403
+
+        original_error = requests.HTTPError("Original Forbidden Message", response=mock_response)
+        mock_response.raise_for_status.side_effect = original_error
+
+        mock_response.json.return_value = {
+            "error": {
+                "message": "Permission 'secretmanager.versions.access' denied on resource."
+            }
+        }
+        client._session.get.return_value = mock_response
+
+        with pytest.raises(requests.HTTPError) as exc_info:
+            client._rest_get("some-path")
+
+        assert "Permission 'secretmanager.versions.access' denied on resource. (HTTP 403)" in str(exc_info.value)
+        assert exc_info.value.__cause__ is original_error
+
+    def test_rest_get_generic_error_raising(self, mock_sa_credentials: MagicMock) -> None:
+        """_rest_get raises original HTTPError if response is not valid JSON or lacks error message."""
+        import requests
+
+        client = GoogleSecretManagerClient(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+            verify_ssl=False,
+        )
+        client._session = MagicMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+
+        original_error = requests.HTTPError("Internal Server Error", response=mock_response)
+        mock_response.raise_for_status.side_effect = original_error
+
+        mock_response.json.side_effect = ValueError("Not JSON")
+        client._session.get.return_value = mock_response
+
+        with pytest.raises(requests.HTTPError) as exc_info:
+            client._rest_get("some-path")
+
+        assert str(exc_info.value) == "Internal Server Error"
+

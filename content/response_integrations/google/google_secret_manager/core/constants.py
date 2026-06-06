@@ -30,6 +30,8 @@ VERIFY_SSL_PARAM: str = "Verify SSL"
 
 # Secret Manager API defaults
 DEFAULT_SECRET_VERSION: str = "latest"
+SECRET_MANAGER_API_BASE: str = "https://secretmanager.googleapis.com/v1"
+SECRET_MANAGER_SCOPE: str = "https://www.googleapis.com/auth/cloud-platform"
 
 # Job parameter names
 ENVIRONMENT_NAME_PARAM: str = "Environment Name"

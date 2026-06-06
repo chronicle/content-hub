@@ -12,17 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for build_auth_params."""
+"""Tests for authentication."""
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
+import google.auth
+import google.auth.exceptions
+import google.auth.impersonated_credentials
+from google.oauth2 import service_account
 
-from google_secret_manager.core.auth import (
+from google_secret_manager.core.authentication import (
     IntegrationParameters,
     build_auth_params,
+    _get_credentials_using_service_account,
+    _get_credentials_using_workload_identity_email,
+    get_credentials,
 )
 from google_secret_manager.core.constants import (
     INTEGRATION_IDENTIFIER,
@@ -33,6 +40,10 @@ from google_secret_manager.core.constants import (
 )
 from google_secret_manager.core.exceptions import (
     GoogleSecretManagerError,
+    InvalidConfigurationError,
+)
+from google_secret_manager.tests.core.factories import (
+    make_sa_json,
 )
 
 
@@ -160,3 +171,98 @@ class TestBuildAuthParams:
         result = build_auth_params(mock_job)
 
         assert result.verify_ssl is False
+
+
+class TestGetCredentialsFunctions:
+    """Tests for credentials helper functions."""
+
+    def test_get_credentials_using_service_account_success(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """Resolves credentials and project_id from SA json."""
+        sa_json = make_sa_json(project_id="test-proj")
+        creds, resolved_proj = _get_credentials_using_service_account(sa_json)
+        assert creds is mock_sa_credentials
+        assert resolved_proj == "test-proj"
+
+    def test_get_credentials_using_service_account_override_project_id(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """Resolves credentials and prefers explicit project ID over JSON."""
+        sa_json = make_sa_json(project_id="json-proj")
+        creds, resolved_proj = _get_credentials_using_service_account(
+            sa_json, project_id="explicit-proj"
+        )
+        assert creds is mock_sa_credentials
+        assert resolved_proj == "explicit-proj"
+
+    def test_get_credentials_using_service_account_invalid_json_raises(self) -> None:
+        """Raises InvalidConfigurationError if SA JSON is invalid."""
+        with pytest.raises(InvalidConfigurationError, match="Invalid Service Account"):
+            _get_credentials_using_service_account("invalid-json{")
+
+    def test_get_credentials_using_workload_identity_email_success(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Builds impersonated credentials."""
+        mock_source_creds = MagicMock()
+        monkeypatch.setattr(
+            "google.auth.default",
+            lambda scopes: (mock_source_creds, None),
+        )
+        mock_impersonated = MagicMock()
+        monkeypatch.setattr(
+            "google.auth.impersonated_credentials.Credentials",
+            lambda **kwargs: mock_impersonated,
+        )
+
+        creds = _get_credentials_using_workload_identity_email(
+            "sa@proj.iam.gserviceaccount.com"
+        )
+        assert creds is mock_impersonated
+
+    def test_get_credentials_using_workload_identity_email_default_creds_failure(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Raises InvalidConfigurationError if application default credentials are not found."""
+        def mock_default_raise(scopes):
+            raise google.auth.exceptions.DefaultCredentialsError("Not found")
+
+        monkeypatch.setattr("google.auth.default", mock_default_raise)
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Could not resolve Application Default Credentials",
+        ):
+            _get_credentials_using_workload_identity_email("sa@proj.iam.gserviceaccount.com")
+
+    def test_get_credentials_workload_identity_preferred(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """get_credentials prefers workload identity if both are provided."""
+        mock_impersonated = MagicMock()
+        monkeypatch.setattr(
+            "google_secret_manager.core.authentication._get_credentials_using_workload_identity_email",
+            lambda email: mock_impersonated,
+        )
+
+        creds, proj = get_credentials(
+            service_account_json="sa-json",
+            project_id="test-proj",
+            workload_identity_email="sa@proj.iam.gserviceaccount.com",
+        )
+        assert creds is mock_impersonated
+        assert proj == "test-proj"
+
+    def test_get_credentials_no_auth_raises(self) -> None:
+        """Raises InvalidConfigurationError if no credentials arguments are provided."""
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Either 'Service Account JSON' or 'Workload Identity Email' must be provided",
+        ):
+            get_credentials()

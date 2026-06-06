@@ -18,16 +18,14 @@ import base64
 import logging
 from typing import TYPE_CHECKING
 
-import google.auth
-import google.auth.impersonated_credentials
 import requests
-import yaml
 from google.auth.transport.requests import AuthorizedSession
 from google.cloud import secretmanager
-from google.oauth2 import service_account
 
+from .authentication import create_authorized_session, get_credentials
 from .constants import (
     DEFAULT_SECRET_VERSION,
+    SECRET_MANAGER_API_BASE,
 )
 from .exceptions import (
     ConnectivityError,
@@ -42,14 +40,9 @@ if TYPE_CHECKING:
     )
     from google.cloud.secretmanager_v1.types import AccessSecretVersionResponse
 
-_SECRET_MANAGER_API_BASE: str = "https://secretmanager.googleapis.com/v1"
-
 
 class GoogleSecretManagerClient:
     """Client for interacting with Google Secret Manager."""
-
-    # OAuth2 scope required to access the Secret Manager API.
-    _SECRET_MANAGER_SCOPE: str = "https://www.googleapis.com/auth/cloud-platform"
 
     def __init__(
         self,
@@ -84,23 +77,12 @@ class GoogleSecretManagerClient:
         """
         self.logger: logging.Logger | None = logger
         self.verify_ssl: bool = verify_ssl
-        self.project_id: str | None
-        if workload_identity_email:
-            self.credentials: (
-                service_account.Credentials | google.auth.impersonated_credentials.Credentials
-            ) = self._build_impersonated_credentials(workload_identity_email)
-            self.project_id = project_id
-        elif service_account_json:
-            self.credentials, self.project_id = self._build_sa_credentials(
-                service_account_json,
-                project_id,
-            )
-        else:
-            msg: str = (
-                "Either 'Service Account JSON' or 'Workload Identity Email' "
-                "must be provided to authenticate with Google Secret Manager."
-            )
-            raise InvalidConfigurationError(msg)
+
+        self.credentials, self.project_id = get_credentials(
+            service_account_json=service_account_json,
+            project_id=project_id,
+            workload_identity_email=workload_identity_email,
+        )
 
         if not self.project_id:
             msg = (
@@ -115,94 +97,18 @@ class GoogleSecretManagerClient:
         self._session: AuthorizedSession | None = None
 
         if self.verify_ssl:
-            if self.logger:
-                self.logger.info("Initializing Google Secret Manager client with gRPC transport.")
-            self._service_client = secretmanager.SecretManagerServiceClient(
-                credentials=self.credentials,
-            )
+            self._init_grpc_transport()
         else:
-            if self.logger:
-                self.logger.info(
-                    "Initializing Google Secret Manager client with direct REST transport "
-                    "(verify_ssl=False)."
-                )
-            # gRPC does not support disabling SSL verification, and the
-            # library's REST transport has protobuf/proto-plus compatibility
-            # issues in some environments.  Fall back to calling the Secret
-            # Manager REST API directly via ``AuthorizedSession`` (a
-            # ``requests.Session`` subclass) with ``verify=False`` —
-            # consistent with every other integration in this repository.
-            self._session = AuthorizedSession(self.credentials)
-            self._session.verify = False
-
-    @staticmethod
-    def _build_sa_credentials(
-        service_account_json: str,
-        project_id: str | None,
-    ) -> tuple[service_account.Credentials, str | None]:
-        """Build credentials from a Service Account JSON key string.
-
-        Args:
-            service_account_json (str): The JSON key string.
-            project_id (str | None): Explicit project ID, or None to infer.
-
-        Returns:
-            A (credentials, project_id) tuple.
-
-        Raises:
-            InvalidConfigurationError: If the JSON is malformed.
-
-        """
-        try:
-            info: dict = yaml.safe_load(service_account_json)
-            if not isinstance(info, dict):
-                msg: str = "Invalid Service Account: JSON is empty or invalid."
-                raise InvalidConfigurationError(msg)
-        except yaml.YAMLError as e:
-            msg = f"Invalid Service Account YAML/JSON provided: {e}"
-            raise InvalidConfigurationError(msg) from e
-
-        credentials: service_account.Credentials = (
-            service_account.Credentials.from_service_account_info(info)
-        )
-        resolved_project_id: str | None = project_id or info.get("project_id")
-
-        return credentials, resolved_project_id
-
-    def _build_impersonated_credentials(
-        self,
-        target_service_account: str,
-    ) -> google.auth.impersonated_credentials.Credentials:
-        """Build impersonated credentials using Application Default Credentials.
-
-        Args:
-            target_service_account (str): The service account email to impersonate.
-
-        Returns:
-            Impersonated credentials scoped for Secret Manager.
-
-        Raises:
-            InvalidConfigurationError: If ADC cannot be resolved.
-
-        """
-        try:
-            source_credentials, _ = google.auth.default(scopes=[self._SECRET_MANAGER_SCOPE])
-        except google.auth.exceptions.DefaultCredentialsError as e:
-            msg: str = (
-                f"Could not resolve Application Default Credentials for Workload "
-                f"Identity impersonation: {e}"
+            self._session = create_authorized_session(
+                credentials=self.credentials,
+                verify_ssl=self.verify_ssl,
             )
-            raise InvalidConfigurationError(msg) from e
 
-        return google.auth.impersonated_credentials.Credentials(
-            source_credentials=source_credentials,
-            target_principal=target_service_account,
-            target_scopes=[self._SECRET_MANAGER_SCOPE],
+    def _init_grpc_transport(self) -> None:
+        """Initialize the gRPC-based Secret Manager client."""
+        self._service_client = secretmanager.SecretManagerServiceClient(
+            credentials=self.credentials,
         )
-
-    # ------------------------------------------------------------------
-    # REST API helpers (used when verify_ssl=False)
-    # ------------------------------------------------------------------
 
     def _rest_get(self, path: str, params: dict | None = None) -> dict:
         """Make an authenticated GET request to the Secret Manager REST API.
@@ -220,9 +126,23 @@ class GoogleSecretManagerClient:
 
         """
         assert self._session is not None  # noqa: S101
-        url: str = f"{_SECRET_MANAGER_API_BASE}/{path}"
+        url: str = f"{SECRET_MANAGER_API_BASE}/{path}"
         response: requests.Response = self._session.get(url, params=params)
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as error:
+            error_message = None
+            try:
+                error_data = response.json()
+                error_message = error_data.get("error", {}).get("message")
+            except Exception:
+                pass
+            if error_message:
+                raise requests.HTTPError(
+                    f"{error_message} (HTTP {response.status_code})",
+                    response=response,
+                ) from error
+            raise
         return response.json()
 
     # ------------------------------------------------------------------
@@ -257,7 +177,7 @@ class GoogleSecretManagerClient:
                 )
         except GoogleSecretManagerError as e:
             if self.logger:
-                self.logger.error("Failed to connect to Google Secret Manager: %s", e)
+                self.logger.error(f"Failed to connect to Google Secret Manager: {e}")
             raise
         except Exception as e:
             msg: str = f"Failed to connect to Google Secret Manager: {e}"
@@ -287,7 +207,7 @@ class GoogleSecretManagerClient:
         """
         parent: str = f"projects/{self.project_id}/secrets/{secret_id}"
         if self.logger:
-            self.logger.info("Resolving latest enabled version for secret '%s'.", secret_id)
+            self.logger.info(f"Resolving latest enabled version for secret {secret_id}.")
 
         try:
             if self._service_client:
@@ -302,11 +222,9 @@ class GoogleSecretManagerClient:
             # through.  The subsequent get_secret_value call will raise a
             # proper SecretAccessError.
             if self.logger:
-                self.logger.warning(
-                    "Failed to list secret versions for '%s' (%s). Falling back to default version '%s'.",
-                    secret_id,
-                    e,
-                    DEFAULT_SECRET_VERSION,
+                self.logger.warn(
+                    f"Failed to list secret versions for '{secret_id}' ({e}). "
+                    f"Falling back to default version '{DEFAULT_SECRET_VERSION}'."
                 )
             return DEFAULT_SECRET_VERSION
 

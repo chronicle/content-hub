@@ -18,7 +18,7 @@ from abc import ABC
 
 from TIPCommon.base.action import Action
 
-from .auth import IntegrationParameters, build_auth_params
+from .authentication import IntegrationParameters, build_auth_params
 from .manager import GoogleSecretManagerClient
 
 
