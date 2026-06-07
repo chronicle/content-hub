@@ -2,115 +2,100 @@ File Android Analysis:
   ai_description: >-
     ### General Description
 
-    This action performs automated file analysis using an Android Virtual Machine
-    within the ANY.RUN sandbox environment. It is designed to process file attachments
-    associated with a case, providing deep behavioral analysis, network activity monitoring,
-    and threat intelligence. The action submits the file to the ANY.RUN platform,
-    monitors the analysis progress, and retrieves comprehensive reports including
-    HTML summaries and identified Indicators of Compromise (IOCs).
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Timeout In Seconds | String | No | Defines the duration for the analysis task.
-    Range: 10-660 seconds. Default is 240. |
-
-    | Change to valid extension | Boolean | No | If enabled, automatically adjusts
-    the file extension to a valid format for analysis. |
-
-    | Command line | String | No | Optional command-line arguments to be passed to
-    the object during analysis. |
-
-    | System's language | String | No | Sets the operating system language for the
-    sandbox (e.g., 'en-US', 'Brazil'). |
-
-    | User Tags | String | No | Custom tags to categorize the task in ANY.RUN. Max
-    8 tags, 16 chars each. |
-
-    | Analysis Privacy Type | DDL | No | Sets visibility of the analysis: public,
-    bylink, owner, or byteam. |
-
-    | Network Connect | Boolean | No | Enables or disables network connectivity for
-    the analyzed file. |
-
-    | Network Fakenet | Boolean | No | Enables the FakeNet feature to simulate network
-    services. |
-
-    | Network Tor | Boolean | No | Routes sandbox traffic through the TOR network.
-    |
-
-    | Network Geo | String | No | Specifies the geolocation for TOR or proxy exit
-    nodes (e.g., 'US', 'AU'). |
-
-    | Network Mitm | Boolean | No | Enables HTTPS Man-In-The-Middle proxy for traffic
-    inspection. |
-
-    | Network Residential Proxy | Boolean | No | Uses a residential proxy for network
-    traffic. |
-
-    | Network Residential Proxy Geo | String | No | Specifies the geolocation for
-    the residential proxy. |
-
-
-    ### Additional Notes
-
-    - This action operates on the **first attachment** found in the Google SecOps
-    case. If no attachments are present, the action will fail.
-
-    - It requires a valid ANY.RUN Sandbox API Key to be configured in the integration
-    settings.
-
-    - The action results in both a new attachment (HTML report) and case comments
-    (analysis link and IOC summary).
+    Performs automated malware analysis on an Android file attachment using the ANY.RUN
+    sandbox. This action submits the file to the sandbox, retrieves the analysis report,
+    saves the report as a case attachment, and adds comments to the case with the
+    analysis link and any identified suspicious or malicious indicators (IOCs).
 
 
     ### Flow Description
 
-    1. **Initialization:** Retrieves the ANY.RUN API key and SSL configuration from
-    the integration settings.
+    1. Retrieve the file attachment from the current case.
 
-    2. **Attachment Retrieval:** Fetches the first available attachment from the current
-    case context.
+    2. Initialize the ANY.RUN Sandbox connector using the provided API key and configuration.
 
-    3. **Task Submission:** Submits the file to the ANY.RUN Android sandbox using
-    the specified environment, network, and privacy parameters.
+    3. Submit the file to the ANY.RUN Android sandbox for analysis, applying user-defined
+    parameters (e.g., timeout, network settings, language).
 
-    4. **Interactive Link:** Immediately posts a case comment containing the URL to
-    the live interactive analysis in ANY.RUN.
+    4. Add a comment to the case containing the URL to the interactive analysis report.
 
-    5. **Status Monitoring:** Polls the ANY.RUN API to monitor the progress of the
-    analysis task.
+    5. Wait for the analysis to complete and retrieve the analysis report in HTML
+    format.
 
-    6. **Report Retrieval:** Once complete, downloads the HTML version of the analysis
-    report.
+    6. Save the HTML report as a new attachment to the case wall.
 
-    7. **Internal Mutation (Attachment):** Saves the HTML report as a new attachment
-    on the Google SecOps case wall.
+    7. Retrieve identified IOCs from the report and add a summary comment to the case.
 
-    8. **IOC Processing:** Fetches IOC data; if suspicious or malicious indicators
-    are found, it formats and posts them as a summary comment in the case.
+    8. Retrieve and return the final analysis verdict.
+
+
+    ### Additional Notes
+
+    This action requires an active ANY.RUN API key. It processes file attachments
+    and does not directly operate on entity types like IP or Hash, though it identifies
+    IOCs within the file.
+  ai_short_description: >-
+    Performs automated malware analysis on an Android file attachment using the ANY.RUN
+    sandbox.
   capabilities:
     can_create_case_comments: true
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: true
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Creates a new sandbox analysis task and uploads a file to the ANY.RUN platform
-      for processing.
+    external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds comments to the case wall containing analysis links and IOC summaries,
-      and uploads the generated HTML report as a new case attachment.
+      Adds comments to the case and saves the analysis report as a case attachment.
+    reasoning: >-
+      The action fetches analysis reports and IOCs from the ANY.RUN sandbox (fetches_data=true).
+      It does not mutate external security systems (can_mutate_external_data=false).
+      It mutates internal SOAR data by adding comments and saving attachments (can_mutate_internal_data=true).
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action is an enrichment action because it fetches analysis data and IOCs
+      from an external sandbox. It is not a remediation action as it does not perform
+      any blocking or containment.
+    remediation: false
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -124,95 +109,123 @@ File Android Analysis:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates on file attachments retrieved via `siemplify.get_attachments()`.
+      It does not iterate over or filter `siemplify.target_entities`, so no entity
+      type flags are set.
+  outcome_categories:
+    add_alert_comment: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action submits a file to the ANY.RUN sandbox for analysis (Submit File).
+      It retrieves the analysis report and extracts IOCs (Enrich IOC). It adds comments
+      to the case (Add Alert Comment). It does not perform any remediation actions
+      like blocking or isolating.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Timeout In Seconds | string | No | Select task completion time. Size range:
+    10-660 seconds. |
+
+    | Change to valid extension | boolean | No | Automatically change file extension
+    to valid. |
+
+    | Command line | string | No | Optional command-line arguments for the analyzed
+    object. Use an empty string ("") to apply the default behavior. |
+
+    | System's language | string | No | Operation system's language. Use locale identifier
+    or country name (Ex: 'en-US' or 'Brazil'). Case-insensitive. |
+
+    | User Tags | string | No | Add user tags. Only characters a-z, A-Z, 0-9, hyphen
+    (-), and comma (,) are allowed. Max tag length: 16 characters. Max unique tags
+    per task: 8. |
+
+    | Analysis Privacy Type | ddl | No | Privacy settings. Supports: public, bylink,
+    owner, byteam. |
+
+    | Network Connect | boolean | No | Enable network connection. |
+
+    | Network Fakenet | boolean | No | Enable FakeNet feature. |
+
+    | Network Tor | boolean | No | Enable TOR using. |
+
+    | Network Geo | string | No | TOR geolocation option. Example: US, AU |
+
+    | Network Mitm | boolean | No | Enable HTTPS MITM Proxy using. |
+
+    | Network Residential Proxy | boolean | No | Residential proxy using. |
+
+    | Network Residential Proxy Geo | string | No | Residential proxy geolocation
+    option. Example: US, AU. |
 File Linux Analysis:
   ai_description: >-
     ### General Description
 
-    The **File Linux Analysis** action automates the submission of file attachments
-    to the ANY.RUN sandbox for behavioral analysis within a Linux environment (Ubuntu
-    or Debian). It allows security analysts to safely execute suspicious files, observe
-    their network activity, and retrieve detailed forensic reports directly within
-    Google SecOps.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Env Os** | DDL | Yes | Specifies the Linux distribution for the analysis (ubuntu
-    or debian). |
-
-    | **StartFolder** | DDL | No | The directory where the file will be placed (desktop,
-    home, downloads, temp). |
-
-    | **Run As Root** | Boolean | No | If true, executes the file with superuser privileges.
-    |
-
-    | **Timeout In Seconds** | String | No | Duration of the analysis (10 to 660 seconds).
-    Default is 240. |
-
-    | **Change to valid extension** | Boolean | No | Automatically renames the file
-    to a valid extension if necessary. |
-
-    | **Command line** | String | No | Optional arguments to pass to the file during
-    execution. |
-
-    | **System's language** | String | No | The locale/language of the OS (e.g., 'en-US').
-    |
-
-    | **User Tags** | String | No | Custom tags for the ANY.RUN task (max 8 tags,
-    16 chars each). |
-
-    | **Analysis Privacy Type** | DDL | No | Sets visibility of the task (public,
-    bylink, owner, byteam). |
-
-    | **Network Connect** | Boolean | No | Enables or disables internet access for
-    the VM. |
-
-    | **Network Fakenet** | Boolean | No | Enables FakeNet to simulate network services.
-    |
-
-    | **Network Tor** | Boolean | No | Routes traffic through the TOR network. |
-
-    | **Network Geo** | String | No | Geolocation for TOR exit nodes (e.g., 'US').
-    |
-
-    | **Network Mitm** | Boolean | No | Enables HTTPS Man-In-The-Middle proxying.
-    |
-
-    | **Network Residential Proxy** | Boolean | No | Uses a residential proxy for
-    network traffic. |
-
-    | **Network Residential Proxy Geo** | String | No | Geolocation for the residential
-    proxy. |
-
-
-    ### Additional Notes
-
-    - This action requires at least one attachment to be present in the Google SecOps
-    case. It processes the first attachment found.
-
-    - The action provides a direct link to the interactive ANY.RUN session in the
-    case comments.
+    Performs automated file analysis using the ANY.RUN Linux sandbox. This action
+    retrieves an attachment from the current case, submits it to the ANY.RUN sandbox
+    for dynamic analysis, and retrieves the resulting report, verdict, and indicators
+    of compromise (IOCs). The action provides visibility into the file's behavior
+    and potential maliciousness.
 
 
     ### Flow Description
 
-    1. **Attachment Retrieval:** Fetches the first available attachment from the current
-    case.
+    1. Extracts the ANY.RUN Sandbox API Key and SSL verification settings from the
+    integration configuration.
 
-    2. **Sandbox Submission:** Uploads the file to ANY.RUN using the Linux connector
-    with the configured OS and network parameters.
+    2. Retrieves the file attachment from the current case.
 
-    3. **Task Monitoring:** Polls the ANY.RUN API to monitor the status of the analysis.
+    3. Submits the file to the ANY.RUN Linux sandbox for analysis using the provided
+    configuration parameters (OS, folder, command line, network settings, etc.).
 
-    4. **Report Retrieval:** Once complete, it downloads the HTML analysis report
-    and extracts Indicators of Compromise (IOCs).
+    4. Adds a comment to the case containing a link to the interactive ANY.RUN analysis
+    task.
 
-    5. **Case Enrichment:** Saves the HTML report to the Case Wall and adds comments
-    containing the task URL and a summary of malicious/suspicious IOCs.
+    5. Monitors the task status until completion.
+
+    6. Downloads the HTML analysis report and saves it as an attachment to the case
+    wall.
+
+    7. Retrieves identified IOCs and adds a summary comment to the case.
+
+    8. Retrieves the final analysis verdict and completes the action.
+
+
+    ### Additional Notes
+
+    This action requires an active ANY.RUN Sandbox API Key. It performs external data
+    mutation by creating a new analysis task in the ANY.RUN platform and internal
+    data mutation by saving reports and comments to the case.
+  ai_short_description: >-
+    Analyzes file attachments using the ANY.RUN Linux sandbox, providing reports,
+    verdicts, and IOCs.
   capabilities:
     can_create_case_comments: true
     can_create_insight: false
@@ -221,15 +234,61 @@ File Linux Analysis:
     can_mutate_internal_data: true
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new analysis task and uploads a file to the ANY.RUN sandbox environment.
+      Submits a file to the ANY.RUN sandbox for analysis, which creates a new task/analysis
+      record in the external system.
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds comments to the case and uploads the HTML analysis report as an attachment
-      to the case wall.
+      Saves the analysis report as an attachment to the case wall and adds comments
+      to the case.
+    reasoning: >-
+      The action fetches analysis reports and IOCs from the ANY.RUN API (fetches_data=true).
+      It submits a file to the sandbox, which creates a task record (can_mutate_external_data=true).
+      It saves attachments and adds comments to the case (can_mutate_internal_data=true).
   categories:
     enrichment: false
+    reasoning: >-
+      The action submits a file to an external sandbox (mutating external data) and
+      saves reports/comments to the case (mutating internal data). Because it mutates
+      external data, it does not meet the strict 'Read-Only' criteria for Enrichment.
+      It is not a Remediation action as it does not perform blocking or containment.
+    remediation: false
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -243,124 +302,179 @@ File Linux Analysis:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates on case attachments retrieved via `siemplify.get_attachments()`
+      and does not iterate over or filter `siemplify.target_entities`.
+  outcome_categories:
+    add_alert_comment: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action submits a file to the ANY.RUN sandbox (Submit File), retrieves the
+      analysis report and IOCs (Enrich IOC), and adds comments to the case (Add Alert
+      Comment).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Env Os | ddl | Yes | Version of OS. Supports ubuntu, debian. |
+
+    | StartFolder | ddl | No | Supports desktop, home, downloads, temp. |
+
+    | Run As Root | boolean | No | Run file with superuser privileges. |
+
+    | Timeout In Seconds | string | No | Select task completion time. Size range:
+    10-660 seconds. |
+
+    | Change to valid extension | boolean | No | Automatically change file extension
+    to valid. |
+
+    | Command line | string | No | Optional command-line arguments for the analyzed
+    object. |
+
+    | System's language | string | No | Operation system's language. Use locale identifier
+    or country name. |
+
+    | User Tags | string | No | Add user tags. Max tag length: 16 characters. |
+
+    | Analysis Privacy Type | ddl | No | Privacy settings. Supports: public, bylink,
+    owner, byteam. |
+
+    | Network Connect | boolean | No | Enable network connection. |
+
+    | Network Fakenet | boolean | No | Enable FakeNet feature. |
+
+    | Network Tor | boolean | No | Enable TOR using. |
+
+    | Network Geo | string | No | TOR geolocation option. Example: US, AU. |
+
+    | Network Mitm | boolean | No | Enable HTTPS MITM Proxy using. |
+
+    | Network Residential Proxy | boolean | No | Residential proxy using. |
+
+    | Network Residential Proxy Geo | string | No | Residential proxy geolocation
+    option. Example: US, AU. |
 File Windows Analysis:
   ai_description: >-
-    ### General Description
+    General Description
 
-    Performs automated malware analysis of file attachments using ANY.RUN's Windows
-    sandbox environment. This action allows security analysts to submit suspicious
-    files directly from a Google SecOps case to ANY.RUN, where they are executed in
-    a controlled virtual machine to observe behavior, network activity, and potential
-    threats.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Environment Version | DDL | No | Specifies the Windows OS version (7, 10, or
-    11). Default is 10. |
-
-    | Environment Bitness | DDL | No | Specifies the OS architecture (32 or 64 bit).
-    Default is 64. |
-
-    | Environment Type | DDL | No | Selects the environment preset. 'development'
-    is only for Windows 10 x64; 'complete' is required for others. |
-
-    | File Force Elevation | Boolean | No | If true, forces the file to execute with
-    administrative privileges (PE files only). |
-
-    | StartFolder | DDL | No | The directory where the file will be executed (e.g.,
-    temp, desktop, downloads). |
-
-    | Timeout In Seconds | String | No | The duration of the analysis task (10-660
-    seconds). Default is 240. |
-
-    | Change to valid extension | Boolean | No | Automatically corrects the file extension
-    to match the file type. |
-
-    | Command line | String | No | Optional arguments to pass to the file during execution.
-    |
-
-    | System's language | String | No | Sets the OS locale (e.g., 'en-US'). |
-
-    | User Tags | String | No | Custom tags for the ANY.RUN task (max 8 tags, 16 chars
-    each). |
-
-    | Analysis Privacy Type | DDL | No | Sets visibility of the task (public, bylink,
-    owner, byteam). |
-
-    | Network Connect | Boolean | No | Enables or disables network connectivity for
-    the sandbox. |
-
-    | Network Fakenet | Boolean | No | Enables the FakeNet feature to simulate network
-    services. |
-
-    | Network Tor | Boolean | No | Routes sandbox traffic through the TOR network.
-    |
-
-    | Network Geo | String | No | Specifies the TOR exit node location (e.g., 'US').
-    |
-
-    | Network Mitm | Boolean | No | Enables HTTPS Man-In-The-Middle proxy for traffic
-    inspection. |
-
-    | Network Residential Proxy | Boolean | No | Uses a residential proxy for the
-    sandbox connection. |
-
-    | Network Residential Proxy Geo | String | No | Specifies the residential proxy
-    location. |
+    Performs file analysis using the ANY.RUN Windows sandbox. This action allows analysts
+    to submit suspicious files for automated detonation and behavioral analysis in
+    a controlled environment. It supports various configuration options, including
+    OS version, bitness, network settings, and privacy levels, to tailor the analysis
+    to specific requirements.
 
 
-    ### Additional Notes
+    Flow Description
 
-    * This action does not run on specific entities (like IP or Hostname) but instead
-    processes **attachments** associated with the current case.
+    1. Retrieves the file attachment from the current case.
 
-    * At least one attachment must be present in the case for the action to execute
-    successfully.
+    2. Submits the file to the ANY.RUN sandbox for analysis using the provided environment
+    parameters (e.g., OS version, bitness, network settings).
+
+    3. Polls the ANY.RUN API to monitor the task status until completion.
+
+    4. Downloads the generated analysis report in HTML format and saves it as an attachment
+    to the case wall.
+
+    5. Extracts identified indicators of compromise (IOCs) from the analysis report.
+
+    6. Adds a comment to the case containing the link to the interactive analysis
+    and a summary of any suspicious or malicious IOCs found.
 
 
-    ### Flow Description
+    Additional Notes
 
-    1. **Attachment Retrieval:** The action fetches the first available attachment
-    from the Google SecOps case.
-
-    2. **Task Submission:** It uploads the file to the ANY.RUN API, creating a new
-    Windows analysis task with the configured environment and network settings.
-
-    3. **Monitoring:** The action polls the ANY.RUN service to monitor the status
-    of the analysis.
-
-    4. **Reporting:** Once complete, it retrieves the full HTML analysis report and
-    saves it as a new attachment to the case wall.
-
-    5. **IOC Extraction:** It fetches identified Indicators of Compromise (IOCs) and
-    posts a summary comment to the case wall, highlighting suspicious or malicious
-    findings.
-
-    6. **Verdict:** The action concludes by providing the final analysis verdict (e.g.,
-    Malicious, Suspicious, Clean) as the action result.
+    This action requires a valid ANY.RUN API key. It is designed for file-based analysis
+    and does not require specific entity types as input, as it operates directly on
+    case attachments.
+  ai_short_description: >-
+    Submits a file to the ANY.RUN Windows sandbox for analysis, retrieves the report,
+    and adds findings to the case.
   capabilities:
     can_create_case_comments: true
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: true
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Creates a new sandbox analysis task and uploads a file to the ANY.RUN platform
-      for processing.
+    external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds comments to the case wall containing analysis links and IOC summaries,
-      and saves the HTML analysis report as a case attachment.
+      Adds comments to the case and saves analysis reports as attachments to the case
+      wall.
+    reasoning: >-
+      The action fetches analysis data from the ANY.RUN API. It does not mutate external
+      security controls. It mutates internal data by adding comments and saving attachments
+      to the case wall.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches analysis reports and IOCs from an external sandbox (Enrichment).
+      It does not perform remediation actions like blocking or isolating hosts.
+    remediation: false
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -374,64 +488,108 @@ File Windows Analysis:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Ping:
-  ai_description: >-
-    ### General Description
-
-    Tests the connectivity between Google SecOps and the ANY.RUN Sandbox service.
-    This action is used to verify that the integration is correctly configured and
-    can successfully communicate with the ANY.RUN API.
-
-
-    ### Parameters Description
-
-    This action does not take any action-specific parameters. It relies on the following
-    integration configuration parameters:
-
-
+    reasoning: >-
+      The action operates on case attachments retrieved via `siemplify.get_attachments()`
+      rather than processing specific entities from the case. Therefore, no entity
+      type flags are set to true.
+  outcome_categories:
+    add_alert_comment: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action submits a file for analysis (Submit File), extracts IOCs (Enrich
+      IOC), and adds comments to the case (Add Alert Comment).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | ANYRUN Sandbox API KEY | String | Yes | The API key used to authenticate with
-    the ANY.RUN Sandbox service. |
+    | Environment Version | ddl | No | Version of OS. Supports 7, 10, 11. |
 
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the ANY.RUN API. |
+    | Environment Bitness | ddl | No | Bitness of Operation System. Supports 32, 64.
+    |
 
-    | Enable proxy | Boolean | No | If enabled, the action will use the configured
-    proxy to connect to the ANY.RUN API. |
+    | Environment Type | ddl | No | Environment preset type. Use 'development' for
+    Windows 10 x64, otherwise 'complete'. |
 
-    | Proxy host | String | No | The hostname or IP address of the proxy server. Required
-    if 'Enable proxy' is true. |
+    | File Force Elevation | boolean | No | Forces the file to execute with elevated
+    privileges (for PE32, PE32+, PE64 files only). |
 
-    | Proxy port | String | No | The port of the proxy server. Required if 'Enable
-    proxy' is true. |
+    | StartFolder | ddl | No | Directory to start the file in (desktop, home, downloads,
+    temp, appdata, windows, root). |
 
+    | Timeout In Seconds | string | No | Task completion time (10-660 seconds). |
 
-    ### Additional Notes
+    | Change to valid extension | boolean | No | Automatically change file extension
+    to valid. |
 
-    - This is a standard 'Ping' action used for troubleshooting connectivity and credential
-    issues.
+    | Command line | string | No | Optional command-line arguments for the analyzed
+    object. |
 
-    - The action will fail if the API key is invalid or if the network connection
-    (including proxy settings) is misconfigured.
+    | System's language | string | No | Operation system's language (e.g., 'en-US').
+    |
 
+    | User Tags | string | No | User tags for the task. |
 
-    ### Flow Description
+    | Analysis Privacy Type | ddl | No | Privacy settings (public, bylink, owner,
+    byteam). |
 
-    1. **Configuration Extraction**: The action retrieves the API key, SSL verification
-    setting, and proxy configuration from the integration's global settings.
+    | Network Connect | boolean | No | Enable network connection. |
 
-    2. **Proxy Validation (Optional)**: If the 'Enable proxy' setting is true, the
-    action attempts to validate the proxy connection using the provided host and port.
+    | Network Fakenet | boolean | No | Enable FakeNet feature. |
 
-    3. **Authorization Check**: The action makes a request to the ANY.RUN Sandbox
-    API to verify the validity of the provided API key.
+    | Network Tor | boolean | No | Enable TOR. |
 
-    4. **Result Reporting**: If the authorization check is successful, the action
-    logs a success message and completes. If an error occurs (e.g., authentication
-    failure or network timeout), the action logs the error and fails.
+    | Network Geo | string | No | TOR geolocation option. |
+
+    | Network Mitm | boolean | No | Enable HTTPS MITM Proxy. |
+
+    | Network Residential Proxy | boolean | No | Enable residential proxy. |
+
+    | Network Residential Proxy Geo | string | No | Residential proxy geolocation
+    option. |
+Ping:
+  ai_description: >-
+    General Description: Tests the connectivity between the Google SecOps platform
+    and the ANY.RUN Sandbox service. This action verifies that the integration is
+    correctly configured and that the platform can successfully communicate with the
+    external sandbox API. Flow Description: 1. The action extracts the required ANY.RUN
+    Sandbox API Key and SSL verification settings from the integration configuration.
+    2. If proxy settings are enabled, the action extracts the proxy host and port,
+    then attempts to validate the proxy connection using the BaseSandboxConnector.check_proxy
+    method. 3. The action initializes the BaseSandboxConnector with the provided API
+    key and settings. 4. It calls the connector.check_authorization method to verify
+    the API key and connectivity to the ANY.RUN service. 5. The action returns a success
+    or failure status based on the outcome of the connectivity check. Additional Notes:
+    This action is strictly for connectivity testing and does not perform any data
+    enrichment, remediation, or entity manipulation.
+  ai_short_description: >-
+    Tests connectivity between the Google SecOps platform and the ANY.RUN Sandbox
+    service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -442,10 +600,52 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only verifies connectivity to an external service. It does not fetch
+      data, mutate external systems, or modify internal SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a connectivity test (Ping). It does not fetch data for enrichment
+      or perform remediation.
+    remediation: false
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -459,379 +659,139 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping). It does not match any of the defined
+      outcome categories (Enrich IOC, Block IP, etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 URL Android Analysis:
   ai_description: >-
     ### General Description
 
-    The **URL Android Analysis** action submits one or more URLs to the ANY.RUN Sandbox
-    for automated analysis using an Android virtual machine. This action is designed
-    to observe the behavior of URLs in a mobile environment, providing detailed threat
-    intelligence, including HTML reports, Indicators of Compromise (IOCs), and a final
-    analysis verdict.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Url** | String | Yes | The URL(s) to be analyzed. Defaults to `[Entity.Identifier]`.
-    Multiple URLs can be provided as a comma-separated list. |
-
-    | **Timeout In Seconds** | String | No | The duration for the analysis task, ranging
-    from 10 to 660 seconds. Default is 120. |
-
-    | **Command line** | String | No | Optional command-line arguments for the analyzed
-    object. |
-
-    | **System's language** | String | No | The operating system's locale or country
-    name (e.g., 'en-US'). |
-
-    | **User Tags** | String | No | Custom tags to categorize the task in ANY.RUN
-    (max 8 tags, 16 chars each). |
-
-    | **Analysis Privacy Type** | DDL | No | Privacy level for the task: `public`,
-    `bylink`, `owner`, or `byteam`. Default is `bylink`. |
-
-    | **Network Connect** | Boolean | No | Enables network connectivity for the analysis
-    VM. Default is `true`. |
-
-    | **Network Fakenet** | Boolean | No | Enables the FakeNet feature to simulate
-    network services. |
-
-    | **Network Tor** | Boolean | No | Routes VM traffic through the TOR network.
-    |
-
-    | **Network Geo** | String | No | Geolocation for TOR or proxy exit nodes (e.g.,
-    'US', 'AU'). |
-
-    | **Network Mitm** | Boolean | No | Enables HTTPS MITM Proxy for traffic inspection.
-    |
-
-    | **Network Residential Proxy** | Boolean | No | Uses a residential proxy for
-    the analysis. |
-
-    | **Network Residential Proxy Geo** | String | No | Geolocation for the residential
-    proxy. |
+    Analyzes URLs using the ANY.RUN Android sandbox. This action submits a specified
+    URL to the ANY.RUN platform for dynamic analysis, retrieves the resulting report,
+    and extracts indicators of compromise (IOCs) and the final verdict. The action
+    provides visibility into the behavior of the URL within an Android environment,
+    helping analysts assess potential threats.
 
 
     ### Flow Description
 
-    1. **Setup**: Extracts API credentials and configuration settings for the ANY.RUN
-    Sandbox.
+    1. The action extracts the API key and configuration settings.
 
-    2. **Task Submission**: Submits the target URL(s) to the ANY.RUN API to initiate
-    an Android-based analysis task.
+    2. It extracts the target URL(s) from the action parameters.
 
-    3. **Interactive Link**: Immediately adds a case comment with a link to the live
-    interactive analysis on the ANY.RUN platform.
+    3. For each URL, it submits the task to the ANY.RUN Android sandbox using the
+    `SandboxConnector`.
 
-    4. **Status Polling**: Monitors the task status until the analysis is complete.
+    4. It adds a comment to the case containing a link to the interactive ANY.RUN
+    analysis.
 
-    5. **Report Retrieval**: Downloads the final analysis report in HTML format and
-    attaches it to the Google SecOps Case Wall.
+    5. It waits for the analysis task to complete.
 
-    6. **IOC Extraction**: Retrieves detected Indicators of Compromise (IOCs). If
-    any are classified as suspicious or malicious, a summary is added to the case
-    comments.
+    6. It downloads the HTML analysis report and saves it as an attachment to the
+    case wall.
 
-    7. **Final Verdict**: Fetches the final analysis verdict and adds a concluding
-    comment to the case with the analysis status.
-  capabilities:
-    can_create_case_comments: true
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Submits a URL to the ANY.RUN sandbox, which creates a new analysis task/resource
-      on the external platform.
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds multiple comments to the case and saves the analysis report as an attachment
-      to the case wall.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
-    - USERUNIQNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-URL Linux Analysis:
-  ai_description: >-
-    ### General Description
+    7. It fetches any identified IOCs and adds them to the case as a comment.
 
-    Submits one or more URLs to the ANY.RUN Sandbox for automated analysis using a
-    Linux virtual machine. This action allows security analysts to safely investigate
-    suspicious URLs in a controlled environment, providing detailed reports on network
-    activity, file modifications, and threat indicators.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Url | The destination URL(s) to analyze. Supports a comma-separated list of
-    URLs. Defaults to the identifier of the entity in scope. | String | Yes |
-
-    | Machine Os | The Linux operating system version to use for the analysis. Supported
-    values: `ubuntu`, `debian`. | DDL | Yes |
-
-    | Browser | The web browser to use for the analysis. Supported values: `Google
-    Chrome`, `Mozilla Firefox`. | DDL | Yes |
-
-    | Timeout In Seconds | The duration of the analysis task in the sandbox. Range:
-    10-660 seconds. Default is 120. | String | No |
-
-    | Command line | Optional command-line arguments to be passed to the analyzed
-    object. | String | No |
-
-    | System's language | The language/locale of the sandbox operating system (e.g.,
-    'en-US' or 'Brazil'). | String | No |
-
-    | User Tags | Custom tags to associate with the analysis task. Max 8 unique tags,
-    16 characters each. | String | No |
-
-    | Analysis Privacy Type | Privacy level for the analysis task. Supported values:
-    `public`, `bylink`, `owner`, `byteam`. | DDL | No |
-
-    | Network Connect | Enables or disables network connectivity within the sandbox.
-    | Boolean | No |
-
-    | Network Fakenet | Enables the FakeNet feature to simulate network services.
-    | Boolean | No |
-
-    | Network Tor | Enables the use of the TOR network for analysis. | Boolean | No
-    |
-
-    | Network Geo | Specifies the TOR geolocation (e.g., 'US', 'AU'). Default is 'fastest'.
-    | String | No |
-
-    | Network Mitm | Enables an HTTPS MITM (Man-In-The-Middle) proxy. | Boolean |
-    No |
-
-    | Network Residential Proxy | Enables the use of a residential proxy. | Boolean
-    | No |
-
-    | Network Residential Proxy Geo | Specifies the residential proxy geolocation
-    (e.g., 'US', 'AU'). Default is 'fastest'. | String | No |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action extracts the ANY.RUN API key and SSL verification
-    settings from the integration configuration.
-
-    2. **URL Parsing**: It retrieves the `Url` parameter and splits it by commas to
-    handle multiple URLs in a single execution.
-
-    3. **Task Submission**: For each URL, it initiates a Linux-based analysis task
-    in ANY.RUN using the specified OS, browser, and network configuration parameters.
-
-    4. **Interactive Link**: A comment is added to the Google SecOps case containing
-    a direct link to the interactive analysis task on the ANY.RUN platform.
-
-    5. **Monitoring**: The action polls the ANY.RUN API to monitor the status of the
-    analysis task until completion.
-
-    6. **Report Retrieval**: Once finished, it downloads the full HTML analysis report
-    and attaches it to the Case Wall.
-
-    7. **IOC Summary**: It fetches the Indicator of Compromise (IOC) report. If any
-    malicious or suspicious indicators are found, it adds a summary comment to the
-    case.
-
-    8. **Verdict**: Finally, it retrieves the analysis verdict and adds a concluding
-    comment with the final status of the URL analysis.
-  capabilities:
-    can_create_case_comments: true
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Creates a new analysis task resource in the ANY.RUN sandbox environment for
-      every URL submitted.
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds multiple comments to the case and attaches an HTML analysis report to the
-      case wall.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-URL Windows Analysis:
-  ai_description: >-
-    ### General Description
-
-    Submits URLs to the ANY.RUN Sandbox for automated and interactive analysis using
-    a Windows Virtual Machine. This action allows security analysts to safely execute
-    and observe the behavior of suspicious links in a controlled environment, providing
-    detailed reports on network activity, process execution, and threat indicators.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Url | String | Yes | The destination URL(s) to analyze. Supports comma-separated
-    values. Defaults to the entity identifier. |
-
-    | Browser | DDL | Yes | The browser used for the analysis (Microsoft Edge, Google
-    Chrome, Mozilla Firefox, Internet Explorer). |
-
-    | Timeout In Seconds | String | No | Task completion time (10-660 seconds). Default
-    is 120. |
-
-    | Command line | String | No | Optional command-line arguments for the analyzed
-    object. |
-
-    | System's language | String | No | Operation system's language (e.g., 'en-US'
-    or 'Brazil'). |
-
-    | User Tags | String | No | Custom tags for the task (max 8 unique tags, 16 characters
-    each). |
-
-    | Analysis Privacy Type | DDL | No | Privacy settings for the analysis (public,
-    bylink, owner, byteam). |
-
-    | Network Connect | Boolean | No | Enable network connection during analysis.
-    |
-
-    | Network Fakenet | Boolean | No | Enable FakeNet feature to simulate network
-    services. |
-
-    | Network Tor | Boolean | No | Enable TOR for network traffic. |
-
-    | Network Geo | String | No | TOR geolocation option (e.g., US, AU). |
-
-    | Network Mitm | Boolean | No | Enable HTTPS MITM Proxy for traffic inspection.
-    |
-
-    | Network Residential Proxy | Boolean | No | Use a residential proxy for the analysis.
-    |
-
-    | Network Residential Proxy Geo | String | No | Residential proxy geolocation
-    option. |
+    8. It fetches the final analysis verdict and adds it to the case as a comment.
 
 
     ### Additional Notes
 
-    - The action can process multiple URLs simultaneously if they are provided as
-    a comma-separated list in the `Url` parameter.
-
-    - While the action is designed to work with URL entities via the `[Entity.Identifier]`
-    placeholder, it processes the input as a string and does not directly modify entity
-    attributes.
-
-
-    ### Flow Description
-
-    1. **Initialization**: Retrieves the API key and SSL verification settings from
-    the integration configuration.
-
-    2. **Input Parsing**: Extracts the target URL(s) from the action parameters.
-
-    3. **Task Submission**: For each URL, it initiates a Windows-based analysis task
-    in the ANY.RUN sandbox using the specified browser, timeout, and network configurations.
-
-    4. **Interactive Link**: Immediately adds a case comment containing a direct link
-    to the ANY.RUN interactive analysis session.
-
-    5. **Monitoring**: Polls the ANY.RUN API to monitor the status of the analysis
-    task.
-
-    6. **Report Retrieval**: Once the analysis is complete, it fetches the full HTML
-    report and attaches it to the Google SecOps Case Wall.
-
-    7. **IOC Extraction**: Retrieves identified Indicators of Compromise (IOCs) and
-    posts a summary of suspicious or malicious findings as a case comment.
-
-    8. **Final Verdict**: Fetches the final analysis verdict and status, adding them
-    as a concluding comment to the case.
+    This action requires a valid ANY.RUN API key. It performs external analysis and
+    updates the case with findings, but does not modify external security controls.
+  ai_short_description: >-
+    Analyzes URLs using the ANY.RUN Android sandbox to retrieve threat intelligence,
+    reports, and verdicts.
   capabilities:
     can_create_case_comments: true
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: true
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Submits a URL to the ANY.RUN sandbox to initiate a new interactive analysis
-      task, which creates a new job/record in the external ANY.RUN environment.
+    external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds multiple case comments containing analysis links, IOC summaries, and verdicts.
-      It also saves and attaches the HTML analysis report to the case wall.
+      Saves the analysis report as an HTML attachment to the case wall and adds comments.
+    reasoning: >-
+      The action makes API calls to ANY.RUN to submit URLs and fetch analysis reports
+      (fetches_data=true). It does not mutate external security controls (can_mutate_external_data=false).
+      It mutates internal SOAR data by adding comments and case wall attachments (can_mutate_internal_data=true).
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches analysis data (report, IOCs, verdict) from an external sandbox,
+      which qualifies as enrichment. It does not perform any security control changes
+      (remediation) on external systems.
+    remediation: false
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -845,3 +805,459 @@ URL Windows Analysis:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action processes URL entities provided via the 'Url' parameter, which defaults
+      to the entity identifier. It does not perform filtering on the entity list itself.
+  outcome_categories:
+    add_alert_comment: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action submits a URL to the ANY.RUN sandbox for analysis, which matches
+      the 'Submit File' outcome. It also fetches IOCs and adds comments to the case,
+      matching 'Enrich IOC' and 'Add Alert Comment'.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Url | String | Yes | The destination URL(s) to analyze. Defaults to the entity
+    identifier. |
+
+    | Timeout In Seconds | String | No | Task completion time (10-660 seconds). |
+
+    | Command line | String | No | Optional command-line arguments for the analyzed
+    object. |
+
+    | System's language | String | No | Operation system's language (e.g., 'en-US').
+    |
+
+    | User Tags | String | No | User tags for the task. |
+
+    | Analysis Privacy Type | DDL | No | Privacy settings (bylink, byteam, public,
+    owner). |
+
+    | Network Connect | Boolean | No | Enable network connection. |
+
+    | Network Fakenet | Boolean | No | Enable FakeNet feature. |
+
+    | Network Tor | Boolean | No | Enable TOR usage. |
+
+    | Network Geo | String | No | TOR geolocation option. |
+
+    | Network Mitm | Boolean | No | Enable HTTPS MITM Proxy. |
+
+    | Network Residential Proxy | Boolean | No | Enable residential proxy. |
+
+    | Network Residential Proxy Geo | String | No | Residential proxy geolocation
+    option. |
+URL Linux Analysis:
+  ai_description: >-
+    ### General Description
+
+    Analyzes URLs using the ANY.RUN Linux sandbox environment. This action submits
+    a specified URL to the ANY.RUN sandbox, configures the analysis environment (OS,
+    browser, network settings), and retrieves the resulting analysis report, indicators
+    of compromise (IOCs), and the final verdict. The action provides visibility into
+    the behavior of the URL within a controlled Linux environment.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action extracts the ANY.RUN API key and SSL
+    verification settings from the integration configuration.
+
+    2. **Parameter Extraction**: It retrieves the target URL(s) and environment settings
+    (OS, browser, network options, etc.) from the action parameters.
+
+    3. **Sandbox Submission**: For each URL, the action initializes a `SandboxConnector`
+    and submits the URL for analysis using the specified environment parameters.
+
+    4. **Status Monitoring**: The action polls the ANY.RUN API to monitor the task
+    status until completion.
+
+    5. **Report Retrieval**: It downloads the HTML analysis report and saves it as
+    an attachment to the case wall.
+
+    6. **IOC Extraction**: It retrieves any identified IOCs from the report and appends
+    them as a comment to the case.
+
+    7. **Verdict Reporting**: It fetches the final analysis verdict and appends it
+    as a comment to the case.
+
+
+    ### Additional Notes
+
+    This action supports various network configurations, including TOR, MITM proxies,
+    and residential proxies, allowing for flexible analysis scenarios. It does not
+    modify the external URL or the target system; it is strictly an analysis and enrichment
+    action.
+  ai_short_description: >-
+    Analyzes URLs using the ANY.RUN Linux sandbox to retrieve threat intelligence,
+    analysis reports, and verdicts.
+  capabilities:
+    can_create_case_comments: true
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds comments and case wall attachments to the SOAR case.
+    reasoning: >-
+      The action fetches data from an external sandbox (fetches_data=true). It does
+      not mutate external systems (can_mutate_external_data=false). It mutates internal
+      data by adding comments and attachments to the case wall (can_mutate_internal_data=true).
+      It does not update entities, create insights, or modify alert data.
+  categories:
+    enrichment: true
+    reasoning: >-
+      The action fetches analysis reports, IOCs, and verdicts from an external sandbox
+      (ANY.RUN) to provide context and threat intelligence. It does not perform any
+      remediation or blocking actions. Therefore, it is classified as an enrichment
+      action.
+    remediation: false
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action processes URL entities provided via the 'Url' parameter. It does
+      not perform internal filtering on the entity list based on attributes like creation
+      time or modification time.
+  outcome_categories:
+    add_alert_comment: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action submits a URL to a sandbox for analysis (submit_file), retrieves
+      threat intelligence including IOCs and reputation (enrich_ioc), and adds comments
+      to the case (add_alert_comment).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Url | String | Yes | The destination URL(s) to analyze. |
+
+    | Machine Os | DDL | Yes | The operating system version for the sandbox (ubuntu,
+    debian). |
+
+    | Browser | DDL | Yes | The browser to use for analysis (Google Chrome, Mozilla
+    Firefox). |
+
+    | Timeout In Seconds | String | No | Task completion timeout (10-660 seconds).
+    |
+
+    | Command line | String | No | Optional command-line arguments for the analyzed
+    object. |
+
+    | System's language | String | No | The OS language (e.g., en-US). |
+
+    | User Tags | String | No | User-defined tags for the task. |
+
+    | Analysis Privacy Type | DDL | No | Privacy settings for the analysis (bylink,
+    byteam, public, owner). |
+
+    | Network Connect | Boolean | No | Enable network connection. |
+
+    | Network Fakenet | Boolean | No | Enable FakeNet feature. |
+
+    | Network Tor | Boolean | No | Enable TOR usage. |
+
+    | Network Geo | String | No | TOR geolocation option. |
+
+    | Network Mitm | Boolean | No | Enable HTTPS MITM Proxy. |
+
+    | Network Residential Proxy | Boolean | No | Enable residential proxy usage. |
+
+    | Network Residential Proxy Geo | String | No | Residential proxy geolocation
+    option. |
+URL Windows Analysis:
+  ai_description: >-
+    ### General Description
+
+    Analyzes URLs using the ANY.RUN Windows sandbox environment to determine their
+    maliciousness. This action submits a specified URL to the ANY.RUN sandbox, configures
+    the analysis environment (browser, network settings, etc.), and retrieves a detailed
+    report including threat intelligence and indicators of compromise (IOCs).
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the ANY.RUN API key and
+    proxy settings from the integration configuration.
+
+    2. **Parameter Extraction**: It extracts the target URL(s) and optional analysis
+    parameters such as browser type, timeout, network settings (Tor, MITM, etc.),
+    and system language.
+
+    3. **Sandbox Submission**: The action connects to the ANY.RUN sandbox and submits
+    the URL for analysis using the `SandboxConnector.windows` method.
+
+    4. **Interactive Link**: It adds a comment to the case containing a link to the
+    interactive ANY.RUN analysis task.
+
+    5. **Report Retrieval**: Upon task completion, the action downloads the HTML analysis
+    report and saves it as an attachment to the case wall using `save_attachment_to_case_wall`.
+
+    6. **IOC Extraction**: It extracts any identified suspicious or malicious IOCs
+    from the report and appends them to the case as a comment.
+
+    7. **Verdict Reporting**: Finally, it retrieves the overall analysis verdict and
+    adds a summary comment to the case.
+
+
+    ### Additional Notes
+
+    This action requires a valid ANY.RUN API key. It supports various customization
+    options for the analysis environment, including browser selection, network proxy
+    configurations, and privacy settings. The action is designed to be run on URL
+    entities, though it can accept manual URL inputs.
+  ai_short_description: >-
+    Analyzes URLs using the ANY.RUN Windows sandbox to retrieve threat intelligence,
+    reports, and malicious indicators.
+  capabilities:
+    can_create_case_comments: true
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Adds comments to the case and saves analysis reports as attachments to the case
+      wall.
+    reasoning: >-
+      The action fetches data (analysis reports and IOCs) from the ANY.RUN sandbox.
+      It does not mutate external data (no blocking/quarantining). It mutates internal
+      data by adding comments and saving attachments to the case wall.
+  categories:
+    enrichment: true
+    reasoning: >-
+      The action is an enrichment action because its primary purpose is to fetch threat
+      intelligence and analysis reports from an external sandbox. It does not block,
+      quarantine, or perform any remediation actions on the external system. It modifies
+      internal data by adding comments and attachments to the case, which is permitted
+      for enrichment actions.
+    remediation: false
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action is designed to process URL entities, as indicated by the default
+      parameter value `[Entity.Identifier]` and the nature of the analysis (URL analysis).
+  outcome_categories:
+    add_alert_comment: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action submits a URL to a sandbox (matches 'submit_file'), retrieves threat
+      intelligence/IOCs (matches 'enrich_ioc'), and adds comments to the case (matches
+      'add_alert_comment').
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Url | String | Yes | The destination URL(s) to analyze. Defaults to the entity
+    identifier. |
+
+    | Browser | DDL | Yes | The browser to use for analysis (e.g., Microsoft Edge,
+    Google Chrome). |
+
+    | Timeout In Seconds | String | No | Task completion timeout (10-660 seconds).
+    Default is 120. |
+
+    | Command line | String | No | Optional command-line arguments for the analyzed
+    object. |
+
+    | System's language | String | No | OS language (e.g., 'en-US'). |
+
+    | User Tags | String | No | User tags for the task. |
+
+    | Analysis Privacy Type | DDL | No | Privacy settings (public, bylink, owner,
+    byteam). |
+
+    | Network Connect | Boolean | No | Enable network connection. |
+
+    | Network Fakenet | Boolean | No | Enable FakeNet feature. |
+
+    | Network Tor | Boolean | No | Enable TOR usage. |
+
+    | Network Geo | String | No | TOR geolocation option. |
+
+    | Network Mitm | Boolean | No | Enable HTTPS MITM Proxy. |
+
+    | Network Residential Proxy | Boolean | No | Enable residential proxy usage. |
+
+    | Network Residential Proxy Geo | String | No | Residential proxy geolocation
+    option. |

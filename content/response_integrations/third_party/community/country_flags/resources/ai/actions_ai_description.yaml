@@ -2,25 +2,41 @@ Get Country Flag:
   ai_description: >-
     ### General Description
 
-    The **Get Country Flag** action retrieves a base64-encoded image of a country's
-    flag from the `countryflags.io` service. This utility is used to provide visual
-    context for countries associated with entities or provided as direct input. The
-    action maintains a local cache to optimize performance and reduce API calls.\n\n###
-    Parameters Description\n| Parameter | Type | Mandatory | Description |\n| :---
-    | :--- | :--- | :--- |\n| Country Code Two Digit | string | No | A 2-letter ISO
-    country code (e.g., 'us', 'fr') to fetch the flag for. |\n| Country Code From
-    Entity Field | string | No | A comma-separated list of field names to look for
-    in an entity's `additional_properties` (e.g., 'country', 'location'). |\n\n###
-    Additional Notes\n- The action uses a local `flags.json` file in the run folder
-    for caching.\n- If no country code is found and no parameter is provided, the
-    action completes without fetching data.\n\n### Flow Description\n1. **Load Cache**:
-    Attempts to read existing flag data from a local JSON file.\n2. **Identify Country
-    Codes**: Checks the `Country Code Two Digit` parameter and iterates through entities
-    to find codes in specified `additional_properties` fields.\n3. **Fetch Missing
-    Flags**: For any code not in the cache, it performs a GET request to the external
-    flag service.\n4. **Process and Encode**: Converts the image content to a base64
-    string.\n5. **Update and Output**: Updates the local cache file and adds the base64
-    strings to the action's JSON result.
+    Fetches a country flag image in base64 format from `countryflags.io` based on
+    a provided country code. This action allows users to retrieve visual representations
+    of countries, which can be used for reporting or enrichment purposes. It supports
+    both direct input of a country code and extraction of the country code from an
+    entity's additional properties.
+
+
+    ### Flow Description
+
+    1. Initialize the `SiemplifyAction` and load the local cache file `flags.json`
+    from the runner's folder.
+
+    2. If `Country Code From Entity Field` is provided, iterate through all target
+    entities. For each entity, check if the specified field exists in `entity.additional_properties`.
+
+    3. If a country code is found (either from the entity field or the `Country Code
+    Two Digit` parameter), check if it exists in the local cache.
+
+    4. If the flag is not in the cache, perform an HTTP GET request to `https://www.countryflags.io/{country_code}/flat/64.png`.
+
+    5. Encode the retrieved image content into a base64 string and update the local
+    cache.
+
+    6. Add the resulting base64 flag data to the action's result JSON.
+
+    7. If the cache was updated, write the new `flags.json` file back to the disk.
+
+
+    ### Additional Notes
+
+    The action utilizes a local file-based cache to minimize redundant external API
+    calls to `countryflags.io`.
+  ai_short_description: >-
+    Fetches and returns a base64-encoded country flag image based on a provided country
+    code.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -31,45 +47,56 @@ Get Country Flag:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from an external API (countryflags.io). It does not
+      mutate external data. It updates a local cache file, which is not considered
+      a mutation of Google SecOps case data. It does not update entities, create insights,
+      or modify alert data.
   categories:
     enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (countryflags.io) to provide
+      context (a flag image). It does not mutate external systems or modify Google
+      SecOps case data (entities, insights, comments). Therefore, it is classified
+      as an enrichment action.
+    remediation: false
   entity_usage:
     entity_types:
-    - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
-    - USERUNIQNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: true
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -83,46 +110,90 @@ Get Country Flag:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over all `siemplify.target_entities` without filtering by
+      specific entity types. It does, however, filter processing based on the presence
+      of specific keys in the entity's `additional_properties`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (a country flag) for an entity or resource.
+      This aligns with the 'Enrich Asset' category as it provides additional context.
+      It does not perform threat intelligence lookups (Enrich IOC) or modify alert/ticket
+      states.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Country Code Two Digit | String | No | Enter the 2 digits of a given country
+    (for example, us) |
+
+    | Country Code From Entity Field | String | No | Insert a given field related
+    to a specific entity that has been enriched by another product that you would
+    like to extract a base64 for that country |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is designed to verify connectivity between Google SecOps and
-    the Country Flags service. It performs a test request to ensure that the integration
-    can successfully reach the external API and retrieve data.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action uses a hardcoded country code ("us") to perform the connectivity test.
-    It also utilizes a local cache file (`flags.json`) within the execution environment
-    to store previously retrieved flag data. Note that while the action fetches data,
-    it is named 'Ping' and therefore is not categorized as an enrichment action per
-    standard guidelines.
+    Tests connectivity to the Country Flags service by retrieving a flag image for
+    a specific country code. This action is primarily used for connectivity testing
+    and does not perform standard enrichment or remediation tasks.
 
 
     ### Flow Description
 
-    1. **Initialize**: The script initializes the Siemplify action and attempts to
-    load existing flag data from a local cache file named `flags.json` in the run
-    folder.
+    1. Initialize the `SiemplifyAction`.
 
-    2. **Cache Check**: It checks if the flag for the hardcoded country code "us"
-    is already present in the loaded cache.
+    2. Attempt to load a local cache file (`flags.json`) to check for existing flag
+    data.
 
-    3. **API Request**: If the flag is not found in the cache, it sends a GET request
-    to the Country Flags API (`https://www.countryflags.io/us/flat/64.png`).
+    3. If the cache is missing or invalid, initialize an empty cache.
 
-    4. **Data Processing**: The retrieved image content is encoded into a base64 string
-    and added to the local cache object.
+    4. Define the target country code (hardcoded as "us").
 
-    5. **Completion**: The action concludes with a success status if the flag data
-    is successfully obtained (either from the cache or the external API).
+    5. Check if the flag for the country code exists in the cache.
+
+    6. If not in cache, perform an HTTP GET request to `https://www.countryflags.io/{}/flat/64.png`
+    to download the flag image.
+
+    7. Encode the downloaded image content to base64 and update the cache.
+
+    8. Terminate the action with a success or failure status.
+
+
+    ### Additional Notes
+
+    This action is primarily used for connectivity testing and does not perform standard
+    enrichment or remediation tasks.
+  ai_short_description: >-
+    Tests connectivity to the Country Flags service by retrieving a flag image.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -133,10 +204,54 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs an HTTP GET request to test connectivity, which constitutes
+      fetching data. It does not mutate external systems, nor does it modify internal
+      SOAR data (entities, insights, comments, or alerts).
   categories:
     enrichment: false
+    reasoning: >-
+      The action is named "Ping" and is designed to test connectivity to an external
+      service. According to the guidelines, actions named "Ping" must not be categorized
+      as enrichment actions. It does not perform any remediation tasks.
+    remediation: false
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -150,3 +265,38 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities from the SOAR platform. It uses
+      a hardcoded country code ("us") for its connectivity test.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test ("Ping") and does not perform any of the defined
+      outcomes such as enriching IOCs, assets, or performing remediation.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.

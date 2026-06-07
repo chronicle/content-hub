@@ -2,57 +2,42 @@ ANYRUN TI Lookup:
   ai_description: >-
     ### General Description
 
-    Performs threat intelligence lookups using the ANY.RUN TI Lookup service. This
-    action allows users to query for specific entities (IPs, Domains, URLs, Processes,
-    Filehashes) or provide a raw ANY.RUN query string to retrieve detailed threat
-    analysis. The results include threat levels (Malicious, Suspicious, Unknown) and
-    full JSON reports.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Lookup Depth | Specify the number of days from the current date for which you
-    want to lookup. | String | Yes |
-
-    | Query | Raw query with necessary filters. Supports condition concatenation with
-    AND, OR, NOT and Parentheses (). | String | No |
-
-    | Identifiers | The target case entity identifiers. | String | Yes |
-
-    | Types | The target case entity types. | String | Yes |
-
-
-    ### Additional Notes
-
-    The action requires either a raw query or a list of entity identifiers and types.
-    If the 'Query' parameter is provided, the action will prioritize it and perform
-    a lookup based on the query string. If 'Query' is empty, the action will iterate
-    through the provided entities and perform lookups for supported types (Address,
-    IPSet, DestinationURL, Domain, Process, and Filehash).
+    Performs threat intelligence lookups using the ANY.RUN platform for specified
+    entities or custom queries. This action retrieves threat intelligence data, provides
+    a summary verdict, and attaches the full JSON report to the case wall for further
+    analysis.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieve action parameters (Lookup Depth, Query,
-    Identifiers, Types) and integration settings (API Key, SSL verification).
+    1. The action extracts configuration parameters, including the API Key, Lookup
+    Depth, and proxy settings.
 
-    2. **Lookup Mode Selection**: Check if a raw query is provided. If so, proceed
-    with query lookup; otherwise, process the list of entities.
+    2. It identifies the target entities or custom query provided in the input parameters.
 
-    3. **API Interaction**: For the query or each supported entity, call the ANY.RUN
-    TI Lookup API to fetch intelligence data.
+    3. The `LookupConnector` is initialized with the provided credentials and proxy
+    configuration.
 
-    4. **Internal Data Updates**: For each successful lookup:
-        - Add a comment to the case with a direct link to the ANY.RUN portal.
-        - Save the complete JSON intelligence report as an attachment to the case
-    wall.
-        - Calculate a verdict based on the threat level score.
-    5. **Summary Reporting**: Aggregate the results for all processed items into a
-    summary table and add it as a final comment to the case.
+    4. The action calls the `get_intelligence` method to fetch threat data from the
+    ANY.RUN platform.
+
+    5. A comment is added to the case containing a direct link to the ANY.RUN lookup
+    reference.
+
+    6. The full JSON report is saved as an attachment to the case wall.
+
+    7. The action returns a summary verdict (e.g., Suspicious, Malicious, Unknown)
+    based on the threat level.
+
+
+    ### Additional Notes
+
+    This action supports multiple entity types, including IP addresses, domains, URLs,
+    and file hashes, which are mapped to appropriate query parameters for the ANY.RUN
+    platform.
+  ai_short_description: >-
+    Performs threat intelligence lookups on entities using the ANY.RUN platform and
+    attaches the detailed report to the case.
   capabilities:
     can_create_case_comments: true
     can_create_insight: false
@@ -63,17 +48,56 @@ ANYRUN TI Lookup:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Adds lookup URLs and summary reports as comments and case wall attachments.
+      Adds comments and attachments to the case wall.
+    reasoning: >-
+      The action makes a GET request to the ANY.RUN API to fetch threat intelligence.
+      It does not mutate external data. It mutates internal data by adding comments
+      and attachments to the case wall.
   categories:
-    enrichment: false
+    enrichment: true
+    reasoning: >-
+      The action fetches threat intelligence data from an external source (ANY.RUN)
+      and adds it to the case as a comment and attachment. It does not modify external
+      systems or perform remediation. Therefore, it is classified as an enrichment
+      action.
+    remediation: false
   entity_usage:
     entity_types:
-    - ADDRESS
-    - IPSET
-    - DestinationURL
-    - DOMAIN
-    - PROCESS
-    - FILEHASH
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: true
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: true
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: true
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -87,29 +111,86 @@ ANYRUN TI Lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over the provided entity identifiers and types, mapping
+      them to ANY.RUN query parameters using the `Config.ENTITIES` dictionary. It
+      filters by entity type to determine which lookups are supported.
+  outcome_categories:
+    add_alert_comment: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence for IOCs (Enrich IOC) and adds a comment
+      to the case (Add Alert Comment). It does not perform any remediation or external
+      mutation.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Lookup Depth | String | Yes | Specify the number of days from the current date
+    for which you want to lookup. |
+
+    | Query | String | No | Raw query with necessary filters. Supports condition concatenation
+    with AND, OR, NOT and Parentheses (). |
+
+    | Identifiers | String | Yes | The target case entity identifiers. |
+
+    | Types | String | Yes | The target case entity types. |
 Ping:
   ai_description: >-
-    ### General Description: Tests the connectivity between Google SecOps and the
-    ANY.RUN TI Lookup service to ensure the integration is correctly configured and
-    can successfully communicate with the ANY.RUN API. ### Parameters Description:
-    1. ANYRUN TI Lookup API KEY (String, Mandatory): The API key required to authenticate
-    requests to the ANY.RUN TI Lookup service. 2. Verify SSL (Boolean, Optional):
-    If enabled, the action will verify the SSL certificate of the ANY.RUN API endpoint.
-    3. Enable proxy (Boolean, Optional): If enabled, the action will attempt to connect
-    through the specified proxy server. 4. Proxy host (String, Optional): The hostname
-    or IP address of the proxy server. Required if 'Enable proxy' is true. 5. Proxy
-    port (String, Optional): The port number of the proxy server. Required if 'Enable
-    proxy' is true. ### Additional Notes: This action does not process any entities
-    or modify any data. If 'Enable proxy' is selected, both 'Proxy host' and 'Proxy
-    port' must be provided. ### Flow Description: 1. Configuration Extraction: The
-    action retrieves the API key, SSL verification preference, and proxy settings
-    from the integration configuration. 2. Proxy Validation (Optional): If proxying
-    is enabled, the action first tests the connection through the specified proxy
-    host and port. 3. Authorization Check: The action uses the LookupConnector to
-    perform an authorization check against the ANY.RUN API using the provided API
-    key. 4. Result Reporting: If the check is successful, a completion message is
-    returned. If any step fails (e.g., invalid API key, network timeout), the action
-    fails and logs the error details.
+    ### General Description
+
+    Tests connectivity to the ANY.RUN TI Lookup service by verifying the provided
+    API key and optional proxy settings. This action ensures that the integration
+    is correctly configured and can communicate with the external service.
+
+
+    ### Flow Description
+
+    1. Extracts the `ANYRUN TI Lookup API KEY` and `Verify SSL` configuration parameters.
+
+    2. Checks if `Enable proxy` is configured. If enabled, it extracts the `Proxy
+    host` and `Proxy port` and validates the proxy connection using the `LookupConnector`.
+
+    3. Initializes the `LookupConnector` with the provided API key and SSL settings.
+
+    4. Calls `connector.check_authorization()` to verify the API key's validity.
+
+    5. Returns a success or failure message based on the outcome of the connectivity
+    check.
+
+
+    ### Additional Notes
+
+    This action is a connectivity test and does not perform any data enrichment or
+    remediation.
+  ai_short_description: >-
+    Tests connectivity to the ANY.RUN TI Lookup service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -120,10 +201,53 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity check (Ping) to verify the API key and proxy
+      settings. It does not fetch data, mutate external systems, or modify internal
+      SOAR data.
   categories:
     enrichment: false
+    reasoning: >-
+      The action is a 'Ping' action designed to test connectivity. Per the guidelines,
+      Ping actions are not enrichment actions. It does not perform any remediation.
+    remediation: false
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -137,3 +261,51 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping) and does not perform any of the defined
+      outcomes (e.g., enrichment, remediation, ticket management).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | ANYRUN TI Lookup API KEY | String | Yes | API Key for ANY.RUN TI Lookup |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates |
+
+    | Enable proxy | Boolean | No | Whether to use a proxy |
+
+    | Proxy host | String | No | Proxy host address (required if Enable proxy is true)
+    |
+
+    | Proxy port | String | No | Proxy port (required if Enable proxy is true) |
