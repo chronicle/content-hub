@@ -2,34 +2,39 @@ Gather Remote Agent Datapoints:
   ai_description: >-
     ### General Description
 
-    This action gathers diagnostic information and logs from a remote Siemplify/Chronicle
-    agent. It collects system load metrics, file information, and error logs from
-    the agent's local environment to assist in troubleshooting integration or connector
-    issues.
+    Gathers diagnostic data from a remote agent machine to assist in troubleshooting.
+    This action collects agent status, system load information (CPU, memory, uptime),
+    file information from the agent's working directory, and relevant agent/connector
+    logs. It outputs all collected information to the execution logs for analysis.
 
 
     ### Flow Description
 
-    1. Extracts `IntegrationName` and `ConnectorName` parameters.
+    1. **Parameter Extraction**: The action extracts the `IntegrationName` (mandatory)
+    and `ConnectorName` (optional) from the action parameters.
 
-    2. Initializes collectors for Agent Logs, Agent Load Info, and File Information.
+    2. **Agent Status Collection**: It reads the agent status from `/opt/SiemplifyAgent/Resources/agent_status.json`
+    and flattens the JSON output for logging.
 
-    3. Executes shell commands (e.g., `cat`, `lscpu`, `uptime`, `free`, `env`, `ls`,
-    `date`) on the host machine to retrieve diagnostic data.
+    3. **System Load Collection**: It executes system commands (`lscpu`, `uptime`,
+    `free -h`, `env`) to gather CPU, memory, and environment information.
 
-    4. Parses and filters logs from `/var/log/SiemplifyAgent/agent.log` and connector-specific
-    directories.
+    4. **File Information Collection**: It lists files in the `/opt/SiemplifyAgent`
+    directory using `ls -lart`.
 
-    5. Logs all collected information to the Siemplify logger for analyst review.
+    5. **Log Collection**: It reads and parses the agent log (`/var/log/SiemplifyAgent/agent.log`)
+    and connector runner logs to extract error information.
+
+    6. **Logging**: All collected diagnostic data is written to the execution logger.
 
 
     ### Additional Notes
 
-    This action runs locally on the agent machine and does not interact with external
-    APIs. It is intended for troubleshooting and diagnostic purposes.
+    This is a diagnostic utility action designed for troubleshooting agent and connector
+    issues. It does not perform any modifications to the system or the SOAR platform.
   ai_short_description: >-
-    Gathers diagnostic logs and system performance metrics from a remote Siemplify/Chronicle
-    agent for troubleshooting.
+    Gathers diagnostic data from a remote agent, including agent status, system load,
+    file information, and logs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -41,9 +46,16 @@ Gather Remote Agent Datapoints:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action executes local shell commands to collect diagnostic logs and system
-      metrics from the agent machine. It does not interact with external APIs, mutate
-      external or internal data, update entities, or create insights/comments.
+      The action collects diagnostic data (logs, system load, file information) from
+      the local agent machine and outputs it to the execution logs. It does not fetch
+      data from external APIs, nor does it mutate any external or internal systems
+      (entities, alerts, cases).
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action is a diagnostic tool that collects system and log information from
+      the agent machine. It does not perform any enrichment or remediation tasks.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -95,9 +107,8 @@ Gather Remote Agent Datapoints:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not use or filter any entities. It operates on the local agent
-      machine to collect diagnostic data based on provided integration and connector
-      names.
+      The action does not interact with any entities. It operates on the local agent
+      machine to collect diagnostic information.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -113,10 +124,9 @@ Gather Remote Agent Datapoints:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action gathers diagnostic logs and system information from the local agent
-      machine for troubleshooting purposes. It does not interact with external systems,
-      modify alerts, or perform enrichment on entities. Therefore, it does not match
-      any of the predefined outcome categories.
+      The action is a diagnostic tool that collects system and log information from
+      the agent machine. It does not perform any of the defined outcome actions such
+      as enriching IOCs, updating alerts, or performing remediation.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -136,7 +146,7 @@ Gather Remote Agent Datapoints:
 
     | --- | --- | --- | --- |
 
-    | IntegrationName | String | Yes | The name of the integration for which you want
-    to analyse. |
+    | IntegrationName | String | Yes | Name of the Integration for which you want
+    to analyse |
 
-    | ConnectorName | String | No | The name of the connector to analyze. |
+    | ConnectorName | String | No | Connector Name |

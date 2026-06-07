@@ -3,33 +3,31 @@ Lookup:
     ### General Description
 
     Checks if a specific URL is safe for browsing using the Google Safe Browsing service.
-    This action queries the Google Safe Browsing API to determine if a provided URL
-    is flagged as malicious, providing immediate threat intelligence for the indicator.
+    This action queries the service to determine if a given URL is flagged as malicious,
+    providing threat intelligence to help analysts assess the risk of a URL.
 
 
     ### Flow Description
 
-    1. The action extracts the `Api Key` from the integration configuration.
+    1. Extract the `Api Key` from the integration configuration.
 
-    2. The action extracts the `Url` parameter provided by the user.
+    2. Extract the `Url` parameter from the action input.
 
-    3. The action initializes the `SafeBrowsing` manager using the provided API key.
+    3. Initialize the `SafeBrowsing` manager with the provided API key.
 
-    4. The action calls the `lookup_urls` method from the `pysafebrowsing` library
-    to query the Google Safe Browsing API for the specified URL.
+    4. Call the `lookup_urls` method to query the Google Safe Browsing service for
+    the status of the provided URL.
 
-    5. The action parses the response to determine if the URL is marked as malicious.
+    5. Add the raw JSON result to the action output.
 
-    6. The action adds the raw JSON response to the action results using `siemplify.result.add_result_json`.
-
-    7. The action terminates with a summary message indicating whether the URL was
-    found to be malicious.
+    6. Determine if the URL is malicious and terminate the action with a status message
+    and boolean result.
 
 
     ### Additional Notes
 
-    This action operates on a direct URL input provided as a parameter and does not
-    interact with or filter existing entities within the SOAR platform.
+    This action is a lookup/enrichment action. It does not modify external systems
+    or internal case data (other than returning results).
   ai_short_description: >-
     Checks if a specific URL is safe for browsing using the Google Safe Browsing service.
   capabilities:
@@ -43,9 +41,14 @@ Lookup:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the Google Safe Browsing API to fetch reputation
-      data for a URL. It does not mutate any external or internal data, nor does it
-      update entities, create insights, or modify alert data.
+      The action makes a GET request to the Google Safe Browsing API to fetch URL
+      reputation data. It does not mutate external data or internal case data.
+  categories:
+    enrichment: true
+    reasoning: >-
+      The action fetches reputation data for a URL from Google Safe Browsing. It does
+      not modify any external or internal systems, making it an enrichment action.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -97,9 +100,8 @@ Lookup:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or utilize `siemplify.target_entities`. It
-      relies solely on the `Url` parameter provided by the user to perform the lookup.
-      Therefore, no entity type flags or entity filtering flags are applicable.
+      The action does not process entities from the case; it operates on a direct
+      URL input parameter provided by the user.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -115,9 +117,9 @@ Lookup:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action queries an external service (Google Safe Browsing) to retrieve reputation
-      data for a URL. This directly matches the 'Enrich IOC' category as it provides
-      threat intelligence for an indicator.
+      The action retrieves threat intelligence (malicious status) for a URL, which
+      qualifies as 'Enrich IOC'. It does not perform any other actions like ticket
+      creation or host containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -137,36 +139,36 @@ Lookup:
 
     | --- | --- | --- | --- |
 
+    | Api Key | String | Yes | API Key for Google Safe Browsing (configured in integration
+    settings). |
+
     | Url | String | Yes | The URL you would like to check in Google Safe Browsing.
     |
 Ping:
   ai_description: >-
-    ### General Description
+    General Description
 
-    Verifies connectivity to the Google Safe Browsing service by performing a sample
-    URL lookup. This action is intended for health checks and does not perform any
-    security operations or entity processing.
-
-
-    ### Flow Description
-
-    1. The action extracts the `Api Key` from the integration configuration.
-
-    2. It initializes the `SafeBrowsing` manager using the provided API key.
-
-    3. It executes a `lookup_urls` API call using a hardcoded test URL (`http://malware.testing.google.test/testing/malware/`)
-    to verify the connection.
-
-    4. It terminates the action with a success message if the connectivity test completes.
+    Tests connectivity to the Google Safe Browsing service to ensure the integration
+    is properly configured and the API key is valid.
 
 
-    ### Additional Notes
+    Flow Description
 
-    This action is strictly for connectivity verification and does not process any
-    entities or perform security operations.
+    1. Extracts the 'Api Key' from the integration configuration.
+
+    2. Initializes the `SafeBrowsing` manager using the provided API Key.
+
+    3. Performs a test URL lookup using a hardcoded test URL to verify connectivity.
+
+    4. Returns a success message upon completion.
+
+
+    Additional Notes
+
+    This action is a connectivity test and does not perform any actual enrichment
+    or remediation on entities.
   ai_short_description: >-
-    Verifies connectivity to the Google Safe Browsing service by performing a sample
-    URL lookup.
+    Tests connectivity to the Google Safe Browsing service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -179,8 +181,14 @@ Ping:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a connectivity test by calling the Google Safe Browsing
-      API. It does not fetch contextual data for alerts or entities, nor does it mutate
-      any external or internal data.
+      API. It does not mutate external or internal data, nor does it fetch contextual
+      data for entities.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action is named 'Ping' and is a connectivity test. It does not perform enrichment
+      or remediation on entities.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -232,8 +240,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with `target_entities`. It performs a hardcoded
-      connectivity test, so all entity flags are false.
+      The action does not interact with any entities; it is a standalone connectivity
+      test.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -249,8 +257,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping) and does not perform any of the defined
-      security outcomes such as enrichment, blocking, or ticketing.
+      The action is a connectivity test and does not match any of the defined outcome
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

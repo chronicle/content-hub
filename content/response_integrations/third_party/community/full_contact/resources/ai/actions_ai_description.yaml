@@ -1,44 +1,37 @@
 Enrich Entities:
   ai_description: >-
-    ### General Description
-
-    Enriches User entities by querying the Full Contact API to retrieve professional
-    and company-related metadata. This action enhances the context of user entities
-    within the case by populating their additional properties with information such
-    as company name, industry, location, employee count, and personal details like
-    job title and LinkedIn profile.
+    General Description: Enriches User entities using the Full Contact API. It retrieves
+    professional and company-related metadata (e.g., company name, industry, location,
+    job title, LinkedIn profile) based on the user's email address or associated domain.
 
 
-    ### Flow Description
+    Flow Description:
 
-    1. The action iterates through the target entities provided in the case.
+    1. The action retrieves the API key from the "Full Contact" integration configuration.
 
-    2. It filters for entities of type `USER`.
+    2. It iterates through the target entities, specifically identifying entities
+    of type USER.
 
-    3. For each user, it extracts the domain from the email address and the email
-    itself.
+    3. For each user entity, it extracts the domain from the email address and the
+    email itself.
 
-    4. It makes a POST request to the Full Contact API (`/v3/company.enrich`) to retrieve
-    company information based on the domain.
+    4. It calls the Full Contact API (/v3/company.enrich) to fetch company details
+    using the domain.
 
-    5. It makes a POST request to the Full Contact API (`/v3/person.enrich`) to retrieve
-    personal information based on the email.
+    5. It calls the Full Contact API (/v3/person.enrich) to fetch person details using
+    the email address.
 
-    6. The retrieved data is mapped to the entity's `additional_properties`.
+    6. The retrieved data is mapped to the entity's additional_properties.
 
-    7. The action updates the entities in the SOAR platform using `siemplify.update_entities`.
+    7. The action updates the entities in the SOAR platform with the new enrichment
+    data and adds the results to the action output.
 
-    8. The final enrichment data is added to the action result.
 
-
-    ### Additional Notes
-
-    This action requires a valid API Key configured for the Full Contact integration.
-    It specifically targets `USER` entities and will only perform enrichment if the
-    entity type matches.
+    Additional Notes: This action requires a valid Full Contact API key. It specifically
+    targets USER entities.
   ai_short_description: >-
-    Enriches User entities with professional and company metadata retrieved from the
-    Full Contact API.
+    Enriches User entities with professional and company metadata using the Full Contact
+    API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -49,12 +42,18 @@ Enrich Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the entity's additional_properties with retrieved enrichment data within
-      the SOAR platform.
+      Updates entity additional_properties with enrichment data.
     reasoning: >-
-      The action fetches data from an external API (Full Contact). It updates internal
-      entities by modifying their additional properties and saving them back to the
-      platform. It does not mutate external data (the API calls are for retrieval).
+      The action makes POST requests to the Full Contact API to fetch enrichment data
+      for user entities. It does not mutate external data. It updates internal entities
+      by adding enrichment data to their additional properties.
+  categories:
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Full Contact) and updates internal
+      entities with the retrieved information. It does not mutate external systems.
+      Therefore, it is an enrichment action and not a remediation action.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -106,9 +105,8 @@ Enrich Entities:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and explicitly checks `if
-      ent.entity_type == EntityTypes.USER`. It only processes entities of type USER,
-      filtering by entity type.
+      The code iterates over `siemplify.target_entities` and filters using `ent.entity_type
+      == EntityTypes.USER`. This means it targets USER entities, filtering by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -125,8 +123,8 @@ Enrich Entities:
     get_alert_information: false
     reasoning: >-
       The action retrieves contextual metadata (company info, job title, etc.) for
-      a user entity. This matches the 'Enrich Asset' category. It does not perform
-      any blocking, ticket creation, or alert modification.
+      a user entity. This matches the 'Enrich Asset' category. It does not enrich
+      IOCs, update alerts, or perform any remediation actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -141,50 +139,38 @@ Enrich Entities:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | API Key | String | Yes | API Key for the Full Contact integration (configured
-    in the integration settings). |
+  parameters_description: There are no parameters for this action.
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the Full Contact API by performing a domain enrichment request
-    for a hardcoded domain. This action is primarily used for diagnostic purposes
-    to verify that the integration is correctly configured and can communicate with
-    the Full Contact service.
+    Tests connectivity with the Full Contact product by performing a domain enrichment
+    request. This action is primarily used as a diagnostic tool to verify that the
+    integration is correctly configured and can communicate with the Full Contact
+    API.
 
 
     ### Flow Description
 
-    1. Initialize the `SiemplifyAction` module.
+    1. The action initializes the `FullContactManager` using the API key retrieved
+    from the integration configuration.
 
-    2. Retrieve the API Key from the "Full Contact" integration configuration.
+    2. It executes a POST request to the Full Contact `company.enrich` endpoint using
+    a hardcoded domain ("google.com").
 
-    3. Instantiate the `FullContactManager` class with the retrieved API Key.
+    3. The action validates the response status; if a 401 error is returned, it raises
+    an exception to indicate an authentication failure.
 
-    4. Call the `enrich_domain` method of `FullContactManager` with the hardcoded
-    domain "google.com".
-
-    5. The `enrich_domain` method sends a POST request to `https://api.fullcontact.com/v3/company.enrich`.
-
-    6. Check the response status; if the status is 401, raise an exception indicating
-    an authentication failure.
-
-    7. End the action with a success message.
+    4. If the connectivity test completes successfully, the action returns a success
+    message.
 
 
     ### Additional Notes
 
-    This action is designed for connectivity testing and does not process any entities
-    from the case. It uses a hardcoded domain for the test and does not accept any
-    input parameters.
+    This action is intended for connectivity testing and does not process entities
+    or perform actual enrichment on case data. It is not an enrichment action.
   ai_short_description: >-
-    Tests connectivity to the Full Contact API by performing a domain enrichment request
-    for a hardcoded domain.
+    Tests connectivity with the Full Contact product.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -196,9 +182,16 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to an external API to test connectivity. It
-      does not fetch contextual data for alerts or entities, nor does it mutate any
-      data.
+      The action makes a POST request to the Full Contact API to test connectivity.
+      It does not fetch contextual data for alerts/entities, nor does it mutate external
+      or internal data.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action is named 'Ping' and is designed to test connectivity. It does not
+      perform enrichment on entities or remediate threats, so it is not an enrichment
+      or remediation action.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -250,9 +243,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not use `siemplify.target_entities`. It uses a hardcoded domain
-      string ('google.com') to perform a connectivity test. Therefore, it does not
-      filter or process any entities.
+      The action does not interact with any entities. It uses a hardcoded domain string
+      to test connectivity.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -268,9 +260,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a connectivity test by calling an external API. It does
-      not enrich IOCs from the case, update alerts, or perform any other listed outcome.
-      It is strictly a diagnostic/connectivity test.
+      The action is a connectivity test ('Ping') and does not perform any of the defined
+      outcome actions (enrichment, remediation, ticket management, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

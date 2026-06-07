@@ -2,39 +2,31 @@ Ping:
   ai_description: >-
     ### General Description
 
-    This action verifies connectivity to the SendGrid API by performing a GET request
-    to the `/v3/scopes` endpoint. It validates the provided API token by checking
-    for the presence of the `mail.send` scope in the response, ensuring the integration
-    is correctly configured and authorized.
+    Verifies connectivity to the SendGrid API by validating the provided API token
+    and checking for required permissions.
 
 
     ### Flow Description
 
-    1. Initialize the `SiemplifyAction` object.
+    1. Retrieves the API Token from the SendGrid integration configuration.
 
-    2. Retrieve the "API Token" from the SendGrid integration configuration.
+    2. Initiates an HTTPS GET request to the SendGrid API endpoint `/v3/scopes` using
+    the provided authorization token.
 
-    3. Establish an HTTPS connection to `api.sendgrid.com`.
+    3. Parses the JSON response to extract the available API scopes.
 
-    4. Execute a GET request to the `/v3/scopes` endpoint using the provided API token
-    in the authorization header.
+    4. Checks if the `mail.send` scope is present in the retrieved permissions.
 
-    5. Parse the JSON response to extract the available scopes.
-
-    6. Search for the `mail.send` permission within the retrieved scopes.
-
-    7. If the scope is found, return a success message; otherwise, return an error
-    message indicating a connection or permission failure.
+    5. Returns a success message if the scope is found, or an error message if the
+    connection fails or the token is invalid.
 
 
     ### Additional Notes
 
-    This action is strictly for connectivity testing and validation. It does not perform
-    any operations on entities, modify external data, or create insights within the
-    SOAR platform.
+    This action is strictly for connectivity testing and does not perform any data
+    enrichment, remediation, or entity modification.
   ai_short_description: >-
-    Verifies connectivity to the SendGrid API and validates the provided API token
-    by checking for required permissions.
+    Verifies connectivity to the SendGrid API by validating the API token.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -46,8 +38,15 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the SendGrid API to verify connectivity
-      and validate the API token. It does not mutate any data or interact with entities.
+      The action performs a GET request to verify API connectivity and permissions.
+      It does not modify external or internal data.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action is a connectivity test (Ping). Per the guidelines, actions named
+      'Ping' must not be categorized as enrichment actions. It does not perform any
+      remediation tasks.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -99,8 +98,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities; it performs a standalone connectivity
-      test against the SendGrid API.
+      The action does not interact with any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -116,8 +114,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test and does not perform any of the defined outcome
-      actions (enrichment, containment, ticketing, etc.).
+      The action is a connectivity test (Ping) and does not perform any of the defined
+      operational outcomes such as enrichment, remediation, or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -132,50 +130,61 @@ Ping:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: There are no parameters for this action
+  parameters_description: There are no parameters for this action.
 Send Email:
   ai_description: >-
     ### General Description
 
-    Sends an email notification using the SendGrid API. This action allows users to
-    dispatch automated emails with custom subjects and content, facilitating communication
-    or reporting workflows within the SOAR platform.
+    Sends an email message using the SendGrid API. This action allows users to dispatch
+    notifications or reports to specified recipients with a custom subject and HTML
+    content.
 
 
     ### Flow Description
 
-    1. The action initializes the SendGrid API client using the configured API token.
+    1. The action retrieves the integration configuration, including the SendGrid
+    API token, and the action parameters (Email From, Email To, Subject, Content,
+    and Return Message Status).
 
-    2. It constructs an email message object using the provided 'From', 'To', 'Subject',
-    and 'Content' parameters.
+    2. It constructs a `Mail` object using the provided sender, recipient, subject,
+    and HTML content.
 
-    3. The action sends the email via the SendGrid API.
+    3. The action calls the SendGrid API (`sg.send`) to transmit the email.
 
-    4. If the 'Return Message Status' parameter is enabled, the action captures the
-    response status code and recipient details, saving them as a JSON result in the
-    action output.
+    4. If the `Return Message Status` parameter is enabled, the action adds a result
+    JSON to the SOAR platform containing the response status code and recipient information.
+
+    5. The action logs the outcome and returns the execution status.
 
 
     ### Additional Notes
 
-    This action does not operate on specific entities and is intended for general
-    notification or reporting purposes. It does not support retry logic.
+    This action does not process entities and operates independently of the alert's
+    entity list.
   ai_short_description: >-
-    Sends an email notification via the SendGrid API.
+    Sends an email message via the SendGrid API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: true
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Sends an email message via the SendGrid API.
+    external_data_mutation_explanation: Sends an email via the SendGrid API.
     fetches_data: false
-    internal_data_mutation_explanation: null
+    internal_data_mutation_explanation: >-
+      Adds result JSON to the SOAR platform if 'Return Message Status' is enabled.
     reasoning: >-
-      The action sends an email via the SendGrid API (external system). It does not
-      fetch data, update entities, or modify internal SecOps data.
+      The action performs an external API call to SendGrid to send an email (can_mutate_external_data=true).
+      It also adds result JSON to the SOAR platform if configured (can_mutate_internal_data=true).
+      It does not fetch data.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action sends an email, which is a communication task. According to the remediation
+      criteria, communication updates (including sending emails) qualify as remediation
+      actions. It does not fetch data, so it is not an enrichment action.
+    remediation: true
   entity_usage:
     entity_types:
       address: false
@@ -227,8 +236,8 @@ Send Email:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over or utilize target entities; it performs a global
-      operation to send an email.
+      The action overrides the base execution logic and does not iterate over or process
+      any entities. Therefore, no entity types are used.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -244,7 +253,7 @@ Send Email:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action sends an email via SendGrid, which directly matches the 'Send Email'
+      The action sends an email via SendGrid. This directly matches the 'Send Email'
       outcome category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
@@ -265,8 +274,8 @@ Send Email:
 
     | --- | --- | --- | --- |
 
-    | Return Message Status | Boolean | No | If enabled, returns the status of the
-    email delivery in the action result. |
+    | Return Message Status | Boolean | No | If enabled, adds the email response status
+    and recipient details to the action results. |
 
     | Subject | String | Yes | The subject line of the email. |
 
@@ -274,4 +283,4 @@ Send Email:
 
     | Email From | String | Yes | The sender email address. |
 
-    | Content | Email Content | Yes | The HTML content of the email. |
+    | Content | Email Content | Yes | The HTML content of the email body. |

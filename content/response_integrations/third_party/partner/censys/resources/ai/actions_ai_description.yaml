@@ -3,35 +3,34 @@ Create Related Infrastructure Job:
     ### General Description
 
     Initiates a CensEye job to discover related infrastructure for a specified target
-    (Host, Web Property, or Certificate) using the Censys platform. This action allows
-    users to trigger asynchronous discovery tasks and retrieve a job identifier for
-    monitoring.
+    (host, web property, or certificate). This action allows users to trigger asynchronous
+    threat hunting jobs on the Censys platform.
 
 
     ### Flow Description
 
-    1. Extracts `Target Type` and `Target Value` from the action parameters.
+    1. Extracts `Target Type` and `Target Value` from action parameters.
 
-    2. Validates the `Target Value` based on the selected `Target Type` (IP address
-    for Host, domain:port for Web Property, or SHA-256 fingerprint for Certificate).
+    2. Validates the `Target Value` based on the selected `Target Type` (IP for Host,
+    domain:port for Web Property, or SHA-256 for Certificate).
 
     3. Initializes the `APIManager` with integration credentials.
 
-    4. Sends a POST request to the Censys API (`/v3/threat-hunting/censeye/jobs`)
-    to create the infrastructure discovery job.
+    4. Makes a `POST` request to the Censys API (`/v3/threat-hunting/censeye/jobs`)
+    to create the job.
 
-    5. Adds the API response JSON to the action results.
+    5. Stores the API response in the action results using `siemplify.result.add_result_json`.
 
-    6. Returns a status message containing the Job ID, state, and creation time.
+    6. Returns the job ID, state, and creation time in the output message.
 
 
     ### Additional Notes
 
-    This action runs asynchronously on the Censys platform. The returned Job ID should
-    be used with subsequent actions to monitor status and retrieve results.
+    The job runs asynchronously. The returned job ID can be used in subsequent actions
+    to monitor status and retrieve results.
   ai_short_description: >-
-    Initiates a CensEye job to discover related infrastructure for a specified host,
-    web property, or certificate.
+    Initiates a CensEye job to discover related infrastructure for a specified target
+    (host, web property, or certificate).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -40,13 +39,18 @@ Create Related Infrastructure Job:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Initiates a new infrastructure discovery job in the Censys platform.
+      Initiates a new CensEye job on the Censys platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Censys API to initiate a job, which constitutes
-      an external data mutation. It does not fetch contextual data, mutate internal
-      data, or update entities/insights.
+      The action makes a POST request to create a job on the Censys platform (can_mutate_external_data=true).
+      It does not fetch context data or update internal entities.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action initiates a job on an external platform (Censys). It does not retrieve
+      data (enrichment) or perform remediation (blocking/containment).
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -98,9 +102,8 @@ Create Related Infrastructure Job:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use entity-specific
-      identifiers. It extracts parameters directly from the action configuration using
-      `siemplify.extract_action_param`. Therefore, it does not run on entities.
+      The action does not operate on entities from the case. It uses parameters provided
+      by the user to define the target for the CensEye job.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -116,9 +119,9 @@ Create Related Infrastructure Job:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action initiates a job in the Censys platform. It does not perform enrichment,
-      alert updates, ticketing, or any other listed outcome category. Therefore, no
-      outcome category flags are set to true.
+      The action initiates a CensEye job on the Censys platform. It does not fit into
+      any of the provided outcome categories (e.g., enrichment, remediation, ticketing,
+      or alert management).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -138,46 +141,46 @@ Create Related Infrastructure Job:
 
     | --- | --- | --- | --- |
 
-    | Target Type | String | Yes | The type of asset to analyze (Host, Web Property,
-    or Certificate). |
+    | Target Type | String | Yes | The type of asset to analyze for related infrastructure
+    (Host, Web Property, or Certificate). |
 
-    | Target Value | String | Yes | The value to analyze (IP address, domain:port,
-    or SHA-256 fingerprint). |
+    | Target Value | String | Yes | The actual value to analyze (IP address for Host,
+    domain:port for Web Property, or SHA-256 fingerprint for Certificate). |
 Enrich Certificates:
   ai_description: >-
     ### General Description
 
-    Enriches `FILEHASH` entities (specifically SSL/TLS certificate fingerprints) using
-    the Censys Platform API. It retrieves detailed certificate intelligence, including
-    issuer, subject, validity periods, and Subject Alternative Names (SANs).
+    Enriches FILEHASH entities (specifically SSL/TLS certificate SHA-256 fingerprints)
+    using the Censys Platform API. This action retrieves comprehensive certificate
+    intelligence, including issuer, subject, validity periods, and Subject Alternative
+    Names (SANs), to provide context for security investigations.
 
 
     ### Flow Description
 
-    1. The action retrieves `FILEHASH` entities from the current scope.
+    1. The action extracts all FILEHASH entities from the current case scope.
 
-    2. It validates the certificate IDs (SHA-256 fingerprints) to ensure they meet
-    the required format.
+    2. It validates the certificate IDs, ensuring they are 64-character SHA-256 fingerprints.
 
-    3. It calls the Censys API (`/v3/global/asset/certificate`) to fetch enrichment
-    data for the valid certificate IDs.
+    3. It calls the Censys API (`/v3/global/asset/certificate`) to fetch intelligence
+    for the valid certificate IDs.
 
-    4. For each entity, it matches the API response to the entity identifier.
+    4. The API response is processed to extract relevant certificate metadata.
 
-    5. It updates the entity's `additional_properties` with the retrieved certificate
-    intelligence and marks the entity as enriched.
+    5. The action updates the entity's `additional_properties` with the retrieved
+    enrichment data and marks the entity as enriched.
 
-    6. Finally, it updates the entities in the SOAR platform and adds the results
-    to the action output.
+    6. Finally, the action adds the detailed JSON results to the action output and
+    updates the entities in the SOAR platform.
 
 
     ### Additional Notes
 
-    Requires a valid Censys API Key and Organization ID. Only `FILEHASH` entities
-    are processed by this action.
+    This action requires a valid Censys API Key and Organization ID configured in
+    the integration settings. It does not perform any external mutations and is strictly
+    used for enrichment purposes.
   ai_short_description: >-
-    Enriches `FILEHASH` entities with SSL/TLS certificate intelligence retrieved from
-    the Censys Platform API.
+    Enriches SSL/TLS certificate FILEHASH entities using the Censys Platform API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -188,13 +191,18 @@ Enrich Certificates:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the `additional_properties` and `is_enriched` status of `FILEHASH` entities
-      within the SOAR platform.
+      Updates entity properties with enrichment data.
     reasoning: >-
-      The action makes a POST request to the Censys API to fetch certificate data
-      (fetches_data=true). It updates the entity's `additional_properties` and `is_enriched`
-      status (can_mutate_internal_data=true, can_update_entities=true). It does not
-      mutate external data.
+      The action fetches data from the Censys API (fetches_data=true) and updates
+      entity properties (can_update_entities=true). It does not mutate external data
+      or modify alert data.
+  categories:
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Censys) to enrich existing
+      entities without modifying external systems. It updates internal entity properties,
+      which is a permitted internal mutation for enrichment actions.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -246,9 +254,8 @@ Enrich Certificates:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action retrieves `FILEHASH` entities using `get_filehash_entities`, which
-      filters `siemplify.target_entities` by `EntityTypes.FILEHASH`. Therefore, it
-      targets `FILEHASH` entities and filters by entity type.
+      The action specifically targets FILEHASH entities by calling `get_filehash_entities`,
+      which filters the entities by their type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -264,9 +271,9 @@ Enrich Certificates:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches certificate intelligence from the Censys API and updates
-      the entity's properties. This matches the 'Enrich IOC' category as it provides
-      threat intelligence for a file hash (certificate fingerprint).
+      The action retrieves threat intelligence and metadata for a certificate (IOC),
+      which aligns with the 'Enrich IOC' category. It does not perform any remediation
+      or ticket management actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -281,55 +288,46 @@ Enrich Certificates:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | API Key | String | Yes | Censys API Key |
-
-    | Organization Id | String | Yes | Censys Organization ID |
-
-    | Verify SSL | Boolean | Yes | Whether to verify SSL certificates |
+  parameters_description: There are no parameters for this action.
 Enrich IPs:
   ai_description: >-
     ### General Description
 
-    This action enriches IP Address entities using the Censys Platform API. It retrieves
-    detailed intelligence about internet-facing infrastructure, including services,
-    ports, protocols, certificates, vulnerabilities, and location data, to help security
-    teams understand their attack surface exposure.
+    Enriches IP Address entities using the Censys Platform API. It retrieves detailed
+    intelligence about internet-facing infrastructure, including services, ports,
+    protocols, certificates, vulnerabilities, and location data to help security teams
+    understand their attack surface exposure.
 
 
     ### Flow Description
 
-    1. Extracts integration configuration (API Key, Organization ID, SSL verification)
-    and the optional `At Time` parameter.
+    1. Extracts integration parameters (API Key, Organization ID) and the optional
+    `At Time` parameter.
 
-    2. Retrieves all `ADDRESS` type entities from the current case.
+    2. Identifies IP Address entities from the current case.
 
     3. Validates the IP addresses and filters out invalid formats.
 
     4. Calls the Censys API (`/v3/global/asset/host`) to fetch host intelligence for
-    the valid IP addresses, optionally using the provided historical timestamp.
+    the valid IP addresses.
 
-    5. Parses the API response and maps the data to internal `HostDatamodel` objects.
+    5. Processes the API response to extract relevant host data (e.g., services, location,
+    vulnerabilities).
 
-    6. Updates each entity's `additional_properties` with the retrieved enrichment
-    data (e.g., services, ports, location, vulnerabilities) and marks the entity as
-    enriched.
+    6. Updates the entity's `additional_properties` with the retrieved enrichment
+    data and marks the entity as enriched.
 
-    7. Updates the entities within the SOAR platform and adds the raw JSON results
-    to the action output.
+    7. Updates the entities in the SOAR platform and adds the raw JSON results to
+    the action output.
 
 
     ### Additional Notes
 
-    This action requires an active Censys API key and organization ID. It specifically
-    targets `ADDRESS` entities and will skip any invalid IP formats.
+    This action is read-only regarding external systems (it only fetches data) and
+    performs internal mutations by updating entity attributes.
   ai_short_description: >-
-    Enriches IP Address entities with comprehensive internet-facing infrastructure
-    intelligence from the Censys Platform.
+    Enriches IP Address entities with comprehensive host intelligence from the Censys
+    Platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -340,10 +338,17 @@ Enrich IPs:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional_properties and sets the is_enriched flag to true.
+      Updates entity properties with enrichment data and sets the enriched status.
     reasoning: >-
-      The action fetches data from the Censys API and updates internal SOAR entities
-      with the retrieved enrichment data. It does not mutate external systems.
+      The action makes a POST request to the Censys API to fetch host data. It does
+      not mutate external data but updates internal entities with the retrieved information.
+  categories:
+    enrichment: true
+    reasoning: >-
+      The action fetches IP data from Censys, returning threat intelligence and contextual
+      metadata. This matches the 'Enrich IOC' and 'Enrich Asset' expected outcomes.
+      It does not mutate data on external systems, so it is an enrichment action.
+    remediation: false
   entity_usage:
     entity_types:
       address: true
@@ -396,8 +401,7 @@ Enrich IPs:
     filters_by_modification_time: false
     reasoning: >-
       The code uses `get_ip_entities(siemplify)` which filters `siemplify.target_entities`
-      for `entity.entity_type == EntityTypes.ADDRESS`. It processes the list of valid
-      IP entities and updates their properties.
+      by `EntityTypes.ADDRESS`. So `filters_by_entity_type` is True.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -408,14 +412,14 @@ Enrich IPs:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: false
+    enrich_asset: true
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches threat intelligence (services, vulnerabilities, location)
-      for IP addresses, which directly matches the 'Enrich IOC' category. It does
-      not perform any containment, ticketing, or alert modification actions.
+      The action fetches host intelligence (services, ports, vulnerabilities, location)
+      for IP addresses. This is clearly `enrich_ioc` (threat intel) and `enrich_asset`
+      (contextual metadata).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -442,40 +446,41 @@ Enrich Web Properties:
   ai_description: >-
     ### General Description
 
-    This action retrieves comprehensive information about a web property (domain or
-    IP address) using the Censys Platform API. It provides detailed intelligence about
-    web-facing assets, including HTTP/HTTPS services, certificates, technologies,
-    and security configurations.
+    This action enriches web property entities (IP addresses or domains) by querying
+    the Censys Platform API. It retrieves detailed intelligence about web-facing assets,
+    including HTTP/HTTPS services, certificates, technologies, and security configurations
+    for specified ports.
 
 
     ### Flow Description
 
-    1. Extracts integration parameters (API Key, Organization ID, SSL verification)
-    and action parameters (Ports, optional timestamp).
+    1. Extracts the `Port` and optional `At Time` parameters from the action configuration.
 
-    2. Identifies and validates `ADDRESS` and `DOMAIN` entities from the current case
-    using `get_web_property_entities`.
+    2. Identifies relevant entities (ADDRESS or DOMAIN types) from the current case.
 
-    3. Constructs web property identifiers by combining entity identifiers with the
-    specified ports.
+    3. Validates the entities and constructs web property identifiers (e.g., `hostname:port`).
 
-    4. Queries the Censys API (`/v3/global/asset/webproperty`) to retrieve detailed
-    intelligence.
+    4. Calls the Censys API (`/v3/global/asset/webproperty`) to retrieve enrichment
+    data for the constructed identifiers.
 
-    5. Parses the API response and updates the corresponding entities in the SOAR
-    platform with the retrieved enrichment data.
+    5. Parses the API response and maps the data to the entity's `additional_properties`
+    attribute.
 
-    6. Marks entities as enriched (`is_enriched = True`) and saves the changes using
-    `siemplify.update_entities`.
+    6. Updates the entities in the SOAR platform with the new enrichment data and
+    marks them as enriched.
+
+    7. Adds the detailed JSON results to the action output.
 
 
     ### Additional Notes
 
-    This action requires valid Censys API credentials. It supports historical data
-    retrieval via the 'At Time' parameter, which must be in RFC3339 format.
+    The action supports historical lookups if an `At Time` timestamp is provided.
+    It clears existing enrichment data for specific ports before applying new data
+    to ensure accuracy.
   ai_short_description: >-
-    Enriches web property entities (IPs and domains) by retrieving detailed asset
-    intelligence from the Censys Platform API.
+    Enriches web property entities (IP addresses or domains) by retrieving detailed
+    asset intelligence, including services, certificates, and technologies, from the
+    Censys Platform API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -486,12 +491,19 @@ Enrich Web Properties:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity `additional_properties` with enrichment data and sets `is_enriched`
+      Updates entity additional_properties with enrichment data and sets is_enriched
       to true.
     reasoning: >-
-      The action fetches data from the Censys API to enrich entities. It updates internal
-      entity properties (`additional_properties`) and marks them as enriched, which
-      constitutes internal data mutation. It does not mutate external data.
+      The action fetches data from the Censys API (fetches_data=true). It updates
+      entity `additional_properties` (can_update_entities=true, can_mutate_internal_data=true).
+      It does not mutate external data.
+  categories:
+    enrichment: true
+    reasoning: >-
+      The action fetches data from an external source (Censys API) and updates internal
+      entities with the retrieved information. It does not mutate external systems
+      or perform remediation tasks. Therefore, it is classified as an enrichment action.
+    remediation: false
   entity_usage:
     entity_types:
       address: true
@@ -543,9 +555,9 @@ Enrich Web Properties:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The script uses `get_web_property_entities(siemplify)` which filters `siemplify.target_entities`
-      for `EntityTypes.ADDRESS` and `EntityTypes.DOMAIN`. Therefore, it targets these
-      two types and filters by entity type.
+      The action retrieves entities from the case using `get_web_property_entities`,
+      which filters for `EntityTypes.ADDRESS` and `EntityTypes.DOMAIN`. It then processes
+      these entities to enrich them with Censys data.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -556,15 +568,14 @@ Enrich Web Properties:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: false
+    enrich_asset: true
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence and contextual data for web properties
-      (IPs and domains) from Censys and updates the entities in the SOAR platform.
-      This matches the 'Enrich IOC' category. It does not perform any external system
-      mutations or other listed actions.
+      The action fetches contextual metadata about web properties (assets) and indicators
+      (IOCs) from the Censys API. This matches the 'Enrich IOC' and 'Enrich Asset'
+      categories. It does not perform any remediation or alert/ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -585,7 +596,7 @@ Enrich Web Properties:
     | --- | --- | --- | --- |
 
     | Port | String | Yes | Comma separated ports associated with domain or hostname
-    (e.g., "80, 443"). |
+    (e.g., 80, 443). |
 
     | At Time | String | No | RFC3339 Timestamp to view all requested hosts at a specific
     point in time. Ensure that you suffix the date with T00:00:00Z or a specific time.
@@ -601,31 +612,28 @@ Get Host History:
 
     ### Flow Description
 
-    1. Extract `Host ID`, `Start Time`, and `End Time` parameters from the action
-    configuration.
+    1. Extracts `Host ID`, `Start Time`, and `End Time` parameters.
 
-    2. Validate the `Host ID` (IP address) and ensure `Start Time` and `End Time`
-    are valid RFC3339 timestamps.
+    2. Validates the IP address and RFC3339 timestamps.
 
-    3. Initialize the `APIManager` and perform a GET request to the Censys API endpoint
-    (`/v3/global/asset/host/{host_id}/timeline`).
+    3. Initializes the `APIManager` and calls the Censys API to fetch host history
+    events via a GET request to `/v3/global/asset/host/{host_id}/timeline`.
 
-    4. Handle pagination to retrieve historical events, ensuring the time range is
-    correctly processed (API expects reverse chronological order).
+    4. Handles pagination if necessary, collecting up to 1000 records.
 
-    5. Add the raw JSON response to the action results using `siemplify.result.add_result_json`.
+    5. Adds the raw JSON response to the action results.
 
-    6. Format the event data into a data table and generate a descriptive output message.
+    6. Processes events into a table format and adds it to the action results.
+
+    7. Constructs and returns an output message summarizing the findings.
 
 
     ### Additional Notes
 
-    This action requires valid Censys API credentials (API Key and Organization ID).
-    The action handles pagination automatically and provides warnings if partial data
-    is collected or if record limits are reached.
+    Requires valid Censys API credentials. The action is read-only and does not modify
+    external or internal data.
   ai_short_description: >-
-    Retrieves historical event data for a host (IP address) from Censys within a specified
-    time range.
+    Retrieves historical event data for a host (IP address) from Censys.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -637,9 +645,17 @@ Get Host History:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Censys API to fetch historical data. It
-      does not mutate external or internal data, nor does it update entities or create
-      insights.
+      The action makes a GET request to the Censys API to fetch host history. It does
+      not mutate external data, nor does it update internal entities, insights, or
+      comments.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action retrieves historical event data for a host from Censys. It does not
+      modify external systems, nor does it update internal entities, insights, or
+      comments. It is a data retrieval action, which does not qualify as enrichment
+      or remediation.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -691,9 +707,8 @@ Get Host History:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action extracts parameters directly from the configuration and does not
-      iterate over or filter `target_entities`. Therefore, no entity usage flags are
-      set to true.
+      The action takes `Host ID` as a parameter and does not operate on `siemplify.target_entities`.
+      Therefore, it does not use any entity types.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -709,9 +724,9 @@ Get Host History:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves historical logs/telemetry data from Censys, which matches
-      the 'Search Events' category. It does not perform enrichment (reputation/prevalence),
-      ticket creation, or other state-changing operations.
+      The action retrieves historical event data for a host from Censys. It does not
+      modify external systems, nor does it update internal entities, insights, or
+      comments. It is a data retrieval action, which matches the 'Search Events' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -744,36 +759,38 @@ Get Related Infrastructure Job Status:
   ai_description: >-
     ### General Description
 
-    Retrieves the current status of a CensEye job from the Censys platform using a
-    provided Job ID. This action is designed for asynchronous workflows, allowing
-    playbooks to poll for job completion.
+    Retrieves the current status of a CensEye job from the Censys platform. This action
+    is designed to support asynchronous workflows by allowing playbooks to poll for
+    the status of a long-running threat hunting job until it reaches a terminal state
+    (Completed or Failed).
 
 
     ### Flow Description
 
-    1. Extracts the `Job ID` parameter from the action configuration.
+    1. The action extracts the `Job ID` parameter provided by the user.
 
-    2. Initializes the `APIManager` with integration credentials.
+    2. It initializes the `APIManager` to authenticate with the Censys platform using
+    the configured API credentials.
 
-    3. Calls the Censys API (`GET /v3/threat-hunting/censeye/jobs/{job_id}`) to retrieve
-    the current status of the specified job.
+    3. The action performs a `GET` request to the Censys API endpoint `/v3/threat-hunting/censeye/jobs/{job_id}`
+    to retrieve the current job status.
 
-    4. Parses the API response to determine the job state (`COMPLETED`, `FAILED`,
-    or `INPROGRESS`).
+    4. The API response is parsed to determine the job state (`completed`, `failed`,
+    or other).
 
-    5. Adds the raw API response to the action results for further processing.
-
-    6. Sets the final execution status and output message based on the job state.
+    5. The action updates the execution state of the playbook accordingly:
+        - If the job is completed, it returns a success status with the result count.
+        - If the job failed, it returns a failure status.
+        - If the job is still in progress, it returns an in-progress status.
+    6. The full API response is added to the action results for further analysis.
 
 
     ### Additional Notes
 
-    This action is intended for use in polling loops to monitor long-running CensEye
-    threat hunting jobs. It does not perform any modifications to the job or external
-    systems.
+    This action does not modify any data in Censys or the SOAR platform. It is strictly
+    a utility action for monitoring the progress of CensEye threat hunting jobs.
   ai_short_description: >-
-    Retrieves the current status of a CensEye job from the Censys platform using a
-    provided Job ID.
+    Retrieves the current status of a CensEye threat hunting job from the Censys platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -785,9 +802,17 @@ Get Related Infrastructure Job Status:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Censys API to fetch job status. It does
-      not mutate external or internal data, nor does it update entities or create
+      The action performs a GET request to retrieve job status information. It does
+      not mutate any external or internal data, nor does it update entities or create
       insights.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action fetches data (job status) from an external system (Censys) without
+      modifying any external or internal data. However, it does not enrich entities
+      or alerts, nor does it perform remediation. Therefore, it is neither an Enrichment
+      nor a Remediation action.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -839,8 +864,8 @@ Get Related Infrastructure Job Status:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action operates on a provided 'Job ID' parameter and does not interact with,
-      iterate over, or filter any entities from the SOAR case.
+      The action operates based on a provided `Job ID` parameter and does not interact
+      with or filter any entities from the SOAR case.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -856,9 +881,9 @@ Get Related Infrastructure Job Status:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action retrieves the status of a job from the Censys platform. This aligns
-      with the 'Get Alert Information' category, which covers fetching information
-      about an alert or job from a 3rd party product.
+      The action fetches information about a specific job from the Censys platform.
+      This aligns with the 'Get Alert Information' category, as it retrieves status
+      details from a 3rd party product.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -884,34 +909,31 @@ Get Related Infrastructure Results:
   ai_description: >-
     ### General Description
 
-    This action retrieves the detailed pivot results from a completed CensEye job,
-    formats them into a table with 5 columns, and generates Censys search URLs for
-    each pivot.
+    Retrieves the detailed pivot results from a completed CensEye job in Censys, formats
+    them into a table, and generates Censys search URLs for each pivot.
 
 
     ### Flow Description
 
-    1. Extracts the `Job ID` parameter.
+    1. Extracts the `Job ID` parameter from the action configuration.
 
-    2. Initializes `APIManager` with integration credentials.
+    2. Initializes the `APIManager` with integration credentials.
 
     3. Calls the Censys API (`GET /v3/threat-hunting/censeye/jobs/{job_id}/results`)
     to retrieve job results.
 
     4. Adds the raw JSON response to the action results.
 
-    5. Processes the results into a `RelatedInfraResultModel` to format data (fields,
-    values, asset counts) and generate clickable Censys search URLs.
+    5. Processes the results into a data table (CSV format) containing pivot fields,
+    values, asset counts, and Censys search URLs.
 
-    6. Adds a data table titled "Related Infrastructure Pivots" to the action results.
-
-    7. Returns a summary message indicating success or failure.
+    6. Returns a summary message indicating the number of pivots retrieved and total
+    assets.
 
 
     ### Additional Notes
 
-    Requires an active Censys Threat Hunting Module subscription. Maximum 50 results
-    are returned per job.
+    Maximum 50 results per job.
   ai_short_description: >-
     Retrieves and formats pivot results from a completed CensEye job in Censys.
   capabilities:
@@ -925,9 +947,15 @@ Get Related Infrastructure Results:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Censys API to retrieve results for a specific
-      CensEye job. It does not mutate external or internal data, nor does it update
-      entities or create insights.
+      The action performs a GET request to the Censys API to fetch job results. It
+      does not mutate external data. It does not modify internal SOAR case data.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action fetches job results from an external API. It does not modify external
+      systems, nor does it modify internal SOAR case data (entities, insights, etc.).
+      It is not an enrichment or remediation action.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -979,8 +1007,8 @@ Get Related Infrastructure Results:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` or use any entity-specific
-      logic. It operates solely on the provided `Job ID` parameter.
+      The action operates on a Job ID parameter and does not interact with any entities
+      in the scope.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -996,8 +1024,10 @@ Get Related Infrastructure Results:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves job results from the Censys API. It does not perform enrichment,
-      alert management, or any other listed outcome category.
+      The action retrieves job results from an external API and formats them for display
+      within the SOAR platform. It does not match any of the predefined outcome categories
+      (e.g., Enrich IOC, Enrich Asset, etc.) as it operates on job results rather
+      than entities or alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1023,35 +1053,34 @@ Get Rescan Status:
   ai_description: >-
     ### General Description
 
-    This action retrieves the current status of a scan by its ID from the Censys platform.
-    It allows users to monitor the progress of previously initiated scans and determine
-    when scan results are available.
+    Retrieves the current status of a scan by its ID from the Censys platform. This
+    action allows users to monitor the progress of previously initiated scans and
+    determine when scan results are available.
 
 
     ### Flow Description
 
-    1. The action extracts the `Scan ID` parameter provided by the user.
+    1. Extracts the `Scan ID` parameter.
 
-    2. It initializes the `APIManager` using the configured API key and organization
-    ID.
+    2. Initializes the `APIManager` with integration credentials.
 
-    3. It performs a GET request to the Censys API (`/v3/global/scans/{scan_id}`)
-    to fetch the scan status.
+    3. Makes a `GET` request to the Censys API (`/v3/global/scans/{scan_id}`) to fetch
+    the scan status.
 
-    4. The raw JSON response is added to the action results using `siemplify.result.add_result_json`.
+    4. Adds the raw JSON response to the action results using `siemplify.result.add_result_json`.
 
-    5. The action parses the response to determine if the scan is completed, in progress,
-    or failed.
+    5. Parses the response to determine if the scan is completed, in progress, or
+    failed.
 
-    6. It sets the execution state and returns a descriptive status message.
+    6. Returns the status message and execution state to the SOAR platform.
 
 
     ### Additional Notes
 
-    This action is designed for asynchronous monitoring of scan tasks and does not
-    modify any data in the external system.
+    This action is asynchronous and helps monitor the progress of previously initiated
+    scans.
   ai_short_description: >-
-    Retrieves the current status of a Censys scan using a provided Scan ID.
+    Retrieves the current status of a scan by its ID from the Censys platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1063,9 +1092,16 @@ Get Rescan Status:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the Censys API to retrieve scan status. It
-      does not mutate external or internal data, nor does it update entities or create
-      insights.
+      The action makes a GET request to the Censys API to retrieve the status of a
+      scan. It does not mutate external data or modify internal SOAR data (entities,
+      insights, etc.).
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action retrieves the status of a scan from the Censys platform. It does
+      not perform enrichment on entities, update alerts, or perform remediation. It
+      is a status-checking utility.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -1117,9 +1153,8 @@ Get Rescan Status:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `target_entities` or use entity-specific identifiers.
-      It operates on a provided `Scan ID` parameter, therefore it does not run on
-      entities.
+      The action does not operate on entities. It takes a 'Scan ID' as a parameter,
+      not an entity.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1133,11 +1168,11 @@ Get Rescan Status:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: true
+    get_alert_information: false
     reasoning: >-
-      The action retrieves the status of a scan from the Censys API. This matches
-      the 'Get Alert Information' category as it fetches status/metadata from the
-      3rd party product.
+      The action retrieves the status of a scan from the Censys platform. It does
+      not perform enrichment on entities, update alerts, or perform remediation. It
+      is a status-checking utility.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1160,36 +1195,37 @@ Get Rescan Status:
     | Scan ID | String | Yes | The unique identifier of the tracked scan. |
 Initiate Rescan:
   ai_description: >-
-    General Description: Initiates a live rescan for a known host service or web origin
-    using the Censys API. This action triggers a scan on a specified IP or domain
-    at a given port, allowing users to obtain up-to-date information about the target.
+    ### General Description
+
+    Initiates a live rescan for a known host service or web origin using the Censys
+    API. This action triggers a scan on the specified target (IP or domain) and port,
+    returning a scan ID for monitoring.
 
 
-    Flow Description:
+    ### Flow Description
 
     1. Extract action parameters: `IOC Type`, `IOC Value`, `Port`, `Protocol`, and
     `Transport Protocol`.
 
-    2. Validate the provided parameters, ensuring the port is within the valid range
-    (1-65535) and required fields are present based on the `IOC Type`.
+    2. Validate parameters (e.g., port range, IP format if Service type).
 
-    3. Initialize the `APIManager` with the configured API key and organization ID.
+    3. Initialize `APIManager` with integration credentials.
 
-    4. Call the Censys API (`POST /v3/global/scans/rescan`) to initiate the rescan.
+    4. Call the Censys API `POST /v3/global/scans/rescan` endpoint with the provided
+    target details.
 
-    5. Process the API response to extract the `tracked_scan_id` and task details.
+    5. Add the API response to the action results using `siemplify.result.add_result_json`.
 
-    6. Add the raw API response to the action results and return a status message
-    indicating success or failure.
+    6. Return a status message containing the `tracked_scan_id` and task details.
 
 
-    Additional Notes:
+    ### Additional Notes
 
-    The scan may take several minutes to complete. The returned `tracked_scan_id`
-    can be used to monitor the scan's status using the `Get Rescan Status` action.
+    The scan may take several minutes to complete. The returned scan ID can be used
+    with the `Get Rescan Status` action to monitor progress.
   ai_short_description: >-
-    Initiates a live rescan for a host service or web origin via the Censys API to
-    retrieve updated scan data.
+    Initiates a live rescan for a host service or web origin via the Censys API and
+    returns a scan ID for monitoring.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1198,14 +1234,20 @@ Initiate Rescan:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Initiates a live rescan on the Censys platform for the specified host or web
-      origin.
+      Initiates a new rescan job on the Censys platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to the Censys API to initiate a rescan (external
-      mutation). It does not fetch data for enrichment, nor does it mutate internal
-      SOAR data (like entities or insights).
+      The action performs a POST request to initiate a rescan job on the Censys platform,
+      which constitutes an external data mutation. It does not fetch data, update
+      entities, or create insights.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action initiates a rescan job on the Censys platform. It is not an enrichment
+      action because it creates a scan job (mutates external state), and it is not
+      a remediation action because it does not neutralize threats or perform containment.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -1257,9 +1299,8 @@ Initiate Rescan:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action extracts parameters directly from the action configuration (`siemplify.extract_action_param`)
-      and does not iterate over or filter `siemplify.target_entities`. Therefore,
-      it does not use entities.
+      The action does not operate on entities; it uses action parameters provided
+      by the user.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1275,9 +1316,9 @@ Initiate Rescan:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action triggers a rescan on the Censys platform. This does not match any
-      of the predefined outcome categories (e.g., enrichment, containment, ticketing,
-      or alert management).
+      The action initiates a rescan job on the Censys platform. It does not perform
+      any of the listed outcomes such as enriching IOCs, updating tickets, or blocking
+      IPs.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1297,45 +1338,42 @@ Initiate Rescan:
 
     | --- | --- | --- | --- |
 
-    | IOC Type | DDL | Yes | Type of IOC (Service or Web Origin). |
+    | IOC Type | ddl | Yes | Initiate a rescan for a known IP or domain. Options:
+    Service, Web Origin. |
 
-    | IOC Value | String | Yes | IP address or domain name to initiate a rescan. |
+    | IOC Value | string | Yes | IP address or domain name to initiate a rescan. |
 
-    | Port | String | Yes | Port associated with IP or domain (1-65535). |
+    | Port | string | Yes | Port associated with IP or domain. Valid range is 1 to
+    65535. |
 
-    | Protocol | String | No | Name of service protocol (Required for Service). |
+    | Protocol | string | No | Name of service protocol. Required if IOC Type is 'Service'.
+    |
 
-    | Transport Protocol | DDL | No | Transport Protocol of service (Required for
-    Service). |
+    | Transport Protocol | ddl | No | Transport Protocol of service. Required if IOC
+    Type is 'Service'. Options: Unknown, TCP, UDP, ICMP, QUIC. |
 Ping:
   ai_description: >-
     ### General Description
 
-    This action tests the connectivity between the Google SecOps SOAR server and the
-    Censys platform by performing a GET request to the Censys API.
+    Tests connectivity between the Google SecOps SOAR server and the Censys platform.
 
 
     ### Flow Description
 
-    1. The action initializes the `SiemplifyAction` and retrieves the required configuration
-    parameters (`API Key`, `Organization Id`, `Verify SSL`).
+    1. Extracts integration configuration parameters (API Key, Organization ID, Verify
+    SSL).
 
-    2. It instantiates the `APIManager` with the provided credentials.
+    2. Initializes the `APIManager` with the provided credentials.
 
-    3. The action calls the `test_connectivity` method, which performs an authenticated
-    GET request to the Censys API endpoint (`/v3/accounts/organizations/{organization_id}`).
+    3. Performs a `GET` request to the Censys API connectivity endpoint (`/v3/accounts/organizations/{organization_id}`)
+    to verify authentication and network reachability.
 
-    4. If the request is successful, it sets the connectivity result to `True` and
-    returns a success message.
-
-    5. If the request fails (e.g., authentication error, network issue), it catches
-    the exception, sets the connectivity result to `False`, and returns an error message.
+    4. Returns a success or failure status based on the API response.
 
 
     ### Additional Notes
 
-    This action does not interact with any entities and is used solely for verifying
-    integration configuration.
+    This action is used to validate the integration configuration.
   ai_short_description: >-
     Tests connectivity between the Google SecOps SOAR server and the Censys platform.
   capabilities:
@@ -1349,9 +1387,15 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a connectivity test by making a GET request to the Censys
-      API. It does not fetch contextual data for entities, nor does it mutate any
-      external or internal data.
+      The action performs a connectivity test (Ping) to verify API authentication
+      and network reachability. It does not fetch contextual data, mutate external
+      data, or modify internal SOAR data.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action is a connectivity test (Ping), which is explicitly excluded from
+      being an enrichment action. It does not perform any remediation tasks.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -1403,8 +1447,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities; it is a standalone connectivity
-      test.
+      The action does not interact with any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1420,8 +1463,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test and does not perform any of the defined outcome
-      actions (enrichment, containment, ticketing, etc.).
+      The action performs a connectivity test (Ping) to verify API authentication
+      and network reachability. It does not perform any data enrichment, remediation,
+      or case management tasks.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

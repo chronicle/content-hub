@@ -3,37 +3,36 @@ Check Url:
     ### General Description
 
     Checks if a specific URL is marked as suspicious by the PhishTank Community. This
-    action queries the PhishTank API to retrieve reputation data and verification
-    status for URL entities, providing actionable intelligence to the analyst.
+    action retrieves threat intelligence regarding the URL's verification status and
+    validity from the PhishTank database. It provides visibility into whether a URL
+    is known to be malicious, helping analysts prioritize their investigation.
 
 
     ### Flow Description
 
-    1. Extracts the `Service Url` configuration parameter from the PhishTank integration
-    settings.
+    1. The action iterates through all provided URL entities in the current scope.
 
-    2. Iterates through all `URL` type entities in the current scope.
+    2. For each URL, it sends a POST request to the configured PhishTank service URL
+    with the URL and format parameters.
 
-    3. For each URL, sends a POST request to the PhishTank service with the URL and
-    format parameters.
+    3. The action parses the XML response from PhishTank to extract details such as
+    the phish detail page, verification status, and validity.
 
-    4. Parses the XML response to determine if the URL exists in the database and
-    if it is verified.
+    4. If the URL is found in the database, an entity insight is added to the entity
+    with the retrieved properties.
 
-    5. If the URL is found, adds an insight to the entity with details including the
-    link, verification status, and validity.
+    5. If the URL is verified as malicious, the action updates the entity's suspicious
+    status to true.
 
-    6. If the URL is verified as suspicious, marks the entity as suspicious and updates
-    it in the SOAR platform.
-
-    7. Aggregates the results and adds a JSON result to the action output.
+    6. Finally, the action adds the raw result data to the action results and updates
+    the entities in the SOAR platform.
 
 
     ### Additional Notes
 
-    This action specifically targets URL entities. It requires a valid `Service Url`
-    to be configured in the integration settings to successfully communicate with
-    the PhishTank API.
+    This action performs enrichment by fetching data from an external service. It
+    does not modify any external systems. It only updates internal entity attributes
+    and adds insights within the SOAR platform.
   ai_short_description: >-
     Checks if a URL is marked as suspicious by the PhishTank Community and updates
     the entity status if verified.
@@ -47,13 +46,18 @@ Check Url:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the entity's 'is_suspicious' status within the SOAR platform based on
-      the PhishTank verification results.
+      Updates entity suspicious status and adds entity insights.
     reasoning: >-
-      The action fetches data from the PhishTank API (fetches_data=true). It updates
-      the entity's 'is_suspicious' status and adds insights within the SOAR platform
-      (can_mutate_internal_data=true, can_update_entities=true, can_create_insight=true).
-      It does not mutate external data.
+      The action fetches data from an external API (PhishTank) to enrich URL entities.
+      It does not mutate external data. It performs internal mutations by updating
+      entity attributes and adding insights.
+  categories:
+    enrichment: true
+    reasoning: >-
+      The action fetches threat intelligence data from an external service (PhishTank)
+      and updates internal entities (insights and suspicious status). It does not
+      modify external systems, making it a classic enrichment action.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -105,9 +109,9 @@ Check Url:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters specifically
-      for entities where `entity.entity_type == EntityTypes.URL`. It does not apply
-      filters based on creation time, modification time, or other entity attributes.
+      The action iterates through `siemplify.target_entities` and filters specifically
+      for entities where `entity.entity_type == EntityTypes.URL`. It does not filter
+      by other attributes like creation time, modification time, or case identifiers.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -123,10 +127,9 @@ Check Url:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action queries the PhishTank API to retrieve reputation and verification
-      status for URLs, which aligns with the 'Enrich IOC' category. It updates the
-      entity's suspicious status internally, but does not perform external blocking
-      or other state-changing operations on external systems.
+      The action retrieves threat intelligence (reputation/verification) for a URL
+      entity. This aligns with the 'Enrich IOC' category. It does not perform any
+      remediation or ticket management actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -141,36 +144,33 @@ Check Url:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Service Url | String | Yes | The API endpoint URL for the PhishTank service.
-    |
+  parameters_description: There are no parameters for this action.
 Ping:
   ai_description: >-
-    General Description
+    ### General Description
 
-    Tests the connectivity between the SOAR platform and the PhishTank service. This
-    action verifies that the integration is correctly configured and that the service
+    Tests connectivity to the PhishTank service by sending a test request to the configured
+    service URL.
+
+
+    ### Flow Description
+
+    1. The action retrieves the `Service Url` from the integration configuration.
+
+    2. It executes a POST request to the provided URL with a test payload (`url=google.com`,
+    `format=json`).
+
+    3. It validates the response using `raise_for_status()` to ensure the service
     is reachable.
 
-
-    Flow Description
-
-    1. Extracts the "Service Url" configuration parameter from the integration settings.
-
-    2. Sends a POST request to the configured service URL with a test payload (`url=google.com`).
-
-    3. Validates the response using `raise_for_status` to ensure the service is reachable.
-
-    4. Terminates the action with a success message if the connection is established.
+    4. It completes the action by returning a success message indicating the connection
+    status.
 
 
-    Additional Notes
+    ### Additional Notes
 
-    This action is intended for health checks and connectivity verification only.
+    This action is intended for connectivity verification and does not perform any
+    data processing or remediation.
   ai_short_description: >-
     Tests connectivity to the PhishTank service.
   capabilities:
@@ -184,8 +184,15 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a network request to verify connectivity. It does not fetch
-      security data, mutate external/internal systems, or update SOAR objects.
+      The action performs a POST request to test connectivity. It does not fetch data
+      for enrichment, mutate external state, or modify internal SOAR data.
+  categories:
+    enrichment: false
+    reasoning: >-
+      The action is named 'Ping' and is designed solely to test connectivity to the
+      PhishTank service. According to the guidelines, 'Ping' actions are not enrichment
+      actions. It does not perform any remediation or state-changing operations.
+    remediation: false
   entity_usage:
     entity_types:
       address: false
@@ -237,8 +244,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action performs a connectivity test using a hardcoded URL and does not interact
-      with any entities from the SOAR platform.
+      The action does not interact with any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -254,8 +260,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping) and does not perform any of the defined
-      security operations such as enrichment, containment, or ticketing.
+      The action is a connectivity test ('Ping'). It does not fetch IOCs, enrich assets,
+      or perform any remediation. It does not match any of the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -275,5 +281,4 @@ Ping:
 
     | --- | --- | --- | --- |
 
-    | Service Url | String | Yes | The URL of the PhishTank service to test connectivity
-    against. |
+    | Service Url | String | Yes | The endpoint URL for the PhishTank service. |
