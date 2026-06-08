@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import base64
-import dataclasses
 import hashlib
 import hmac
 import time
@@ -38,8 +37,7 @@ if TYPE_CHECKING:
     from TIPCommon.types import ChronicleSOAR
 
 
-@dataclasses.dataclass(slots=True)
-class SessionAuthenticationParameters:
+class SessionAuthenticationParameters(NamedTuple):
     """Parameters required to authenticate a session."""
 
     api_access_id: str

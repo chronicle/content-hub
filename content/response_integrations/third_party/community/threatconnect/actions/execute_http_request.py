@@ -26,18 +26,18 @@ from TIPCommon.validation import ParameterValidator
 
 from ..core import utils
 from ..core.base_action import ThreatConnectAction
-from ..core.constants import EXECUTE_HTTP_REQUEST_SCRIPT_NAME
+from ..core.constants import (
+    ERROR_STATUS_CODE_THRESHOLD,
+    EXECUTE_HTTP_REQUEST_SCRIPT_NAME,
+)
 from ..core.exceptions import ThreatConnectHTTPError
 
 if TYPE_CHECKING:
-    from TIPCommon.types import Entity, SingleJson
-
-    from ..core.api.api_client import ThreatConnectApiClient
+    from TIPCommon.types import SingleJson
 
 
 SUCCESS_MESSAGE: str = "Successfully executed API request."
 ERROR_MESSAGE: str = "Failed to execute API request."
-ERROR_STATUS_CODE_THRESHOLD: int = 400
 FIELDS_TO_RETURN_POSSIBLE_VALUES: list[str] = [
     "response_data",
     "redirects",
@@ -54,7 +54,6 @@ class ExecuteHttpRequest(ThreatConnectAction):
     def __init__(self) -> None:
         super().__init__(EXECUTE_HTTP_REQUEST_SCRIPT_NAME)
         self.output_message = SUCCESS_MESSAGE
-        self.execution_state = ExecutionState.COMPLETED
         self.error_output_message = ERROR_MESSAGE
 
     def _extract_action_parameters(self) -> None:
@@ -181,10 +180,9 @@ class ExecuteHttpRequest(ThreatConnectAction):
                 print_value=True,
             )
 
-    def _perform_action(self, current_entity: Entity | None = None) -> None:
+    def _perform_action(self, _: None = None) -> None:
         try:
-            client: ThreatConnectApiClient = self.api_client  # type: ignore[assignment]
-            response = client.execute_request(
+            response = self.api_client.execute_request(
                 method=self.params.method,
                 url=self.params.url_path,
                 params=self.params.url_params,
@@ -212,7 +210,8 @@ class ExecuteHttpRequest(ThreatConnectAction):
             )
             if wait_for_expected_values:
                 self.output_message = (
-                    "Successfully executed API request. Waiting for expected response values."
+                    "Successfully executed API request. "
+                    "Waiting for expected response values."
                 )
                 self.execution_state = ExecutionState.IN_PROGRESS
                 self.result_value = json.dumps(results)

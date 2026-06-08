@@ -19,6 +19,7 @@ from __future__ import annotations
 INTEGRATION_NAME: str = "ThreatConnect"
 PING_SCRIPT_NAME: str = "ThreatConnect - Ping"
 EXECUTE_HTTP_REQUEST_SCRIPT_NAME: str = "ThreatConnect - Execute HTTP Request"
+ENRICH_ENTITIES_SCRIPT_NAME: str = "ThreatConnect - Enrich Entities"
 SECURITY_LABELS_URI: str = "/api/v3/securityLabels"
 INDICATORS_URI: str = "/api/v3/indicators"
 
@@ -63,3 +64,5 @@ PLURAL_MAPPING: dict[str, str] = {
     "Tool": "tools",
     "Vulnerability": "vulnerabilities",
 }
+
+ERROR_STATUS_CODE_THRESHOLD: int = 400

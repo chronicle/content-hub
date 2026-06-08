@@ -16,24 +16,21 @@
 
 from __future__ import annotations
 
-# Inbuilt imports
 import dataclasses
 import urllib.parse
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-# Third-party imports
 import requests
-
-# TIPCommon imports
 from TIPCommon.base.interfaces import Apiable
 
-# Local imports
 from ..data_models import IndicatorData
 from ..exceptions import ThreatConnectHTTPError
 from .api_utils import get_full_url, validate_response
 
 if TYPE_CHECKING:
     from logging import Logger
+
+    from TIPCommon.types import SingleJson
 
     from ..auth import AuthenticatedSession
 
@@ -44,13 +41,6 @@ class ApiParameters:
 
     api_root: str
     verify_ssl: bool
-
-    def __post_init__(self) -> None:
-        """Normalize API configuration parameters."""
-        api_root_clean = self.api_root.rstrip("/")
-        if not api_root_clean.endswith("/api"):
-            api_root_clean = f"{api_root_clean}/api"
-        self.api_root = api_root_clean
 
 
 class ThreatConnectApiClient(Apiable[ApiParameters]):
@@ -67,7 +57,6 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
             configuration=configuration,
         )
         self.api_root = configuration.api_root
-        self.verify_ssl = configuration.verify_ssl
         self.logger = logger
 
     def test_connectivity(self) -> None:
@@ -87,17 +76,13 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
         method: str,
         url: str,
         *,
-        params: dict | None = None,
-        headers: dict | None = None,
-        cookies: dict | None = None,
+        params: SingleJson | None = None,
+        headers: SingleJson | None = None,
+        cookies: SingleJson | None = None,
         data: str | None = None,
-        verify: bool | None = None,
         timeout: int | None = None,
     ) -> requests.Response:
         """Execute an arbitrary HTTP request."""
-        if verify is None:
-            verify = self.verify_ssl
-
         response = self.session.request(
             method=method,
             url=url,
@@ -105,7 +90,6 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
             headers=headers,
             cookies=cookies,
             data=data,
-            verify=verify,
             timeout=timeout,
         )
         validate_response(
@@ -126,7 +110,7 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
             "indicator_details", encoded_value=encoded_value
         )
 
-        params: dict[str, Any] = {
+        params: SingleJson = {
             "fields": [
                 "tags",
                 "attributes",
@@ -142,7 +126,7 @@ class ThreatConnectApiClient(Apiable[ApiParameters]):
         }
 
         results: list[IndicatorData] = []
-        owners: list[str | None] = list(owner_names) if owner_names else [None]
+        owners: list[str | None] = owner_names or [None]
 
         for owner in owners:
             query_params = params.copy()

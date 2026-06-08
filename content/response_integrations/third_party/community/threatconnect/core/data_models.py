@@ -16,11 +16,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+import enum
+from typing import TYPE_CHECKING, Any
 
 from TIPCommon.data_models import BaseDataModel
 
 from .constants import EXCLUDE_FIELDS_SET, MAX_INT_SENTINEL, PLURAL_MAPPING
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 def get_singular_type_key(group_type: str) -> str:
@@ -63,6 +67,13 @@ def get_owner_type(owner_name: str | None) -> str:
     return "Organization"
 
 
+class CalIndicatorStatus(enum.IntEnum):
+    """Legacy V2 calIndicatorStatus mappings."""
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+
+
 def estimate_cal_status(rating: float | None, score: int | None) -> int | None:
     """Defensively estimate and map the legacy V2 calIndicatorStatus.
 
@@ -72,10 +83,10 @@ def estimate_cal_status(rating: float | None, score: int | None) -> int | None:
     s = score or 0
 
     if r > 1.0 or s > 500:
-        return 3
+        return CalIndicatorStatus.HIGH
     if s > 0 or r == 0.0:
-        return 2
-    return 1
+        return CalIndicatorStatus.MEDIUM
+    return CalIndicatorStatus.LOW
 
 
 class IndicatorData(BaseDataModel):
@@ -102,11 +113,11 @@ class IndicatorData(BaseDataModel):
     )
 
     @classmethod
-    def from_json(cls, json_data: dict[str, Any]) -> IndicatorData:
+    def from_json(cls, json_data: SingleJson) -> IndicatorData:
         """Create IndicatorData from JSON dict."""
         return cls(json_data)
 
-    def __init__(self, raw_data: dict[str, Any]) -> None:
+    def __init__(self, raw_data: SingleJson) -> None:
         """Initialize IndicatorData from raw V3 API payload."""
         super().__init__(raw_data)
         self.v3_raw_data = raw_data
@@ -165,7 +176,7 @@ class IndicatorData(BaseDataModel):
                     "displayed": attr.get("displayed", True),
                 })
 
-    def _parse_owners(self, raw_data: dict[str, Any]) -> None:
+    def _parse_owners(self, raw_data: SingleJson) -> None:
         """Parse owner details container."""
         owner_list = []
         owner_name = raw_data.get("ownerName")
@@ -194,7 +205,7 @@ class IndicatorData(BaseDataModel):
                 "securityLabel": []
             }
 
-    def _parse_associated_groups(self, raw_data: dict[str, Any]) -> None:
+    def _parse_associated_groups(self, raw_data: SingleJson) -> None:
         """Parse associated groups payload list."""
         self.associated_groups = []
         groups_data = raw_data.get("associatedGroups") or raw_data.get("groups")
@@ -205,7 +216,7 @@ class IndicatorData(BaseDataModel):
             for grp in groups_data:
                 self.associated_groups.append(grp)
 
-    def _parse_associated_indicators(self, raw_data: dict[str, Any]) -> None:
+    def _parse_associated_indicators(self, raw_data: SingleJson) -> None:
         """Parse associated indicators payload list."""
         self.associated_indicators = []
         indicators_data = (
@@ -221,7 +232,7 @@ class IndicatorData(BaseDataModel):
             for ind in indicators_data:
                 self.associated_indicators.append(ind)
 
-    def _parse_sort_id(self, x: dict[str, Any]) -> tuple[int, str]:
+    def _parse_sort_id(self, x: SingleJson) -> tuple[int, str]:
         """Robust, homogeneous-type sorting helper utilizing static sentinels."""
         raw_id = x.get("id")
         if raw_id is None:
@@ -231,7 +242,7 @@ class IndicatorData(BaseDataModel):
             return (int(str_id), "")
         return (MAX_INT_SENTINEL, str_id)
 
-    def _map_v2_fields(self, indicator_value: str) -> dict[str, Any]:
+    def _map_v2_fields(self, indicator_value: str) -> SingleJson:
         """Isolate and construct base legacy V2 indicator fields."""
         v2_fields = {
             "webLink": self.web_link,
@@ -263,7 +274,7 @@ class IndicatorData(BaseDataModel):
 
         return v2_fields
 
-    def _backfill_v2_owner(self, v2_fields: dict[str, Any]) -> None:
+    def _backfill_v2_owner(self, v2_fields: SingleJson) -> None:
         """Resolve and backfill owner details."""
         if self.owners and self.owners.get("owner"):
             v2_fields["owner"] = self.owners["owner"][0]
@@ -275,7 +286,7 @@ class IndicatorData(BaseDataModel):
                 "type": get_owner_type(owner_name),
             }
 
-    def _backfill_threat_assess(self, v2_fields: dict[str, Any]) -> None:
+    def _backfill_threat_assess(self, v2_fields: SingleJson) -> None:
         """Extract and map raw threatAssess container fields recursively."""
         threat_assess = self.v3_raw_data.get("threatAssess", {})
         if isinstance(threat_assess, dict) and threat_assess:
@@ -334,7 +345,7 @@ class IndicatorData(BaseDataModel):
                 "threatAssessScore", 0
             )
 
-    def _backfill_cal_status(self, v2_fields: dict[str, Any]) -> None:
+    def _backfill_cal_status(self, v2_fields: SingleJson) -> None:
         """Resolve calIndicatorStatus fallback estimations."""
         cal_status = self.v3_raw_data.get("calIndicatorStatus")
         if cal_status is None:
@@ -348,9 +359,9 @@ class IndicatorData(BaseDataModel):
 
         v2_fields["calIndicatorStatus"] = cal_status
 
-    def _map_associated_groups(self) -> dict[str, list[dict]] | None:
+    def _map_associated_groups(self) -> dict[str, list[SingleJson]] | None:
         """Map and flatten the structured V3 associated groups."""
-        mapped_groups: dict[str, list[dict]] = {}
+        mapped_groups: dict[str, list[SingleJson]] = {}
         for grp in self.associated_groups:
             if not isinstance(grp, dict):
                 continue
@@ -375,8 +386,8 @@ class IndicatorData(BaseDataModel):
         return mapped_groups if mapped_groups else None
 
     def _map_single_group(
-        self, grp: dict[str, Any], grp_type: str, singular_key: str
-    ) -> dict[str, Any]:
+        self, grp: SingleJson, grp_type: str, singular_key: str
+    ) -> SingleJson:
         """Convert a single V3 group dict record to V2 schema layout."""
         group_attrs, raw_group_attrs = self._extract_group_attrs(grp)
         group_tags = self._extract_group_tags(grp)
@@ -434,8 +445,8 @@ class IndicatorData(BaseDataModel):
         return mapped_group
 
     def _extract_group_attrs(
-        self, grp: dict[str, Any]
-    ) -> tuple[dict[str, list[str]], list[dict[str, Any]]]:
+        self, grp: SingleJson
+    ) -> tuple[dict[str, list[str]], list[SingleJson]]:
         """Extract flat attributes dictionary and raw attribute objects list."""
         group_attrs = {}
         raw_group_attrs = []
@@ -458,7 +469,7 @@ class IndicatorData(BaseDataModel):
                 })
         return group_attrs, raw_group_attrs
 
-    def _extract_group_tags(self, grp: dict[str, Any]) -> dict[str, Any]:
+    def _extract_group_tags(self, grp: SingleJson) -> SingleJson:
         """Extract and package tag envelopes list."""
         group_tags_list = []
         tags_envelope = grp.get("tags")
@@ -474,7 +485,7 @@ class IndicatorData(BaseDataModel):
             "tag": group_tags_list
         }
 
-    def _extract_group_labels(self, grp: dict[str, Any]) -> dict[str, Any]:
+    def _extract_group_labels(self, grp: SingleJson) -> SingleJson:
         """Extract and package security labels envelopes."""
         group_labels_list = []
         labels_envelope = grp.get("securityLabels")
@@ -492,12 +503,12 @@ class IndicatorData(BaseDataModel):
 
     def _extract_group_report(
         self,
-        grp: dict[str, Any],
-        group_tags: dict[str, Any],
-        group_labels: dict[str, Any],
+        grp: SingleJson,
+        group_tags: SingleJson,
+        group_labels: SingleJson,
         group_attrs: dict[str, list[str]],
-        raw_group_attrs: list[dict[str, Any]],
-    ) -> dict[str, Any]:
+        raw_group_attrs: list[SingleJson],
+    ) -> SingleJson:
         """Construct the singular inner report details container map."""
         v3_report_raw = grp.get("report", {})
         v3_report = (
@@ -538,7 +549,7 @@ class IndicatorData(BaseDataModel):
             "attribute": raw_group_attrs,
         }
 
-    def _map_associated_indicators(self) -> list[dict]:
+    def _map_associated_indicators(self) -> list[SingleJson]:
         """Map and sort data records across associated indicators."""
         mapped_indicators = []
         for ind in self.associated_indicators:
@@ -550,82 +561,27 @@ class IndicatorData(BaseDataModel):
         mapped_indicators.sort(key=self._parse_sort_id)
         return mapped_indicators
 
-    def _map_single_indicator(self, ind: dict[str, Any]) -> dict[str, Any]:
+    def _map_single_indicator(self, ind: SingleJson) -> SingleJson:
         """Convert a single associated indicator V3 record to V2 schema."""
         ind_type = ind.get("type", "Address")
         ind_rating = ind.get("rating")
         ind_confidence = ind.get("confidence")
         ind_owner_name = ind.get("ownerName")
 
-        ind_ta_raw = ind.get("threatAssess", {})
-        ind_ta = ind_ta_raw if isinstance(ind_ta_raw, dict) else {}
-        
-        ind_ta_rating = (
-            ind_ta.get("rating")
-            if ind_ta.get("rating") is not None
-            else ind_ta.get("threatAssessRating")
-        )
-        ind_ta_confidence = (
-            ind_ta.get("confidence")
-            if ind_ta.get("confidence") is not None
-            else ind_ta.get("threatAssessConfidence")
-        )
-        ind_ta_score = (
-            ind_ta.get("score")
-            if ind_ta.get("score") is not None
-            else ind_ta.get("threatAssessScore")
-        )
+        ta_rating, ta_confidence, ta_score = self._extract_indicator_threat_assess(ind)
+        cal_status = self._resolve_indicator_cal_status(ind, ta_rating, ta_score, ind_rating)
 
-        cal_status = ind.get("calIndicatorStatus", ind_ta.get("calIndicatorStatus"))
-        if cal_status is None:
-            cal_status = estimate_cal_status(
-                ind_ta_rating if ind_ta_rating is not None else ind_rating,
-                ind_ta_score,
-            )
-
-        mapped_ind = {
-            "id": ind.get("id"),
-            "ownerName": ind_owner_name,
-            "ownerId": ind.get("ownerId"),
-            "owner": {
-                "id": ind.get("ownerId"),
-                "name": ind_owner_name,
-                "type": get_owner_type(ind_owner_name),
-            } if ind_owner_name else None,
-            "type": ind_type,
-            "dateAdded": ind.get("dateAdded"),
-            "lastModified": ind.get("lastModified"),
-            "rating": ind_rating,
-            "confidence": ind_confidence,
-            "threatAssessRating": (
-                ind.get("threatAssessRating")
-                if ind.get("threatAssessRating") is not None
-                else ind_ta_rating
-            ),
-            "threatAssessConfidence": (
-                ind.get("threatAssessConfidence")
-                if ind.get("threatAssessConfidence") is not None
-                else ind_ta_confidence
-            ),
-            "threatAssessScore": (
-                ind.get("threatAssessScore")
-                if ind.get("threatAssessScore") is not None
-                else ind_ta_score
-            ),
-            "threatAssessScoreObserved": ind_ta.get(
-                "threatAssessScoreObserved", 0
-            ),
-            "threatAssessScoreFalsePositive": ind_ta.get(
-                "threatAssessScoreFalsePositive", 0
-            ),
-            "calIndicatorStatus": cal_status,
-            "webLink": ind.get("webLink"),
-            "summary": ind.get("summary") or ind.get("text"),
-            "text": ind.get("text") or ind.get("summary"),
-            "privateFlag": ind.get("privateFlag", False),
-            "active": ind.get("active", True),
-            "activeLocked": ind.get("activeLocked", False),
-        }
+        mapped_ind = self._build_indicator_base_map(
+            ind=ind,
+            owner_name=ind_owner_name,
+            ind_type=ind_type,
+            ind_rating=ind_rating,
+            ind_confidence=ind_confidence,
+            ta_rating=ta_rating,
+            ta_confidence=ta_confidence,
+            ta_score=ta_score,
+            cal_status=cal_status,
+        )
 
         if ind_type == "File" and "sha1" in ind:
             mapped_ind["sha1"] = ind.get("sha1")
@@ -645,7 +601,111 @@ class IndicatorData(BaseDataModel):
 
         return mapped_ind
 
-    def _map_observations(self) -> tuple[int, list[dict]]:
+    def _extract_indicator_threat_assess(
+        self,
+        ind: SingleJson
+    ) -> tuple[float | None, float | None, int | None]:
+        """Extract threatAssess container fields recursively for a single indicator."""
+        ind_ta_raw = ind.get("threatAssess", {})
+        ind_ta = ind_ta_raw if isinstance(ind_ta_raw, dict) else {}
+
+        ta_rating = (
+            ind_ta.get("rating")
+            if ind_ta.get("rating") is not None
+            else ind_ta.get("threatAssessRating")
+        )
+        ta_confidence = (
+            ind_ta.get("confidence")
+            if ind_ta.get("confidence") is not None
+            else ind_ta.get("threatAssessConfidence")
+        )
+        ta_score = (
+            ind_ta.get("score")
+            if ind_ta.get("score") is not None
+            else ind_ta.get("threatAssessScore")
+        )
+        return ta_rating, ta_confidence, ta_score
+
+    def _resolve_indicator_cal_status(
+        self,
+        ind: SingleJson,
+        ta_rating: float | None,
+        ta_score: int | None,
+        ind_rating: float | None,
+    ) -> int | None:
+        """Resolve calIndicatorStatus fallback estimation for a single indicator."""
+        ind_ta_raw = ind.get("threatAssess", {})
+        ind_ta = ind_ta_raw if isinstance(ind_ta_raw, dict) else {}
+
+        cal_status = ind.get("calIndicatorStatus", ind_ta.get("calIndicatorStatus"))
+        if cal_status is None:
+            cal_status = estimate_cal_status(
+                ta_rating if ta_rating is not None else ind_rating,
+                ta_score,
+            )
+        return cal_status
+
+    def _build_indicator_base_map(
+        self,
+        ind: SingleJson,
+        owner_name: str | None,
+        ind_type: str,
+        ind_rating: float | None,
+        ind_confidence: float | None,
+        ta_rating: float | None,
+        ta_confidence: float | None,
+        ta_score: int | None,
+        cal_status: int | None,
+    ) -> SingleJson:
+        """Construct the base mapped indicator dictionary layout."""
+        ind_ta_raw = ind.get("threatAssess", {})
+        ind_ta = ind_ta_raw if isinstance(ind_ta_raw, dict) else {}
+
+        return {
+            "id": ind.get("id"),
+            "ownerName": owner_name,
+            "ownerId": ind.get("ownerId"),
+            "owner": {
+                "id": ind.get("ownerId"),
+                "name": owner_name,
+                "type": get_owner_type(owner_name),
+            } if owner_name else None,
+            "type": ind_type,
+            "dateAdded": ind.get("dateAdded"),
+            "lastModified": ind.get("lastModified"),
+            "rating": ind_rating,
+            "confidence": ind_confidence,
+            "threatAssessRating": (
+                ind.get("threatAssessRating")
+                if ind.get("threatAssessRating") is not None
+                else ta_rating
+            ),
+            "threatAssessConfidence": (
+                ind.get("threatAssessConfidence")
+                if ind.get("threatAssessConfidence") is not None
+                else ta_confidence
+            ),
+            "threatAssessScore": (
+                ind.get("threatAssessScore")
+                if ind.get("threatAssessScore") is not None
+                else ta_score
+            ),
+            "threatAssessScoreObserved": ind_ta.get(
+                "threatAssessScoreObserved", 0
+            ),
+            "threatAssessScoreFalsePositive": ind_ta.get(
+                "threatAssessScoreFalsePositive", 0
+            ),
+            "calIndicatorStatus": cal_status,
+            "webLink": ind.get("webLink"),
+            "summary": ind.get("summary") or ind.get("text"),
+            "text": ind.get("text") or ind.get("summary"),
+            "privateFlag": ind.get("privateFlag", False),
+            "active": ind.get("active", True),
+            "activeLocked": ind.get("activeLocked", False),
+        }
+
+    def _map_observations(self) -> tuple[int, list[SingleJson]]:
         """Safely build out metrics structure tracking historical observations."""
         obs_data = self.v3_raw_data.get("observations")
         obs_count = 0
@@ -668,7 +728,7 @@ class IndicatorData(BaseDataModel):
             })
         return obs_count, observation_list
 
-    def to_v2_json(self, indicator_value: str) -> dict[str, Any]:
+    def to_v2_json(self, indicator_value: str) -> SingleJson:
         """Map to V2 format and merge all additional V3 fields for zero regression."""
         type_mapping = {
             "Address": "address",

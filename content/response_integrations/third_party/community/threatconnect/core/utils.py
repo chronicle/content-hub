@@ -62,9 +62,9 @@ def parse_string_to_dict(string: str) -> SingleJson:
         raise ThreatConnectInvalidJsonError(msg) from err
 
 
-def validate_expected_values(  # noqa: PLR0911
-    data: Any,  # noqa: ANN401
-    expected_values: dict[str, Any],
+def validate_expected_values(
+    data: SingleJson | None,
+    expected_values: SingleJson,
 ) -> bool:
     """Validate data by recursively checking expected values.
 
@@ -86,24 +86,26 @@ def validate_expected_values(  # noqa: PLR0911
         if expected_key not in data:
             return False
 
-        actual_val: Any = data[expected_key]
+        actual_val = data[expected_key]
 
+        is_valid = True
         if isinstance(expected_val, dict):
-            if not isinstance(actual_val, dict) or not validate_expected_values(
+            is_valid = isinstance(actual_val, dict) and validate_expected_values(
                 actual_val,
                 expected_val,
-            ):
-                return False
+            )
         elif isinstance(expected_val, list):
-            if actual_val not in expected_val:
-                return False
-        elif actual_val != expected_val:
+            is_valid = actual_val in expected_val
+        else:
+            is_valid = actual_val == expected_val
+
+        if not is_valid:
             return False
 
     return True
 
 
-def convert_to_base_64(data: Any) -> str:  # noqa: ANN401
+def convert_to_base_64(data: object) -> str:
     """Convert data to base 64 encoded string.
 
     Args:
@@ -220,7 +222,7 @@ def extract_file_name(response_headers: dict[str, str]) -> str:
     return FILE_NAME
 
 
-def get_response_data(response: requests.Response) -> Any:  # noqa: ANN401
+def get_response_data(response: requests.Response) -> SingleJson | list | str:
     """Get response data from requests.Response.
 
     Args:

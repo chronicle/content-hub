@@ -16,21 +16,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from ..core.base_action import ThreatConnectAction
 from ..core.constants import PING_SCRIPT_NAME
-
-if TYPE_CHECKING:
-    from TIPCommon.types import Entity
-
-    from ..core.api.api_client import ThreatConnectApiClient
 
 SUCCESS_MESSAGE: str = (
     "Successfully connected to the ThreatConnect server with the provided "
     "connection parameters!"
 )
-ERROR_MESSAGE: str = "Failed to connect to the ThreatConnect server! Error is {error}"
+ERROR_MESSAGE: str = "Failed to connect to the ThreatConnect server!"
 
 
 class Ping(ThreatConnectAction):
@@ -41,15 +34,10 @@ class Ping(ThreatConnectAction):
         self.output_message = SUCCESS_MESSAGE
         self.error_output_message = ERROR_MESSAGE
 
-    def _perform_action(self, current_entity: Entity | None = None) -> None:
+    def _perform_action(self, _: None = None) -> None:
         """Verify connectivity through the client."""
-        client: ThreatConnectApiClient = self.api_client  # type: ignore[assignment]
-        client.test_connectivity()
+        self.api_client.test_connectivity()
         self.result_value = True
-
-    def _finalize_action_on_failure(self, error: Exception) -> None:
-        """Set output message when execution fails."""
-        self.error_output_message = ERROR_MESSAGE.format(error=error)
 
 
 def main() -> None:
