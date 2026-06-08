@@ -202,14 +202,14 @@ class SyncIntegrationCredentialJob(Job):
         try:
             loaded = yaml.safe_load(context_str)
         except Exception as e:
-            self.logger.warning("Failed to parse job context: %s. Starting fresh.", e)
+            self.logger.warn(f"Failed to parse job context: {e}. Starting fresh.")
             self.state_context = {}
             return
 
         if isinstance(loaded, dict):
             self.state_context = loaded
         else:
-            self.logger.warning("Parsed job context is not a dictionary. Starting fresh.")
+            self.logger.warn("Parsed job context is not a dictionary. Starting fresh.")
             self.state_context = {}
 
     def _save_context(self) -> None:
@@ -326,9 +326,9 @@ class SyncIntegrationCredentialJob(Job):
 
         masked: str = mask_id(secret_id)
         if resolved_version == DEFAULT_SECRET_VERSION:
-            self.logger.info("Secret '%s': No active versions. Falling back to '%s'.", masked, DEFAULT_SECRET_VERSION)
+            self.logger.info(f"Secret '{masked}': No active versions. Falling back to '{DEFAULT_SECRET_VERSION}'.")
         else:
-            self.logger.info("Secret '%s': Resolved to latest enabled version '%s'.", masked, resolved_version)
+            self.logger.info(f"Secret '{masked}': Resolved to latest enabled version '{resolved_version}'.")
 
         return secret_id, resolved_version
 
@@ -426,11 +426,11 @@ class SyncIntegrationCredentialJob(Job):
             param_mapping (SingleJson): Param names to secret IDs.
 
         """
-        self.logger.info("Processing integration instance: %s", name)
+        self.logger.info(f"Processing integration instance: {name}")
 
         identifier: str | None = self._resolve_instance_identifier(name)
         if identifier is None:
-            self.logger.error("Skipping instance '%s' — could not resolve identifier.", name)
+            self.logger.error(f"Skipping instance '{name}' — could not resolve identifier.")
             return
 
         await self._set_integration_params(api, name, identifier, param_mapping)
@@ -590,11 +590,11 @@ class SyncIntegrationCredentialJob(Job):
             param_mapping (SingleJson): Param names to secret IDs.
 
         """
-        self.logger.info("Processing connector: %s", name)
+        self.logger.info(f"Processing connector: {name}")
 
         identifier: str | None = self._resolve_connector_identifier(name)
         if identifier is None:
-            self.logger.error("Skipping connector '%s' — could not resolve identifier.", name)
+            self.logger.error(f"Skipping connector '{name}' — could not resolve identifier.")
             return
 
         await self._set_connector_params(api, name, identifier, param_mapping)
@@ -700,7 +700,7 @@ class SyncIntegrationCredentialJob(Job):
                 return
             async with semaphore:
                 try:
-                    self.logger.info("Processing job: %s", job_name)
+                    self.logger.info(f"Processing job: {job_name}")
                     await self._update_single_job(
                         api,
                         job_name,
@@ -744,7 +744,7 @@ class SyncIntegrationCredentialJob(Job):
             return None
 
         if not job_instances:
-            self.logger.warning("No jobs returned from platform.")
+            self.logger.warn("No jobs returned from platform.")
             return None
 
         return job_instances
@@ -810,7 +810,7 @@ class SyncIntegrationCredentialJob(Job):
         )
 
         if updated_count == 0:
-            self.logger.warning("No parameters updated for job '%s' — skipping save.", job_name)
+            self.logger.warn(f"No parameters updated for job '{job_name}' — skipping save.")
             return
 
         job_data["parameters"] = parameters
@@ -865,7 +865,7 @@ class SyncIntegrationCredentialJob(Job):
             return None
 
         if not parameters:
-            self.logger.warning("Job '%s' has an empty parameters list — nothing to update.", job_name)
+            self.logger.warn(f"Job '{job_name}' has an empty parameters list — nothing to update.")
             return None
 
         return job_data, parameters
@@ -892,10 +892,10 @@ class SyncIntegrationCredentialJob(Job):
         """
         job_instance_id: str | None = job_data.get("id")
         if job_instance_id is None:
-            self.logger.error("Job '%s' has no id and no parameters — cannot update.", job_name)
+            self.logger.error(f"Job '{job_name}' has no id and no parameters — cannot update.")
             return None
 
-        self.logger.info("Fetching full details for job '%s' (id: %s).", job_name, job_instance_id)
+        self.logger.info(f"Fetching full details for job '{job_name}' (id: {job_instance_id}).")
         try:
             full_job: SingleJson = await api.get_installed_jobs(
                 job_instance_id=job_instance_id,
@@ -1019,7 +1019,7 @@ class SyncIntegrationCredentialJob(Job):
         """
         try:
             await api.save_or_update_job(job_data=job_data)
-            self.logger.info("Saved job '%s' with %s updated parameter(s).", job_name, updated_count)
+            self.logger.info(f"Saved job '{job_name}' with {updated_count} updated parameter(s).")
         except JobSaveError:
             raise
         except Exception as e:
