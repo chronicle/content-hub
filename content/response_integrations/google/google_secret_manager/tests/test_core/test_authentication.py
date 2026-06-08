@@ -30,6 +30,8 @@ from google_secret_manager.core.authentication import (
     _get_credentials_using_service_account,
     _get_credentials_using_workload_identity_email,
     get_credentials,
+    prepare_auth_request,
+    create_authorized_session,
 )
 from google_secret_manager.core.constants import (
     INTEGRATION_IDENTIFIER,
@@ -266,3 +268,35 @@ class TestGetCredentialsFunctions:
             match="Either 'Service Account JSON' or 'Workload Identity Email' must be provided",
         ):
             get_credentials()
+
+
+class TestSessionCreation:
+    """Tests for prepare_auth_request and create_authorized_session."""
+
+    def test_prepare_auth_request_verify_ssl_true(self) -> None:
+        """prepare_auth_request has verify=True by default."""
+        req = prepare_auth_request()
+        assert req.session.verify is True
+
+    def test_prepare_auth_request_verify_ssl_false(self) -> None:
+        """prepare_auth_request sets verify=False when verify_ssl=False."""
+        req = prepare_auth_request(verify_ssl=False)
+        assert req.session.verify is False
+
+    def test_create_authorized_session_verify_ssl_true(self) -> None:
+        """create_authorized_session sets verify=True by default."""
+        mock_creds = MagicMock()
+        with patch("google_secret_manager.core.authentication.prepare_auth_request") as mock_prepare:
+            session = create_authorized_session(mock_creds)
+            assert session.verify is True
+            mock_prepare.assert_called_once_with(verify_ssl=True)
+
+    def test_create_authorized_session_verify_ssl_false(self) -> None:
+        """create_authorized_session sets verify=False when verify_ssl=False."""
+        mock_creds = MagicMock()
+        with patch("google_secret_manager.core.authentication.prepare_auth_request") as mock_prepare:
+            session = create_authorized_session(mock_creds, verify_ssl=False)
+            assert session.verify is False
+            mock_prepare.assert_called_once_with(verify_ssl=False)
+
+
