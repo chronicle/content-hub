@@ -146,7 +146,8 @@ def _get_credentials_using_service_account(
         msg = f"Invalid Service Account YAML/JSON provided: {e}"
         raise InvalidConfigurationError(msg) from e
 
-    credentials = service_account.Credentials.from_service_account_info(info).with_scopes([SECRET_MANAGER_SCOPE])
+    creds = service_account.Credentials.from_service_account_info(info)
+    credentials = creds.with_scopes([SECRET_MANAGER_SCOPE])
     resolved_project_id: str | None = project_id or info.get("project_id")
 
     return credentials, resolved_project_id
