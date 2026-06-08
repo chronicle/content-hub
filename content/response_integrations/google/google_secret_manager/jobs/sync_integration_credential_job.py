@@ -357,9 +357,6 @@ class SyncIntegrationCredentialJob(Job):
             "integrationInstances",
             [],
         )
-        if not instances_list:
-            self.logger.info("No integration instances found in environment. Skipping.")
-            return
 
         self.instance_name_to_identifier = self._build_instance_name_lookup_from_json(
             instances_list,
@@ -533,9 +530,6 @@ class SyncIntegrationCredentialJob(Job):
             integration_name=ANY_INTEGRATION_FILTER_VALUE,
         )
         cards = response.get("connectorInstances", [])
-        if not cards:
-            self.logger.info("No connectors configured. Skipping.")
-            return
 
         self.connector_name_to_identifier = self._build_connector_name_lookup_from_json(
             cards,
@@ -691,6 +685,7 @@ class SyncIntegrationCredentialJob(Job):
 
         job_instances: list[SingleJson] | None = await self._fetch_job_instances(api)
         if job_instances is None:
+            self._sync_errors.append("Failed to fetch installed jobs from platform.")
             return
 
         name_to_job: SingleJson = self._build_job_name_lookup(job_instances)
@@ -745,7 +740,7 @@ class SyncIntegrationCredentialJob(Job):
 
         if not job_instances:
             self.logger.warn("No jobs returned from platform.")
-            return None
+            return []
 
         return job_instances
 
