@@ -7,13 +7,13 @@ import json
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.AbnormalManager import (
     AbnormalAuthenticationError,
     AbnormalConnectionError,
     AbnormalManager,
     AbnormalValidationError,
+    parse_messages_input,
 )
 from ..core.constants import INTEGRATION_NAME, REMEDIATE_MESSAGES_SCRIPT_NAME
 
@@ -25,21 +25,18 @@ def main() -> None:
     siemplify.script_name = REMEDIATE_MESSAGES_SCRIPT_NAME
     siemplify.LOGGER.info(f"Action: {REMEDIATE_MESSAGES_SCRIPT_NAME} started")
 
-    api_url = extract_configuration_param(
-        siemplify,
+    api_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="API URL",
         is_mandatory=True,
         print_value=True,
     )
-    api_key = extract_configuration_param(
-        siemplify,
+    api_key = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="API Key",
         is_mandatory=True,
     )
-    verify_ssl = extract_configuration_param(
-        siemplify,
+    verify_ssl = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="Verify SSL",
         input_type=bool,
@@ -47,40 +44,38 @@ def main() -> None:
         default_value=True,
     )
 
-    action = extract_action_param(
-        siemplify, param_name="Action", is_mandatory=True, print_value=True
+    action = siemplify.extract_action_param(
+        param_name="Action",
+        is_mandatory=True,
+        print_value=True,
     )
-    source = extract_action_param(
-        siemplify,
+    source = siemplify.extract_action_param(
         param_name="Source",
         is_mandatory=True,
         print_value=True,
         default_value="abnormal",
     )
-    messages_json = extract_action_param(
-        siemplify, param_name="Messages JSON", is_mandatory=True, print_value=False
+    messages_json = siemplify.extract_action_param(
+        param_name="Messages JSON",
+        is_mandatory=True,
+        print_value=False,
     )
-    remediation_reason = extract_action_param(
-        siemplify, param_name="Remediation Reason", is_mandatory=True, print_value=True
+    remediation_reason = siemplify.extract_action_param(
+        param_name="Remediation Reason",
+        is_mandatory=True,
+        print_value=True,
     )
-    tenant_ids_raw = extract_action_param(
-        siemplify, param_name="Tenant IDs", is_mandatory=False
+    tenant_ids_raw = siemplify.extract_action_param(
+        param_name="Tenant IDs",
+        is_mandatory=False,
     )
-    tenant_ids = (
-        [t.strip() for t in tenant_ids_raw.split(",") if t.strip()]
-        if tenant_ids_raw
-        else None
-    )
+    tenant_ids = [t.strip() for t in tenant_ids_raw.split(",") if t.strip()] if tenant_ids_raw else None
 
     result_value = False
     status = EXECUTION_STATE_FAILED
 
     try:
-        messages = json.loads(messages_json)
-        if not isinstance(messages, list):
-            raise AbnormalValidationError(
-                "Messages JSON must be a JSON array of message objects."
-            )
+        messages = parse_messages_input(messages_json)
 
         manager = AbnormalManager(api_url=api_url, api_key=api_key, verify_ssl=verify_ssl)
         response = manager.remediate_messages(
@@ -108,9 +103,7 @@ def main() -> None:
         AbnormalConnectionError,
         Exception,
     ) as e:
-        output_message = (
-            f'Error executing action "{REMEDIATE_MESSAGES_SCRIPT_NAME}". Reason: {e}'
-        )
+        output_message = f'Error executing action "{REMEDIATE_MESSAGES_SCRIPT_NAME}". Reason: {e}'
         siemplify.LOGGER.error(output_message)
         siemplify.LOGGER.exception(e)
 

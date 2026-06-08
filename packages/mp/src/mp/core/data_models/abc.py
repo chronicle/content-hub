@@ -17,7 +17,7 @@ from __future__ import annotations
 import abc
 import enum
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Generic, Self, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Self, TypeVar, cast
 
 import pydantic
 import yaml
@@ -292,7 +292,7 @@ class SingularComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT])
 
         """
         try:
-            metadata_json: _BT = mp.core.file_utils.load_json_file(metadata_path)
+            metadata_json: _BT = cast("_BT", mp.core.file_utils.load_json_file(metadata_path))
             built: Self = cls.from_built(metadata_path.stem, metadata_json)
         except ValueError as e:
             msg: str = f"Failed to load json from {metadata_path}"
@@ -315,7 +315,7 @@ class SingularComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT])
 
         """
         try:
-            metadata_json: _NBT = mp.core.file_utils.load_yaml_file(metadata_path)
+            metadata_json: _NBT = cast("_NBT", mp.core.file_utils.load_yaml_file(metadata_path))
             non_built: Self = cls.from_non_built(metadata_path.stem, metadata_json)
         except ValueError as e:
             msg: str = f"Failed to load yaml from {metadata_path}"
@@ -373,7 +373,7 @@ class ComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
 
         """
         try:
-            metadata_json: _BT = mp.core.file_utils.load_json_file(metadata_path)
+            metadata_json: _BT = cast("_BT", mp.core.file_utils.load_json_file(metadata_path))
             built: Self = cls.from_built(metadata_path.stem, metadata_json)
         except ValueError as e:
             msg: str = f"Failed to load json from {metadata_path}"
@@ -396,7 +396,7 @@ class ComponentMetadata(BuildableComponent, abc.ABC, Generic[_BT, _NBT]):
 
         """
         try:
-            metadata_json: _NBT = mp.core.file_utils.load_yaml_file(metadata_path)
+            metadata_json: _NBT = cast("_NBT", mp.core.file_utils.load_yaml_file(metadata_path))
             non_built: Self = cls.from_non_built(metadata_path.stem, metadata_json)
         except ValueError as e:
             msg: str = f"Failed to load yaml from {metadata_path}"
@@ -455,7 +455,7 @@ class SequentialMetadata(Buildable, abc.ABC, Generic[_BT, _NBT]):
 
         """
         try:
-            content: list[_BT] = mp.core.file_utils.load_json_file(meta_path)
+            content: list[_BT] = cast("list[_BT]", mp.core.file_utils.load_json_file(meta_path))
             results: list[Self] = [cls.from_built(c) for c in content]
         except ValueError as e:
             msg: str = f"Failed to load json from {meta_path}"
