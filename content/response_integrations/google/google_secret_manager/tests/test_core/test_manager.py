@@ -16,9 +16,12 @@
 
 from __future__ import annotations
 
+import base64
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 from google_secret_manager.core.constants import DEFAULT_SECRET_VERSION
 from google_secret_manager.core.exceptions import (
@@ -28,8 +31,26 @@ from google_secret_manager.core.exceptions import (
 )
 from google_secret_manager.tests.core.factories import (
     make_client,
-    make_sa_json,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+class _FixtureBridge:
+    make_sa_json: Callable[..., str] | None = None
+
+
+@pytest.fixture(autouse=True)
+def _init_make_sa_json(make_sa_json: Callable[..., str]) -> None:
+    _FixtureBridge.make_sa_json = make_sa_json
+
+
+def make_sa_json(project_id: str = "test-project") -> str:
+    if _FixtureBridge.make_sa_json is None:
+        msg = "FixtureBridge.make_sa_json is not initialized"
+        raise ValueError(msg)
+    return _FixtureBridge.make_sa_json(project_id)
 
 # -------------------------------------------------------------------
 # Initialization
@@ -182,9 +203,11 @@ class TestConnectivity:
             service_account_json=make_sa_json(),
             project_id="test-project",
         )
-        with patch.object(client, "_rest_get", side_effect=Exception("HTTP Error")):
-            with pytest.raises(ConnectivityError, match="HTTP Error"):
-                client.test_connectivity()
+        with (
+            patch.object(client, "_rest_get", side_effect=Exception("HTTP Error")),
+            pytest.raises(ConnectivityError, match="HTTP Error"),
+        ):
+            client.test_connectivity()
 
 
 # -------------------------------------------------------------------
@@ -204,7 +227,6 @@ class TestGetSecretValue:
             service_account_json=make_sa_json(),
             project_id="test-project",
         )
-        import base64
 
         encoded_data = base64.b64encode(b"my-password-123").decode("utf-8")
         mock_response = {"payload": {"data": encoded_data}}
@@ -223,15 +245,16 @@ class TestGetSecretValue:
             service_account_json=make_sa_json(),
             project_id="test-project",
         )
-        import base64
 
         # b"\x80\x81\x82\xff" is invalid UTF-8
         encoded_data = base64.b64encode(b"\x80\x81\x82\xff").decode("utf-8")
         mock_response = {"payload": {"data": encoded_data}}
 
-        with patch.object(client, "_rest_get", return_value=mock_response):
-            with pytest.raises(SecretAccessError, match="non-UTF-8"):
-                client.get_secret_value("binary-secret")
+        with (
+            patch.object(client, "_rest_get", return_value=mock_response),
+            pytest.raises(SecretAccessError, match="non-UTF-8"),
+        ):
+            client.get_secret_value("binary-secret")
 
     def test_get_secret_value_api_error_raises(
         self,
@@ -242,9 +265,11 @@ class TestGetSecretValue:
             service_account_json=make_sa_json(),
             project_id="test-project",
         )
-        with patch.object(client, "_rest_get", side_effect=Exception("HTTP Error")):
-            with pytest.raises(SecretAccessError, match="HTTP Error"):
-                client.get_secret_value("db-password", "3")
+        with (
+            patch.object(client, "_rest_get", side_effect=Exception("HTTP Error")),
+            pytest.raises(SecretAccessError, match="HTTP Error"),
+        ):
+            client.get_secret_value("db-password", "3")
 
     def test_get_secret_value_full_resource_name(
         self,
@@ -255,7 +280,6 @@ class TestGetSecretValue:
             service_account_json=make_sa_json(),
             project_id="test-project",
         )
-        import base64
 
         encoded_data = base64.b64encode(b"my-password-123").decode("utf-8")
         mock_response = {"payload": {"data": encoded_data}}
@@ -405,8 +429,6 @@ class TestRestGetErrorHandling:
 
     def test_rest_get_detailed_error_raising(self, mock_sa_credentials: MagicMock) -> None:
         """_rest_get raises HTTPError with detailed Google API error message."""
-        import requests
-
         client = make_client(
             service_account_json=make_sa_json(),
             project_id="test-project",
@@ -432,8 +454,6 @@ class TestRestGetErrorHandling:
 
     def test_rest_get_generic_error_raising(self, mock_sa_credentials: MagicMock) -> None:
         """_rest_get raises original HTTPError if response is not valid JSON or lacks error message."""
-        import requests
-
         client = make_client(
             service_account_json=make_sa_json(),
             project_id="test-project",

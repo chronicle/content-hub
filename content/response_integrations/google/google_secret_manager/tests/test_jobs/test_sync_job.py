@@ -16,8 +16,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -146,7 +147,7 @@ class TestResolveSecretAndVersion:
             "projects/123/secrets/foo/versions/3",
         )
 
-        assert secret_id == "projects/123/secrets/foo"
+        assert secret_id == "projects/123/secrets/foo"  # noqa: S105
         assert version_id == "3"
 
     @pytest.mark.anyio
@@ -169,7 +170,7 @@ class TestResolveSecretAndVersion:
             "projects/123/secrets/foo",
         )
 
-        assert secret_id == "projects/123/secrets/foo"
+        assert secret_id == "projects/123/secrets/foo"  # noqa: S105
         assert version_id == "7"
         mock_client.resolve_latest_enabled_version.assert_called_once_with(
             "projects/123/secrets/foo",
@@ -185,7 +186,7 @@ class TestResolveSecretAndVersion:
             "projects/123/secrets/foo",
         )
 
-        assert secret_id == "projects/123/secrets/foo"
+        assert secret_id == "projects/123/secrets/foo"  # noqa: S105
         assert version_id == DEFAULT_SECRET_VERSION
 
 
@@ -393,14 +394,14 @@ class TestSecretFetchCaching:
 
         # First call
         val1 = await job._fetch_secret_value_pre_resolved(
-            secret_id="secret-a",
+            secret_id="secret-a",  # noqa: S106
             version_id="3",
             context_label="first call",
         )
 
         # Second call (same secret and version)
         val2 = await job._fetch_secret_value_pre_resolved(
-            secret_id="secret-a",
+            secret_id="secret-a",  # noqa: S106
             version_id="3",
             context_label="second call",
         )
@@ -410,7 +411,7 @@ class TestSecretFetchCaching:
 
         # The client's get_secret_value should have been called exactly once
         mock_client.get_secret_value.assert_called_once_with(
-            secret_id="secret-a",
+            secret_id="secret-a",  # noqa: S106
             version_id="3",
         )
 
@@ -424,9 +425,6 @@ class TestAggregatedErrors:
     @pytest.mark.anyio
     async def test_sync_errors_collected_and_fails_job(self) -> None:
         """Collects errors from various failing components and raises IntegrationCredentialSyncError."""
-        import asyncio
-        from unittest.mock import patch
-
         job = _make_job()
         job._soar_job = MagicMock()
         job.params.credential_mapping = (
@@ -462,36 +460,38 @@ class TestAggregatedErrors:
         assert any("Job 'job1' not found" in err for err in job._sync_errors)
 
         # Mock the entire _async_main calling flow with these sync errors
-        with patch.object(job, "_init_secret_manager_client"):
-            with patch.object(job, "_load_context"):
-                with patch.object(job, "_save_context"):
-                    with patch(
-                        "google_secret_manager.jobs.sync_integration_credential_job.AsyncChronicleSOAR"
-                    ) as mock_soar_cls:
-                        mock_soar = AsyncMock()
-                        mock_soar_cls.return_value = mock_soar
+        with (
+            patch.object(job, "_init_secret_manager_client"),
+            patch.object(job, "_load_context"),
+            patch.object(job, "_save_context"),
+            patch(
+                "google_secret_manager.jobs.sync_integration_credential_job.AsyncChronicleSOAR"
+            ) as mock_soar_cls,
+            patch(
+                "google_secret_manager.jobs.sync_integration_credential_job.AsyncMarketplaceApi"
+            ) as mock_market_cls,
+        ):
+            mock_soar = AsyncMock()
+            mock_soar_cls.return_value = mock_soar
 
-                        with patch(
-                            "google_secret_manager.jobs.sync_integration_credential_job.AsyncMarketplaceApi"
-                        ) as mock_market_cls:
-                            # Mock the marketplace API methods
-                            mock_market = AsyncMock()
-                            mock_market.get_installed_integrations_of_environment.return_value = {
-                                "instances": [{"displayName": "other-inst", "identifier": "other-inst-id"}]
-                            }
-                            mock_market.get_connector_cards.return_value = {
-                                "connectorInstances": [{"displayName": "other-conn", "identifier": "other-conn-id"}]
-                            }
-                            mock_market.get_installed_jobs.return_value = [
-                                {"displayName": "other-job", "id": "other-job-id", "parameters": []}
-                            ]
-                            mock_market_cls.return_value = mock_market
+            # Mock the marketplace API methods
+            mock_market = AsyncMock()
+            mock_market.get_installed_integrations_of_environment.return_value = {
+                "instances": [{"displayName": "other-inst", "identifier": "other-inst-id"}]
+            }
+            mock_market.get_connector_cards.return_value = {
+                "connectorInstances": [{"displayName": "other-conn", "identifier": "other-conn-id"}]
+            }
+            mock_market.get_installed_jobs.return_value = [
+                {"displayName": "other-job", "id": "other-job-id", "parameters": []}
+            ]
+            mock_market_cls.return_value = mock_market
 
-                            # Run _async_main and assert it raises IntegrationCredentialSyncError
-                            with pytest.raises(IntegrationCredentialSyncError) as exc_info:
-                                await job._async_main()
+            # Run _async_main and assert it raises IntegrationCredentialSyncError
+            with pytest.raises(IntegrationCredentialSyncError) as exc_info:
+                await job._async_main()
 
-                            assert "Credential synchronization completed with one or more errors" in str(exc_info.value)
-                            assert "Integration instance 'inst1' not found" in str(exc_info.value)
-                            assert "Connector 'conn1' not found" in str(exc_info.value)
-                            assert "Job 'job1' not found" in str(exc_info.value)
+            assert "Credential synchronization completed with one or more errors" in str(exc_info.value)
+            assert "Integration instance 'inst1' not found" in str(exc_info.value)
+            assert "Connector 'conn1' not found" in str(exc_info.value)
+            assert "Job 'job1' not found" in str(exc_info.value)

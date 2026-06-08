@@ -16,14 +16,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
-from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from google_secret_manager.actions import ping
 from google_secret_manager.tests.common import CONFIG_PATH
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
 
 
 class TestPing:

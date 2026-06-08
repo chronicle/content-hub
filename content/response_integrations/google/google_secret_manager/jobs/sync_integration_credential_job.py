@@ -19,6 +19,7 @@ import json
 import re
 import time
 from itertools import starmap
+from operator import itemgetter
 from typing import TYPE_CHECKING
 
 import yaml
@@ -111,34 +112,38 @@ class SyncIntegrationCredentialJob(Job):
         try:
             self.credential_mapping = yaml.safe_load(self.params.credential_mapping) or {}
         except yaml.YAMLError as e:
-            raise InvalidConfigurationError(f"Invalid Credential Mapping syntax: {e}") from e
+            msg = f"Invalid Credential Mapping syntax: {e}"
+            raise InvalidConfigurationError(msg) from e
 
         if not isinstance(self.credential_mapping, dict):
-            raise InvalidConfigurationError("Credential Mapping must be a dictionary.")
+            msg = "Credential Mapping must be a dictionary."
+            raise InvalidConfigurationError(msg)
 
         valid_keys = {INTEGRATION_INSTANCES_KEY, CONNECTORS_KEY, JOBS_KEY}
         invalid_keys = set(self.credential_mapping.keys()) - valid_keys
         if invalid_keys:
-            raise InvalidConfigurationError(
+            msg = (
                 f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. Allowed keys are: {list(valid_keys)}."
             )
+            raise InvalidConfigurationError(msg)
 
         for category in valid_keys:
             category_mapping = self.credential_mapping.get(category, {})
             if not isinstance(category_mapping, dict):
-                raise InvalidConfigurationError(f"Category '{category}' must be a dictionary.")
+                msg = f"Category '{category}' must be a dictionary."
+                raise InvalidConfigurationError(msg)
 
             for component_name, param_mapping in category_mapping.items():
                 if not isinstance(param_mapping, dict):
-                    raise InvalidConfigurationError(
-                        f"Parameters for '{component_name}' in category '{category}' must be a dictionary."
-                    )
+                    msg = f"Parameters for '{component_name}' in category '{category}' must be a dictionary."
+                    raise InvalidConfigurationError(msg)
 
                 for param_name, mapped_value in param_mapping.items():
                     val = str(mapped_value).strip()
                     if not RESOURCE_NAME_PATTERN.match(val):
                         msg = (
-                            f"Invalid format for parameter '{param_name}' of '{component_name}' in category '{category}': '{val}'. "
+                            f"Invalid format for parameter '{param_name}' of '{component_name}' "
+                            f"in category '{category}': '{val}'. "
                             f"Expected format: 'projects/{{project}}/secrets/{{secret}}' "
                             f"or 'projects/{{project}}/secrets/{{secret}}/versions/{{version}}'."
                         )
@@ -201,7 +206,7 @@ class SyncIntegrationCredentialJob(Job):
 
         try:
             loaded = yaml.safe_load(context_str)
-        except Exception as e:
+        except yaml.YAMLError as e:
             self.logger.warn(f"Failed to parse job context: {e}. Starting fresh.")
             self.state_context = {}
             return
@@ -259,7 +264,8 @@ class SyncIntegrationCredentialJob(Job):
         except SecretAccessError:
             raise
         except Exception as e:
-            raise SecretAccessError(f"Failed to fetch secret '{mask_id(secret_id)}' for {context_label}: {e}") from e
+            msg = f"Failed to fetch secret '{mask_id(secret_id)}' for {context_label}: {e}"
+            raise SecretAccessError(msg) from e
 
         self._secret_cache[cache_key] = secret_value
 
@@ -286,7 +292,8 @@ class SyncIntegrationCredentialJob(Job):
         """Parse the mapped string, resolving the version if not explicitly provided.
 
         Args:
-            mapped_value (str): The value from the JSON mapping (e.g., 'projects/project/secrets/secret/versions/version').
+            mapped_value (str): The value from the JSON mapping
+                (e.g., 'projects/project/secrets/secret/versions/version').
 
         Returns:
             tuple[str, str]: The (secret_id, resolved_version).
@@ -503,7 +510,8 @@ class SyncIntegrationCredentialJob(Job):
                     property_value=secret_value,
                 )
             except Exception as e:
-                raise ParameterUpdateError(f"Failed to set {context}: {e}") from e
+                msg = f"Failed to set {context}: {e}"
+                raise ParameterUpdateError(msg) from e
 
             self.state_context[state_key] = state_val
             self.logger.info(
@@ -561,7 +569,16 @@ class SyncIntegrationCredentialJob(Job):
         self,
         connector_cards: list[SingleJson],
     ) -> NameIdentifierMap:
-        """Build a display_name → identifier mapping from raw JSON."""
+        """Build a display_name → identifier mapping from raw JSON.
+
+        Args:
+            connector_cards (list[SingleJson]): Raw connector card data.
+
+        Returns:
+            NameIdentifierMap: A dictionary mapping connector names
+                to their identifiers.
+
+        """
         return build_lookup_with_warnings(
             items=connector_cards,
             get_key=lambda c: c.get("displayName", ""),
@@ -630,6 +647,9 @@ class SyncIntegrationCredentialJob(Job):
             identifier (str): Resolved connector identifier.
             param_mapping (SingleJson): Param names to secret IDs.
 
+        Raises:
+            ParameterUpdateError: If updating a parameter fails.
+
         """
         for param_name, mapped_value in param_mapping.items():
             context: str = f"param '{param_name}' on connector '{name}' (id: {identifier})"
@@ -656,7 +676,8 @@ class SyncIntegrationCredentialJob(Job):
                     parameter_value=secret_value,
                 )
             except Exception as e:
-                raise ParameterUpdateError(f"Failed to set {context}: {e}") from e
+                msg = f"Failed to set {context}: {e}"
+                raise ParameterUpdateError(msg) from e
 
             self.state_context[state_key] = state_val
             self.logger.info(
@@ -898,7 +919,8 @@ class SyncIntegrationCredentialJob(Job):
         except JobFetchError:
             raise
         except Exception as e:
-            raise JobFetchError(f"Failed to fetch details for job '{job_name}' (id: {job_instance_id}): {e}") from e
+            msg = f"Failed to fetch details for job '{job_name}' (id: {job_instance_id}): {e}"
+            raise JobFetchError(msg) from e
 
         if not isinstance(full_job, dict):
             self.logger.error(
@@ -929,7 +951,7 @@ class SyncIntegrationCredentialJob(Job):
         return build_lookup_with_warnings(
             items=indexed_params,
             get_key=lambda item: item[1].get("displayName") or item[1].get("name", ""),
-            get_value=lambda item: item[0],
+            get_value=itemgetter(0),
             entity_type="job parameter",
             logger=self.logger,
         )
@@ -1018,10 +1040,12 @@ class SyncIntegrationCredentialJob(Job):
         except JobSaveError:
             raise
         except Exception as e:
-            raise JobSaveError(f"Failed to save job '{job_name}': {e}") from e
+            msg = f"Failed to save job '{job_name}': {e}"
+            raise JobSaveError(msg) from e
 
 
 def main() -> None:
+    """Run the credential synchronization job."""
     SyncIntegrationCredentialJob().start()
 
 

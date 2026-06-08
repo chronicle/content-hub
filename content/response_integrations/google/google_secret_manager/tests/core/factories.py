@@ -16,47 +16,33 @@
 
 from __future__ import annotations
 
-import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
 from google_secret_manager.core.manager import GoogleSecretManagerClient
 
-# ---------------------------------------------------------------------------
-# Fake Service Account JSON
-# ---------------------------------------------------------------------------
-
-_FAKE_SA_INFO: dict[str, str] = {
-    "type": "service_account",
-    "project_id": "test-project",
-    "private_key_id": "key-id",
-    "private_key": (
-        "-----BEGIN RSA PRIVATE KEY-----\n"
-        "MIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn/ygWep4PAtGoRBh0VFnMD"
-        "lOIA7RkVhmFJR\n"
-        "-----END RSA PRIVATE KEY-----\n"
-    ),
-    "client_email": "test@test-project.iam.gserviceaccount.com",
-    "client_id": "123456789",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-}
+if TYPE_CHECKING:
+    from TIPCommon.base.interfaces import ScriptLogger
 
 
-def make_sa_json(
-    project_id: str = "test-project",
-) -> str:
-    """Return a fake Service Account JSON string."""
-    info: dict[str, str] = {**_FAKE_SA_INFO, "project_id": project_id}
-
-    return json.dumps(info)
-
-
-def make_client(**kwargs: Any) -> GoogleSecretManagerClient:
+def make_client(
+    service_account_json: str | None = None,
+    project_id: str | None = None,
+    workload_identity_email: str | None = None,
+    logger: ScriptLogger | MagicMock | None = None,
+    verify_ssl: bool = True,
+) -> GoogleSecretManagerClient:
     """Build a GoogleSecretManagerClient with a default mock logger."""
-    kwargs.setdefault("logger", MagicMock())
+    if logger is None:
+        logger = MagicMock()
 
-    return GoogleSecretManagerClient(**kwargs)
+    return GoogleSecretManagerClient(
+        service_account_json=service_account_json,
+        project_id=project_id,
+        workload_identity_email=workload_identity_email,
+        logger=logger,
+        verify_ssl=verify_ssl,
+    )
 
 
 # ---------------------------------------------------------------------------

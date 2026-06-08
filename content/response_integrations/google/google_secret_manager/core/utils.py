@@ -20,6 +20,8 @@ from typing import TYPE_CHECKING, Any
 
 import requests
 
+from .constants import MIN_MASK_LENGTH
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -46,13 +48,11 @@ def validate_response(response: requests.Response) -> None:
         try:
             error_data = response.json()
             error_message = error_data.get("error", {}).get("message")
-        except Exception:
-            pass
+        except ValueError:
+            error_message = None
         if error_message:
-            raise requests.HTTPError(
-                f"{error_message} (HTTP {response.status_code})",
-                response=response,
-            ) from error
+            error_detail = f"{error_message} (HTTP {response.status_code})"
+            raise requests.HTTPError(error_detail, response=response) from error
         raise
 
 
@@ -66,7 +66,7 @@ def mask_id(value: str) -> str:
         str: The masked secret ID.
 
     """
-    if len(value) <= 6:
+    if len(value) <= MIN_MASK_LENGTH:
         return "***"
 
     return f"{value[:3]}***{value[-3:]}"

@@ -154,10 +154,11 @@ class GoogleSecretManagerClient:
                 DEFAULT_SECRET_VERSION if none are enabled.
 
         """
-        if secret_id.startswith("projects/"):
-            parent = secret_id
-        else:
-            parent = f"projects/{self.project_id}/secrets/{secret_id}"
+        parent = (
+            secret_id
+            if secret_id.startswith("projects/")
+            else f"projects/{self.project_id}/secrets/{secret_id}"
+        )
         self.logger.info(f"Resolving latest enabled version for secret {secret_id}.")
 
         try:

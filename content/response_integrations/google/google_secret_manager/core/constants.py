@@ -29,9 +29,9 @@ WORKLOAD_IDENTITY_EMAIL_PARAM: str = "Workload Identity Email"
 VERIFY_SSL_PARAM: str = "Verify SSL"
 
 # Secret Manager API defaults
-DEFAULT_SECRET_VERSION: str = "latest"
-SECRET_MANAGER_API_BASE: str = "https://secretmanager.googleapis.com/v1"
-SECRET_MANAGER_SCOPE: str = "https://www.googleapis.com/auth/cloud-platform"
+DEFAULT_SECRET_VERSION: str = "latest"  # noqa: S105
+SECRET_MANAGER_API_BASE: str = "https://secretmanager.googleapis.com/v1"  # noqa: S105
+SECRET_MANAGER_SCOPE: str = "https://www.googleapis.com/auth/cloud-platform"  # noqa: S105
 
 # Job parameter names
 ENVIRONMENT_NAME_PARAM: str = "Environment Name"
@@ -48,3 +48,6 @@ ANY_INTEGRATION_FILTER_VALUE: str = "-"
 # Async concurrency control
 ASYNC_SEMAPHORE_LIMIT: int = 10
 TIMEOUT_THRESHOLD_MS: int = 1000 * 540
+
+# Masking configurations
+MIN_MASK_LENGTH: int = 6

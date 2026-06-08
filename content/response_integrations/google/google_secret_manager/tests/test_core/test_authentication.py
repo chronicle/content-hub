@@ -16,10 +16,14 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import google.auth.exceptions
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from google_secret_manager.core.authentication import (
     IntegrationParameters,
@@ -40,9 +44,6 @@ from google_secret_manager.core.constants import (
 from google_secret_manager.core.exceptions import (
     GoogleSecretManagerError,
     InvalidConfigurationError,
-)
-from google_secret_manager.tests.core.factories import (
-    make_sa_json,
 )
 
 
@@ -178,6 +179,7 @@ class TestGetCredentialsFunctions:
     def test_get_credentials_using_service_account_success(
         self,
         mock_sa_credentials: MagicMock,
+        make_sa_json: Callable[..., str],
     ) -> None:
         """Resolves credentials and project_id from SA json."""
         sa_json = make_sa_json(project_id="test-proj")
@@ -188,6 +190,7 @@ class TestGetCredentialsFunctions:
     def test_get_credentials_using_service_account_override_project_id(
         self,
         mock_sa_credentials: MagicMock,
+        make_sa_json: Callable[..., str],
     ) -> None:
         """Resolves credentials and prefers explicit project ID over JSON."""
         sa_json = make_sa_json(project_id="json-proj")
