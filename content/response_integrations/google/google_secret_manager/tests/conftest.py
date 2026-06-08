@@ -31,5 +31,6 @@ def mock_sa_credentials() -> MagicMock:
         "google.oauth2.service_account.Credentials.from_service_account_info",
     ) as mock_from_sa:
         mock_creds: MagicMock = MagicMock()
+        mock_creds.with_scopes.return_value = mock_creds
         mock_from_sa.return_value = mock_creds
         yield mock_creds
