@@ -18,6 +18,8 @@ import dataclasses
 import tomllib
 from typing import TYPE_CHECKING
 
+import yaml
+
 from mp.core import constants
 from mp.core.exceptions import FatalValidationError
 
@@ -25,41 +27,92 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+def _validate_action_file(action_file: Path, errors: list[str]) -> None:
+    """Validate parameters in a single action YAML file.
+
+    Args:
+        action_file: Path to the action YAML file.
+        errors: List to accumulate error messages.
+
+    """
+    try:
+        action_data = yaml.safe_load(action_file.read_text(encoding="utf-8"))
+    except (yaml.YAMLError, OSError):
+        # Skip if we can't parse or read it, let other checks handle it
+        return
+
+    if not action_data or not isinstance(action_data, dict):
+        return
+
+    parameters = action_data.get("parameters")
+    if not isinstance(parameters, list) or not parameters:
+        return
+
+    for param in parameters:
+        if not isinstance(param, dict):
+            continue
+        param_name = param.get("name", "Unknown")
+        if "description" not in param:
+            errors.append(
+                f"Action '{action_file.stem}' parameter '{param_name}' "
+                "is missing 'description' field."
+            )
+        else:
+            param_desc = param.get("description")
+            if not isinstance(param_desc, str) or not param_desc.strip():
+                errors.append(
+                    f"Action '{action_file.stem}' parameter '{param_name}' "
+                    "has an empty 'description' field."
+                )
+
+
 @dataclasses.dataclass(slots=True, frozen=True)
 class IntegrationDescriptionValidation:
-    """Validate that the integration has a description in pyproject.toml."""
+    """Validate description fields for integrations and their action parameters."""
 
     name: str = "Integration Description Validation"
 
     @staticmethod
     def run(path: Path) -> None:
-        """Check that the integration has a description in pyproject.toml.
+        """Run validation for integration and action parameter descriptions.
 
         Args:
             path: The path of the integration to validate.
 
         Raises:
-            FatalValidationError: If the description is missing or empty.
+            FatalValidationError: If any description is missing or empty.
 
         """
+        errors: list[str] = []
+
         pyproject_path = path / constants.PROJECT_FILE
-        if not pyproject_path.exists():
-            # Structure validation should catch this, but we skip to avoid crash
-            return
+        if pyproject_path.exists():
+            data = None
+            try:
+                with pyproject_path.open("rb") as f:
+                    data = tomllib.load(f)
+            except (tomllib.TOMLDecodeError, OSError):
+                # Skip if we can't parse it, let other validations handle it
+                pass
 
-        try:
-            with pyproject_path.open("rb") as f:
-                data = tomllib.load(f)
-        except (tomllib.TOMLDecodeError, OSError):
-            # If we can't parse it, we skip and let other validations (or loader) fail
-            return
+            if data is not None:
+                project = data.get("project", {})
+                if "description" not in project:
+                    errors.append(
+                        f"Integration is missing the 'description' field in {constants.PROJECT_FILE}."
+                    )
+                else:
+                    description = project.get("description")
+                    if not isinstance(description, str) or not description.strip():
+                        errors.append(
+                            f"Integration has an empty 'description' field in {constants.PROJECT_FILE}."
+                        )
 
-        project = data.get("project", {})
-        if "description" not in project:
-            msg = f"Integration '{path.name}' is missing the 'description' field in {constants.PROJECT_FILE}."
-            raise FatalValidationError(msg)
+        # 2. Check Action Parameter Descriptions
+        actions_dir = path / constants.ACTIONS_DIR
+        if actions_dir.exists() and actions_dir.is_dir():
+            for action_file in actions_dir.rglob(f"*{constants.YAML_SUFFIX}"):
+                _validate_action_file(action_file, errors)
 
-        description = project.get("description")
-        if not isinstance(description, str) or not description.strip():
-            msg = f"Integration '{path.name}' has an empty 'description' field in {constants.PROJECT_FILE}."
-            raise FatalValidationError(msg)
+        if errors:
+            raise FatalValidationError("\n".join(errors))
