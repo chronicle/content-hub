@@ -385,11 +385,8 @@ class SyncIntegrationCredentialJob(Job):
                         param_mapping,
                     )
                 except Exception as e:
-                    self.logger.exception(
-                        "Failed to update instance '%s'",
-                        name,
-                    )
-                    self._sync_errors.append(f"Failed to update instance '{name}': {e}")
+                    self.logger.exception(f"Failed to update instance '{name}': {e}")
+                    self._sync_errors.append(f"Failed to update instance '{name}'")
 
         tasks = list(starmap(update_task, instances.items()))
         await asyncio.gather(*tasks)
@@ -556,11 +553,8 @@ class SyncIntegrationCredentialJob(Job):
                         param_mapping,
                     )
                 except Exception as e:
-                    self.logger.exception(
-                        "Failed to update connector '%s'",
-                        name,
-                    )
-                    self._sync_errors.append(f"Failed to update connector '{name}': {e}")
+                    self.logger.exception(f"Failed to update connector '{name}': {e}")
+                    self._sync_errors.append(f"Failed to update connector '{name}'")
 
         tasks = list(starmap(update_task, connectors.items()))
         await asyncio.gather(*tasks)
@@ -724,11 +718,8 @@ class SyncIntegrationCredentialJob(Job):
                         name_to_job,
                     )
                 except Exception as e:
-                    self.logger.exception(
-                        "Failed to update job '%s'",
-                        job_name,
-                    )
-                    self._sync_errors.append(f"Failed to update job '{job_name}': {e}")
+                    self.logger.exception(f"Failed to update job '{job_name}': {e}")
+                    self._sync_errors.append(f"Failed to update job '{job_name}'")
 
         tasks = list(starmap(update_task, jobs.items()))
         await asyncio.gather(*tasks)
@@ -737,7 +728,7 @@ class SyncIntegrationCredentialJob(Job):
         self,
         api: AsyncMarketplaceApi,
     ) -> list[SingleJson] | None:
-        """Fetch and normalise the list of installed jobs.
+        """Fetch and normalize the list of installed jobs.
 
         Returns:
             A flat list of job instance dicts, or ``None`` if the fetch fails or the
