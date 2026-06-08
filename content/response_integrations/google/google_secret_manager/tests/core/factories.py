@@ -20,7 +20,7 @@ import json
 from typing import Any
 from unittest.mock import MagicMock
 
-from google.cloud import secretmanager
+from google_secret_manager.core.manager import GoogleSecretManagerClient
 
 # ---------------------------------------------------------------------------
 # Fake Service Account JSON
@@ -52,38 +52,11 @@ def make_sa_json(
     return json.dumps(info)
 
 
-# ---------------------------------------------------------------------------
-# Mock SecretVersion proto
-# ---------------------------------------------------------------------------
+def make_client(**kwargs: Any) -> GoogleSecretManagerClient:
+    """Build a GoogleSecretManagerClient with a default mock logger."""
+    kwargs.setdefault("logger", MagicMock())
 
-
-def make_secret_version(
-    project_id: str = "test-project",
-    secret_id: str = "my-secret",
-    version_id: str = "1",
-    state: int = secretmanager.SecretVersion.State.ENABLED,
-) -> MagicMock:
-    """Build a mock ``SecretVersion`` protobuf object."""
-    version: MagicMock = MagicMock()
-    version.name = f"projects/{project_id}/secrets/{secret_id}/versions/{version_id}"
-    version.state = state
-
-    return version
-
-
-# ---------------------------------------------------------------------------
-# Mock AccessSecretVersionResponse
-# ---------------------------------------------------------------------------
-
-
-def make_access_response(
-    payload_data: bytes = b"super-secret-value",
-) -> MagicMock:
-    """Build a mock ``AccessSecretVersionResponse``."""
-    response: MagicMock = MagicMock()
-    response.payload.data = payload_data
-
-    return response
+    return GoogleSecretManagerClient(**kwargs)
 
 
 # ---------------------------------------------------------------------------

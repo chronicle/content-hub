@@ -113,7 +113,13 @@ class SyncIntegrationCredentialJob(Job):
         self.logger.info("'Sync Integration Credential Job' completed.")
 
     async def _async_main(self) -> None:
-        """Main async execution."""
+        """Execute the main asynchronous flow.
+
+        Raises:
+            IntegrationCredentialSyncError: If one or more errors occur
+                during credential synchronization.
+
+        """
         self._init_secret_manager_client()
         self._load_context()
         async_soar = AsyncChronicleSOAR(self.soar_job)
@@ -157,13 +163,15 @@ class SyncIntegrationCredentialJob(Job):
 
         try:
             loaded = yaml.safe_load(context_str)
-            if isinstance(loaded, dict):
-                self.state_context = loaded
-            else:
-                self.logger.warn("Parsed job context is not a dictionary. Starting fresh.")
-                self.state_context = {}
         except Exception as e:
             self.logger.warn(f"Failed to parse job context: {e}. Starting fresh.")
+            self.state_context = {}
+            return
+
+        if isinstance(loaded, dict):
+            self.state_context = loaded
+        else:
+            self.logger.warn("Parsed job context is not a dictionary. Starting fresh.")
             self.state_context = {}
 
     def _save_context(self) -> None:
@@ -175,8 +183,8 @@ class SyncIntegrationCredentialJob(Job):
                 property_key="sync_credentials_state",
                 property_value=json.dumps(self.state_context),
             )
-        except Exception as e:
-            self.logger.error(f"Failed to save job context state: {e}")
+        except Exception:
+            self.logger.exception("Failed to save job context state.")
 
     async def _fetch_secret_value_pre_resolved(
         self,
@@ -185,7 +193,20 @@ class SyncIntegrationCredentialJob(Job):
         *,
         context_label: str,
     ) -> str:
-        """Fetch the secret value for a pre-resolved secret and version."""
+        """Fetch the secret value for a pre-resolved secret and version.
+
+        Args:
+            secret_id (str): The ID of the secret.
+            version_id (str): The version of the secret to retrieve.
+            context_label (str): Context label for logging/errors.
+
+        Returns:
+            str: The retrieved secret value.
+
+        Raises:
+            SecretAccessError: If the secret value cannot be fetched.
+
+        """
         cache_key = (secret_id, version_id)
         if cache_key in self._secret_cache:
             self.logger.info(
@@ -207,10 +228,17 @@ class SyncIntegrationCredentialJob(Job):
             ) from e
 
         self._secret_cache[cache_key] = secret_value
+
         return secret_value
 
     def _is_approaching_timeout(self) -> bool:
-        """Check if the job is approaching its timeout."""
+        """Check if the job is approaching its timeout.
+
+        Returns:
+            bool: True if the execution time is nearing the timeout threshold,
+                False otherwise.
+
+        """
         if not self.job_start_time:
             return False
 
@@ -309,8 +337,8 @@ class SyncIntegrationCredentialJob(Job):
                         api, name, param_mapping,
                     )
                 except Exception as e:
-                    self.logger.error(
-                        f"Failed to update instance '{name}': {e}",
+                    self.logger.exception(
+                        f"Failed to update instance '{name}'",
                     )
                     self._sync_errors.append(f"Failed to update instance '{name}': {e}")
 
@@ -321,7 +349,16 @@ class SyncIntegrationCredentialJob(Job):
         self,
         instances: list[SingleJson],
     ) -> NameIdentifierMap:
-        """Build a name → identifier mapping from raw JSON instances."""
+        """Build a name → identifier mapping from raw JSON instances.
+
+        Args:
+            instances (list[SingleJson]): The list of raw JSON instance data.
+
+        Returns:
+            NameIdentifierMap: A dictionary mapping instance display names
+                to their identifiers.
+
+        """
         return build_lookup_with_warnings(
             items=instances,
             get_key=lambda i: i.get("displayName") or i.get("instanceName", ""),
@@ -395,6 +432,9 @@ class SyncIntegrationCredentialJob(Job):
             identifier (str): Resolved instance identifier.
             param_mapping (SingleJson): Param names to secret IDs.
 
+        Raises:
+            ParameterUpdateError: If updating a parameter fails.
+
         """
         for param_name, mapped_value in param_mapping.items():
             context: str = f"param '{param_name}' on instance '{name}' (id: {identifier})"
@@ -467,8 +507,8 @@ class SyncIntegrationCredentialJob(Job):
                         api, name, param_mapping,
                     )
                 except Exception as e:
-                    self.logger.error(
-                        f"Failed to update connector '{name}': {e}",
+                    self.logger.exception(
+                        f"Failed to update connector '{name}'",
                     )
                     self._sync_errors.append(f"Failed to update connector '{name}': {e}")
 
@@ -617,8 +657,8 @@ class SyncIntegrationCredentialJob(Job):
                         api, job_name, param_mapping, name_to_job,
                     )
                 except Exception as e:
-                    self.logger.error(
-                        f"Failed to update job '{job_name}': {e}",
+                    self.logger.exception(
+                        f"Failed to update job '{job_name}'",
                     )
                     self._sync_errors.append(f"Failed to update job '{job_name}': {e}")
 
@@ -792,6 +832,9 @@ class SyncIntegrationCredentialJob(Job):
         Returns:
             A (job_data, parameters) tuple, or None on failure.
 
+        Raises:
+            JobFetchError: If fetching the job details fails.
+
         """
         job_instance_id: str | None = job_data.get("id")
         if job_instance_id is None:
@@ -883,7 +926,8 @@ class SyncIntegrationCredentialJob(Job):
             if self.state_context.get(state_key) == state_val:
                 self.logger.info(
                     f"Skipping '{param_name}' on job '{job_name}' — "
-                    f"already up-to-date with secret '{mask_id(secret_id)}' (version '{version_id}')."
+                    f"already up-to-date with secret '{mask_id(secret_id)}' "
+                    f"(version '{version_id}')."
                 )
                 continue
 
@@ -918,6 +962,9 @@ class SyncIntegrationCredentialJob(Job):
             job_name (str): Display name (for logging).
             job_data (SingleJson): The full job dict with updated parameters.
             updated_count (int): Number of params changed (for logging).
+
+        Raises:
+            JobSaveError: If saving the job data back to the platform fails.
 
         """
         try:

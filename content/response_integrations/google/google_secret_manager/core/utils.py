@@ -16,12 +16,56 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+import requests
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from TIPCommon.base.interfaces import ScriptLogger
+    from TIPCommon.types import SingleJson
+
+
+def validate_response(response: requests.Response) -> None:
+    """Validate an HTTP response, raising enriched errors for Google API failures.
+
+    Args:
+        response (requests.Response): The HTTP response to validate.
+
+    Raises:
+        requests.HTTPError: If the response status is not 2xx. When the response
+            body contains a Google API error message, the exception message is
+            enriched with that detail and the HTTP status code.
+
+    """
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as error:
+        error_message = None
+        try:
+            error_data = response.json()
+            error_message = error_data.get("error", {}).get("message")
+        except Exception:
+            pass
+        if error_message:
+            raise requests.HTTPError(
+                f"{error_message} (HTTP {response.status_code})",
+                response=response,
+            ) from error
+        raise
 
 
 def mask_id(value: str) -> str:
-    """Mask a secret ID for safe logging."""
+    """Mask a secret ID for safe logging.
+
+    Args:
+        value (str): The secret ID to mask.
+
+    Returns:
+        str: The masked secret ID.
+
+    """
     if len(value) <= 6:
         return "***"
 
@@ -29,13 +73,13 @@ def mask_id(value: str) -> str:
 
 
 def build_lookup_with_warnings(
-    items: list,
+    items: list[Any],
     get_key: Callable[[Any], Any],
     get_value: Callable[[Any], Any],
     entity_type: str,
-    logger: Any,
-) -> dict:
-    """Generic helper to build a lookup dict and warn on duplicates.
+    logger: ScriptLogger,
+) -> SingleJson:
+    """Build a lookup dictionary from a list and warn on duplicates.
 
     Args:
         items: The list of items to process.

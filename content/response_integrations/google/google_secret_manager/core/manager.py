@@ -12,15 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Client for interacting with Google Secret Manager."""
+
 from __future__ import annotations
 
 import base64
-import logging
 from typing import TYPE_CHECKING
-
-import requests
-from google.auth.transport.requests import AuthorizedSession
-from google.cloud import secretmanager
 
 from .authentication import create_authorized_session, get_credentials
 from .constants import (
@@ -33,12 +30,12 @@ from .exceptions import (
     InvalidConfigurationError,
     SecretAccessError,
 )
+from .utils import validate_response
 
 if TYPE_CHECKING:
-    from google.cloud.secretmanager_v1.services.secret_manager_service import (
-        SecretManagerServiceClient,
-    )
-    from google.cloud.secretmanager_v1.types import AccessSecretVersionResponse
+    import requests
+    from google.auth.transport.requests import AuthorizedSession
+    from TIPCommon.base.interfaces.logger import ScriptLogger
 
 
 class GoogleSecretManagerClient:
@@ -49,8 +46,8 @@ class GoogleSecretManagerClient:
         service_account_json: str | None = None,
         project_id: str | None = None,
         workload_identity_email: str | None = None,
-        logger: logging.Logger | None = None,
         *,
+        logger: ScriptLogger,
         verify_ssl: bool = True,
     ) -> None:
         """Initialize the Google Secret Manager Client.
@@ -66,7 +63,7 @@ class GoogleSecretManagerClient:
             project_id (str | None): The Google Cloud Project ID.
             workload_identity_email (str | None): The service account email to
                 impersonate when using Workload Identity / ADC authentication.
-            logger (logging.Logger | None): Optional logger instance for logging.
+            logger (ScriptLogger): Logger instance for logging.
             verify_ssl (bool): Whether to verify the server's SSL certificate.
                 Defaults to True.
 
@@ -75,7 +72,7 @@ class GoogleSecretManagerClient:
                 email is provided, or if Project ID is missing.
 
         """
-        self.logger: logging.Logger | None = logger
+        self.logger: ScriptLogger = logger
         self.verify_ssl: bool = verify_ssl
 
         self.credentials, self.project_id = get_credentials(
@@ -93,21 +90,9 @@ class GoogleSecretManagerClient:
             )
             raise InvalidConfigurationError(msg)
 
-        self._service_client: SecretManagerServiceClient | None = None
-        self._session: AuthorizedSession | None = None
-
-        if self.verify_ssl:
-            self._init_grpc_transport()
-        else:
-            self._session = create_authorized_session(
-                credentials=self.credentials,
-                verify_ssl=self.verify_ssl,
-            )
-
-    def _init_grpc_transport(self) -> None:
-        """Initialize the gRPC-based Secret Manager client."""
-        self._service_client = secretmanager.SecretManagerServiceClient(
+        self._session: AuthorizedSession = create_authorized_session(
             credentials=self.credentials,
+            verify_ssl=self.verify_ssl,
         )
 
     def _rest_get(self, path: str, params: dict | None = None) -> dict:
@@ -121,33 +106,12 @@ class GoogleSecretManagerClient:
         Returns:
             dict: The parsed JSON response body.
 
-        Raises:
-            requests.HTTPError: If the response status is not 2xx.
-
         """
-        assert self._session is not None  # noqa: S101
         url: str = f"{SECRET_MANAGER_API_BASE}/{path}"
         response: requests.Response = self._session.get(url, params=params)
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as error:
-            error_message = None
-            try:
-                error_data = response.json()
-                error_message = error_data.get("error", {}).get("message")
-            except Exception:
-                pass
-            if error_message:
-                raise requests.HTTPError(
-                    f"{error_message} (HTTP {response.status_code})",
-                    response=response,
-                ) from error
-            raise
-        return response.json()
+        validate_response(response)
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+        return response.json()
 
     def test_connectivity(self) -> bool:
         """Test connectivity to Google Secret Manager.
@@ -160,34 +124,19 @@ class GoogleSecretManagerClient:
             ConnectivityError: If the connectivity tests fail.
 
         """
-        if self.logger:
-            self.logger.info("Testing connectivity to Google Secret Manager.")
+        self.logger.info("Testing connectivity to Google Secret Manager.")
         try:
-            if self._service_client:
-                parent: str = f"projects/{self.project_id}"
-                results = self._service_client.list_secrets(
-                    request={"parent": parent, "page_size": 1},
-                )
-                # Attempt to iterate to trigger the API call
-                next(iter(results), None)
-            else:
-                self._rest_get(
-                    f"projects/{self.project_id}/secrets",
-                    params={"pageSize": "1"},
-                )
-        except GoogleSecretManagerError as e:
-            if self.logger:
-                self.logger.error(f"Failed to connect to Google Secret Manager: {e}")
+            self._rest_get(
+                f"projects/{self.project_id}/secrets",
+                params={"pageSize": "1"},
+            )
+        except GoogleSecretManagerError:
             raise
         except Exception as e:
-            msg: str = f"Failed to connect to Google Secret Manager: {e}"
-            if self.logger:
-                self.logger.error(msg)
-            raise ConnectivityError(msg) from e
-        else:
-            if self.logger:
-                self.logger.info("Successfully connected to Google Secret Manager.")
-            return True
+            raise ConnectivityError(str(e)) from e
+
+        self.logger.info("Successfully connected to Google Secret Manager.")
+        return True
 
     def resolve_latest_enabled_version(self, secret_id: str) -> str:
         """Resolve the latest enabled version for a given secret.
@@ -206,66 +155,46 @@ class GoogleSecretManagerClient:
 
         """
         parent: str = f"projects/{self.project_id}/secrets/{secret_id}"
-        if self.logger:
-            self.logger.info(f"Resolving latest enabled version for secret {secret_id}.")
+        self.logger.info(f"Resolving latest enabled version for secret {secret_id}.")
 
         try:
-            if self._service_client:
-                versions = list(
-                    self._service_client.list_secret_versions(request={"parent": parent}),
-                )
-            else:
-                data: dict = self._rest_get(f"{parent}/versions")
-                versions = data.get("versions", [])
+            data: dict = self._rest_get(f"{parent}/versions")
+            versions = data.get("versions", [])
         except Exception as e:  # noqa: BLE001
-            # If we fail to list versions (e.g., permission issue), fall
-            # through.  The subsequent get_secret_value call will raise a
-            # proper SecretAccessError.
-            if self.logger:
-                self.logger.warn(
-                    f"Failed to list secret versions for '{secret_id}' ({e}). "
-                    f"Falling back to default version '{DEFAULT_SECRET_VERSION}'."
-                )
+            self.logger.warn(
+                f"Failed to list secret versions for '{secret_id}' ({e}). "
+                f"Falling back to default version '{DEFAULT_SECRET_VERSION}'."
+            )
             return DEFAULT_SECRET_VERSION
 
         latest_version_number: int = -1
         latest_version_id: str | None = None
 
         for version in versions:
-            # gRPC client returns protobuf objects with .state enum;
-            # REST API returns dicts with "state" string.
-            if self._service_client:
-                if version.state != secretmanager.SecretVersion.State.ENABLED:
-                    continue
-                version_id: str = version.name.split("/")[-1]
-            else:
-                if version.get("state") != "ENABLED":
-                    continue
-                version_id = version["name"].split("/")[-1]
+            if version.get("state") != "ENABLED":
+                continue
+
+            version_id = version["name"].split("/")[-1]
 
             try:
                 version_number: int = int(version_id)
             except ValueError:
                 continue
+
             if version_number > latest_version_number:
                 latest_version_number = version_number
                 latest_version_id = version_id
 
         if latest_version_id is not None:
-            if self.logger:
-                self.logger.info(
-                    "Resolved latest enabled version for '%s' to '%s'.",
-                    secret_id,
-                    latest_version_id,
-                )
+            self.logger.info(
+                f"Resolved latest enabled version for '{secret_id}' to '{latest_version_id}'."
+            )
             return latest_version_id
 
-        if self.logger:
-            self.logger.warning(
-                "No enabled versions found for secret '%s'. Falling back to default version '%s'.",
-                secret_id,
-                DEFAULT_SECRET_VERSION,
-            )
+        self.logger.warn(
+            f"No enabled versions found for secret '{secret_id}'. "
+            f"Falling back to default version '{DEFAULT_SECRET_VERSION}'."
+        )
         return DEFAULT_SECRET_VERSION
 
     def get_secret_value(self, secret_id: str, version_id: str = DEFAULT_SECRET_VERSION) -> str:
@@ -284,26 +213,17 @@ class GoogleSecretManagerClient:
 
         """
         name: str = f"projects/{self.project_id}/secrets/{secret_id}/versions/{version_id}"
-        if self.logger:
-            self.logger.info("Accessing secret '%s' version '%s'.", secret_id, version_id)
+        self.logger.info(f"Accessing secret '{secret_id}' version '{version_id}'.")
 
         try:
-            if self._service_client:
-                response: AccessSecretVersionResponse = (
-                    self._service_client.access_secret_version(request={"name": name})
-                )
-                payload: bytes = response.payload.data
-            else:
-                data: dict = self._rest_get(f"{name}:access")
-                # REST API returns payload.data as a base64-encoded string.
-                payload = base64.b64decode(data["payload"]["data"])
-            if self.logger:
-                self.logger.info("Successfully retrieved payload for secret '%s'.", secret_id)
+            data: dict = self._rest_get(f"{name}:access")
+            payload = base64.b64decode(data["payload"]["data"])
+            self.logger.info(f"Successfully retrieved payload for secret '{secret_id}'.")
         except Exception as e:
-            msg: str = f"Failed to access secret version '{version_id}': {e}"
-            if self.logger:
-                self.logger.error("Failed to access secret '%s' version '%s': %s", secret_id, version_id, e)
-            raise SecretAccessError(msg) from e
+            self.logger.exception(
+                f"Failed to access secret '{secret_id}' version '{version_id}'."
+            )
+            raise SecretAccessError(str(e)) from e
 
         try:
             return payload.decode("UTF-8")
@@ -314,11 +234,7 @@ class GoogleSecretManagerClient:
                 f"This integration only supports "
                 f"text-based secrets (UTF-8 encoded)."
             )
-            if self.logger:
-                self.logger.error(
-                    "Failed to decode secret '%s' version '%s' as UTF-8.",
-                    secret_id,
-                    version_id,
-                )
+            self.logger.exception(
+                f"Failed to decode secret '{secret_id}' version '{version_id}' as UTF-8."
+            )
             raise SecretAccessError(msg) from e
-

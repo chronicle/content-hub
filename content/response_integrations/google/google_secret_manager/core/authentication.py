@@ -205,17 +205,18 @@ def get_credentials(
     if workload_identity_email:
         credentials = _get_credentials_using_workload_identity_email(workload_identity_email)
         return credentials, project_id
-    elif service_account_json:
+
+    if service_account_json:
         return _get_credentials_using_service_account(service_account_json, project_id)
-    else:
-        msg = (
-            "Either 'Service Account JSON' or 'Workload Identity Email' "
-            "must be provided to authenticate with Google Secret Manager."
-        )
-        raise InvalidConfigurationError(msg)
+
+    msg = (
+        "Either 'Service Account JSON' or 'Workload Identity Email' "
+        "must be provided to authenticate with Google Secret Manager."
+    )
+    raise InvalidConfigurationError(msg)
 
 
-def prepare_auth_request(verify_ssl: bool = True) -> google.auth.transport.requests.Request:
+def prepare_auth_request(*, verify_ssl: bool = True) -> google.auth.transport.requests.Request:
     """Prepare an auth request for credential token refresh.
 
     Args:
@@ -238,6 +239,7 @@ def prepare_auth_request(verify_ssl: bool = True) -> google.auth.transport.reque
 
 def create_authorized_session(
     credentials: google.auth.credentials.Credentials,
+    *,
     verify_ssl: bool = True,
 ) -> AuthorizedSession:
     """Create an authorized REST session.

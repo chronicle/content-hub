@@ -22,22 +22,6 @@ pytest_plugins = ("integration_testing.conftest",)
 
 
 @pytest.fixture
-def mock_sm_service_client() -> MagicMock:
-    """Patch the gRPC SecretManagerServiceClient.
-
-    Returns a ``MagicMock`` that stands in for the real client so
-    tests can configure return values on ``list_secrets``,
-    ``list_secret_versions``, and ``access_secret_version``.
-    """
-    with patch(
-        "google.cloud.secretmanager.SecretManagerServiceClient",
-    ) as mock_cls:
-        mock_instance: MagicMock = MagicMock()
-        mock_cls.return_value = mock_instance
-        yield mock_instance
-
-
-@pytest.fixture
 def mock_sa_credentials() -> MagicMock:
     """Patch ``service_account.Credentials.from_service_account_info``.
 

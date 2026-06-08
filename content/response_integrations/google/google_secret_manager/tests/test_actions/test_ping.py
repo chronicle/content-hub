@@ -34,22 +34,23 @@ class TestPing:
         "google.oauth2.service_account.Credentials.from_service_account_info",
     )
     @patch(
-        "google.cloud.secretmanager.SecretManagerServiceClient",
+        "google_secret_manager.core.manager.GoogleSecretManagerClient._rest_get",
     )
     def test_ping_success(
         self,
-        mock_sm_cls: MagicMock,
+        mock_rest_get: MagicMock,
         mock_sa_from_info: MagicMock,
         action_output: MockActionOutput,
     ) -> None:
         """Ping succeeds when test_connectivity returns True."""
-        mock_instance: MagicMock = MagicMock()
-        mock_sm_cls.return_value = mock_instance
-        mock_instance.list_secrets.return_value = iter([])
+        mock_rest_get.return_value = {}
 
         ping.main()
 
-        mock_instance.list_secrets.assert_called_once()
+        mock_rest_get.assert_called_once_with(
+            "projects/test-project/secrets",
+            params={"pageSize": "1"},
+        )
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert "Successfully connected" in (action_output.results.output_message)
 
@@ -58,20 +59,16 @@ class TestPing:
         "google.oauth2.service_account.Credentials.from_service_account_info",
     )
     @patch(
-        "google.cloud.secretmanager.SecretManagerServiceClient",
+        "google_secret_manager.core.manager.GoogleSecretManagerClient._rest_get",
     )
     def test_ping_failure(
         self,
-        mock_sm_cls: MagicMock,
+        mock_rest_get: MagicMock,
         mock_sa_from_info: MagicMock,
         action_output: MockActionOutput,
     ) -> None:
         """Ping reports failure when connectivity fails."""
-        mock_instance: MagicMock = MagicMock()
-        mock_sm_cls.return_value = mock_instance
-        mock_instance.list_secrets.side_effect = Exception(
-            "Connection refused",
-        )
+        mock_rest_get.side_effect = Exception("Connection refused")
 
         ping.main()
 
