@@ -595,11 +595,11 @@ class SiemplifyApiClient:
     def get_integration_connectors(self, chronicle_soar: ChronicleSoar, integration_name: str) -> list[SingleJson]:
         return get_integration_connectors(chronicle_soar=chronicle_soar, integration_name=integration_name)
 
-    def get_jobs(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
+    def get_jobs(self, chronicle_soar: ChronicleSoar, enrich: bool = True) -> list[SingleJson]:
         res = get_installed_jobs(chronicle_soar=chronicle_soar)
         jobs = res if isinstance(res, list) else res.get("job_instances", [])
         
-        if not platform_supports_1p_api():
+        if not platform_supports_1p_api() or not enrich:
             return jobs
             
         enriched_jobs = []
@@ -618,6 +618,7 @@ class SiemplifyApiClient:
             enriched_jobs.append(job)
             
         return enriched_jobs
+
 
     def add_job(self, job, job_definition_id=None):
         return add_job(self.siemplify_soar, job, job_definition_id)

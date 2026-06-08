@@ -410,7 +410,7 @@ ROOT_README = """# GitSync
 |Name|Description|
 |----|-----------|
 {% for job in jobs -%}
-|{{ job.name }}|{{ job.description }}|
+|{{ job.displayName }}|{{ job.description }}|
 {% endfor %}
 {% endif -%}
 

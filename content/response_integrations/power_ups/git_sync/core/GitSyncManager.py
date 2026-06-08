@@ -289,7 +289,7 @@ class GitSyncManager:
         installed_version = self.get_installed_integration_version(
             connector.integration,
         )
-        if not installed_version:
+        if not installed_version or installed_version == "0.0":
             self.logger.info(
                 f"Connector {connector.name} integration ({connector.integration}) not installed",
             )
@@ -484,7 +484,7 @@ class GitSyncManager:
             existing_job = next(
                 (
                     x
-                    for x in self.api.get_jobs(chronicle_soar=self._siemplify)
+                    for x in self.api.get_jobs(chronicle_soar=self._siemplify, enrich=False)
                     if x.get("displayName") == job.raw_data.get("displayName")
                 ),
                 None,
@@ -520,7 +520,7 @@ class GitSyncManager:
             existing_job = next(
                 (
                     x
-                    for x in self.api.get_jobs(chronicle_soar=self._siemplify)
+                    for x in self.api.get_jobs(chronicle_soar=self._siemplify, enrich=False)
                     if x.get("name") == job.name or x.get("displayName") == job.name
                 ),
                 None,
@@ -571,7 +571,11 @@ class GitSyncManager:
         ]
 
         jobs = [
-            {"name": job.name, "description": strip_new_lines(job.description)}
+            {
+                "name": job.name,
+                "displayName": job.displayName,
+                "description": strip_new_lines(job.description),
+            }
             for job in self.content.get_jobs()
         ]
 

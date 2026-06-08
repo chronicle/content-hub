@@ -576,7 +576,11 @@ class Job(Content):
         raw_data["id"] = 0
         self.raw_data = raw_data
         self.name = self.raw_data.get("name")
-        self.displayName = self.raw_data.get("displayName") or self.raw_data.get("name")
+        display_name = self.raw_data.get("displayName") or self.raw_data.get("name")
+        if isinstance(display_name, str):
+            display_name = " ".join(display_name.split())
+        self.displayName = display_name
+        self.raw_data["displayName"] = display_name
         self.integration = self.raw_data.get("integration")
         self.description = self.raw_data.get("description")
         self.parameters = self.raw_data.get("parameters")
@@ -592,7 +596,7 @@ class Job(Content):
         self.readme = readme.render(job=self.__dict__)
 
     def iter_files(self) -> Iterator[File]:
-        name = self.raw_data.get("displayName") or self.name
+        name = self.displayName or self.name
         name = name.replace("/", "_")
         yield File(f"Jobs/{name}.json", json.dumps(self.raw_data, indent=4))
 
