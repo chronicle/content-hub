@@ -64,21 +64,23 @@ class TestValidateParams:
     """Tests for _validate_params."""
 
     def test_valid_json(self) -> None:
-        """Parses valid JSON credential mapping."""
+        """Parses valid JSON credential mapping with valid resource names."""
         job = _make_job()
-        job.params.credential_mapping = '{"integration_instances": {"inst1": {}}}'
+        job.params.credential_mapping = '{"integration_instances": {"inst1": {"p1": "projects/123/secrets/foo"}}}'
 
         job._validate_params()
 
         assert "integration_instances" in job.credential_mapping
         assert job.credential_mapping["integration_instances"] == {
-            "inst1": {},
+            "inst1": {"p1": "projects/123/secrets/foo"},
         }
 
     def test_valid_yaml(self) -> None:
-        """Parses valid YAML credential mapping."""
+        """Parses valid YAML credential mapping with valid resource names."""
         job = _make_job()
-        job.params.credential_mapping = "integration_instances:\n  inst1: {}\n"
+        job.params.credential_mapping = (
+            "integration_instances:\n  inst1:\n    p1: projects/123/secrets/foo/versions/3\n"
+        )
 
         job._validate_params()
 
@@ -104,6 +106,28 @@ class TestValidateParams:
         ):
             job._validate_params()
 
+    def test_invalid_root_key_raises(self) -> None:
+        """Raises InvalidConfigurationError on invalid root key."""
+        job = _make_job()
+        job.params.credential_mapping = '{"invalid_root": {"inst1": {}}}'
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Invalid root keys",
+        ):
+            job._validate_params()
+
+    def test_invalid_value_format_raises(self) -> None:
+        """Raises InvalidConfigurationError on invalid parameter value format."""
+        job = _make_job()
+        job.params.credential_mapping = '{"integration_instances": {"inst1": {"p1": "short-secret-name"}}}'
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Invalid format for parameter",
+        ):
+            job._validate_params()
+
 
 # -------------------------------------------------------------------
 # Secret + Version Resolution
@@ -115,44 +139,40 @@ class TestResolveSecretAndVersion:
 
     @pytest.mark.anyio
     async def test_explicit_version(self) -> None:
-        """'my-secret:5' returns ('my-secret', '5')."""
+        """'projects/123/secrets/foo/versions/3' returns ('projects/123/secrets/foo', '3')."""
         job = _make_job()
 
         secret_id, version_id = await job._resolve_secret_and_version(
-            "my-secret:5",
+            "projects/123/secrets/foo/versions/3",
         )
 
-        assert secret_id == "my-secret"
-        assert version_id == "5"
+        assert secret_id == "projects/123/secrets/foo"
+        assert version_id == "3"
 
     @pytest.mark.anyio
-    async def test_explicit_version_with_colon_in_id(self) -> None:
-        """Splits on first colon only: 'a:b:c' → ('a', 'b:c')."""
+    async def test_invalid_format_raises(self) -> None:
+        """Raises InvalidConfigurationError for invalid format."""
         job = _make_job()
 
-        secret_id, version_id = await job._resolve_secret_and_version(
-            "a:b:c",
-        )
-
-        assert secret_id == "a"
-        assert version_id == "b:c"
+        with pytest.raises(InvalidConfigurationError, match="Invalid credential mapping format"):
+            await job._resolve_secret_and_version("my-secret:5")
 
     @pytest.mark.anyio
     async def test_auto_version_with_client(self) -> None:
-        """Calls resolve_latest_enabled_version when no colon."""
+        """Calls resolve_latest_enabled_version when no versions/ part in resource path."""
         job = _make_job()
         mock_client: MagicMock = MagicMock()
         mock_client.resolve_latest_enabled_version.return_value = "7"
         job.secret_manager_client = mock_client
 
         secret_id, version_id = await job._resolve_secret_and_version(
-            "my-secret",
+            "projects/123/secrets/foo",
         )
 
-        assert secret_id == "my-secret"
+        assert secret_id == "projects/123/secrets/foo"
         assert version_id == "7"
         mock_client.resolve_latest_enabled_version.assert_called_once_with(
-            "my-secret",
+            "projects/123/secrets/foo",
         )
 
     @pytest.mark.anyio
@@ -162,10 +182,10 @@ class TestResolveSecretAndVersion:
         job.secret_manager_client = None
 
         secret_id, version_id = await job._resolve_secret_and_version(
-            "my-secret",
+            "projects/123/secrets/foo",
         )
 
-        assert secret_id == "my-secret"
+        assert secret_id == "projects/123/secrets/foo"
         assert version_id == DEFAULT_SECRET_VERSION
 
 
@@ -295,7 +315,7 @@ class TestStateContextRegistry:
     async def test_set_integration_params_skips_when_up_to_date(self) -> None:
         """Skips fetching and setting configuration when parameter is up-to-date."""
         job = _make_job()
-        job.state_context = {"instance:inst_id:param_x": "my-secret::5"}
+        job.state_context = {"instance:inst_id:param_x": "projects/123/secrets/my-secret::5"}
 
         mock_client = MagicMock()
         mock_client.resolve_latest_enabled_version.return_value = "5"
@@ -310,7 +330,7 @@ class TestStateContextRegistry:
             api=mock_api,
             name="Instance A",
             identifier="inst_id",
-            param_mapping={"param_x": "my-secret"},
+            param_mapping={"param_x": "projects/123/secrets/my-secret"},
         )
 
         job._fetch_secret_value_pre_resolved.assert_not_called()
@@ -321,7 +341,7 @@ class TestStateContextRegistry:
         """Updates and saves to context when parameter is outdated (rotated secret)."""
         job = _make_job()
         # Old version was 5
-        job.state_context = {"instance:inst_id:param_x": "my-secret:latest::5"}
+        job.state_context = {"instance:inst_id:param_x": "projects/123/secrets/my-secret::5"}
 
         mock_client = MagicMock()
         # New resolved version is 6
@@ -337,11 +357,13 @@ class TestStateContextRegistry:
             api=mock_api,
             name="Instance A",
             identifier="inst_id",
-            param_mapping={"param_x": "my-secret"},
+            param_mapping={"param_x": "projects/123/secrets/my-secret"},
         )
 
         job._fetch_secret_value_pre_resolved.assert_called_once_with(
-            "my-secret", "6", context_label="param 'param_x' on instance 'Instance A' (id: inst_id)"
+            "projects/123/secrets/my-secret",
+            "6",
+            context_label="param 'param_x' on instance 'Instance A' (id: inst_id)",
         )
         mock_api.set_configuration_property.assert_called_once_with(
             integration_instance_identifier="inst_id",
@@ -349,7 +371,7 @@ class TestStateContextRegistry:
             property_value="new-secret-value",
         )
         # Context must be updated
-        assert job.state_context["instance:inst_id:param_x"] == "my-secret::6"
+        assert job.state_context["instance:inst_id:param_x"] == "projects/123/secrets/my-secret::6"
 
 
 # -------------------------------------------------------------------
@@ -443,11 +465,15 @@ class TestAggregatedErrors:
         with patch.object(job, "_init_secret_manager_client"):
             with patch.object(job, "_load_context"):
                 with patch.object(job, "_save_context"):
-                    with patch("google_secret_manager.jobs.sync_integration_credential_job.AsyncChronicleSOAR") as mock_soar_cls:
+                    with patch(
+                        "google_secret_manager.jobs.sync_integration_credential_job.AsyncChronicleSOAR"
+                    ) as mock_soar_cls:
                         mock_soar = AsyncMock()
                         mock_soar_cls.return_value = mock_soar
 
-                        with patch("google_secret_manager.jobs.sync_integration_credential_job.AsyncMarketplaceApi") as mock_market_cls:
+                        with patch(
+                            "google_secret_manager.jobs.sync_integration_credential_job.AsyncMarketplaceApi"
+                        ) as mock_market_cls:
                             # Mock the marketplace API methods
                             mock_market = AsyncMock()
                             mock_market.get_installed_integrations_of_environment.return_value = {

@@ -205,15 +205,14 @@ class TestGetSecretValue:
             project_id="test-project",
         )
         import base64
+
         encoded_data = base64.b64encode(b"my-password-123").decode("utf-8")
         mock_response = {"payload": {"data": encoded_data}}
 
         with patch.object(client, "_rest_get", return_value=mock_response) as mock_rest_get:
             result = client.get_secret_value("db-password", "3")
             assert result == "my-password-123"
-            mock_rest_get.assert_called_once_with(
-                "projects/test-project/secrets/db-password/versions/3:access"
-            )
+            mock_rest_get.assert_called_once_with("projects/test-project/secrets/db-password/versions/3:access")
 
     def test_get_secret_value_non_utf8_raises(
         self,
@@ -225,6 +224,7 @@ class TestGetSecretValue:
             project_id="test-project",
         )
         import base64
+
         # b"\x80\x81\x82\xff" is invalid UTF-8
         encoded_data = base64.b64encode(b"\x80\x81\x82\xff").decode("utf-8")
         mock_response = {"payload": {"data": encoded_data}}
@@ -245,6 +245,25 @@ class TestGetSecretValue:
         with patch.object(client, "_rest_get", side_effect=Exception("HTTP Error")):
             with pytest.raises(SecretAccessError, match="HTTP Error"):
                 client.get_secret_value("db-password", "3")
+
+    def test_get_secret_value_full_resource_name(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """Uses full resource name path directly when secret_id starts with projects/."""
+        client = make_client(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+        )
+        import base64
+
+        encoded_data = base64.b64encode(b"my-password-123").decode("utf-8")
+        mock_response = {"payload": {"data": encoded_data}}
+
+        with patch.object(client, "_rest_get", return_value=mock_response) as mock_rest_get:
+            result = client.get_secret_value("projects/other-project/secrets/my-secret", "3")
+            assert result == "my-password-123"
+            mock_rest_get.assert_called_once_with("projects/other-project/secrets/my-secret/versions/3:access")
 
 
 # -------------------------------------------------------------------
@@ -275,9 +294,27 @@ class TestResolveLatestEnabledVersion:
         with patch.object(client, "_rest_get", return_value=mock_response) as mock_rest_get:
             result = client.resolve_latest_enabled_version("my-secret")
             assert result == "7"
-            mock_rest_get.assert_called_once_with(
-                "projects/test-project/secrets/my-secret/versions"
-            )
+            mock_rest_get.assert_called_once_with("projects/test-project/secrets/my-secret/versions")
+
+    def test_picks_highest_version_number_with_full_resource_name(
+        self,
+        mock_sa_credentials: MagicMock,
+    ) -> None:
+        """Selects the highest enabled version using full resource name directly."""
+        client = make_client(
+            service_account_json=make_sa_json(),
+            project_id="test-project",
+        )
+        mock_response = {
+            "versions": [
+                {"name": "projects/other-project/secrets/my-secret/versions/3", "state": "ENABLED"},
+                {"name": "projects/other-project/secrets/my-secret/versions/7", "state": "ENABLED"},
+            ]
+        }
+        with patch.object(client, "_rest_get", return_value=mock_response) as mock_rest_get:
+            result = client.resolve_latest_enabled_version("projects/other-project/secrets/my-secret")
+            assert result == "7"
+            mock_rest_get.assert_called_once_with("projects/other-project/secrets/my-secret/versions")
 
     def test_skips_disabled_and_destroyed(
         self,
@@ -383,9 +420,7 @@ class TestRestGetErrorHandling:
         mock_response.raise_for_status.side_effect = original_error
 
         mock_response.json.return_value = {
-            "error": {
-                "message": "Permission 'secretmanager.versions.access' denied on resource."
-            }
+            "error": {"message": "Permission 'secretmanager.versions.access' denied on resource."}
         }
         client._session.get.return_value = mock_response
 

@@ -154,16 +154,21 @@ class GoogleSecretManagerClient:
                 DEFAULT_SECRET_VERSION if none are enabled.
 
         """
-        parent: str = f"projects/{self.project_id}/secrets/{secret_id}"
-        self.logger.info(f"Resolving latest enabled version for secret {secret_id}.")
+        if secret_id.startswith("projects/"):
+            parent = secret_id
+        else:
+            parent = f"projects/{self.project_id}/secrets/{secret_id}"
+        self.logger.info("Resolving latest enabled version for secret %s.", secret_id)
 
         try:
             data: dict = self._rest_get(f"{parent}/versions")
             versions = data.get("versions", [])
         except Exception as e:  # noqa: BLE001
-            self.logger.warn(
-                f"Failed to list secret versions for '{secret_id}' ({e}). "
-                f"Falling back to default version '{DEFAULT_SECRET_VERSION}'."
+            self.logger.warning(
+                "Failed to list secret versions for '%s' (%s). Falling back to default version '%s'.",
+                secret_id,
+                e,
+                DEFAULT_SECRET_VERSION,
             )
             return DEFAULT_SECRET_VERSION
 
@@ -186,14 +191,13 @@ class GoogleSecretManagerClient:
                 latest_version_id = version_id
 
         if latest_version_id is not None:
-            self.logger.info(
-                f"Resolved latest enabled version for '{secret_id}' to '{latest_version_id}'."
-            )
+            self.logger.info("Resolved latest enabled version for '%s' to '%s'.", secret_id, latest_version_id)
             return latest_version_id
 
-        self.logger.warn(
-            f"No enabled versions found for secret '{secret_id}'. "
-            f"Falling back to default version '{DEFAULT_SECRET_VERSION}'."
+        self.logger.warning(
+            "No enabled versions found for secret '%s'. Falling back to default version '%s'.",
+            secret_id,
+            DEFAULT_SECRET_VERSION,
         )
         return DEFAULT_SECRET_VERSION
 
@@ -212,17 +216,18 @@ class GoogleSecretManagerClient:
                 cannot be decoded.
 
         """
-        name: str = f"projects/{self.project_id}/secrets/{secret_id}/versions/{version_id}"
-        self.logger.info(f"Accessing secret '{secret_id}' version '{version_id}'.")
+        if secret_id.startswith("projects/"):
+            name = f"{secret_id}/versions/{version_id}"
+        else:
+            name = f"projects/{self.project_id}/secrets/{secret_id}/versions/{version_id}"
+        self.logger.info("Accessing secret '%s' version '%s'.", secret_id, version_id)
 
         try:
             data: dict = self._rest_get(f"{name}:access")
             payload = base64.b64decode(data["payload"]["data"])
-            self.logger.info(f"Successfully retrieved payload for secret '{secret_id}'.")
+            self.logger.info("Successfully retrieved payload for secret '%s'.", secret_id)
         except Exception as e:
-            self.logger.exception(
-                f"Failed to access secret '{secret_id}' version '{version_id}'."
-            )
+            self.logger.exception("Failed to access secret '%s' version '%s'.", secret_id, version_id)
             raise SecretAccessError(str(e)) from e
 
         try:
@@ -234,7 +239,5 @@ class GoogleSecretManagerClient:
                 f"This integration only supports "
                 f"text-based secrets (UTF-8 encoded)."
             )
-            self.logger.exception(
-                f"Failed to decode secret '{secret_id}' version '{version_id}' as UTF-8."
-            )
+            self.logger.exception("Failed to decode secret '%s' version '%s' as UTF-8.", secret_id, version_id)
             raise SecretAccessError(msg) from e

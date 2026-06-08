@@ -98,7 +98,7 @@ def build_lookup_with_warnings(
         if not key:
             continue
         if key in lookup:
-            logger.warn(f"Duplicate {entity_type} '{key}' detected. Later entry will overwrite.")
+            logger.warning("Duplicate %s '%s' detected. Later entry will overwrite.", entity_type, key)
         lookup[key] = get_value(item)
 
     return lookup

@@ -170,10 +170,7 @@ def _get_credentials_using_workload_identity_email(
     try:
         source_credentials, _ = google.auth.default(scopes=[SECRET_MANAGER_SCOPE])
     except google.auth.exceptions.DefaultCredentialsError as e:
-        msg: str = (
-            f"Could not resolve Application Default Credentials for Workload "
-            f"Identity impersonation: {e}"
-        )
+        msg: str = f"Could not resolve Application Default Credentials for Workload Identity impersonation: {e}"
         raise InvalidConfigurationError(msg) from e
 
     return google.auth.impersonated_credentials.Credentials(

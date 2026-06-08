@@ -40,8 +40,7 @@ class PingAction(GoogleSecretManagerAction):
             raise
 
         self.output_message = (
-            "Successfully connected to the Google Secret Manager server with the provided "
-            "connection parameters!"
+            "Successfully connected to the Google Secret Manager server with the provided connection parameters!"
         )
         self.result_value = is_connected
 

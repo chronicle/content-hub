@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
+from itertools import starmap
 from typing import TYPE_CHECKING
 
 import yaml
@@ -52,6 +54,11 @@ if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
 NameIdentifierMap = dict[str, str]
+
+RESOURCE_NAME_PATTERN: re.Pattern = re.compile(
+    r"^projects/(?P<project>[^/]+)/secrets/(?P<secret>[^/]+)"
+    r"(?:/versions/(?P<version>[^/]+))?$"
+)
 
 
 class SyncIntegrationCredentialJob(Job):
@@ -98,13 +105,44 @@ class SyncIntegrationCredentialJob(Job):
 
         Raises:
             InvalidConfigurationError: If the YAML/JSON string
-                is invalid.
+                is invalid or if the mapped values are in an invalid format.
 
         """
         try:
             self.credential_mapping = yaml.safe_load(self.params.credential_mapping) or {}
         except yaml.YAMLError as e:
             raise InvalidConfigurationError(f"Invalid Credential Mapping syntax: {e}") from e
+
+        if not isinstance(self.credential_mapping, dict):
+            raise InvalidConfigurationError("Credential Mapping must be a dictionary.")
+
+        valid_keys = {INTEGRATION_INSTANCES_KEY, CONNECTORS_KEY, JOBS_KEY}
+        invalid_keys = set(self.credential_mapping.keys()) - valid_keys
+        if invalid_keys:
+            raise InvalidConfigurationError(
+                f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. Allowed keys are: {list(valid_keys)}."
+            )
+
+        for category in valid_keys:
+            category_mapping = self.credential_mapping.get(category, {})
+            if not isinstance(category_mapping, dict):
+                raise InvalidConfigurationError(f"Category '{category}' must be a dictionary.")
+
+            for component_name, param_mapping in category_mapping.items():
+                if not isinstance(param_mapping, dict):
+                    raise InvalidConfigurationError(
+                        f"Parameters for '{component_name}' in category '{category}' must be a dictionary."
+                    )
+
+                for param_name, mapped_value in param_mapping.items():
+                    val = str(mapped_value).strip()
+                    if not RESOURCE_NAME_PATTERN.match(val):
+                        msg = (
+                            f"Invalid format for parameter '{param_name}' of '{component_name}' in category '{category}': '{val}'. "
+                            f"Expected format: 'projects/{{project}}/secrets/{{secret}}' "
+                            f"or 'projects/{{project}}/secrets/{{secret}}/versions/{{version}}'."
+                        )
+                        raise InvalidConfigurationError(msg)
 
     def _perform_job(self) -> None:
         """Fetch secrets and sync to SOAR platform."""
@@ -164,14 +202,14 @@ class SyncIntegrationCredentialJob(Job):
         try:
             loaded = yaml.safe_load(context_str)
         except Exception as e:
-            self.logger.warn(f"Failed to parse job context: {e}. Starting fresh.")
+            self.logger.warning("Failed to parse job context: %s. Starting fresh.", e)
             self.state_context = {}
             return
 
         if isinstance(loaded, dict):
             self.state_context = loaded
         else:
-            self.logger.warn("Parsed job context is not a dictionary. Starting fresh.")
+            self.logger.warning("Parsed job context is not a dictionary. Starting fresh.")
             self.state_context = {}
 
     def _save_context(self) -> None:
@@ -209,9 +247,7 @@ class SyncIntegrationCredentialJob(Job):
         """
         cache_key = (secret_id, version_id)
         if cache_key in self._secret_cache:
-            self.logger.info(
-                f"Using cached payload for secret '{mask_id(secret_id)}' (version '{version_id}')."
-            )
+            self.logger.info(f"Using cached payload for secret '{mask_id(secret_id)}' (version '{version_id}').")
             return self._secret_cache[cache_key]
 
         try:
@@ -223,9 +259,7 @@ class SyncIntegrationCredentialJob(Job):
         except SecretAccessError:
             raise
         except Exception as e:
-            raise SecretAccessError(
-                f"Failed to fetch secret '{mask_id(secret_id)}' for {context_label}: {e}"
-            ) from e
+            raise SecretAccessError(f"Failed to fetch secret '{mask_id(secret_id)}' for {context_label}: {e}") from e
 
         self._secret_cache[cache_key] = secret_value
 
@@ -252,24 +286,36 @@ class SyncIntegrationCredentialJob(Job):
         """Parse the mapped string, resolving the version if not explicitly provided.
 
         Args:
-            mapped_value (str): The value from the JSON mapping (e.g., 'secret-id:version').
+            mapped_value (str): The value from the JSON mapping (e.g., 'projects/project/secrets/secret/versions/version').
 
         Returns:
             tuple[str, str]: The (secret_id, resolved_version).
 
+        Raises:
+            InvalidConfigurationError: If the mapped value is in an invalid format.
+
         """
-        mapped_value = str(mapped_value)
-        if ":" in mapped_value:
-            secret_id: str
-            explicit_version: str
-            secret_id, explicit_version = mapped_value.split(":", 1)
-            self.logger.info(
-                f"Secret '{mask_id(secret_id)}': Using explicit version '{explicit_version}'."
+        mapped_value = str(mapped_value).strip()
+        match = RESOURCE_NAME_PATTERN.match(mapped_value)
+        if not match:
+            msg = (
+                f"Invalid credential mapping format for value '{mapped_value}'. "
+                f"Expected format: 'projects/{{project}}/secrets/{{secret}}' "
+                f"or 'projects/{{project}}/secrets/{{secret}}/versions/{{version}}'."
             )
+            raise InvalidConfigurationError(msg)
 
-            return secret_id, explicit_version
+        gd = match.groupdict()
+        project = gd["project"]
+        secret = gd["secret"]
+        version = gd["version"]
 
-        secret_id: str = mapped_value
+        secret_id = f"projects/{project}/secrets/{secret}"
+
+        if version is not None:
+            self.logger.info(f"Secret '{mask_id(secret_id)}': Using explicit version '{version}'.")
+            return secret_id, version
+
         if self.secret_manager_client:
             resolved_version: str = await asyncio.to_thread(
                 self.secret_manager_client.resolve_latest_enabled_version,
@@ -280,14 +326,9 @@ class SyncIntegrationCredentialJob(Job):
 
         masked: str = mask_id(secret_id)
         if resolved_version == DEFAULT_SECRET_VERSION:
-            self.logger.info(
-                f"Secret '{masked}': No active versions. "
-                f"Falling back to '{DEFAULT_SECRET_VERSION}'."
-            )
+            self.logger.info("Secret '%s': No active versions. Falling back to '%s'.", masked, DEFAULT_SECRET_VERSION)
         else:
-            self.logger.info(
-                f"Secret '{masked}': Resolved to latest enabled version '{resolved_version}'."
-            )
+            self.logger.info("Secret '%s': Resolved to latest enabled version '%s'.", masked, resolved_version)
 
         return secret_id, resolved_version
 
@@ -313,7 +354,8 @@ class SyncIntegrationCredentialJob(Job):
             environment=self.params.environment_name,
         )
         instances_list = response.get("instances", []) or response.get(
-            "integrationInstances", [],
+            "integrationInstances",
+            [],
         )
         if not instances_list:
             self.logger.info("No integration instances found in environment. Skipping.")
@@ -334,15 +376,18 @@ class SyncIntegrationCredentialJob(Job):
             async with semaphore:
                 try:
                     await self._update_single_integration_instance(
-                        api, name, param_mapping,
+                        api,
+                        name,
+                        param_mapping,
                     )
                 except Exception as e:
                     self.logger.exception(
-                        f"Failed to update instance '{name}'",
+                        "Failed to update instance '%s'",
+                        name,
                     )
                     self._sync_errors.append(f"Failed to update instance '{name}': {e}")
 
-        tasks = [update_task(name, pm) for name, pm in instances.items()]
+        tasks = list(starmap(update_task, instances.items()))
         await asyncio.gather(*tasks)
 
     def _build_instance_name_lookup_from_json(
@@ -381,11 +426,11 @@ class SyncIntegrationCredentialJob(Job):
             param_mapping (SingleJson): Param names to secret IDs.
 
         """
-        self.logger.info(f"Processing integration instance: {name}")
+        self.logger.info("Processing integration instance: %s", name)
 
         identifier: str | None = self._resolve_instance_identifier(name)
         if identifier is None:
-            self.logger.error(f"Skipping instance '{name}' — could not resolve identifier.")
+            self.logger.error("Skipping instance '%s' — could not resolve identifier.", name)
             return
 
         await self._set_integration_params(api, name, identifier, param_mapping)
@@ -504,15 +549,18 @@ class SyncIntegrationCredentialJob(Job):
             async with semaphore:
                 try:
                     await self._update_single_connector(
-                        api, name, param_mapping,
+                        api,
+                        name,
+                        param_mapping,
                     )
                 except Exception as e:
                     self.logger.exception(
-                        f"Failed to update connector '{name}'",
+                        "Failed to update connector '%s'",
+                        name,
                     )
                     self._sync_errors.append(f"Failed to update connector '{name}': {e}")
 
-        tasks = [update_task(name, pm) for name, pm in connectors.items()]
+        tasks = list(starmap(update_task, connectors.items()))
         await asyncio.gather(*tasks)
 
     def _build_connector_name_lookup_from_json(
@@ -542,11 +590,11 @@ class SyncIntegrationCredentialJob(Job):
             param_mapping (SingleJson): Param names to secret IDs.
 
         """
-        self.logger.info(f"Processing connector: {name}")
+        self.logger.info("Processing connector: %s", name)
 
         identifier: str | None = self._resolve_connector_identifier(name)
         if identifier is None:
-            self.logger.error(f"Skipping connector '{name}' — could not resolve identifier.")
+            self.logger.error("Skipping connector '%s' — could not resolve identifier.", name)
             return
 
         await self._set_connector_params(api, name, identifier, param_mapping)
@@ -652,17 +700,21 @@ class SyncIntegrationCredentialJob(Job):
                 return
             async with semaphore:
                 try:
-                    self.logger.info(f"Processing job: {job_name}")
+                    self.logger.info("Processing job: %s", job_name)
                     await self._update_single_job(
-                        api, job_name, param_mapping, name_to_job,
+                        api,
+                        job_name,
+                        param_mapping,
+                        name_to_job,
                     )
                 except Exception as e:
                     self.logger.exception(
-                        f"Failed to update job '{job_name}'",
+                        "Failed to update job '%s'",
+                        job_name,
                     )
                     self._sync_errors.append(f"Failed to update job '{job_name}': {e}")
 
-        tasks = [update_task(name, pm) for name, pm in jobs.items()]
+        tasks = list(starmap(update_task, jobs.items()))
         await asyncio.gather(*tasks)
 
     async def _fetch_job_instances(
@@ -692,7 +744,7 @@ class SyncIntegrationCredentialJob(Job):
             return None
 
         if not job_instances:
-            self.logger.warn("No jobs returned from platform.")
+            self.logger.warning("No jobs returned from platform.")
             return None
 
         return job_instances
@@ -737,7 +789,9 @@ class SyncIntegrationCredentialJob(Job):
 
         """
         resolved: tuple[SingleJson, list[SingleJson]] | None = await self._resolve_job_data(
-            api, job_name, name_to_job,
+            api,
+            job_name,
+            name_to_job,
         )
         if resolved is None:
             return
@@ -756,7 +810,7 @@ class SyncIntegrationCredentialJob(Job):
         )
 
         if updated_count == 0:
-            self.logger.warn(f"No parameters updated for job '{job_name}' — skipping save.")
+            self.logger.warning("No parameters updated for job '%s' — skipping save.", job_name)
             return
 
         job_data["parameters"] = parameters
@@ -795,7 +849,9 @@ class SyncIntegrationCredentialJob(Job):
         parameters: list[SingleJson] | None = job_data.get("parameters")
         if parameters is None:
             job_data, parameters = await self._fetch_full_job_details(
-                api, job_name, job_data,
+                api,
+                job_name,
+                job_data,
             ) or (None, None)
             if job_data is None:
                 return None
@@ -809,9 +865,7 @@ class SyncIntegrationCredentialJob(Job):
             return None
 
         if not parameters:
-            self.logger.warn(
-                f"Job '{job_name}' has an empty parameters list — nothing to update."
-            )
+            self.logger.warning("Job '%s' has an empty parameters list — nothing to update.", job_name)
             return None
 
         return job_data, parameters
@@ -838,10 +892,10 @@ class SyncIntegrationCredentialJob(Job):
         """
         job_instance_id: str | None = job_data.get("id")
         if job_instance_id is None:
-            self.logger.error(f"Job '{job_name}' has no id and no parameters — cannot update.")
+            self.logger.error("Job '%s' has no id and no parameters — cannot update.", job_name)
             return None
 
-        self.logger.info(f"Fetching full details for job '{job_name}' (id: {job_instance_id}).")
+        self.logger.info("Fetching full details for job '%s' (id: %s).", job_name, job_instance_id)
         try:
             full_job: SingleJson = await api.get_installed_jobs(
                 job_instance_id=job_instance_id,
@@ -849,9 +903,7 @@ class SyncIntegrationCredentialJob(Job):
         except JobFetchError:
             raise
         except Exception as e:
-            raise JobFetchError(
-                f"Failed to fetch details for job '{job_name}' (id: {job_instance_id}): {e}"
-            ) from e
+            raise JobFetchError(f"Failed to fetch details for job '{job_name}' (id: {job_instance_id}): {e}") from e
 
         if not isinstance(full_job, dict):
             self.logger.error(
@@ -941,9 +993,7 @@ class SyncIntegrationCredentialJob(Job):
             updated_count += 1
             self.state_context[state_key] = state_val
             self.logger.info(
-                f"Set '{param_name}' on job '{job_name}'"
-                f" from secret '{mask_id(secret_id)}'"
-                f" (version '{version_id}')."
+                f"Set '{param_name}' on job '{job_name}' from secret '{mask_id(secret_id)}' (version '{version_id}')."
             )
 
         return updated_count
@@ -969,7 +1019,7 @@ class SyncIntegrationCredentialJob(Job):
         """
         try:
             await api.save_or_update_job(job_data=job_data)
-            self.logger.info(f"Saved job '{job_name}' with {updated_count} updated parameter(s).")
+            self.logger.info("Saved job '%s' with %s updated parameter(s).", job_name, updated_count)
         except JobSaveError:
             raise
         except Exception as e:
