@@ -53,17 +53,11 @@ def _validate_action_file(action_file: Path, errors: list[str]) -> None:
             continue
         param_name = param.get("name", "Unknown")
         if "description" not in param:
-            errors.append(
-                f"Action '{action_file.stem}' parameter '{param_name}' "
-                "is missing 'description' field."
-            )
+            errors.append(f"Action '{action_file.stem}' parameter '{param_name}' is missing 'description' field.")
         else:
             param_desc = param.get("description")
             if not isinstance(param_desc, str) or not param_desc.strip():
-                errors.append(
-                    f"Action '{action_file.stem}' parameter '{param_name}' "
-                    "has an empty 'description' field."
-                )
+                errors.append(f"Action '{action_file.stem}' parameter '{param_name}' has an empty 'description' field.")
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -98,15 +92,11 @@ class IntegrationDescriptionValidation:
             if data is not None:
                 project = data.get("project", {})
                 if "description" not in project:
-                    errors.append(
-                        f"Integration is missing the 'description' field in {constants.PROJECT_FILE}."
-                    )
+                    errors.append(f"Integration is missing the 'description' field in {constants.PROJECT_FILE}.")
                 else:
                     description = project.get("description")
                     if not isinstance(description, str) or not description.strip():
-                        errors.append(
-                            f"Integration has an empty 'description' field in {constants.PROJECT_FILE}."
-                        )
+                        errors.append(f"Integration has an empty 'description' field in {constants.PROJECT_FILE}.")
 
         # 2. Check Action Parameter Descriptions
         actions_dir = path / constants.ACTIONS_DIR

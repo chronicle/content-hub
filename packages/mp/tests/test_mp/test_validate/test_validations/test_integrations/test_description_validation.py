@@ -201,10 +201,7 @@ class TestIntegrationDescriptionValidation:
         }
         _write_action_yaml(temp_integration, "my_action", action_content)
 
-        msg = (
-            "Action 'my_action' parameter 'Param1' "
-            "is missing 'description' field"
-        )
+        msg = "Action 'my_action' parameter 'Param1' is missing 'description' field"
         with pytest.raises(FatalValidationError, match=msg):
             self.runner.run(temp_integration)
 
@@ -230,10 +227,7 @@ class TestIntegrationDescriptionValidation:
         }
         _write_action_yaml(temp_integration, "my_action", action_content)
 
-        msg = (
-            "Action 'my_action' parameter 'Param1' "
-            "has an empty 'description' field"
-        )
+        msg = "Action 'my_action' parameter 'Param1' has an empty 'description' field"
         with pytest.raises(FatalValidationError, match=msg):
             self.runner.run(temp_integration)
 
