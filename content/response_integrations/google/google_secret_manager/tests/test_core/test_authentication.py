@@ -18,20 +18,17 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-import google.auth
 import google.auth.exceptions
-import google.auth.impersonated_credentials
-from google.oauth2 import service_account
+import pytest
 
 from google_secret_manager.core.authentication import (
     IntegrationParameters,
-    build_auth_params,
     _get_credentials_using_service_account,
     _get_credentials_using_workload_identity_email,
+    build_auth_params,
+    create_authorized_session,
     get_credentials,
     prepare_auth_request,
-    create_authorized_session,
 )
 from google_secret_manager.core.constants import (
     INTEGRATION_IDENTIFIER,
@@ -194,9 +191,7 @@ class TestGetCredentialsFunctions:
     ) -> None:
         """Resolves credentials and prefers explicit project ID over JSON."""
         sa_json = make_sa_json(project_id="json-proj")
-        creds, resolved_proj = _get_credentials_using_service_account(
-            sa_json, project_id="explicit-proj"
-        )
+        creds, resolved_proj = _get_credentials_using_service_account(sa_json, project_id="explicit-proj")
         assert creds is mock_sa_credentials
         assert resolved_proj == "explicit-proj"
 
@@ -221,9 +216,7 @@ class TestGetCredentialsFunctions:
             lambda **kwargs: mock_impersonated,
         )
 
-        creds = _get_credentials_using_workload_identity_email(
-            "sa@proj.iam.gserviceaccount.com"
-        )
+        creds = _get_credentials_using_workload_identity_email("sa@proj.iam.gserviceaccount.com")
         assert creds is mock_impersonated
 
     def test_get_credentials_using_workload_identity_email_default_creds_failure(
@@ -231,8 +224,10 @@ class TestGetCredentialsFunctions:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Raises InvalidConfigurationError if application default credentials are not found."""
-        def mock_default_raise(scopes):
-            raise google.auth.exceptions.DefaultCredentialsError("Not found")
+
+        def mock_default_raise(scopes: list[str]) -> None:
+            msg = "Not found"
+            raise google.auth.exceptions.DefaultCredentialsError(msg)
 
         monkeypatch.setattr("google.auth.default", mock_default_raise)
 
@@ -298,5 +293,3 @@ class TestSessionCreation:
             session = create_authorized_session(mock_creds, verify_ssl=False)
             assert session.verify is False
             mock_prepare.assert_called_once_with(verify_ssl=False)
-
-
