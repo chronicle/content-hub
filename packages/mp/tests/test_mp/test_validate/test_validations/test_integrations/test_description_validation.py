@@ -16,7 +16,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
+
 import pytest
 import toml
 
@@ -24,6 +25,9 @@ from mp.core.exceptions import FatalValidationError
 from mp.validate.validations.integrations.description_validation import (
     IntegrationDescriptionValidation,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _write_pyproject(integration_path: Path, content: dict) -> None:

@@ -19,6 +19,7 @@ from .connectors_documentation_link_validation import ConnectorsHasDocumentation
 from .connectors_ssl_validation import SslParameterExistsInConnectorsValidation
 from .custom_validation import NoCustomComponentsInIntegrationValidation
 from .dependency_provider_validation import DependencyProviderValidation
+from .description_validation import IntegrationDescriptionValidation
 from .disabled_validation import NoDisabledComponentsInIntegrationValidation
 from .documentation_link_validation import IntegrationHasDocumentationLinkValidation
 from .fields_validation import FieldsValidation
@@ -30,12 +31,12 @@ from .required_dependencies_validation import RequiredDevDependenciesValidation
 from .structure_validation import IntegrationFileStructureValidation
 from .uv_lock_validation import UvLockValidation
 from .version_bump_validation import VersionBumpValidation
-from .description_validation import IntegrationDescriptionValidation
 
 __all__: list[str] = [
     "ConnectorsHasDocumentationLinkValidation",
     "DependencyProviderValidation",
     "FieldsValidation",
+    "IntegrationDescriptionValidation",
     "IntegrationFileStructureValidation",
     "IntegrationHasDocumentationLinkValidation",
     "IntegrationHasMappingRulesIfHasConnectorValidation",
@@ -48,6 +49,5 @@ __all__: list[str] = [
     "SslParameterExistsInIntegrationValidation",
     "UvLockValidation",
     "VersionBumpValidation",
-    "IntegrationDescriptionValidation",
     "get_integration_validations",
 ]

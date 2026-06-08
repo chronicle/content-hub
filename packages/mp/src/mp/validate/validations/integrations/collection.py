@@ -20,6 +20,7 @@ from .connectors_documentation_link_validation import ConnectorsHasDocumentation
 from .connectors_ssl_validation import SslParameterExistsInConnectorsValidation
 from .custom_validation import NoCustomComponentsInIntegrationValidation
 from .dependency_provider_validation import DependencyProviderValidation
+from .description_validation import IntegrationDescriptionValidation
 from .disabled_validation import NoDisabledComponentsInIntegrationValidation
 from .documentation_link_validation import IntegrationHasDocumentationLinkValidation
 from .empty_init_files_validation import EmptyInitFilesValidation
@@ -38,7 +39,6 @@ from .test_config_validation import TestConfigValidation
 from .uv_lock_validation import UvLockValidation
 from .version_bump_validation import VersionBumpValidation
 from .version_consistency_validation import VersionConsistencyValidation
-from .description_validation import IntegrationDescriptionValidation
 
 if TYPE_CHECKING:
     from mp.validate.data_models import Validator

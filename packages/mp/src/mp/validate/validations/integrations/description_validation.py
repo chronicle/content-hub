@@ -50,7 +50,7 @@ class IntegrationDescriptionValidation:
         try:
             with pyproject_path.open("rb") as f:
                 data = tomllib.load(f)
-        except Exception:
+        except (tomllib.TOMLDecodeError, OSError):
             # If we can't parse it, we skip and let other validations (or loader) fail
             return
 
