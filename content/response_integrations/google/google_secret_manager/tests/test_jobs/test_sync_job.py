@@ -402,8 +402,8 @@ class TestAggregatedErrors:
     @pytest.mark.anyio
     async def test_sync_errors_collected_and_fails_job(self) -> None:
         """Collects errors from various failing components and raises IntegrationCredentialSyncError."""
-        from unittest.mock import patch
         import asyncio
+        from unittest.mock import patch
 
         job = _make_job()
         job._soar_job = MagicMock()
