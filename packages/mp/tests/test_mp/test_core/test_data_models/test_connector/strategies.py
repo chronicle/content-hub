@@ -89,7 +89,7 @@ ST_VALID_NON_BUILT_CONNECTOR_RULE_DICT = st.fixed_dictionaries(
             "rule_name": st_valid_display_name,
             "rule_type": st_valid_non_built_param_type(ConnectorRuleType),
         },
-    )
+    ),
 )
 
 ST_VALID_BUILT_CONNECTOR_RULE_DICT = st.fixed_dictionaries(
@@ -99,7 +99,7 @@ ST_VALID_BUILT_CONNECTOR_RULE_DICT = st.fixed_dictionaries(
             "RuleName": st_valid_display_name,
             "RuleType": st_valid_built_type(ConnectorRuleType),
         },
-    )
+    ),
 )
 
 
