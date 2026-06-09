@@ -32,6 +32,26 @@ INTEGRATION_PREFIX = "IPInfo"
 
 
 def enrich_legacy(ipinfo_manager, siemplify, ip_entities):
+    """
+    Enrich ADDRESS entities one-by-one via the IPInfo legacy per-IP endpoint.
+
+    Each entity is queried independently. A failure on one entity is logged and
+    appended to the returned errors list without aborting the loop.
+
+    Args:
+        ipinfo_manager: Configured IPInfoManager client. Uses get_ip_information.
+        siemplify: SiemplifyAction context. Used for logging and to attach
+            per-entity result tables.
+        ip_entities: Target entities to enrich. Expected to be of type ADDRESS.
+
+    Returns:
+        A 3-tuple of:
+            - json_results (dict): mapping of entity identifier to raw response
+              payload, for each successfully enriched entity.
+            - success_entities (list): entities whose additional_properties were
+              updated and is_enriched set to True.
+            - errors (list[str]): one human-readable message per failed entity.
+    """
     success_entities = []
     errors = []
     json_results = {}
@@ -56,6 +76,33 @@ def enrich_legacy(ipinfo_manager, siemplify, ip_entities):
 
 
 def enrich_batch(ipinfo_manager, siemplify, ip_entities, bundle):
+    """
+    Enrich ADDRESS entities via the IPInfo batch endpoint, chunked by BATCH_MAX_IPS.
+
+    The input is split into chunks of at most BATCH_MAX_IPS entities. Each chunk
+    is sent in a single POST. If a chunk request fails (network, HTTP error,
+    malformed response) every entity in that chunk is marked as errored and the
+    loop continues with the next chunk so successful chunks are preserved.
+    Per-IP errors returned inside a successful response as {"error": "..."} are
+    also collected.
+
+    Args:
+        ipinfo_manager: Configured IPInfoManager client. Uses get_ip_information_batch.
+        siemplify: SiemplifyAction context. Used for logging and to attach
+            per-entity result tables.
+        ip_entities: Target entities to enrich. Expected to be of type ADDRESS.
+        bundle: IPInfo bundle name. One of "Lite", "Core", "Plus", "Max".
+            Selects which batch endpoint to call.
+
+    Returns:
+        A 3-tuple of:
+            - json_results (dict): mapping of entity identifier to raw response
+              payload, for each successfully enriched entity.
+            - success_entities (list): entities whose additional_properties were
+              updated and is_enriched set to True.
+            - errors (list[str]): one human-readable message per failure
+              (chunk-level or per-IP).
+    """
     success_entities = []
     errors = []
     json_results = {}
