@@ -320,6 +320,9 @@ class AbnormalManager:
         The status endpoint scopes to the tenants authorized by the API key (resolved
         server-side from the bearer token) and rejects a tenant query param, so
         ``tenant_ids`` is accepted for signature compatibility but not sent.
+
+        Raises:
+            AbnormalValidationError: If activity_log_id is not provided.
         """
         if not activity_log_id:
             raise AbnormalValidationError(ERROR_MSG_MISSING_ACTIVITY_ID)
@@ -541,8 +544,9 @@ class AbnormalManager:
         params: dict[str, Any] = {"pageSize": page_size, "pageNumber": page_number}
         if tenant_ids:
             # The /v1/search/activities view reads request.GET.getlist("tenant_ids")
-            # (snake_case), so send that key — not camelCase.
-            params["tenant_ids"] = ",".join(tenant_ids)
+            # (snake_case). Pass a list so requests emits repeated query params
+            # (?tenant_ids=a&tenant_ids=b) rather than one comma-joined value.
+            params["tenant_ids"] = tenant_ids
         return self._make_request("GET", ACTIVITIES_LIST_ENDPOINT, params=params)
 
     # ── Inquiry ───────────────────────────────────────────────────────────────
