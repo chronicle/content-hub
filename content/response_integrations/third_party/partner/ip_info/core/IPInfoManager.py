@@ -143,7 +143,7 @@ class IPInfoManager:
         except Exception as err:
             if response.status_code == API_LIMIT_STATUS_CODE:
                 raise IPInfoManagerError(f"API limit exceeded. Error: {err}")
-            raise IPInfoManagerError(f"Error:{err}, Content:{response.content}")
+            raise IPInfoManagerError(f"Error:{err}")
         return response.json()
 
     def get_domains_information(self, domain_name):
