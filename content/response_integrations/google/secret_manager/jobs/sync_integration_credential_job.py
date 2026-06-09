@@ -384,8 +384,8 @@ class SyncIntegrationCredentialJob(Job):
                         name,
                         param_mapping,
                     )
-                except Exception as e:
-                    self.logger.exception(f"Failed to update instance '{name}': {e}")
+                except Exception:
+                    self.logger.exception(f"Failed to update instance '{name}'.")
                     self._sync_errors.append(f"Failed to update instance '{name}'")
 
         tasks = list(starmap(update_task, instances.items()))
@@ -552,8 +552,8 @@ class SyncIntegrationCredentialJob(Job):
                         name,
                         param_mapping,
                     )
-                except Exception as e:
-                    self.logger.exception(f"Failed to update connector '{name}': {e}")
+                except Exception:
+                    self.logger.exception(f"Failed to update connector '{name}'.")
                     self._sync_errors.append(f"Failed to update connector '{name}'")
 
         tasks = list(starmap(update_task, connectors.items()))
@@ -717,8 +717,8 @@ class SyncIntegrationCredentialJob(Job):
                         param_mapping,
                         name_to_job,
                     )
-                except Exception as e:
-                    self.logger.exception(f"Failed to update job '{job_name}': {e}")
+                except Exception:
+                    self.logger.exception(f"Failed to update job '{job_name}'.")
                     self._sync_errors.append(f"Failed to update job '{job_name}'")
 
         tasks = list(starmap(update_task, jobs.items()))
