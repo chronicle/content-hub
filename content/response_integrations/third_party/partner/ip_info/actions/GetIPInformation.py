@@ -124,8 +124,14 @@ def enrich_batch(ipinfo_manager, siemplify, ip_entities, bundle):
             ip_information = batch_results.get(entity.identifier)
             if not ip_information:
                 continue
-            if "error" in ip_information:
+
+            if isinstance(ip_information, dict) and "error" in ip_information:
                 error_message = f"Failed fetching information for {entity.identifier}, ERROR: {ip_information['error']}"
+                siemplify.LOGGER.error(error_message)
+                errors.append(error_message)
+                continue
+            elif not isinstance(ip_information, dict):
+                error_message = f"Failed fetching information for {entity.identifier}, unexpected response type: {type(ip_information)}"
                 siemplify.LOGGER.error(error_message)
                 errors.append(error_message)
                 continue
