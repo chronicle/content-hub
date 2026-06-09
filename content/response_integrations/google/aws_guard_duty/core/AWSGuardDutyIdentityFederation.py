@@ -255,7 +255,7 @@ class AWSGuardDutyIdentityFederation:
                 auth_request=auth_request,
             )
 
-        except Exception:
+        except Exception as e:
             self.logger.exception("Failed to parse or generate token.")
             raise
 
