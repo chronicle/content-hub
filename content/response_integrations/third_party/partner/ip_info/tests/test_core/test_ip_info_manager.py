@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from unittest.mock import MagicMock, patch
 
 import pytest
-from core.IPInfoManager import BATCH_BASE_URLS, IPInfoManager
+from core.IPInfoManager import IPInfoManager
 
 
 @pytest.fixture
