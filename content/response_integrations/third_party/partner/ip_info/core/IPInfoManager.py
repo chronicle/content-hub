@@ -110,19 +110,29 @@ class IPInfoManager:
         self.validate_response(response)
         return response.json()
 
-    def get_ip_information_batch(self, ips, bundle):
+    def get_ip_information_batch(self, ips: list[str], bundle: str) -> dict[str, dict]:
         """
         Fetch information for a list of IPs via the IPInfo batch endpoint.
 
-        Makes a single POST with `ips` as the body. The caller is responsible
+        Makes a single POST with ``ips`` as the body. The caller is responsible
         for splitting input into chunks of BATCH_MAX_IPS or fewer (IPInfo's
         per-call cap) and handling per-chunk failures.
 
-        :param ips: IP addresses to enrich. Must not exceed BATCH_MAX_IPS.
-        :param bundle: One of "Lite", "Core", "Plus", "Max". Selects the batch endpoint.
-            Core/Plus/Max share the same URL — the tier is gated by the token.
-        :return: Mapping of IP -> response object. Response shape depends on bundle.
-        :raises IPInfoManagerError: on HTTP failure.
+        Args:
+            ips: IP addresses to enrich. Must not exceed BATCH_MAX_IPS.
+            bundle: IPInfo bundle name. One of "Lite", "Core", "Plus", "Max".
+                Selects the batch endpoint. Core/Plus/Max share the same URL —
+                the tier is gated by the token.
+
+        Returns:
+            Mapping of IP to response object. The per-IP value shape depends on
+            the bundle (flat for Lite, nested {geo, as, anonymous, ...} for
+            Core/Plus/Max). IPs that IPInfo could not resolve appear with an
+            {"error": <message>} value instead of a full payload.
+
+        Raises:
+            IPInfoManagerError: On HTTP failure (network error, non-2xx
+                response, malformed JSON).
         """
         url = BATCH_BASE_URLS[bundle]
         response = self.session.post(url, json=ips)
