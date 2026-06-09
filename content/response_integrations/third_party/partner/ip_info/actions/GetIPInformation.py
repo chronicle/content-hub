@@ -24,11 +24,72 @@ from soar_sdk.SiemplifyUtils import (
     output_handler,
 )
 
-from ..core.IPInfoManager import IPInfoManager
+from ..core.IPInfoManager import BATCH_MAX_IPS, IPInfoManager
 
 ACTION_NAME = "IPInfo Get_IP_Information"
 PROVIDER = "IPInfo"
 INTEGRATION_PREFIX = "IPInfo"
+
+
+def enrich_legacy(ipinfo_manager, siemplify, ip_entities):
+    success_entities = []
+    errors = []
+    json_results = {}
+
+    for entity in ip_entities:
+        try:
+            ip_information = ipinfo_manager.get_ip_information(entity.identifier)
+            if ip_information:
+                json_results[entity.identifier] = ip_information
+                flat_info = dict_to_flat(ip_information)
+                entity.additional_properties.update(add_prefix_to_dict(flat_info, INTEGRATION_PREFIX))
+                entity.is_enriched = True
+                siemplify.result.add_entity_table(entity.identifier, flat_dict_to_csv(flat_info))
+                success_entities.append(entity)
+        except Exception as err:
+            error_message = f"Failed fetching information for {entity.identifier}, ERROR: {err}"
+            siemplify.LOGGER.error(error_message)
+            siemplify.LOGGER.exception(err)
+            errors.append(error_message)
+
+    return json_results, success_entities, errors
+
+
+def enrich_batch(ipinfo_manager, siemplify, ip_entities, bundle):
+    success_entities = []
+    errors = []
+    json_results = {}
+
+    for i in range(0, len(ip_entities), BATCH_MAX_IPS):
+        chunk_entities = ip_entities[i : i + BATCH_MAX_IPS]
+        try:
+            batch_results = ipinfo_manager.get_ip_information_batch(
+                [entity.identifier for entity in chunk_entities], bundle
+            )
+        except Exception as err:
+            for entity in chunk_entities:
+                error_message = f"Failed fetching information for {entity.identifier}, ERROR: {err}"
+                siemplify.LOGGER.error(error_message)
+                errors.append(error_message)
+            continue
+
+        for entity in chunk_entities:
+            ip_information = batch_results.get(entity.identifier)
+            if not ip_information:
+                continue
+            if "error" in ip_information:
+                error_message = f"Failed fetching information for {entity.identifier}, ERROR: {ip_information['error']}"
+                siemplify.LOGGER.error(error_message)
+                errors.append(error_message)
+                continue
+            json_results[entity.identifier] = ip_information
+            flat_info = dict_to_flat(ip_information)
+            entity.additional_properties.update(add_prefix_to_dict(flat_info, INTEGRATION_PREFIX))
+            entity.is_enriched = True
+            siemplify.result.add_entity_table(entity.identifier, flat_dict_to_csv(flat_info))
+            success_entities.append(entity)
+
+    return json_results, success_entities, errors
 
 
 @output_handler
@@ -42,44 +103,28 @@ def main():
     success_entities = []
     errors = []
     json_results = {}
-    result_value = False
 
-    ip_entities = [
-        entity for entity in siemplify.target_entities if entity.entity_type == EntityTypes.ADDRESS
-    ]
+    ip_entities = [entity for entity in siemplify.target_entities if entity.entity_type == EntityTypes.ADDRESS]
 
-    for entity in ip_entities:
-        try:
-            ip_information = ipinfo_manager.get_ip_information(entity.identifier)
-            if ip_information:
-                json_results[entity.identifier] = ip_information
-                flat_info = dict_to_flat(ip_information)
-                entity.additional_properties.update(
-                    add_prefix_to_dict(flat_info, INTEGRATION_PREFIX)
-                )
-                entity.is_enriched = True
-                siemplify.result.add_entity_table(entity.identifier, flat_dict_to_csv(flat_info))
-                success_entities.append(entity)
-                result_value = True
-        except Exception as err:
-            error_message = f"Failed fetching information for {entity.identifier}, ERROR: {err}"
-            siemplify.LOGGER.error(error_message)
-            siemplify.LOGGER.exception(err)
-            errors.append(error_message)
+    bundle = siemplify.extract_action_param(param_name="Bundle", default_value="Legacy")
+
+    if bundle == "Legacy":
+        json_results, success_entities, errors = enrich_legacy(ipinfo_manager, siemplify, ip_entities)
+    else:
+        json_results, success_entities, errors = enrich_batch(ipinfo_manager, siemplify, ip_entities, bundle)
 
     siemplify.update_entities(success_entities)
 
     if success_entities:
-        output_message = (f"Fetched IP information for: "
-                          f"{', '.join([entity.identifier for entity in success_entities])}")
+        output_message = f"Fetched IP information for: {', '.join([entity.identifier for entity in success_entities])}"
     else:
-        output_message = "Mo information fetched for target entities."
+        output_message = "No information fetched for target entities."
 
     if errors:
         output_message = "{0}\n\nErrors:\n{1}".format(output_message, "\n".join(errors))
 
     siemplify.result.add_result_json(convert_dict_to_json_result_dict(json_results))
-    siemplify.end(output_message, result_value)
+    siemplify.end(output_message, len(success_entities) > 0)
 
 
 if __name__ == "__main__":

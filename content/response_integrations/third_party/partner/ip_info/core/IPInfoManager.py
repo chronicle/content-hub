@@ -42,6 +42,15 @@ API_LIMIT_STATUS_CODE = 429
 
 ERROR_WORD = b"error"
 
+BATCH_BASE_URLS = {
+    "Lite": "https://api.ipinfo.io/batch/lite",
+    "Core": "https://api.ipinfo.io/batch",
+    "Plus": "https://api.ipinfo.io/batch",
+    "Max": "https://api.ipinfo.io/batch",
+}
+
+BATCH_MAX_IPS = 1000
+
 
 # =====================================
 #              CLASSES                #
@@ -99,6 +108,30 @@ class IPInfoManager:
         request_url = urllib.parse.urljoin(self.api_root, ip_address)
         response = self.session.get(request_url)
         self.validate_response(response)
+        return response.json()
+
+    def get_ip_information_batch(self, ips, bundle):
+        """
+        Fetch information for a list of IPs via the IPInfo batch endpoint.
+
+        Makes a single POST with `ips` as the body. The caller is responsible
+        for splitting input into chunks of BATCH_MAX_IPS or fewer (IPInfo's
+        per-call cap) and handling per-chunk failures.
+
+        :param ips: IP addresses to enrich. Must not exceed BATCH_MAX_IPS.
+        :param bundle: One of "Lite", "Core", "Plus", "Max". Selects the batch endpoint.
+            Core/Plus/Max share the same URL — the tier is gated by the token.
+        :return: Mapping of IP -> response object. Response shape depends on bundle.
+        :raises IPInfoManagerError: on HTTP failure.
+        """
+        url = BATCH_BASE_URLS[bundle]
+        response = self.session.post(url, json=ips)
+        try:
+            response.raise_for_status()
+        except Exception as err:
+            if response.status_code == API_LIMIT_STATUS_CODE:
+                raise IPInfoManagerError(f"API limit exceeded. Error: {err}")
+            raise IPInfoManagerError(f"Error:{err}, Content:{response.content}")
         return response.json()
 
     def get_domains_information(self, domain_name):
