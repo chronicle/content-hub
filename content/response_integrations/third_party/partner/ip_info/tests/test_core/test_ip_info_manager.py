@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from core.IPInfoManager import IPInfoManager
+from core.IPInfoManager import IPInfoManager, IPInfoManagerError
 
 
 @pytest.fixture
@@ -48,6 +48,6 @@ class TestGetIPInformationBatch:
     def test_bearer_auth_header_present_on_session(self, manager: IPInfoManager) -> None:
         assert manager.session.headers["Authorization"] == "Bearer test-token"
 
-    def test_unknown_bundle_raises_key_error(self, manager: IPInfoManager) -> None:
-        with pytest.raises(KeyError):
+    def test_unknown_bundle_raises_manager_error(self, manager: IPInfoManager) -> None:
+        with pytest.raises(IPInfoManagerError):
             manager.get_ip_information_batch(["8.8.8.8"], "Legacy")
