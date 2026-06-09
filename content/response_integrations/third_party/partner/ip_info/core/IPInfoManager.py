@@ -134,7 +134,9 @@ class IPInfoManager:
             IPInfoManagerError: On HTTP failure (network error, non-2xx
                 response, malformed JSON).
         """
-        url = BATCH_BASE_URLS[bundle]
+        url = BATCH_BASE_URLS.get(bundle)
+        if not url:
+            raise IPInfoManagerError(f"Unsupported bundle: {bundle}")
         response = self.session.post(url, json=ips)
         try:
             response.raise_for_status()
