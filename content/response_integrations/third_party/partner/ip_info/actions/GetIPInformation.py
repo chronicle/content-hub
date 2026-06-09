@@ -153,7 +153,7 @@ def main():
 
     ip_entities = [entity for entity in siemplify.target_entities if entity.entity_type == EntityTypes.ADDRESS]
 
-    bundle = siemplify.extract_action_param(param_name="Bundle", default_value="Legacy")
+    bundle = siemplify.extract_action_param(param_name="IPinfo Bundle", default_value="Legacy")
 
     if bundle == "Legacy":
         json_results, success_entities, errors = enrich_legacy(ipinfo_manager, siemplify, ip_entities)
