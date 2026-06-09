@@ -21,13 +21,13 @@ class TestGetIPInformationBatch:
             ("Max", "https://api.ipinfo.io/batch"),
         ],
     )
-    def test_routes_to_correct_url_per_bundle(self, manager, bundle, expected_url):
+    def test_routes_to_correct_url_per_bundle(self, manager: IPInfoManager, bundle: str, expected_url: str) -> None:
         with patch.object(manager.session, "post", return_value=MagicMock(json=lambda: {})) as post:
             manager.get_ip_information_batch(["8.8.8.8"], bundle)
 
         post.assert_called_once_with(expected_url, json=["8.8.8.8"])
 
-    def test_passes_ip_list_as_json_body(self, manager):
+    def test_passes_ip_list_as_json_body(self, manager: IPInfoManager) -> None:
         ips = ["8.8.8.8", "1.1.1.1", "9.9.9.9"]
         with patch.object(manager.session, "post", return_value=MagicMock(json=lambda: {})) as post:
             manager.get_ip_information_batch(ips, "Core")
@@ -35,7 +35,7 @@ class TestGetIPInformationBatch:
         _, kwargs = post.call_args
         assert kwargs["json"] == ips
 
-    def test_returns_response_json_unchanged(self, manager):
+    def test_returns_response_json_unchanged(self, manager: IPInfoManager) -> None:
         api_response = {
             "8.8.8.8": {"ip": "8.8.8.8", "geo": {"city": "Mountain View"}},
             "1.1.1.1": {"ip": "1.1.1.1", "geo": {"city": "Brisbane"}},
@@ -45,9 +45,9 @@ class TestGetIPInformationBatch:
 
         assert result == api_response
 
-    def test_bearer_auth_header_present_on_session(self, manager):
+    def test_bearer_auth_header_present_on_session(self, manager: IPInfoManager) -> None:
         assert manager.session.headers["Authorization"] == "Bearer test-token"
 
-    def test_unknown_bundle_raises_key_error(self, manager):
+    def test_unknown_bundle_raises_key_error(self, manager: IPInfoManager) -> None:
         with pytest.raises(KeyError):
             manager.get_ip_information_batch(["8.8.8.8"], "Legacy")
