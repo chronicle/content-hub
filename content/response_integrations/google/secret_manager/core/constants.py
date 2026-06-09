@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Constants for the Google Secret Manager integration."""
+"""Constants for the Secret Manager integration."""
 
 # Integration identifier
-INTEGRATION_IDENTIFIER: str = "GoogleSecretManager"
-INTEGRATION_NAME: str = "Google Secret Manager"
+INTEGRATION_IDENTIFIER: str = "SecretManager"
+INTEGRATION_NAME: str = "Secret Manager"
 
 # Script names
 PING_SCRIPT_NAME: str = "Ping"

@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
-from google_secret_manager.core.manager import GoogleSecretManagerClient
+from secret_manager.core.manager import SecretManagerClient
 
 if TYPE_CHECKING:
     from TIPCommon.base.interfaces import ScriptLogger
@@ -31,12 +31,12 @@ def make_client(
     workload_identity_email: str | None = None,
     logger: ScriptLogger | MagicMock | None = None,
     verify_ssl: bool = True,
-) -> GoogleSecretManagerClient:
-    """Build a GoogleSecretManagerClient with a default mock logger."""
+) -> SecretManagerClient:
+    """Build a SecretManagerClient with a default mock logger."""
     if logger is None:
         logger = MagicMock()
 
-    return GoogleSecretManagerClient(
+    return SecretManagerClient(
         service_account_json=service_account_json,
         project_id=project_id,
         workload_identity_email=workload_identity_email,

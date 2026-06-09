@@ -22,12 +22,12 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 
-from google_secret_manager.core.constants import DEFAULT_SECRET_VERSION
-from google_secret_manager.core.exceptions import (
+from secret_manager.core.constants import DEFAULT_SECRET_VERSION
+from secret_manager.core.exceptions import (
     IntegrationCredentialSyncError,
     InvalidConfigurationError,
 )
-from google_secret_manager.jobs.sync_integration_credential_job import (
+from secret_manager.jobs.sync_integration_credential_job import (
     SyncIntegrationCredentialJob,
 )
 
@@ -465,10 +465,10 @@ class TestAggregatedErrors:
             patch.object(job, "_load_context"),
             patch.object(job, "_save_context"),
             patch(
-                "google_secret_manager.jobs.sync_integration_credential_job.AsyncChronicleSOAR"
+                "secret_manager.jobs.sync_integration_credential_job.AsyncChronicleSOAR"
             ) as mock_soar_cls,
             patch(
-                "google_secret_manager.jobs.sync_integration_credential_job.AsyncMarketplaceApi"
+                "secret_manager.jobs.sync_integration_credential_job.AsyncMarketplaceApi"
             ) as mock_market_cls,
         ):
             mock_soar = AsyncMock()

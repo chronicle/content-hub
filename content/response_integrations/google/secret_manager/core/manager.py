@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Client for interacting with Google Secret Manager."""
+"""Client for interacting with Secret Manager."""
 
 from __future__ import annotations
 
@@ -26,9 +26,9 @@ from .constants import (
 )
 from .exceptions import (
     ConnectivityError,
-    GoogleSecretManagerError,
     InvalidConfigurationError,
     SecretAccessError,
+    SecretManagerError,
 )
 from .utils import validate_response
 
@@ -38,8 +38,8 @@ if TYPE_CHECKING:
     from TIPCommon.base.interfaces.logger import ScriptLogger
 
 
-class GoogleSecretManagerClient:
-    """Client for interacting with Google Secret Manager."""
+class SecretManagerClient:
+    """Client for interacting with Secret Manager."""
 
     def __init__(
         self,
@@ -50,7 +50,7 @@ class GoogleSecretManagerClient:
         logger: ScriptLogger,
         verify_ssl: bool = True,
     ) -> None:
-        """Initialize the Google Secret Manager Client.
+        """Initialize the Secret Manager Client.
 
         Exactly one of ``service_account_json`` or ``workload_identity_email``
         must be provided.  When ``workload_identity_email`` is given, the client
@@ -114,28 +114,28 @@ class GoogleSecretManagerClient:
         return response.json()
 
     def test_connectivity(self) -> bool:
-        """Test connectivity to Google Secret Manager.
+        """Test connectivity to Secret Manager.
 
         Returns:
             bool: True if connectivity is successful.
 
         Raises:
-            GoogleSecretManagerError: If Secret Manager API returns an error.
+            SecretManagerError: If Secret Manager API returns an error.
             ConnectivityError: If the connectivity tests fail.
 
         """
-        self.logger.info("Testing connectivity to Google Secret Manager.")
+        self.logger.info("Testing connectivity to Secret Manager.")
         try:
             self._rest_get(
                 f"projects/{self.project_id}/secrets",
                 params={"pageSize": "1"},
             )
-        except GoogleSecretManagerError:
+        except SecretManagerError:
             raise
         except Exception as e:
             raise ConnectivityError(str(e)) from e
 
-        self.logger.info("Successfully connected to Google Secret Manager.")
+        self.logger.info("Successfully connected to Secret Manager.")
         return True
 
     def resolve_latest_enabled_version(self, secret_id: str) -> str:

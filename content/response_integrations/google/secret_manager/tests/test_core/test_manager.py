@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Tests for GoogleSecretManagerClient."""
+"""Tests for SecretManagerClient."""
 
 from __future__ import annotations
 
@@ -23,13 +23,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from google_secret_manager.core.constants import DEFAULT_SECRET_VERSION
-from google_secret_manager.core.exceptions import (
+from secret_manager.core.constants import DEFAULT_SECRET_VERSION
+from secret_manager.core.exceptions import (
     ConnectivityError,
     InvalidConfigurationError,
     SecretAccessError,
 )
-from google_secret_manager.tests.core.factories import (
+from secret_manager.tests.core.factories import (
     make_client,
 )
 
@@ -58,7 +58,7 @@ def make_sa_json(project_id: str = "test-project") -> str:
 
 
 class TestClientInit:
-    """Tests for GoogleSecretManagerClient.__init__."""
+    """Tests for SecretManagerClient.__init__."""
 
     def test_init_with_sa_json(
         self,
@@ -151,7 +151,7 @@ class TestClientInit:
         mock_session_instance = MagicMock()
 
         with patch(
-            "google_secret_manager.core.manager.create_authorized_session",
+            "secret_manager.core.manager.create_authorized_session",
             return_value=mock_session_instance,
         ) as mock_create_session:
             client = make_client(

@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""User-defined exceptions for the Google Secret Manager integration."""
+"""User-defined exceptions for the Secret Manager integration."""
 
 from __future__ import annotations
 
 
-class GoogleSecretManagerError(Exception):
-    """Top-level base exception for all Google Secret Manager integration errors."""
+class SecretManagerError(Exception):
+    """Top-level base exception for all Secret Manager integration errors."""
 
 
-class InvalidConfigurationError(GoogleSecretManagerError):
+class InvalidConfigurationError(SecretManagerError):
     """Raised when integration configuration parameters are invalid or missing.
 
     Examples:
@@ -32,25 +32,25 @@ class InvalidConfigurationError(GoogleSecretManagerError):
     """
 
 
-class ConnectivityError(GoogleSecretManagerError):
+class ConnectivityError(SecretManagerError):
     """Raised when a connectivity check against the Secret Manager API fails."""
 
 
-class SecretAccessError(GoogleSecretManagerError):
+class SecretAccessError(SecretManagerError):
     """Raised when fetching a secret version from Secret Manager fails."""
 
 
-class ParameterUpdateError(GoogleSecretManagerError):
+class ParameterUpdateError(SecretManagerError):
     """Raised when updating a parameter on an integration instance or connector fails."""
 
 
-class JobFetchError(GoogleSecretManagerError):
+class JobFetchError(SecretManagerError):
     """Raised when fetching job details from the SOAR platform fails."""
 
 
-class JobSaveError(GoogleSecretManagerError):
+class JobSaveError(SecretManagerError):
     """Raised when persisting an updated job back to the SOAR platform fails."""
 
 
-class IntegrationCredentialSyncError(GoogleSecretManagerError):
+class IntegrationCredentialSyncError(SecretManagerError):
     """Raised when one or more credentials/parameters fail to sync during the sync job."""

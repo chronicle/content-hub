@@ -37,7 +37,7 @@ from .constants import (
     VERIFY_SSL_PARAM,
     WORKLOAD_IDENTITY_EMAIL_PARAM,
 )
-from .exceptions import GoogleSecretManagerError, InvalidConfigurationError
+from .exceptions import InvalidConfigurationError, SecretManagerError
 
 if TYPE_CHECKING:
     from TIPCommon.types import ChronicleSOAR
@@ -65,7 +65,7 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
         IntegrationParameters: The extracted integration parameters.
 
     Raises:
-        GoogleSecretManagerError: If the provided SDK object type is not
+        SecretManagerError: If the provided SDK object type is not
             supported.
 
     """
@@ -79,7 +79,7 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
         input_dictionary = soar_sdk_object.parameters
     else:
         msg: str = f"Provided SOAR instance is not supported! type: {sdk_class}."
-        raise GoogleSecretManagerError(msg)
+        raise SecretManagerError(msg)
 
     service_account_json: str | None = extract_script_param(
         soar_sdk_object,
@@ -209,7 +209,7 @@ def get_credentials(
 
     msg = (
         "Either 'Service Account JSON' or 'Workload Identity Email' "
-        "must be provided to authenticate with Google Secret Manager."
+        "must be provided to authenticate with Secret Manager."
     )
     raise InvalidConfigurationError(msg)
 

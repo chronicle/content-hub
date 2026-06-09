@@ -14,33 +14,33 @@
 
 from __future__ import annotations
 
-from ..core.base_action import GoogleSecretManagerAction
+from ..core.base_action import SecretManagerAction
 from ..core.constants import PING_SCRIPT_NAME
-from ..core.exceptions import GoogleSecretManagerError
+from ..core.exceptions import SecretManagerError
 
 
-class PingAction(GoogleSecretManagerAction):
-    """Action to test connectivity to Google Secret Manager."""
+class PingAction(SecretManagerAction):
+    """Action to test connectivity to Secret Manager."""
 
     def __init__(self) -> None:
         super().__init__(PING_SCRIPT_NAME)
-        self.error_output_message: str = "Failed to connect to the Google Secret Manager server!"
+        self.error_output_message: str = "Failed to connect to the Secret Manager server!"
 
     def _perform_action(self, _: object = None) -> None:
-        """Test connectivity to Google Secret Manager.
+        """Test connectivity to Secret Manager.
 
         Raises:
-            GoogleSecretManagerError: If the connectivity check fails.
+            SecretManagerError: If the connectivity check fails.
 
         """
         try:
             is_connected: bool = self.secret_manager_client.test_connectivity()
-        except GoogleSecretManagerError:
-            self.logger.exception("Failed to connect to Google Secret Manager.")
+        except SecretManagerError:
+            self.logger.exception("Failed to connect to Secret Manager.")
             raise
 
         self.output_message = (
-            "Successfully connected to the Google Secret Manager server with the provided connection parameters!"
+            "Successfully connected to the Secret Manager server with the provided connection parameters!"
         )
         self.result_value = is_connected
 

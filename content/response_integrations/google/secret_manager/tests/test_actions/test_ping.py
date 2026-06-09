@@ -22,8 +22,8 @@ from unittest.mock import MagicMock, patch
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
-from google_secret_manager.actions import ping
-from google_secret_manager.tests.common import CONFIG_PATH
+from secret_manager.actions import ping
+from secret_manager.tests.common import CONFIG_PATH
 
 if TYPE_CHECKING:
     from integration_testing.platform.script_output import MockActionOutput
@@ -37,7 +37,7 @@ class TestPing:
         "google.oauth2.service_account.Credentials.from_service_account_info",
     )
     @patch(
-        "google_secret_manager.core.manager.GoogleSecretManagerClient._rest_get",
+        "secret_manager.core.manager.SecretManagerClient._rest_get",
     )
     def test_ping_success(
         self,
@@ -62,7 +62,7 @@ class TestPing:
         "google.oauth2.service_account.Credentials.from_service_account_info",
     )
     @patch(
-        "google_secret_manager.core.manager.GoogleSecretManagerClient._rest_get",
+        "secret_manager.core.manager.SecretManagerClient._rest_get",
     )
     def test_ping_failure(
         self,

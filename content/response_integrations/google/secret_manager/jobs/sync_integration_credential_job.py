@@ -48,7 +48,7 @@ from ..core.exceptions import (
     ParameterUpdateError,
     SecretAccessError,
 )
-from ..core.manager import GoogleSecretManagerClient
+from ..core.manager import SecretManagerClient
 from ..core.utils import build_lookup_with_warnings, mask_id
 
 if TYPE_CHECKING:
@@ -63,17 +63,17 @@ RESOURCE_NAME_PATTERN: re.Pattern = re.compile(
 
 
 class SyncIntegrationCredentialJob(Job):
-    """Syncs credentials from GCP Secret Manager to SOAR.
+    """Syncs credentials from Secret Manager to SOAR.
 
     Reads a credential mapping JSON from job parameters, fetches
-    the corresponding secrets from Google Secret Manager, and
+    the corresponding secrets from Secret Manager, and
     uses the SOAR SDK to set configuration properties on
     integration instances, connectors, and jobs.
     """
 
     def __init__(self) -> None:
         super().__init__(SYNC_CREDENTIAL_JOB_SCRIPT_NAME)
-        self.secret_manager_client: GoogleSecretManagerClient | None = None
+        self.secret_manager_client: SecretManagerClient | None = None
         self.credential_mapping: SingleJson = {}
         self.instance_name_to_identifier: NameIdentifierMap = {}
         self.connector_name_to_identifier: NameIdentifierMap = {}
@@ -87,10 +87,10 @@ class SyncIntegrationCredentialJob(Job):
         """No-op. Async API clients are initialized inside the async event loop."""
 
     def _init_secret_manager_client(self) -> None:
-        """Initialize the Google Secret Manager client."""
+        """Initialize the Secret Manager client."""
         auth_params: IntegrationParameters = build_auth_params(self.soar_job)
 
-        self.secret_manager_client = GoogleSecretManagerClient(
+        self.secret_manager_client = SecretManagerClient(
             service_account_json=auth_params.service_account_json,
             project_id=auth_params.project_id,
             workload_identity_email=auth_params.workload_identity_email,

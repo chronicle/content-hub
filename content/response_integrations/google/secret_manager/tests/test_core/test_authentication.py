@@ -25,7 +25,7 @@ import pytest
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-from google_secret_manager.core.authentication import (
+from secret_manager.core.authentication import (
     IntegrationParameters,
     _get_credentials_using_service_account,
     _get_credentials_using_workload_identity_email,
@@ -34,16 +34,16 @@ from google_secret_manager.core.authentication import (
     get_credentials,
     prepare_auth_request,
 )
-from google_secret_manager.core.constants import (
+from secret_manager.core.constants import (
     INTEGRATION_IDENTIFIER,
     PROJECT_ID_PARAM,
     SERVICE_ACCOUNT_JSON_PARAM,
     VERIFY_SSL_PARAM,
     WORKLOAD_IDENTITY_EMAIL_PARAM,
 )
-from google_secret_manager.core.exceptions import (
-    GoogleSecretManagerError,
+from secret_manager.core.exceptions import (
     InvalidConfigurationError,
+    SecretManagerError,
 )
 
 
@@ -111,12 +111,12 @@ class TestBuildAuthParams:
         assert result.verify_ssl is False
 
     def test_unsupported_type_raises(self) -> None:
-        """Raises GoogleSecretManagerError for unknown SDK types."""
+        """Raises SecretManagerError for unknown SDK types."""
         mock_unknown: MagicMock = MagicMock()
         mock_unknown.__class__.__name__ = "UnknownSDKClass"
 
         with pytest.raises(
-            GoogleSecretManagerError,
+            SecretManagerError,
             match="not supported",
         ):
             build_auth_params(mock_unknown)
@@ -247,7 +247,7 @@ class TestGetCredentialsFunctions:
         """get_credentials prefers workload identity if both are provided."""
         mock_impersonated = MagicMock()
         monkeypatch.setattr(
-            "google_secret_manager.core.authentication._get_credentials_using_workload_identity_email",
+            "secret_manager.core.authentication._get_credentials_using_workload_identity_email",
             lambda email: mock_impersonated,
         )
 
@@ -284,7 +284,7 @@ class TestSessionCreation:
     def test_create_authorized_session_verify_ssl_true(self) -> None:
         """create_authorized_session sets verify=True by default."""
         mock_creds = MagicMock()
-        with patch("google_secret_manager.core.authentication.prepare_auth_request") as mock_prepare:
+        with patch("secret_manager.core.authentication.prepare_auth_request") as mock_prepare:
             session = create_authorized_session(mock_creds)
             assert session.verify is True
             mock_prepare.assert_called_once_with(verify_ssl=True)
@@ -292,7 +292,7 @@ class TestSessionCreation:
     def test_create_authorized_session_verify_ssl_false(self) -> None:
         """create_authorized_session sets verify=False when verify_ssl=False."""
         mock_creds = MagicMock()
-        with patch("google_secret_manager.core.authentication.prepare_auth_request") as mock_prepare:
+        with patch("secret_manager.core.authentication.prepare_auth_request") as mock_prepare:
             session = create_authorized_session(mock_creds, verify_ssl=False)
             assert session.verify is False
             mock_prepare.assert_called_once_with(verify_ssl=False)
