@@ -90,8 +90,10 @@ class IntegrationDescriptionValidation:
                 pass
 
             if data is not None:
-                project = data.get("project", {})
-                if "description" not in project:
+                project = data.get("project")
+                if not isinstance(project, dict):
+                    errors.append(f"Integration is missing the 'project' section in {constants.PROJECT_FILE}.")
+                elif "description" not in project:
                     errors.append(f"Integration is missing the 'description' field in {constants.PROJECT_FILE}.")
                 else:
                     description = project.get("description")

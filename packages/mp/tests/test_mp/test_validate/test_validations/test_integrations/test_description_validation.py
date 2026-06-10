@@ -129,6 +129,26 @@ class TestIntegrationDescriptionValidation:
         pyproject.write_text("invalid = [toml")
         self.runner.run(temp_integration)  # Should not raise
 
+    def test_missing_project_section_fails(self, temp_integration: Path) -> None:
+        """Test that missing project section fails validation."""
+        content = {
+            "not_project": {
+                "name": "mock_integration",
+            },
+        }
+        _write_pyproject(temp_integration, content)
+        with pytest.raises(FatalValidationError, match="missing the 'project' section"):
+            self.runner.run(temp_integration)
+
+    def test_non_dict_project_section_fails(self, temp_integration: Path) -> None:
+        """Test that non-dict project section fails validation."""
+        content = {
+            "project": "not a dict"
+        }
+        _write_pyproject(temp_integration, content)
+        with pytest.raises(FatalValidationError, match="missing the 'project' section"):
+            self.runner.run(temp_integration)
+
     # --- Action Parameter Level Tests ---
 
     def test_valid_integration_and_actions_passes(self, temp_integration: Path) -> None:
