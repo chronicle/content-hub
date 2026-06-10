@@ -223,6 +223,7 @@ class GitSyncManager:
             self.api.import_package(
                 integration.identifier,
                 integration.get_zip_as_base64(),
+                #integration.staging,
             )
         else:
             self.logger.info(
@@ -331,8 +332,14 @@ class GitSyncManager:
             try:
                 integration_connectors = self.api.get_integration_connectors(self._siemplify, connector.integration)
                 connector_def = next(
-                    (x for x in integration_connectors if x.get("displayName") == connector.raw_data.get("displayName") or x.get("displayName") == connector.name),
-                    None
+                    (
+                        x
+                        for x in integration_connectors
+                        
+                        if x.get("displayName") == connector.raw_data.get("connectorDefinitionName") 
+                        or x.get("displayName") == connector.name
+                    ),
+                    None,
                 )
                 if connector_def:
                     connector_definition_id = str(connector_def.get("id"))
