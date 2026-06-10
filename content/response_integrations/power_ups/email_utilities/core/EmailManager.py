@@ -1630,9 +1630,15 @@ class EmailManager:
 
     def get_alert_entity_identifiers(self):
         self.siemplify.load_case_data()
-        alerts = getattr(
-            self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+        execution_scope = getattr(
+            self.siemplify, "execution_scope", ExecutionScope.Alert.value
         )
+        if execution_scope == ExecutionScope.Alert.value:
+            alerts = [self.siemplify.current_alert]
+        else:
+            alerts = getattr(
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
 
         identifiers = []
         for alert in alerts:
@@ -1648,9 +1654,15 @@ class EmailManager:
 
     def get_alert_entity_identifiers_with_entity_type(self):
         self.siemplify.load_case_data()
-        alerts = getattr(
-            self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+        execution_scope = getattr(
+            self.siemplify, "execution_scope", ExecutionScope.Alert.value
         )
+        if execution_scope == ExecutionScope.Alert.value:
+            alerts = [self.siemplify.current_alert]
+        else:
+            alerts = getattr(
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
 
         identifiers = []
         for alert in alerts:
@@ -1680,9 +1692,15 @@ class EmailManager:
 
     def get_alert_entities(self):
         self.siemplify.load_case_data()
-        alerts = getattr(
-            self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+        execution_scope = getattr(
+            self.siemplify, "execution_scope", ExecutionScope.Alert.value
         )
+        if execution_scope == ExecutionScope.Alert.value:
+            alerts = [self.siemplify.current_alert]
+        else:
+            alerts = getattr(
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
 
         entities = []
         for alert in alerts:
