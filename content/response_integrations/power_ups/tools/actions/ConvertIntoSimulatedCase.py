@@ -17,10 +17,15 @@ from __future__ import annotations
 import base64
 import json
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import import_simulator_custom_case
+
+from ..core.ToolsCommon import (
+    ExecutionScope,
+    get_execution_scope,
+)
 
 
 # The output_handler decorator manages output for Siemplify actions.
@@ -31,6 +36,15 @@ def main():
 
     except TypeError:
         siemplify = SiemplifyAction()
+
+    raw_scope = getattr(siemplify, "execution_scope", ExecutionScope.Alert.value)
+    execution_scope = get_execution_scope(raw_scope, logger=siemplify.LOGGER)
+
+    if execution_scope.value == ExecutionScope.Case.value:
+        output_message = "This action doesn't support case playbook feature."
+        siemplify.LOGGER.error(output_message)
+        siemplify.end(output_message, False, EXECUTION_STATE_FAILED)
+        return
 
     pushToSimulated = siemplify.extract_action_param(
         "Push to Simulated Cases",
@@ -58,7 +72,8 @@ def main():
 
     output_message = "Action result: "
 
-    # Check if the 'SourceFileContent' property exists in the alert data before trying to load it.
+    # Check if the 'SourceFileContent' property exists in the alert data before
+    # trying to load it.
     if "SourceFileContent" in siemplify.current_alert.entities[0].additional_properties:
         # Load the alert data from the 'SourceFileContent' property.
         case_data = json.loads(
@@ -102,7 +117,8 @@ def main():
     # Prepare the data to be pushed or saved.
     myJson = {"cases": [case_data]}
 
-    # Push the data to the simulator or save it as a JSON file, depending on the parameters.
+    # Push the data to the simulator or save it as a JSON file, depending on
+    # the parameters.
     if pushToSimulated:
         import_simulator_custom_case(siemplify, myJson)
         output_message += " Pushed to Simulated "

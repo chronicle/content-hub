@@ -56,7 +56,7 @@ def update_single_step(playbook_path: Path, updates: dict) -> None:
                     value=new_param["value"],
                     step_id="1",
                     playbook_id="1",
-                )
+                ),
             )
     mp.core.file_utils.save_yaml(
         step.to_non_built(),

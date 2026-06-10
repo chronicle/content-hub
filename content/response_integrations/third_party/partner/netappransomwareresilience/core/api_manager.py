@@ -12,6 +12,7 @@ from .constants import (
     ENDPOINT_JOB_STATUS,
     ENDPOINT_TAKE_SNAPSHOT,
     ENDPOINT_VOLUME_OFFLINE,
+    ENDPOINT_VOLUME_ONLINE,
     RRS_SERVICE_URL,
 )
 from .utils import (
@@ -306,6 +307,46 @@ class ApiManager:
         # Parse response
         response_data = response.json()
         self.siemplify.LOGGER.info(f"ApiManager.volume_offline: API call successful. Status: {response.status_code}")
+
+        return response_data
+
+    def volume_online(self, volume_id: str, agent_id: str, system_id: str) -> dict:
+        """
+        Bring a volume online.
+
+        Extracts volume parameters from action and brings the volume online.
+
+        Args:
+            volume_id: Volume ID to bring online, extracted from action parameters.
+            agent_id: Console agent ID, extracted from action parameters.
+            system_id: Storage system ID, extracted from action parameters.
+
+        Returns:
+            Response data from the volume online API.
+
+        Raises:
+            requests.HTTPError: If the API call returns a non-2xx status code.
+
+        """
+        self.siemplify.LOGGER.info(f"ApiManager.volume_online: Bringing volume online for volume_id: {volume_id}")
+
+        # Build full URL
+        url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_VOLUME_ONLINE)
+
+        # Build request payload
+        request_payload = {"volume_id": volume_id, "agent_id": agent_id, "system_id": system_id}
+
+        self.siemplify.LOGGER.info(f"ApiManager.volume_online: POST URL={url}")
+
+        # Make API call using session (already has Authorization header from __init__)
+        response = self.session.post(url, json=request_payload, verify=self.SSL_VERIFY)
+
+        # Check if request was successful
+        response.raise_for_status()
+
+        # Parse response
+        response_data = response.json()
+        self.siemplify.LOGGER.info(f"ApiManager.volume_online: API call successful. Status: {response.status_code}")
 
         return response_data
 

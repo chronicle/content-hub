@@ -16,13 +16,15 @@ from __future__ import annotations
 
 import json
 from unittest.mock import MagicMock
-from TIPCommon.types import ChronicleSOAR
-from git_sync.tests.common import MOCKS_PATH
-from git_sync.tests.core.product import GitSyncProduct
-from git_sync.core.definitions import Workflow
-from git_sync.core.GitSyncManager import WorkflowInstaller
 
-with open(MOCKS_PATH / "mock_data.json", "r") as f:
+from TIPCommon.types import ChronicleSOAR
+
+from ...core.definitions import Workflow
+from ...core.GitSyncManager import WorkflowInstaller
+from ..common import MOCKS_PATH
+from ..core.product import GitSyncProduct
+
+with open(MOCKS_PATH / "mock_data.json", encoding="utf-8") as f:
     MOCK_DATA = json.load(f)
 
 GIT_PLAYBOOK_DATA = MOCK_DATA["git_playbook"]
@@ -48,7 +50,7 @@ def test_duplicate_step_names_matching_prevention() -> None:
         chronicle_soar=chronicle_soar,
         api=git_sync_product,
         logger=MagicMock(),
-        mod_time_cache=mock_cache
+        mod_time_cache=mock_cache,
     )
 
     # Act
@@ -62,4 +64,7 @@ def test_duplicate_step_names_matching_prevention() -> None:
 
     # Assert that each step matched a DIFFERENT, UNIQUE local step ID using pytest asserts
     assert step_1["identifier"] != step_2["identifier"]
-    assert {step_1["identifier"], step_2["identifier"]} == {"local_PA4_1", "local_PA4_2"}
+    assert {step_1["identifier"], step_2["identifier"]} == {
+        "local_PA4_1",
+        "local_PA4_2",
+    }

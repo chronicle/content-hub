@@ -28,11 +28,12 @@ from mp.core.file_utils import get_marketplace_integration_path
 from mp.core.utils import str_to_snake_case
 
 
-def find_integration_src_path(integration_name: str) -> tuple[pathlib.Path, str]:
+def find_integration_src_path(integration_name: str, src_path: pathlib.Path | None = None) -> tuple[pathlib.Path, str]:
     """Find the source path of the integration, trying snake_case if needed.
 
     Args:
         integration_name: The name of the integration.
+        src_path: The source path to start searching from, if provided.
 
     Returns:
         tuple[pathlib.Path, str]: The source path and the resolved integration name.
@@ -41,20 +42,23 @@ def find_integration_src_path(integration_name: str) -> tuple[pathlib.Path, str]
         typer.BadParameter: If the integration is not found.
 
     """
-    src_path: pathlib.Path | None = get_marketplace_integration_path(integration_name)
-    resolved_name: str = integration_name
+    snake_name: str = str_to_snake_case(integration_name)
+    candidates: list[str] = [integration_name]
+    if snake_name != integration_name:
+        candidates.append(snake_name)
 
-    if src_path is None:
-        snake_name: str = str_to_snake_case(integration_name)
-        src_path: pathlib.Path | None = get_marketplace_integration_path(snake_name)
-        if src_path is not None:
-            resolved_name = snake_name
+    if src_path is not None:
+        for name in candidates:
+            if (custom_target := src_path / name).exists():
+                return custom_target, name
 
-    if src_path is None:
-        msg: str = f"Integration '{integration_name}' not found."
-        raise typer.BadParameter(msg)
+    else:
+        for name in candidates:
+            if (found_path := get_marketplace_integration_path(name)) is not None:
+                return found_path, name
 
-    return src_path, resolved_name
+    msg: str = f"Integration '{integration_name}' not found."
+    raise typer.BadParameter(msg)
 
 
 def create_zip(built_dir: pathlib.Path, identifier: str, zip_dir: pathlib.Path) -> pathlib.Path:
