@@ -27,38 +27,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def _validate_action_file(action_file: Path, errors: list[str]) -> None:
-    """Validate parameters in a single action YAML file.
-
-    Args:
-        action_file: Path to the action YAML file.
-        errors: List to accumulate error messages.
-
-    """
-    try:
-        action_data = yaml.safe_load(action_file.read_text(encoding="utf-8"))
-    except (yaml.YAMLError, OSError):
-        # Skip if we can't parse or read it, let other checks handle it
-        return
-
-    if not action_data or not isinstance(action_data, dict):
-        return
-
-    parameters = action_data.get("parameters")
-    if not isinstance(parameters, list) or not parameters:
-        return
-
-    for param in parameters:
-        if not isinstance(param, dict):
-            continue
-        param_name = param.get("name", "Unknown")
-        if "description" not in param:
-            errors.append(f"Action '{action_file.stem}' parameter '{param_name}' is missing 'description' field.")
-        else:
-            param_desc = param.get("description")
-            if not isinstance(param_desc, str) or not param_desc.strip():
-                errors.append(f"Action '{action_file.stem}' parameter '{param_name}' has an empty 'description' field.")
-
 
 @dataclasses.dataclass(slots=True, frozen=True)
 class IntegrationDescriptionValidation:
@@ -108,3 +76,36 @@ class IntegrationDescriptionValidation:
 
         if errors:
             raise NonFatalValidationError("\n".join(errors))
+
+
+def _validate_action_file(action_file: Path, errors: list[str]) -> None:
+    """Validate parameters in a single action YAML file.
+
+    Args:
+        action_file: Path to the action YAML file.
+        errors: List to accumulate error messages.
+
+    """
+    try:
+        action_data = yaml.safe_load(action_file.read_text(encoding="utf-8"))
+    except (yaml.YAMLError, OSError):
+        # Skip if we can't parse or read it, let other checks handle it
+        return
+
+    if not action_data or not isinstance(action_data, dict):
+        return
+
+    parameters = action_data.get("parameters")
+    if not isinstance(parameters, list) or not parameters:
+        return
+
+    for param in parameters:
+        if not isinstance(param, dict):
+            continue
+        param_name = param.get("name", "Unknown")
+        if "description" not in param:
+            errors.append(f"Action '{action_file.stem}' parameter '{param_name}' is missing 'description' field.")
+        else:
+            param_desc = param.get("description")
+            if not isinstance(param_desc, str) or not param_desc.strip():
+                errors.append(f"Action '{action_file.stem}' parameter '{param_name}' has an empty 'description' field.")
