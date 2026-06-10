@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: List Groups
-description: List asset groups in the user's account.
-documentation_link: https://cloud.google.com/chronicle/docs/soar/marketplace-integrations/qualysvm#list_groups
-integration_identifier: QualysVM
-parameters: []
-dynamic_results_metadata:
--   result_example_path: resources/ListGroups_JsonResult_example.json
-    result_name: JsonResult
-    show_result: true
-creator: Admin
+from __future__ import annotations
+import sys
+import pathlib
+import soar_sdk
+
+# Inject soar_sdk package directory into sys.path to allow top-level imports
+# of modules like SiemplifyUtils, SiemplifyAction, etc. (which TIPCommon and parser expect)
+sys.path.insert(0, str(pathlib.Path(soar_sdk.__file__).parent))
