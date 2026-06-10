@@ -100,7 +100,8 @@ ST_VALID_NON_BUILT_JOB_METADATA_DICT = st.fixed_dictionaries(
             "integration": st_valid_identifier_name,
             "name": st_valid_display_name,
             "parameters": st.lists(
-                ST_VALID_NON_BUILT_JOB_PARAMETER_DICT, max_size=mp.core.constants.MAX_PARAMETERS_LENGTH
+                ST_VALID_NON_BUILT_JOB_PARAMETER_DICT,
+                max_size=mp.core.constants.MAX_PARAMETERS_LENGTH,
             ),
         },
     ),

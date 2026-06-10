@@ -5,7 +5,6 @@ from __future__ import annotations
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.AbnormalManager import (
     AbnormalAuthenticationError,
@@ -23,36 +22,31 @@ def main() -> None:
     siemplify.script_name = LIST_CASES_SCRIPT_NAME
     siemplify.LOGGER.info(f"Action: {LIST_CASES_SCRIPT_NAME} started")
 
-    api_url = extract_configuration_param(
-        siemplify,
+    api_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="API URL",
         is_mandatory=True,
         print_value=True,
     )
-    api_key = extract_configuration_param(
-        siemplify,
+    api_key = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="API Key",
         is_mandatory=True,
     )
-    verify_ssl = extract_configuration_param(
-        siemplify,
+    verify_ssl = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME,
         param_name="Verify SSL",
         input_type=bool,
         is_mandatory=False,
         default_value=True,
     )
-    filter_str = extract_action_param(
-        siemplify,
+    filter_str = siemplify.extract_action_param(
         param_name="Filter",
         is_mandatory=False,
         print_value=True,
     )
     page_size = int(
-        extract_action_param(
-            siemplify,
+        siemplify.extract_action_param(
             param_name="Page Size",
             is_mandatory=False,
             default_value="100",
@@ -60,8 +54,7 @@ def main() -> None:
         or 100
     )
     page_number = int(
-        extract_action_param(
-            siemplify,
+        siemplify.extract_action_param(
             param_name="Page Number",
             is_mandatory=False,
             default_value="1",

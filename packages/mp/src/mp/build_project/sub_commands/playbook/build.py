@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Annotated
 import typer
 
 import mp.core.config
-from mp.build_project.flow.playbooks.flow import build_playbooks
+from mp.build_project.flow.playbooks.flow import BuildPlaybooksParams, build_playbooks
 from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
@@ -72,11 +72,23 @@ def build_playbook(  # noqa: PLR0913
     ],
     src: Annotated[
         Path | None,
-        typer.Option(help="Customize source folder to build or deconstruct from."),
+        typer.Option(
+            exists=True,
+            dir_okay=True,
+            file_okay=False,
+            resolve_path=True,
+            help="Customize source folder to build or deconstruct from.",
+        ),
     ] = None,
     dst: Annotated[
         Path | None,
-        typer.Option(help="Customize destination folder to build or deconstruct to."),
+        typer.Option(
+            exists=True,
+            dir_okay=True,
+            file_okay=False,
+            resolve_path=True,
+            help="Customize destination folder to build or deconstruct to.",
+        ),
     ] = None,
     *,
     deconstruct: Annotated[
@@ -143,7 +155,9 @@ def build_playbook(  # noqa: PLR0913
     try:
         if playbooks:
             logger.debug("Dispatching to build_playbooks flow")
-            build_playbooks(playbooks=playbooks, repositories=[], src=src, dst=dst, deconstruct=deconstruct)
+            build_playbooks(
+                BuildPlaybooksParams(playbooks=playbooks, repositories=[], src=src, dst=dst, deconstruct=deconstruct)
+            )
     finally:
         mp.core.config.clear_custom_src()
         mp.core.config.clear_custom_dst()

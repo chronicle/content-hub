@@ -41,7 +41,7 @@ def _write_pyproject(integration_path: Path, description: str) -> None:
             "name": "mock_integration",
             "version": "1.0",
             "description": description,
-        }
+        },
     }
     pyproject_path = integration_path / "pyproject.toml"
     with pyproject_path.open("w") as f:
