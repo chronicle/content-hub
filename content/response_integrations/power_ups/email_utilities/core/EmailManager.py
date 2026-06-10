@@ -32,6 +32,7 @@ from base64 import urlsafe_b64decode
 from collections import Counter
 from email.message import Message
 from email.utils import parseaddr
+from enum import Enum
 from html import unescape
 from json import JSONEncoder
 from typing import Any
@@ -59,6 +60,13 @@ from .EmailUtilitiesManager import (
     extract_valid_ips_from_body,
     fix_malformed_eml_content,
 )
+
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
 
 if typing.TYPE_CHECKING:
     from collections.abc import Iterable
