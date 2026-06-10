@@ -255,8 +255,8 @@ class VulnerabilityFindingsQueryBuilder:
             filter_by["hasFix"] = self.has_fix
         if self.has_exploit is not None:
             filter_by["hasExploit"] = self.has_exploit
-        if self.cve_ids:
-            filter_by["vulnerabilityExternalIdV2"] = self.cve_ids
+        if self.cve_ids and len(self.cve_ids) == 1:
+            filter_by["vulnerabilityExternalIdV2"] = {"equals": self.cve_ids[0]}
         if self.related_issue_severity:
             filter_by["relatedIssueSeverity"] = self.related_issue_severity
 

@@ -245,6 +245,10 @@ class WizApiClient(Apiable):
         Returns:
             A list of VulnerabilityFinding objects.
         """
+        api_first = first
+        if cve_ids and len(cve_ids) > 1:
+            api_first = constants.MAX_FINDINGS_LIMIT
+
         query_builder_instance = query_builder.VulnerabilityFindingsQueryBuilder(
             resource_name=resource_name,
             severity=severity,
@@ -252,7 +256,7 @@ class WizApiClient(Apiable):
             has_exploit=has_exploit,
             cve_ids=cve_ids,
             related_issue_severity=related_issue_severity,
-            first=first,
+            first=api_first,
         )
 
         url: str = api_utils.get_full_url(
@@ -266,4 +270,7 @@ class WizApiClient(Apiable):
         api_utils.validate_response(response=response)
 
         nodes = response.json().get("data", {}).get("vulnerabilityFindings", {}).get("nodes", [])
-        return [self.parser.build_vulnerability_finding_object(node) for node in nodes]
+        findings = [self.parser.build_vulnerability_finding_object(node) for node in nodes]
+        if cve_ids:
+            findings = [f for f in findings if f.name in cve_ids]
+        return findings[:first]
