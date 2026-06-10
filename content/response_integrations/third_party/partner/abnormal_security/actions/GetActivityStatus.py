@@ -55,12 +55,13 @@ def main() -> None:
         is_mandatory=True,
         print_value=True,
     )
+    # Tenant scope is resolved from the API key; this field is optional and unused.
     tenant_ids_raw = siemplify.extract_action_param(
         param_name="Tenant IDs",
-        is_mandatory=True,
+        is_mandatory=False,
         print_value=True,
     )
-    tenant_ids = [t.strip() for t in tenant_ids_raw.split(",") if t.strip()]
+    tenant_ids = [t.strip() for t in tenant_ids_raw.split(",") if t.strip()] if tenant_ids_raw else None
 
     result_value = False
     status = EXECUTION_STATE_FAILED
