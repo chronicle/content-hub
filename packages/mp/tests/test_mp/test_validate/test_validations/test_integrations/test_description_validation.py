@@ -22,7 +22,7 @@ import pytest
 import toml
 import yaml
 
-from mp.core.exceptions import FatalValidationError
+from mp.core.exceptions import NonFatalValidationError
 from mp.validate.validations.integrations.description_validation import (
     IntegrationDescriptionValidation,
 )
@@ -75,7 +75,7 @@ class TestIntegrationDescriptionValidation:
             },
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(FatalValidationError, match="Integration is missing the 'description' field in pyproject.toml."):
+        with pytest.raises(NonFatalValidationError, match="Integration is missing the 'description' field in pyproject.toml."):
             self.runner.run(temp_integration)
 
     def test_empty_description_fails(self, temp_integration: Path) -> None:
@@ -88,7 +88,7 @@ class TestIntegrationDescriptionValidation:
             },
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(FatalValidationError, match="Integration has an empty 'description' field in pyproject.toml."):
+        with pytest.raises(NonFatalValidationError, match="Integration has an empty 'description' field in pyproject.toml."):
             self.runner.run(temp_integration)
 
     def test_whitespace_description_fails(self, temp_integration: Path) -> None:
@@ -101,7 +101,7 @@ class TestIntegrationDescriptionValidation:
             },
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(FatalValidationError, match="Integration has an empty 'description' field in pyproject.toml."):
+        with pytest.raises(NonFatalValidationError, match="Integration has an empty 'description' field in pyproject.toml."):
             self.runner.run(temp_integration)
 
     def test_non_string_description_fails(self, temp_integration: Path) -> None:
@@ -114,7 +114,7 @@ class TestIntegrationDescriptionValidation:
             },
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(FatalValidationError, match="Integration has an empty 'description' field in pyproject.toml."):
+        with pytest.raises(NonFatalValidationError, match="Integration has an empty 'description' field in pyproject.toml."):
             self.runner.run(temp_integration)
 
     def test_missing_pyproject_skips(self, temp_integration: Path) -> None:
@@ -137,7 +137,7 @@ class TestIntegrationDescriptionValidation:
             },
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(FatalValidationError, match="Integration is missing the 'project' section in pyproject.toml."):
+        with pytest.raises(NonFatalValidationError, match="Integration is missing the 'project' section in pyproject.toml."):
             self.runner.run(temp_integration)
 
     def test_non_dict_project_section_fails(self, temp_integration: Path) -> None:
@@ -146,7 +146,7 @@ class TestIntegrationDescriptionValidation:
             "project": "not a dict"
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(FatalValidationError, match="Integration is missing the 'project' section in pyproject.toml."):
+        with pytest.raises(NonFatalValidationError, match="Integration is missing the 'project' section in pyproject.toml."):
             self.runner.run(temp_integration)
 
     def test_valid_integration_and_actions_passes(self, temp_integration: Path) -> None:
@@ -220,7 +220,7 @@ class TestIntegrationDescriptionValidation:
         _write_action_yaml(temp_integration, "my_action", action_content)
 
         msg = "Action 'my_action' parameter 'Param1' is missing 'description' field."
-        with pytest.raises(FatalValidationError, match=msg):
+        with pytest.raises(NonFatalValidationError, match=msg):
             self.runner.run(temp_integration)
 
     def test_empty_action_parameter_description_fails(self, temp_integration: Path) -> None:
@@ -246,7 +246,7 @@ class TestIntegrationDescriptionValidation:
         _write_action_yaml(temp_integration, "my_action", action_content)
 
         msg = "Action 'my_action' parameter 'Param1' has an empty 'description' field."
-        with pytest.raises(FatalValidationError, match=msg):
+        with pytest.raises(NonFatalValidationError, match=msg):
             self.runner.run(temp_integration)
 
     def test_multiple_errors_accumulated(self, temp_integration: Path) -> None:
@@ -269,7 +269,7 @@ class TestIntegrationDescriptionValidation:
         }
         _write_action_yaml(temp_integration, "my_action", action_content)
 
-        with pytest.raises(FatalValidationError) as exc_info:
+        with pytest.raises(NonFatalValidationError) as exc_info:
             self.runner.run(temp_integration)
 
         err_msg = str(exc_info.value)

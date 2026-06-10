@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 import yaml
 
 from mp.core import constants
-from mp.core.exceptions import FatalValidationError
+from mp.core.exceptions import NonFatalValidationError
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -74,7 +74,7 @@ class IntegrationDescriptionValidation:
             path: The path of the integration to validate.
 
         Raises:
-            FatalValidationError: If any description is missing or empty.
+            NonFatalValidationError: If any description is missing or empty.
 
         """
         errors: list[str] = []
@@ -107,4 +107,4 @@ class IntegrationDescriptionValidation:
                 _validate_action_file(action_file, errors)
 
         if errors:
-            raise FatalValidationError("\n".join(errors))
+            raise NonFatalValidationError("\n".join(errors))
