@@ -1,41 +1,47 @@
 Get Authentication Logs for User:
   ai_description: >-
-    General Description: Obtains user data and authentication logs from Duo Security
-    for a specified user. This action retrieves historical authentication telemetry,
-    including access devices, locations, and applications, and aggregates this data
-    to identify common authentication sources based on a configurable threshold.
+    ### General Description
+
+    Retrieves user data and authentication logs from DUO for a specified user over
+    a defined time range. This action aggregates authentication events and calculates
+    frequency counts for various authentication attributes (such as IP addresses,
+    locations, operating systems, and applications) to help identify potentially anomalous
+    authentication sources based on a configurable threshold.
 
 
-    Flow Description:
+    ### Flow Description
 
-    1. The action extracts the required parameters: 'Username', 'Number Days Back',
-    and 'Authentication Threshold'.
+    1. The action extracts the `Username`, `Number Days Back`, and `Authentication
+    Threshold` parameters.
 
-    2. It initializes the Duo Admin API client using the configured API Hostname,
-    Admin Secret Key, and Admin Integration Key.
+    2. It authenticates with the DUO Admin API using the provided configuration credentials.
 
-    3. The action calls the Duo API 'get_users_by_name' method to retrieve the user's
-    unique identifier.
+    3. It calls the `admin_api.get_users_by_name` method to retrieve the `user_id`
+    associated with the specified username.
 
-    4. Using the retrieved user ID, it calls the Duo API 'get_authentication_log'
-    method to fetch authentication logs for the specified number of days.
+    4. It calculates the time range based on the `Number Days Back` parameter.
 
-    5. The action iterates through the authentication logs, filtering for successful
-    authentications.
+    5. It calls the `admin_api.get_authentication_log` method to fetch authentication
+    logs for the user within the calculated time range.
 
-    6. It aggregates the authentication data (IPs, locations, OS, applications, devices)
-    and filters out sources that do not meet the 'Authentication Threshold'.
+    6. It processes the retrieved logs to count occurrences of various authentication
+    attributes (e.g., IP, state, OS, application, device).
 
-    7. Finally, the aggregated results are returned as a JSON object via the Siemplify
-    result handler.
+    7. It filters these attributes based on the `Authentication Threshold` to identify
+    frequently seen sources.
+
+    8. It outputs the aggregated results as a JSON object using `siemplify.result.add_result_json`.
 
 
-    Additional Notes: This action requires valid Duo Admin API credentials configured
-    in the integration settings. It is a read-only operation and does not modify any
-    external or internal systems.
+    ### Additional Notes
+
+    This action requires valid DUO Admin API credentials (API Hostname, Admin Secret
+    Key, and Admin Integration Key) to be configured in the integration settings.
+    It does not perform any state-changing operations on the DUO platform or the SOAR
+    case.
   ai_short_description: >-
-    Retrieves authentication logs and user metadata from Duo Security for a specific
-    user.
+    Retrieves user data and authentication logs from DUO for a specific user, providing
+    aggregated insights on authentication sources.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -47,15 +53,9 @@ Get Authentication Logs for User:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs GET requests to the Duo Admin API to retrieve user and log
-      data. It does not mutate any external or internal data.
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches data from an external system (Duo Security) and does not
-      perform any mutations on external or internal systems. It is strictly an enrichment/data
-      retrieval action.
-    remediation: false
+      The action fetches authentication logs and user data from the DUO API (fetches_data=true).
+      It does not perform any mutations on external systems or internal SOAR data.
+      It does not update entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -107,9 +107,9 @@ Get Authentication Logs for User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities from the SOAR platform; it uses a 'Username'
-      parameter provided by the user to query the Duo API. Therefore, no entity types
-      or entity filters are utilized.
+      The action extracts the 'Username' from action parameters using `siemplify.extract_action_param`.
+      It does not iterate over or filter `siemplify.target_entities`. Therefore, it
+      does not run on entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -120,15 +120,14 @@ Get Authentication Logs for User:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: true
+    enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves user metadata and historical authentication logs from Duo
-      Security. This aligns with 'Enrich Asset' (providing contextual metadata for
-      a user) and 'Search Events' (fetching historical logs/telemetry). It does not
-      perform any remediation or alert updates.
+      The action retrieves historical authentication logs from DUO based on a user
+      and time range. This matches the 'Search Events' category, which involves returning
+      a collection of historical logs or telemetry data.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -159,35 +158,37 @@ Get Trust Monitor Events:
   ai_description: >-
     ### General Description
 
-    Fetches DUO Trust Monitor events from the DUO Admin API for a specified lookback
-    period. This action retrieves historical security events from DUO, allowing analysts
-    to review recent activity within the DUO environment.
+    Retrieves DUO Trust Monitor events from the DUO platform for a specified lookback
+    period. This action allows analysts to pull historical security events directly
+    from DUO to support investigation and monitoring workflows.
 
 
     ### Flow Description
 
-    1. Extracts configuration parameters (API Hostname, Admin Secret Key, Admin Integration
-    Key) from the DUO integration settings.
+    1. Extracts DUO API credentials (API Hostname, Admin Secret Key, and Admin Integration
+    Key) from the integration configuration.
 
-    2. Extracts the `Number Days Back` parameter to determine the lookback period.
+    2. Extracts the 'Number Days Back' parameter to define the time range for the
+    query.
 
-    3. Calculates the time range by subtracting the specified number of days from
-    the current timestamp.
+    3. Calculates the start and end timestamps based on the current time and the provided
+    number of days.
 
-    4. Initializes the `duo_client.Admin` client using the provided credentials.
+    4. Initializes the DUO Admin API client using the extracted credentials.
 
-    5. Calls the `admin_api.get_trust_monitor_events_by_offset` method with the calculated
-    time range to retrieve the events.
+    5. Calls the `get_trust_monitor_events_by_offset` API method to retrieve events
+    within the calculated time range.
 
-    6. Adds the retrieved events to the action result using `siemplify.result.add_result_json`.
+    6. Adds the retrieved events to the action results as a JSON object.
 
 
     ### Additional Notes
 
     This action requires valid DUO Admin API credentials configured in the integration
-    settings. It is a read-only operation that retrieves data for analysis.
+    settings. It performs a read-only operation and does not modify any data in DUO
+    or the SOAR platform.
   ai_short_description: >-
-    Fetches DUO Trust Monitor events from the DUO Admin API for a specified lookback
+    Retrieves DUO Trust Monitor events from the DUO platform for a specified lookback
     period.
   capabilities:
     can_create_case_comments: false
@@ -200,16 +201,8 @@ Get Trust Monitor Events:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the DUO API to retrieve events. It does not
-      mutate external or internal data.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action fetches historical events from DUO. It does not modify external systems
-      or internal case data. It is a search/fetch operation and does not meet the
-      criteria for enrichment (which requires gathering context about specific alerts
-      or entities) or remediation.
-    remediation: false
+      The action fetches data from the DUO API. It does not mutate external or internal
+      data, nor does it update entities or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -261,8 +254,8 @@ Get Trust Monitor Events:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or filter any entities. It performs a general
-      API call to fetch events based on a time range.
+      The action does not interact with or filter by any entities. It performs a global
+      search for events based on a time range provided as an input parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -278,8 +271,9 @@ Get Trust Monitor Events:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves historical Trust Monitor events from DUO based on a time
-      range. This aligns with the 'Search Events' category.
+      The action retrieves historical logs (Trust Monitor events) from an external
+      service based on a time range, which directly aligns with the 'Search Events'
+      category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -302,31 +296,37 @@ Get Trust Monitor Events:
     | Number Days Back | String | Yes | Number of days back to pull events from. |
 Get Users by Name:
   ai_description: >-
-    General Description: Queries the DUO API to retrieve detailed information about
-    a specific user. This action is useful for gathering authentication and device
-    context for a user identity during an investigation.
+    ### General Description
+
+    Queries the DUO Admin API to retrieve user information, including authentication
+    and device data, for a specified username. This action is designed to provide
+    security analysts with contextual information about a user within the DUO environment.
 
 
-    Flow Description:
+    ### Flow Description
 
-    1. The action extracts the required DUO configuration parameters: 'API Hostname',
-    'Admin Secret Key', and 'Admin Integration Key'.
+    1. Extracts the required DUO API configuration parameters (API Hostname, Admin
+    Secret Key, Admin Integration Key) from the integration settings.
 
-    2. It extracts the 'Username' parameter provided by the user.
+    2. Extracts the target `Username` parameter provided by the user.
 
-    3. The action initializes the DUO Admin API client using the extracted credentials.
+    3. Initializes the `duo_client.Admin` client using the retrieved credentials.
 
-    4. It calls the 'admin_api.get_users_by_name' method to fetch user data from the
-    DUO platform.
+    4. Executes the `get_users_by_name` method via the DUO Admin API to fetch the
+    user's profile and associated data.
 
-    5. The retrieved user data is formatted into a JSON object and added to the action
-    results.
+    5. Parses the response to extract the `user_id` and the full user data object.
+
+    6. Adds the retrieved user information to the action results using `siemplify.result.add_result_json`.
 
 
-    Additional Notes: This action requires valid DUO Admin API credentials to function.
-    It does not modify any data in DUO or the SOAR platform; it is a read-only operation.
+    ### Additional Notes
+
+    This action requires valid DUO Admin API credentials. It is a read-only operation
+    and does not modify any data in DUO or the SOAR platform.
   ai_short_description: >-
-    Queries the DUO API to retrieve detailed information about a specific user.
+    Queries the DUO Admin API to retrieve user information, including authentication
+    and device data, for a specified username.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -338,16 +338,9 @@ Get Users by Name:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to the DUO API to fetch user information.
-      It does not mutate any external data, nor does it modify any internal SOAR data
-      (entities, insights, or comments).
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches user data from an external API (DUO) without modifying any
-      external or internal systems. It meets the criteria for an enrichment action
-      as it is a read-only operation that retrieves supplemental context.
-    remediation: false
+      The action performs a GET request to the DUO Admin API to fetch user data. It
+      does not mutate any external or internal data, nor does it update entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -399,9 +392,9 @@ Get Users by Name:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process entities from the SOAR platform; it relies on a
-      provided 'Username' parameter to perform the lookup. Therefore, no entity types
-      are used, and no entity filters are applicable.
+      The action does not iterate over or utilize `siemplify.target_entities`. It
+      relies solely on the `Username` parameter provided in the action configuration
+      to perform the lookup.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -417,9 +410,9 @@ Get Users by Name:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves contextual metadata (user, authentication, and device data)
-      for a specific user from the DUO platform. This aligns with the 'Enrich Asset'
-      category. It does not perform any alert updates, ticketing, or remediation actions.
+      The action retrieves contextual metadata (authentication and device data) for
+      a specific user from the DUO platform. This aligns with the 'Enrich Asset' category.
+      It does not perform any mutations or alert updates.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -439,14 +432,13 @@ Get Users by Name:
 
     | --- | --- | --- | --- |
 
-    | Username | String | Yes | The username to query in the DUO platform. |
+    | Username | String | Yes | The target username to query in DUO. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Verifies the connectivity and authentication credentials for the DUO integration.
-    This action ensures that the configured API Hostname, Auth Secret Key, and Auth
-    Integration Key are valid and that the signature generation is functioning correctly.
+    Verifies the connectivity and validity of the DUO Auth API credentials by performing
+    a health check against the DUO service.
 
 
     ### Flow Description
@@ -454,21 +446,21 @@ Ping:
     1. The action extracts the `API Hostname`, `Auth Secret Key`, and `Auth Integration
     Key` from the integration configuration.
 
-    2. It initializes the `duo_client.Auth` object using these extracted credentials.
+    2. It initializes the `duo_client.Auth` client using these credentials.
 
-    3. It executes the `auth_api.check()` method to validate the connection to the
-    DUO API.
+    3. It calls the `auth_api.check()` method to verify the connection and signature
+    generation.
 
-    4. The action returns a success message if the credentials are valid or an error
-    message if the connection fails.
+    4. The action returns a success message if the check is successful, or a failure
+    message if an exception occurs.
 
 
     ### Additional Notes
 
-    This is a connectivity test action and does not perform any data enrichment or
-    remediation.
+    This action is a connectivity test and does not perform any data enrichment or
+    mutation.
   ai_short_description: >-
-    Verifies DUO integration connectivity and authentication credentials.
+    Verifies DUO Auth API connectivity and credential validity.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -480,16 +472,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action is a connectivity test (Ping) that validates credentials against
-      the DUO API. It does not fetch data, mutate external systems, or modify internal
-      SOAR data.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is a 'Ping' action designed to verify connectivity and credentials.
-      It does not fetch data for entities or perform remediation. Therefore, it is
-      neither an enrichment nor a remediation action.
-    remediation: false
+      The action performs a connectivity check against the DUO API. It does not fetch
+      contextual data, mutate external or internal data, update entities, create insights,
+      or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -541,8 +526,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities; it only performs a connectivity check
-      against the DUO API.
+      The action performs a connectivity test against the DUO API and does not interact
+      with any entities in the SOAR platform. All entity flags are false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -558,9 +543,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a connectivity check (Ping) to verify API credentials. It
-      does not match any of the defined outcome categories (Enrich IOC, Block IP,
-      etc.).
+      The action is a connectivity test (ping) and does not perform any of the defined
+      outcome actions (enrichment, containment, ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

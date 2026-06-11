@@ -2,36 +2,36 @@ Add Comment:
   ai_description: >-
     ### General Description
 
-    Adds a comment to a specific alarm in the SOCRadar platform. This action enables
-    analysts to append notes or context directly to an existing alarm, facilitating
-    better collaboration and documentation within the SOCRadar environment.
+    Adds a comment to a specific SOCRadar alarm. This action allows analysts to append
+    notes or information directly to an existing alarm within the SOCRadar platform,
+    facilitating better communication and documentation of investigation steps.
 
 
     ### Flow Description
 
-    1. The action extracts the necessary configuration parameters: `API Root`, `API
-    Key`, `Company ID`, and `Verify SSL`.
+    1. The action extracts the necessary configuration parameters (API Root, API Key,
+    Company ID, and SSL verification settings) from the integration configuration.
 
-    2. It extracts the required action parameters: `Alarm ID`, `Comment`, and the
-    optional `User Email`.
+    2. It extracts the action-specific parameters: `Alarm ID` (the identifier of the
+    target alarm), `Comment` (the text to be added), and `User Email` (optional, the
+    email of the user posting the comment).
 
-    3. The `SOCRadarManager` is initialized with the provided credentials.
+    3. The action initializes the `SOCRadarManager` with the provided credentials.
 
-    4. The action calls the `add_comment` method, which performs a `POST` request
-    to the SOCRadar API endpoint `alarm/add/comment/v2` with the alarm ID, comment,
-    and user email.
+    4. It calls the `add_comment` method, which performs a POST request to the SOCRadar
+    API endpoint `alarm/add/comment/v2` with the alarm ID, comment, and optional user
+    email.
 
-    5. The result of the API call is added to the action's output using `siemplify.result.add_result_json`.
-
-    6. The action concludes by ending with a success or failure message.
+    5. The result of the API call is returned to the SOAR platform, and the action
+    concludes with a success message or an error if the request fails.
 
 
     ### Additional Notes
 
-    This action modifies the state of an external SOCRadar alarm by adding a comment.
-    It does not perform any modifications to the internal Google SecOps case or alert
-    data.
-  ai_short_description: Adds a comment to a SOCRadar alarm.
+    This action performs a state-changing operation on the external SOCRadar platform.
+    It does not interact with SOAR entities or modify internal case data.
+  ai_short_description: >-
+    Adds a comment to a specific SOCRadar alarm.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -40,19 +40,13 @@ Add Comment:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a comment to an alarm in the SOCRadar platform.
+      Adds a comment to a specific alarm in the SOCRadar platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to add a comment to an external SOCRadar alarm
-      (can_mutate_external_data=true). It does not fetch context data or update internal
-      entities.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action performs a POST request to add a comment to an external system. It
-      does not fetch data (not enrichment) and does not perform remediation (not remediation).
-    remediation: false
+      The action performs a POST request to the SOCRadar API to add a comment to an
+      alarm, which constitutes an external data mutation. It does not fetch data,
+      update internal entities, or modify SOAR alert data.
   entity_usage:
     entity_types:
       address: false
@@ -104,8 +98,8 @@ Add Comment:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities from the SOAR platform; it operates
-      on an external Alarm ID provided as a parameter.
+      The action does not interact with SOAR entities. It operates solely on the provided
+      Alarm ID parameter to perform an external API call.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -121,9 +115,10 @@ Add Comment:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action adds a comment to an external SOCRadar alarm. It does not modify
-      the alert within the SecOps platform, nor does it perform any of the other listed
-      remediation or enrichment tasks.
+      The action adds a comment to an external SOCRadar alarm. It does not append
+      notes to the SOAR alert's activity timeline (Add Alert Comment), nor does it
+      update the SOAR alert status (Update Alert). Therefore, it does not match any
+      of the provided outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -143,49 +138,47 @@ Add Comment:
 
     | --- | --- | --- | --- |
 
-    | Alarm ID | String | Yes | The SOCRadar alarm ID. |
+    | Alarm ID | String | Yes | The SOCRadar alarm ID to which the comment will be
+    added. |
 
-    | Comment | String | Yes | Comment text to add. |
+    | Comment | String | Yes | The text content of the comment to add. |
 
-    | User Email | String | No | Email of the user posting the comment. |
+    | User Email | String | No | The email address of the user posting the comment.
+    |
 Add Tag:
   ai_description: >-
     ### General Description
 
-    Adds a tag to a specific SOCRadar alarm. This action allows analysts to categorize
-    or label alarms within the SOCRadar platform to improve incident tracking and
-    organization.
+    Adds a tag to a specific SOCRadar alarm. This action allows users to categorize
+    or label alarms within the SOCRadar platform to improve incident management and
+    tracking.
 
 
     ### Flow Description
 
     1. The action extracts the necessary configuration parameters (API Root, API Key,
-    Company ID, and SSL verification settings) from the integration configuration.
+    Company ID, Verify SSL) and action parameters (Alarm ID, Tag).
 
-    2. It extracts the required action parameters: `Alarm ID` and `Tag`.
+    2. The `SOCRadarManager` is initialized with the provided credentials.
 
-    3. The action initializes the `SOCRadarManager` to handle API communication.
+    3. The action calls the `get_alarm_details` method to retrieve the current state
+    of the specified alarm, including its existing tags.
 
-    4. It calls the `get_alarm_details` method (GET request) to retrieve the current
-    state of the specified alarm and verify its existence.
+    4. The action checks if the requested tag is already present in the alarm's tag
+    list to ensure idempotency.
 
-    5. It checks if the provided tag is already associated with the alarm to ensure
-    idempotency.
+    5. If the tag is not present, the action performs a `POST` request to the SOCRadar
+    API (`alarm/tag` endpoint) to add the tag to the alarm.
 
-    6. If the tag is not present, it performs a POST request to the SOCRadar API (`alarm/tag`
-    endpoint) to add the tag to the alarm.
-
-    7. The result of the operation is added to the action output, and the action concludes
-    with a success or failure message.
+    6. The result of the operation is added to the action results, and the action
+    concludes with a success message.
 
 
     ### Additional Notes
 
-    This action performs a mutation on an external system (SOCRadar). It is not considered
-    an enrichment action because it modifies external data, nor is it a remediation
-    action as it does not neutralize threats.
-  ai_short_description: >-
-    Adds a tag to a specified SOCRadar alarm.
+    This action performs an idempotency check by fetching the alarm details before
+    attempting to add the tag, preventing duplicate tag entries.
+  ai_short_description: Adds a tag to a specific SOCRadar alarm.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -194,20 +187,13 @@ Add Tag:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds a tag to an alarm in the SOCRadar platform.
+      Adds a tag to a specific SOCRadar alarm via the SOCRadar API.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches alarm details (GET) to check for existing tags and then performs
-      a POST request to add a tag to the external SOCRadar system. It does not modify
-      internal SOAR data or entities.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action modifies external data (adds a tag to an alarm in SOCRadar), which
-      disqualifies it from being an Enrichment action. It does not perform threat
-      neutralization or infrastructure control, so it is not a Remediation action.
-    remediation: false
+      The action fetches alarm details to check for existing tags (fetches_data=true)
+      and performs a POST request to the SOCRadar API to add a tag (can_mutate_external_data=true).
+      It does not modify internal SecOps data or entities.
   entity_usage:
     entity_types:
       address: false
@@ -259,8 +245,8 @@ Add Tag:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action operates on a specific Alarm ID provided as an input parameter and
-      does not interact with or filter SOAR entities.
+      The action operates on a specific Alarm ID provided as an input parameter, not
+      on entities from the SOAR case. Therefore, no entity usage flags are set.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -274,11 +260,12 @@ Add Tag:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: false
+    get_alert_information: true
     reasoning: >-
-      The action adds a tag to an external SOCRadar alarm. It does not match any of
-      the defined outcome categories, which are primarily focused on SecOps platform
-      alerts, ITSM tickets, or specific threat remediation actions.
+      The action fetches alarm details (get_alert_information) and updates an external
+      alarm by adding a tag. Since there is no specific category for 'Update External
+      Alarm', and it fetches information, 'get_alert_information' is the most relevant
+      category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -298,43 +285,43 @@ Add Tag:
 
     | --- | --- | --- | --- |
 
-    | Alarm ID | String | Yes | The SOCRadar alarm ID. |
+    | Alarm ID | String | Yes | The SOCRadar alarm ID to which the tag will be added.
+    |
 
-    | Tag | String | Yes | The tag to add to the alarm. |
+    | Tag | String | Yes | The tag string to add to the alarm. |
 Ask Analyst:
   ai_description: >-
     ### General Description
 
-    Requests assistance from a SOCRadar analyst for a specific alarm. This action
-    allows security analysts to send a message or question directly to the SOCRadar
-    analyst team regarding an existing alarm, facilitating collaboration and incident
-    investigation.
+    This action allows analysts to request assistance or clarification from the SOCRadar
+    analyst team regarding a specific alarm. It facilitates communication between
+    the SOAR platform and the SOCRadar service by submitting a comment directly to
+    the relevant incident.
 
 
     ### Flow Description
 
-    1. The action extracts the necessary configuration parameters (API Root, API Key,
-    Company ID, and SSL verification settings) from the integration configuration.
+    1. Extracts configuration parameters (API Root, API Key, Company ID, Verify SSL)
+    and action parameters (Alarm ID, Comment).
 
-    2. It extracts the required action parameters: `Alarm ID` and `Comment`.
+    2. Initializes the `SOCRadarManager` with the provided credentials.
 
-    3. The action initializes the `SOCRadarManager` with the provided credentials.
+    3. Calls the `ask_analyst` method of the `SOCRadarManager`, which sends a `POST`
+    request to the SOCRadar API endpoint `incidents/ask/analyst/v2` with the `alarm_id`
+    and `comment`.
 
-    4. It executes a POST request to the SOCRadar API endpoint `incidents/ask/analyst/v2`
-    with the `alarm_id` and `comment`.
+    4. Adds the API response to the action results using `siemplify.result.add_result_json`.
 
-    5. The result of the API call is added to the action's result JSON.
-
-    6. The action concludes with a success message indicating the request was sent.
+    5. Ends the action with a success message indicating the question was sent.
 
 
     ### Additional Notes
 
-    This action requires a valid SOCRadar API Key and an existing Alarm ID. It is
-    an operational action used for communication with the SOCRadar analyst team and
-    does not perform automated remediation or data enrichment.
+    This action requires a valid SOCRadar Alarm ID and a comment to be provided. It
+    interacts with the SOCRadar API to facilitate analyst-to-analyst communication.
   ai_short_description: >-
-    Requests assistance from a SOCRadar analyst for a specific alarm.
+    Requests assistance from a SOCRadar analyst for a specific alarm by sending a
+    comment to the SOCRadar platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -343,22 +330,13 @@ Ask Analyst:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends a request to the SOCRadar analyst team by creating an entry in the SOCRadar
-      system.
+      Sends a request for assistance to the SOCRadar analyst team for a specific alarm,
+      creating an interaction record in the SOCRadar platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to the SOCRadar API to create an analyst
-      request (mutating external data). It does not fetch data for enrichment, nor
-      does it modify internal SOAR data or entities.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is an operational request to an external service to facilitate communication.
-      It does not retrieve data for enrichment purposes, nor does it perform security
-      remediation (e.g., blocking, isolating, or resetting credentials). Therefore,
-      it does not qualify as either an enrichment or remediation action.
-    remediation: false
+      The action makes a POST request to the SOCRadar API to submit an analyst request.
+      This mutates external data in the SOCRadar platform.
   entity_usage:
     entity_types:
       address: false
@@ -410,8 +388,8 @@ Ask Analyst:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with or filter any entities. It operates solely
-      based on the provided 'Alarm ID' and 'Comment' parameters.
+      The action does not iterate over `target_entities`. It takes `Alarm ID` and
+      `Comment` as direct input parameters. Therefore, no entity flags are set.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -427,9 +405,8 @@ Ask Analyst:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action sends a request to an external analyst team. It does not fit the
-      definitions of enrichment, remediation, or ticket management provided. It is
-      a specific communication workflow action.
+      The action sends a request to an analyst. It does not match any of the predefined
+      outcome categories (e.g., Enrich IOC, Contain Host, Create Ticket).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -453,44 +430,22 @@ Ask Analyst:
 
     | Comment | String | Yes | Message for the SOCRadar analyst team. |
 Change Alarm Status:
-  ai_description: >-
-    ### General Description
-
-    Updates the status of an alarm within the SOCRadar platform. This action allows
-    analysts to modify the lifecycle state of an incident (e.g., changing to 'RESOLVED'
-    or 'FALSE_POSITIVE') directly from the SOAR platform, ensuring synchronization
-    between SOCRadar and the security operations workflow.
-
-
-    ### Flow Description
-
-    1. The action extracts the necessary configuration parameters (API Root, API Key,
-    Company ID, and SSL verification settings) from the integration configuration.
-
-    2. It extracts the action-specific parameters: Alarm ID, Status, Comments, Email,
-    and the 'Update Related Findings' flag.
-
-    3. The action initializes the `SOCRadarManager` to handle communication with the
-    SOCRadar REST API.
-
-    4. It invokes the `change_status` method, which performs a `POST` request to the
-    `/alarms/status/change` endpoint of the SOCRadar API with the provided alarm details
-    and status update.
-
-    5. The API response is captured and added to the action results using `add_result_json`.
-
-    6. The action concludes by logging the outcome and terminating with a success
-    or failure message.
-
-
-    ### Additional Notes
-
-    This action performs a state change on an external system (SOCRadar). It does
-    not interact with SOAR entities or modify internal case data. The 'Update Related
-    Findings' parameter is automatically disabled if an email is not provided, as
-    required by the API logic.
-  ai_short_description: >-
-    Updates the status of an alarm within the SOCRadar platform.
+  ai_description: "### General Description\nUpdates the status of a specific alarm\
+    \ within the SOCRadar platform. This action allows analysts to transition an alarm's\
+    \ state (e.g., to RESOLVED or INVESTIGATING) and optionally provide comments or\
+    \ update related findings.\n\n### Flow Description\n1. The action extracts configuration\
+    \ parameters (API Root, API Key, Company ID, SSL verification) and action parameters\
+    \ (Alarm ID, Status, Comments, Email, Update Related Findings).\n2. The `SOCRadarManager`\
+    \ is initialized with the provided credentials.\n3. The action calls the `change_status`\
+    \ method of the `SOCRadarManager`.\n4. The manager performs a `POST` request to\
+    \ the SOCRadar API endpoint `alarms/status/change` with the provided alarm ID,\
+    \ status, and optional metadata.\n5. The result of the API call is added to the\
+    \ action result, and the action concludes with a success or failure message.\n\
+    \n### Additional Notes\n- The action supports updating related findings if an\
+    \ email is provided. \n- Valid statuses include OPEN, INVESTIGATING, RESOLVED,\
+    \ PENDING_INFO, LEGAL_REVIEW, VENDOR_ASSESSMENT, FALSE_POSITIVE, DUPLICATE, PROCESSED_INTERNALLY,\
+    \ MITIGATED, and NOT_APPLICABLE."
+  ai_short_description: Updates the status of a SOCRadar alarm.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -499,20 +454,13 @@ Change Alarm Status:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the status of an alarm in the SOCRadar platform.
+      Updates the status of an alarm in the SOCRadar platform via a POST request.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to update the status of an alarm in the external
-      SOCRadar system. It does not fetch data, nor does it modify internal SOAR data
-      or entities.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action performs a state change on an external system (SOCRadar) by updating
-      an alarm status. It does not fetch data (enrichment) nor does it perform threat
-      neutralization or infrastructure control (remediation).
-    remediation: false
+      The action performs a POST request to the SOCRadar API to change the status
+      of an alarm. This is an external data mutation. It does not fetch data, update
+      internal entities, or modify internal alert data.
   entity_usage:
     entity_types:
       address: false
@@ -564,8 +512,8 @@ Change Alarm Status:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with SOAR entities. It operates solely on parameters
-      provided via the action configuration (Alarm ID).
+      The action does not iterate over or utilize target entities. It operates on
+      a specific Alarm ID provided as an action parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -581,10 +529,9 @@ Change Alarm Status:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the status of an alarm in the external SOCRadar platform.
-      It does not match the 'Update Alert' category (which is specific to the SecOps
-      platform) nor 'Update Ticket' (as SOCRadar is an incident/threat platform, not
-      an ITSM). No other categories apply.
+      The action updates the status of an external alarm in SOCRadar. It does not
+      update an alert within the SecOps platform, nor does it create a ticket, enrich
+      IOCs, or perform any of the other listed outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -604,15 +551,13 @@ Change Alarm Status:
 
     | --- | --- | --- | --- |
 
-    | Alarm ID | String | Yes | The SOCRadar alarm ID to be updated. |
+    | Alarm ID | String | Yes | The SOCRadar alarm ID. |
 
-    | Status | String | Yes | The new status name or code to apply to the alarm. |
+    | Status | String | Yes | New status name or code (e.g., OPEN, RESOLVED). |
 
-    | Comments | String | No | Optional comment to include with the status change.
-    |
+    | Comments | String | No | Optional comment for the status change. |
 
-    | Email | String | No | The email address of the user performing the status change.
-    |
+    | Email | String | No | Email of the user making the change. |
 
     | Update Related Findings | Boolean | No | Whether to update the status of related
     findings. Defaults to true. |
@@ -620,33 +565,36 @@ Change Assignee:
   ai_description: >-
     ### General Description
 
-    Assigns users to a specific SOCRadar alarm by providing their email addresses
-    or user IDs. This action updates the assignee field of an alarm within the external
-    SOCRadar platform, facilitating incident management and ownership tracking.
+    Assigns one or more users to a specific SOCRadar alarm by updating the assignee
+    field within the SOCRadar platform. This action allows security analysts to delegate
+    or reassign incidents directly from the SOAR platform to the appropriate personnel
+    in SOCRadar.
 
 
     ### Flow Description
 
-    1. Extracts configuration parameters (API Root, API Key, Company ID, SSL verification)
-    and action parameters (Alarm ID, User Emails, User IDs).
+    1. The action extracts the necessary configuration parameters (API Root, API Key,
+    Company ID) to establish a connection to the SOCRadar API.
 
-    2. Initializes the `SOCRadarManager` with the provided credentials.
+    2. It retrieves the `Alarm ID`, `User Emails`, and `User IDs` from the action
+    parameters.
 
-    3. Calls the `change_assignee` method of the `SOCRadarManager`, which sends a
-    `POST` request to the SOCRadar API endpoint `alarm/{alarm_id}/assignee` with the
-    specified user identifiers.
+    3. The action parses the provided `User Emails` and `User IDs` into lists.
 
-    4. Adds the API response to the action results and terminates the action with
-    a success or failure message.
+    4. It invokes the `SOCRadarManager.change_assignee` method, which performs a `POST`
+    request to the `/alarm/{alarm_id}/assignee` endpoint of the SOCRadar API.
+
+    5. The result of the API operation is added to the action results, and the action
+    concludes with a success or failure message.
 
 
     ### Additional Notes
 
-    This action modifies the assignment state of an alarm in the external SOCRadar
-    platform. At least one of 'User Emails' or 'User IDs' must be provided for the
-    action to succeed.
+    This action requires a valid SOCRadar API Key and Company ID. Either `User Emails`
+    or `User IDs` (or both) must be provided to successfully update the assignee.
   ai_short_description: >-
-    Assigns users to a SOCRadar alarm using their email addresses or user IDs.
+    Assigns users to a SOCRadar alarm by updating the assignee field in the SOCRadar
+    platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -655,22 +603,13 @@ Change Assignee:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the assignee of a SOCRadar alarm by sending a POST request to the SOCRadar
-      API.
+      Updates the assignee field of an alarm record within the SOCRadar platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to update the assignee of an alarm in the
-      external SOCRadar system. It does not fetch data, nor does it modify internal
-      SOAR data (entities, insights, etc.).
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action performs a POST request to update the assignee of an alarm in the
-      external SOCRadar system. It does not fetch data, nor does it modify internal
-      SOAR data (entities, insights, etc.). It is an administrative action, not an
-      enrichment or remediation action.
-    remediation: false
+      The action performs a POST request to the SOCRadar API to update the assignee
+      of an alarm. This is a state-changing operation on an external system (can_mutate_external_data=true).
+      It does not fetch data, update internal entities, or modify internal alert data.
   entity_usage:
     entity_types:
       address: false
@@ -722,8 +661,9 @@ Change Assignee:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not use `siemplify.target_entities`. It uses `siemplify.extract_action_param`
-      for `Alarm ID`. All entity flags are false.
+      The action operates based on an 'Alarm ID' provided as an input parameter. It
+      does not iterate over or filter `siemplify.target_entities`. Therefore, no entity
+      usage flags are set to true.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -739,10 +679,10 @@ Change Assignee:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the assignee of an alarm in the external SOCRadar platform.
-      This matches the 'Update Ticket' category, as it synchronizes a field change
-      (assignee) to an external incident/alarm management system. It is not an enrichment
-      action, nor is it a remediation action (no threat neutralization).
+      The action performs a POST request to update the assignee of an alarm in the
+      SOCRadar platform. This constitutes an update to an external record, which aligns
+      with the 'Update Ticket' category as it synchronizes field changes to an external
+      incident management system.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -762,46 +702,45 @@ Change Assignee:
 
     | --- | --- | --- | --- |
 
-    | Alarm ID | String | Yes | The SOCRadar alarm ID. |
+    | Alarm ID | String | Yes | The SOCRadar alarm ID to be updated. |
 
     | User Emails | String | No | Comma-separated email addresses of users to assign.
     |
 
     | User IDs | String | No | Comma-separated user IDs to assign. |
-
-
-    **Parameter Notes:** At least one of 'User Emails' or 'User IDs' must be provided.
 Change Severity:
   ai_description: >-
     ### General Description
 
-    Updates the severity level of a SOCRadar alarm. This action allows analysts to
-    modify the priority of an existing alarm within the SOCRadar platform to better
-    reflect its current risk or status.
+    Changes the severity level of a specific alarm within the SOCRadar platform. This
+    action allows analysts to update the priority of an incident directly from the
+    SOAR platform by interacting with the SOCRadar REST API.
 
 
     ### Flow Description
 
-    1. Extract configuration parameters (API Root, API Key, Company ID, Verify SSL).
+    1. The action extracts the necessary configuration parameters (API Root, API Key,
+    Company ID, Verify SSL) to establish a connection to the SOCRadar API.
 
-    2. Extract action parameters (Alarm ID, Severity).
+    2. It retrieves the `Alarm ID` and the new `Severity` level from the action parameters.
 
-    3. Initialize the `SOCRadarManager` with the provided credentials.
+    3. The `SOCRadarManager` is initialized with the provided credentials.
 
-    4. Call the `change_severity` method, which sends a `POST` request to the SOCRadar
-    API endpoint `alarm/severity` with the `alarm_id` and the new `severity` value.
+    4. The action calls the `change_severity` method, which sends a `POST` request
+    to the SOCRadar API endpoint `alarm/severity` with the specified `alarm_id` and
+    `severity`.
 
-    5. Add the API response to the action results.
-
-    6. Terminate the action with a status message indicating success or failure.
+    5. The result of the API operation is added to the action results, and the action
+    concludes with a success or failure message.
 
 
     ### Additional Notes
 
-    The action requires a valid SOCRadar Alarm ID and a severity level (CRITICAL,
-    HIGH, MEDIUM, or LOW).
+    The `Severity` parameter must be one of the following values: 'CRITICAL', 'HIGH',
+    'MEDIUM', or 'LOW'. The action validates this input before sending the request
+    to the API.
   ai_short_description: >-
-    Updates the severity level of a SOCRadar alarm.
+    Changes the severity level of a specific alarm within the SOCRadar platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -810,20 +749,13 @@ Change Severity:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the severity level of an alarm in the SOCRadar platform.
+      Updates the severity level of a specific alarm within the SOCRadar platform.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to the SOCRadar API to update the severity
-      of an alarm. It does not fetch data, nor does it modify internal SOAR data or
-      entities.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action modifies the severity of an alarm in the external SOCRadar system.
-      This is an administrative update to an alert/incident record, which qualifies
-      as an Alert/Ticket update, thus meeting the remediation criteria.
-    remediation: true
+      The action performs a POST request to the SOCRadar API to change the severity
+      of an alarm, which constitutes a mutation of external data. It does not fetch
+      data, mutate internal SOAR data, or update entities/insights.
   entity_usage:
     entity_types:
       address: false
@@ -875,7 +807,9 @@ Change Severity:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities; it uses an Alarm ID provided as a parameter.
+      The action operates on a specific Alarm ID provided as an input parameter. It
+      does not iterate over or utilize any entities from the SOAR case, therefore
+      all entity type flags are set to false.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -891,9 +825,9 @@ Change Severity:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action updates the severity of an alarm in the external SOCRadar system.
-      This aligns with the 'Update Ticket' category, as it synchronizes a field change
-      (severity) to an external system.
+      The action updates the severity of an alarm in the external SOCRadar platform.
+      It does not modify the SOAR alert, create a ticket, or perform any of the other
+      listed outcome actions. Therefore, no outcome categories are matched.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -907,7 +841,7 @@ Change Severity:
     update_alert: false
     update_email: false
     update_identity: false
-    update_ticket: true
+    update_ticket: false
   parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
@@ -920,40 +854,42 @@ Enrich Indicator:
   ai_description: >-
     ### General Description
 
-    Enriches indicators (IP, domain, hash, URL) using the SOCRadar IOC Enrichment
+    Enriches an indicator (IP, domain, hash, or URL) using the SOCRadar IOC Enrichment
     API. This action retrieves comprehensive threat intelligence, including threat
-    scores, severity, categorization, classifications, and history. Optionally, it
-    can include AI-generated threat insights.
+    scores, severity levels, categorization, and historical data. It allows optional
+    inclusion of AI-generated insights to provide deeper context regarding the indicator's
+    risk.
 
 
     ### Flow Description
 
-    1. Extracts configuration parameters (API credentials, Company ID, SSL verification
-    settings) and action parameters (Indicator, AI insight preference, and requested
-    fields).
+    1. The action extracts configuration parameters, including the API Root, API Key,
+    Company ID, and the required IOC Enrichment API Key.
 
-    2. Validates the presence of the required IOC Enrichment API Key.
+    2. It extracts action parameters: the `Indicator` to be enriched, the `Include
+    AI Insight` toggle, and specific `Fields` to retrieve.
 
-    3. Calls the SOCRadar API (`ioc_enrichment/get/indicator_details`) to retrieve
-    threat intelligence for the specified indicator.
+    3. The action calls the `SOCRadarManager.enrich_indicator` method, which performs
+    a POST request to the SOCRadar IOC Enrichment API (`ioc_enrichment/get/indicator_details`)
+    to fetch the threat intelligence data.
 
-    4. Processes the API response to calculate a severity label (CRITICAL, HIGH, MEDIUM,
-    LOW) based on the returned risk score.
+    4. Upon receiving the response, the action calculates a severity label (CRITICAL,
+    HIGH, MEDIUM, LOW) based on the returned risk score.
 
-    5. Adds the detailed JSON result to the action output for further analysis.
+    5. The full result is added to the action's output using `siemplify.result.add_result_json`.
 
-    6. Finalizes the action with a summary string containing the indicator, risk score,
-    severity, and categorization.
+    6. Finally, the action generates a summary string containing the indicator, risk
+    score, severity, and categorization, and terminates the action.
 
 
     ### Additional Notes
 
-    Requires a valid SOCRadar IOC Enrichment API Key to be configured in the integration
-    settings. The action does not modify any internal SOAR entities or insights directly;
-    it provides the data as a result JSON.
+    This action requires a valid IOC Enrichment API Key configured in the integration
+    settings. The `Include AI Insight` parameter may increase response time and credit
+    usage.
   ai_short_description: >-
-    Enriches indicators (IP, domain, hash, URL) using the SOCRadar IOC Enrichment
-    API to retrieve threat intelligence, severity, and risk scores.
+    Enriches an indicator (IP, domain, hash, or URL) using the SOCRadar IOC Enrichment
+    API to retrieve threat intelligence details, including risk scores and severity.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -965,19 +901,12 @@ Enrich Indicator:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a POST request to fetch threat intelligence data from SOCRadar.
-      It does not mutate external data or internal SOAR data (entities, insights,
-      comments).
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches threat intelligence from SOCRadar, returning reputation and
-      threat data. It does not mutate external systems or internal SOAR data (entities,
-      insights, comments). This matches the criteria for an Enrichment action.
-    remediation: false
+      The action performs a POST request to an external API to fetch threat intelligence
+      data (fetches_data=true). It does not mutate external or internal data, nor
+      does it update entities, create insights, or modify alerts.
   entity_usage:
     entity_types:
-      address: true
+      address: false
       alert: false
       application: false
       child_hash: false
@@ -990,10 +919,10 @@ Enrich Indicator:
       database: false
       deployment: false
       destination_domain: false
-      domain: true
+      domain: false
       email_message: false
       event: false
-      file_hash: true
+      file_hash: false
       file_name: false
       generic: false
       host_name: false
@@ -1009,7 +938,7 @@ Enrich Indicator:
       threat_actor: false
       threat_campaign: false
       threat_signature: false
-      url: true
+      url: false
       usb: false
       user: false
     filters_by_additional_properties: false
@@ -1026,10 +955,9 @@ Enrich Indicator:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action takes an `Indicator` parameter directly rather than iterating over
-      `siemplify.target_entities`. It is designed to process IP, domain, hash, and
-      URL indicators, so these entity types are marked as true. It does not filter
-      entities.
+      The action operates on a provided 'Indicator' parameter string rather than iterating
+      over the 'siemplify.target_entities' list. Therefore, it does not utilize or
+      filter any specific entity types.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1045,9 +973,9 @@ Enrich Indicator:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches threat intelligence for an indicator from SOCRadar, returning
-      reputation and threat data. This matches the 'Enrich IOC' expected outcome.
-      It does not mutate external or internal data.
+      The action retrieves threat intelligence (reputation, severity, categorization)
+      for an indicator from an external service. This directly matches the 'Enrich
+      IOC' category. It does not perform any mutation or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1079,40 +1007,42 @@ Enrich Indicator STIX:
   ai_description: >-
     ### General Description
 
-    Enriches an indicator (IP address, domain, hash, or URL) using the SOCRadar IOC
-    Enrichment API. This action retrieves comprehensive threat intelligence and returns
-    the findings in a STIX 2.1 bundle format, providing structured data for further
-    analysis or integration.
+    Enriches an indicator (IP, domain, hash, or URL) using the SOCRadar Threat Intelligence
+    API. This action retrieves comprehensive threat intelligence data and returns
+    the results in a STIX 2.1 bundle format, providing structured cyber threat intelligence
+    for further analysis.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action extracts the `Indicator` value and the
-    optional `Show Credit Details` flag from the action parameters.
+    1. The action extracts the necessary configuration parameters (API Root, API Key,
+    Company ID, and IOC Enrichment API Key) from the integration settings.
 
-    2. **Configuration Validation**: It retrieves the required `IOC Enrichment API
-    Key` from the integration configuration. If the key is missing, the action terminates
-    with an error.
+    2. It extracts the action parameters: `Indicator` (the value to enrich) and `Show
+    Credit Details` (a boolean flag to include API credit usage).
 
-    3. **API Interaction**: The action initializes the `SOCRadarManager` and calls
-    the `enrich_indicator_stix` method, which performs a POST request to the SOCRadar
-    `ioc_enrichment/get/indicator_details_stix` endpoint.
+    3. It validates that the `IOC Enrichment API Key` is present.
 
-    4. **Result Output**: The retrieved STIX bundle is added to the action results
-    using `siemplify.result.add_result_json`.
+    4. The action initializes the `SOCRadarManager` and calls the `enrich_indicator_stix`
+    method.
 
-    5. **Completion**: The action concludes by providing a summary of the enrichment
-    process, including the number of STIX objects returned.
+    5. The manager performs a POST request to the SOCRadar API endpoint `ioc_enrichment/get/indicator_details_stix`
+    with the indicator and credit details flag.
+
+    6. The resulting STIX bundle is added to the action results using `siemplify.result.add_result_json`.
+
+    7. The action concludes by returning a summary of the enrichment process, including
+    the count of STIX objects returned.
 
 
     ### Additional Notes
 
-    This action requires a valid IOC Enrichment API Key configured in the SOCRadar
-    integration settings. It does not modify any entities or case data within Google
-    SecOps; it strictly retrieves and displays threat intelligence data.
+    This action requires a valid IOC Enrichment API Key to be configured in the integration
+    settings. The action operates on a provided indicator string rather than iterating
+    over entities attached to a case.
   ai_short_description: >-
-    Enriches an indicator using the SOCRadar IOC Enrichment API and returns the results
-    in STIX 2.1 bundle format.
+    Enriches an indicator (IP, domain, hash, or URL) using the SOCRadar Threat Intelligence
+    API and returns the results in STIX 2.1 bundle format.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1124,16 +1054,9 @@ Enrich Indicator STIX:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from the SOCRadar API. It does not mutate external data
-      (no block/quarantine actions) and does not mutate internal data (no entity updates
-      or insights).
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches threat intelligence data from an external source (SOCRadar)
-      and does not modify any external or internal systems. It meets the criteria
-      for an Enrichment action.
-    remediation: false
+      The action makes a POST request to the SOCRadar API to fetch threat intelligence
+      data. It does not mutate external data, nor does it mutate internal SecOps data
+      (it only adds result JSON).
   entity_usage:
     entity_types:
       address: false
@@ -1185,9 +1108,9 @@ Enrich Indicator STIX:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action operates on an indicator provided as a parameter rather than iterating
-      over entities attached to the case. Therefore, it does not filter or process
-      specific entity types.
+      The action accepts an 'Indicator' as a direct input parameter and does not iterate
+      over or process 'siemplify.target_entities'. Therefore, it does not use or filter
+      any entity types.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1203,9 +1126,9 @@ Enrich Indicator STIX:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence (STIX bundle) for a given indicator,
-      which directly aligns with the 'Enrich IOC' outcome. It does not perform any
-      remediation, ticket management, or alert updates.
+      The action fetches threat intelligence data for an indicator and returns it
+      in STIX format. This matches the 'Enrich IOC' category. It does not perform
+      any mutation or alert management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1229,39 +1152,38 @@ Enrich Indicator STIX:
     hash, or URL). |
 
     | Show Credit Details | String | No | Set to true to include API credit usage
-    details in the response. Defaults to false. |
+    details in the response. |
 Get Alarm Details:
   ai_description: >-
-    ### General Description
-
-    Fetches detailed information for a specific SOCRadar alarm using its unique identifier.
-    This action retrieves the full alarm record from the SOCRadar platform, providing
-    comprehensive context for incident analysis.
+    Fetches full details of a specific SOCRadar alarm using its unique identifier.
+    This action retrieves comprehensive information about an alarm, allowing analysts
+    to review incident data directly within the SOAR platform.
 
 
     ### Flow Description
 
-    1. The action extracts the necessary configuration parameters: `API Root`, `API
-    Key`, `Company ID`, and `Verify SSL`.
+    1. The action extracts the necessary configuration parameters, including the API
+    Root, API Key, Company ID, and SSL verification settings.
 
     2. It retrieves the `Alarm ID` parameter provided by the user.
 
     3. The `SOCRadarManager` is initialized with the extracted credentials.
 
-    4. The action calls the `get_alarm_details` method, which performs a GET request
-    to the SOCRadar API (`/incidents/v4`) to retrieve the specific alarm's details.
+    4. The action calls the `get_alarm_details` method, which executes a GET request
+    to the SOCRadar API endpoint (`/incidents/v4`) to fetch the specific alarm record.
 
-    5. The retrieved alarm data is added to the action's result output using `siemplify.result.add_result_json`.
+    5. The retrieved alarm data is added to the action's result JSON.
 
-    6. The action concludes by returning a success message containing the alarm title.
+    6. The action concludes by returning a success message containing the title of
+    the retrieved alarm.
 
 
     ### Additional Notes
 
-    This action is a read-only operation. It does not modify any data within the SOCRadar
-    platform or the SOAR case management system.
+    This action is a read-only operation and does not perform any modifications to
+    the SOCRadar platform or the SOAR case data.
   ai_short_description: >-
-    Fetches detailed information for a specific SOCRadar alarm by its ID.
+    Fetches full details of a specific SOCRadar alarm by its ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1273,17 +1195,9 @@ Get Alarm Details:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from an external API (SOCRadar) via a GET request. It
-      does not mutate external data, nor does it modify internal SOAR data (entities,
-      insights, or comments).
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action performs a GET request to fetch alarm details from an external system
-      (SOCRadar). It does not mutate any external data, nor does it modify any internal
-      SOAR data (entities, insights, or comments). As it gathers supplemental context
-      about an alert, it qualifies as an enrichment action.
-    remediation: false
+      The action performs a GET request to the SOCRadar API to retrieve alarm details.
+      It does not mutate any external or internal data, nor does it update entities
+      or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -1335,8 +1249,8 @@ Get Alarm Details:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action operates on a specific Alarm ID provided as a parameter and does
-      not interact with or filter any entities from the SOAR case.
+      The action operates on a specific 'Alarm ID' provided as an input parameter.
+      It does not iterate over or filter any target entities from the SOAR case.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1352,8 +1266,9 @@ Get Alarm Details:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action retrieves detailed information about a specific alarm from the SOCRadar
-      platform. This directly matches the 'Get Alert Information' outcome category.
+      The action retrieves information about a specific alarm from the SOCRadar platform.
+      This matches the 'Get Alert Information' category. It does not perform any other
+      actions like enrichment, ticketing, or containment.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1378,33 +1293,31 @@ Get Assignee:
   ai_description: >-
     ### General Description
 
-    Retrieves the current assignee(s) for a specific SOCRadar alarm. This action interacts
-    with the SOCRadar API to fetch assignment details, providing visibility into which
-    user or service account is responsible for a given alarm.
+    Retrieves the current assignee(s) for a specific SOCRadar alarm. This action allows
+    analysts to quickly identify who is responsible for a given alarm within the SOCRadar
+    platform without leaving the SOAR interface.
 
 
     ### Flow Description
 
-    1. The action extracts the necessary configuration parameters: `API Root`, `API
-    Key`, `Company ID`, and `Verify SSL`.
+    1. The action extracts the necessary configuration parameters (API Root, API Key,
+    Company ID, and SSL verification settings) from the integration configuration.
 
-    2. The `Alarm ID` parameter is extracted from the action input.
+    2. The `Alarm ID` is extracted from the action parameters.
 
     3. The `SOCRadarManager` is initialized with the provided credentials.
 
-    4. The action calls the `get_assignee` method, which performs a GET request to
-    the SOCRadar API endpoint `alarm/{alarm_id}/assignee`.
+    4. The action calls the `get_assignee` method, which performs an HTTP GET request
+    to the SOCRadar API endpoint `alarm/{alarm_id}/assignee`.
 
-    5. The retrieved assignee information is added to the action result using `add_result_json`.
-
-    6. The action concludes with a success message indicating the assignee data has
-    been retrieved.
+    5. The retrieved assignee information is added to the action result JSON for display
+    in the SOAR platform.
 
 
     ### Additional Notes
 
-    This action is a read-only operation and does not modify any data in SOCRadar
-    or the SOAR platform.
+    This action is a read-only operation and does not perform any modifications to
+    the alarm or external systems.
   ai_short_description: >-
     Retrieves the current assignee(s) for a specific SOCRadar alarm.
   capabilities:
@@ -1418,14 +1331,9 @@ Get Assignee:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to fetch data from SOCRadar. It does not mutate
-      any external or internal data.
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches data from an external system (SOCRadar) without modifying
-      any external or internal state. It qualifies as an enrichment action.
-    remediation: false
+      The action performs a GET request to retrieve data from the SOCRadar API. It
+      does not mutate any external or internal data, nor does it update entities or
+      create insights.
   entity_usage:
     entity_types:
       address: false
@@ -1477,8 +1385,8 @@ Get Assignee:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action operates on an Alarm ID provided as a parameter and does not process
-      or filter any SOAR entities.
+      The action operates based on a provided 'Alarm ID' parameter and does not interact
+      with or filter any SOAR target entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1494,8 +1402,8 @@ Get Assignee:
     execute_command_on_the_host: false
     get_alert_information: true
     reasoning: >-
-      The action fetches information about an alarm from the SOCRadar platform. This
-      directly aligns with the 'Get Alert Information' category.
+      The action fetches specific information (assignee) about an alarm from the SOCRadar
+      product. This aligns with the 'Get Alert Information' category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1521,34 +1429,34 @@ Get Assignee Options:
   ai_description: >-
     ### General Description
 
-    Fetches the list of available assignees for alarms from the SOCRadar platform.
-    This action retrieves the current list of users who can be assigned to incidents,
-    enabling automated or manual assignment workflows within the SOAR platform.
+    Retrieves a list of all users available for alarm assignment within the SOCRadar
+    platform for the configured company. This action provides the necessary context
+    for analysts to reassign alarms to appropriate team members.
 
 
     ### Flow Description
 
-    1. Initialize the `SOCRadarManager` using the provided API credentials (API Root,
-    API Key, Company ID) and SSL verification settings.
+    1. Extracts configuration parameters (API Root, API Key, Company ID, and Verify
+    SSL) from the integration settings.
 
-    2. Execute a GET request to the `alarm/assignee_options` endpoint of the SOCRadar
-    API.
+    2. Initializes the `SOCRadarManager` with the provided credentials.
 
-    3. Retrieve the list of assignable users from the API response.
+    3. Executes a GET request to the SOCRadar API endpoint `alarm/assignee_options`
+    to fetch the list of assignable users.
 
-    4. Add the retrieved user data to the action results using `siemplify.result.add_result_json`.
+    4. Adds the raw JSON response containing the user list to the action results.
 
-    5. Terminate the action with a success message indicating the number of assignable
+    5. Ends the action with a summary message indicating the number of assignable
     users found.
 
 
     ### Additional Notes
 
-    This action is primarily used to populate UI elements or logic flows that require
-    selecting an assignee for an alarm. It does not modify any data in SOCRadar or
-    the SOAR platform.
+    This action does not require any specific entities to run and operates globally
+    based on the integration configuration.
   ai_short_description: >-
-    Fetches the list of available assignees for alarms from the SOCRadar platform.
+    Retrieves a list of all users available for alarm assignment from the SOCRadar
+    platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1560,17 +1468,9 @@ Get Assignee Options:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to retrieve data (assignee options). It does
-      not mutate external systems. It does not modify internal SOAR data (entities,
-      insights, or comments).
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action performs a GET request to retrieve data (assignee options) from an
-      external system (SOCRadar). It does not mutate external data, nor does it modify
-      internal SOAR data (entities, insights, or comments). It meets the criteria
-      for an Enrichment action as it proactively fetches data.
-    remediation: false
+      The action performs a GET request to fetch data (assignable users) from the
+      SOCRadar API. It does not mutate any external or internal data, nor does it
+      update entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -1622,8 +1522,8 @@ Get Assignee Options:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities. It is a standalone utility action
-      that fetches configuration data from the SOCRadar API.
+      The action does not iterate over or utilize any entities from the SOAR platform.
+      It is a global utility action that fetches data from the SOCRadar API.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1637,12 +1537,11 @@ Get Assignee Options:
     enrich_asset: false
     enrich_ioc: false
     execute_command_on_the_host: false
-    get_alert_information: true
+    get_alert_information: false
     reasoning: >-
-      The action fetches a list of users available for alarm assignment from the SOCRadar
-      API. This provides context for managing alarms, fitting the 'Get Alert Information'
-      category as it retrieves metadata related to the alarm management process from
-      the 3rd party product.
+      The action retrieves a list of assignable users from the SOCRadar API. It does
+      not perform enrichment, update alerts, or modify any external or internal system
+      state. Therefore, it does not match any of the defined outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1662,34 +1561,36 @@ Get Threat Feed:
   ai_description: >-
     ### General Description
 
-    Fetches IOCs from one or more SOCRadar Threat Feed collections by UUID. This action
-    retrieves threat intelligence data, including IOC values, types, confidence scores,
-    and timestamps, from the specified collections.
+    Fetches Indicators of Compromise (IOCs) from one or more SOCRadar Threat Feed
+    collections using their unique identifiers (UUIDs). This action retrieves threat
+    intelligence data, including IOC values, types, confidence scores, and timestamps,
+    allowing analysts to ingest external threat data into the SOAR platform.
 
 
     ### Flow Description
 
-    1. Extracts configuration parameters (API Root, API Key, Company ID, Verify SSL)
-    from the integration settings.
+    1. The action extracts configuration parameters (API Root, API Key, Company ID,
+    and SSL verification settings) to initialize the `SOCRadarManager`.
 
-    2. Extracts action parameters (Collection UUIDs, Max IOCs Per Feed, IOC Type Filter)
-    from the action configuration.
+    2. It extracts action parameters: `Collection UUIDs` (mandatory), `Max IOCs Per
+    Feed` (optional), and `IOC Type Filter` (optional).
 
-    3. Calls `SOCRadarManager.get_multiple_ioc_feeds` to retrieve data from the specified
-    collections using the provided UUIDs.
+    3. The action calls the `SOCRadarManager.get_multiple_ioc_feeds` method to retrieve
+    data from the SOCRadar API for the provided UUIDs.
 
-    4. Filters the retrieved feed data based on the optional `IOC Type Filter` and
-    limits the number of results per feed using `Max IOCs Per Feed`.
+    4. The retrieved feed data is filtered based on the `IOC Type Filter` (e.g., hash,
+    ip, domain, url) if provided.
 
-    5. Adds the resulting IOC data to the action result JSON for further use in the
-    playbook.
+    5. The results are truncated to the `Max IOCs Per Feed` limit.
+
+    6. The final processed IOC data is added to the action result JSON, and the action
+    concludes with a summary of the total IOCs fetched.
 
 
     ### Additional Notes
 
-    This action is a data retrieval task and does not modify any entities, alerts,
-    or cases within the SOAR platform. It is designed to provide threat intelligence
-    data for use in subsequent playbook steps.
+    This action does not operate on specific entities within the case. It is designed
+    to retrieve bulk threat intelligence data for ingestion or further analysis.
   ai_short_description: >-
     Fetches IOCs from SOCRadar Threat Feed collections by UUID.
   capabilities:
@@ -1703,16 +1604,9 @@ Get Threat Feed:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to fetch threat intelligence feeds. It does not
-      mutate external data or modify internal SOAR data (entities, insights, comments).
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action fetches threat intelligence feeds from SOCRadar. It does not modify
-      external systems or internal case data (entities, insights, comments). Therefore,
-      it is neither an Enrichment action (which requires acting on alerts/entities)
-      nor a Remediation action.
-    remediation: false
+      The action performs a GET request to the SOCRadar API to fetch threat intelligence
+      data (fetches_data=true). It does not mutate external systems, modify internal
+      case data, update entities, or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -1764,8 +1658,8 @@ Get Threat Feed:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with entities. It takes parameters directly from
-      the action configuration to fetch threat feeds.
+      The action does not interact with `siemplify.target_entities`. It operates on
+      provided UUIDs to fetch data from an external source.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1781,10 +1675,10 @@ Get Threat Feed:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches a list of IOCs from SOCRadar Threat Feed collections. It
-      does not enrich a specific entity, update an alert, or perform any of the defined
-      remediation or management tasks. Therefore, it does not match any of the provided
-      outcome categories.
+      The action fetches threat intelligence feeds. While it retrieves IOCs, it does
+      not enrich a specific entity provided in the case, nor does it perform any of
+      the other listed actions (blocking, ticketing, etc.). Therefore, no outcome
+      categories are matched.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1816,31 +1710,35 @@ Ping:
   ai_description: >-
     ### General Description
 
-    Tests connectivity to the SOCRadar API by performing a GET request to the incidents
-    endpoint. This action verifies that the provided API credentials and configuration
-    parameters are valid and that the SOCRadar platform is reachable.
+    Tests connectivity to the SOCRadar API by attempting to retrieve a sample incident.
+    This action verifies that the provided API credentials, Company ID, and API Root
+    are valid and that the SOAR platform can successfully communicate with the SOCRadar
+    service.
 
 
     ### Flow Description
 
     1. The action extracts the required configuration parameters: `API Root`, `API
-    Key`, `Company ID`, and `Verify SSL`.
+    Key`, `Company ID`, and `Verify SSL` from the integration settings.
 
-    2. It initializes the `SOCRadarManager` with these credentials.
+    2. The `SOCRadarManager` is initialized with these credentials.
 
     3. The action calls the `test_connectivity` method, which executes a GET request
     to the `incidents/v4` endpoint with a page limit of 1.
 
-    4. If the request is successful, the action terminates with a success message.
-    If an exception occurs (e.g., authentication failure, network error), it terminates
-    with a failure message.
+    4. If the API returns a successful response, the action terminates with a success
+    message.
+
+    5. If the API request fails (e.g., due to authentication issues or network errors),
+    the action terminates with a failure message containing the error details.
 
 
     ### Additional Notes
 
-    This action is strictly for connectivity testing and does not perform any data
-    retrieval, enrichment, or remediation tasks.
-  ai_short_description: Tests connectivity to the SOCRadar API.
+    This action does not perform any data processing or modifications. It is strictly
+    intended for troubleshooting and verifying the integration configuration.
+  ai_short_description: >-
+    Tests connectivity to the SOCRadar API by attempting to fetch a sample incident.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1852,16 +1750,9 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a GET request to verify connectivity to the SOCRadar API.
+      The action performs a GET request to the SOCRadar API to verify connectivity.
       It does not mutate any external or internal data, nor does it update entities
-      or create insights.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is a connectivity test (Ping). According to the guidelines, Ping
-      actions are not enrichment actions. It does not perform any remediation tasks,
-      so it is not a remediation action.
-    remediation: false
+      or insights.
   entity_usage:
     entity_types:
       address: false
@@ -1913,8 +1804,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities; it is a global connectivity test that
-      operates independently of any specific alert or entity.
+      The action is a global connectivity test and does not interact with or filter
+      any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -1930,9 +1821,147 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a connectivity test (Ping) to the SOCRadar API. It does
-      not perform any enrichment, remediation, or data modification tasks. Therefore,
-      it does not match any of the defined outcome categories.
+      The action performs a connectivity test by fetching a sample incident. It does
+      not perform enrichment, alert updates, or any other functional outcome defined
+      in the categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
+Rapid Reputation:
+  ai_description: >-
+    ### General Description
+
+    Performs a rapid reputation lookup for an entity (IP, hostname, URL, or hash)
+    using the SOCRadar Rapid Reputation API. This action retrieves threat intelligence,
+    including risk scores, whitelisting status, and finding sources, to assist in
+    security investigations.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (API credentials) and action parameters (Entity
+    Value, Entity Type).
+
+    2. Validates the provided entity type against supported types (ip, hostname, url,
+    hash).
+
+    3. Calls the SOCRadar Rapid Reputation API to retrieve reputation data, including
+    risk score, whitelisting status, and threat intelligence sources.
+
+    4. Calculates the severity level based on the returned risk score (CRITICAL: 75-100,
+    HIGH: 50-74, MEDIUM: 25-49, LOW: 0-24).
+
+    5. Adds the detailed reputation data to the action result JSON.
+
+    6. Returns a summary of the findings and ends the action.
+
+
+    ### Additional Notes
+
+    This action is an enrichment/lookup tool and does not modify any external or internal
+    system state. It relies on user-provided parameters rather than iterating over
+    case entities.
+  ai_short_description: >-
+    Performs a rapid reputation lookup for an entity (IP, hostname, URL, or hash)
+    using the SOCRadar Rapid Reputation API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the SOCRadar API to fetch reputation data.
+      It does not mutate external or internal data, nor does it update entities or
+      create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action uses `siemplify.extract_action_param` to get the entity value and
+      type from user input, rather than iterating over `siemplify.target_entities`.
+      Therefore, it does not use or filter entities from the case.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves reputation, prevalence, and threat intelligence for an
+      indicator. This matches the 'Enrich IOC' category. It does not perform any other
+      actions like blocking, ticketing, or updating alerts.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -1952,163 +1981,42 @@ Ping:
 
     | --- | --- | --- | --- |
 
-    | API Root | String | Yes | The base URL for the SOCRadar API. |
+    | Entity Value | String | Yes | The entity to check (e.g. 37.46.210.230, evil.com,
+    or a file hash). |
 
-    | API Key | String | Yes | The API key used for authentication. |
-
-    | Company ID | String | Yes | The unique identifier for the company. |
-
-    | Verify SSL | Boolean | No | Whether to verify SSL certificates for API requests.
-    Defaults to True. |
-Rapid Reputation:
-  ai_description: >-
-    General Description\n\nPerforms a quick reputation lookup for an entity (IP, hostname,
-    URL, or hash) using the SOCRadar Rapid Reputation API. This action retrieves threat
-    intelligence, including risk scores, severity levels, and whitelisting status,
-    to assist in security analysis.\n\nFlow Description\n\n1. Extracts configuration
-    parameters (API credentials, SSL verification settings).\n2. Extracts action parameters
-    (`Entity Value`, `Entity Type`).\n3. Validates the `Entity Type` against allowed
-    values (ip, hostname, url, hash).\n4. Calls the `SOCRadarManager.rapid_reputation`
-    method to fetch reputation data from the SOCRadar API.\n5. Calculates the severity
-    level (CRITICAL, HIGH, MEDIUM, LOW) based on the returned risk score.\n6. Adds
-    the full result JSON to the action results.\n7. Finalizes the action with a summary
-    string indicating the entity, score, severity, and whitelisting status.\n\nAdditional
-    Notes\n\nRequires a valid Rapid Reputation API Key configured in the integration
-    settings.
-  ai_short_description: >-
-    Performs a quick reputation lookup for an entity (IP, hostname, URL, or hash)
-    using the SOCRadar Rapid Reputation API.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes a GET request to the SOCRadar API to fetch reputation data.
-      It does not mutate external data or internal SOAR data (it only adds result
-      JSON).
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches reputation data from SOCRadar. It does not mutate external
-      systems or modify internal SOAR data (like entities or insights). It is a pure
-      enrichment action.
-    remediation: false
-  entity_usage:
-    entity_types:
-      address: true
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: true
-      file_name: false
-      generic: false
-      host_name: true
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: true
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action accepts `Entity Value` and `Entity Type` as input parameters. It
-      supports `ip`, `hostname`, `url`, and `hash` as entity types, which map to `address`,
-      `host_name`, `url`, and `file_hash` respectively. It does not filter `siemplify.target_entities`
-      but rather operates on the provided parameters.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: true
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action fetches reputation, severity, and threat intelligence for an indicator
-      (IP, hostname, URL, or hash). This matches the 'Enrich IOC' outcome.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |\n| --- | --- | --- | --- |\n| Entity
-    Value | string | Yes | The entity to check (e.g. 37.46.210.230, evil.com, or a
-    file hash). |\n| Entity Type | string | Yes | Type of entity: ip, hostname, url,
-    or hash. |
+    | Entity Type | String | Yes | Type of entity: ip, hostname, url, or hash. |
 Remove Tag:
-  ai_description: "### General Description\nRemoves a specified tag from a SOCRadar\
-    \ alarm. This action interacts with the SOCRadar REST API to manage alarm metadata,\
-    \ ensuring that the specified tag is removed from the target alarm if it exists.\n\
-    \n### Flow Description\n1. **Configuration Extraction**: The action retrieves\
-    \ necessary integration configuration parameters, including the API Root, API\
-    \ Key, Company ID, and SSL verification settings.\n2. **Parameter Extraction**:\
-    \ The action extracts the `Alarm ID` and `Tag` parameters provided by the user.\n\
-    3. **Manager Initialization**: An instance of `SOCRadarManager` is initialized\
-    \ with the retrieved configuration.\n4. **Alarm Retrieval**: The action calls\
-    \ `manager.get_alarm_details(alarm_id)` to fetch the current details of the alarm,\
-    \ including its existing tags.\n5. **Tag Removal**: \n    * The action checks\
-    \ if the specified `Tag` exists in the alarm's current tags.\n    * If the tag\
-    \ is present, it sends a POST request to the `alarm/tag` endpoint to remove the\
-    \ tag from the alarm.\n6. **Result Output**: The action outputs the result of\
-    \ the operation using `siemplify.result.add_result_json` and terminates with a\
-    \ success message.\n\n### Additional Notes\nThis action performs a mutation on\
-    \ the external SOCRadar platform by modifying the alarm's tag list. It is not\
-    \ an enrichment action as it modifies external data."
+  ai_description: >-
+    ### General Description
+
+    Removes a specified tag from a SOCRadar alarm. This action interacts with the
+    SOCRadar REST API to modify the metadata of an existing alarm by removing a tag.
+
+
+    ### Flow Description
+
+    1. The action extracts the `Alarm ID` and `Tag` from the provided action parameters.
+
+    2. The `SOCRadarManager` is initialized using the configured API credentials.
+
+    3. The action calls `manager.remove_tag(alarm_id, tag)`.
+
+    4. Inside the manager, the action first calls `get_alarm_details` to retrieve
+    the current state of the alarm.
+
+    5. It checks if the specified tag exists in the alarm's current tag list.
+
+    6. If the tag is present, the action performs a POST request to the `alarm/tag`
+    endpoint to remove the tag from the alarm.
+
+    7. The result of the operation is returned as a JSON object, and the action concludes
+    with a success or failure message.
+
+
+    ### Additional Notes
+
+    This action performs a state-changing operation on the SOCRadar platform. It includes
+    an idempotency check by verifying the tag's existence before attempting removal.
   ai_short_description: >-
     Removes a specified tag from a SOCRadar alarm.
   capabilities:
@@ -2119,21 +2027,13 @@ Remove Tag:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes a tag from an alarm in the SOCRadar platform.
+      Removes a tag from the specified SOCRadar alarm via a POST request to the API.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches alarm details (GET) and then performs a POST request to remove
-      a tag from the alarm in the external SOCRadar system. It does not modify internal
-      SOAR data or entities.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action modifies data in an external system (SOCRadar) by removing a tag
-      from an alarm. Therefore, it is not an enrichment action. It does not perform
-      threat neutralization or infrastructure control, so it is not a remediation
-      action.
-    remediation: false
+      The action fetches alarm details to verify the tag's existence (fetches_data=true)
+      and performs a POST request to the SOCRadar API to remove the tag (can_mutate_external_data=true).
+      It does not mutate internal SecOps data or entities.
   entity_usage:
     entity_types:
       address: false
@@ -2185,8 +2085,8 @@ Remove Tag:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action operates on an Alarm ID provided as a parameter and does not interact
-      with SOAR entities (e.g., IP, User, File). Therefore, no entity types are used.
+      The action operates on a specific Alarm ID provided as an input parameter. It
+      does not iterate over or utilize the `siemplify.target_entities` list.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -2202,10 +2102,9 @@ Remove Tag:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action modifies an alarm in the external SOCRadar system by removing a tag.
-      It does not fit into the provided categories like 'update_alert' (which refers
-      to the SecOps platform), 'update_ticket', or 'update_identity'. It is an administrative
-      update to an external alarm.
+      The action modifies alarm metadata in an external system (SOCRadar). It does
+      not match any of the predefined categories like 'Update Alert' (which refers
+      to the SecOps platform), 'Enrich IOC', or 'Create Ticket'.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

@@ -2,38 +2,42 @@ List Catalogs:
   ai_description: >-
     ### General Description
 
-    Lists available breach catalogs from the SpyCloud platform based on specified
-    time frames and filtering criteria. This action allows users to query breach data
-    sources, providing visibility into available catalogs for further investigation.
+    Lists available catalogs from the SpyCloud platform based on specified search
+    criteria. This action allows users to retrieve a list of breach catalogs, providing
+    visibility into available data sources within the SpyCloud environment.
 
 
     ### Flow Description
 
-    1. The action extracts configuration parameters (API Root, API Key, Verify SSL)
-    and action parameters (Filter Logic, Filter Value, Time Frame, Start Time, End
-    Time, Max Catalogs To Return).
+    1. Extracts configuration parameters (API Root, API Key, Verify SSL) and action
+    parameters (Filter Logic, Filter Value, Time Frame, Start Time, End Time, Max
+    Catalogs To Return).
 
-    2. It calculates the appropriate start and end timestamps based on the selected
-    'Time Frame'.
+    2. Calculates the search time range based on the selected 'Time Frame' (e.g.,
+    Last Week, Last Month, Last Year, or Custom).
 
-    3. It makes a GET request to the SpyCloud API (`/enterprise-v1/breach/catalog`)
-    to retrieve the list of catalogs.
+    3. Initializes the `SpyCloudManager` to establish a connection with the SpyCloud
+    API.
 
-    4. If 'Filter Logic' is set to 'Equal', it filters the retrieved catalogs locally
-    based on the 'Filter Value'.
+    4. Executes a GET request to the SpyCloud API to retrieve the list of catalogs.
 
-    5. It limits the number of results based on the 'Max Catalogs To Return' parameter.
+    5. Applies optional filtering logic (Equal or Contains) to the results if a filter
+    value is provided.
 
-    6. The action outputs the results as a JSON list and a formatted data table in
-    the action results.
+    6. Limits the number of returned catalogs based on the 'Max Catalogs To Return'
+    parameter.
+
+    7. Outputs the final list of catalogs as a JSON object and a formatted data table
+    in the action results.
 
 
     ### Additional Notes
 
-    This action is a read-only utility and does not modify any external systems or
-    internal case data. It does not operate on specific entities.
+    This action is read-only and does not modify any data in SpyCloud or the SOAR
+    platform. It is intended for information retrieval and discovery of available
+    breach catalogs.
   ai_short_description: >-
-    Lists available breach catalogs from SpyCloud based on time frames and filtering
+    Lists available catalogs from the SpyCloud platform based on specified search
     criteria.
   capabilities:
     can_create_case_comments: false
@@ -47,14 +51,8 @@ List Catalogs:
     internal_data_mutation_explanation: null
     reasoning: >-
       The action performs a GET request to fetch data from the SpyCloud API. It does
-      not mutate any external or internal data.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is a utility to list data from an external service. It does not act
-      on entities to provide context (Enrichment) nor does it perform any state-changing
-      operations (Remediation).
-    remediation: false
+      not mutate any external or internal data, nor does it update entities or create
+      insights.
   entity_usage:
     entity_types:
       address: false
@@ -106,8 +104,8 @@ List Catalogs:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process or filter by any entities. It is a standalone utility
-      action.
+      The action does not interact with or filter any entities. It operates independently
+      of the case entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -123,9 +121,9 @@ List Catalogs:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves a collection of breach catalogs, which constitutes telemetry
-      data matching the provided search parameters. This aligns with the 'Search Events'
-      category.
+      The action retrieves a list of catalogs from the SpyCloud API. This matches
+      the 'Search Events' category as it returns a collection of historical data matching
+      specific search parameters.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -145,47 +143,58 @@ List Catalogs:
 
     | --- | --- | --- | --- |
 
-    | Filter Logic | DDL | No | Specify the filter logic to apply (Equal or Contains).
+    | Filter Logic | ddl | No | Specify what filter logic should be applied (Equal
+    or Contains). |
+
+    | Filter Value | string | No | Specify the value to be used in the filter. |
+
+    | Time Frame | ddl | Yes | Specify a time frame for the search (Last Week, Last
+    Month, Last Year, or Custom). |
+
+    | Start Time | string | No | Specify the start time for the search in ISO 8601
+    format. Mandatory if 'Custom' is selected for Time Frame. |
+
+    | End Time | string | No | Specify the end time for the search in ISO 8601 format.
     |
 
-    | Filter Value | String | No | The value to use for filtering. 'Equal' matches
-    the title, 'Contains' searches all response fields. |
-
-    | Time Frame | DDL | Yes | The time range for the search (Last Week, Last Month,
-    Last Year, or Custom). |
-
-    | Start Time | String | No | The start time for the search in ISO 8601 format.
-    Mandatory if 'Custom' is selected for Time Frame. |
-
-    | End Time | String | No | The end time for the search in ISO 8601 format. Defaults
-    to current time if not provided. |
-
-    | Max Catalogs To Return | String | No | The maximum number of catalogs to return.
-    Default is 50. |
+    | Max Catalogs To Return | string | No | Specify the maximum number of catalogs
+    to return. Default is 50. |
 List Entity Breaches:
-  ai_description: "### General Description\nThis action retrieves breach information\
-    \ for specific entities (IP Addresses, Users, and URLs) from the SpyCloud platform.\
-    \ It allows analysts to query breach catalogs within a specified timeframe to\
-    \ identify if an entity has been compromised. The action enriches the entities\
-    \ with breach data, providing visibility into potential security incidents associated\
-    \ with the entity.\n\n### Flow Description\n1. **Initialization**: The action\
-    \ extracts configuration parameters (API Root, API Key, SSL verification) and\
-    \ action parameters (Catalog Filter, Time Frame, Start/End Time, Max Breaches).\n\
-    2. **Entity Filtering**: It filters the provided entities to include only those\
-    \ of type IP Address, User, or URL.\n3. **Data Retrieval**: \n    - It calculates\
-    \ the search timeframe.\n    - It optionally fetches catalog information from\
-    \ SpyCloud if a filter is provided.\n    - For each valid entity, it determines\
-    \ the appropriate breach type (IPs, Emails, Usernames, or Domains) and queries\
-    \ the SpyCloud API for breach records.\n4. **Enrichment**: If breaches are found,\
-    \ the action updates the entity's `additional_properties` with the breach data\
-    \ and marks the entity as enriched.\n5. **Output**: It updates the entities in\
-    \ the SOAR platform and adds a JSON result containing the breach details to the\
-    \ action output.\n\n### Additional Notes\n- The action supports filtering by specific\
-    \ breach catalogs.\n- If no breaches are found for an entity, it is not updated.\n\
-    - The action handles pagination for API requests to ensure all relevant breach\
-    \ data is retrieved."
+  ai_description: >-
+    ### General Description
+
+    This action retrieves breach information for specified entities (IP Addresses,
+    Usernames/Emails, and Domains/URLs) from the SpyCloud service. It allows filtering
+    by catalog and time frame to narrow down the search results.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (API Root, API Key, SSL verification) and
+    action parameters (Catalog Filter, Time Frame, Start/End Time, Max Breaches).
+
+    2. Filters target entities to include only supported types (IP Address, User,
+    URL).
+
+    3. Initializes the `SpyCloudManager` to interact with the SpyCloud API.
+
+    4. Retrieves catalog information if a filter is provided.
+
+    5. Iterates through each supported entity:
+        * Determines the appropriate breach type (IP, Email, Username, or Domain).
+        * Calls the SpyCloud API (`get_breaches`) to fetch breach data.
+        * Updates the entity's `additional_properties` with enrichment data (e.g.,
+    `was_breached: True`) and marks the entity as enriched.
+    6. Updates the entities in the SOAR platform and adds the breach results as a
+    JSON result.
+
+
+    ### Additional Notes
+
+    The action supports filtering by specific catalogs and time frames. It handles
+    different entity types by mapping them to the corresponding SpyCloud breach types.
   ai_short_description: >-
-    Retrieves and enriches entities with breach information from the SpyCloud platform.
+    Retrieves and enriches entities with breach information from SpyCloud.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -196,21 +205,12 @@ List Entity Breaches:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with breach information and marks them
-      as enriched.
+      Updates entities with breach enrichment data.
     reasoning: >-
-      The action fetches data from the SpyCloud API (fetches_data=true). It does not
-      mutate external systems. It mutates internal SOAR data by updating entity properties
-      and adding result JSON (can_mutate_internal_data=true). It updates entities
-      but does not create insights or modify alert data.
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches data from an external source (SpyCloud) to enrich entities
-      within the SOAR platform. It does not perform any external mutations (blocking,
-      deleting, etc.) and only modifies internal SOAR data (entities). Therefore,
-      it is classified as an Enrichment action and not a Remediation action.
-    remediation: false
+      The action fetches breach data from the SpyCloud API (fetches_data=true). It
+      updates the entities within the SOAR platform with enrichment data (can_mutate_internal_data=true,
+      can_update_entities=true). It does not perform any state-changing operations
+      on external systems.
   entity_usage:
     entity_types:
       address: true
@@ -262,10 +262,10 @@ List Entity Breaches:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action processes entities by filtering the `siemplify.target_entities` list
-      against a list of supported types: `EntityTypes.ADDRESS`, `EntityTypes.USER`,
-      and `EntityTypes.URL`. It does not filter by other attributes like creation
-      time, modification time, or specific flags.
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES` includes `EntityTypes.ADDRESS`,
+      `EntityTypes.USER`, and `EntityTypes.URL`. This means it targets ADDRESS, USER,
+      and URL entities, filtering by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -281,9 +281,10 @@ List Entity Breaches:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves breach intelligence for IPs and Domains (Enrich IOC) and
-      Users (Enrich Asset). It does not perform any alert updates, ticketing, or remediation
-      actions.
+      The action fetches breach data from SpyCloud for IP addresses, users, and domains/URLs,
+      providing threat intelligence and context. This matches the 'Enrich IOC' (for
+      IPs, Domains, URLs) and 'Enrich Asset' (for Users) categories. It does not perform
+      any external mutations or alert modifications.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -306,14 +307,16 @@ List Entity Breaches:
     | Catalog Filter | String | No | Specify the name of the category in which you
     want to search for breaches. |
 
-    | Time Frame | DDL | Yes | Specify a time frame for the search (Last Week, Last
-    Month, Last Year, Custom). |
+    | Time Frame | DDL | Yes | Specify a time frame for the search. If "Custom" is
+    selected, you also need to provide "Start Time". |
 
-    | Start Time | String | No | Specify the start time for the search (ISO 8601).
-    Mandatory if "Custom" is selected for Time Frame. |
+    | Start Time | String | No | Specify the start time for the search. This parameter
+    is mandatory if "Custom" is selected for the "Time Frame" parameter. Format: ISO
+    8601. |
 
-    | End Time | String | No | Specify the end time for the search (ISO 8601). If
-    not provided and "Custom" is selected, defaults to current time. |
+    | End Time | String | No | Specify the end time for the search. Format: ISO 8601.
+    If nothing is provided and "Custom" is selected for the "Time Frame" parameter
+    then this parameter will use current time. |
 
     | Max Breaches To Return | String | No | Specify how many breaches to return per
     entity. Default: 1. Maximum: 1000. |
@@ -322,28 +325,31 @@ Ping:
     ### General Description
 
     Tests connectivity to the SpyCloud server to ensure the integration is correctly
-    configured and the API credentials are valid. This action performs a simple health
-    check against the SpyCloud API.
+    configured and can communicate with the API. This action validates the provided
+    connection parameters, including the API root, API key, and SSL verification settings.
 
 
     ### Flow Description
 
-    1. The action extracts the required integration configuration parameters: API
-    Root, API Key, and Verify SSL.
+    1. The action extracts the required integration configuration parameters: `API
+    Root`, `API Key`, and `Verify SSL`.
 
-    2. It initializes the `SpyCloudManager` with these credentials.
+    2. It initializes the `SpyCloudManager` using these parameters.
 
-    3. The action calls the `test_connectivity` method, which executes a GET request
+    3. The action calls the `test_connectivity` method, which performs a GET request
     to the SpyCloud ping endpoint.
 
-    4. If the request is successful, the action returns a success message; otherwise,
-    it logs the error and returns a failure status.
+    4. The response is validated to ensure the connection is successful.
+
+    5. The action concludes by returning a success or failure message based on the
+    connectivity result.
 
 
     ### Additional Notes
 
     This action is intended for troubleshooting and verifying the integration setup.
-    It does not perform any data enrichment or remediation tasks.
+    It does not perform any data retrieval or modification operations on entities
+    or external systems.
   ai_short_description: >-
     Tests connectivity to the SpyCloud server.
   capabilities:
@@ -357,16 +363,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a simple connectivity check (GET request) to verify the
-      API connection. It does not fetch contextual data for entities, nor does it
-      mutate any external or internal data.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is a connectivity test (Ping). It does not fetch data for enrichment,
-      nor does it perform any remediation or mutation of external/internal systems.
-      Therefore, it is neither an enrichment nor a remediation action.
-    remediation: false
+      The action performs a simple connectivity check via a GET request. It does not
+      fetch contextual data, mutate external or internal data, or update any platform
+      objects.
   entity_usage:
     entity_types:
       address: false
@@ -418,7 +417,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities; it is a standalone connectivity test.
+      The action is a standalone connectivity test and does not interact with or filter
+      any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -434,8 +434,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (Ping) and does not perform any of the defined
-      outcome actions such as enriching IOCs, blocking IPs, or creating tickets.
+      The action performs a connectivity test (ping) to verify API access. It does
+      not perform enrichment, mutation, or any other operations defined in the outcome
+      categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
