@@ -54,7 +54,7 @@ def test_get_dependencies_with_local_and_remote(tmp_path: Path) -> None:
 
     # Mock local package resolution
     with unittest.mock.patch(
-        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies"
+        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies",
     ) as mock_resolve:
 
         def mock_resolver(
@@ -130,7 +130,7 @@ def test_get_dependencies_includes_envcommon_when_tipcommon_exists(tmp_path: Pat
     (dependencies_dir / "EnvironmentCommon-1.0.0-py3-none-any.whl").touch()
 
     with unittest.mock.patch(
-        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies"
+        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies",
     ) as mock_resolve:
 
         def mock_resolver(name: str, version: str) -> Dependencies:
@@ -238,7 +238,9 @@ def test_get_dependencies_bumps_sdk_dependency_to_min_version(tmp_path: Path) ->
     ],
 )
 def test_get_dependencies_handles_tipcommon_version_for_envcommon_dependency(
-    tmp_path: Path, tipcommon_version: str, envcommon_should_be_dependency: bool
+    tmp_path: Path,
+    tipcommon_version: str,
+    envcommon_should_be_dependency: bool,
 ) -> None:
     """Test that EnvironmentCommon is only a dependency for TIPCommon >= 1.0.14."""
     _create_dummy_python_file(tmp_path, "import TIPCommon")
@@ -247,7 +249,7 @@ def test_get_dependencies_handles_tipcommon_version_for_envcommon_dependency(
     (dependencies_dir / "EnvironmentCommon-1.0.0-py3-none-any.whl").touch()
 
     with unittest.mock.patch(
-        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies"
+        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies",
     ) as mock_resolve:
 
         def mock_resolver(

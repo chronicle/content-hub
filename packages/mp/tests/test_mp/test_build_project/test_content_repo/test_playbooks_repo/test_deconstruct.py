@@ -76,7 +76,8 @@ def assert_deconstruct_playbook(
             assert expected_step in actual_files
             if expected_step.endswith(".yaml"):
                 expected, actual = test_mp.common.get_yaml_content(
-                    expected=expected_dir / expected_step, actual=actual_dir / expected_step
+                    expected=expected_dir / expected_step,
+                    actual=actual_dir / expected_step,
                 )
                 assert actual == expected
 
