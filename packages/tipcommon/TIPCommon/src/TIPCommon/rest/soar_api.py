@@ -2036,7 +2036,7 @@ def get_cases_by_timestamp_filter(
     api_client.params.case_ids = case_ids or []
     return api_client.get_cases_by_timestamp_filter()
 
-# QA fixes
+
 def get_email_templates(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """Get email templates
 
@@ -2048,7 +2048,7 @@ def get_email_templates(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_email_template()
-    
+
     if isinstance(response, list):
         return response
 
@@ -2088,6 +2088,8 @@ def get_env_dynamic_parameters(chronicle_soar: ChronicleSOAR) -> list[SingleJson
     """
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_env_dynamic_parameters()
+    if isinstance(response, list):
+        return response
     try:
         validate_response(response, validate_json=True)
         response_data = response.json()
@@ -2099,7 +2101,6 @@ def get_env_dynamic_parameters(chronicle_soar: ChronicleSOAR) -> list[SingleJson
     return response_data
 
 
-#QA fixes new
 def add_dynamic_env_param(
     chronicle_soar: ChronicleSOAR,
     param: SingleJson,
@@ -2302,7 +2303,7 @@ def save_integration_instance_settings(
         validate_response(response, validate_json=False)
         return True
     except (HTTPError, InternalJSONDecoderError):
-        return False # QA fixes
+        return False
 
 
 def import_simulated_case(
@@ -2317,7 +2318,8 @@ def import_simulated_case(
         validate_response(response, validate_json=False)
         return True
     except (HTTPError, InternalJSONDecoderError) as e:
-        raise Exception(f"{response.text}") from e # QA fixes
+        raise Exception(f"{response.text}") from e
+
 
 def add_case_tag(
     chronicle_soar: ChronicleSOAR,
@@ -2383,6 +2385,8 @@ def get_networks(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_networks()
+    if isinstance(response, list):
+        return response
     try:
         if isinstance(response, dict) and "networks" in response:
             return response["networks"]
@@ -2425,11 +2429,13 @@ def get_custom_lists(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_custom_lists()
+    if isinstance(response, list):
+        return response
     try:
         validate_response(response, validate_json=True)
         raw_data = response.json()
-        if isinstance(raw_data, dict) and "custom_lists" in raw_data:
-            return raw_data["custom_lists"]
+        if isinstance(raw_data, dict) and "customLists" in raw_data:
+            return raw_data["customLists"]
     except InternalJSONDecoderError:
         return []
 
@@ -2620,13 +2626,20 @@ def get_visual_families(
     """
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_visual_families()
-    validate_response(response, validate_json=True)
-    data = response.json()
+
+    if isinstance(response, list):
+        data = response
+    else:
+        validate_response(response, validate_json=True)
+        data = response.json()
+
     families: list[VisualFamily] = []
     if isinstance(data, dict) and "visual_families" in data:
-        families = [VisualFamily.from_json(vf) for vf in data["visual_families"]]
-    else:
+        families = [VisualFamily.from_json(vf) for vf in data["visualFamilies"]]
+    elif isinstance(data, list):
         families = [VisualFamily.from_json(vf) for vf in data]
+    elif isinstance(data, dict):
+        families = [VisualFamily.from_json(vf) for vf in data.get("visualFamilies", [])]
 
     if not include_default_vfs:
         families = [f for f in families if f.is_custom]
@@ -2731,11 +2744,13 @@ def get_case_close_reasons(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_case_close_reasons()
+    if isinstance(response, list):
+        return response
     validate_response(response, validate_json=True)
 
     raw_data = response.json()
     if isinstance(raw_data, dict):
-        return raw_data.get("case_close_definitions", [])
+        return raw_data.get("caseCloseDefinitions", [])
 
     return raw_data
 
@@ -2760,13 +2775,16 @@ def get_block_lists_details(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     return raw_data
 
 
-def get_sla_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:#QA fixes
+def get_sla_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """Get sla records."""
     api_client = get_soar_client(chronicle_soar)
     result = api_client.get_sla_records()
+    if isinstance(result, list):
+        return result
     if not result.text or not result.text.strip():
         response = []
-    response = result.json()
+    else:
+        response = result.json()
 
     try:
         if response is None:
@@ -2776,12 +2794,12 @@ def get_sla_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:#QA fixes
             return response
 
         if isinstance(response, dict):
-            return response.get("sla_definitions", []) or []
+            return response.get("slaDefinitions", []) or []
 
         if hasattr(response, "json"):
             try:
                 parsed = response.json() or {}
-                return parsed.get("sla_definitions", []) or []
+                return parsed.get("slaDefinitions", []) or []
             except (ValueError, InternalJSONDecoderError):
                 return []
     except (ValueError, InternalJSONDecoderError):
@@ -2800,7 +2818,8 @@ def get_all_model_block_records(chronicle_soar: ChronicleSOAR) -> list[SingleJso
     except InternalJSONDecoderError:
         return []
 
-def get_company_logo(chronicle_soar: ChronicleSOAR) -> SingleJson:#QA fixes
+
+def get_company_logo(chronicle_soar: ChronicleSOAR) -> SingleJson:
     """Get company logo."""
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_company_logo()
@@ -2809,6 +2828,7 @@ def get_company_logo(chronicle_soar: ChronicleSOAR) -> SingleJson:#QA fixes
         return response.json()
     except InternalJSONDecoderError:
         return {}
+
 
 def get_case_title_settings(chronicle_soar: ChronicleSOAR) -> SingleJson:
     """Get case title settings."""
@@ -2819,7 +2839,8 @@ def get_case_title_settings(chronicle_soar: ChronicleSOAR) -> SingleJson:
         return response.json()
     except InternalJSONDecoderError:
         return {}
-#QA fixes
+
+
 def save_case_title_settings(
     chronicle_soar: ChronicleSOAR,
     name: str,
@@ -2838,14 +2859,15 @@ def save_case_title_settings(
     api_client.params.settings = settings
 
     response = api_client.save_case_title_settings()
-    
+
     validate_response(response, validate_json=False)
     if not response.text or not response.text.strip():
         return {}
-        
+
     return response.json()
 
-def add_or_update_company_logo( #QA fixes 2
+
+def add_or_update_company_logo(
     chronicle_soar: ChronicleSOAR,
     company_logo: SingleJson,
 ) -> SingleJson:
@@ -2859,7 +2881,7 @@ def add_or_update_company_logo( #QA fixes 2
         return {}
     try:
         return response.json()
-    except (ValueError, InternalJSONDecoderError): #QA fixes
+    except (ValueError, InternalJSONDecoderError):
         return {}
 
 
@@ -2988,15 +3010,17 @@ def get_store_data(chronicle_soar: ChronicleSOAR) -> SingleJson:
     api_client = get_soar_client(chronicle_soar)
 
     response = api_client.get_store_data()
-    return response.get("integrations", response.get("marketplaceIntegrations", [])) #QA fixes
+    return response.get("integrations", response.get("marketplaceIntegrations", []))
+
 
 def import_package(
-    chronicle_soar: ChronicleSOAR, integration_name: str, b64_blob: str
+    chronicle_soar: ChronicleSOAR, integration_name: str, b64_blob: str, staging: str
 ) -> SingleJson:
     """Import package."""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.integration_name = integration_name
     api_client.params.b64_blob = b64_blob
+    api_client.params.staging = staging
     response = api_client.import_package()
     validate_response(response, validate_json=False)
     return response.content
@@ -3121,16 +3145,8 @@ def update_existing_connector(
     api_client.params.existing_connector = existing_connector
     response = api_client.update_existing_connector()
     validate_response(response, validate_json=False)
-    return response #QA fixes
+    return response
 
-
-# def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson) -> SingleJson:
-#     """Add job."""
-#     api_client = get_soar_client(chronicle_soar)
-#     api_client.params.job = job
-#     response = api_client.add_job()
-#     validate_response(response, validate_json=False)
-#     return response.content
 
 def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson, job_definition_id: str = None) -> SingleJson:
     """Add job."""
@@ -3155,7 +3171,7 @@ def update_job_instance(
     api_client.params.job = job
     response = api_client.update_job_instance()
     validate_response(response, validate_json=False)
-    return response.content # QA fixes
+    return response.content
 
 
 def add_email_template(
@@ -3178,7 +3194,7 @@ def update_email_template(
     api_client.params.existing_template = existing_template
     response = api_client.update_email_template()
     validate_response(response, validate_json=False)
-    return response #qa fixes
+    return response
 
 
 def get_denylists(
@@ -3197,12 +3213,29 @@ def get_denylists(
 def get_simulated_cases(
     chronicle_soar: ChronicleSOAR,
     is_expand: bool = False,
-) -> SingleJson:
+) -> list[SingleJson] | SingleJson:
     """Get simulated cases."""
     api_client = get_soar_client(chronicle_soar)
     api_client.params.is_expand = is_expand
     response = api_client.get_simulated_cases()
-    return safe_json_for_204(response, default_for_204={})
+    if isinstance(response, list):
+        if response and isinstance(response[0], dict):
+            return [
+                item.get("name") or item.get("displayName") or item.get("identifier")
+                for item in response
+                if item
+            ]
+        return response
+    raw_data = safe_json_for_204(response, default_for_204=[])
+    if isinstance(raw_data, list):
+        if raw_data and isinstance(raw_data[0], dict):
+            return [
+                item.get("name") or item.get("displayName") or item.get("identifier")
+                for item in raw_data
+                if item
+            ]
+        return raw_data
+    return raw_data
 
 
 def get_installed_integrations(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:

@@ -17,12 +17,15 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import TYPE_CHECKING
+
+from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 from TIPCommon.consts import DATAPLANE_1P_HEADER, DEFAULT_1P_PAGE_SIZE
 from TIPCommon.exceptions import EmptyMandatoryValues, ParameterValidationError
 from TIPCommon.rest.custom_types import HttpMethod
-from TIPCommon.utils import escape_odata_literal, safe_json_for_204, temporarily_remove_header
+from TIPCommon.utils import escape_odata_literal, get_sdk_api_uri, safe_json_for_204, temporarily_remove_header
 
 from .base_soar_api import BaseSoarApi
 
@@ -882,10 +885,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_env_dynamic_parameters(self) -> requests.Response:
+    def get_env_dynamic_parameters(self) -> list[SingleJson]:
         """Get env dynamic parameters"""
-        endpoint = "/settings/dynamicParameters"
-        return self._make_request(HttpMethod.GET, endpoint)
+        endpoint = f"/settings/dynamicParameters?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="dynamicParameters")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def add_dynamic_env_param(self) -> requests.Response:
@@ -967,15 +970,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         payload = self.params.domain_data
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
-    @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_environment_names(self) -> requests.Response:
-        """Get environment names"""
-        endpoint = "/system/settings/environments"
-        response = self._make_request(HttpMethod.GET, endpoint)
-        return [
-            evn_name.get("displayName")
-            for evn_name in response.json().get("environments", [])
-        ]
+    def get_environment_names(self) -> list[str]:
+        """Get environment names."""
+        environments = self.get_environments()
+        return [env.get("displayName") for env in environments]
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_environments(self) -> list[SingleJson]:
@@ -997,7 +995,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Save integration instance settings"""
         endpoint = f"/integrations/{self.params.integration_identifier}/integrationInstances/{self.params.identifier}"
         payload = self.params.integration_data
-        return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload) # QA fixes
+        return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def import_simulated_case(self) -> requests.Response:
@@ -1034,18 +1032,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_networks(self) -> requests.Response:
-        """Get networks"""
-        endpoint = "/system/settings/networks"
-        response = self._make_request(HttpMethod.GET, endpoint)
-        raw = response.text.strip()
-        if not raw:
-            return []
-        try:
-            data = response.json()
-        except Exception:
-            return []
-        return response.json()
+    def get_networks(self) -> list[SingleJson]:
+        """Get networks."""
+        endpoint = f"/system/settings/networks?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="networks")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_network(self) -> requests.Response:
@@ -1054,20 +1044,19 @@ class OnePlatformSoarApi(BaseSoarApi):
         payload = self.params.network_data
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
-    @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_custom_lists(self) -> requests.Response:
-        """Get custom lists"""
-        endpoint = "/system/settings/customLists"
-        return self._make_request(HttpMethod.GET, endpoint)
+    def get_custom_lists(self) -> list[SingleJson]:
+        """Get custom lists."""
+        endpoint = f"/system/settings/customLists?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="customLists")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_custom_list(self) -> requests.Response:
         """Update custom list"""
-        endpoint = f"/system/settings/customLists"
+        endpoint = "/system/settings/customLists"
         payload = self.params.tracking_list
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
-    @temporarily_remove_header(DATAPLANE_1P_HEADER)#QA fixes
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_blocklist(self) -> requests.Response:
         """Update blocklist"""
         endpoint = "/entitiesBlocklists"
@@ -1122,14 +1111,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         )
         return self._make_request(HttpMethod.GET, endpoint)
 
-    # @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    # def get_installed_jobs(self) -> requests.Response:
-    #     """Get installed jobs."""
-    #     endpoint: str = "/integrations/-/jobs/-/jobInstances"
-    #     if self.params.job_instance_id:
-    #         endpoint += f"/{self.params.job_instance_id}"
-    #     return self._make_request(HttpMethod.GET, endpoint) #QA fixes
-
     def _enrich_connector_instances_with_params(
         self,
         response_json: SingleJson
@@ -1155,7 +1136,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         return detailed_data_list
 
-    @temporarily_remove_header(DATAPLANE_1P_HEADER) #QA fixes
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_installed_connectors(self) -> requests.Response:
         """Get installed connectors."""
         instance_id: str = getattr(self.params, "connector_instance_id", None)
@@ -1213,10 +1194,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         return new_response
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_visual_families(self) -> requests.Response:
+    def get_visual_families(self) -> list[SingleJson]:
         """Get custom visual families."""
-        endpoint = "/ontologyRecords/-/visualFamilies"
-        return self._make_request(HttpMethod.GET, endpoint)
+        endpoint = f"/ontologyRecords/-/visualFamilies?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="visualFamilies")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_visual_family_by_id(self) -> requests.Response:
@@ -1237,9 +1218,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._paginate_results(initial_endpoint=endpoint, root_response_key="case_stage_definitions")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_case_close_reasons(self) -> requests.Response:
-        """Get case close reasons"""
-        return self.get_case_alert()
+    def get_case_close_reasons(self) -> list[SingleJson]:
+        """Get case close reasons."""
+        endpoint = f"/system/settings/caseCloseDefinitions?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="caseCloseDefinitions")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_block_lists_details(self) -> requests.Response:
@@ -1248,10 +1230,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_sla_records(self) -> requests.Response:
-        """Get sla records"""
-        endpoint = "/system/settings/slaDefinitions"
-        return self._make_request(HttpMethod.GET, endpoint)
+    def get_sla_records(self) -> list[SingleJson]:
+        """Get sla records."""
+        endpoint = f"/system/settings/slaDefinitions?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="slaDefinitions")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_all_model_block_records(self) -> requests.Response:
@@ -1290,7 +1272,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Add or update company logo."""
         prop_name = self.params.company_logo.get("displayName") or self.params.company_logo.get("name") or "CompanyLogo"
         endpoint: str = f"/moduleSettings/CompanySetting/properties/{prop_name}"
-        payload = self.params.company_logo # QA fixes - 2
+        payload = self.params.company_logo
         return self._make_request(HttpMethod.PATCH, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
@@ -1358,18 +1340,58 @@ class OnePlatformSoarApi(BaseSoarApi):
         """Get store data."""
         endpoint = f"/marketplaceIntegrations?pageSize={_PAGE_SIZE}"
         results = self._paginate_results(initial_endpoint=endpoint, root_response_key="marketplaceIntegrations")
-        return {"marketplaceIntegrations": results} #QA fixes
+        return {"marketplaceIntegrations": results}
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def import_package(self) -> requests.Response:
         """Import package."""
-        endpoint = "/ide/ImportPackage"
-        data = {
-            "data": self.params.b64_blob,
-            "integrationIdentifier": self.params.integration_name,
-            "isCustom": True,
+        staging_val = "true" if getattr(self.params, "staging", False) else "false"
+        endpoint = "/upload/integrations:import"
+        url = f"{get_sdk_api_uri(self.chronicle_soar)}{endpoint}"
+        url = re.sub(
+            r'(https?://[^/]+/)(v[a-zA-Z0-9]+/)(.*)/upload/(.*)',
+            r'\1upload/\2\3/\4',
+            url
+        )
+        self.chronicle_soar.LOGGER.info(f"Calling API endpoint: {url}")
+
+        params = {
+            "uploadType": "media",
+            "staging": staging_val,
         }
-        return self._make_request(HttpMethod.POST, endpoint, json_payload=data)
+        headers = {
+            "Content-Type": "application/octet-stream",
+        }
+        binary_data = self.params.b64_blob
+
+        zip_filename = self.params.integration_name + ".zip"
+
+        metadata = {
+                "integration": {
+                    "displayName": self.params.integration_name
+                },
+                "staging": getattr(self.params, "staging", False),
+                "Staging": getattr(self.params, "staging", False)
+            }
+        m = MultipartEncoder(
+            fields={
+                'metadata': ('metadata', json.dumps(metadata), 'application/json; charset=UTF-8'),
+                'file': (zip_filename, binary_data, 'application/zip')
+            },
+            boundary='----WebKitFormBoundaryYOURBOUNDARY'
+        )
+
+        headers = {
+            "Content-Type": m.content_type,
+        }
+
+        return self.chronicle_soar.session.request(
+            "POST",
+            url,
+            params=params,
+            data=m,
+            headers=headers,
+        )
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_ide_item(self) -> requests.Response:
@@ -1583,7 +1605,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             HttpMethod.POST, endpoint, json_payload=self.params.template
         )
 
-    @temporarily_remove_header(DATAPLANE_1P_HEADER) # QA fixes
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_email_template(self) -> requests.Response:
         """Update email template."""
         template = self.params.template
@@ -1607,16 +1629,48 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._paginate_results(initial_endpoint=endpoint, root_response_key="soar_block_entities")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_simulated_cases(self) -> requests.Response:
+    def get_simulated_cases(self) -> list[SingleJson]:
         """Get simulated cases."""
-        endpoint = "/legacyCases:getCustomCases"
-        return self._make_request(HttpMethod.GET, endpoint)
+        endpoint = f"/legacyCases:getCustomCases?pageSize={_PAGE_SIZE}"
+        response = self._make_request(HttpMethod.GET, endpoint)
+        response.raise_for_status()
+        try:
+            response_data = response.json()
+        except Exception:
+            return []
+
+        if isinstance(response_data, list):
+            return response_data
+
+        all_records = []
+        current_records = response_data.get("custom_cases")
+        if current_records is None:
+            current_records = response_data.get("customCases", [])
+        all_records.extend(current_records)
+
+        next_token = response_data.get("nextPageToken")
+        while next_token:
+            endpoint_with_token = f"{endpoint}&pageToken={next_token}"
+            try:
+                page_response = self._make_request(HttpMethod.GET, endpoint_with_token)
+                page_response.raise_for_status()
+                page_data = page_response.json()
+            except Exception:
+                break
+
+            current_records = page_data.get("custom_cases")
+            if current_records is None:
+                current_records = page_data.get("customCases", [])
+            all_records.extend(current_records)
+            next_token = page_data.get("nextPageToken")
+
+        return all_records
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_installed_integrations(self) -> list[SingleJson]:
         """Get installed integrations."""
         endpoint = f"/integrations?pageSize={_PAGE_SIZE}"
-        return self._paginate_results(initial_endpoint=endpoint, root_response_key="integrations") # QA fixes
+        return self._paginate_results(initial_endpoint=endpoint, root_response_key="integrations")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_case_close_comment(self, case_id: str | int) -> requests.Response:
@@ -1638,7 +1692,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(method=HttpMethod.GET, endpoint=endpoint, params=params)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def add_mapping_rules(self) -> requests.Response:#QA fixes
+    def add_mapping_rules(self) -> requests.Response:
         """Add mapping rules."""
         endpoint = f"/ontologyRecords/{self.params.mr_id}/mappingRules:save"
 
@@ -1717,14 +1771,14 @@ class OnePlatformSoarApi(BaseSoarApi):
             family_data = family_data["visualFamilyDataModel"]
 
         if isinstance(family_data, dict) and "rules" in family_data:
-            family_data["modelingRules"] = family_data.pop("rules") #QA fixes
+            family_data["modelingRules"] = family_data.pop("rules")
 
         return self._make_request(
             HttpMethod.POST, endpoint, json_payload=family_data
         )
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def update_visual_family(self) -> requests.Response: #QA fixes
+    def update_visual_family(self) -> requests.Response:
         """Update custom visual family."""
         family_data = self.params.visual_family
         existing_vf = self.params.existing_vf
