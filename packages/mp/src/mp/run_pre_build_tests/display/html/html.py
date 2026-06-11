@@ -40,19 +40,23 @@ class HtmlFormat:
 
     def display(self) -> None:
         """Generate an HTML report for integration test results."""
-        try:  # noqa: PLW0717
+        try:
             html_content: str = self._generate_validation_report_html()
+        except Exception:
+            logger.exception("❌ Error generating report HTML")
+            return
 
+        try:
             with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html", encoding="utf-8") as temp_file:
                 temp_file.write(html_content)
                 report_path: Path = pathlib.Path(temp_file.name)
 
             resolved_path: Path = report_path.resolve()
-            logger.info("📂 Report available at 👉: %s", resolved_path.as_uri())
-            webbrowser.open(resolved_path.as_uri())
-
         except Exception:
             logger.exception("❌ Error generating report")
+        else:
+            logger.info("📂 Report available at 👉: %s", resolved_path.as_uri())
+            webbrowser.open(resolved_path.as_uri())
 
     def _generate_validation_report_html(
         self,

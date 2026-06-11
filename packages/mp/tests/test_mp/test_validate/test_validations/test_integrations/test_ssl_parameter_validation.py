@@ -37,6 +37,7 @@ if TYPE_CHECKING:
 def _update_yaml_file(file_path: pathlib.Path, updates: dict[str, Any]) -> None:
     """Read a YAML file, update its content, and write it back."""
     content = file_utils.load_yaml_file(file_path)
+    assert isinstance(content, dict)
     content.update(updates)
     file_utils.write_yaml_to_file(content, file_path)
 
@@ -86,7 +87,7 @@ class TestSSLParameterValidation:
             {
                 "name": "Verify SSL",
                 "type": "string",
-            }
+            },
         ]
         _update_yaml_file(integration_file, {"parameters": params})
 
@@ -101,7 +102,7 @@ class TestSSLParameterValidation:
                 "name": "Verify SSL",
                 "type": "boolean",
                 "default_value": False,
-            }
+            },
         ]
         _update_yaml_file(integration_file, {"parameters": params})
 
@@ -116,7 +117,7 @@ class TestSSLParameterValidation:
                 "name": "Verify SSL",
                 "type": "boolean",
                 "default_value": False,
-            }
+            },
         ]
         _update_yaml_file(integration_file, {"parameters": params})
         with mock.patch(
@@ -134,7 +135,7 @@ class TestSSLParameterValidation:
                 "name": ssl_param_name,
                 "type": "boolean",
                 "default_value": True,
-            }
+            },
         ]
         _update_yaml_file(integration_file, {"parameters": params})
 
