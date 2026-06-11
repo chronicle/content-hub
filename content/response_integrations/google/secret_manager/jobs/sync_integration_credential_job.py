@@ -29,7 +29,6 @@ from TIPCommon.rest.async_soar_platform_clients.soar_api_client import (
     AsyncMarketplaceApi,
 )
 
-from ..core.authentication import IntegrationParameters, build_auth_params
 from ..core.constants import (
     ANY_INTEGRATION_FILTER_VALUE,
     ASYNC_SEMAPHORE_LIMIT,
@@ -88,14 +87,12 @@ class SyncIntegrationCredentialJob(Job):
 
     def _init_secret_manager_client(self) -> None:
         """Initialize the Secret Manager client."""
-        auth_params: IntegrationParameters = build_auth_params(self.soar_job)
-
         self.secret_manager_client = SecretManagerClient(
-            service_account_json=auth_params.service_account_json,
-            project_id=auth_params.project_id,
-            workload_identity_email=auth_params.workload_identity_email,
+            service_account_json=getattr(self.params, "service_account_json", None),
+            project_id=getattr(self.params, "project_id", None),
+            workload_identity_email=getattr(self.params, "workload_identity_email", None),
             logger=self.logger,
-            verify_ssl=auth_params.verify_ssl,
+            verify_ssl=getattr(self.params, "verify_ssl", True),
         )
 
     def _validate_params(self) -> None:
