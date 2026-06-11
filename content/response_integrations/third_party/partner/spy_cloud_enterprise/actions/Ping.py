@@ -34,7 +34,7 @@ VERIFY_SSL_PARAM = "Verify SSL"
 SCRIPT_NAME = PING_SCRIPT_NAME
 
 
-def _extract_api_key(siemplify):
+def _extract_api_key(siemplify: SiemplifyAction) -> str | None:
     """Extract the SpyCloud API key from integration configuration."""
     if extract_configuration_param:
         return extract_configuration_param(
@@ -53,7 +53,7 @@ def _extract_api_key(siemplify):
     )
 
 
-def _extract_verify_ssl(siemplify):
+def _extract_verify_ssl(siemplify: SiemplifyAction) -> bool:
     """Extract the Verify SSL flag from integration configuration."""
     if extract_configuration_param:
         return extract_configuration_param(
@@ -84,7 +84,6 @@ def main():
     status = EXECUTION_STATE_FAILED
     result_value = "false"
     output_message = ""
-    sdk = None
 
     siemplify.LOGGER.info("================= Main - Param Init =================")
 
@@ -98,14 +97,14 @@ def main():
             f"{ENDPOINT_PING} (verify_ssl={verify_ssl})"
         )
 
-        sdk = SpyCloudSDK(api_key, verify_ssl=verify_ssl)
-        sdk.breach_catalog.ping()
+        with SpyCloudSDK(api_key, verify_ssl=verify_ssl) as sdk:
+            sdk.breach_catalog.ping()
 
         status = EXECUTION_STATE_COMPLETED
         result_value = "true"
         output_message = (
-            f"Successfully connected to {INTEGRATION_DISPLAY_NAME} with the "
-            "provided API key."
+            f"Successfully connected to the {INTEGRATION_DISPLAY_NAME} server with "
+            "the provided connection parameters!"
         )
 
         try:
@@ -122,13 +121,15 @@ def main():
 
     except Exception as error:
         siemplify.LOGGER.error(
-            f"Failed to connect to {INTEGRATION_DISPLAY_NAME}. Error: {error}"
+            f"Failed to connect to the {INTEGRATION_DISPLAY_NAME} server! "
+            f"Error is {error}"
         )
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
         output_message = (
-            f"Failed to connect to {INTEGRATION_DISPLAY_NAME}. Error: {error}"
+            f"Failed to connect to the {INTEGRATION_DISPLAY_NAME} server! "
+            f"Error is {error}"
         )
 
         try:
@@ -139,13 +140,6 @@ def main():
                 "endpoint": ENDPOINT_PING,
                 "error": str(error),
             })
-        except Exception:
-            pass
-
-    finally:
-        try:
-            if sdk is not None and hasattr(sdk, "_handler"):
-                sdk._handler.close()
         except Exception:
             pass
 

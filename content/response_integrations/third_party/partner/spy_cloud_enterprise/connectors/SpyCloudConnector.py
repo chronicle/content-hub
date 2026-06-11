@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 from collections import Counter
+from typing import Any, Callable
 
 from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
@@ -16,7 +17,7 @@ from ..core.SpyCloudManager import SpyCloudManager
 CONNECTOR_NAME = "SpyCloud Enterprise Connector"
 
 
-def _safe_get(dct, *keys, default=None):
+def _safe_get(dct: Any, *keys: Any, default: Any = None) -> Any:
     current = dct
     for key in keys:
         if not isinstance(current, dict):
@@ -30,7 +31,7 @@ def _safe_get(dct, *keys, default=None):
 COLLECTION_SOURCE_FIELD = "spycloud_collection_source"
 
 
-def _normalize_collection_sources(value):
+def _normalize_collection_sources(value: Any) -> list[str]:
     if value in (None, "", [], {}):
         return ["unknown"]
 
@@ -63,14 +64,14 @@ def _normalize_collection_sources(value):
     return [str(value)]
 
 
-def _collection_source_label(value):
+def _collection_source_label(value: Any) -> str:
     sources = _normalize_collection_sources(value)
     if not sources:
         return "unknown"
     return "+".join(sources)
 
 
-def _format_source_counts(counter):
+def _format_source_counts(counter: Counter) -> str:
     if not counter:
         return "none"
     return ", ".join(
@@ -78,7 +79,10 @@ def _format_source_counts(counter):
     )
 
 
-def _count_sources(items, source_getter):
+def _count_sources(
+    items: Any,
+    source_getter: Callable[[Any], list[str]],
+) -> Counter:
     counter = Counter()
     for item in items or []:
         for source in source_getter(item):
@@ -86,13 +90,13 @@ def _count_sources(items, source_getter):
     return counter
 
 
-def _get_raw_record_sources(record):
+def _get_raw_record_sources(record: Any) -> list[str]:
     if not isinstance(record, dict):
         return ["unknown"]
     return [_collection_source_label(record.get(COLLECTION_SOURCE_FIELD))]
 
 
-def _get_udm_event_sources(udm_event):
+def _get_udm_event_sources(udm_event: Any) -> list[str]:
     extensions = udm_event.get("extensions", {}) if isinstance(udm_event, dict) else {}
     additional = udm_event.get("additional", {}) if isinstance(udm_event, dict) else {}
     if not isinstance(extensions, dict):
@@ -106,7 +110,7 @@ def _get_udm_event_sources(udm_event):
     ]
 
 
-def _get_alert_sources(alert):
+def _get_alert_sources(alert: Any) -> list[str]:
     counter = Counter()
     for event in getattr(alert, "events", []) or []:
         if isinstance(event, dict):
@@ -114,7 +118,7 @@ def _get_alert_sources(alert):
     return list(counter.keys()) or ["unknown"]
 
 
-def _safe_udm_sample(udm_event):
+def _safe_udm_sample(udm_event: Any) -> dict[str, Any]:
     metadata = udm_event.get("metadata", {}) if isinstance(udm_event, dict) else {}
     security_result = udm_event.get("security_result", {}) if isinstance(udm_event, dict) else {}
     extensions = udm_event.get("extensions", {}) if isinstance(udm_event, dict) else {}
@@ -141,7 +145,12 @@ def _safe_udm_sample(udm_event):
     }
 
 
-def _log_udm_samples(logger, udm_events, is_test_run, limit=3):
+def _log_udm_samples(
+    logger: Any,
+    udm_events: Any,
+    is_test_run: bool,
+    limit: int = 3,
+) -> None:
     if not is_test_run:
         return
 
@@ -154,7 +163,7 @@ def _log_udm_samples(logger, udm_events, is_test_run, limit=3):
 
 
 @output_handler
-def main(is_test_run):
+def main(is_test_run: bool) -> None:
     siemplify = SiemplifyConnectorExecution()
     siemplify.script_name = CONNECTOR_NAME
     alerts = []

@@ -522,6 +522,15 @@ class SpyCloudSDK:
     def compass(self) -> CompassClient:
         return self._clients["compass"]
 
+    def close(self) -> None:
+        self._handler.close()
+
+    def __enter__(self) -> SpyCloudSDK:
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.close()
+
     def __getattr__(self, name: str):
         for client in self._clients.values():
             if hasattr(client, name):
