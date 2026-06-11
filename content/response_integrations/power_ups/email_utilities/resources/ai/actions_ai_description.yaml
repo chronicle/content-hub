@@ -2,39 +2,36 @@ Analyze EML Headers:
   ai_description: >-
     ### General Description
 
-    Analyzes EML file headers or a provided list of headers to identify potential
-    email spoofing, configuration issues, or suspicious patterns. This action parses
-    the input to extract header key-value pairs and performs a series of checks to
-    validate email integrity.
+    Analyzes email headers from a provided EML file or JSON header list to identify
+    potential spoofing, misconfigurations, or suspicious email characteristics.
 
 
     ### Flow Description
 
-    1. Accepts either a Base64-encoded EML file or a JSON-formatted list of headers
-    as input parameters.
+    1. The action receives input as either a Base64-encoded EML file or a JSON-formatted
+    list of headers.
 
-    2. Parses the input to extract header key-value pairs, handling potential duplicate
-    keys.
+    2. It parses the input to extract individual email headers.
 
-    3. Analyzes specific headers (e.g., Return-Path, From, Reply-To, Message-ID) for
-    inconsistencies or suspicious patterns, such as mismatches between sender-related
-    headers.
+    3. It performs static analysis on the headers, checking for anomalies such as
+    mismatches between 'Return-Path', 'From', and 'Reply-To' headers, missing 'Message-ID',
+    or the presence of suspicious headers like 'Bcc' or 'X-Distribution'.
 
-    4. Extracts domains and IP addresses from "Received" headers.
+    4. It extracts domain and IP address information from 'Received' headers.
 
-    5. Generates a structured JSON result containing the extracted headers, analysis
-    recommendations, and an HTML-formatted summary table.
+    5. It generates a structured JSON result containing an HTML table of all headers,
+    a list of recommendations with severity scores, and a summary of findings.
 
-    6. Returns the analysis results as a JSON object to the action result.
+    6. The final result is returned to the platform using `siemplify.result.add_result_json`.
 
 
     ### Additional Notes
 
-    This action is purely analytical and does not modify external systems or internal
-    case data. It is designed to assist analysts in evaluating email headers for potential
-    threats.
+    This action performs static analysis and does not interact with external services
+    or modify case data.
   ai_short_description: >-
-    Analyzes EML headers to detect potential email spoofing and configuration anomalies.
+    Analyzes email headers from EML files or JSON input to identify spoofing indicators
+    and suspicious email characteristics.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -46,15 +43,9 @@ Analyze EML Headers:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action parses provided input data and returns a result JSON. It does not
-      fetch data from external APIs, nor does it mutate any external or internal systems.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action performs analysis on provided email headers to identify potential
-      issues. It does not fetch data from external systems (not enrichment) and does
-      not perform any remediation actions (not remediation).
-    remediation: false
+      The action performs static analysis on provided input and returns a JSON result.
+      It does not fetch external data, mutate external or internal data, update entities,
+      create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -106,8 +97,8 @@ Analyze EML Headers:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action processes input parameters (Base64 EML or Header List) and does not
-      interact with or filter any entities from the case.
+      The action does not operate on entities. It processes input parameters directly
+      to analyze email headers.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -123,9 +114,9 @@ Analyze EML Headers:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a utility that parses and analyzes email headers. It does not
-      match any of the defined outcome categories such as enriching IOCs/assets, updating
-      alerts, or performing remediation actions.
+      The action performs static analysis on email headers and returns a report. It
+      does not match any of the provided outcome categories (Enrich IOC, Enrich Asset,
+      etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -145,52 +136,47 @@ Analyze EML Headers:
 
     | --- | --- | --- | --- |
 
-    | Base64 EML | string | No | Base64 string of an EML file. |
+    | Base64 EML | String | No | Base64 string of an EML file. |
 
-    | Header List | string | No | Headers list in a JSON format. |
+    | Header List | String | No | Headers list in a JSON format. |
 
 
-    **Parameter Notes:** Either 'Base64 EML' or 'Header List' must be provided for
-    the action to execute.
+    **Parameter Notes**: Either 'Base64 EML' or 'Header List' must be provided.
 Analyze Headers:
   ai_description: >-
     ### General Description
 
     Analyzes email headers to validate authentication mechanisms (SPF, DMARC, ARC,
-    DKIM) and assess the reputation of relay servers. This action parses email headers
-    to extract key information, validates domain authentication records, and enriches
-    relay server information with reputation, geo-location, and Whois data.
+    DKIM) and assess the reputation of relay servers. This action is designed to parse
+    email header data provided in a JSON format, perform security checks, and provide
+    a detailed analysis of the email's authenticity and the reputation of the servers
+    involved in its delivery.
 
 
     ### Flow Description
 
-    1. Accepts a JSON object containing email headers as input.
+    1. Accepts a JSON object containing email headers as input via the 'Headers JSON'
+    parameter.
 
-    2. Parses the headers to extract key information such as sender, recipient, subject,
-    and message ID.
+    2. Parses the headers to extract authentication results and routing information.
 
-    3. Validates SPF, DMARC, and MX records for the sender's domain using `checkdmarc`.
+    3. Validates SPF, DMARC, ARC, and DKIM records using domain-specific checks.
 
-    4. Verifies DKIM and ARC signatures using `EmailUtilitiesManager`.
+    4. Analyzes relay servers by querying DNS-based Blackhole Lists (DNSBL) and retrieving
+    geo-location and WHOIS data for IP addresses.
 
-    5. Parses "Received" headers to trace the email's path.
-
-    6. For each relay server (IP or domain) identified in the path, it queries RBLs
-    (Real-time Blackhole Lists) to check for denylisting.
-
-    7. Enriches relay server information with geo-location and IP Whois data.
-
-    8. Returns a comprehensive JSON result containing all validation and enrichment
-    data.
+    5. Constructs a comprehensive JSON result containing the analysis, which is then
+    added to the action results.
 
 
     ### Additional Notes
 
-    This action is purely analytical and does not modify external systems or internal
-    case data beyond returning the analysis results.
+    This action is purely analytical and does not modify any external systems or internal
+    SOAR entities. It relies on external DNS and geolocation services to provide context
+    for the email headers.
   ai_short_description: >-
-    Analyzes email headers to validate authentication (SPF, DMARC, ARC, DKIM) and
-    enrich relay server information with reputation, geo-location, and Whois data.
+    Analyzes email headers to validate authentication protocols (SPF, DMARC, ARC,
+    DKIM) and assess relay server reputation via RBLs and geolocation.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -202,15 +188,9 @@ Analyze Headers:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches data from external sources (DNS, RBL, Whois, Geo) to enrich
-      the provided email headers. It does not mutate any external or internal data.
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action performs data retrieval (DNS, RBL, Whois, Geo) to enrich email header
-      information. It does not perform any external or internal mutations. Therefore,
-      it is an enrichment action.
-    remediation: false
+      The action makes external API calls to DNSBL, IPWhois, and Geo-location services
+      to fetch reputation and location data for relay servers found in the email headers.
+      It does not mutate any external or internal data.
   entity_usage:
     entity_types:
       address: false
@@ -262,9 +242,9 @@ Analyze Headers:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities from the case. It takes a JSON input
-      parameter containing email headers and processes them directly. Therefore, no
-      entity types are used.
+      The action does not operate on entities. It takes a JSON string parameter containing
+      email headers and processes them directly without iterating over or filtering
+      any SOAR entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -276,13 +256,13 @@ Analyze Headers:
     download_file: false
     enable_identity: false
     enrich_asset: false
-    enrich_ioc: true
+    enrich_ioc: false
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action enriches relay server IPs/domains with reputation, geo-location,
-      and Whois data, matching 'Enrich IOC'. It does not perform any remediation,
-      ticket management, or alert modification.
+      The action parses email headers and returns a JSON result. It does not perform
+      any of the defined actions like enriching entities, updating alerts, or modifying
+      external systems.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -302,45 +282,42 @@ Analyze Headers:
 
     | --- | --- | --- | --- |
 
-    | Headers JSON | String | Yes | A JSON object containing the email headers to
-    be analyzed. |
+    | Headers JSON | String | Yes | The JSON object that contains the email headers.
+    |
 Parse Base64 Email:
   ai_description: >-
-    ### General Description
+    General Description
 
-    Parses EML and MSG files provided as a base64-encoded string. It extracts comprehensive
-    email metadata, including headers, body content, attachments, and embedded indicators
-    (URLs, domains, email addresses, and IP addresses).
-
-
-    ### Flow Description
-
-    1. Accepts a base64-encoded EML/MSG string as input.
-
-    2. Decodes the base64 string into binary content.
-
-    3. Detects the file type (EML or MSG) using `olefile`.
-
-    4. Parses the email structure, including headers, body (text/plain and text/html),
-    and attachments.
-
-    5. Extracts indicators (URLs, domains, emails, IPs) from the body and headers
-    using regex and URL extraction libraries.
-
-    6. Processes attachments recursively if they are nested emails.
-
-    7. Aggregates all extracted data into a structured JSON object.
-
-    8. Returns the parsed email data as a JSON result in the action output.
+    Parses a base64-encoded EML or MSG email file into a structured JSON format. This
+    action is a utility for email analysis and does not perform external lookups or
+    system mutations.
 
 
-    ### Additional Notes
+    Flow Description
 
-    This action is a utility for email analysis and does not perform external lookups
-    or modify case data.
+    1. The action receives a base64-encoded string representing an EML or MSG file
+    via the `EML/MSG Base64 String` parameter.
+
+    2. The base64 string is decoded into raw bytes.
+
+    3. The script determines the file type (OLE/MSG or EML) and uses the appropriate
+    parser.
+
+    4. Headers, body content, and attachments are parsed and extracted.
+
+    5. The script extracts IOCs (URLs, domains, emails, IPs) from the email body and
+    headers.
+
+    6. The final structured data is returned as a JSON result using `siemplify.result.add_result_json`.
+
+
+    Additional Notes
+
+    This action is a local parsing utility and does not perform external API calls
+    or modify system state.
   ai_short_description: >-
-    Parses EML and MSG files from a base64-encoded string to extract email metadata
-    and indicators.
+    Parses a base64-encoded EML or MSG email file into a structured JSON format, extracting
+    headers, body content, attachments, and IOCs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -352,14 +329,9 @@ Parse Base64 Email:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action parses provided data and does not fetch data from an external source.
-      It does not mutate external or internal data.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action parses provided data and does not fetch data from an external source,
-      so it is not an enrichment action. It does not perform any remediation actions.
-    remediation: false
+      The action is a local parsing utility that processes an input string and returns
+      a JSON result. It does not fetch data from external sources, mutate external
+      systems, or modify internal SecOps data.
   entity_usage:
     entity_types:
       address: false
@@ -411,8 +383,8 @@ Parse Base64 Email:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It parses a base64-encoded email string
-      provided as a parameter.
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It processes the provided base64 string parameter directly.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -428,9 +400,8 @@ Parse Base64 Email:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action parses an email file provided as input and returns the parsed structure.
-      It does not fetch external threat intelligence (Enrich IOC), update assets,
-      or perform remediation. It is a data parsing utility.
+      The action is a local parsing utility for email content. It does not perform
+      enrichment, ticketing, blocking, or any other listed outcome category.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -464,46 +435,49 @@ Parse Case Wall Email:
   ai_description: >-
     ### General Description
 
-    This action parses EML or MSG files attached to the case wall. It extracts email
-    metadata, body content, and attachments, and optionally creates entities (User,
-    Email Subject, URLs, Emails, IPs, Hashes) based on the email content.
+    This action parses EML or MSG files that are attached to the case wall. It extracts
+    email metadata (such as headers and body content), identifies attachments, and
+    extracts potential indicators of compromise (IOCs) like URLs, IP addresses, email
+    addresses, and file hashes. The action can optionally create these extracted IOCs
+    as entities within the case and save attachments back to the case wall for further
+    analysis.
 
 
     ### Flow Description
 
-    1. **Retrieve Attachments**: The action fetches all attachments from the case
-    wall using the `AttachmentsManager`.
+    1. **Initialization**: Initializes the `EmailManager` and `AttachmentsManager`
+    to handle email parsing and case wall interactions.
 
-    2. **Identify Target**: It identifies the target email attachment (either the
-    original EML or an attached email) based on the `Original EML Only` parameter.
+    2. **Attachment Retrieval**: Retrieves all attachments associated with the current
+    alert or case from the case wall.
 
-    3. **Parse Email**: It parses the email content (headers, body, and attachments)
-    using the `EmailManager`.
+    3. **Target Identification**: Identifies the target EML or MSG file based on the
+    provided parameters (e.g., 'Original EML Only').
 
-    4. **Create Entities**: If enabled, it creates entities (User, Email Subject,
-    URLs, Emails, IPs, Hashes) from the parsed email content. It supports filtering
-    entities using a regex (`Exclude Entities Regex`) and can defang/fang entities.
+    4. **Email Parsing**: Reads the content of the identified attachment and parses
+    it using the `EmailManager` to extract headers, body, and nested attachments.
 
-    5. **Save Attachments**: If enabled, it saves extracted attachments to the case
-    wall and updates the corresponding file entities with the new attachment ID.
+    5. **Entity Creation**: If enabled, creates new entities (e.g., User, Email Subject,
+    URL, IP, Hash) in the case based on the parsed email content and the 'Create Observed
+    Entities' parameter.
 
-    6. **Finalize**: It returns the parsed email data and a list of created entities
-    in the action result.
+    6. **Attachment Management**: If 'Save Attachments to Case Wall' is enabled, saves
+    extracted attachments to the case wall and updates the corresponding file entities
+    with the new attachment IDs.
+
+    7. **Result Generation**: Adds the parsed email data and a list of created entities
+    to the action results.
 
 
     ### Additional Notes
 
-    - Supports custom regex for entity extraction via the `Custom Entity Regexes`
-    parameter.
-
-    - Can be configured to create entities from the To/From headers and the Subject
-    field.
-
-    - Supports filtering of observed entities based on the `Create Observed Entities`
-    parameter.
+    This action is part of the Email Utilities integration and is designed to automate
+    the initial triage and extraction of IOCs from email-based alerts. It does not
+    require external API keys as it operates entirely on data already present within
+    the Google SecOps SOAR platform.
   ai_short_description: >-
-    Parses EML or MSG files attached to the case wall, extracts entities, and saves
-    attachments.
+    Parses EML or MSG files from the case wall, extracts metadata and IOCs, and optionally
+    creates entities and saves attachments.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -514,181 +488,13 @@ Parse Case Wall Email:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Creates new entities and adds attachments to the case wall.
+      Creates new entities and adds attachments to the case wall within the SOAR platform.
     reasoning: >-
-      The action fetches attachment data from the case wall (internal) and creates
-      new entities and attachments within the case. It does not mutate external data.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action parses email files and creates entities. It does not perform external
-      enrichment (reputation lookups) or remediation (blocking/containment).
-    remediation: false
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: true
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: true
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action parses an email attachment and creates new entities based on the
-      content. It also checks existing `FILENAME` entities to link them with extracted
-      attachments.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action parses email files and creates entities. It does not match any of
-      the defined enrichment or remediation categories.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Create Entities | boolean | No | When enabled, this will create User entities
-    out of the To and From headers and a Email Subject entity out of the Subject field.
-    |
-
-    | Exclude Entities Regex | string | No | Observed entities that match the supplied
-    regex will not be created. |
-
-    | Original EML Only | boolean | No | Extract attachments from the original EML
-    only. |
-
-    | Create Observed Entities | ddl | No | Create Entities out of the observed entities
-    in the email body. 'All' will create URL, Email, IP, and Hash entities. |
-
-    | Save Attachments to Case Wall | boolean | No | Save the extracted attachments
-    to the case wall. |
-
-    | Fang Entities | boolean | No | When enabled, entities that are defanged (example.com
-    => example[.]com) will be converted to fanged entities. |
-
-    | Custom Entity Regexes | code | No | A JSON object that can parse out entities
-    from body and subject. |
-Parse EML Base64 Blob:
-  ai_description: >-
-    ### General Description
-
-    This action decodes a base64-encoded string representing an EML file and parses
-    its contents to extract metadata and body information. It is designed to facilitate
-    the analysis of email content by converting raw base64 data into a structured
-    JSON format.
-
-
-    ### Flow Description
-
-    1. The action retrieves the `Base64 EML Blob` parameter.
-
-    2. It decodes the provided base64 string into raw EML content.
-
-    3. The raw content is parsed using the email library to extract metadata (sender,
-    recipients, subject, date) and body content (text and HTML).
-
-    4. The action recursively processes multipart attachments to identify and extract
-    nested EML content.
-
-    5. All extracted information is aggregated into a JSON structure.
-
-    6. The final JSON result is added to the action output.
-
-
-    ### Additional Notes
-
-    This action is purely analytical and does not modify any external or internal
-    systems. It does not interact with external APIs or modify SOAR case data.
-  ai_short_description: >-
-    Decodes and parses a base64-encoded EML file, returning the extracted metadata
-    and content.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: false
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action performs local parsing of a provided string. It does not fetch data
-      from external APIs, nor does it mutate any external or internal data.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action parses a provided base64 string and returns the parsed content. It
-      does not fetch data from external sources, nor does it perform any remediation
-      or mutation of external or internal systems.
-    remediation: false
+      The action fetches attachment data from the case wall (fetches_data=true) and
+      mutates internal SOAR data by creating new entities and adding attachments to
+      the case wall (can_mutate_internal_data=true). It updates existing entities
+      with attachment IDs (can_update_entities=true). It does not mutate external
+      systems.
   entity_usage:
     entity_types:
       address: false
@@ -740,8 +546,10 @@ Parse EML Base64 Blob:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action operates on a provided string parameter and does not interact with
-      entities.
+      The action does not filter or operate on the `target_entities` list provided
+      by the SOAR platform. Instead, it retrieves attachments from the case wall and
+      extracts new entities from the email content. Therefore, it does not use or
+      filter any specific entity types from the input.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -757,9 +565,163 @@ Parse EML Base64 Blob:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action parses a provided base64 string and returns the parsed content. It
-      does not match any of the defined outcome categories (e.g., enrichment, remediation,
-      ticket management, etc.).
+      The action parses email files and extracts entities. It does not perform enrichment,
+      containment, or ticketing operations as defined in the outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Create Entities | Boolean | No | When enabled, creates User entities from To/From
+    headers and Email Subject entities. |
+
+    | Exclude Entities Regex | String | No | Regex pattern to exclude specific observed
+    entities from being created. |
+
+    | Original EML Only | Boolean | No | If true, limits parsing to the original EML
+    file. |
+
+    | Create Observed Entities | DDL | No | Specifies which entity types (URLs, Emails,
+    IPs, Hashes) to extract from the email body. |
+
+    | Save Attachments to Case Wall | Boolean | No | If true, saves extracted attachments
+    to the case wall. |
+
+    | Fang Entities | Boolean | No | If true, converts defanged entities (e.g., example[.]com)
+    to fanged format. |
+
+    | Custom Entity Regexes | Code | No | A JSON object defining custom regex patterns
+    for entity extraction. |
+Parse EML Base64 Blob:
+  ai_description: >-
+    ### General Description
+
+    This action decodes a base64-encoded EML file and parses its contents, including
+    headers, body, and attachments. It is designed to extract structured information
+    from raw email data for further analysis.
+
+
+    ### Flow Description
+
+    1. Accepts a base64-encoded string as input via the 'Base64 EML Blob' parameter.
+
+    2. Decodes the base64 string into raw EML content.
+
+    3. Parses the EML content using the Python `email` library.
+
+    4. Extracts metadata (sender, recipients, subject, date) and body content (text
+    and HTML).
+
+    5. Recursively processes multipart messages to identify attachments.
+
+    6. Returns the parsed email structure as a JSON result using `siemplify.result.add_result_json`.
+
+
+    ### Additional Notes
+
+    This action is purely for parsing and data extraction; it does not perform any
+    external API calls or modify SOAR case data.
+  ai_short_description: >-
+    Decodes and parses a base64-encoded EML file into a structured JSON format.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action parses a base64-encoded EML file and returns the parsed content as
+      a JSON result. It does not perform any external API calls, mutate external or
+      internal data, update entities, create insights, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action operates on a provided base64 string input parameter and does not
+      interact with or filter any entities from the SOAR case.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action parses a base64-encoded EML file and returns the parsed content as
+      a JSON result. It does not perform any of the listed actions (enrichment, containment,
+      ticketing, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -782,24 +744,22 @@ Parse EML Base64 Blob:
     | Base64 EML Blob | String | Yes | A base64 encoded string of an EML file. |
 Ping:
   ai_description: >-
-    Checks the connectivity between the SOAR platform and the Email Utilities integration.
+    General Description: This action verifies the connectivity between the SOAR platform
+    and the Email Utilities integration.
 
 
-    ### Flow Description
+    Flow Description:
 
     1. The action initializes the `SiemplifyAction` object.
 
-    2. It performs a connectivity check to verify the integration is reachable.
+    2. It immediately terminates the execution by calling `siemplify.end` with a success
+    message, confirming that the integration is reachable and configured correctly.
 
-    3. It returns a success message indicating that the integration is connected.
 
-
-    ### Additional Notes
-
-    This is a standard connectivity check action and does not perform any data processing
-    or external API calls.
+    Additional Notes: This is a connectivity check action and does not perform any
+    data processing or external API calls.
   ai_short_description: >-
-    Checks the connectivity between the SOAR platform and the Email Utilities integration.
+    Verifies connectivity to the Email Utilities integration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -811,15 +771,9 @@ Ping:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action is a simple connectivity check. It does not fetch data, mutate external
-      data, or mutate internal data.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is a standard connectivity check ('Ping'). It does not fetch data,
-      mutate external systems, or perform any remediation. It does not meet the criteria
-      for enrichment or remediation.
-    remediation: false
+      The action performs a simple connectivity check by calling `siemplify.end`.
+      It does not interact with external APIs, fetch data, or modify any internal
+      or external system state.
   entity_usage:
     entity_types:
       address: false
@@ -871,7 +825,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities.
+      The action does not interact with any entities. It is a simple connectivity
+      check.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -887,8 +842,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity check ('Ping') and does not perform any of the
-      defined outcome actions.
+      The action is a connectivity check and does not perform any of the defined outcome
+      operations (enrichment, ticketing, blocking, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

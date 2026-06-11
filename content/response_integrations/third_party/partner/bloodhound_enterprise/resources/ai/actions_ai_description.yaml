@@ -1,47 +1,41 @@
-Get Authentication Logs for User:
+Does Path Exists:
   ai_description: >-
     ### General Description
 
-    Retrieves user data and authentication logs from DUO for a specified user over
-    a defined time range. This action aggregates authentication events and calculates
-    frequency counts for various authentication attributes (such as IP addresses,
-    locations, operating systems, and applications) to help identify potentially anomalous
-    authentication sources based on a configurable threshold.
+    Checks for the existence of an attack path between two specified principals (nodes)
+    within BloodHound Enterprise. This action allows security analysts to verify if
+    a potential attack path exists between a source principal and a destination principal,
+    aiding in the assessment of lateral movement risks.
 
 
     ### Flow Description
 
-    1. The action extracts the `Username`, `Number Days Back`, and `Authentication
-    Threshold` parameters.
+    1. Extracts configuration parameters, including the BloodHound Enterprise Server
+    URL, Token ID, and Token Key.
 
-    2. It authenticates with the DUO Admin API using the provided configuration credentials.
+    2. Parses the `Event Details` parameter, which is expected to contain a JSON string
+    or a comma-separated list of JSON objects defining `FromPrincipal` and `ToPrincipal`
+    pairs.
 
-    3. It calls the `admin_api.get_users_by_name` method to retrieve the `user_id`
-    associated with the specified username.
+    3. Iterates through each principal pair extracted from the input.
 
-    4. It calculates the time range based on the `Number Days Back` parameter.
+    4. For each pair, the action calls the BloodHound Enterprise API (`/api/v2/graphs/shortest-path`)
+    to determine if a path exists between the specified nodes.
 
-    5. It calls the `admin_api.get_authentication_log` method to fetch authentication
-    logs for the user within the calculated time range.
+    5. Consolidates the results for all pairs into a single response payload.
 
-    6. It processes the retrieved logs to count occurrences of various authentication
-    attributes (e.g., IP, state, OS, application, device).
-
-    7. It filters these attributes based on the `Authentication Threshold` to identify
-    frequently seen sources.
-
-    8. It outputs the aggregated results as a JSON object using `siemplify.result.add_result_json`.
+    6. Updates the action result with the path information and terminates the action
+    with a success or failure status based on whether paths were found for all provided
+    pairs.
 
 
     ### Additional Notes
 
-    This action requires valid DUO Admin API credentials (API Hostname, Admin Secret
-    Key, and Admin Integration Key) to be configured in the integration settings.
-    It does not perform any state-changing operations on the DUO platform or the SOAR
-    case.
+    The `Event Details` parameter must be provided as a valid JSON string or a comma-separated
+    list of JSON objects containing the keys `FromPrincipal` and `ToPrincipal`.
   ai_short_description: >-
-    Retrieves user data and authentication logs from DUO for a specific user, providing
-    aggregated insights on authentication sources.
+    Checks for the existence of an attack path between two specified principals (nodes)
+    within BloodHound Enterprise.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -53,9 +47,9 @@ Get Authentication Logs for User:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action fetches authentication logs and user data from the DUO API (fetches_data=true).
-      It does not perform any mutations on external systems or internal SOAR data.
-      It does not update entities, create insights, or modify alert data.
+      The action performs a GET request to the BloodHound Enterprise API to check
+      for path existence. It does not mutate external or internal data, nor does it
+      update entities or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -107,9 +101,10 @@ Get Authentication Logs for User:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action extracts the 'Username' from action parameters using `siemplify.extract_action_param`.
-      It does not iterate over or filter `siemplify.target_entities`. Therefore, it
-      does not run on entities.
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It relies entirely on the `Event Details` parameter provided by
+      the user to identify the principals for the path check. Therefore, no entity
+      usage flags are set.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -125,294 +120,9 @@ Get Authentication Logs for User:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves historical authentication logs from DUO based on a user
-      and time range. This matches the 'Search Events' category, which involves returning
-      a collection of historical logs or telemetry data.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: true
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Authentication Threshold | String | Yes | Number of successful authentications
-    to indicate a source may be from a known safe entity. |
-
-    | Number Days Back | String | Yes | Number of days back to obtain authentication
-    logs from. |
-
-    | Username | String | No | Username to retrieve logs for. |
-Get Trust Monitor Events:
-  ai_description: >-
-    ### General Description
-
-    Retrieves DUO Trust Monitor events from the DUO platform for a specified lookback
-    period. This action allows analysts to pull historical security events directly
-    from DUO to support investigation and monitoring workflows.
-
-
-    ### Flow Description
-
-    1. Extracts DUO API credentials (API Hostname, Admin Secret Key, and Admin Integration
-    Key) from the integration configuration.
-
-    2. Extracts the 'Number Days Back' parameter to define the time range for the
-    query.
-
-    3. Calculates the start and end timestamps based on the current time and the provided
-    number of days.
-
-    4. Initializes the DUO Admin API client using the extracted credentials.
-
-    5. Calls the `get_trust_monitor_events_by_offset` API method to retrieve events
-    within the calculated time range.
-
-    6. Adds the retrieved events to the action results as a JSON object.
-
-
-    ### Additional Notes
-
-    This action requires valid DUO Admin API credentials configured in the integration
-    settings. It performs a read-only operation and does not modify any data in DUO
-    or the SOAR platform.
-  ai_short_description: >-
-    Retrieves DUO Trust Monitor events from the DUO platform for a specified lookback
-    period.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action fetches data from the DUO API. It does not mutate external or internal
-      data, nor does it update entities or create insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not interact with or filter by any entities. It performs a global
-      search for events based on a time range provided as an input parameter.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action retrieves historical logs (Trust Monitor events) from an external
-      service based on a time range, which directly aligns with the 'Search Events'
-      category.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: true
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Number Days Back | String | Yes | Number of days back to pull events from. |
-Get Users by Name:
-  ai_description: >-
-    ### General Description
-
-    Queries the DUO Admin API to retrieve user information, including authentication
-    and device data, for a specified username. This action is designed to provide
-    security analysts with contextual information about a user within the DUO environment.
-
-
-    ### Flow Description
-
-    1. Extracts the required DUO API configuration parameters (API Hostname, Admin
-    Secret Key, Admin Integration Key) from the integration settings.
-
-    2. Extracts the target `Username` parameter provided by the user.
-
-    3. Initializes the `duo_client.Admin` client using the retrieved credentials.
-
-    4. Executes the `get_users_by_name` method via the DUO Admin API to fetch the
-    user's profile and associated data.
-
-    5. Parses the response to extract the `user_id` and the full user data object.
-
-    6. Adds the retrieved user information to the action results using `siemplify.result.add_result_json`.
-
-
-    ### Additional Notes
-
-    This action requires valid DUO Admin API credentials. It is a read-only operation
-    and does not modify any data in DUO or the SOAR platform.
-  ai_short_description: >-
-    Queries the DUO Admin API to retrieve user information, including authentication
-    and device data, for a specified username.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action performs a GET request to the DUO Admin API to fetch user data. It
-      does not mutate any external or internal data, nor does it update entities,
-      create insights, or modify alert data.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not iterate over or utilize `siemplify.target_entities`. It
-      relies solely on the `Username` parameter provided in the action configuration
-      to perform the lookup.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: true
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action retrieves contextual metadata (authentication and device data) for
-      a specific user from the DUO platform. This aligns with the 'Enrich Asset' category.
-      It does not perform any mutations or alert updates.
+      The action performs a path existence check in BloodHound Enterprise. It does
+      not fit into the predefined categories like enrichment, containment, or ticketing,
+      as it is a specific graph-based query.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -432,35 +142,55 @@ Get Users by Name:
 
     | --- | --- | --- | --- |
 
-    | Username | String | Yes | The target username to query in DUO. |
-Ping:
+    | Event Details | String | Yes | These are event details. Expected as a JSON string
+    or comma-separated list of JSON objects containing `FromPrincipal` and `ToPrincipal`
+    keys. |
+Fetch Assets:
   ai_description: >-
     ### General Description
 
-    Verifies the connectivity and validity of the DUO Auth API credentials by performing
-    a health check against the DUO service.
+    Fetches detailed asset information from BloodHound Enterprise based on provided
+    Object IDs. This action retrieves primary asset details and, for Azure-specific
+    objects, gathers additional related entity counts to provide a comprehensive view
+    of the asset's security context.
 
 
     ### Flow Description
 
-    1. The action extracts the `API Hostname`, `Auth Secret Key`, and `Auth Integration
-    Key` from the integration configuration.
+    1. Extracts configuration parameters (tenant domain, token ID, token key) from
+    the integration settings.
 
-    2. It initializes the `duo_client.Auth` client using these credentials.
+    2. Parses the `additional_data` parameter to manage iterative execution state,
+    allowing the action to resume partial executions.
 
-    3. It calls the `auth_api.check()` method to verify the connection and signature
-    generation.
+    3. If no state exists, parses the `Object IDs` parameter into a list of IDs to
+    process.
 
-    4. The action returns a success message if the check is successful, or a failure
-    message if an exception occurs.
+    4. Iteratively processes one Object ID per execution to prevent timeouts, using
+    the `BloodhoundManager` to interact with the BloodHound Enterprise API.
+
+    5. Performs a search request (GET) to identify the object type and retrieve its
+    primary details.
+
+    6. If the object is an Azure type, performs additional API requests (GET) to fetch
+    related entity counts (e.g., group memberships, roles, inbound/outbound controls).
+
+    7. Stores the retrieved information and updates the execution state.
+
+    8. If more IDs remain, returns an `INPROGRESS` state with the updated `additional_data`;
+    otherwise, returns `COMPLETED` with the consolidated asset information in the
+    result JSON.
 
 
     ### Additional Notes
 
-    This action is a connectivity test and does not perform any data enrichment or
-    mutation.
+    This action supports iterative execution, enabling the processing of large lists
+    of Object IDs without exceeding execution time limits. It relies on the BloodHound
+    Enterprise API for all data retrieval and does not modify any external or internal
+    system state.
   ai_short_description: >-
-    Verifies DUO Auth API connectivity and credential validity.
+    Fetches detailed asset information from BloodHound Enterprise for specified Object
+    IDs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -469,12 +199,12 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: false
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a connectivity check against the DUO API. It does not fetch
-      contextual data, mutate external or internal data, update entities, create insights,
-      or modify alert data.
+      The action performs GET requests to the BloodHound Enterprise API to retrieve
+      asset data. It does not mutate external or internal data, nor does it update
+      entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -526,8 +256,289 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action performs a connectivity test against the DUO API and does not interact
-      with any entities in the SOAR platform. All entity flags are false.
+      The action does not iterate over or filter `siemplify.target_entities`. It processes
+      a list of IDs provided directly through the 'Object IDs' action parameter. Therefore,
+      it does not use or filter any entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (asset info) for resources, which matches
+      the 'Enrich Asset' category. It also performs a search for the asset within
+      the product, matching the 'Search Asset' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: true
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Object IDs | String | Yes | Comma-separated list of BloodHound object IDs (SIDs
+    or Azure object IDs) to fetch. |
+Get Object Id:
+  ai_description: >-
+    ### General Description
+
+    Fetches object IDs from BloodHound Enterprise for a provided list of object names.
+    This action allows analysts to retrieve unique identifiers for various objects
+    (such as users, computers, or groups) within the BloodHound environment to facilitate
+    further investigation or correlation.
+
+
+    ### Flow Description
+
+    1. The action extracts the `Object Names` parameter, which is a comma-separated
+    string of names to look up.
+
+    2. It initializes the `BloodhoundManager` using the configured integration credentials
+    (tenant domain, token ID, and token key).
+
+    3. The action iterates through each provided object name.
+
+    4. For each name, it performs a GET request to the BloodHound Enterprise API endpoint
+    `/api/v2/search` to retrieve the corresponding object details, including the object
+    ID.
+
+    5. The results are consolidated into a JSON payload and returned as the action
+    result.
+
+
+    ### Additional Notes
+
+    This action is a read-only operation and does not modify any data in BloodHound
+    Enterprise or the SOAR platform. It is intended for data retrieval and enrichment
+    purposes.
+  ai_short_description: >-
+    Fetches object IDs from BloodHound Enterprise for a provided list of object names.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to fetch data from BloodHound Enterprise.
+      It does not mutate external or internal data, nor does it update entities, create
+      insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize the `siemplify.target_entities` list. It relies
+      entirely on the user-provided 'Object Names' input parameter to perform lookups.
+      Consequently, no entity types are used, and no entity filtering is applied.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves object IDs from BloodHound Enterprise, which provides contextual
+      metadata about assets (users, computers, groups). This aligns with the 'Enrich
+      Asset' category as it provides information about resources. It does not perform
+      any mutation, ticketing, or alert management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Object Names | String | Yes | Comma-separated list of BloodHound object names
+    to look up object IDs for. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the BloodHound Enterprise server using the provided
+    integration credentials. This action verifies that the SOAR platform can successfully
+    authenticate and communicate with the BloodHound Enterprise API.
+
+
+    ### Flow Description
+
+    1. The action extracts the required configuration parameters: BloodHound Enterprise
+    Server, Token ID, and Token Key.
+
+    2. It initializes the `BloodhoundManager` with these credentials.
+
+    3. The action executes a `test_connection()` method, which performs an HTTP GET
+    request to the BloodHound Enterprise `/api/v2/available-domains` endpoint.
+
+    4. If the request is successful, the action logs the success and terminates with
+    a completed status.
+
+    5. If the request fails (e.g., due to invalid credentials or network issues),
+    the action logs the error and terminates with a failed status.
+
+
+    ### Additional Notes
+
+    This action is intended for troubleshooting and verifying the integration setup.
+    It does not perform any data enrichment or state changes.
+  ai_short_description: >-
+    Tests connectivity to the BloodHound Enterprise server.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to verify connectivity to the BloodHound Enterprise
+      API. It does not mutate any data or update internal SOAR objects.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action performs a connectivity test against the BloodHound Enterprise API
+      and does not interact with any entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -543,8 +554,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test (ping) and does not perform any of the defined
-      outcome actions (enrichment, containment, ticketing, etc.).
+      The action is a connectivity test (ping) and does not perform any enrichment,
+      mutation, or case management tasks, therefore it does not match any of the defined
+      outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

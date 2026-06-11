@@ -1,32 +1,17 @@
 Ping:
   ai_description: >-
-    General Description
-
-    Tests connectivity to the Azure DevOps platform by attempting to retrieve the
-    list of projects. This action verifies that the provided credentials and configuration
-    parameters are valid for establishing a connection to the Azure DevOps API.
-
-
-    Flow Description
-
-    1. Extracts configuration parameters: `Personal Access Token`, `Organization`,
-    and `Base URL`.
-
-    2. Initializes an Azure DevOps connection using `BasicAuthentication` with the
-    provided token.
-
-    3. Attempts to retrieve the list of projects using the `core_client.get_projects()`
-    method.
-
-    4. Returns a success or failure message based on the connection attempt.
-
-
-    Additional Notes
-
-    This action is a connectivity test and does not perform any data enrichment or
-    remediation.
+    Tests connectivity to the Azure DevOps environment by attempting to retrieve a
+    list of projects using the provided credentials. ### Flow Description 1. Extracts
+    the 'Personal Access Token', 'Organization', and 'Base URL' from the integration
+    configuration. 2. Initializes a connection to the Azure DevOps API using 'BasicAuthentication'.
+    3. Attempts to retrieve the list of projects using the 'core_client.get_projects()'
+    method. 4. Returns a success or failure message based on the outcome of the API
+    call. ### Additional Notes This action is used to verify that the integration
+    configuration is correct and that the SOAR platform can communicate with the Azure
+    DevOps instance.
   ai_short_description: >-
-    Tests connectivity to the Azure DevOps platform.
+    Tests connectivity to the Azure DevOps environment by attempting to retrieve a
+    list of projects.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -38,15 +23,8 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a connectivity test by calling `get_projects()`. It does
-      not mutate external or internal data.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is named 'Ping' and is a connectivity test. Per instructions, 'Actions
-      named Ping must not be categorized as enrichment actions.' It does not perform
-      any remediation.
-    remediation: false
+      The action performs a GET request to the Azure DevOps API to verify connectivity
+      by listing projects. It does not mutate any external or internal data.
   entity_usage:
     entity_types:
       address: false
@@ -98,7 +76,7 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities.
+      The action does not interact with entities; it is a connectivity test.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -114,8 +92,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test ('Ping') and does not perform any of the defined
-      outcomes.
+      The action is a connectivity test and does not perform any of the defined outcome
+      actions (enrichment, ticketing, blocking, etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -130,42 +108,43 @@ Ping:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Personal Access Token | String | Yes | Azure DevOps Personal Access Token |
-
-    | Organization | String | Yes | Azure DevOps Organization name |
-
-    | Base URL | String | Yes | Azure DevOps Base URL |
+  parameters_description: There are no parameters for this action.
 Trigger Azure Build:
   ai_description: >-
-    Triggers an Azure DevOps pipeline build and monitors its completion status.
+    ### General Description
+
+    Triggers an Azure DevOps build pipeline and monitors its execution status. This
+    action allows users to initiate automated workflows or deployments in Azure DevOps
+    directly from the SOAR platform by specifying a build definition ID and passing
+    custom variables.
 
 
     ### Flow Description
 
-    1. The action extracts configuration parameters (Project, Organization, Token,
-    Base URL) and action parameters (Build Definition Id, Build Variables).
+    1. The action extracts configuration parameters (Project, Organization, Personal
+    Access Token, Base URL) and action parameters (Build Definition Id, Build Variables).
 
-    2. The `main()` function sends a POST request to the Azure DevOps API to trigger
-    a new build with the provided definition ID and variables.
+    2. A POST request is sent to the Azure DevOps API to trigger a new build with
+    the specified definition ID and variables.
 
-    3. The action returns the new build ID.
+    3. The action returns the `build_id` of the triggered build to the SOAR platform.
 
-    4. The `query_job()` function periodically checks the status of the triggered
-    build via a GET request to the Azure DevOps API.
+    4. The action enters an asynchronous state, where the `query_job` function periodically
+    polls the Azure DevOps API via a GET request using the `build_id` to check the
+    build status.
 
-    5. The action reports the final build status and result (e.g., succeeded, failed).
+    5. The action continues to poll until the build reaches a terminal state (e.g.,
+    succeeded, failed, or canceled), at which point it reports the final status.
 
 
     ### Additional Notes
 
-    This action is asynchronous and uses a job mechanism to poll for the build result.
+    This action is designed to run asynchronously to accommodate the time required
+    for build pipelines to complete. Ensure that the provided Personal Access Token
+    has the necessary permissions to trigger and query builds in the target Azure
+    DevOps project.
   ai_short_description: >-
-    Triggers an Azure DevOps pipeline build and monitors its status until completion.
+    Triggers an Azure DevOps build pipeline and monitors its execution status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -173,19 +152,13 @@ Trigger Azure Build:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: Triggers a new build in Azure DevOps.
+    external_data_mutation_explanation: >-
+      Triggers a new build pipeline in Azure DevOps.
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action triggers a build (external mutation) and fetches build status (fetches
-      data). It does not modify internal SOAR data.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action triggers a build in Azure DevOps, which is a remediation/mitigation
-      action. It is not an enrichment action as it performs a state-changing operation
-      (triggering a build).
-    remediation: true
+      The action triggers an external process (POST request) and polls for status
+      (GET request). It does not modify internal SOAR data or entities.
   entity_usage:
     entity_types:
       address: false
@@ -237,7 +210,9 @@ Trigger Azure Build:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not operate on entities. It uses configuration and action parameters.
+      The action operates based on configuration and action parameters (Build Definition
+      Id, Build Variables) and does not interact with or filter any specific entities
+      from the SOAR case.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -253,9 +228,9 @@ Trigger Azure Build:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action triggers an external pipeline build. While this serves as a mitigation
-      trigger, it does not fit into the specific categories like 'Block IP' or 'Create
-      Ticket'. Therefore, all specific outcome flags are false.
+      The action triggers an external CI/CD pipeline and monitors its status. It does
+      not perform enrichment, ticketing, containment, or identity management operations
+      defined in the outcome categories.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -278,35 +253,39 @@ Trigger Azure Build:
     | Build Definition Id | String | Yes | The build definition ID of the pipeline
     you want to trigger. |
 
-    | Build Variables | Code | Yes | The variables to pass for the given pipeline.
-    |
+    | Build Variables | Code | Yes | The variables to pass for the given pipeline,
+    formatted as a JSON object. |
 Wait Until Web Resource Is Up:
   ai_description: >-
-    General Description
+    ### General Description
 
-    Checks the availability of a web resource by performing an HTTP GET request.
-
-
-    Flow Description
-
-    1. The action extracts the `URL` parameter provided by the user.
-
-    2. It performs an HTTP GET request to the specified URL with a 5-second timeout.
-
-    3. If the request is successful (HTTP 2xx), the action returns `True` and sets
-    the execution state to `COMPLETED`.
-
-    4. If the request fails or the resource is unreachable, the action returns `False`
-    and sets the execution state to `INPROGRESS`, signaling the SOAR platform to retry
-    the action.
+    Checks the availability of a specific web resource by sending an HTTP GET request
+    to the provided URL. This action is designed to verify if a web resource is reachable
+    and returns a success status if the resource responds with a 200-299 status code.
 
 
-    Additional Notes
+    ### Flow Description
 
-    This action is designed for asynchronous workflows where the platform polls the
-    resource until it becomes available.
+    1. Extract the `URL` parameter from the action configuration.
+
+    2. Perform an HTTP GET request to the specified URL with a 5-second timeout.
+
+    3. Evaluate the response status code. If the status code indicates success (200-299),
+    the resource is considered "up".
+
+    4. If the resource is "up", the action completes with a success status.
+
+    5. If the resource is "down" (request fails or returns an error), the action sets
+    the execution state to "In Progress", allowing the playbook to retry the check.
+
+
+    ### Additional Notes
+
+    This action is designed to be used as an asynchronous polling mechanism within
+    a playbook to wait for a web resource to become available.
   ai_short_description: >-
-    Checks the availability of a web resource via an HTTP GET request.
+    Checks the availability of a web resource by performing an HTTP GET request and
+    returns the status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -318,15 +297,9 @@ Wait Until Web Resource Is Up:
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a connectivity check (GET request) to a URL. It does not
-      fetch contextual data for entities, nor does it mutate any external or internal
-      systems.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is a utility for polling a web resource. It does not perform enrichment
-      (fetching context) or remediation (changing state).
-    remediation: false
+      The action performs an HTTP GET request to check the availability of a URL.
+      It does not mutate external or internal data, nor does it update entities or
+      create insights.
   entity_usage:
     entity_types:
       address: false
@@ -378,8 +351,8 @@ Wait Until Web Resource Is Up:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities; it only uses the provided URL
-      parameter.
+      The action does not interact with any entities. It operates solely on the provided
+      URL parameter.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -395,8 +368,9 @@ Wait Until Web Resource Is Up:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action performs a connectivity check on a URL. It does not perform any of
-      the listed remediation or enrichment tasks.
+      The action performs a connectivity check on a URL to determine if it is reachable.
+      It does not perform any of the defined security operations such as enrichment,
+      containment, or ticketing.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

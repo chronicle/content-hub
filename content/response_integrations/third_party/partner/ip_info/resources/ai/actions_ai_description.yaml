@@ -3,36 +3,32 @@ Get Domain Information:
     ### General Description
 
     Fetches domain information for hostname entities using the IPInfo service. This
-    action retrieves comprehensive domain details, updates the entity's profile with
-    this information, and provides a structured table for analysis.
+    action retrieves contextual domain details, updates the entity's additional properties,
+    and marks the entity as enriched.
 
 
     ### Flow Description
 
-    1. Initialize the `IPInfoManager` using the provided API root and token from the
-    integration configuration.
+    1. Initialize the `IPInfoManager` using the provided API configuration (API Root,
+    Token, and SSL verification settings).
 
     2. Filter the target entities to identify those of type `HOSTNAME`.
 
-    3. For each identified hostname, call the `get_domains_information` method of
-    the `IPInfoManager` to retrieve domain details.
+    3. For each identified hostname, call the `get_domains_information` method via
+    the IPInfo API.
 
-    4. If information is successfully retrieved:
-        - Flatten the domain information dictionary.
-        - Update the entity's `additional_properties` with the retrieved data, prefixed
-    with `IPInfo`.
-        - Mark the entity as enriched (`is_enriched = True`).
-        - Add the domain information to the entity's table using `siemplify.result.add_entity_table`.
-    5. Update the entities in the SOAR platform using `siemplify.update_entities`.
+    4. Update the entity's `additional_properties` with the retrieved domain data.
 
-    6. Add the aggregated results to the action's JSON result.
+    5. Set the entity's `is_enriched` flag to true.
+
+    6. Update the entities in the SOAR platform and add the results to the action
+    output as a table and JSON.
 
 
     ### Additional Notes
 
-    This action requires valid IPInfo API credentials (API Root and Token) to be configured
-    in the integration settings. It is designed to enrich hostname entities with external
-    domain intelligence.
+    This action requires a valid IPInfo API token and API root URL configured in the
+    integration settings. It does not perform any external mutations.
   ai_short_description: >-
     Fetches domain information for hostname entities using the IPInfo service.
   capabilities:
@@ -45,18 +41,12 @@ Get Domain Information:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties and adds entity tables.
+      Updates entity `additional_properties` and `is_enriched` status within the SOAR
+      platform.
     reasoning: >-
-      The action fetches data from an external API (IPInfo) and updates internal entities
-      (via `update_entities` and `add_entity_table`). It does not mutate external
-      data.
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches data from an external service (IPInfo) and updates internal
-      entities with this information. It does not mutate external data or perform
-      remediation tasks. Therefore, it is classified as an enrichment action.
-    remediation: false
+      The action makes a GET request to the IPInfo API to fetch domain information.
+      It does not mutate external data but updates internal entities by adding additional
+      properties and setting the enriched status.
   entity_usage:
     entity_types:
       address: false
@@ -108,9 +98,9 @@ Get Domain Information:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and filters specifically
-      for entities where `entity.entity_type == EntityTypes.HOSTNAME`. It does not
-      filter by other attributes.
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.HOSTNAME`. This means it targets HOSTNAME entities, filtering
+      by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -121,14 +111,15 @@ Get Domain Information:
     disable_identity: false
     download_file: false
     enable_identity: false
-    enrich_asset: false
+    enrich_asset: true
     enrich_ioc: true
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches domain information, which provides threat intelligence and
-      context for the domain. This aligns with the 'Enrich IOC' category. It does
-      not perform any other actions like ticket creation, blocking, or host containment.
+      The action fetches domain information for hostname entities from the IPInfo
+      service. This provides contextual metadata for the asset (Enrich Asset) and
+      threat intelligence for the domain (Enrich IOC). It does not perform any external
+      mutations or alert updates.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -148,46 +139,47 @@ Get Domain Information:
 
     | --- | --- | --- | --- |
 
-    | API Root | String | Yes | The base URL for the IPInfo API. |
+    | API Root | String | Yes | IPInfo API root URL. |
 
-    | Token | String | Yes | The API token for authentication. |
+    | Token | String | Yes | Authorization token for IPInfo. |
 
-    | Verify SSL | Boolean | No | Whether to verify SSL certificates. Defaults to
-    false. |
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates (default: false).
+    |
 Get IP Information:
   ai_description: >-
-    General Description
+    ### General Description
 
-    Fetches IP address information from the IPInfo service to provide context for
-    security investigations.
-
-
-    Flow Description
-
-    1. The action initializes the `SiemplifyAction` and `IPInfoManager` using the
-    configured API root and token.
-
-    2. It filters the target entities to identify those of type `ADDRESS`.
-
-    3. For each identified IP address, the action performs a GET request to the IPInfo
-    API to retrieve associated information.
-
-    4. The retrieved data is flattened and added to the entity's `additional_properties`.
-
-    5. The entity is marked as enriched (`is_enriched = True`).
-
-    6. An entity table containing the IP information is added to the action results.
-
-    7. The updated entities are saved back to the SOAR platform.
-
-    8. The full result set is added as a JSON object to the action output.
+    This action retrieves detailed information for IP address entities using the IPInfo
+    service. It enriches the entities within the Google SecOps platform by fetching
+    external threat intelligence or geolocation data, updating the entity's properties,
+    and providing a structured result for the analyst.
 
 
-    Additional Notes
+    ### Flow Description
 
-    This action is strictly for enrichment and does not modify any external systems.
+    1. **Initialization**: The action initializes the `IPInfoManager` using the configured
+    API Root, Token, and SSL verification settings.
+
+    2. **Filtering**: It filters the `target_entities` to identify only those of type
+    `ADDRESS`.
+
+    3. **Data Retrieval**: For each identified IP address, the action performs an
+    HTTP GET request to the IPInfo API to fetch associated information.
+
+    4. **Enrichment**: The retrieved data is flattened and added to the entity's `additional_properties`
+    with the `IPInfo` prefix. The entity is marked as enriched (`is_enriched = True`).
+
+    5. **Platform Update**: The action updates the entities in the SecOps platform
+    and adds a result table and JSON output containing the fetched information.
+
+
+    ### Additional Notes
+
+    This action requires the IPInfo integration to be configured with a valid API
+    Root and Token. It does not perform any state-changing operations on external
+    systems.
   ai_short_description: >-
-    Fetches contextual information for IP address entities using the IPInfo service.
+    Enriches IP address entities by fetching information from the IPInfo service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -198,18 +190,13 @@ Get IP Information:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity properties and adds entity tables within the SOAR platform.
+      Updates entity additional_properties and sets is_enriched to True within the
+      SecOps platform.
     reasoning: >-
-      The action fetches data from an external API (GET request). It updates internal
-      entities by adding properties and tables, but does not mutate external data
-      or modify alert data.
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches data from an external service (IPInfo) and updates internal
-      entities with the retrieved information. It does not perform any external mutations
-      or remediation tasks. Therefore, it is classified as an enrichment action.
-    remediation: false
+      The action fetches data from an external API (fetches_data=true). It updates
+      internal entities with the fetched information (can_mutate_internal_data=true,
+      can_update_entities=true). It does not mutate external data, create insights,
+      modify alert data, or create case comments.
   entity_usage:
     entity_types:
       address: true
@@ -261,9 +248,9 @@ Get IP Information:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
-      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering by
-      entity_type.
+      The code iterates over `siemplify.target_entities` and filters specifically
+      for `EntityTypes.ADDRESS`. It does not filter by other attributes like creation
+      time, modification time, or specific entity flags.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -279,9 +266,9 @@ Get IP Information:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves reputation and contextual information for an IP address
-      (IOC) from the IPInfo service. This matches the 'Enrich IOC' category. It does
-      not perform any other actions like ticketing, blocking, or identity management.
+      The action fetches information for an IP address and updates the entity within
+      the platform. This matches the 'Enrich IOC' category. It does not perform any
+      mutation on external systems or other platform-specific alert/ticket operations.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -296,21 +283,25 @@ Get IP Information:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: There are no parameters for this action.
+  parameters_description: >-
+    There are no parameters for this action. The action relies on the integration
+    configuration (API Root, Token, and Verify SSL) to authenticate and communicate
+    with the IPInfo service.
 Ping:
   ai_description: >-
     ### General Description
 
-    This action verifies the connectivity and validity of the API token for the IPInfo
-    integration by performing a test request.
+    This action validates the connectivity and API token validity for the IPInfo integration
+    by performing a test request to the IPInfo API.
 
 
     ### Flow Description
 
-    1. The action initializes the `IPInfoManager` using the configured API root and
-    token.
+    1. The action initializes the `IPInfoManager` using the configured API root, token,
+    and SSL verification settings.
 
-    2. It executes a `GET` request to the IPInfo API using a test IP address ("8.8.8.8").
+    2. It executes the `ping()` method, which sends a GET request to the IPInfo API
+    using a test IP address ("8.8.8.8").
 
     3. The response is validated to ensure the API token is authorized and the service
     is reachable.
@@ -320,10 +311,10 @@ Ping:
 
     ### Additional Notes
 
-    This is a connectivity test action and does not process any entities or perform
-    data enrichment.
+    This action does not interact with any entities in the case. It is strictly for
+    connectivity testing.
   ai_short_description: >-
-    Verifies the connectivity and validity of the IPInfo API token.
+    Validates the IPInfo API token and connectivity by performing a test request.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -332,19 +323,11 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes a GET request to the IPInfo API to verify connectivity (fetches_data=true).
-      It does not mutate external or internal data, nor does it update entities or
-      alerts.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is named 'Ping' and is a connectivity test. Per the instructions,
-      'Actions named Ping must not be categorized as enrichment actions.' It does
-      not perform any remediation.
-    remediation: false
+      The action performs a GET request to verify connectivity. It does not fetch
+      contextual data on alerts or entities, nor does it mutate any data.
   entity_usage:
     entity_types:
       address: false
@@ -396,8 +379,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with any entities. It is a standalone connectivity
-      test.
+      The action does not use any entities. It uses a hardcoded test IP address to
+      verify connectivity.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -413,9 +396,9 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test ('Ping') to verify API token validity. It
-      does not perform any enrichment, remediation, or alert/ticket management tasks,
-      and therefore does not match any of the defined outcome categories.
+      The action performs a connectivity test to verify the API token. It does not
+      perform any of the listed outcome actions (enrichment, containment, ticketing,
+      etc.).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false

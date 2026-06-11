@@ -1,28 +1,42 @@
 Enrich Actor:
-  ai_description: "### General Description\nEnriches Threat Actor, Hostname, File\
-    \ Hash, IP Address, and URL entities using Cybersixgill Darkfeed. This action\
-    \ retrieves threat intelligence, including actor activity, targets, techniques,\
-    \ and associated IOCs from the last 90 days. It updates the entity's profile with\
-    \ additional properties, generates a detailed table of findings, and creates a\
-    \ case insight to provide context for analysts.\n\n### Flow Description\n1. **Configuration\
-    \ Extraction**: The action extracts the `Client Id` and `Client Secret` from the\
-    \ integration configuration.\n2. **Initialization**: Initializes the `SixgillEnrichManager`\
-    \ to handle API communication with Cybersixgill.\n3. **Entity Processing**: Iterates\
-    \ through the target entities provided in the case.\n4. **API Query**: For each\
-    \ supported entity type (Threat Actor, Hostname, File Hash, IP Address, URL),\
-    \ the action queries the Sixgill API to retrieve relevant threat intelligence.\n\
-    5. **Data Enrichment**: \n    - Updates the entity's `additional_properties` with\
-    \ retrieved data (e.g., feed name, confidence, severity, MITRE ATT&CK tactics).\n\
-    \    - Marks the entity as enriched and suspicious if data is found.\n    - Updates\
-    \ the entity within the SOAR platform using `siemplify.update_entities`.\n6. **Result\
-    \ Reporting**: \n    - Adds an entity table containing the enrichment details.\n\
-    \    - Creates a case insight with the analysis results.\n    - Adds the raw JSON\
-    \ result to the action output.\n\n### Additional Notes\nThis action requires valid\
-    \ Cybersixgill credentials. It is designed to provide deep context on threat actors\
-    \ and associated indicators, aiding in faster incident investigation."
+  ai_description: >-
+    ### General Description
+
+    Enriches Threat Actor entities using the Cybersixgill Darkfeed Enrichment service.
+    This action retrieves detailed intelligence regarding threat actors, including
+    their activity, targets, and techniques, and updates the SOAR case with this contextual
+    information.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the required `Client Id`
+    and `Client Secret` from the integration configuration.
+
+    2. **Initialization**: A `SixgillEnrichManager` is initialized to handle API communication
+    with the Cybersixgill platform.
+
+    3. **Entity Processing**: The action iterates through the provided `target_entities`,
+    specifically filtering for `THREATACTOR` types.
+
+    4. **Data Retrieval**: For each valid entity, the action queries the Sixgill API
+    to fetch relevant threat intelligence data.
+
+    5. **Entity Update**: The action updates the entity's `additional_properties`
+    with the retrieved Sixgill data (e.g., feed name, confidence, severity, MITRE
+    ATT&CK mappings) and marks the entity as enriched and suspicious.
+
+    6. **Insight Creation**: The action generates a case insight containing a summary
+    of the actor's activity and adds a table to the entity's results, providing a
+    structured view of the intelligence.
+
+
+    ### Additional Notes
+
+    This action requires valid Cybersixgill API credentials. It specifically targets
+    Threat Actor entities to provide deep-web and dark-web context.
   ai_short_description: >-
-    Enriches Threat Actor, Hostname, File Hash, IP Address, and URL entities using
-    Cybersixgill Darkfeed threat intelligence.
+    Enriches Threat Actor entities with intelligence data from Cybersixgill Darkfeed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -33,22 +47,15 @@ Enrich Actor:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties and creates case insights within the SOAR
-      platform.
+      Updates entity additional properties and creates case insights within Google
+      SecOps.
     reasoning: >-
       The action fetches data from the Sixgill API (fetches_data=true). It updates
       internal entities with additional properties and creates case insights (can_mutate_internal_data=true).
       It does not mutate external systems.
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches threat intelligence data from an external source (Cybersixgill)
-      and updates internal SOAR entities and insights. It does not perform any external
-      mutations (blocking, etc.). Therefore, it is an enrichment action.
-    remediation: false
   entity_usage:
     entity_types:
-      address: true
+      address: false
       alert: false
       application: false
       child_hash: false
@@ -64,10 +71,10 @@ Enrich Actor:
       domain: false
       email_message: false
       event: false
-      file_hash: true
+      file_hash: false
       file_name: false
       generic: false
-      host_name: true
+      host_name: false
       ip_set: false
       mac_address: false
       parent_hash: false
@@ -80,7 +87,7 @@ Enrich Actor:
       threat_actor: true
       threat_campaign: false
       threat_signature: false
-      url: true
+      url: false
       usb: false
       user: false
     filters_by_additional_properties: false
@@ -97,9 +104,10 @@ Enrich Actor:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates through `siemplify.target_entities` and checks the `entity_type`
-      against a list of supported types: THREATACTOR, HOSTNAME, FILEHASH, ADDRESS,
-      and URL. It then performs enrichment based on these types.
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for `EntityTypes.THREATACTOR` in the `EnrichActor.py` script. While the underlying
+      processor supports other types, this specific action is restricted to Threat
+      Actor entities.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -115,9 +123,9 @@ Enrich Actor:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence (reputation, actor details, MITRE mapping)
-      for various IOCs and entities. This aligns with the 'Enrich IOC' category. It
-      does not perform remediation or ticket management.
+      The action retrieves threat intelligence for a Threat Actor, which aligns with
+      the 'Enrich IOC' category (which explicitly includes Threat Actor). It does
+      not perform external mutations or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -137,36 +145,48 @@ Enrich Actor:
 
     | --- | --- | --- | --- |
 
-    | Client Id | String | Yes | The Client ID for Cybersixgill authentication. |
+    | Client Id | String | Yes | The Client ID for authenticating with the Cybersixgill
+    API. |
 
-    | Client Secret | String | Yes | The Client Secret for Cybersixgill authentication.
-    |
+    | Client Secret | String | Yes | The Client Secret for authenticating with the
+    Cybersixgill API. |
 Enrich Domain:
-  ai_description: "### General Description\nEnriches domain entities using the Cybersixgill\
-    \ Darkfeed platform. This action retrieves threat intelligence regarding compromised\
-    \ sites, domains for sale on the dark web, and associated threat actor activity.\
-    \ It provides analysts with critical context, including confidence scores, severity,\
-    \ and MITRE ATT&CK mapping, to help prioritize and investigate potentially malicious\
-    \ domains.\n\n### Flow Description\n1. **Configuration Extraction**: The action\
-    \ extracts the `Client Id` and `Client Secret` from the integration configuration.\n\
-    2. **Initialization**: A `SixgillEnrichManager` is initialized to handle API communication\
-    \ with the Cybersixgill platform.\n3. **Data Retrieval**: The action iterates\
-    \ through the provided `HOSTNAME` entities and queries the Sixgill API for threat\
-    \ intelligence related to each domain.\n4. **Entity Enrichment**: For each domain\
-    \ found in the feed, the action updates the entity's `additional_properties` with\
-    \ Sixgill-specific data (e.g., feed name, actor, confidence, severity).\n5. **Internal\
-    \ Updates**: \n    * The action updates the entity status (`is_enriched = True`,\
-    \ `is_suspicious = True`).\n    * It adds a detailed data table to the entity.\n\
-    \    * It creates a case insight containing the retrieved threat intelligence,\
-    \ including VirusTotal and MITRE ATT&CK references.\n6. **Result Output**: The\
-    \ action returns the processed results as a JSON object and updates the case wall\
-    \ with the findings.\n\n### Additional Notes\nThis action requires valid Cybersixgill\
-    \ API credentials (`Client Id` and `Client Secret`) configured in the integration\
-    \ settings. It specifically targets `HOSTNAME` entities and does not perform any\
-    \ external remediation or blocking actions."
+  ai_description: >-
+    ### General Description
+
+    Enriches Domain (Hostname) entities using the Cybersixgill Darkfeed Enrichment
+    service. This action retrieves threat intelligence regarding compromised sites,
+    dark web activity, and associated threat actors to provide context on potentially
+    malicious domains.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (`Client Id`, `Client Secret`) to authenticate
+    with the Sixgill API.
+
+    2. Iterates through the provided target entities, filtering for Hostname (Domain)
+    entities.
+
+    3. Queries the Sixgill API to retrieve threat intelligence data for each domain.
+
+    4. Updates the entity's `is_enriched` and `is_suspicious` status and populates
+    `additional_properties` with retrieved metadata, including VirusTotal and MITRE
+    ATT&CK information.
+
+    5. Generates a case insight containing the enrichment details and attaches a table
+    to the entity with the findings.
+
+    6. Adds the raw JSON result to the action output.
+
+
+    ### Additional Notes
+
+    This action performs enrichment only and does not modify external systems. It
+    requires valid Cybersixgill credentials configured in the integration settings.
   ai_short_description: >-
-    Enriches domain entities with threat intelligence from Cybersixgill Darkfeed,
-    including threat actor data, confidence scores, and MITRE ATT&CK mapping.
+    Enriches Domain (Hostname) entities with threat intelligence from Cybersixgill
+    Darkfeed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -177,20 +197,12 @@ Enrich Domain:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity properties, adds entity tables, and creates case insights within
-      the SOAR platform.
+      Updates entity properties (is_enriched, is_suspicious, additional_properties),
+      creates case insights, and adds entity tables.
     reasoning: >-
-      The action fetches data from the Cybersixgill API (fetches_data=true). It does
-      not mutate external systems (can_mutate_external_data=false). It updates internal
-      SOAR data by updating entities, adding tables, and creating insights (can_mutate_internal_data=true).
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action retrieves threat intelligence data from an external source (Cybersixgill)
-      and updates internal SOAR data (entities, insights, tables). It does not perform
-      any external mutations or remediation actions. Therefore, it is classified as
-      an enrichment action.
-    remediation: false
+      The action fetches data from the Sixgill API (fetches_data=true). It updates
+      internal entities with enrichment data and creates case insights (can_mutate_internal_data=true).
+      It does not mutate external systems.
   entity_usage:
     entity_types:
       address: false
@@ -242,9 +254,8 @@ Enrich Domain:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates through `siemplify.target_entities` and specifically processes
-      entities where `entity.entity_type` is `HOSTNAME`. It updates these entities
-      with additional properties and insights.
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for `EntityTypes.HOSTNAME` as defined in the `EnrichDomain.py` script.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -260,9 +271,9 @@ Enrich Domain:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches threat intelligence (reputation, actor, confidence) for domain
-      entities. This aligns with the 'Enrich IOC' category. It does not perform any
-      remediation, ticketing, or alert status updates.
+      The action retrieves threat intelligence (reputation, dark web activity) for
+      domain indicators, which aligns with the 'Enrich IOC' category. It does not
+      perform any containment or ticket management actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -277,55 +288,55 @@ Enrich Domain:
     update_email: false
     update_identity: false
     update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Client Id | String | Yes | The Client ID for Cybersixgill API authentication.
-    |
-
-    | Client Secret | String | Yes | The Client Secret for Cybersixgill API authentication.
-    |
+  parameters_description: There are no parameters for this action.
 Enrich Hash:
   ai_description: >-
     ### General Description
 
     Enriches File Hash entities using the Cybersixgill Darkfeed Enrichment service.
-    This action proactively analyzes and investigates malware hashes as they emerge
-    on the dark web, providing threat intelligence even for samples that may not yet
-    be detected by traditional antivirus vendors.
+    This action proactively investigates malware hashes by querying the Sixgill intelligence
+    cloud to retrieve threat intelligence, including feed names, actor information,
+    confidence scores, severity, and associated MITRE ATT&CK tactics and techniques.
+    It helps security analysts gain context on emerging threats and malware detected
+    on the dark web.
 
 
     ### Flow Description
 
-    1. The action extracts the `Client Id` and `Client Secret` from the integration
-    configuration.
+    1. The action initializes the `SixgillEnrichManager` using the provided `Client
+    Id` and `Client Secret` from the integration configuration.
 
-    2. It initializes the `SixgillEnrichManager` to establish a connection with the
-    Sixgill API.
+    2. It iterates through the `target_entities` in the current case, filtering specifically
+    for entities of type `FILEHASH`.
 
-    3. The action iterates through the target entities, specifically filtering for
-    `FILEHASH` types.
+    3. For each valid file hash, the action queries the Sixgill API to retrieve threat
+    intelligence data.
 
-    4. For each hash, it queries the Sixgill API to retrieve threat intelligence data.
-
-    5. If data is found, the action:
+    4. If data is found, the action:
         - Updates the entity's `is_enriched` and `is_suspicious` status.
-        - Populates the entity's `additional_properties` with metadata such as feed
-    name, source, actor, confidence, severity, and VirusTotal/MITRE references.
-        - Creates a case insight containing the detailed analysis.
-        - Adds an entity table to the case wall with the retrieved intelligence.
-        - Updates the entity within the SOAR platform.
+        - Updates the entity's `additional_properties` with the retrieved intelligence
+    (e.g., feed name, actor, confidence, severity, VirusTotal positive rate, and MITRE
+    ATT&CK details).
+        - Calls `siemplify.update_entities` to save these changes to the SOAR platform.
+        - Generates a case insight using `siemplify.create_case_insight` containing
+    the detailed threat intelligence.
+        - Adds a table of the enrichment results to the action output using `siemplify.result.add_entity_table`.
+        - Adds the raw JSON response to the action results using `siemplify.result.add_json`.
+        - Creates links to external resources (e.g., Sixgill portal, VirusTotal) using
+    `siemplify.result.add_entity_link`.
+    5. If no data is found or an error occurs, the action logs the event and continues
+    processing other entities.
+
 
     ### Additional Notes
 
-    This action is strictly for enrichment purposes and does not perform any remediation
-    or external system state changes. It relies on the Cybersixgill API to provide
-    context for potentially malicious file hashes.
+    This action is strictly for enrichment and does not perform any state-changing
+    operations on external systems. It relies on the `SixgillEnrichManager` to handle
+    API communication and the `SixgillActionResultProcessor` to format and attach
+    the intelligence to the SOAR case.
   ai_short_description: >-
-    Enriches File Hash entities with threat intelligence from Cybersixgill Darkfeed,
-    updating entity attributes and creating case insights.
+    Enriches File Hash entities with threat intelligence from the Cybersixgill Darkfeed
+    service, updating entity properties and creating case insights.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -336,20 +347,13 @@ Enrich Hash:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes (is_enriched, is_suspicious, additional_properties),
-      creates case insights, and adds entity tables to the case.
+      Updates entity properties (is_enriched, is_suspicious, additional_properties)
+      and creates case insights within the SOAR platform.
     reasoning: >-
-      The action fetches data from the Sixgill API (fetches_data=true). It does not
-      mutate external systems. It mutates internal SOAR data by updating entities,
-      creating insights, and adding tables (can_mutate_internal_data=true).
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches threat intelligence data from an external source (Cybersixgill)
-      and updates internal SOAR entities and insights. It does not perform any external
-      mutations or remediation actions. Therefore, it is classified as an enrichment
-      action.
-    remediation: false
+      The action fetches threat intelligence data from the Sixgill API (fetches_data=true).
+      It updates internal entities with new properties and creates case insights (can_mutate_internal_data=true,
+      can_update_entities=true, can_create_insight=true). It does not modify external
+      systems (can_mutate_external_data=false).
   entity_usage:
     entity_types:
       address: false
@@ -401,9 +405,10 @@ Enrich Hash:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action explicitly filters for `EntityTypes.FILEHASH` in the main script
-      execution. It processes these entities to update their internal attributes and
-      add insights.
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type` is `FILEHASH`. It does not use other
+      entity types or filter by other attributes like creation time or modification
+      time.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -419,9 +424,9 @@ Enrich Hash:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence for file hashes, which directly matches
-      the 'Enrich IOC' category. It does not perform any remediation, ticket management,
-      or other actions.
+      The action retrieves threat intelligence (reputation, actor, confidence, MITRE
+      data) for file hashes from Sixgill. This matches the 'Enrich IOC' category.
+      It does not perform any blocking, ticketing, or identity management actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -448,45 +453,45 @@ Enrich Hash:
     Cybersixgill API. |
 Enrich IP:
   ai_description: >-
-    Enriches IP Address entities using Cybersixgill Darkfeed to retrieve threat intelligence.
-    This action queries the Sixgill platform for information regarding C&C servers,
-    botnets, DDoS attacks, and other malicious activities associated with the provided
-    IP addresses. It updates the entity's profile with relevant threat data, including
-    confidence scores, severity, and associated MITRE ATT&CK techniques, and generates
-    actionable insights within the case.
+    ### General Description
+
+    Enriches IP Address entities using the Cybersixgill Darkfeed Enrichment service.
+    This action retrieves threat intelligence, including malware family, attribution,
+    and associated threat actor information, to provide context for IP addresses involved
+    in malicious activities like botnets, DDoS attacks, and proxy anonymization.
 
 
     ### Flow Description
 
-    1. **Configuration Extraction**: The action retrieves the required `Client Id`
-    and `Client Secret` from the integration configuration.
+    1. The action initializes the Sixgill manager using the provided `Client Id` and
+    `Client Secret` configuration parameters.
 
-    2. **Initialization**: It initializes the `SixgillEnrichManager` to handle API
-    communication with the Cybersixgill platform.
+    2. It iterates through the target entities, filtering specifically for those of
+    type `ADDRESS`.
 
-    3. **Entity Processing**: The action iterates through the target entities, specifically
-    filtering for `ADDRESS` types.
+    3. For each valid IP entity, the action queries the Sixgill API to retrieve threat
+    intelligence data.
 
-    4. **Data Retrieval**: For each valid IP entity, it performs a query to the Sixgill
-    API to fetch threat intelligence data.
-
-    5. **Entity Update**: If data is found, the action updates the entity's `is_enriched`
-    and `is_suspicious` flags and populates `additional_properties` with the retrieved
-    threat intelligence.
-
-    6. **Result Generation**: The action creates a case insight, adds an entity table
-    with detailed threat information, and attaches the raw JSON result to the action
-    output.
+    4. If data is found, the action:
+        * Updates the entity within the SOAR platform by setting `is_enriched` and
+    `is_suspicious` flags to true.
+        * Populates the entity's `additional_properties` with detailed threat intelligence
+    (e.g., feed name, confidence, severity, MITRE ATT&CK mappings).
+        * Generates a case insight containing the enrichment summary.
+        * Adds a table of enrichment details to the action result.
+        * Attaches external links (e.g., VirusTotal, Sixgill portal) to the entity.
+    5. Finally, the action updates the entities in the SOAR platform and returns the
+    processed results.
 
 
     ### Additional Notes
 
     This action is strictly for enrichment purposes and does not perform any blocking
-    or remediation on external systems. It requires valid Cybersixgill API credentials
-    to function.
+    or containment operations on external systems. It relies on the Cybersixgill API
+    for data retrieval.
   ai_short_description: >-
-    Enriches IP Address entities using Cybersixgill Darkfeed to retrieve threat intelligence
-    and update entity profiles.
+    Enriches IP Address entities with threat intelligence from Cybersixgill Darkfeed,
+    updating entity properties and creating case insights.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -497,20 +502,13 @@ Enrich IP:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes (is_enriched, is_suspicious, additional_properties)
-      and creates case insights/tables within the SOAR platform.
+      Updates entity properties (is_enriched, is_suspicious, additional_properties)
+      and creates case insights within the SOAR platform.
     reasoning: >-
-      The action fetches data from the Cybersixgill API (fetches_data=true). It updates
-      internal entities with enrichment data and creates case insights (can_mutate_internal_data=true).
-      It does not mutate external systems.
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action fetches threat intelligence data from an external source (Cybersixgill)
-      and updates internal SOAR entities and insights. It does not perform any external
-      mutations or remediation actions. Therefore, it is classified as an enrichment
-      action.
-    remediation: false
+      The action fetches data from the Sixgill API (fetches_data=true). It updates
+      internal entities with enrichment data and creates case insights (can_mutate_internal_data=true,
+      can_update_entities=true, can_create_insight=true). It does not mutate external
+      systems.
   entity_usage:
     entity_types:
       address: true
@@ -562,9 +560,9 @@ Enrich IP:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action explicitly filters target entities to process only those with the
-      type `ADDRESS` (IP addresses). It does not filter by other attributes like creation
-      time or modification time.
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type` is `ADDRESS`. It does not filter by
+      other attributes like creation time or modification time.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -580,9 +578,9 @@ Enrich IP:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action retrieves threat intelligence (reputation, feed data, MITRE mappings)
-      for IP addresses. This aligns with the 'Enrich IOC' category. It does not perform
-      any remediation, ticket management, or alert status updates.
+      The action retrieves threat intelligence for IP addresses (IOCs) and updates
+      the SOAR platform with this context. This aligns with the 'Enrich IOC' category.
+      It does not perform any external mutations or alert status changes.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -602,52 +600,48 @@ Enrich IP:
 
     | --- | --- | --- | --- |
 
-    | Client Id | String | Yes | The Client ID for Cybersixgill API authentication.
-    |
+    | Client Id | String | Yes | The Client ID for authenticating with the Cybersixgill
+    API. |
 
-    | Client Secret | String | Yes | The Client Secret for Cybersixgill API authentication.
-    |
+    | Client Secret | String | Yes | The Client Secret for authenticating with the
+    Cybersixgill API. |
 Enrich URL:
   ai_description: >-
     ### General Description
 
     Enriches URL entities using the Cybersixgill Darkfeed Enrichment service. This
-    action queries the Sixgill platform to retrieve threat intelligence, including
-    malware associations, actor information, and MITRE ATT&CK mapping for the specified
-    URL. It provides actionable context to security analysts by aggregating data from
-    underground file-sharing and paste sites.
+    action retrieves threat intelligence, including associated threat actors, MITRE
+    ATT&CK tactics/techniques, and VirusTotal reputation data, to help analysts investigate
+    potential malicious URLs.
 
 
     ### Flow Description
 
-    1. The action initializes the `SixgillEnrichManager` using the provided `Client
-    Id` and `Client Secret` from the integration configuration.
+    1. The action extracts the `Client Id` and `Client Secret` from the integration
+    configuration.
 
-    2. It iterates through the target entities, filtering for those with the `URL`
-    entity type.
+    2. It iterates through the provided `target_entities` and filters for those with
+    the `URL` entity type.
 
-    3. For each valid URL, the action calls the Sixgill API (`query_sixgill`) to fetch
-    threat intelligence data.
+    3. For each valid URL, the action queries the Sixgill API using the `SixgillEnrichManager`
+    to retrieve threat intelligence data.
 
-    4. If data is retrieved, the action:
+    4. If data is found, the action:
         * Updates the entity's `is_enriched` and `is_suspicious` flags.
-        * Updates the entity's `additional_properties` with Sixgill-specific metadata
-    (e.g., feed name, confidence, severity).
-        * Generates a detailed case insight containing the retrieved intelligence.
-        * Adds a data table to the entity's results in the SOAR platform.
-        * Attaches the raw JSON response to the entity.
-    5. Finally, the action updates the entities in the SOAR platform and completes
-    the execution.
-
+        * Populates the entity's `additional_properties` with metadata such as feed
+    name, source, actor, and confidence scores.
+        * Calls `siemplify.update_entities` to save these changes to the SOAR platform.
+        * Generates a case insight containing the enrichment details and links.
+        * Adds an entity table to the result for structured viewing.
+        * Adds the raw JSON result to the action output.
 
     ### Additional Notes
 
     This action is strictly for enrichment purposes and does not perform any blocking
-    or remediation actions on external systems. It relies on the Cybersixgill API
-    for data retrieval.
+    or containment operations. It relies on the Cybersixgill API for data retrieval.
   ai_short_description: >-
-    Enriches URL entities by retrieving threat intelligence, actor information, and
-    MITRE ATT&CK mappings from the Cybersixgill Darkfeed service.
+    Enriches URL entities with threat intelligence from Cybersixgill, updating entity
+    properties and creating case insights.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -658,21 +652,13 @@ Enrich URL:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes (is_enriched, is_suspicious, additional_properties),
-      creates case insights, and adds data tables/JSON to the case.
+      Updates entity properties (is_enriched, is_suspicious, additional_properties)
+      and creates case insights within the SOAR platform.
     reasoning: >-
-      The action fetches data from the Sixgill API (fetches_data=true). It does not
-      mutate external systems (can_mutate_external_data=false). It mutates internal
-      SOAR data by updating entities, creating insights, and adding tables/JSON to
-      the case (can_mutate_internal_data=true).
-  categories:
-    enrichment: true
-    reasoning: >-
-      The action retrieves threat intelligence data from an external source (Cybersixgill)
-      and updates internal SOAR entities and insights. It does not perform any external
-      mutations or remediation tasks. Therefore, it is classified as an enrichment
-      action.
-    remediation: false
+      The action fetches data from the Sixgill API (fetches_data=true). It updates
+      internal entities with enrichment data and suspicious status (can_update_entities=true)
+      and creates case insights (can_create_insight=true). It does not mutate external
+      systems or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -724,9 +710,9 @@ Enrich URL:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action iterates over `siemplify.target_entities` and explicitly checks if
-      `entity.entity_type` is `URL`. It filters entities based on this type to perform
-      enrichment.
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where the type is `URL` (via `entity.entity_type.upper() in entity_types`
+      where `entity_types` is `[EntityTypes.URL]`).
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -742,9 +728,10 @@ Enrich URL:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action fetches threat intelligence (reputation, actor info, MITRE mapping)
-      for a URL entity. This aligns with the 'Enrich IOC' category. It does not perform
-      any other actions like ticketing, blocking, or identity management.
+      The action retrieves threat intelligence (reputation, actor, MITRE data) for
+      URL indicators from an external service (Sixgill). This aligns with the 'Enrich
+      IOC' category. It does not perform any containment, ticketing, or alert modification
+      actions.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -771,30 +758,32 @@ Enrich URL:
     Cybersixgill API. |
 Ping:
   ai_description: >-
-    General Description
+    ### General Description
 
-    Tests connectivity to the Cybersixgill Darkfeed Enrichment service to ensure the
-    integration is properly configured and communicating with the external API.
-
-
-    Flow Description
-
-    1. The action extracts the required configuration parameters (Client ID and Client
-    Secret) from the integration settings.
-
-    2. It initializes the SixgillEnrichManager using these credentials.
-
-    3. It executes a test enrichment call to the Cybersixgill API using a hardcoded
-    IP address (8.8.8.8) to verify connectivity.
-
-    4. The action returns a success or failure status message based on the API response.
+    Tests the connectivity between the SOAR platform and the Cybersixgill Darkfeed
+    Enrichment service. This action is designed to verify that the integration is
+    correctly configured and that the platform can successfully communicate with the
+    external API.
 
 
-    Additional Notes
+    ### Flow Description
 
-    This action is strictly for diagnostic purposes and does not process any entities
-    from the case. It is intended to be used by administrators to validate the integration
-    setup.
+    1. The action extracts the 'Client Id' and 'Client Secret' from the integration
+    configuration.
+
+    2. It initializes the `SixgillEnrichManager` using the provided credentials.
+
+    3. It executes a test query (`enrich_ioc`) using a sample IP address ('8.8.8.8')
+    to verify the API connection.
+
+    4. The action returns the status of the connectivity test (success or failure)
+    to the SOAR platform, which is then displayed as the action result.
+
+
+    ### Additional Notes
+
+    This action is intended for diagnostic purposes only. It does not process any
+    entities from the case and does not perform any enrichment or mutation operations.
   ai_short_description: >-
     Tests connectivity to the Cybersixgill Darkfeed Enrichment service.
   capabilities:
@@ -808,16 +797,9 @@ Ping:
     fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action makes an API call to test connectivity, but it does not fetch contextual
-      data for entities or alerts, nor does it mutate any external or internal data.
-      It is a diagnostic tool.
-  categories:
-    enrichment: false
-    reasoning: >-
-      The action is a connectivity test ('Ping'). According to the provided guidelines,
-      actions named 'Ping' are explicitly excluded from being categorized as enrichment
-      actions. It does not perform any remediation or state-changing operations.
-    remediation: false
+      The action performs a test query to the external API to verify connectivity.
+      This is classified as fetching data (diagnostic). It does not mutate any external
+      or internal data, nor does it update entities or create insights.
   entity_usage:
     entity_types:
       address: false
@@ -869,8 +851,8 @@ Ping:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not process any entities from the case. It uses a hardcoded
-      IP address (8.8.8.8) to perform a connectivity test against the external service.
+      The action is a standalone connectivity test that does not interact with or
+      filter any entities from the case.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -886,9 +868,8 @@ Ping:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action is a connectivity test ('Ping') and does not perform any of the defined
-      functional outcomes such as enrichment, remediation, ticket management, or alert
-      updates.
+      The action is a diagnostic connectivity test and does not perform any of the
+      defined functional outcomes such as enrichment, containment, or ticket management.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
