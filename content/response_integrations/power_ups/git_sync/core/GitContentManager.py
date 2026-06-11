@@ -99,6 +99,7 @@ class GitContentManager:
         """
         try:
             zip_buffer = BytesIO()
+            definition = None
             with zipfile.ZipFile(
                 zip_buffer,
                 "a",
@@ -108,14 +109,20 @@ class GitContentManager:
                 for file in self.git.get_file_objects_from_path(
                     f"Integrations/{integration_name}",
                 ):
-                    if file.path == f"Integration-{integration_name}.def":
+                    if file.path in (
+                        f"Integration-{integration_name}.def",
+                        f"Integration-{integration_name}.json",
+                    ):
                         definition = json.loads(file.content)
                     zip_file.writestr(file.path, file.content)
             zip_buffer.seek(0)
+            if definition is None:
+                raise KeyError(f"Definition file for integration {integration_name} not found.")
             return Integration(
                 {
                     "identifier": integration_name,
-                    "isCustomIntegration": definition["IsCustom"],
+                    "isCustomIntegration": definition.get("IsCustom") or definition.get("Custom", False),
+                    "Staging": definition.get("Staging", "False"),
                 },
                 zip_buffer,
             )

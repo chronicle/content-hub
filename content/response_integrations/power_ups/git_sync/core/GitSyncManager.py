@@ -220,10 +220,15 @@ class GitSyncManager:
             self.logger.info(
                 f"{integration.identifier} is a custom integration - importing as zip",
             )
+            zip_content = (
+                integration.get_zip_binary()
+                if platform_supports_1p_api()
+                else integration.get_zip_as_base64()
+            )
             self.api.import_package(
                 integration.identifier,
-                integration.get_zip_as_base64(),
-                #integration.staging,
+                zip_content,
+                integration.staging,
             )
         else:
             self.logger.info(

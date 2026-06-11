@@ -238,8 +238,8 @@ class SiemplifyApiClient:
     def export_package(self, integration):
         return export_package(self.siemplify_soar, integration)
 
-    def import_package(self, integration_name, b64_blob):
-        return import_package(self.siemplify_soar, integration_name, b64_blob)
+    def import_package(self, integration_name, b64_blob, staging):
+        return import_package(self.siemplify_soar, integration_name, b64_blob, staging)
 
     def update_ide_item(self, input_json):
         return update_ide_item(self.siemplify_soar, input_json)

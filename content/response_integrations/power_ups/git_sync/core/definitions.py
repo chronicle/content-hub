@@ -249,7 +249,11 @@ class Integration(Content):
 
         self.zipfile = ZipFile(zip_buffer)
         self.identifier = self.integration_card.get("identifier")
-        self.isCustom = self.integration_card.get("isCustomIntegration")
+        self.staging = self.integration_card.get("Staging")
+        is_custom = self.integration_card.get("isCustomIntegration")
+        if is_custom is None:
+            is_custom = self.integration_card.get("custom")
+        self.isCustom = bool(is_custom)
         try:
             self.definition = json.loads(
                 self.zipfile.read(f"Integration-{self.identifier}.def"),
@@ -313,6 +317,9 @@ class Integration(Content):
 
     def get_zip_as_base64(self):
         return base64.b64encode(self.zip_buffer.getvalue()).decode("utf-8")
+    
+    def get_zip_binary(self):
+        return self.zip_buffer.getvalue()
 
     def generate_readme(self, additional_info: str = None):
         env = JinjaEnvironment()
