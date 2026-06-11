@@ -66,7 +66,7 @@ class TestConversions:
 
         # built -> model -> non-built -> model -> built
         final_built = IntegrationParameter.from_non_built(
-            IntegrationParameter.from_built(original_built).to_non_built()
+            IntegrationParameter.from_built(original_built).to_non_built(),
         ).to_built()
 
         assert final_built["PropertyDisplayName"] == original_built["PropertyDisplayName"]
