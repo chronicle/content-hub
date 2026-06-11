@@ -40,7 +40,7 @@ class APIClient:
         self,
         api_key: str,
         base_url: str,
-        user_agent: str = "SpyCloud-SDK-Python/0.2.0",
+        user_agent: str = "SpyCloud-GoogleSecops/1.0.0",
         timeout: int = DEFAULT_TIMEOUT,
         max_retries: int = DEFAULT_MAX_RETRIES,
         backoff_seconds: float = DEFAULT_BACKOFF_SECONDS,
