@@ -37,6 +37,7 @@ class FileUtilitiesMockSession(
         return [
             self.get_case_metadata,
             self.get_alerts_full_details,
+            self.post_alert_full_details,
             self.get_attachments_metadata,
             self.get_attachment_data,
         ]
@@ -60,6 +61,17 @@ class FileUtilitiesMockSession(
         return MockResponse(
             content=self._product.get_alerts_full_details(MOCK_CASE_IDENTIFIER)
         )
+
+    @router.post(r"/api/external/v1/sdk/AlertFullDetails.*")
+    def post_alert_full_details(self, _: MockRequest) -> MockResponse:
+        """Intercept SDK single alert retrieval query.
+
+        Returns:
+            Simulated successful HTTP response containing the first alert details.
+        """
+        alerts = self._product.get_alerts_full_details(MOCK_CASE_IDENTIFIER)
+        # Return the first alert to simulate the current_alert endpoint
+        return MockResponse(content=alerts[0] if alerts else {})
 
     @router.get(r".*/GetCaseFullDetails/\S+|.*/caseComments.*|.*/Attachments/\S+")
     def get_attachments_metadata(self, _: MockRequest) -> MockResponse:
