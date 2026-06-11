@@ -45,9 +45,9 @@ class AttachmentsManager:
 
     def get_alert_entities(self):
         execution_scope = getattr(
-            self.siemplify, "execution_scope", ExecutionScope.Alert.value
+            self.siemplify, "execution_scope", ExecutionScope.Alert
         )
-        if execution_scope == ExecutionScope.Alert.value:
+        if execution_scope.value == ExecutionScope.Alert.value:
             alerts = [self.siemplify.current_alert]
         else:
             alerts = getattr(
