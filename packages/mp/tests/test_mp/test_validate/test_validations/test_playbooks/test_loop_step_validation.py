@@ -67,7 +67,10 @@ START_LOOP_2 = create_step("Start Loop 2", "start_loop_2", StepType.FOR_EACH_STA
 END_LOOP_2 = create_step("End Loop 2", "end_loop_2", StepType.FOR_EACH_END_LOOP, "start_loop_2")
 
 END_LOOP_1_INVALID_START_ID = create_step(
-    "End Loop 1", "end_loop_1", StepType.FOR_EACH_END_LOOP, "non_existent_start_loop"
+    "End Loop 1",
+    "end_loop_1",
+    StepType.FOR_EACH_END_LOOP,
+    "non_existent_start_loop",
 )
 END_LOOP_1_NULL_START_ID = create_step("End Loop 1", "end_loop_1", StepType.FOR_EACH_END_LOOP, None)
 
