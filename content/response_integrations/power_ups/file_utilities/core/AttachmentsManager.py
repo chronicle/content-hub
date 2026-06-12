@@ -55,7 +55,15 @@ class AttachmentsManager:
         self.attachments = self._get_attachments()
 
     def get_alert_entities(self):
-        alerts = getattr(self.siemplify.case, "open_alerts", self.siemplify.case.alerts)
+        execution_scope = getattr(
+            self.siemplify, "execution_scope", ExecutionScope.Alert
+        )
+        if execution_scope.value == ExecutionScope.Alert.value:
+            return getattr(self.siemplify.current_alert, "entities", [])
+
+        alerts = getattr(
+            self.siemplify.case, "open_alerts", getattr(self.siemplify.case, "alerts", [])
+        )
         entities = []
         for alert in alerts:
             try:
