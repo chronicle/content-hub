@@ -246,7 +246,7 @@ Timeout - {{ action.TimeoutSeconds }} Seconds\n
 {% endfor %}
 {% endif %}
 {% if action.DynamicResultsMetadata or action.DynamicResults %}
-{% for metadata in action.DynamicResultsMetadata -%}
+{% for metadata in action.DynamicResultsMetadata or action.DynamicResults -%}
 {% if metadata.ResultName == "JsonResult" -%}
 ##### JSON Results
 ```json
