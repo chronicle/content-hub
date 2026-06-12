@@ -225,7 +225,7 @@ class SecretManagerClient:
             payload = base64.b64decode(data["payload"]["data"])
             self.logger.info(f"Successfully retrieved payload for secret '{secret_id}'.")
         except Exception as e:
-            self.logger.exception(f"Failed to access secret '{secret_id}' version '{version_id}'.")
+            self.logger.warn(f"Failed to access secret '{secret_id}' version '{version_id}': {e}")
             raise SecretAccessError(str(e)) from e
 
         try:
@@ -237,5 +237,5 @@ class SecretManagerClient:
                 f"This integration only supports "
                 f"text-based secrets (UTF-8 encoded)."
             )
-            self.logger.exception(f"Failed to decode secret '{secret_id}' version '{version_id}' as UTF-8.")
+            self.logger.warn(f"Failed to decode secret '{secret_id}' version '{version_id}' as UTF-8: {e}")
             raise SecretAccessError(msg) from e
