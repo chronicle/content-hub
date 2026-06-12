@@ -54,3 +54,10 @@ class IncidentJSONResult(BaseJSONResult):
         description="The type of the object on OpenCTI",
         examples=["Case-Incident"],
     )
+
+
+class RequestForInformationJSONResult(BaseJSONResult):
+    entity_type: Literal["Case-Rfi"] = Field(
+        description="The type of the object on OpenCTI",
+        examples=["Case-Rfi"],
+    )

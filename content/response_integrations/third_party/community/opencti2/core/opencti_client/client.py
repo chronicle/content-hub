@@ -1,6 +1,10 @@
 from core.datamodels.incident import Incident
+from core.datamodels.request_for_information import RequestForInformation
+from core.datamodels.request_for_takedown import RequestForTakedown
 from core.opencti_client.json_results import (
     IncidentJSONResult,
+    RequestForInformationJSONResult,
+    RequestForTakedownJSONResult,
 )
 from pycti import OpenCTIApiClient
 from pydantic import ValidationError
@@ -76,4 +80,37 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Incident creation: {str(e)}"
+            ) from e
+
+    def create_request_for_information(
+        self, request_for_information: RequestForInformation
+    ) -> RequestForInformationJSONResult:
+        try:
+            rfi_args = request_for_information.to_input_variables()
+            information_types = rfi_args.get("information_types") or []
+            priority = rfi_args.get("priority")
+            severity = rfi_args.get("severity")
+            self._upsert_vocabulary_entries(
+                "request_for_information_types_ov", *information_types
+            )
+            self._upsert_vocabulary_entries("case_priority_ov", priority)
+            self._upsert_vocabulary_entries("case_severity_ov", severity)
+
+            labels = rfi_args.get("objectLabel")
+            self._upsert_labels(labels)
+            data = self._api_client.case_rfi.create(**rfi_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create Request for Information."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Request for Information in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return RequestForInformationJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for RFI creation: {str(e)}"
             ) from e
