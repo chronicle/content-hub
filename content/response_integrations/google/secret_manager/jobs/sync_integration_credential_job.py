@@ -182,7 +182,6 @@ class SyncIntegrationCredentialJob(Job):
             if self._sync_errors:
                 summary = "\n".join(f"- {err}" for err in self._sync_errors)
                 msg = f"Credential synchronization completed with one or more errors:\n{summary}"
-                self.logger.error(msg)
                 raise IntegrationCredentialSyncError(msg)
         finally:
             self._save_context()
@@ -381,8 +380,8 @@ class SyncIntegrationCredentialJob(Job):
                         name,
                         param_mapping,
                     )
-                except Exception:
-                    self.logger.exception(f"Failed to update instance '{name}'.")
+                except Exception as e:
+                    self.logger.warn(f"Failed to update instance '{name}': {e}")
                     self._sync_errors.append(f"Failed to update instance '{name}'")
 
         tasks = list(starmap(update_task, instances.items()))
@@ -428,7 +427,7 @@ class SyncIntegrationCredentialJob(Job):
 
         identifier: str | None = self._resolve_instance_identifier(name)
         if identifier is None:
-            self.logger.error(f"Skipping instance '{name}' — could not resolve identifier.")
+            self.logger.warn(f"Skipping instance '{name}' — could not resolve identifier.")
             return
 
         await self._set_integration_params(api, name, identifier, param_mapping)
@@ -455,7 +454,7 @@ class SyncIntegrationCredentialJob(Job):
                 f"Integration instance '{instance_name}' not found in environment "
                 f"'{env}'. Available instances: {available}."
             )
-            self.logger.error(msg)
+            self.logger.warn(msg)
             self._sync_errors.append(msg)
 
         return identifier
@@ -549,8 +548,8 @@ class SyncIntegrationCredentialJob(Job):
                         name,
                         param_mapping,
                     )
-                except Exception:
-                    self.logger.exception(f"Failed to update connector '{name}'.")
+                except Exception as e:
+                    self.logger.warn(f"Failed to update connector '{name}': {e}")
                     self._sync_errors.append(f"Failed to update connector '{name}'")
 
         tasks = list(starmap(update_task, connectors.items()))
@@ -596,7 +595,7 @@ class SyncIntegrationCredentialJob(Job):
 
         identifier: str | None = self._resolve_connector_identifier(name)
         if identifier is None:
-            self.logger.error(f"Skipping connector '{name}' — could not resolve identifier.")
+            self.logger.warn(f"Skipping connector '{name}' — could not resolve identifier.")
             return
 
         await self._set_connector_params(api, name, identifier, param_mapping)
@@ -618,7 +617,7 @@ class SyncIntegrationCredentialJob(Job):
         if identifier is None:
             available: list[str] = list(self.connector_name_to_identifier.keys())
             msg = f"Connector '{connector_name}' not found. Available connectors: {available}."
-            self.logger.error(msg)
+            self.logger.warn(msg)
             self._sync_errors.append(msg)
 
         return identifier
@@ -714,8 +713,8 @@ class SyncIntegrationCredentialJob(Job):
                         param_mapping,
                         name_to_job,
                     )
-                except Exception:
-                    self.logger.exception(f"Failed to update job '{job_name}'.")
+                except Exception as e:
+                    self.logger.warn(f"Failed to update job '{job_name}': {e}")
                     self._sync_errors.append(f"Failed to update job '{job_name}'")
 
         tasks = list(starmap(update_task, jobs.items()))
@@ -740,7 +739,7 @@ class SyncIntegrationCredentialJob(Job):
         elif isinstance(installed_jobs_response, list):
             job_instances = installed_jobs_response
         else:
-            self.logger.error(
+            self.logger.warn(
                 "Unexpected response format from get_installed_jobs: "
                 "expected list or dict with 'job_instances', got "
                 f"{type(installed_jobs_response).__name__}."
@@ -843,7 +842,7 @@ class SyncIntegrationCredentialJob(Job):
         if job_data is None:
             available: list[str] = list(name_to_job.keys())
             msg = f"Job '{job_name}' not found. Available jobs: {available}."
-            self.logger.error(msg)
+            self.logger.warn(msg)
             self._sync_errors.append(msg)
             return None
 
@@ -861,7 +860,7 @@ class SyncIntegrationCredentialJob(Job):
                 return None
 
         if not isinstance(parameters, list):
-            self.logger.error(
+            self.logger.warn(
                 f"Unexpected parameter format for Job '{job_name}'. "
                 f"Expected   'parameters' field to be a list, "
                 f"got {type(parameters).__name__}."
@@ -896,7 +895,7 @@ class SyncIntegrationCredentialJob(Job):
         """
         job_instance_id: str | None = job_data.get("id")
         if job_instance_id is None:
-            self.logger.error(f"Job '{job_name}' has no id and no parameters — cannot update.")
+            self.logger.warn(f"Job '{job_name}' has no id and no parameters — cannot update.")
             return None
 
         self.logger.info(f"Fetching full details for job '{job_name}' (id: {job_instance_id}).")
@@ -911,7 +910,7 @@ class SyncIntegrationCredentialJob(Job):
             raise JobFetchError(msg) from e
 
         if not isinstance(full_job, dict):
-            self.logger.error(
+            self.logger.warn(
                 f"Unexpected response format when fetching job details for "
                 f"'{job_name}': expected dict, got "
                 f"{type(full_job).__name__}."
@@ -971,7 +970,7 @@ class SyncIntegrationCredentialJob(Job):
                     f"job '{job_name}'. Available parameters: "
                     f"{list(param_index.keys())}."
                 )
-                self.logger.error(msg)
+                self.logger.warn(msg)
                 self._sync_errors.append(msg)
                 continue
 
