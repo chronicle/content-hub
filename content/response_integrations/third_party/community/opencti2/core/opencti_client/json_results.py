@@ -61,3 +61,10 @@ class RequestForInformationJSONResult(BaseJSONResult):
         description="The type of the object on OpenCTI",
         examples=["Case-Rfi"],
     )
+
+
+class RequestForTakedownJSONResult(BaseJSONResult):
+    entity_type: Literal["Case-Rft"] = Field(
+        description="The type of the object on OpenCTI",
+        examples=["Case-Rft"],
+    )

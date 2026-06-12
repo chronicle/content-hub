@@ -3,10 +3,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 from core.datamodels.incident import Incident
 from core.datamodels.request_for_information import RequestForInformation
+from core.datamodels.request_for_takedown import RequestForTakedown
 from core.opencti_client.client import OpenCTIClient, OpenCTIClientError
 from core.opencti_client.json_results import (
     IncidentJSONResult,
     RequestForInformationJSONResult,
+    RequestForTakedownJSONResult,
 )
 
 
@@ -27,6 +29,17 @@ def fake_rfi_api_response():
         "id": "a313ee4d-c786-494b-b053-24b140344956",
         "standard_id": "case-rfi--1775d682-9e1b-441a-8577-a875bf44d148",
         "entity_type": "Case-Rfi",
+        "parent_types": ["Basic-Object", "Stix-Object", "Stix-Core-Object"],
+        "createdById": None,
+    }
+
+
+@pytest.fixture
+def fake_rft_api_response():
+    return {
+        "id": "c41abbd3-4e60-47db-9137-6eb8713f9715",
+        "standard_id": "case-rft--f65a5182-a019-4bfc-b341-f5dae79352dd",
+        "entity_type": "Case-Rft",
         "parent_types": ["Basic-Object", "Stix-Object", "Stix-Core-Object"],
         "createdById": None,
     }
@@ -57,6 +70,11 @@ def incident():
 @pytest.fixture
 def request_for_information():
     return RequestForInformation(name="Test RFI")
+
+
+@pytest.fixture
+def request_for_takedown():
+    return RequestForTakedown(name="Test RFT")
 
 
 class TestOpenCTIClientInit:
@@ -166,6 +184,36 @@ class TestCreateRequestForInformation:
             OpenCTIClientError, match="Failed to create Request for Information"
         ):
             client.create_request_for_information(request_for_information)
+
+
+class TestCreateRequestForTakedown:
+    def test_returns_rft_json_result(
+        self, client, mock_pycti_client, request_for_takedown, fake_rft_api_response
+    ):
+        mock_pycti_client.case_rft.create.return_value = fake_rft_api_response
+
+        with patch.object(
+            client, "_upsert_labels", wraps=client._upsert_labels
+        ) as mock_upsert_labels:
+            result = client.create_request_for_takedown(request_for_takedown)
+
+        mock_pycti_client.case_rft.create.assert_called_once_with(
+            **request_for_takedown.to_input_variables()
+        )
+        mock_upsert_labels.assert_called_once_with(
+            request_for_takedown.to_input_variables().get("objectLabel")
+        )
+        assert isinstance(result, RequestForTakedownJSONResult)
+
+    def test_raises_when_api_returns_none(
+        self, client, mock_pycti_client, request_for_takedown
+    ):
+        mock_pycti_client.case_rft.create.return_value = None
+
+        with pytest.raises(
+            OpenCTIClientError, match="Failed to create Request for Takedown"
+        ):
+            client.create_request_for_takedown(request_for_takedown)
 
 
 class TestUpsertLabels:

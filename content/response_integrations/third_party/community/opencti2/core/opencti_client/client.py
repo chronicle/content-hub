@@ -114,3 +114,36 @@ class OpenCTIClient:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for RFI creation: {str(e)}"
             ) from e
+
+    def create_request_for_takedown(
+        self, request_for_takedown: RequestForTakedown
+    ) -> RequestForTakedownJSONResult:
+        try:
+            rft_args = request_for_takedown.to_input_variables()
+            takedown_types = rft_args.get("takedown_types") or []
+            priority = rft_args.get("priority")
+            severity = rft_args.get("severity")
+            self._upsert_vocabulary_entries(
+                "request_for_takedown_types_ov", *takedown_types
+            )
+            self._upsert_vocabulary_entries("case_priority_ov", priority)
+            self._upsert_vocabulary_entries("case_severity_ov", severity)
+
+            labels = rft_args.get("objectLabel")
+            self._upsert_labels(labels)
+            data = self._api_client.case_rft.create(**rft_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create Request for Takedown."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Request for Takedown in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return RequestForTakedownJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for RFT creation: {str(e)}"
+            ) from e
