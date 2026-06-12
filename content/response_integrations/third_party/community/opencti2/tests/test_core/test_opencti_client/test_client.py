@@ -1,7 +1,20 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from core.datamodels.incident import Incident
 from core.opencti_client.client import OpenCTIClient, OpenCTIClientError
+from core.opencti_client.json_results import IncidentJSONResult
+
+
+@pytest.fixture
+def fake_incident_api_response():
+    return {
+        "id": "20f7568f-e6f4-4bcc-8cc8-d6d5ba366622",
+        "standard_id": "incident--79249898-aaf5-5843-8080-1cab8511771d",
+        "entity_type": "Incident",
+        "parent_types": ["Basic-Object", "Stix-Object", "Stix-Core-Object"],
+        "createdById": None,
+    }
 
 
 @pytest.fixture
@@ -21,6 +34,11 @@ def client(mock_pycti_client):
     )
 
 
+@pytest.fixture
+def incident():
+    return Incident(name="Test Incident")
+
+
 class TestOpenCTIClientInit:
     def test_health_check_called_on_successful_connection(self):
         with patch("pycti.OpenCTIApiClient.health_check") as mock_health_check:
@@ -38,3 +56,69 @@ class TestOpenCTIClientInit:
                 OpenCTIClientError, match="Failed to establish connection"
             ):
                 OpenCTIClient(base_url="bad", api_token="token")
+
+
+class TestCreateIncident:
+    def test_returns_incident_json_result(
+        self, client, mock_pycti_client, incident, fake_incident_api_response
+    ):
+        mock_pycti_client.incident.create.return_value = fake_incident_api_response
+
+        with patch.object(
+            client, "_upsert_labels", wraps=client._upsert_labels
+        ) as mock_upsert_labels:
+            result = client.create_incident(incident)
+
+        mock_pycti_client.incident.create.assert_called_once_with(
+            **incident.to_input_variables()
+        )
+        mock_upsert_labels.assert_called_once_with(
+            incident.to_input_variables().get("objectLabel")
+        )
+        assert isinstance(result, IncidentJSONResult)
+
+    def test_raises_when_api_returns_none(self, client, mock_pycti_client, incident):
+        mock_pycti_client.incident.create.return_value = None
+
+        with pytest.raises(OpenCTIClientError, match="Failed to create Incident"):
+            client.create_incident(incident)
+
+    def test_raises_on_invalid_response(self, client, mock_pycti_client, incident):
+        mock_pycti_client.incident.create.return_value = {"unexpected": "data"}
+
+        with pytest.raises(
+            OpenCTIClientError, match="Unexpected OpenCTI response for Incident"
+        ):
+            client.create_incident(incident)
+
+    def test_raises_on_api_exception(self, client, mock_pycti_client, incident):
+        mock_pycti_client.incident.create.side_effect = RuntimeError("network error")
+
+        with pytest.raises(OpenCTIClientError, match="Failed to create Incident"):
+            client.create_incident(incident)
+
+
+class TestUpsertLabels:
+    def test_creates_each_label(self, client, mock_pycti_client):
+        client._upsert_labels(["local", "test"])
+
+        assert mock_pycti_client.label.create.call_args_list == [
+            ((), {"value": "local"}),
+            ((), {"value": "test"}),
+        ]
+
+    def test_noop_when_labels_none(self, client, mock_pycti_client):
+        client._upsert_labels(None)
+
+        mock_pycti_client.label.create.assert_not_called()
+
+    def test_noop_when_labels_empty(self, client, mock_pycti_client):
+        client._upsert_labels([])
+
+        mock_pycti_client.label.create.assert_not_called()
+
+    def test_raises_opencti_client_error_on_failure(self, client, mock_pycti_client):
+        mock_pycti_client.label.create.side_effect = RuntimeError("network error")
+
+        with pytest.raises(OpenCTIClientError, match="Failed to upsert labels"):
+            client._upsert_labels(["local"])
