@@ -319,7 +319,7 @@ class Integration(Content):
         return base64.b64encode(self.zip_buffer.getvalue()).decode("utf-8")
     
     def get_zip_binary(self):
-        return self.zip_buffer.getvalue()#new
+        return self.zip_buffer.getvalue()
 
     def generate_readme(self, additional_info: str = None):
         env = JinjaEnvironment()
