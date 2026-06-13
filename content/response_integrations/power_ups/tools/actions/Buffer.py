@@ -23,7 +23,6 @@ def main():
     siemplify = SiemplifyAction()
     status = EXECUTION_STATE_COMPLETED
 
-    json_failure_message = ""
     result_value = siemplify.parameters.get("ResultValue")
     output_message = "Input values 'transferred' to the output."
     
