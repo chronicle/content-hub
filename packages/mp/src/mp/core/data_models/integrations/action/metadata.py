@@ -77,6 +77,7 @@ ENRICHMENT_OUTCOME_CATEGORIES: set[OutcomeCategoriesEnum] = {
     OutcomeCategoriesEnum.GET_ALERT_INFORMATION,
 }
 
+
 class AiFields(NamedTuple):
     description: str | None
     short_description: str | None
@@ -477,15 +478,7 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
 def _determine_ai_categories(
     outcome_categories: list[OutcomeCategoriesEnum],
 ) -> list[ActionAiCategory]:
-    """Determine if the action is a remediation or enrichment action based on its outcome categories.
 
-    Args:
-        outcome_categories: The list of OutcomeCategoriesEnum objects.
-
-    Returns:
-        The updated list of ActionAiCategory objects.
-
-    """
     result: list[ActionAiCategory] = []
     if any(oc in REMEDIATION_OUTCOME_CATEGORIES for oc in outcome_categories):
         result.append(ActionAiCategory.REMEDIATION)
@@ -494,9 +487,6 @@ def _determine_ai_categories(
         result.append(ActionAiCategory.ENRICHMENT)
 
     return result
-
-
-
 
 
 def _update_non_built_with_ai_fields(non_built: NonBuiltActionMetadata, ai_fields: AiFields) -> None:
@@ -509,13 +499,18 @@ def _update_non_built_with_ai_fields(non_built: NonBuiltActionMetadata, ai_field
 
 
 def _apply_ai_metadata_fallback(data: dict[str, Any]) -> dict[str, Any]:
-    # 1. Fallback for categories
-    categories = data.get("categories")
-    if isinstance(categories, dict):
-        if "remediation" not in categories:
-            categories["remediation"] = False
-        if "enrichment" not in categories:
-            categories["enrichment"] = False
+    # 1. Fallback for outcome_categories
+    outcome_categories = data.get("outcome_categories")
+    if outcome_categories is None:
+        outcome_categories = {}
+        data["outcome_categories"] = outcome_categories
+
+    if isinstance(outcome_categories, dict):
+        if "reasoning" not in outcome_categories:
+            outcome_categories["reasoning"] = ""
+        for category in OUTCOME_CATEGORIES_TO_DEF_OUTCOME_CATEGORIES_ENUM.keys():
+            if category not in outcome_categories:
+                outcome_categories[category] = False
 
     # 2. Fallback for entity_usage.entity_types list to dict
     entity_usage = data.get("entity_usage")

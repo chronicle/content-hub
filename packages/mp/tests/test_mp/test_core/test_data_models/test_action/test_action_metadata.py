@@ -27,8 +27,8 @@ from mp.core.data_models.integrations.action.metadata import (
     ActionMetadata,
     BuiltActionMetadata,
     NonBuiltActionMetadata,
-    _load_json_examples,  # noqa: PLC2701
     _determine_ai_categories,
+    _load_json_examples,  # noqa: PLC2701
 )
 from test_mp.test_core.test_data_models.utils import FILE_NAME
 
