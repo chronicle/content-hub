@@ -1,342 +1,41 @@
-List Spaces:
+Add Entity To Detector URL List:
   ai_description: >-
     General Description
 
-    Lists Google Chat spaces that the configured bot has been added to. It allows
-    filtering by specific criteria (Name, Display Name, Type) and optionally includes
-    user membership information for each space.
+    Adds specified URLs and Domains to a Cloud Identity URL list detector policy.
+    This action helps in maintaining security policies by dynamically updating detection
+    lists based on provided parameters or case entities.
 
 
     Flow Description
 
-    1. Extracts configuration parameters (API Root URL, Service Account, Verify SSL)
-    and action parameters (Filter Key, Filter Logic, Filter Value, Max Records, Include
-    User Memberships).
+    1. Extract the `Detector Policy ID`, `URL`, and `Domain` parameters from the action
+    configuration.
 
-    2. Initializes the `GoogleChatManager` and validates connectivity.
+    2. Parse the `URL` and `Domain` parameters into lists.
 
-    3. Calls the Google Chat API (`GET /v1/spaces`) to retrieve the list of spaces.
+    3. Iterate through the `target_entities` in the current case, filtering for `URL`
+    and `HOSTNAME` entity types.
 
-    4. Applies filtering logic based on the provided `Filter Key`, `Filter Logic`,
-    and `Filter Value`.
+    4. Aggregate all URLs and Domains from both the parameters and the identified
+    entities.
 
-    5. If `Include User Memberships` is enabled, iterates through the retrieved spaces
-    and calls the Google Chat API (`GET /v1/{space}/members`) for each space to fetch
-    membership details.
+    5. Call the Cloud Identity API to fetch the existing policy (`update_url_list_detector_policy`
+    -> `fetch_policy`).
 
-    6. Constructs a CSV table and JSON result containing the space information (and
-    memberships, if requested).
+    6. Update the policy by appending the new URLs/Domains to the existing list.
 
-    7. Adds the results to the SOAR action output using `siemplify.result.add_data_table`
-    and `siemplify.result.add_result_json`.
+    7. Send the updated policy back to the Cloud Identity API via a PATCH request.
+
+    8. Return the result and update the action output message.
 
 
     Additional Notes
 
-    This action does not operate on SOAR entities.
+    The action requires a valid `Detector Policy ID`. It supports both manual input
+    parameters and automatic entity extraction from the case.
   ai_short_description: >-
-    Lists Google Chat spaces that the configured bot has been added to, with optional
-    filtering and membership details.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action makes GET requests to the Google Chat API to fetch spaces and memberships.
-      It does not mutate external data, nor does it modify internal SOAR data (entities,
-      insights, or case comments).
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action does not operate on Siemplify entities, as explicitly stated in the
-      description and confirmed by the code which does not iterate over `siemplify.target_entities`.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action retrieves a list of spaces from Google Chat. It does not match any
-      of the provided outcome categories (e.g., enrichment, containment, ticketing,
-      etc.).
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | Filter Key | DDL | No | Specify the key that needs to be used to filter Google
-    Chat spaces. |
-
-    | Filter Logic | DDL | No | Specify what filter logic should be applied. |
-
-    | Filter Value | String | No | Specify what value should be used in the filter.
-    |
-
-    | Max Records To Return | String | No | Specify how many records to return. |
-
-    | Include User Memberships | Boolean | No | If enabled, user memberships information
-    will be added to the action Case Wall table and JSON result. |
-
-
-    Parameter Notes: The 'Filter Logic' and 'Filter Value' parameters depend on the
-    'Filter Key' parameter being set.
-Ping:
-  ai_description: >-
-    ### General Description
-
-    Tests connectivity to the Google Chat service using the provided configuration
-    parameters. This action validates that the integration is correctly configured
-    and can successfully communicate with the Google Chat API.
-
-
-    ### Flow Description
-
-    1. The action extracts the required configuration parameters: `API Root URL`,
-    `Service Account`, and `Verify SSL`.
-
-    2. It initializes the `GoogleChatManager` with the provided credentials and settings.
-
-    3. The manager performs a `GET` request to the Google Chat API `list-spaces` endpoint
-    (`/v1/spaces`) to verify connectivity.
-
-    4. The action validates the API response.
-
-    5. If the connection is successful, the action returns a success status; otherwise,
-    it returns a failure status with the error details.
-
-
-    ### Additional Notes
-
-    This action is intended for troubleshooting and verifying the integration setup.
-    It does not perform any data modification or retrieval beyond the connectivity
-    test.
-  ai_short_description: >-
-    Tests connectivity to the Google Chat service.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-    reasoning: >-
-      The action performs a GET request to test connectivity, which constitutes fetching
-      data (in this case, a list of spaces to verify the connection). It does not
-      mutate any external or internal data, nor does it update entities or insights.
-  entity_usage:
-    entity_types:
-      address: false
-      alert: false
-      application: false
-      child_hash: false
-      child_process: false
-      cluster: false
-      container: false
-      credit_card: false
-      cve: false
-      cve_id: false
-      database: false
-      deployment: false
-      destination_domain: false
-      domain: false
-      email_message: false
-      event: false
-      file_hash: false
-      file_name: false
-      generic: false
-      host_name: false
-      ip_set: false
-      mac_address: false
-      parent_hash: false
-      parent_process: false
-      phone_number: false
-      pod: false
-      process: false
-      service: false
-      source_domain: false
-      threat_actor: false
-      threat_campaign: false
-      threat_signature: false
-      url: false
-      usb: false
-      user: false
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-    reasoning: >-
-      The action is a standalone connectivity test and does not interact with or filter
-      any entities.
-  outcome_categories:
-    add_alert_comment: false
-    add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
-    contain_host: false
-    create_ticket: false
-    delete_email: false
-    disable_identity: false
-    download_file: false
-    enable_identity: false
-    enrich_asset: false
-    enrich_ioc: false
-    execute_command_on_the_host: false
-    get_alert_information: false
-    reasoning: >-
-      The action performs a connectivity test by making a GET request to the Google
-      Chat API. It does not perform any of the defined outcome actions such as enriching
-      data, updating alerts, or modifying external systems.
-    remove_ioc_from_allowlist: false
-    remove_ioc_from_blocklist: false
-    reset_identity_password: false
-    search_asset: false
-    search_email: false
-    search_events: false
-    send_email: false
-    send_message: false
-    submit_file: false
-    uncontain_host: false
-    update_alert: false
-    update_email: false
-    update_identity: false
-    update_ticket: false
-  parameters_description: >-
-    | Parameter | Type | Mandatory | Description |
-
-    | --- | --- | --- | --- |
-
-    | API Root URL | String | Yes | The base URL for the Google Chat API. |
-
-    | Service Account | String | No | The JSON string containing the service account
-    credentials. |
-
-    | Verify SSL | Boolean | No | Whether to verify SSL certificates for the connection.
-    |
-Send Advanced Message:
-  ai_description: >-
-    ### General Description
-
-    Sends an advanced, formatted message to a specified Google Chat space using a
-    provided JSON payload. This action enables the delivery of rich content, such
-    as cards or interactive elements, to facilitate communication and notifications
-    within the Google Chat environment.
-
-
-    ### Flow Description
-
-    1. The action extracts configuration parameters, including the API Root URL, Service
-    Account credentials, and SSL verification settings.
-
-    2. It retrieves the required action parameters: `Space Name` (the target destination)
-    and `Message JSON Payload` (the formatted content).
-
-    3. The `Message JSON Payload` string is parsed into a dictionary format.
-
-    4. The `GoogleChatManager` is initialized with the provided credentials to establish
-    a connection to the Google Chat API.
-
-    5. The action executes a POST request to the Google Chat API endpoint (`/v1/spaces/{space_name}/messages`)
-    using the `create_advanced_message` method to deliver the payload.
-
-    6. The resulting message object is added to the action's result output.
-
-
-    ### Additional Notes
-
-    This action does not operate on Siemplify entities. Ensure the `Message JSON Payload`
-    strictly adheres to the Google Chat API message format requirements to avoid delivery
-    failures.
-  ai_short_description: >-
-    Sends an advanced, formatted message to a specified Google Chat space using a
-    provided JSON payload.
+    Adds URLs and Domains to a Cloud Identity URL list detector policy.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -345,13 +44,13 @@ Send Advanced Message:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Sends a message to a specified Google Chat space.
-    fetches_data: false
+      Updates the URL list detector policy in Cloud Identity by appending new URLs
+      and domains to the existing list.
+    fetches_data: true
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to the Google Chat API to send a message,
-      which constitutes an external data mutation. It does not fetch data from external
-      systems, nor does it modify internal SOAR data or entities.
+      The action fetches the existing policy from Cloud Identity (GET) and then updates
+      it (PATCH). This involves fetching data and mutating external data.
   entity_usage:
     entity_types:
       address: false
@@ -373,7 +72,7 @@ Send Advanced Message:
       file_hash: false
       file_name: false
       generic: false
-      host_name: false
+      host_name: true
       ip_set: false
       mac_address: false
       parent_hash: false
@@ -386,14 +85,14 @@ Send Advanced Message:
       threat_actor: false
       threat_campaign: false
       threat_signature: false
-      url: false
+      url: true
       usb: false
       user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
-    filters_by_entity_type: false
+    filters_by_entity_type: true
     filters_by_identifier: false
     filters_by_is_artifact: false
     filters_by_is_enriched: false
@@ -403,12 +102,13 @@ Send Advanced Message:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not interact with, filter, or process any entities from the
-      Siemplify platform. It operates independently of the case's entity list.
+      The code iterates over `self.soar_action.target_entities` and filters using
+      `entity.entity_type in [EntityTypes.URL, EntityTypes.HOSTNAME]`. This means
+      it targets URL and HOSTNAME entities, filtering by entity_type.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
-    add_ioc_to_blocklist: false
+    add_ioc_to_blocklist: true
     contain_host: false
     create_ticket: false
     delete_email: false
@@ -420,8 +120,9 @@ Send Advanced Message:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action sends a message to a communication application (Google Chat). This
-      directly aligns with the 'Send Message' category.
+      The action updates a URL list detector policy in Cloud Identity by adding new
+      URLs and domains. This effectively updates security controls to detect or block
+      these indicators, matching the 'Add IOC To Blocklist' outcome.
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -429,7 +130,7 @@ Send Advanced Message:
     search_email: false
     search_events: false
     send_email: false
-    send_message: true
+    send_message: false
     submit_file: false
     uncontain_host: false
     update_alert: false
@@ -441,38 +142,32 @@ Send Advanced Message:
 
     | --- | --- | --- | --- |
 
-    | Space Name | String | Yes | The identifier of the Google Chat space where the
-    message will be sent. |
+    | Detector Policy ID | String | Yes | The unique identifier of the detector policy
+    to update. |
 
-    | Message JSON Payload | String | Yes | A valid JSON payload defining the message
-    content, including cards or widgets, as per Google Chat API specifications. |
-Send Message:
-  ai_description: >-
-    ### General Description
+    | URL | String | No | A comma-separated list of URLs to add to the detector list.
+    |
 
-    Sends a text message to a specified Google Chat space using the Google Chat API.
-    This action allows users to automate communication by posting messages directly
-    to a designated space.
-
-
-    ### Flow Description
-
-    1. The action retrieves configuration parameters (API Root URL, Service Account,
-    Verify SSL) and action parameters (Space Name, Message Text).
-
-    2. It initializes the `GoogleChatManager` to handle authentication and API communication.
-
-    3. The action executes a POST request to the Google Chat API endpoint `/v1/spaces/{space_name}/messages`
-    with the provided message text.
-
-    4. The response from the API is added to the action results as a JSON object.
-
-
-    ### Additional Notes
-
-    This action does not interact with or require any Siemplify entities.
+    | Domain | String | No | A comma-separated list of domains to add to the detector
+    list. |
+Create Policy:
+  ai_description: "General Description\nUse the \u201CCreate Policy\u201D action to\
+    \ create a new policy entry within Cloud Identity. This action allows administrators\
+    \ to define and deploy security policies, such as Data Loss Prevention (DLP) rules,\
+    \ directly into the Google Cloud Identity environment.\n\nFlow Description\n1.\
+    \ The action extracts the \"Policy Entry\" parameter, which contains the JSON\
+    \ configuration for the new policy.\n2. It validates that the provided \"Policy\
+    \ Entry\" is a valid JSON dictionary.\n3. The action initializes a `Policy` data\
+    \ model using the provided configuration.\n4. It calls the `create_policy` method\
+    \ of the `GoogleCloudIdentityApiManager`, which sends a `POST` request to the\
+    \ Cloud Identity API (`/v1beta1/policies`) to create the policy.\n5. The action\
+    \ logs the creation process and returns the created policy details as a JSON result,\
+    \ updating the output message with the success status.\n\nAdditional Notes\nThis\
+    \ action requires appropriate permissions in the Google Cloud Identity environment\
+    \ to create policies. Ensure the \"Policy Entry\" JSON is correctly formatted\
+    \ according to the Cloud Identity API specifications."
   ai_short_description: >-
-    Sends a text message to a specified Google Chat space.
+    Creates a new policy entry within Google Cloud Identity.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -480,14 +175,14 @@ Send Message:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: Sends a message to a Google Chat space.
+    external_data_mutation_explanation: >-
+      Creates a new policy entry in Google Cloud Identity via a POST request.
     fetches_data: false
     internal_data_mutation_explanation: null
     reasoning: >-
-      The action performs a POST request to an external system (Google Chat) to send
-      a message, which constitutes an external data mutation. It does not fetch data,
-      mutate internal SecOps data, update entities, create insights, modify alert
-      data, or create case comments.
+      The action performs a POST request to create a policy in Cloud Identity, which
+      is an external mutation. It does not fetch contextual data, update internal
+      entities, or modify alert data.
   entity_usage:
     entity_types:
       address: false
@@ -539,9 +234,8 @@ Send Message:
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
     reasoning: >-
-      The action does not iterate over `siemplify.target_entities` and the documentation
-      explicitly states it does not work on entities. Therefore, all entity type flags
-      are false, and all filter flags are false.
+      The action does not iterate over or use target entities. It operates on a provided
+      JSON configuration parameter to create a policy in an external system.
   outcome_categories:
     add_alert_comment: false
     add_ioc_to_allowlist: false
@@ -557,9 +251,9 @@ Send Message:
     execute_command_on_the_host: false
     get_alert_information: false
     reasoning: >-
-      The action sends a message to a communication application (Google Chat). This
-      aligns with the 'Send Message' outcome category. It does not perform any other
-      actions like enrichment, ticket creation, or alert modification.
+      The action creates a new policy in Cloud Identity. This does not match any of
+      the predefined outcome categories (e.g., Enrich, Ticket, Blocklist, Identity,
+      Host, Email, File, Message, Search).
     remove_ioc_from_allowlist: false
     remove_ioc_from_blocklist: false
     reset_identity_password: false
@@ -567,7 +261,7 @@ Send Message:
     search_email: false
     search_events: false
     send_email: false
-    send_message: true
+    send_message: false
     submit_file: false
     uncontain_host: false
     update_alert: false
@@ -579,7 +273,289 @@ Send Message:
 
     | --- | --- | --- | --- |
 
-    | Space Name | String | Yes | The identifier of the Google Chat space where the
-    message will be sent. |
+    | Policy Entry | String | Yes | The JSON object representing the configuration
+    of the policy entry to add. |
+List Policies:
+  ai_description: >-
+    ### General Description
 
-    | Message Text | String | Yes | The content of the message to be sent. |
+    Use the "List Policies" action to retrieve and list Cloud Identity policies from
+    a specified organizational unit. This action allows for granular filtering of
+    policies based on policy type, setting type, and display names, providing visibility
+    into the security configuration of the organization.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action extracts the required parameters: `Organization
+    Unit Name`, `Policy Type Filter`, `Setting Type Filter`, `Settings Display Name
+    Filter`, and `Max Results To Return`.
+
+    2. **Validation**: The `Max Results To Return` parameter is validated to ensure
+    it falls within the allowed range (1-100).
+
+    3. **Org Unit Retrieval**: The action calls the `fetch_org_unit` method via the
+    API client to resolve the provided `Organization Unit Name` to an internal Organization
+    Unit ID.
+
+    4. **Policy Listing**: The action calls the `list_policies` method on the API
+    client, passing the resolved Org Unit ID and the specified filters (display names,
+    policy type, setting type).
+
+    5. **Result Processing**: The retrieved policies are limited by the `Max Results
+    To Return` parameter and returned as a JSON list. If no policies match the criteria,
+    an appropriate message is returned.
+
+
+    ### Additional Notes
+
+    This action is read-only and does not modify any external or internal system state.
+    It is intended for auditing and visibility purposes.
+  ai_short_description: >-
+    Lists Cloud Identity policies for a specified organizational unit, supporting
+    filtering by policy type, setting type, and display name.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Cloud Identity API (fetches_data=true). It
+      does not mutate any external or internal data, nor does it update entities,
+      create insights, or modify alert/case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize any entities from the SOAR platform. It operates
+      entirely based on the configuration parameters provided by the user.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration data (policies) from the Cloud Identity API.
+      It does not perform enrichment, modification, or alert management, and therefore
+      does not match any of the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Organization Unit Name | String | Yes | The name of the organizational unit
+    from which to list policies. |
+
+    | Policy Type Filter | DDL | No | Type of the policy used to filter the list (Admin,
+    System, or Both). Defaults to 'Admin'. |
+
+    | Setting Type Filter | String | No | The regular expression pattern used to filter
+    policies by their settings type. |
+
+    | Settings Display Name Filter | String | No | A comma-separated list of display
+    names used to filter policy settings. |
+
+    | Max Results To Return | String | No | The maximum number of results to return
+    for the action run. Max: 100. Defaults to '50'. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Google Cloud Identity API to ensure the integration
+    is correctly configured and that the provided credentials have the necessary permissions.
+
+
+    ### Flow Description
+
+    1. The action initializes the API client using the provided credentials (service
+    account or workload identity).
+
+    2. It calls the `test_connectivity` method.
+
+    3. The `test_connectivity` method performs a GET request to the Policies API (`/v1/policies`)
+    with a page size of 1 to verify that the API is accessible and credentials are
+    valid.
+
+    4. If the request returns a successful response, the action completes successfully.
+    If the request fails or no policies are returned, an exception is raised.
+
+
+    ### Additional Notes
+
+    This action does not modify any data and is intended solely for diagnostic purposes
+    to verify integration health.
+  ai_short_description: >-
+    Tests connectivity to the Google Cloud Identity API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to verify connectivity. It does not mutate
+      external or internal data, nor does it update entities or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It ignores the `target_entities`
+      list and performs a connectivity test against the API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test by fetching a policy list. It does not
+      perform any of the listed actions (enrichment, ticket creation, etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.

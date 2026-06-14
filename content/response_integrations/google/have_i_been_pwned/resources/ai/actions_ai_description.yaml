@@ -1,78 +1,84 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Check Account:
   ai_description: >-
-    ### General Description
-
-    The **Check Account** action retrieves information from the **HaveIBeenPwned**
-    service to determine if a specific account (email address) has been compromised
-    in known data breaches or appeared in public "pastes." This is a critical enrichment
-    step for identifying credential exposure and potential account takeover risks.
+    General Description: This action retrieves information about data breaches and
+    public pastes associated with a specific user account using the HaveIBeenPwned
+    service. It helps analysts identify compromised credentials.
 
 
-    ### Parameters Description
+    Flow Description:
 
-    There are no specific action parameters for this action. It relies on the integration's
-    global configuration (API Key and Verify SSL).
+    1. The action iterates through the provided target entities, filtering for those
+    of type `USER`.
+
+    2. For each valid user entity, the action validates the email format.
+
+    3. The action makes a GET request to the HaveIBeenPwned API (`/breachedaccount/{account}`
+    and `/pasteaccount/{account}`) to fetch breach and paste history.
+
+    4. If breach or paste data is found, the action generates an entity insight, adds
+    the details to the action result as data tables, and updates the JSON result.
+
+    5. Finally, the action returns a summary message indicating whether the account
+    was found in any breaches or pastes.
 
 
-    ### Additional Notes
-
-    - This action specifically targets entities of type **USER** (mapped to **USERUNIQNAME**).
-
-    - It validates the email format before making API calls to ensure efficiency and
-    avoid unnecessary rate-limit consumption.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the HaveIBeenPwned manager using
-    the provided API key and SSL configuration.
-
-    2. **Entity Filtering**: It iterates through the target entities and selects those
-    of type **USER**.
-
-    3. **Validation**: For each user entity, it validates that the identifier is a
-    correctly formatted email address.
-
-    4. **Data Retrieval**: It performs two separate API calls to HaveIBeenPwned: one
-    for data breaches and one for public pastes.
-
-    5. **Internal Enrichment**: If breaches or pastes are found, an **Entity Insight**
-    is created to alert the analyst, and **Data Tables** are added to the case providing
-    detailed lists of the specific breaches and pastes.
-
-    6. **Final Output**: The action returns a summary message listing all pwned entities
-    and provides a full JSON result for downstream automation.
+    Additional Notes: This action is read-only and does not modify external systems.
+    It requires a valid HaveIBeenPwned API key.
+  ai_short_description: >-
+    Checks if a user account has been involved in data breaches or public pastes using
+    the HaveIBeenPwned service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
     can_mutate_internal_data: true
-    can_update_entities: false
+    can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Creates entity insights and adds data tables to the case to provide context
-      on account breaches.
-  categories:
-    enrichment: true
+      Adds entity insights and data tables to the SOAR case.
+    reasoning: >-
+      The action makes GET requests to the HaveIBeenPwned API to fetch breach and
+      paste data. It does not mutate external data. It updates internal entities by
+      adding insights and data tables to the SOAR case.
   entity_usage:
     entity_types:
-    - USERUNIQNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -86,41 +92,85 @@ Check Account:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type == EntityTypes.USER`. This means it targets USER entities,
+      filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches breach and paste information for a user account from the
+      HaveIBeenPwned service. This provides contextual metadata about the user's security
+      posture, matching the 'Enrich Asset' category. It does not modify external systems
+      or alert status.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Api Key | String | Yes | HaveIBeenPwned API Key |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates for API requests
+    |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic tool designed to verify the connectivity between
-    Google SecOps and the HaveIBeenPwned (HIBP) service. It ensures that the provided
-    API key is valid and that the network configuration (including SSL verification)
-    allows for successful communication with the HIBP API.
-
-
-    ### Parameters Description
-
-    There are no input parameters for this action. It relies solely on the integration's
-    global configuration (API Key and Verify SSL).
+    Tests the connectivity between the Google SecOps SOAR platform and the HaveIBeenPwned
+    service. This action verifies that the integration is correctly configured and
+    capable of communicating with the external API.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action fetches the 'Api Key' and 'Verify SSL'
-    settings from the HaveIBeenPwned integration configuration.
+    1. The action retrieves the 'Api Key' and 'Verify SSL' settings from the HaveIBeenPwned
+    integration configuration.
 
-    2. **Manager Initialization**: It initializes the `HaveIBeenPwnedManager` with
-    the retrieved credentials and SSL settings.
+    2. It initializes the `HaveIBeenPwnedManager` using the provided credentials and
+    SSL verification preference.
 
-    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
-    performs a GET request to the HIBP API's `breachedaccount` endpoint using a dummy
-    email address (`test@gmail.com`).
+    3. The action calls the `test_connectivity` method, which performs an HTTP GET
+    request to the HaveIBeenPwned API using a test email address ('test@gmail.com')
+    to validate the connection.
 
-    4. **Validation**: The manager validates the HTTP response. If the API key is
-    invalid (401) or rate-limited (429), an exception is raised. A 404 response is
-    treated as a successful connection (indicating the account was not found but the
-    service is reachable).
+    4. Upon a successful response, the action terminates and returns a 'Connection
+    Established' message with a result value of 'true'.
 
-    5. **Completion**: If no exceptions occur, the action ends with a 'Connection
-    Established' message and a boolean result of `true`.
+
+    ### Additional Notes
+
+    This action is intended for administrative use to troubleshoot or verify integration
+    connectivity. It does not perform any data enrichment or security operations on
+    entities.
+  ai_short_description: >-
+    Tests connectivity to the HaveIBeenPwned service to ensure the integration is
+    properly configured.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -131,10 +181,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs an API request to test connectivity, which constitutes fetching
+      data (in the form of a response). It does not mutate external or internal data,
+      nor does it update entities, create insights, or modify alerts.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -148,3 +235,47 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize or iterate over any target entities. It performs
+      a connectivity test using a hardcoded test email address.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any enrichment, ticketing,
+      blocking, or identity management operations. Therefore, it does not match any
+      of the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Api Key | String | Yes | The API key for HaveIBeenPwned. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates (default: False).
+    |

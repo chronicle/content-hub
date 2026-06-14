@@ -1,70 +1,35 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Execute Custom Search:
   ai_description: >-
     ### General Description
 
-    The **Execute Custom Search** action allows users to perform advanced event searching
-    within a specific Humio repository using Humio's native query language. This is
-    a utility for threat hunting and investigation, enabling the retrieval of raw
-    event data directly into the Google SecOps platform for further analysis.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Repository Name** | String | Yes | The name of the Humio repository where
-    the search will be executed. |
-
-    | **Query** | String | Yes | The Humio query string to execute. Note: Do not include
-    the `head()` function as the action handles result limiting automatically. |
-
-    | **Max Results To Return** | Integer | No | The maximum number of event results
-    to retrieve. Defaults to 50. Must be a value greater than 0. |
-
-
-    ### Additional Notes
-
-    - This action does not operate on specific entities; it is a global search action
-    that returns data based on the provided query.
-
-    - Results are presented both as a raw JSON object and a formatted data table named
-    "Results" on the case wall.
+    Executes a custom search query against a specified repository in Humio to retrieve
+    event logs. This action allows analysts to perform ad-hoc investigations by querying
+    Humio's data store directly from the SOAR platform.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Humio manager using the provided
-    API root and token from the integration configuration.
+    1. The action extracts configuration parameters (API Root, API Token, Verify SSL)
+    and action parameters (Repository Name, Query, Max Results To Return).
 
-    2. **Parameter Validation**: It validates that the `Max Results To Return` parameter
-    is a positive integer.
+    2. It initializes the `HumioManager` to establish a connection with the Humio
+    API.
 
-    3. **Query Construction**: It constructs the final query string by appending the
-    `| head(limit)` clause to the user-provided query to ensure the result set matches
-    the requested limit.
+    3. The action constructs and executes a POST request to the Humio API endpoint
+    `/api/v1/repositories/{repository_name}/query` using the provided query and limit.
 
-    4. **Execution**: A POST request is sent to the Humio query API for the specified
-    repository.
+    4. The retrieved events are parsed into event objects.
 
-    5. **Output Generation**: If events are found, they are parsed into JSON objects
-    and a data table is created. If no results are found, the action completes with
-    a message indicating no data was returned.
+    5. The results are added to the action's JSON output and displayed as a data table
+    within the SOAR platform.
+
+
+    ### Additional Notes
+
+    The `head()` function should not be included in the query string, as the action
+    automatically applies the limit parameter to the query.
+  ai_short_description: >-
+    Executes a custom search query in Humio to retrieve and display event logs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -75,10 +40,48 @@ Execute Custom Search:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data from Humio by executing a query. It does not mutate
+      external data, nor does it mutate internal data (it only outputs results to
+      the action result). It does not update entities, create insights, modify alerts,
+      or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -92,160 +95,93 @@ Execute Custom Search:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter any entities. It performs a search
+      operation based on provided input parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a custom query against Humio to retrieve historical logs,
+      which directly matches the 'Search Events' outcome category. It does not perform
+      any other operations like enrichment, ticketing, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Repository Name | String | Yes | Specify the name of the repository that should
+    be searched. |
+
+    | Query | String | Yes | Specify the query that needs to be executed in Humio.
+    Note: "head()" function shouldn't be a part of this string. |
+
+    | Max Results To Return | String | No | Specify how many results the action should
+    return. Default: 50. |
 Execute Simple Search:
   ai_description: >-
     ### General Description
 
-    The **Execute Simple Search** action allows users to query events from a specific
-    Humio repository based on various filtering and sorting criteria. It is designed
-    to retrieve log data and present it within Google SecOps for investigation and
-    analysis.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Repository Name** | String | Yes | The name of the Humio repository to search
-    within. |
-
-    | **Query Filter** | String | No | A Humio query string to filter results. Note:
-    `head()` and `select()` functions should not be included as they are handled by
-    other parameters. |
-
-    | **Time Frame** | Enum | No | Predefined time ranges (e.g., Last Hour, Last 24
-    Hours). If set to 'Custom', **Start Time** must be provided. |
-
-    | **Start Time** | String | No | The start time for the search in ISO 8601 format.
-    Mandatory if **Time Frame** is 'Custom'. |
-
-    | **End Time** | String | No | The end time for the search in ISO 8601 format.
-    Defaults to the current time if left empty and **Time Frame** is 'Custom'. |
-
-    | **Fields To Return** | String | No | A comma-separated list of specific fields
-    to include in the results. If empty, all fields are returned. |
-
-    | **Sort Field** | String | No | The field name used to sort the results. |
-
-    | **Sort Field Type** | Enum | No | The data type of the sort field (String, Number,
-    or Hex). |
-
-    | **Sort Order** | Enum | No | The direction of sorting (ASC or DESC). |
-
-    | **Max Results To Return** | Integer | No | The maximum number of events to retrieve.
-    Default is 50. Must be greater than 0. |
-
-
-    ### Additional Notes
-
-    - Either a predefined **Time Frame** or a **Custom** time frame with a **Start
-    Time** must be configured for the action to execute successfully.
-
-    - The action automatically constructs the final Humio query by appending `select()`,
-    `head()`, and `sort()` operators based on the provided parameters.
+    Executes a search query against a Humio repository to retrieve historical event
+    logs. This action allows analysts to perform targeted searches by specifying a
+    repository, query filters, time frames, and sorting preferences, returning the
+    results directly to the SOAR platform for analysis.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves configuration settings (API
-    Root, Token) and user-provided search parameters.
+    1. **Parameter Extraction**: The action extracts configuration parameters (API
+    Root, API Token, Verify SSL) and action-specific parameters (Repository Name,
+    Query Filter, Time Frame, etc.).
 
-    2. **Time Validation:** It calculates the start and end timestamps based on the
-    selected **Time Frame**. If 'Custom' is selected, it validates that **Start Time**
-    is provided and is earlier than **End Time**.
+    2. **Input Validation**: Validates that the "Max Results To Return" is greater
+    than 0 and that the "Start Time" precedes the "End Time".
 
-    3. **Query Construction:** The `HumioManager` builds a Humio-compatible query
-    string by combining the **Query Filter** with the specified fields, result limit,
-    and sorting logic.
+    3. **Manager Initialization**: Initializes the `HumioManager` with the provided
+    API credentials and configuration.
 
-    4. **API Execution:** A POST request is sent to the Humio API's query endpoint
-    for the specified repository.
+    4. **API Interaction**: Calls `manager.get_events_by_custom_query`, which performs
+    a POST request to the Humio API endpoint (`/api/v1/repositories/{repository_name}/query`)
+    with the constructed query payload.
 
-    5. **Data Processing:** The returned JSON events are parsed into internal data
-    models.
-
-    6. **Output Generation:** If events are found, they are added to the case as a
-    JSON result and a formatted data table named 'Results'.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action populates the case with a data table named 'Results' and adds the
-      raw event data as JSON results.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Ping:
-  ai_description: >-
-    ### General Description
-
-    The **Ping** action is designed to verify the connectivity between Google SecOps
-    and the Humio instance. It ensures that the provided credentials (API Root and
-    API Token) are valid and that the network path is open by executing a minimal
-    test query.
-
-
-    ### Parameters Description
-
-    This action does not have any action-specific parameters. It relies on the following
-    integration configuration parameters:
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The base URL of the Humio API instance. |
-
-    | API Token | String | Yes | The API token used for authentication with Humio.
-    |
-
-    | Verify SSL | Boolean | Yes | Specifies whether to verify the SSL certificate
-    of the Humio server. |
+    5. **Result Processing**: If results are returned, the action adds the data to
+    the SOAR platform as a JSON object and a formatted data table. If no results are
+    found, an appropriate message is returned.
 
 
     ### Additional Notes
 
-    This action is typically used during the initial setup or troubleshooting of the
-    Humio integration to confirm that the environment can communicate with the Humio
-    API.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: The action retrieves the API Root, API Token, and
-    SSL verification settings from the integration configuration.
-
-    2. **Manager Initialization**: It initializes the `HumioManager` with the retrieved
-    connection settings.
-
-    3. **Connectivity Test**: It executes a minimal query (`|select([@id]) | head(1)`)
-    against the `humio-fleet` repository to verify API access and authentication.
-
-    4. **Result Reporting**: If the query succeeds, it returns a success message;
-    otherwise, it catches the exception and reports a failure with the error details.
+    This action supports both predefined time frames (e.g., Last Hour, Last 24 Hours)
+    and custom time ranges provided in ISO 8601 format. It does not modify any data
+    within Humio or the SOAR platform.
+  ai_short_description: >-
+    Executes a search query in Humio to retrieve and display event logs based on user-defined
+    criteria.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -256,10 +192,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST request to the Humio API to retrieve data (fetches_data=true).
+      It does not mutate external or internal data. It does not update entities, create
+      insights, or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -273,3 +246,214 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter by any entities. It operates solely
+      based on the parameters provided by the user to query the Humio API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a search against the Humio platform to retrieve historical
+      logs based on a query. This directly matches the 'Search Events' category. It
+      does not perform any enrichment, ticketing, or containment actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Repository Name | String | Yes | Specify the name of the repository that should
+    be searched. |
+
+    | Query Filter | String | No | Specify the query that should be executed. Functions
+    "head()" and "select()" should not be provided. |
+
+    | Time Frame | DDL | No | Specify a time frame for the results. If "Custom" is
+    selected, "Start Time" is required. |
+
+    | Start Time | String | No | Specify the start time for the results in ISO 8601
+    format. Mandatory if "Time Frame" is "Custom". |
+
+    | End Time | String | No | Specify the end time for the results in ISO 8601 format.
+    Defaults to current time if not provided. |
+
+    | Fields To Return | String | No | Specify which fields to return. If empty, all
+    fields are returned. |
+
+    | Sort Field | String | No | Specify the parameter to use for sorting. Defaults
+    to timestamp. |
+
+    | Sort Field Type | DDL | No | Specify the type of the field used for sorting
+    (String, Number, Hex). |
+
+    | Sort Order | DDL | No | Specify the order of sorting (ASC, DESC). |
+
+    | Max Results To Return | String | No | Specify the maximum number of results
+    to return. Default is 50. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Humio server using the provided API credentials. This
+    action verifies that the integration is correctly configured and can successfully
+    communicate with the Humio API.
+
+
+    ### Flow Description
+
+    1. The action extracts the required configuration parameters: `API Root`, `API
+    Token`, and `Verify SSL` from the integration settings.
+
+    2. It initializes the `HumioManager` with the provided credentials and SSL verification
+    setting.
+
+    3. The `HumioManager` executes the `test_connectivity` method, which sends a `POST`
+    request to the Humio API `ping` endpoint (`/api/v1/repositories/humio-fleet/query`)
+    with a test query payload.
+
+    4. The response is validated to ensure the connection is successful.
+
+    5. The action returns a success or failure message based on the outcome of the
+    API request.
+
+
+    ### Additional Notes
+
+    This action is intended for administrative use to validate integration settings.
+    It does not perform any data retrieval or modification operations on entities
+    or cases.
+  ai_short_description: >-
+    Tests connectivity to the Humio server using the provided API credentials.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity test by sending a POST request to the Humio
+      API. It does not fetch contextual data for entities, nor does it mutate any
+      external or internal data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action is a standalone connectivity test and does not interact with or filter
+      any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any of the defined outcome
+      actions such as enrichment, ticketing, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | API Root | String | Yes | The base URL for the Humio API. |
+
+    | API Token | String | Yes | The API token for authentication. |
+
+    | Verify SSL | Boolean | Yes | Whether to verify SSL certificates for the connection.
+    |

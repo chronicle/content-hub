@@ -1,67 +1,37 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Archive Findings:
   ai_description: >-
     ### General Description
 
-    Archives specific findings in AWS GuardDuty based on their unique identifiers.
-    This action is used to programmatically manage the lifecycle of GuardDuty findings
-    by moving them to an archived state, typically after they have been reviewed or
-    remediated.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Detector ID** | String | Yes | The unique identifier of the AWS GuardDuty
-    detector associated with the findings. |
-
-    | **Finding IDs** | String | Yes | A comma-separated list of the unique identifiers
-    for the findings that you want to archive. |
-
-    | **AWS Region** | String | No | Optionally specify the AWS Region to be used.
-    If not provided, the default region from the integration configuration will be
-    used. |
+    Archives specified AWS GuardDuty findings. This action allows users to mark specific
+    findings as archived in AWS GuardDuty, effectively removing them from the active
+    findings list.
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves AWS credentials and region settings from the
-    integration configuration and action parameters.
+    1. Extracts parameters: `Detector ID`, `Finding IDs`, and `AWS Region`.
 
-    2. **Connectivity Check**: Validates the connection to the AWS GuardDuty service.
+    2. Initializes the `AWSGuardDutyManager` with the provided AWS credentials.
 
-    3. **ID Parsing**: Converts the comma-separated string of Finding IDs into a list.
+    3. Validates connectivity to the AWS GuardDuty service.
 
-    4. **Verification**: Fetches the details of the specified findings from AWS to
-    verify their existence within the specified detector.
+    4. Parses the comma-separated `Finding IDs` parameter into a list.
 
-    5. **Archiving**: Iterates through the verified findings and calls the AWS API
-    to archive each one individually.
+    5. Retrieves the findings from AWS using `get_findings_by_ids` to verify their
+    existence.
 
-    6. **Reporting**: Compiles a summary message indicating which findings were successfully
-    archived and which ones could not be processed.
+    6. Iterates through the verified findings and calls the `archive_findings` API
+    method for each.
+
+    7. Reports the success or failure for each finding in the final output message.
 
 
     ### Additional Notes
 
-    This action does not operate on SecOps entities; it relies entirely on the provided
-    `Detector ID` and `Finding IDs` parameters.
+    Requires valid AWS credentials configured in the integration. This action performs
+    a state change in AWS GuardDuty.
+  ai_short_description: >-
+    Archives specified AWS GuardDuty findings by ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -70,13 +40,50 @@ Archive Findings:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Changes the status of specified findings in AWS GuardDuty to 'Archived'.
+      Archives the specified findings in AWS GuardDuty.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to fetch findings (fetches_data=true) and a POST/PUT
+      request to archive them (can_mutate_external_data=true). It does not mutate
+      internal data or update entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -90,57 +97,87 @@ Archive Findings:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on `target_entities`. It uses parameters (`Finding
+      IDs`) to perform operations. Therefore, all entity flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches findings from AWS GuardDuty to verify their existence before
+      archiving them, which matches the 'Get Alert Information' category. It also
+      performs a state change in AWS by archiving the findings, but this does not
+      map to any of the other provided categories (e.g., it is not an alert update
+      in SecOps, nor a ticket creation).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | The unique ID of the detector. |
+
+    | Finding IDs | String | Yes | The IDs of the findings that you want to archive.
+    Comma separated ids. |
+
+    | AWS Region | String | No | Optionally specify the AWS Region to be used in the
+    action that can be different from the default region specified in the integration
+    configuration page. |
 Create Sample Findings:
   ai_description: >-
     ### General Description
 
-    The **Create Sample Findings** action allows users to generate mock findings within
-    a specified AWS GuardDuty detector. This is primarily used for testing detection
-    pipelines, verifying connector configurations, or demonstrating GuardDuty capabilities
-    within the Google SecOps environment.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Detector ID** | String | Yes | The unique identifier of the AWS GuardDuty
-    detector where the sample findings should be generated. |
-
-    | **Finding Types** | String | No | A comma-separated list of specific GuardDuty
-    finding types to generate (e.g., `Recon:EC2/PortProbeUnprotectedPort`). |
-
-
-    ### Additional Notes
-
-    - This action requires valid AWS credentials with permissions to call the `CreateSampleFindings`
-    API.
-
-    - **Note on Logic**: While the parameter description in the metadata suggests
-    that leaving 'Finding Types' empty generates all types, the current script implementation
-    requires at least one type to be specified in the parameter to trigger the creation
-    process; otherwise, it will report that no samples were created.
+    Generates example findings in AWS GuardDuty for a specified detector. This action
+    allows users to create sample findings to test their security monitoring and alerting
+    configurations within AWS GuardDuty.
 
 
     ### Flow Description
 
-    1. **Credential Initialization**: Retrieves AWS Access Key, Secret Key, and Region
-    from the integration configuration.
+    1. Extracts `Detector ID` and `Finding Types` from action parameters.
 
-    2. **Connectivity Check**: Validates the connection to the AWS GuardDuty service
-    using the `test_connectivity` method.
+    2. Initializes `AWSGuardDutyManager` with AWS credentials.
 
-    3. **Parameter Parsing**: Converts the comma-separated 'Finding Types' string
-    into a Python list.
+    3. Validates connectivity to the AWS GuardDuty service.
 
-    4. **Finding Generation**: If finding types are provided, the action calls the
-    AWS GuardDuty API to generate the requested sample findings for the specified
-    Detector ID.
+    4. If `Finding Types` are provided, converts them into a list.
 
-    5. **Result Reporting**: Returns a success status and an output message indicating
-    whether the findings were successfully requested.
+    5. Calls the `create_sample_findings` API method of the AWS GuardDuty service
+    using the provided `Detector ID` and `Finding Types`.
+
+    6. Returns a success or failure status based on the API response.
+
+
+    ### Additional Notes
+
+    This action performs a write operation on the AWS GuardDuty service to generate
+    sample data. It does not operate on any entities within the SOAR platform.
+  ai_short_description: >-
+    Generates sample findings in AWS GuardDuty for a specified detector.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -149,14 +186,49 @@ Create Sample Findings:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Generates new sample finding records within the AWS GuardDuty service for the
-      specified detector.
+      Generates sample findings within the AWS GuardDuty service.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to create sample findings in AWS GuardDuty (can_mutate_external_data=true).
+      It does not fetch context data or update internal entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -170,73 +242,88 @@ Create Sample Findings:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not use target entities; it operates on a specific Detector
+      ID provided as a parameter.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action generates sample findings in AWS GuardDuty. This does not align with
+      any of the predefined outcome categories (e.g., enrichment, ticketing, containment).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | The unique ID of the detector to create sample
+    findings for. |
+
+    | Finding Types | String | No | The types of sample findings to generate. Comma
+    separated values. If empty, example findings of all supported finding types will
+    be generated. |
 Create Threat Intelligence Set:
   ai_description: >-
     ### General Description
 
-    This action creates a new Threat Intelligence Set in AWS GuardDuty. A Threat Intelligence
-    Set consists of known malicious IP addresses that GuardDuty uses to generate findings.
-    The action requires a file containing the threat list to be hosted in an accessible
-    S3 bucket. Users can specify the file format, activation status, and resource
-    tags.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Detector ID | String | Yes | The unique identifier of the GuardDuty detector
-    where the set will be created. This can be found in the AWS GuardDuty 'Settings'
-    tab. |
-
-    | Name | String | Yes | A descriptive name for the new Threat Intelligence Set.
-    |
-
-    | File Format | Enum | Yes | The format of the threat list file. Supported formats
-    include Plaintext, STIX, OTX CSV, FireEye iSIGHT CSV, Proofpoint ET CSV, and AlienVault
-    Reputation Feed. |
-
-    | File Location | String | Yes | The S3 URI location of the file (e.g., `https://s3.amazonaws.com/my-bucket/threats.txt`).
-    |
-
-    | Active | Boolean | Yes | If set to 'true', the Threat Intelligence Set will
-    be activated immediately upon creation. |
-
-    | Tags | String | No | Additional metadata tags to apply to the AWS resource.
-    Format: `key_1:value_1,key_2:value_2`. |
-
-
-    ### Additional Notes
-
-    - The AWS IAM role or user associated with the credentials must have the `guardduty:CreateThreatIntelSet`
-    permission and potentially `iam:PutRolePolicy` depending on the environment configuration.
-
-    - AWS GuardDuty limits the maximum number of Threat Intelligence Sets to 6 per
-    detector.
+    Creates a new Threat Intelligence Set in AWS GuardDuty. This action allows users
+    to configure a new threat intelligence feed by specifying the detector ID, name,
+    file format, and location of the threat intelligence file. It also allows for
+    the activation of the set and the addition of custom tags.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves AWS configuration (Access Key, Secret
-    Key, Region) and action-specific parameters (Detector ID, Name, Format, Location,
-    Activation status, and Tags).
+    1. The action extracts the required AWS credentials (Access Key, Secret Key, Region)
+    and action parameters (Detector ID, Name, File Format, File Location, Active,
+    Tags) from the configuration.
 
-    2. **Format Mapping**: The user-friendly file format selection is mapped to the
-    internal AWS format identifiers (e.g., 'Plaintext' maps to 'TXT').
+    2. It initializes the `AWSGuardDutyManager` and performs a connectivity test to
+    ensure the credentials are valid.
 
-    3. **Connectivity Check**: The action establishes a connection to the AWS GuardDuty
-    service and validates the provided credentials.
+    3. The action calls the `manager.create_threat_intel_set` method, which sends
+    a request to the AWS GuardDuty API to create the Threat Intelligence Set with
+    the provided configuration.
 
-    4. **Tag Parsing**: If tags are provided, they are parsed from a comma-separated
-    string into a dictionary format required by the AWS SDK.
+    4. Upon successful creation, the action logs the new Threat Intelligence Set ID
+    and adds it to the result JSON.
 
-    5. **Resource Creation**: The action calls the AWS GuardDuty API to create the
-    Threat Intelligence Set with the specified parameters.
+    5. The action concludes by setting the execution state to completed and returning
+    the output message.
 
-    6. **Result Handling**: Upon successful creation, the action retrieves the unique
-    `ThreatIntelSetId` from AWS, adds it to the JSON results, and completes the execution.
+
+    ### Additional Notes
+
+    - This action requires the `iam:PutRolePolicy` permission in AWS.
+
+    - There is a maximum limit of 6 Threat Intelligence sets per detector.
+  ai_short_description: >-
+    Creates a new Threat Intelligence Set in AWS GuardDuty.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -245,13 +332,50 @@ Create Threat Intelligence Set:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new Threat Intelligence Set resource within the AWS GuardDuty service.
+      Creates a new Threat Intelligence Set in AWS GuardDuty.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to the AWS GuardDuty API to create a new Threat
+      Intelligence Set (can_mutate_external_data=true). It does not fetch context
+      data, update internal entities, or modify alert/case data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -265,27 +389,100 @@ Create Threat Intelligence Set:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize any entities from the SOAR platform. It performs
+      a configuration task in AWS GuardDuty, therefore all entity type flags are set
+      to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new Threat Intelligence Set in AWS GuardDuty. This is a
+      configuration/management operation that does not match the expected outcomes
+      of the provided categories (e.g., enrichment, alert/ticket management, identity
+      management, host containment, or email/file/message operations).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | Specify the detector ID that should be used to
+    create a Threat Intelligence Set. This parameter can be found in the "Settings"
+    tab. |
+
+    | Name | String | Yes | Specify the name of the Threat Intelligence Set. |
+
+    | File Format | DDL | Yes | Select the format of the file that should be used
+    to create a threat intelligence set (e.g., Plaintext, STIX, OTX CSV, FireEye iSIGHT
+    CSV, Proofpoint ET Intelligence Feed CSV, AlienVault Reputation Feed). |
+
+    | File Location | String | Yes | Specify the URI location, where the file is located
+    (e.g., https://s3.amazonaws.com/{bucket-name}/file.txt). |
+
+    | Active | Boolean | Yes | If enabled, the newly created Threat Intelligence Set
+    will be activated. |
+
+    | Tags | String | No | Specify additional tags that should be added to the Threat
+    Intelligence Set. Format: key_1:value_1,key_2:value_1. |
 Create a Detector:
-  ai_description: "### General Description\nThis action creates a single Amazon GuardDuty\
-    \ detector in a specified AWS account and region. A detector is a fundamental\
-    \ resource that represents the GuardDuty service; it must be created in each region\
-    \ where you want to enable GuardDuty. Note that AWS allows only one detector per\
-    \ account per region.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Enable | Boolean | Yes | Specifies\
-    \ whether the detector should be enabled immediately upon creation. Default is\
-    \ 'false'. |\n\n### Additional Notes\n- If a detector already exists for the configured\
-    \ AWS account and region, the action will complete successfully but will return\
-    \ a result value of 'false' and an informative message instead of creating a duplicate.\n\
-    - This action does not operate on entities and is typically used for infrastructure\
-    \ setup or management tasks.\n\n### Flow Description\n1. **Initialization**: The\
-    \ action retrieves AWS configuration (Access Key, Secret Key, Region) and the\
-    \ 'Enable' parameter.\n2. **Connectivity Check**: It establishes a connection\
-    \ to the AWS GuardDuty service and validates the provided credentials.\n3. **Resource\
-    \ Creation**: It attempts to create a new detector using the AWS SDK.\n4. **Result\
-    \ Handling**: \n    - If successful, it captures the new `detectorId` and returns\
-    \ it in the JSON results.\n    - If a detector already exists, it catches the\
-    \ specific exception and notifies the user.\n    - If an error occurs, it logs\
-    \ the failure and terminates with a failed status."
+  ai_description: >-
+    ### General Description
+
+    Creates a new Amazon GuardDuty detector in the specified AWS region. A detector
+    is a resource that represents the GuardDuty service, and this action enables the
+    service for the account in that region. Note that only one detector is allowed
+    per account per region.
+
+
+    ### Flow Description
+
+    1. The action initializes the `AWSGuardDutyManager` using the provided AWS credentials
+    (Access Key, Secret Key, and Default Region).
+
+    2. It validates connectivity to the AWS GuardDuty service.
+
+    3. It calls the `create_detector` method, passing the `Enable` parameter to determine
+    if the detector should be enabled upon creation.
+
+    4. If the detector is successfully created, the action returns the `detectorId`
+    in the JSON results.
+
+    5. If a detector already exists for the account, the action catches the `AWSGuardDutyResourceAlreadyExistsException`
+    and reports that the action could not create a new detector.
+
+
+    ### Additional Notes
+
+    This action requires valid AWS credentials with appropriate permissions to manage
+    GuardDuty resources. It does not operate on any specific entities within the SOAR
+    platform.
+  ai_short_description: >-
+    Creates a new Amazon GuardDuty detector in the specified AWS region.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -294,14 +491,50 @@ Create a Detector:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new Amazon GuardDuty detector resource in the specified AWS account
-      and region.
+      Creates a new Amazon GuardDuty detector in the specified AWS region.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST-like operation to create a resource in an external
+      system (AWS GuardDuty), thus mutating external data. It does not fetch data,
+      update internal entities, or modify internal alert/case data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -315,69 +548,79 @@ Create a Detector:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or utilize any entities from the SOAR platform.
+      It operates on the AWS account level.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new infrastructure resource (GuardDuty detector) in AWS.
+      It does not match any of the predefined outcome categories such as enrichment,
+      ticketing, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Enable | Boolean | Yes | Specifies whether the detector is to be enabled upon
+    creation. |
 Create a Trusted IP List:
   ai_description: >-
     ### General Description
 
-    This action creates a new Trusted IP List (IPSet) in AWS GuardDuty. Trusted IP
-    lists consist of IP addresses that are whitelisted for secure communication with
-    AWS infrastructure and applications. Once an IP address is included in an active
-    Trusted IP List, GuardDuty will no longer generate findings for that specific
-    address. Note that only one Trusted IP set can be active at a time within a detector,
-    and this operation is typically restricted to users from the master account.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Detector ID** | String | Yes | The unique identifier of the GuardDuty detector
-    where the list should be created. This can be found in the AWS GuardDuty 'Settings'
-    tab. |
-
-    | **Name** | String | Yes | The display name for the new Trusted IP List. |
-
-    | **File Format** | String | Yes | The format of the file containing the IP addresses.
-    Supported formats include Plaintext, STIX, OTX CSV, FireEye iSIGHT CSV, Proofpoint
-    ET Intelligence CSV, and AlienVault Reputation Feed. |
-
-    | **File Location** | String | Yes | The S3 URI location (e.g., `https://s3.amazonaws.com/bucket/file.txt`)
-    where the IP list file is stored. |
-
-    | **Activate** | Boolean | Yes | If set to `true`, the newly created Trusted IP
-    List will be activated immediately upon creation. |
-
-    | **AWS Region** | String | No | The specific AWS Region to use for this action.
-    If not provided, the default region from the integration configuration will be
-    used. |
-
-
-    ### Additional Notes
-
-    - Only one Trusted IP set can be active at any given time per detector.
-
-    - The action returns the `TrustedIPID` of the newly created resource in the JSON
-    results.
+    Creates a new Trusted IP List (IPSet) in AWS GuardDuty. This list is used to whitelist
+    IP addresses, preventing GuardDuty from generating findings for them. This action
+    is useful for managing trusted infrastructure and reducing false positives in
+    security monitoring.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves AWS credentials and region settings
-    from the integration configuration and action parameters.
+    1. Extracts AWS credentials and action parameters (Detector ID, Name, File Format,
+    File Location, Activate, AWS Region).
 
-    2. **Connectivity Check**: It establishes a connection to the AWS GuardDuty service
-    and validates the credentials.
+    2. Initializes the `AWSGuardDutyManager` with the provided credentials and region.
 
-    3. **Resource Creation**: It calls the AWS GuardDuty API to create a new IPSet
-    using the provided name, file format, and S3 location.
+    3. Validates connectivity to the AWS GuardDuty service.
 
-    4. **Activation**: If the 'Activate' parameter is enabled, the action instructs
-    AWS to enable the list immediately.
+    4. Calls the `create_ip_set` method of the `AWSGuardDutyManager` to create the
+    Trusted IP List in AWS GuardDuty.
 
-    5. **Completion**: The action captures the unique ID of the new Trusted IP List
-    and reports a successful execution status.
+    5. Returns the ID of the newly created Trusted IP List in the action results.
+
+
+    ### Additional Notes
+
+    Only users from the master account can perform this operation. Only one Trusted
+    IP set can be created and activated.
+  ai_short_description: >-
+    Creates a new Trusted IP List (IPSet) in AWS GuardDuty to whitelist IP addresses.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -386,14 +629,51 @@ Create a Trusted IP List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new Trusted IP List (IPSet) resource within the AWS GuardDuty service
-      and optionally activates it.
+      Creates a new Trusted IP List (IPSet) in AWS GuardDuty.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST-like operation (create_ip_set) to the AWS GuardDuty
+      API to create a new Trusted IP List. This is a state-changing operation on an
+      external system (AWS). It does not fetch data from entities, update internal
+      entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -407,53 +687,100 @@ Create a Trusted IP List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It operates on global parameters provided by the user to interact
+      with the AWS GuardDuty service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: true
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a Trusted IP List in AWS GuardDuty, which effectively whitelists
+      IP addresses to prevent findings. This matches the 'Add IOC To Allowlist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | Specify the detector ID that should be used to
+    create a Trusted IP List. |
+
+    | Name | String | Yes | Specify the name of the Trusted IP List. |
+
+    | File Format | DDL | Yes | Select the format of the file that should be used
+    to create a Trusted IP List. |
+
+    | File Location | String | Yes | Specify the URI location, where the file is located.
+    |
+
+    | Activate | Boolean | Yes | If enabled, the newly created Trusted IP List will
+    be activated. |
+
+    | AWS Region | String | No | Optionally specify the AWS Region to be used in the
+    action that can be different from the default region specified in the integration
+    configuration page. |
 Delete Threat Intelligence Set:
   ai_description: >-
     ### General Description
 
-    Deletes specified threat intelligence sets from an AWS GuardDuty detector. This
-    action is used to manage and clean up threat intelligence sources that are no
-    longer needed or are outdated within the AWS environment.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Detector ID | String | Yes | The unique ID of the AWS GuardDuty detector where
-    the threat intelligence sets reside. |
-
-    | Threat Intelligence Set IDs | String | Yes | A comma-separated list of the unique
-    identifiers for the threat intelligence sets to be deleted. |
-
-
-    ### Additional Notes
-
-    - The action validates the existence of the detector before attempting to delete
-    the sets.
-
-    - It processes multiple IDs in a single execution and provides a summary of successful
-    and failed deletions.
+    Deletes specified threat intelligence sets from AWS GuardDuty. This action allows
+    users to remove existing threat intelligence lists from a specific detector by
+    providing the detector ID and a comma-separated list of threat intelligence set
+    IDs.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieves AWS configuration and action parameters
-    (Detector ID and TI Set IDs).
+    1. Extracts AWS credentials (Access Key, Secret Key, Region) and action parameters
+    (`Detector ID`, `Threat Intelligence Set IDs`) from the configuration.
 
-    2. **Connection & Validation**: Establishes a connection to AWS GuardDuty and
-    verifies that the provided Detector ID exists.
+    2. Initializes the `AWSGuardDutyManager` and performs a connectivity test to ensure
+    the service is accessible.
 
-    3. **ID Parsing**: Converts the comma-separated string of Threat Intelligence
-    Set IDs into a list.
+    3. Validates the existence of the specified detector using the `get_detector`
+    method.
 
-    4. **Deletion Loop**: Iterates through the list of IDs, calling the AWS API to
-    delete each threat intelligence set.
+    4. Iterates through the provided list of Threat Intelligence Set IDs.
 
-    5. **Result Reporting**: Aggregates the results of the deletion attempts and returns
-    a summary message to the SOAR platform.
+    5. For each ID, calls the `delete_threat_intel_set_by_id` method to remove the
+    threat intelligence set from AWS GuardDuty.
+
+    6. Collects the results of each deletion attempt and generates a summary message
+    indicating which sets were successfully deleted and which failed.
+
+
+    ### Additional Notes
+
+    This action performs a destructive operation on AWS GuardDuty resources. Ensure
+    that the provided Threat Intelligence Set IDs are correct, as this action will
+    permanently remove the specified sets from the detector's configuration.
+  ai_short_description: >-
+    Deletes specified threat intelligence sets from AWS GuardDuty.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -462,14 +789,50 @@ Delete Threat Intelligence Set:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes threat intelligence sets from AWS GuardDuty using the delete_threat_intel_set
-      API call.
-    fetches_data: true
+      Deletes threat intelligence sets from AWS GuardDuty.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a state-changing operation (deletion) on an external system
+      (AWS GuardDuty). It does not fetch data, update internal entities, or modify
+      alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -483,50 +846,76 @@ Delete Threat Intelligence Set:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with entities. It operates on static configuration
+      parameters provided by the user to perform management tasks in AWS GuardDuty.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes threat intelligence sets from AWS GuardDuty. This is a management/administrative
+      action that does not fit into the provided enrichment, ticketing, or specific
+      IOC blocking/allowlisting categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Detector ID | String | Yes | Specify the detector ID that\
+    \ should be used to get threat intelligence sets details. This parameter can be\
+    \ found in the \u201CSettings\u201D tab. |\n| Threat Intelligence Set IDs | String\
+    \ | Yes | Specify the comma-separated list of ids of threat intelligence sets.\
+    \ Example: id_1,id_2 |"
 Delete a Detector:
   ai_description: >-
     ### General Description
 
-    Deletes a specific Amazon GuardDuty detector using its unique identifier. A detector
-    is a resource that represents the GuardDuty service within an AWS account and
-    region. Deleting a detector effectively disables GuardDuty in that specific region
-    for the account.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Detector ID | String | Yes | The unique ID of the Amazon GuardDuty detector
-    that you want to delete. |
-
-
-    ### Additional Notes
-
-    - This action requires valid AWS credentials (Access Key ID and Secret Key) and
-    the correct AWS Default Region configured in the integration settings.
-
-    - Deleting a detector is a destructive action and will stop all GuardDuty monitoring
-    and findings generation in the associated region.
+    Deletes an Amazon GuardDuty detector using the provided Detector ID. This action
+    interacts with the AWS GuardDuty service to remove a specific detector resource.
 
 
     ### Flow Description
 
-    1. **Parameter Initialization**: The action retrieves AWS configuration details
-    (Access Key, Secret Key, Region) and the mandatory `Detector ID` from the input.
+    1. Extracts AWS credentials (Access Key, Secret Key, Region) and the `Detector
+    ID` from the action parameters.
 
-    2. **Connectivity Validation**: It establishes a connection to the AWS GuardDuty
-    service and performs a connectivity test to ensure the credentials and region
-    are valid.
+    2. Initializes the `AWSGuardDutyManager` with the provided credentials.
 
-    3. **Deletion Execution**: The action calls the AWS SDK to delete the detector
-    specified by the `Detector ID`.
+    3. Validates connectivity to the AWS GuardDuty service.
 
-    4. **Result Reporting**: If the deletion is successful, the action completes with
-    a success status and a confirmation message. If an error occurs (e.g., invalid
-    ID or insufficient permissions), it logs the error and returns a failure status.
+    4. Calls the `delete_detector` method of the `AWSGuardDutyManager` to remove the
+    specified detector from AWS.
+
+    5. Logs the outcome and returns a success or failure status.
+
+
+    ### Additional Notes
+
+    This action performs a destructive operation in the AWS environment. Ensure the
+    `Detector ID` is correct before execution.
+  ai_short_description: >-
+    Deletes a specified Amazon GuardDuty detector.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -535,14 +924,50 @@ Delete a Detector:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes an Amazon GuardDuty detector resource from the target AWS account and
-      region.
+      Deletes an Amazon GuardDuty detector resource in the AWS environment.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a DELETE request to the AWS GuardDuty API to remove a detector.
+      This mutates external data (AWS environment) but does not fetch data, update
+      internal entities, or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -556,25 +981,624 @@ Delete a Detector:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It operates on a provided `Detector ID` parameter, so no entity
+      flags are set.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes an AWS GuardDuty detector. This is an administrative management
+      action that does not fall into any of the provided categories (e.g., enrichment,
+      ticketing, identity management, or IOC blocking).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | The unique ID of the detector that you want to
+    delete. |
 Delete a Trusted IP list:
   ai_description: >-
-    Deletes one or more Trusted IP lists (IPSets) from AWS GuardDuty based on provided
-    IDs. This action is used to manage and clean up IP reputation lists within the
+    ### General Description
+
+    Deletes specified Trusted IP lists (IPSets) from AWS GuardDuty for a given detector.
+    This action allows users to remove existing IP sets by providing their IDs, effectively
+    managing the allowlist configuration within the AWS GuardDuty service.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (AWS credentials, region) and action parameters
+    (Detector ID, Trusted IP List IDs).
+
+    2. Initializes the `AWSGuardDutyManager` and validates connectivity to the AWS
     GuardDuty service.
 
+    3. Validates the existence of the provided `Detector ID` by calling the AWS GuardDuty
+    API.
 
-    ### Parameters
+    4. Iterates through the provided list of Trusted IP List IDs.
 
-    | Parameter Name | Type | Mandatory | Description |
+    5. Calls the `delete_ip_set_by_id` method in the AWS GuardDuty API for each ID.
 
-    | :--- | :--- | :--- | :--- |
+    6. Reports success or failure for each ID in the final output message.
 
-    | Detector ID | String | Yes | The unique identifier of the GuardDuty detector
-    associated with the IP sets. This can be found in the AWS GuardDuty Settings tab.
+
+    ### Additional Notes
+
+    Requires valid AWS credentials with appropriate permissions to manage GuardDuty
+    IP sets.
+  ai_short_description: >-
+    Deletes specified Trusted IP lists from AWS GuardDuty.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes Trusted IP lists from AWS GuardDuty.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to validate the detector and a DELETE request
+      to remove IP sets from AWS GuardDuty. It does not mutate internal SOAR data
+      or update entities.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `target_entities` or use entity-specific identifiers.
+      It relies on user-provided parameters (`Detector ID` and `Trusted IP List IDs`)
+      to perform its operations. Therefore, no entity flags are set.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes a 'Trusted IP List' in AWS GuardDuty. In GuardDuty, Trusted
+      IP lists are used to suppress findings for known good IPs (allowlisting). Deleting
+      these lists removes the allowlist status for those IPs. This matches the 'Remove
+      IOC From Allowlist' category.
+    remove_ioc_from_allowlist: true
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | The detector ID associated with the IP sets. |
+
+    | Trusted IP List IDs | String | Yes | Comma-separated list of IP set IDs to delete.
     |
+Get Detector Details:
+  ai_description: >-
+    ### General Description
 
-    | Trusted IP List IDs | String | Yes | A comma-separated list of the unique identifiers
-    for the Trusted IP lists (IPSets) to be deleted. |
+    Retrieves configuration and status details for one or more Amazon GuardDuty detectors.
+    This action allows users to query specific detectors by their unique IDs to obtain
+    information such as service role, status, and creation timestamps.
+
+
+    ### Flow Description
+
+    1. The action initializes the AWS GuardDuty manager using the provided AWS credentials
+    and region.
+
+    2. It parses the input `Detector ID` parameter, splitting it into a list if multiple
+    IDs are provided.
+
+    3. For each detector ID, the action calls the `get_detector_details` method via
+    the AWS GuardDuty API.
+
+    4. Successfully retrieved detector details are collected, formatted into a CSV
+    table, and stored in a JSON result object.
+
+    5. The action concludes by outputting the aggregated detector information to the
+    action results.
+
+
+    ### Additional Notes
+
+    This action is read-only and does not modify any data in AWS or the SOAR platform.
+  ai_short_description: >-
+    Retrieves configuration and status details for specified Amazon GuardDuty detectors.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the AWS GuardDuty API to retrieve detector
+      details. It does not mutate any external or internal data, nor does it update
+      entities, insights, or alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on target entities. It takes a manual input parameter
+      'Detector ID' to fetch data from the AWS API, so no entity filtering logic is
+      applied.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (status, service role, timestamps)
+      for an AWS resource (Detector). This aligns with the 'Enrich Asset' category,
+      as it provides context for a managed resource.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | The unique ID of the detector that you want to
+    retrieve. Supports comma-separated values. |
+Get Finding Details:
+  ai_description: "### General Description\nRetrieves detailed information about specific\
+    \ findings from AWS GuardDuty. This action allows analysts to query the AWS GuardDuty\
+    \ service for comprehensive data regarding identified security findings by providing\
+    \ the relevant Detector ID and a list of Finding IDs.\n\n### Flow Description\n\
+    1. **Initialization**: The action initializes the `AWSGuardDutyManager` using\
+    \ the provided AWS credentials and region.\n2. **Connectivity Check**: It validates\
+    \ connectivity to the AWS GuardDuty service by testing the connection.\n3. **Data\
+    \ Retrieval**: The action calls the `get_findings_by_ids` method of the `AWSGuardDutyManager`\
+    \ to fetch detailed information for the specified Finding IDs within the given\
+    \ Detector ID.\n4. **Result Processing**: \n   - If findings are successfully\
+    \ retrieved, the action adds a data table containing the finding details to the\
+    \ action results.\n   - It compiles a summary message indicating which findings\
+    \ were successfully retrieved and which were not.\n   - The raw data for the retrieved\
+    \ findings is added to the action's result JSON.\n5. **Finalization**: The action\
+    \ concludes by returning the status and the compiled output message.\n\n### Additional\
+    \ Notes\nThis action is a read-only operation and does not perform any mutations\
+    \ on the AWS GuardDuty environment or the internal SOAR platform data."
+  ai_short_description: >-
+    Retrieves detailed information for specific AWS GuardDuty findings.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from an external system (AWS GuardDuty) via an API call.
+      It does not mutate any external or internal data, nor does it update entities,
+      create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on target entities. It takes input parameters (Finding
+      IDs and Detector ID) directly from the action configuration to perform its query.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches detailed information about specific findings (alerts) from
+      the AWS GuardDuty service. This directly matches the 'Get Alert Information'
+      outcome category. It does not perform any enrichment of IOCs or assets, nor
+      does it modify any data.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Finding IDs | String | Yes | The IDs of the findings that you want to retrieve.
+    Comma separated ids. |
+
+    | Detector ID | String | Yes | The unique ID of the detector that you want to
+    retrieve. |
+
+    | AWS Region | String | No | Optionally specify the AWS Region to be used in the
+    action that can be different from the default region specified in the integration
+    configuration page. |
+Get Threat Intelligence Set Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves details about specific threat intelligence sets from AWS GuardDuty.
+    This action allows users to query the AWS GuardDuty service to obtain configuration
+    and status information for defined threat intelligence sets, which are used to
+    monitor for malicious activity.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action extracts the required AWS credentials
+    (Access Key, Secret Key, Default Region) and action-specific parameters (Detector
+    ID, Threat Intelligence Set IDs, and optional AWS Region).
+
+    2. **Initialization**: Initializes the `AWSGuardDutyManager` and validates connectivity
+    to the AWS GuardDuty service.
+
+    3. **Validation**: Verifies that the specified Detector ID exists within the AWS
+    environment.
+
+    4. **Data Retrieval**: Iterates through the provided list of Threat Intelligence
+    Set IDs and calls the `get_threat_intel_set_by_id` API method for each ID to fetch
+    its details.
+
+    5. **Output Generation**: Aggregates the retrieved information into a data table
+    and a JSON result object, which are then returned to the SOAR platform.
+
+
+    ### Additional Notes
+
+    This action requires valid AWS credentials with appropriate permissions to access
+    GuardDuty resources. The 'Threat Intelligence Set IDs' parameter must be provided
+    as a comma-separated list.
+  ai_short_description: >-
+    Retrieves details about specific threat intelligence sets from AWS GuardDuty.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the AWS GuardDuty API to retrieve information
+      about threat intelligence sets. It does not mutate any external or internal
+      data, nor does it update entities, insights, or alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on target entities. It uses static input parameters
+      to query AWS GuardDuty directly.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration details for threat intelligence sets from
+      AWS GuardDuty. It does not enrich specific indicators (IOCs), update alerts,
+      or perform any other listed outcome category actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | Specify the detector ID that should be used to
+    get threat intelligence sets details. This parameter can be found in the "Settings"
+    tab. |
+
+    | Threat Intelligence Set IDs | String | Yes | Specify the comma-separated list
+    of ids of threat intelligence sets. Example: id_1,id_2. |
+
+    | AWS Region | String | No | Optionally specify the AWS Region to be used in the
+    action that can be different from the default region specified in the integration
+    configuration page. |
+Get a Trusted IP List:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed configuration information about specific Trusted IP Lists (IP
+    Sets) from AWS GuardDuty. This action allows analysts to inspect the status, format,
+    and location of defined IP sets within a specific GuardDuty detector.
 
 
     ### Flow Description
@@ -582,104 +1606,77 @@ Delete a Trusted IP list:
     1. **Initialization**: The action initializes the AWS GuardDuty manager using
     the provided AWS credentials and region.
 
-    2. **Connectivity Check**: It validates the connection to AWS and verifies that
-    the specified Detector ID exists.
+    2. **Validation**: It validates connectivity to the AWS GuardDuty service and
+    confirms the existence of the specified Detector ID.
 
-    3. **Parsing**: The comma-separated string of Trusted IP List IDs is parsed into
-    a list.
+    3. **Data Retrieval**: The action iterates through the provided list of Trusted
+    IP List IDs.
 
-    4. **Execution**: The action iterates through each IP List ID and attempts to
-    delete it from the specified GuardDuty detector.
+    4. **API Interaction**: For each ID, it calls the `get_ip_set_by_id` method via
+    the AWS GuardDuty API to fetch the IP set details.
 
-    5. **Reporting**: It tracks which deletions were successful and which failed,
-    providing a summary message and setting the action result to true if at least
-    one deletion succeeded.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Deletes specified IP sets (Trusted IP lists) from the AWS GuardDuty service
-      configuration.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Detector Details:
-  ai_description: >-
-    ### General Description
-
-    The **Get Detector Details** action retrieves comprehensive information about
-    specific Amazon GuardDuty detectors. It is used to audit the status and configuration
-    of GuardDuty resources within an AWS environment, providing visibility into whether
-    the service is enabled and which IAM roles are associated with it.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Detector ID | String | Yes | A comma-separated list of unique Amazon GuardDuty
-    detector IDs to retrieve details for. |
-
-
-    ### Flow Description
-
-    1. **Authentication**: The action establishes a connection to the AWS GuardDuty
-    service using the provided Access Key, Secret Key, and Region.
-
-    2. **Input Parsing**: It splits the comma-separated string of Detector IDs into
-    a list for processing.
-
-    3. **Data Retrieval**: For each Detector ID, the action calls the AWS API to fetch
-    details such as the detector's status (e.g., ENABLED), the associated service
-    role ARN, and timestamps for creation and last update.
-
-    4. **Output Generation**: The retrieved data is formatted into a data table named
-    'Detectors Details' and a raw JSON result for further use in the playbook.
+    5. **Output Generation**: Successfully retrieved details are compiled into a data
+    table and a JSON result object, which are then added to the action's output.
 
 
     ### Additional Notes
 
-    If multiple IDs are provided and some are invalid, the action will report the
-    successful retrievals and list the IDs it was unable to find. If no valid detectors
-    are found, the action will fail.
+    This action is read-only and does not modify any resources in AWS GuardDuty. It
+    requires a valid Detector ID and the specific IDs of the Trusted IP Lists to be
+    retrieved.
+  ai_short_description: >-
+    Retrieves configuration details for specified Trusted IP Lists from AWS GuardDuty.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table named 'Detectors Details' and JSON results containing the
-      detector configuration and status to the Google SecOps case.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the AWS GuardDuty API to retrieve configuration
+      data. It does not mutate any external or internal data, nor does it update entities,
+      insights, or alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -693,244 +1690,86 @@ Get Detector Details:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Get Finding Details:
-  ai_description: "### General Description\nThis action retrieves detailed information\
-    \ for specific findings within AWS GuardDuty. It allows security analysts to fetch\
-    \ the full context of one or more findings by providing their unique identifiers\
-    \ and the associated detector ID. The retrieved data includes finding types, severity,\
-    \ resource details (like EC2 instance information), and service-related metadata.\n\
-    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| Finding IDs | String | Yes | A comma-separated\
-    \ list of the unique IDs for the findings you want to retrieve. |\n| Detector\
-    \ ID | String | Yes | The unique ID of the AWS GuardDuty detector associated with\
-    \ the findings. |\n| AWS Region | String | No | The specific AWS Region to use\
-    \ for this request. If not provided, the action uses the default region configured\
-    \ in the integration settings. |\n\n### Additional Notes\n- This action does not\
-    \ run on entities; it relies entirely on the provided input parameters.\n- The\
-    \ results are presented both as a structured data table for quick review and as\
-    \ a raw JSON object for downstream automation logic.\n\n### Flow Description\n\
-    1. **Initialization**: The action extracts the AWS credentials and region from\
-    \ the integration configuration and the specific finding/detector IDs from the\
-    \ action parameters.\n2. **Connection**: It establishes a connection to the AWS\
-    \ GuardDuty service using the Boto3 client.\n3. **Data Retrieval**: The action\
-    \ calls the `get_findings` API for the specified detector, passing the list of\
-    \ finding IDs.\n4. **Processing**: It parses the raw response into internal data\
-    \ models, identifying which findings were successfully retrieved and which were\
-    \ not found.\n5. **Output**: \n    - A data table named 'Findings' is added to\
-    \ the case containing key fields like Title, Severity, and Resource ID.\n    -\
-    \ The full raw JSON for all found findings is added to the action's result JSON.\n\
-    \    - A summary message is generated indicating the success or failure for each\
-    \ requested ID."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds a data table named 'Findings' to the case and populates the
-      result JSON with the raw finding details retrieved from AWS.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Threat Intelligence Set Details:
-  ai_description: >-
-    ### General Description
-
-    Retrieves detailed information about specific Threat Intelligence Sets within
-    AWS GuardDuty. This action allows users to inspect the configuration, status,
-    and metadata (such as S3 location and file format) of threat feeds integrated
-    into a GuardDuty detector. It is primarily used for auditing and verifying the
-    state of threat intelligence sources.
-
-
-    ### Parameters Description
-
-
+    reasoning: >-
+      The action does not interact with or filter any entities. It operates on static
+      configuration parameters (Detector ID and IP List IDs) provided by the user.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration metadata for Trusted IP Lists from AWS GuardDuty.
+      It does not perform enrichment on IOCs or assets, nor does it modify alerts,
+      tickets, or security controls. Therefore, it does not align with any of the
+      defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Detector ID** | String | Yes | The unique identifier of the AWS GuardDuty
-    detector associated with the threat intelligence sets. This can be found in the
-    AWS GuardDuty settings. |
-
-    | **Threat Intelligence Set IDs** | String | Yes | A comma-separated list of unique
-    identifiers for the Threat Intelligence Sets to be retrieved (e.g., `id_1, id_2`).
+    | Detector ID | String | Yes | The unique identifier of the GuardDuty detector.
     |
 
-    | **AWS Region** | String | No | The specific AWS region to use for the request.
-    If not provided, the action defaults to the region specified in the integration
-    configuration. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the AWS GuardDuty manager using
-    the provided access keys and the determined AWS region.
-
-    2. **Connectivity Check**: It performs a connectivity test to validate the AWS
-    credentials.
-
-    3. **Detector Validation**: The action verifies that the provided `Detector ID`
-    exists within the AWS environment.
-
-    4. **ID Parsing**: The `Threat Intelligence Set IDs` parameter is parsed from
-    a comma-separated string into a list of individual identifiers.
-
-    5. **Data Retrieval**: The action iterates through the list of IDs and requests
-    the full details for each Threat Intelligence Set from the AWS GuardDuty service.
-
-    6. **Result Aggregation**: Successfully retrieved details are compiled into a
-    data table named "Threat Intelligence Set Details" and added to the action's JSON
-    results. Any IDs that fail to be retrieved are tracked separately.
-
-    7. **Final Output**: The action concludes by providing a summary message of the
-    successful and failed retrievals and sets the execution status.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get a Trusted IP List:
-  ai_description: "### General Description\nThe **Get a Trusted IP List** action retrieves\
-    \ detailed metadata for one or more Trusted IP Lists (IPSets) from AWS GuardDuty.\
-    \ It provides information such as the list's name, file format (e.g., TXT, STIX),\
-    \ S3 location, and current status (e.g., ACTIVE, INACTIVE). This action is primarily\
-    \ used for auditing GuardDuty configurations or verifying the source of trusted\
-    \ network traffic.\n\n### Parameters Description\n| Parameter Name | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| **Detector ID** | String |\
-    \ Yes | The unique identifier of the GuardDuty detector associated with the IP\
-    \ sets. This can be found in the AWS Console under GuardDuty Settings. |\n| **Trusted\
-    \ IP List IDs** | String | Yes | A comma-separated list of unique IDs for the\
-    \ Trusted IP Lists you wish to inspect (e.g., `12345, 67890`). |\n\n### Flow Description\n\
-    1. **Connection**: The action establishes a connection to the AWS GuardDuty service\
-    \ using the provided Access Key, Secret Key, and Region.\n2. **Validation**: It\
-    \ verifies that the provided **Detector ID** exists and is accessible.\n3. **Parsing**:\
-    \ The **Trusted IP List IDs** string is parsed into individual identifiers.\n\
-    4. **Retrieval**: For each ID, the action queries AWS GuardDuty to fetch the specific\
-    \ IP set details.\n5. **Reporting**: \n    *   Successfully retrieved details\
-    \ are compiled into a data table named \"Trusted IP Lists Details\".\n    *  \
-    \ The raw data for each IP set is attached as a JSON result for downstream logic.\n\
-    \    *   The action provides a summary message listing which IDs were successfully\
-    \ processed and which (if any) failed.\n\n### Additional Notes\n* This action\
-    \ does not interact with entities (IPs, Hosts, etc.) present in the SOAR case;\
-    \ it is a standalone utility for AWS infrastructure management."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
+    | Trusted IP List IDs | String | Yes | A comma-separated list of Trusted IP List
+    IDs to retrieve. |
 Get all Trusted IP lists:
   ai_description: >-
     ### General Description
 
-    This action retrieves a list of all Trusted IP list (IPSet) identifiers associated
-    with a specific AWS GuardDuty detector. It is primarily used for discovery and
-    auditing of configured trusted network locations within the GuardDuty service.
-
-
-    ### Parameters
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Detector ID | String | Yes | The unique identifier of the GuardDuty detector
-    to query. This can be found in the AWS GuardDuty Settings tab. |
-
-    | Max Trusted IP Lists To Return | Integer | No | The maximum number of Trusted
-    IP list IDs to retrieve. Defaults to 50. If a negative value is provided, the
-    default is used. |
-
-    | AWS Region | String | No | The specific AWS Region to use for this action. If
-    not provided, the default region from the integration configuration is used. |
+    Retrieves a list of Trusted IP list IDs (IPSets) from the AWS GuardDuty service
+    for a specified detector. This action allows analysts to identify which IP sets
+    are currently configured within their AWS GuardDuty environment.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts AWS credentials and configuration parameters,
-    including the Detector ID and optional result limits.
+    1. The action extracts the required parameters: `Detector ID`, `Max Trusted IP
+    Lists To Return`, and `AWS Region`.
 
-    2. **Connectivity Check**: It establishes a connection to the AWS GuardDuty service
-    and validates the credentials using a connectivity test.
+    2. It initializes the `AWSGuardDutyManager` using the provided AWS credentials
+    and region.
 
-    3. **Data Retrieval**: The action calls the AWS GuardDuty `list_ip_sets` API using
-    a paginator to fetch the IDs of all trusted IP sets associated with the provided
-    Detector ID.
+    3. It performs a connectivity test to ensure the AWS GuardDuty service is accessible.
 
-    4. **Result Processing**: It collects the retrieved IDs, respecting the `Max Trusted
-    IP Lists To Return` limit.
+    4. The action calls the `get_trusted_ip_lists_ids` method, which interacts with
+    the AWS GuardDuty API to fetch the list of available IP set IDs.
 
-    5. **Output**: The list of IPSet IDs is returned as a JSON result, and the action
-    completes with a success message.
+    5. The retrieved list of IDs is stored in a JSON object.
+
+    6. The final JSON result is added to the action output, and the execution status
+    is set to completed.
 
 
     ### Additional Notes
 
-    This action does not process entities and is intended as a utility to gather configuration
-    data from the AWS environment.
+    This action is a read-only operation and does not modify any AWS resources or
+    internal SOAR entities.
+  ai_short_description: >-
+    Retrieves a list of Trusted IP list IDs from AWS GuardDuty for a specific detector.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -941,10 +1780,47 @@ Get all Trusted IP lists:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a read-only operation to list Trusted IP sets from AWS GuardDuty.
+      It does not modify external or internal data, nor does it update entities or
+      create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -958,48 +1834,85 @@ Get all Trusted IP lists:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities; it retrieves configuration data (IP
+      sets) from AWS GuardDuty based on a provided Detector ID. No entity filtering
+      or processing is performed.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of configuration IDs (Trusted IP lists) from AWS
+      GuardDuty. It does not perform enrichment, ticketing, containment, or event
+      searching, so it does not map to any of the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | Specify the detector ID that should be used to
+    list IP sets. This parameter can be found in the "Settings" tab. |
+
+    | Max Trusted IP Lists To Return | String | No | Specify how many Trusted IPs
+    lists to return. Default is 50. |
+
+    | AWS Region | String | No | Optionally specify the AWS Region to be used in the
+    action that can be different from the default region specified in the integration
+    configuration page. |
 List Detectors:
   ai_description: >-
     ### General Description
 
-    Lists the unique identifiers (`detectorIds`) for all existing Amazon GuardDuty
-    detector resources in the configured AWS region. This action is primarily used
-    for discovery and configuration management, allowing users to identify which GuardDuty
-    detectors are active and available for further operations like fetching findings
-    or managing IP sets.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Max Detectors To Return | Integer | No | Specifies the maximum number of detector
-    IDs to retrieve in a single execution. The default value is 50. |
-
-
-    ### Additional Notes
-
-    This action does not require or process any specific entities (such as IP addresses
-    or Hostnames). It interacts with the AWS environment at a global service level
-    for the specified region.
+    Lists all existing Amazon GuardDuty detector resources within the configured AWS
+    environment. This action retrieves the unique identifiers for all detectors associated
+    with the account in the specified region.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action initializes a connection to the AWS GuardDuty
-    service using the provided AWS Access Key, Secret Key, and Region.
+    1. Initializes the AWS GuardDuty manager using the provided AWS Access Key, Secret
+    Key, and Default Region.
 
-    2. **Connectivity Test**: It performs a connectivity check to ensure the credentials
-    and region configuration are valid.
+    2. Performs a connectivity test to ensure the integration can communicate with
+    the AWS GuardDuty service.
 
-    3. **Listing Detectors**: The action invokes the `list_detectors` API call, utilizing
-    pagination to retrieve the list of detector IDs up to the limit specified by the
-    'Max Detectors To Return' parameter.
+    3. Executes the `list_detectors` operation, utilizing the optional `Max Detectors
+    To Return` parameter to limit the number of results.
 
-    4. **Output Generation**: The retrieved list of detector IDs is packaged into
-    a JSON result and returned to the Google SecOps platform.
+    4. Returns the retrieved list of detector IDs as a JSON object in the action results.
+
+
+    ### Additional Notes
+
+    This action is a read-only operation and does not modify any AWS resources or
+    internal SOAR entities.
+  ai_short_description: >-
+    Lists all existing Amazon GuardDuty detector resources.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1010,10 +1923,47 @@ List Detectors:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches a list of detectors from the AWS GuardDuty service. It does
+      not mutate external or internal data, nor does it update entities, insights,
+      or alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1027,66 +1977,79 @@ List Detectors:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter any entities. It operates globally
+      on the AWS GuardDuty service configuration.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action lists configuration resources (detectors) from AWS GuardDuty. It
+      does not perform enrichment, alert updates, ticketing, or containment operations,
+      and therefore does not match any of the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Detectors To Return | String | No | Specify how many detectors to return.
+    Default is 50. |
 List Findings for a Detector:
   ai_description: >-
     ### General Description
 
-    This action retrieves a list of Amazon GuardDuty finding IDs associated with a
-    specific detector ID. It is primarily used for discovery and orchestration tasks
-    where subsequent actions might need to iterate over or investigate specific findings
-    within the AWS environment.
+    Lists all Amazon GuardDuty findings for a specified detector ID. This action interacts
+    with the AWS GuardDuty service to retrieve a list of finding IDs based on user-defined
+    sorting and filtering criteria.
 
 
-    ### Parameters Description
+    ### Flow Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    1. Extracts the required parameters: `Detector ID`, `Max Findings To Return`,
+    `Sort By`, `Order By`, and `AWS Region`.
 
-    | :--- | :--- | :--- | :--- |
+    2. Initializes the `AWSGuardDutyManager` using the provided AWS credentials and
+    region.
 
-    | Detector ID | String | Yes | The unique identifier of the Amazon GuardDuty detector
-    from which to retrieve findings. |
+    3. Validates connectivity to the AWS GuardDuty service by testing the connection.
 
-    | Max Findings To Return | Integer | No | The maximum number of finding IDs to
-    return in the result. Defaults to 50. If a negative value is provided, the default
-    is used. |
+    4. Calls the `manager.get_findings_ids_for_detector` method to fetch the list
+    of finding IDs from AWS GuardDuty based on the specified parameters.
 
-    | Sort By | String | No | The finding attribute (e.g., 'accountId', 'severity',
-    'updatedAt') used to sort the results. |
-
-    | Order By | String | No | The sort order for the findings. Can be 'ASC' (Ascending)
-    or 'DESC' (Descending). Defaults to 'ASC'. |
-
-    | AWS Region | String | No | The specific AWS Region to use for this action. If
-    not provided, the action uses the default region configured in the integration
-    settings. |
+    5. Adds the retrieved list of finding IDs to the action results as a JSON object.
 
 
     ### Additional Notes
 
-    - This action does not process or enrich specific entities (like IPs or Hostnames)
-    from the Google SecOps case; it operates globally based on the provided Detector
-    ID.
-
-    - The results are returned as a JSON array of finding ID strings under the key
-    `FindingIds`.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action extracts the AWS credentials and region from
-    the integration configuration and the specific parameters from the action input.
-
-    2. **Connectivity Check**: It establishes a connection to the AWS GuardDuty service
-    and validates the credentials using a test connectivity call.
-
-    3. **Data Retrieval**: The action calls the AWS GuardDuty `list_findings` API,
-    applying the specified `Detector ID`, sorting criteria, and result limits.
-
-    4. **Pagination**: It utilizes the AWS SDK's paginator to collect finding IDs
-    up to the specified `Max Findings To Return` limit.
-
-    5. **Output**: The collected list of finding IDs is formatted into a JSON result
-    and returned to the Google SecOps platform.
+    This action is read-only and does not modify any data within AWS or the SOAR platform.
+    It is designed to provide visibility into GuardDuty findings.
+  ai_short_description: >-
+    Lists Amazon GuardDuty findings for a specified detector ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1097,10 +2060,46 @@ List Findings for a Detector:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to the AWS GuardDuty API to fetch findings. It
+      does not mutate external data or internal SOAR data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1114,44 +2113,94 @@ List Findings for a Detector:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It uses a `Detector ID` parameter to
+      fetch findings from AWS GuardDuty, and does not iterate over `siemplify.target_entities`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of findings from AWS GuardDuty, which constitutes
+      telemetry data. This matches the 'Search Events' category. It does not perform
+      enrichment, alert updates, or other listed actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | The unique ID of the detector that you want to
+    retrieve. |
+
+    | Max Findings To Return | String | No | Specify how many findings to return.
+    Default is 50. |
+
+    | Sort By | String | No | Represents the finding attribute (for example, accountId)
+    to sort findings by. |
+
+    | Order By | String | No | The order by which the sorted findings are to be displayed.
+    Options: ASC, DESC. |
+
+    | AWS Region | String | No | Optionally specify the AWS Region to be used in the
+    action that can be different from the default region specified in the integration
+    configuration page. |
 List Threat Intelligence Sets:
   ai_description: >-
-    Lists available threat intelligence sets in AWS GuardDuty for a specific detector.
-    This action is primarily used for administrative or investigative purposes to
-    identify which threat intelligence feeds are currently configured within a GuardDuty
-    environment.
+    ### General Description
 
-
-    ### Parameters
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Detector ID | String | Yes | Specify the unique detector ID used to list threat
-    intelligence sets. This can be found in the AWS GuardDuty 'Settings' tab. |
-
-    | Max Threat Intelligence Sets To Return | Integer | No | Specify the maximum
-    number of threat intelligence set IDs to return. Default is 50. |
-
-    | AWS Region | String | No | Optionally specify the AWS Region to be used. If
-    not provided, the default region from the integration configuration is used. |
+    Lists available threat intelligence sets in AWS GuardDuty for a specified detector.
+    This action retrieves a list of threat intelligence set IDs from the AWS GuardDuty
+    service, allowing users to audit or identify configured threat intelligence sources.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves AWS credentials and the mandatory
-    Detector ID from the input parameters.
+    1. The action extracts configuration parameters (AWS Access Key, Secret Key, Default
+    Region) and action parameters (Detector ID, Max Threat Intelligence Sets To Return,
+    AWS Region).
 
-    2. **Connection**: It establishes a connection to the AWS GuardDuty service and
-    validates the credentials.
+    2. It initializes the `AWSGuardDutyManager` using the provided credentials and
+    region.
 
-    3. **Data Retrieval**: The action calls the AWS API to list threat intelligence
-    sets associated with the provided Detector ID, applying pagination and the specified
-    limit (Max Results).
+    3. It validates connectivity to the AWS GuardDuty service.
 
-    4. **Output**: The retrieved list of Threat Intelligence Set IDs is returned as
-    a JSON result for use in subsequent playbook steps.
+    4. The action calls the `get_threat_intelligence_sets_ids` method of the manager,
+    passing the `detector_id` and `max_results` to retrieve the list of threat intelligence
+    set IDs.
+
+    5. The retrieved list of IDs is returned as a JSON result, and the action completes.
+
+
+    ### Additional Notes
+
+    This action is a read-only operation and does not modify any resources within
+    AWS GuardDuty.
+  ai_short_description: >-
+    Lists available threat intelligence sets in AWS GuardDuty for a specified detector.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1162,10 +2211,47 @@ List Threat Intelligence Sets:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data (list of threat intelligence set IDs) from AWS GuardDuty.
+      It does not mutate external or internal data, nor does it update entities, create
+      insights, or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1179,58 +2265,87 @@ List Threat Intelligence Sets:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize or iterate over any entities from the SOAR platform.
+      It operates independently of specific entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of threat intelligence set IDs from AWS GuardDuty.
+      It does not perform enrichment on specific IOCs, update alerts, or modify external
+      systems. It is a retrieval/listing action that does not map to the provided
+      specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | Specify the detector ID that should be used to
+    list threat intelligence sets. This parameter can be found in the "Settings" tab.
+    |
+
+    | Max Threat Intelligence Sets To Return | String | No | Specify how many threat
+    intelligence sets to return. Default is 50. |
+
+    | AWS Region | String | No | Optionally specify the AWS Region to be used in the
+    action that can be different from the default region specified in the integration
+    configuration page. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility designed to verify the connectivity
-    between Google SecOps and the AWS GuardDuty service. It ensures that the provided
-    AWS credentials and regional configurations are valid and that the environment
-    can successfully communicate with the AWS API.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **AWS Access Key ID** | String | Yes | The unique identifier for the AWS account
-    used to authenticate requests. |
-
-    | **AWS Secret Key** | String | Yes | The secret key associated with the Access
-    Key ID used for signing AWS requests. |
-
-    | **AWS Default Region** | String | Yes | The specific AWS region (e.g., us-east-1)
-    where the GuardDuty service is being accessed. |
+    Tests connectivity to the AWS GuardDuty service using the credentials provided
+    in the integration configuration. This action verifies that the SOAR platform
+    can successfully authenticate and communicate with the AWS GuardDuty API.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves the integration's configuration parameters
-    (Access Key, Secret Key, and Region) from the Google SecOps environment.
+    1. The action extracts the required AWS credentials (Access Key ID, Secret Key,
+    and Default Region) from the integration configuration.
 
-    2. **Manager Setup**: It initializes the `AWSGuardDutyManager` using the extracted
-    credentials and region.
+    2. It initializes the `AWSGuardDutyManager` using these credentials.
 
-    3. **Connectivity Test**: The manager executes the `test_connectivity` method,
-    which performs a lightweight API call (`list_detectors` with a limit of 1) to
-    the AWS GuardDuty service.
+    3. The action calls the `test_connectivity` method, which performs a `list_detectors`
+    API request to AWS GuardDuty to validate the connection.
 
-    4. **Validation**: The action validates the HTTP response status code. If the
-    service returns a success code (200), the connection is confirmed.
-
-    5. **Finalization**: The action returns a boolean result (`true` for success,
-    `false` for failure) and an informative message to the case wall.
+    4. If the API call is successful, the action completes with a success message.
+    If the connection fails, the action logs the error and returns a failure status.
 
 
     ### Additional Notes
 
-    - This action does not process any entities and is strictly used for configuration
-    validation.
-
-    - As per standard SOAR practices, Ping actions are not categorized as enrichment
-    actions.
+    This action is strictly for connectivity testing and does not perform any data
+    mutation or entity enrichment. It does not require any input parameters at the
+    action level.
+  ai_short_description: >-
+    Tests connectivity to the AWS GuardDuty service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1241,10 +2356,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a GET request (list_detectors) to verify connectivity, which
+      constitutes fetching data. It does not mutate external or internal data, nor
+      does it update entities or alerts.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1258,58 +2410,77 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It is a standalone connectivity
+      test that uses integration-level configuration parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test by calling the AWS GuardDuty API. It
+      does not perform any of the listed outcome actions such as enrichment, ticket
+      creation, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 Unarchive Findings:
   ai_description: >-
     ### General Description
 
-    This action unarchives specific AWS GuardDuty findings based on provided Finding
-    IDs and a Detector ID. It is used to revert the status of findings from 'Archived'
-    back to 'Active' within the AWS GuardDuty console, allowing for further investigation
-    or visibility.
+    Unarchives specific AWS GuardDuty findings by their IDs. This action interacts
+    with the AWS GuardDuty service to change the status of findings from archived
+    to active, allowing them to be visible and actionable again within the AWS console.
 
 
-    ### Parameters Description
+    ### Flow Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    1. Extracts the `Detector ID` and `Finding IDs` from the action parameters.
 
-    | :--- | :--- | :--- | :--- |
+    2. Initializes the `AWSGuardDutyManager` using the configured AWS credentials
+    (Access Key, Secret Key, and Region).
 
-    | Detector ID | String | Yes | The unique identifier of the AWS GuardDuty detector
-    associated with the findings. |
+    3. Validates connectivity to the AWS GuardDuty service using `manager.test_connectivity()`.
 
-    | Finding IDs | String | Yes | A comma-separated list of unique identifiers for
-    the findings that need to be unarchived. |
+    4. Retrieves the specified findings using `manager.get_findings_by_ids` to verify
+    their existence in the specified detector.
+
+    5. Iterates through the verified findings and calls `manager.unarchive_findings`
+    for each finding ID.
+
+    6. Returns a summary of findings that were successfully unarchived and those that
+    could not be processed.
 
 
     ### Additional Notes
 
-    - The action first validates the existence of the findings by fetching their details
-    before attempting the unarchive operation.
-
-    - It processes findings individually and provides a summary of which IDs were
-    successfully unarchived and which failed.
-
-
-    ### Flow Description
-
-    1. **Initialization**: Retrieves AWS credentials and region from the integration
-    configuration and the Detector ID and Finding IDs from the action parameters.
-
-    2. **Connectivity Check**: Establishes a connection to the AWS GuardDuty service
-    and validates credentials.
-
-    3. **Input Parsing**: Converts the comma-separated string of Finding IDs into
-    a list.
-
-    4. **Verification**: Fetches finding details from AWS to confirm the IDs are valid
-    and accessible.
-
-    5. **Execution**: Iterates through the verified findings and calls the AWS API
-    to unarchive each one.
-
-    6. **Reporting**: Compiles a success message listing unarchived findings and an
-    error message for any IDs that could not be processed, then returns the final
-    execution status.
+    This action requires valid AWS credentials with appropriate permissions to manage
+    GuardDuty findings. The `Finding IDs` parameter must be a comma-separated list
+    of valid finding identifiers.
+  ai_short_description: >-
+    Unarchives specified AWS GuardDuty findings by their IDs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1318,13 +2489,49 @@ Unarchive Findings:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Changes the status of findings in AWS GuardDuty from 'Archived' to 'Active'.
+      Unarchives specific findings in AWS GuardDuty.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to verify findings and a POST/PUT equivalent
+      (unarchive) to AWS GuardDuty. This mutates external data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1338,53 +2545,87 @@ Unarchive Findings:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Update Findings Feedback:
-  ai_description: >-
-    Updates the feedback status for specific Amazon GuardDuty findings to mark them
-    as either useful or not useful. This action is used to improve the accuracy of
-    GuardDuty detections by providing manual feedback on the relevance of generated
-    findings.
-
-
-    ### Parameters
-
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. It takes `Detector
+      ID` and `Finding IDs` as direct input parameters. Therefore, no entity flags
+      are set to true.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action unarchives findings in AWS GuardDuty. This is a state change in an
+      external system, but it does not map to any of the predefined categories (e.g.,
+      it's not an IOC blocklist action, not an identity action, not a ticket action).
+      Therefore, all categories are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Detector ID | String | Yes | The unique ID of the GuardDuty detector associated
-    with the findings. |
+    | Detector ID | String | Yes | The unique ID of the detector. |
 
-    | Useful? | Boolean | Yes | Set to true to mark findings as 'USEFUL' or false
-    to mark them as 'NOT_USEFUL'. |
+    | Finding IDs | String | Yes | The IDs of the findings that you want to unarchive.
+    Comma separated ids. |
+Update Findings Feedback:
+  ai_description: >-
+    ### General Description
 
-    | Findings IDs | String | Yes | A comma-separated list of the unique identifiers
-    for the findings to be updated. |
-
-    | Comment | String | No | Optional text providing additional context or feedback
-    regarding the findings. |
-
-    | AWS Region | String | No | The AWS region where the detector and findings reside.
-    If not provided, the default region from the integration configuration is used.
-    |
+    Marks the specified Amazon GuardDuty findings as useful or not useful. This action
+    allows analysts to provide feedback on findings, which can help improve the accuracy
+    of future detections.
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves AWS credentials and action parameters, including
-    the list of Finding IDs and the feedback status.
+    1. Extracts configuration parameters (AWS Access Key ID, AWS Secret Key, AWS Default
+    Region) and action parameters (Detector ID, Useful status, Findings IDs, optional
+    Comment, and optional AWS Region).
 
-    2. **Connectivity Check**: Validates the connection to the AWS GuardDuty service
-    using the provided credentials and region.
+    2. Initializes the `AWSGuardDutyManager` and validates connectivity to the AWS
+    GuardDuty service.
 
-    3. **Verification**: Fetches the details of the specified findings from AWS to
-    verify their existence before attempting an update.
+    3. Parses the comma-separated `Findings IDs` into a list.
 
-    4. **Feedback Submission**: Submits the feedback (Useful/Not Useful) and any optional
-    comments to the AWS GuardDuty API for all successfully verified findings.
+    4. Calls `manager.get_findings_by_ids` to verify the existence of the provided
+    findings in the specified detector.
 
-    5. **Reporting**: Returns a summary message indicating which findings were successfully
-    updated and which could not be found or updated.
+    5. Calls `manager.update_findings_feedback` with the validated finding IDs, the
+    feedback status (USEFUL/NOT_USEFUL), and the optional comment.
+
+    6. Logs the outcome and returns the execution status.
+
+
+    ### Additional Notes
+
+    This action interacts directly with the AWS GuardDuty API to update finding feedback.
+    It does not operate on entities within the SOAR platform.
+  ai_short_description: >-
+    Marks Amazon GuardDuty findings as useful or not useful.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1393,14 +2634,52 @@ Update Findings Feedback:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the feedback status (Useful/Not Useful) and adds comments to specific
-      findings within the AWS GuardDuty service.
+      Updates the feedback status (useful/not useful) for specified Amazon GuardDuty
+      findings.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches finding details from AWS GuardDuty to verify their existence
+      (fetches_data=true) and performs a state-changing operation to update the feedback
+      status of those findings in AWS (can_mutate_external_data=true). It does not
+      mutate internal SecOps data or update entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1414,30 +2693,90 @@ Update Findings Feedback:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities; it uses finding IDs provided as parameters.
+      Therefore, all entity type flags and filtering flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches finding details from AWS GuardDuty (get_alert_information)
+      and updates the feedback status of those findings in the external AWS system.
+      It does not match any other category (e.g., it does not update a SecOps alert
+      or create a ticket).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | string | Yes | The unique ID of the detector associated with the
+    findings to update feedback for. |
+
+    | Useful? | boolean | Yes | The feedback for the finding (True for useful, False
+    for not useful). |
+
+    | Findings IDs | string | Yes | The IDs of the findings that you want to mark
+    as useful or not useful. Comma separated values. |
+
+    | Comment | string | No | Additional feedback about the GuardDuty findings. |
+
+    | AWS Region | string | No | Optionally specify the AWS Region to be used in the
+    action that can be different from the default region specified in the integration
+    configuration page. |
 Update Threat Intelligence Set:
-  ai_description: "Updates an existing Threat Intelligence Set in AWS GuardDuty. This\
-    \ action allows for modifying the metadata and operational status of a threat\
-    \ list, such as its display name, the S3 URI location of the source file, and\
-    \ whether the set is currently active for detection. \n\n### Parameters\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Detector\
-    \ ID | String | Yes | The unique identifier of the GuardDuty detector associated\
-    \ with the threat intelligence set. |\n| ID | String | Yes | The unique identifier\
-    \ of the specific Threat Intelligence Set to update. |\n| Name | String | No |\
-    \ The new name to assign to the Threat Intelligence Set. |\n| File Location |\
-    \ String | No | The new S3 URI location where the threat list file is hosted (e.g.,\
-    \ https://s3.amazonaws.com/my-bucket/threats.txt). |\n| Active | Boolean | Yes\
-    \ | Specifies whether the Threat Intelligence Set should be activated (true) or\
-    \ deactivated (false). |\n\n### Additional Notes\n* The AWS IAM role used by this\
-    \ integration requires the `iam:PutRolePolicy` permission to successfully manage\
-    \ GuardDuty resources.\n* Either the 'Name' or 'File Location' (or both) can be\
-    \ updated alongside the 'Active' status.\n\n### Flow Description\n1. **Initialization**:\
-    \ Retrieves AWS configuration (Access Key, Secret Key, Region) and action parameters\
-    \ from the environment.\n2. **Connectivity Check**: Establishes a connection to\
-    \ the AWS GuardDuty service and validates credentials.\n3. **Update Execution**:\
-    \ Calls the AWS GuardDuty API to update the specified Threat Intelligence Set\
-    \ with the provided name, location, and activation status.\n4. **Result Reporting**:\
-    \ Logs the outcome and returns a success status if the update was accepted by\
-    \ AWS."
+  ai_description: >-
+    ### General Description
+
+    Updates a threat intelligence set within AWS GuardDuty. This action allows users
+    to modify the configuration of an existing threat intelligence set, such as its
+    name, the URI location of the threat list file, or its activation status.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (AWS credentials, region) and action parameters
+    (Detector ID, Threat Intel Set ID, Name, File Location, Active status).
+
+    2. Initializes the `AWSGuardDutyManager` with the provided AWS credentials.
+
+    3. Validates connectivity to the AWS GuardDuty service.
+
+    4. Calls the `update_threat_intel_set` method of the `AWSGuardDutyManager` to
+    apply the updates to the specified Threat Intelligence Set in AWS GuardDuty.
+
+    5. Logs the outcome and returns a success or failure status.
+
+
+    ### Additional Notes
+
+    Requires `iam:PutRolePolicy` permission in AWS.
+  ai_short_description: >-
+    Updates a threat intelligence set in AWS GuardDuty.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1446,14 +2785,51 @@ Update Threat Intelligence Set:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the configuration of a Threat Intelligence Set in AWS GuardDuty, including
-      its name, source file location, and activation status.
+      Updates the configuration (name, location, or activation status) of a Threat
+      Intelligence Set in AWS GuardDuty.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a state-changing operation (update) on an external system
+      (AWS GuardDuty). It does not fetch data, update internal entities, or create
+      insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1467,21 +2843,93 @@ Update Threat Intelligence Set:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It takes static parameters (Detector
+      ID, Threat Intel Set ID) and performs an API call to AWS GuardDuty.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates a configuration setting in AWS GuardDuty. It does not match
+      any of the specific categories provided (e.g., it is not an IOC enrichment,
+      ticket creation, or host containment).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | Specify the detector ID that should be used to
+    update a Threat Intelligence Set. |
+
+    | ID | String | Yes | Specify the ID of the Threat Intelligence set that should
+    be updated. |
+
+    | Name | String | No | Specify the new name of the Threat Intelligence Set. |
+
+    | File Location | String | No | Specify a new URI location, where the file is
+    located. |
+
+    | Active | Boolean | Yes | If enabled, the Threat Intelligence Set will be activated.
+    |
 Update a Detector:
-  ai_description: "Updates the configuration of an Amazon GuardDuty detector. This\
-    \ action specifically allows for enabling or disabling a detector based on its\
-    \ unique ID. \n\n### Parameters\n| Parameter | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| Detector ID | String | Yes | The unique\
-    \ identifier of the Amazon GuardDuty detector to be updated. |\n| Enable | Boolean\
-    \ | Yes | Specifies whether the detector should be enabled (True) or disabled\
-    \ (False). |\n\n### Flow Description\n1. **Initialization**: Retrieves AWS credentials\
-    \ (Access Key, Secret Key, and Region) from the integration configuration.\n2.\
-    \ **Parameter Extraction**: Collects the 'Detector ID' and the 'Enable' status\
-    \ from the action input.\n3. **Connectivity Check**: Establishes a connection\
-    \ to the AWS GuardDuty service and verifies connectivity.\n4. **Update Execution**:\
-    \ Calls the AWS SDK to update the specified detector's status in the AWS environment.\n\
-    5. **Completion**: Returns a success message if the update is successful or an\
-    \ error message if the operation fails."
+  ai_description: >-
+    ### General Description
+
+    Updates the status of an Amazon GuardDuty detector. This action allows users to
+    enable or disable a specific detector within their AWS environment by providing
+    the unique Detector ID and the desired state.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the `Detector ID` and `Enable`
+    status from the action parameters.
+
+    2. **Initialization**: The action initializes the `AWSGuardDutyManager` using
+    the configured AWS credentials (Access Key, Secret Key, and Region).
+
+    3. **Connectivity Test**: It performs a connectivity test to ensure the AWS GuardDuty
+    service is reachable.
+
+    4. **Update Operation**: The action calls the `update_detector` method, which
+    executes an API request to AWS GuardDuty to modify the detector's status.
+
+    5. **Completion**: The action logs the outcome and returns a success or failure
+    status to the SOAR platform.
+
+
+    ### Additional Notes
+
+    This action requires valid AWS credentials configured in the integration settings.
+    The `Enable` parameter determines whether the detector is active (true) or inactive
+    (false).
+  ai_short_description: >-
+    Updates the status (enabled or disabled) of an Amazon GuardDuty detector.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1490,14 +2938,50 @@ Update a Detector:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the operational state (Enabled/Disabled) of an Amazon GuardDuty detector
-      within the AWS account.
+      Updates the status (enabled/disabled) of an Amazon GuardDuty detector in AWS.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a state-changing operation on an external system (AWS GuardDuty)
+      by updating the detector's status. It does not fetch data, update internal entities,
+      or modify alerts.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1511,64 +2995,85 @@ Update a Detector:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates on a specific AWS Detector ID provided as a parameter and
+      does not interact with or filter SOAR entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates the configuration of an AWS GuardDuty detector. This does
+      not align with any of the predefined outcome categories such as enrichment,
+      ticketing, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | The unique ID of the detector that you want to
+    update. |
+
+    | Enable | Boolean | Yes | Specifies whether the detector should be enabled (true)
+    or disabled (false). |
 Update a Trusted IP List:
   ai_description: >-
     ### General Description
 
-    Updates an existing Trusted IP List (IPSet) in AWS GuardDuty. This action allows
-    for modifying the metadata or the source file location of a trusted list, which
-    GuardDuty uses to filter out known-safe IP addresses from generating findings.
-    It can also be used to toggle the activation status of the list.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Detector ID | String | Yes | The unique identifier of the GuardDuty detector
-    associated with the IP list. |
-
-    | Trusted IP List ID | String | Yes | The unique identifier of the specific Trusted
-    IP List to be updated. |
-
-    | Name | String | No | A new name for the Trusted IP List. |
-
-    | File Location | String | No | The new S3 URI location where the IP list file
-    is stored (e.g., `https://s3.amazonaws.com/my-bucket/ips.txt`). |
-
-    | Activate | Boolean | Yes | Specifies whether the Trusted IP List should be active
-    or inactive after the update. |
-
-    | AWS Region | String | No | The AWS region where the detector is located. If
-    not provided, the default region from the integration configuration is used. |
-
-
-    ### Additional Notes
-
-    This action does not process entities from the SecOps case; it operates directly
-    on the AWS GuardDuty configuration using the provided IDs. Either the 'Name' or
-    'File Location' (or both) should typically be provided to make a meaningful update,
-    though the API allows updating just the 'Activate' status.
+    Updates a Trusted IP List within AWS GuardDuty. This action allows users to modify
+    the name, file location, or activation status of an existing trusted IP list.
+    Trusted IP lists in GuardDuty are used to identify known-good IP addresses, which
+    helps suppress security findings for these IPs and reduces false positives in
+    threat detection.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves AWS credentials and region settings
-    from the integration configuration.
+    1. Initialize the AWS GuardDuty manager using the provided AWS credentials and
+    region.
 
-    2. **Parameter Extraction**: It extracts the Detector ID, IP Set ID, and optional
-    update fields (Name, Location, Activation status) from the action parameters.
+    2. Validate connectivity to the AWS GuardDuty service to ensure the credentials
+    are valid.
 
-    3. **Connection**: It establishes a connection to the AWS GuardDuty service using
-    the Boto3 client.
+    3. Call the `update_ip_set` method with the provided `Detector ID`, `Trusted IP
+    List ID`, and optional parameters (`Name`, `File Location`, `Activate`).
 
-    4. **Execution**: It calls the `update_ip_set` method in the AWS GuardDuty Manager,
-    which sends a request to AWS to modify the specified IP list.
+    4. Return the execution status based on the success or failure of the API call.
 
-    5. **Completion**: The action returns a success status if the update is accepted
-    by AWS, or a failure status if an error occurs (e.g., invalid IDs or permissions).
+
+    ### Additional Notes
+
+    This action performs a mutation on external AWS GuardDuty configurations. Ensure
+    that the `Detector ID` and `Trusted IP List ID` are accurate, as incorrect identifiers
+    will result in an execution failure. The `Activate` parameter determines whether
+    the updated list is immediately active in GuardDuty.
+  ai_short_description: >-
+    Updates a Trusted IP List in AWS GuardDuty to manage known-good IP addresses and
+    reduce false positives.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1577,15 +3082,50 @@ Update a Trusted IP List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the configuration of a Trusted IP List (IPSet) in AWS GuardDuty, which
-      can change the list's name, the source file location in S3, and its activation
-      status.
+      Updates the configuration of a Trusted IP List in AWS GuardDuty.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a mutation on an external system (AWS GuardDuty) by updating
+      an IP set configuration. It does not fetch data for enrichment, nor does it
+      modify internal SOAR case data or entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1599,3 +3139,60 @@ Update a Trusted IP List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or filter any entities. It operates on static
+      configuration parameters provided by the user to update an AWS GuardDuty resource.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: true
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates a 'Trusted IP List' in AWS GuardDuty. In GuardDuty, Trusted
+      IP lists are used to define known-good IP addresses to suppress alerts, which
+      directly matches the 'Add IOC To Allowlist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Detector ID | String | Yes | Specify the detector ID that should be used to
+    update a Trusted IP List. This parameter can be found in the "Settings" tab. |
+
+    | Trusted IP List ID | String | Yes | Specify the ID of the Trusted IP List that
+    should be updated. |
+
+    | Name | String | No | Specify the new name of the Trusted IP List. |
+
+    | File Location | String | No | Specify a new URI location, where the file is
+    located. |
+
+    | Activate | Boolean | Yes | If enabled, the Trusted IP List will be activated.
+    |
+
+    | AWS Region | String | No | Optionally specify the AWS Region to be used in the
+    action that can be different from the default region specified in the integration
+    configuration page. |

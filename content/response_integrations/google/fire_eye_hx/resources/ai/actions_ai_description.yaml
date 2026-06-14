@@ -1,72 +1,37 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Acknowledge Alert Groups:
   ai_description: >-
     ### General Description
 
-    The **Acknowledge Alert Groups** action allows users to synchronize the status
-    of alert groups between FireEye HX and Google SecOps by updating their acknowledgement
-    state. This action is specifically designed for alert groups, as the FireEye HX
-    API does not support acknowledging individual alerts directly. It enables security
-    analysts to mark groups of alerts as handled or unhandled within the FireEye HX
-    platform directly from the SOAR interface.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Alert Groups IDs** | String | Yes | A comma-separated list of FireEye HX Alert
-    Group IDs to be processed. |
-
-    | **Acknowledgment** | String (Dropdown) | Yes | Specifies whether to 'Acknowledge'
-    or 'Un-acknowledge' the provided alert groups. |
-
-    | **Acknowledgment Comment** | String | No | An optional comment to be associated
-    with the acknowledgement status change. |
-
-    | **Limit** | Integer | No | The maximum number of alert group records to include
-    in the JSON result output. Defaults to 50 if not specified or if a non-positive
-    value is provided. |
+    Acknowledge or un-acknowledge alert groups in the FireEye HX platform. This action
+    updates the acknowledgement status of specified alert groups in the external system
+    based on the provided parameters, allowing for better synchronization between
+    the FireEye HX platform and the SOAR platform.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action establishes a session with the FireEye HX instance
-    using the provided API credentials and configuration.
+    1. Extract configuration parameters (API Root, Username, Password, Verify SSL)
+    for the FireEye HX integration.
 
-    2. **Parameter Parsing**: It cleans and splits the `Alert Groups IDs` string into
-    a list and determines the boolean acknowledgement state based on the `Acknowledgment`
-    selection.
+    2. Extract action parameters: `Alert Groups IDs`, `Acknowledgment` (Acknowledge/Un-acknowledge),
+    `Acknowledgment Comment` (optional), and `Limit` (optional).
 
-    3. **API Interaction**: It executes a `PATCH` request to the `/alert_groups` endpoint
-    of the FireEye HX API, passing the list of IDs, the status, and the optional comment.
+    3. Initialize the `FireEyeHXManager` with the provided credentials.
 
-    4. **Result Processing**: The action compares the requested IDs against the IDs
-    returned in the API response to determine which groups were successfully updated.
+    4. Call the `hx_manager.ackowledge_alert_groups` method, which performs a PATCH
+    request to the FireEye HX API endpoint `/alert_groups` with the specified alert
+    group IDs and the desired acknowledgement status.
 
-    5. **Output**: It generates a summary message indicating success or partial success
-    and attaches the raw API response as a JSON result for further use in the playbook.
+    5. Process the response from the API and return a success or failure message based
+    on the outcome.
 
 
     ### Additional Notes
 
-    - This action does not operate on entities within the Google SecOps scope; it
-    relies entirely on the IDs provided in the input parameters.
+    This action modifies the state of alert groups in the external FireEye HX system.
+    It does not modify any data within the SOAR platform itself.
+  ai_short_description: >-
+    Acknowledges or un-acknowledges alert groups in the FireEye HX platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -75,15 +40,51 @@ Acknowledge Alert Groups:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the acknowledgement status (Acknowledge or Un-acknowledge) and adds
-      comments to alert groups in FireEye HX via a PATCH request to the /alert_groups
-      endpoint.
-    fetches_data: true
+      Updates the acknowledgement status of alert groups in the FireEye HX platform.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a PATCH request to the FireEye HX API to update the acknowledgement
+      status of alert groups. This constitutes a mutation of external data. It does
+      not fetch data, mutate internal data, update entities, create insights, modify
+      alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -97,67 +98,1457 @@ Acknowledge Alert Groups:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Cancel Host Contain:
-  ai_description: >-
-    Cancels the containment of a host on the FireEye HX server based on Hostname or
-    IP Address entities. This action is used to restore network access to an endpoint
-    that was previously isolated. Note that this action is not supported for Linux
-    hosts by FireEye HX.
-
-
-    ### Parameters
-
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It operates on 'Alert Groups IDs' provided as a parameter. Therefore,
+      no entity types are used, and all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action acknowledges or un-acknowledges alert groups in the external FireEye
+      HX system. It does not modify the status, severity, or assignee of alerts within
+      the SecOps platform, nor does it perform any of the other listed outcome actions
+      (e.g., ticket creation, IOC blocking, etc.). Therefore, no outcome categories
+      are matched.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
     | --- | --- | --- | --- |
 
-    | API Root | String | Yes | The API root URL of the FireEye HX server. |
+    | Alert Groups IDs | String | Yes | Specify the Alert Groups IDs you would like
+    to Acknowledge. |
 
-    | Username | String | Yes | The username used for authentication with the FireEye
-    HX API. |
+    | Acknowledgment Comment | String | No | Specify the acknowledgment comment you
+    would like to add to the relevant alert groups. |
 
-    | Password | String | Yes | The password used for authentication with the FireEye
-    HX API. |
+    | Acknowledgment | String (DDL) | Yes | Specify whether you would like to Acknowledge
+    or Un-acknowledge the specified alert groups. |
 
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the FireEye HX server. Default is False. |
+    | Limit | String | No | Specify the maximum amount of alert group listings coming
+    back from the API, in the JSON result. |
+Cancel Host Contain:
+  ai_description: >-
+    ### General Description
+
+    Cancels the containment of a host on the FireEye HX server. This action removes
+    the network isolation for a specified host, restoring its full communication capabilities.
+
+
+    ### Flow Description
+
+    1. Initialize the FireEye HX manager with the provided credentials (API Root,
+    Username, Password, and SSL verification settings).
+
+    2. Iterate through the provided entities (Hostname or IP Address).
+
+    3. For each entity, search for the corresponding host in FireEye HX using `get_hosts`
+    or `get_hosts_by_ip`.
+
+    4. If multiple hosts are found, select the one with the most recent `last_poll_timestamp`.
+
+    5. Execute `cancel_containment_by_id` via a DELETE API call to the FireEye HX
+    server to remove the host from containment.
+
+    6. Report the success or failure of the operation for each entity.
+
+
+    ### Additional Notes
+
+    This action is not supported for Linux hosts by FireEye HX.
+  ai_short_description: >-
+    Cancels the containment of a host on the FireEye HX server for the specified Hostname
+    or IP Address entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes the host from containment on the FireEye HX server.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches host information from the FireEye HX server to identify the
+      correct agent ID and then performs a DELETE request to cancel the containment
+      of the host. This constitutes fetching data and mutating external data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if their `entity_type` is either `ADDRESS` or `HOSTNAME` using the `SUPPORTED_ENTITIES`
+      list. This confirms filtering by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a DELETE request to the FireEye HX server to cancel the
+      containment of a host. This directly matches the 'Uncontain Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: true
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | API Root | String | Yes | The API root URL for the FireEye HX server. |
+
+    | Username | String | Yes | The username for authentication. |
+
+    | Password | String | Yes | The password for authentication. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates (default: False).
+    |
+Contain Host:
+  ai_description: >-
+    ### General Description
+
+    Initiates a containment task on a FireEye HX server for specified host entities.
+    This action allows security analysts to isolate compromised endpoints directly
+    from the SOAR platform, preventing further network activity from the affected
+    host. The action supports both IP address and Hostname entities.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the `FireEyeHXManager` using the
+    provided API credentials and configuration.
+
+    2. **Entity Processing**: It iterates through the provided `target_entities`.
+
+    3. **Host Identification**: For each entity, it performs an API call to fetch
+    matching hosts from the FireEye HX server:
+        * If the entity is a `HOSTNAME`, it calls `get_hosts` with the hostname.
+        * If the entity is an `ADDRESS`, it calls `get_hosts_by_ip` with the IP address.
+    4. **Selection**: If multiple hosts are returned, the action selects the host
+    with the most recent `last_poll_timestamp`.
+
+    5. **Containment**: It executes the containment task by calling the `contain_host_by_id`
+    method, which performs a POST request to the FireEye HX API to initiate the containment
+    state.
+
+    6. **Completion**: The action logs the status of the containment task for each
+    entity and closes the session.
+
+
+    ### Additional Notes
+
+    This action is not supported for Linux hosts by FireEye HX. If the `Approve Containment`
+    parameter is set to false, the containment request may require manual approval
+    in the FireEye HX web console.
+  ai_short_description: >-
+    Initiates a containment task on a FireEye HX server for specified host entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a containment task on the FireEye HX server for the identified host.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches host data (GET) to identify the correct agent and then performs
+      a state-changing operation (POST) to contain the host on the external FireEye
+      HX server. It does not mutate internal SOAR data or update entities.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      them by checking if the `entity_type` is in the `SUPPORTED_ENTITIES` list (ADDRESS
+      and HOSTNAME). It then branches logic based on the specific entity type to fetch
+      the corresponding host from FireEye HX.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: true
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a POST request to the FireEye HX API to initiate a containment
+      task on a host. This directly matches the 'Contain Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Approve Containment | Boolean | Yes | Specify if the containment request for
+    the host should be automatically approved. If set to false, the request may require
+    manual approval in the FireEye HX web console. |
+Get Alert Group Details:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed information for specified Alert Groups from FireEye HX. This
+    action allows analysts to fetch comprehensive metadata for one or more alert groups
+    by providing their unique identifiers.
+
+
+    ### Flow Description
+
+    1. Extracts integration configuration (API Root, credentials) and the `Alert Group
+    ID` parameter.
+
+    2. Initializes the `FireEyeHXManager` to establish a session with the FireEye
+    HX API.
+
+    3. Iterates through the provided comma-separated list of Alert Group IDs.
+
+    4. For each ID, calls the `get_alert_group_details` API endpoint to retrieve group
+    metadata.
+
+    5. Aggregates successful results into a JSON object and a data table.
+
+    6. Outputs the results to the SOAR platform and logs the execution status.
+
+    7. Closes the API session.
+
+
+    ### Additional Notes
+
+    The action supports multiple Alert Group IDs provided as a comma-separated string.
+  ai_short_description: >-
+    Retrieves detailed information for specified Alert Groups from FireEye HX.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve alert group details from FireEye
+      HX. It does not mutate external or internal data, nor does it update entities
+      or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action works on other data sources without referencing specific entities,
+      so all flags must be false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action retrieves details about alert groups from the FireEye HX platform.
+      This matches the 'Get Alert Information' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert Group ID | String | Yes | Comma-separated list of Alert Group IDs to retrieve
+    details for. |
+Get Alerts:
+  ai_description: >-
+    ### General Description
+
+    Fetches alerts from FireEye HX for specific Host or IP entities. This action allows
+    analysts to retrieve security alerts associated with endpoints, supporting various
+    filtering options such as alert source, resolution status, and time range.
+
+
+    ### Flow Description
+
+    1. Initializes the `FireEyeHXManager` using the provided integration credentials.
+
+    2. Iterates through the provided `target_entities` (Host or IP).
+
+    3. For each entity, calls `hx_manager.get_hosts` (or `hx_manager.get_hosts_by_ip`)
+    to identify the corresponding host in FireEye HX.
+
+    4. If a matching host is found, calls `hx_manager.get_alerts` using the host's
+    ID and any specified filters (e.g., `Limit`, `Has Share Mode`, `Alert Resolution
+    Status`, `Alert Source`, `Alert ID`, `Alert reported in last x hours`).
+
+    5. Adds the retrieved alerts to the action result as a data table and JSON.
+
+
+    ### Additional Notes
+
+    The action supports filtering by alert source, resolution status, and time range.
+    If multiple hosts match an entity, the one with the most recent `last_poll_timestamp`
+    is selected.
+  ai_short_description: >-
+    Fetches alerts from FireEye HX for specified Host or IP entities based on provided
+    filters.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the FireEye HX API to fetch host and alert
+      data. It does not mutate external or internal data, nor does it update entities
+      or create insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and checks if `entity.entity_type`
+      is in `SUPPORTED_ENTITIES` (ADDRESS, HOSTNAME). This means it targets ADDRESS
+      and HOSTNAME entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches alerts from FireEye HX based on the provided entities and
+      filters. This matches the 'Get Alert Information' expected outcome. It does
+      not perform enrichment, containment, or other mutation actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Limit | String | No | How many alerts action should return, for example, 100.
+    |
+
+    | Has Share Mode | DDL | No | Filter alerts that were triggered from indicators
+    with specific share mode. Available values: any, restricted, unrestricted. |
+
+    | Alert Resolution Status | DDL | No | Filter alerts based on alert resolution
+    status. Available values: any, active_threat, alert, block, partial_block. |
+
+    | Alert reported in last x hours | String | No | Filter alerts reported in last
+    x hours, for example last 4 hours. |
+
+    | Alert Source | DDL | No | Source of alert. Available values: any, exd (exploit
+    detection), mal (malware alert), ioc (indicator of compromise). |
+
+    | Alert ID | String | No | Return specific alert by alert identifier. |
+Get Alerts in Alert Group:
+  ai_description: >-
+    General Description: This action retrieves a list of alerts associated with one
+    or more specified Alert Group IDs from the FireEye HX platform.
+
+
+    Flow Description:
+
+    1. Extract integration configuration (API Root, credentials) and action parameters
+    (Alert Group ID, Limit).
+
+    2. Initialize the `FireEyeHXManager` to establish a connection to the FireEye
+    HX API.
+
+    3. Iterate through the provided comma-separated list of Alert Group IDs.
+
+    4. For each ID, perform a GET request to the FireEye HX API (`/alert_groups/{alert_group_id}/alerts`)
+    to fetch associated alerts.
+
+    5. If alerts are retrieved, construct a data table and add the JSON results to
+    the action output.
+
+    6. Log the success or failure of each group retrieval.
+
+    7. Close the connection to the FireEye HX API.
+
+
+    Additional Notes: The action does not operate on entities. It requires valid FireEye
+    HX credentials.
+  ai_short_description: >-
+    Retrieves alerts from the FireEye HX platform for specified Alert Group IDs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the FireEye HX API to fetch alert data. It
+      does not mutate any external or internal data. It does not update entities,
+      create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It takes `Alert Group ID` as an input parameter, so it does not
+      run on entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches alert information from the FireEye HX platform based on the
+      provided Alert Group ID. This matches the 'Get Alert Information' category.
+      It does not perform any other actions like enrichment, ticket creation, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert Group ID | String | Yes | Specify a comma-separated list of Alert Group
+    IDs for which you want to retrieve alerts. |
+
+    | Limit | String | No | Specify the maximum amount of alerts listings coming back
+    from the API, for the alert group. Default is 50. |
+Get Host Alert Groups:
+  ai_description: >-
+    ### General Description
+
+    Retrieves alert groups associated with a specific host from FireEye HX. This action
+    allows analysts to query FireEye HX for security alerts related to a given Hostname
+    or IP Address, providing visibility into the threat activity on that endpoint.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the `FireEyeHXManager` using the
+    provided API credentials (API Root, Username, Password) and SSL verification settings.
+
+    2. **Entity Processing**: The action iterates through the provided `target_entities`
+    (Hostname or IP Address).
+
+    3. **Host Search**: For each entity, the action queries FireEye HX to find the
+    corresponding host. If multiple hosts are found, it selects the one with the most
+    recent `last_poll_timestamp`.
+
+    4. **Alert Group Retrieval**: The action calls the FireEye HX API to fetch alert
+    groups for the identified host. This request can be filtered by the `Acknowledgment
+    Filter` parameter (All, Only Acknowledged, or Only Unacknowledged) and limited
+    by the `Max Alert Groups To Return` parameter.
+
+    5. **Result Presentation**: The retrieved alert groups are added to the action's
+    JSON result and displayed as a data table in the SOAR platform.
+
+
+    ### Additional Notes
+
+    - The action supports filtering by acknowledgment status and limiting the number
+    of returned alert groups.
+
+    - If no host is found for an entity, the entity is marked as failed.
+
+    - The action requires valid FireEye HX credentials to perform API requests.
+  ai_short_description: >-
+    Retrieves alert groups for a specific host from FireEye HX.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs GET requests to the FireEye HX API to retrieve host and
+      alert group information. It does not mutate any external or internal data, nor
+      does it update entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks if
+      the entity type is either `EntityTypes.ADDRESS` or `EntityTypes.HOSTNAME`. It
+      skips any entities that do not match these types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches alert groups from FireEye HX, which provides context about
+      the asset (Enrich Asset), retrieves historical alert data (Search Events), and
+      fetches specific alert information from the 3rd party product (Get Alert Information).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Acknowledgment Filter | ddl | No | Specify whether to return all alert groups,
+    only acknowledged, or only unacknowledged. Default: ALL. |
+
+    | Max Alert Groups To Return | string | No | Specify the maximum number of Alert
+    Groups to return per entity. Default: 20. |
+Get Host Info:
+  ai_description: >-
+    Enriches Hostname and IP Address entities using FireEye HX. This action retrieves
+    detailed host information, including agent version, OS, containment state, and
+    alert counts, to provide context for security investigations.
+
+
+    ### Flow Description
+
+    1. Initialize the FireEye HX manager using the provided API credentials.
+
+    2. Iterate through the target entities (HOSTNAME and ADDRESS).
+
+    3. For each entity, query the FireEye HX API to retrieve matching host information.
+
+    4. If multiple hosts match, select the one with the most recent `last_poll_timestamp`.
+
+    5. Update the entity's `additional_properties` with the retrieved host data.
+
+    6. Mark the entity as enriched and update it within the SOAR platform.
+
+    7. Add the host information as a table to the action results.
+
+
+    ### Additional Notes
+
+    This action requires valid FireEye HX credentials. It supports both hostname and
+    IP address entities.
+  ai_short_description: >-
+    Enriches Hostname and IP Address entities with host metadata from FireEye HX.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity `additional_properties` and `is_enriched` status.
+    reasoning: >-
+      The action makes a GET request to FireEye HX API to fetch host data. It does
+      not mutate external data but updates internal entities with the retrieved information.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `if entity.entity_type
+      not in SUPPORTED_ENTITIES: continue`. This means it targets ADDRESS and HOSTNAME
+      entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches host information from FireEye HX, returning contextual metadata
+      (OS, agent version, etc.) for assets. This matches the 'Enrich Asset' expected
+      outcome. It does not return reputation or threat intelligence for the IP, so
+      it is not an 'Enrich IOC' action.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | API Root | String | Yes | The base URL for the FireEye HX API. |
+
+    | Username | String | Yes | Username for authentication. |
+
+    | Password | String | Yes | Password for authentication. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates. Default is False.
+    |
+Get Indicator:
+  ai_description: >-
+    ### General Description
+
+    Retrieves detailed information about a specific indicator from the FireEye HX
+    server. This action allows analysts to fetch metadata, status, and threat intelligence
+    associated with a particular indicator by its category and name.
+
+
+    ### Flow Description
+
+    1. Initializes the `FireEyeHXManager` using configuration parameters (API Root,
+    Username, Password, Verify SSL).
+
+    2. Calls the `get_indicator` method of the `FireEyeHXManager` with the provided
+    `Indicator Category` and `Indicator Name` parameters.
+
+    3. If the indicator is found, the action adds the raw indicator data as a JSON
+    result and a formatted data table to the action results.
+
+    4. If the indicator is not found, the action logs an error and sets the result
+    to "false".
+
+    5. Finally, the action logs the execution status and ends.
+
+
+    ### Additional Notes
+
+    This action is used for retrieving indicator details from FireEye HX. The `uri_name`
+    for the category and indicator can be found by running the "Get Indicators" action.
+  ai_short_description: >-
+    Retrieves detailed information about a specific indicator from the FireEye HX
+    server.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the FireEye HX API to retrieve indicator information.
+      It does not mutate any data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities; it retrieves information based on user-provided
+      parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves indicator information (reputation, metadata) from FireEye
+      HX, which matches the 'Enrich IOC' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Indicator Category | String | Yes | Specify indicator category\
+    \ uri_name value. uri_name can be found by running \u201CGet Indicators\u201D\
+    \ action. |\n| Indicator Name | String | Yes | Specify indicator uri_name value.\
+    \ uri_name can be found by running \u201CGet Indicators\u201D action. |"
+Get Indicators:
+  ai_description: >-
+    ### General Description
+
+    Fetches indicators of compromise (IOCs) from the FireEye HX server based on provided
+    search parameters. This action allows users to query for specific indicators,
+    filter by category, share mode, or author, and limit the number of results returned.
+
+
+    ### Flow Description
+
+    1. Extracts integration configuration (API root, username, password, and SSL verification
+    settings).
+
+    2. Extracts action parameters (Indicator Category, Search Term, Limit, Share Mode,
+    Sort By Field, Created by, and Has associated alerts).
+
+    3. Initializes the `FireEyeHXManager` with the provided credentials.
+
+    4. Calls the `get_indicators` method on the FireEye HX API to retrieve the requested
+    indicators.
+
+    5. Constructs a CSV table of the retrieved indicators for display in the action
+    results.
+
+    6. Adds the raw indicator data to the action result JSON.
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities and is used for retrieving threat
+    intelligence data from the FireEye HX platform.
+  ai_short_description: >-
+    Fetches indicators of compromise (IOCs) from the FireEye HX server based on specified
+    search criteria.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the FireEye HX API to retrieve indicators.
+      It does not mutate external or internal data, nor does it update entities or
+      create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `siemplify.target_entities`. It operates independently
+      of any specific entity.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of indicators from the FireEye HX server. It does
+      not perform enrichment on existing entities, update alerts, or perform any containment
+      actions. Therefore, it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Indicator Category | String | No | The indicator category. |
+
+    | Search Term | String | No | The search term can be any name, category, signature,
+    source, or condition value. |
+
+    | Limit | String | No | How many indicators action should return, for example,
+    100. |
+
+    | Share Mode | String | No | Filter indicators based on specific share mode. Available
+    values: any, restricted, unrestricted. |
+
+    | Sort By Field | String | No | Sorts the results by the specified field in ascending
+    order. |
+
+    | Created by | String | No | Filter indicators based on author. |
+
+    | Has associated alerts | Boolean | No | Specify if only indicators, which have
+    associated alerts should be returned. |
+Get List of File Acquisitions For Host:
+  ai_description: >-
+    Retrieves a list of file acquisitions for a specific host from the FireEye HX
+    server. This action allows analysts to investigate file acquisition history on
+    endpoints to support forensic analysis and threat hunting.
 
 
     ### Flow Description
 
     1. **Initialization**: The action initializes the FireEye HX manager using the
-    provided integration configuration.
+    provided API credentials.
 
-    2. **Entity Processing**: Iterates through the target entities in the current
-    context, filtering for Hostname and Address types.
+    2. **Entity Processing**: It iterates through the provided target entities (supporting
+    Hostname and IP Address).
 
-    3. **Host Lookup**: For each entity, it queries the FireEye HX API to find matching
-    agents. If multiple agents match a single entity, it selects the one with the
-    most recent `last_poll_timestamp`.
+    3. **Host Lookup**: For each entity, it queries the FireEye HX server to find
+    matching hosts. If multiple hosts are found, it selects the one with the most
+    recent `last_poll_timestamp`.
 
-    4. **Containment Cancellation**: Executes a command to cancel the containment
-    state for the identified agent ID via a DELETE request to the FireEye HX API.
+    4. **Data Retrieval**: It calls the `get_file_acquisitions_for_host` API method
+    to fetch file acquisition records, applying optional search terms, limits, and
+    filters.
 
-    5. **Result Aggregation**: Tracks successful cancellations, missing agents, and
-    failures, providing a detailed summary in the action output.
+    5. **Result Output**: The retrieved file acquisition data is formatted into a
+    CSV data table and added to the action results as a JSON object.
+
+
+    ### Additional Notes
+
+    This action performs read-only operations and does not modify any data on the
+    FireEye HX server or within the SOAR platform.
+  ai_short_description: >-
+    Retrieves a list of file acquisitions for a host from the FireEye HX server.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
-    can_mutate_external_data: true
+    can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      The action sends a DELETE request to the FireEye HX API endpoint (/hosts/{agent_id}/containment)
-      to change the host's state from contained to uncontained.
+    external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs GET requests to the FireEye HX API to retrieve file acquisition
+      data. It does not perform any mutations on external systems or internal SOAR
+      data, nor does it update entities or create insights.
   entity_usage:
     entity_types:
-    - HOSTNAME
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -171,764 +1562,146 @@ Cancel Host Contain:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Contain Host:
-  ai_description: >-
-    ### General Description
-
-    The **Contain Host** action isolates a host from the network by creating a containment
-    task on the FireEye HX server. It is designed to work with **HOSTNAME** and **ADDRESS**
-    (IP) entities. This action is critical for incident response to prevent the lateral
-    movement of threats. Note that FireEye HX does not support containment for Linux
-    hosts.
-
-
-    ### Parameters Description
-
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks if
+      the entity type is either `EntityTypes.ADDRESS` or `EntityTypes.HOSTNAME`. It
+      filters out any entities that do not match these supported types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves historical file acquisition records from the FireEye HX
+      server based on host identifiers. This aligns with the 'Search Events' category
+      as it returns a collection of historical logs/telemetry data.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Approve Containment** | Boolean | Yes | Determines if the containment request
-    should be automatically approved on the FireEye HX server. If set to `false`,
-    the request is created but must be manually approved within the FireEye HX web
-    console. |
+    | Search Term | String | No | Searches all file acquisitions for hosts connected
+    to the FireEye HX server. The search_term can be any condition value. |
 
-
-    ### Flow Description
-
-    1. **Initialization**: The action retrieves the FireEye HX integration configuration
-    (API Root, credentials, SSL settings) and the `Approve Containment` action parameter.
-
-    2. **Entity Filtering**: It iterates through the target entities, processing only
-    those of type `HOSTNAME` or `ADDRESS` (IP).
-
-    3. **Host Identification**: For each valid entity, the action queries the FireEye
-    HX API to find matching agents. If multiple agents match a single entity, the
-    action automatically selects the one with the most recent `last_poll_timestamp`
-    to ensure the most relevant host is targeted.
-
-    4. **Containment Request**: The action sends a POST request to the FireEye HX
-    server to initiate the containment task for the identified agent ID. The `approve`
-    flag is passed based on the user-provided parameter.
-
-    5. **Result Aggregation**: The action tracks successful containments, missing
-    agents (where no matching FireEye HX agent was found), and any processing failures,
-    providing a detailed summary in the output message.
-
-
-    ### Additional Notes
-
-    - **Mutation**: This action performs a state-changing operation on an external
-    system (FireEye HX).
-
-    - **Platform Limitation**: As per FireEye HX documentation, this action is not
-    supported for Linux-based hosts.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Initiates a containment task on the FireEye HX server, which isolates the target
-      host from the network by changing its containment state.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - HOSTNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Alert Group Details:
-  ai_description: >-
-    ### General Description
-
-    The **Get Alert Group Details** action retrieves comprehensive information for
-    specific Alert Groups within FireEye HX using their unique identifiers. This action
-    is primarily used to gather deep context about grouped alerts, including assessment
-    details, event counts, and acknowledgement status, which helps analysts understand
-    the scope and nature of a threat group.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Alert Group ID** | String | Yes | A comma-separated list of FireEye HX Alert
-    Group IDs (e.g., `622d3688031aa40faa4bd86028841276`) for which details should
-    be retrieved. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the FireEye HX Manager using the
-    provided API credentials (API Root, Username, Password) and SSL verification settings.
-
-    2. **Parameter Parsing**: The input `Alert Group ID` string is parsed and converted
-    into a unique list of IDs to be processed.
-
-    3. **Data Retrieval**: The action iterates through each Alert Group ID and performs
-    a GET request to the FireEye HX API to fetch the specific group's details.
-
-    4. **Data Processing**: For each successful retrieval, the action parses the raw
-    JSON data into a structured format, extracting fields such as assessment, event
-    counts, and timestamps.
-
-    5. **Output Generation**: The action aggregates the results into a JSON object
-    and constructs a data table named "Alert Group Details" containing the summarized
-    information for all successfully retrieved groups.
-
-
-    ### Additional Notes
-
-    This action does not interact with or process entities from the Google SecOps
-    environment; it operates exclusively based on the provided Alert Group ID parameters.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Alerts:
-  ai_description: >-
-    ### General Description
-
-    The **Get Alerts** action retrieves security alerts from FireEye HX associated
-    with specific **Hostname** or **IP Address** entities. This action allows analysts
-    to gather historical or recent alert data for investigation, providing granular
-    filtering options such as resolution status, alert source, and time-based windows.
-    It is primarily used to enrich the context of a case by identifying previous or
-    related malicious activity on a specific endpoint.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Limit** | Integer | No | Specifies the maximum number of alerts to return
-    for each entity. |
-
-    | **Has Share Mode** | String | No | Filters alerts based on indicator share mode.
-    Options: `any`, `restricted`, `unrestricted`. |
-
-    | **Alert Resolution Status** | String | No | Filters alerts by their resolution
-    status. Options: `any`, `active_threat`, `alert`, `block`, `partial_block`. |
-
-    | **Alert reported in last x hours** | Integer | No | Filters alerts reported
-    within the specified number of hours from the current time. |
-
-    | **Alert Source** | String | No | Filters alerts by source. Options: `any`, `exd`
-    (exploit detection), `mal` (malware alert), `ioc` (indicator of compromise). |
-
-    | **Alert ID** | String | No | Retrieves a specific alert by its unique identifier.
+    | Limit | String | No | How many records action should return, for example, 100.
     |
 
-
-    ### Flow Description
-
-    1. **Host Identification**: The action iterates through the target entities. For
-    each **Hostname** or **ADDRESS**, it queries FireEye HX to find the corresponding
-    agent ID.
-
-    2. **Agent Selection**: If multiple agents match a single entity (e.g., a host
-    with multiple IPs or re-imaged systems), the action selects the agent with the
-    most recent `last_poll_timestamp` to ensure data accuracy.
-
-    3. **Alert Retrieval**: The action calls the FireEye HX API to fetch alerts for
-    the identified agent, applying the user-defined filters (Limit, Share Mode, Resolution,
-    Time Range, Source, or specific Alert ID).
-
-    4. **Data Formatting**: Retrieved alerts are processed and formatted into CSV-style
-    data for tables.
-
-    5. **Output Generation**: The action attaches a data table for each entity containing
-    the alert details and provides a full JSON result for further automated processing.
-
-
-    ### Additional Notes
-
-    - If no matching agent is found in FireEye HX for a given entity, the action will
-    report that the agent was missing and move to the next entity.
-
-    - The action uses ISO-8601 timestamp formatting for time-based queries.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds data tables to the Google SecOps case containing detailed alert
-      information retrieved from FireEye HX for each processed entity.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - HOSTNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Alerts in Alert Group:
-  ai_description: "### General Description\nRetrieves all alerts associated with one\
-    \ or more specific Alert Group IDs from FireEye HX. This action is useful for\
-    \ analysts who need to investigate the individual events and alerts that comprise\
-    \ a higher-level alert group or incident within the FireEye HX platform.\n\n###\
-    \ Parameters Description\n\n| Parameter | Type | Mandatory | Description |\n|\
-    \ :--- | :--- | :--- | :--- |\n| Alert Group ID | String | Yes | A comma-separated\
-    \ list of Alert Group IDs for which you want to retrieve alerts. |\n| Limit |\
-    \ Integer | No | The maximum number of alerts to retrieve for each alert group.\
-    \ If a non-positive value is provided, the default value of 50 is used. |\n\n\
-    ### Flow Description\n1. **Initialization**: The action extracts the integration\
-    \ configuration (API Root, Username, Password, SSL verification) and the action\
-    \ parameters (Alert Group IDs and Limit).\n2. **Authentication**: Connects to\
-    \ the FireEye HX API to obtain an authentication token.\n3. **Input Parsing**:\
-    \ Converts the comma-separated string of Alert Group IDs into a unique list.\n\
-    4. **Data Retrieval**: Iterates through each Alert Group ID and calls the FireEye\
-    \ HX API to fetch the associated alerts up to the specified limit.\n5. **Result\
-    \ Processing**: \n    * For each group where alerts are found, it generates a\
-    \ data table containing alert details (ID, Indicator Name, Event Time, etc.).\n\
-    \    * Collects the raw JSON data for all retrieved alerts.\n6. **Final Output**:\
-    \ Adds the aggregated JSON results and data tables to the action output and provides\
-    \ a summary message of successful and failed group retrievals.\n7. **Cleanup**:\
-    \ Terminates the session by logging out of the FireEye HX API.\n\n### Additional\
-    \ Notes\n* This action does not operate on entities within the Google SecOps environment;\
-    \ it relies entirely on the provided Alert Group ID parameters.\n* If multiple\
-    \ IDs are provided, the action will attempt to process all of them, reporting\
-    \ success or failure for each individually."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Host Alert Groups:
-  ai_description: >-
-    ### General Description
-
-    The **Get Host Alert Groups** action retrieves a list of alert groups associated
-    with a specific host from FireEye HX. It supports **Hostname** and **IP Address**
-    entities. This action allows security analysts to view the history of alerts and
-    detections associated with a specific endpoint, providing context for investigations.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Acknowledgment Filter** | String | No | Filters the alert groups based on
-    their acknowledgment status. Options: `ALL` (default), `Only Acknowledged`, `Only
-    Unacknowledged`. |
-
-    | **Max Alert Groups To Return** | Integer | No | The maximum number of alert
-    groups to retrieve for each entity. Default is 20. Must be a positive integer.
-    |
-
-
-    ### Flow Description
-
-    1. **Authentication**: The action authenticates with the FireEye HX API using
-    the provided credentials and retrieves an API token.
-
-    2. **Host Identification**: For each provided entity (Hostname or IP), the action
-    searches for matching hosts in FireEye HX. If multiple hosts are found for a single
-    entity, it selects the host with the most recent `last_poll_timestamp`.
-
-    3. **Alert Group Retrieval**: It fetches the alert groups for the identified host,
-    applying the specified acknowledgment filter and limiting the results to the value
-    provided in the parameters.
-
-    4. **Output Generation**: The retrieved alert groups are formatted into a data
-    table and attached to the case wall for each successful entity. The raw data is
-    also returned as a JSON result.
-
-    5. **Cleanup**: The action logs out of the FireEye HX session.
-
-
-    ### Additional Notes
-
-    - If no matching host is found for an entity, the action will log the failure
-    and continue to the next entity.
-
-    - The action will fail if the 'Max Alert Groups To Return' parameter is set to
-    a value less than 1.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds data tables containing alert group details to the case wall
-      for each processed entity.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - HOSTNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Host Info:
-  ai_description: "### General Description\nThis action enriches Hostname and IP Address\
-    \ entities with detailed endpoint information retrieved from FireEye HX. It provides\
-    \ visibility into the host's operating system, agent status, network configuration,\
-    \ and historical alert statistics. This data is used to update entity attributes\
-    \ and provide a structured data table for analysts within the Google SecOps case.\n\
-    \n### Parameters Description\n| Parameter Name | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| API Root | String | Yes | The base URL of\
-    \ the FireEye HX instance (e.g., `https://hx-server.example.com`). |\n| Username\
-    \ | String | Yes | The username used to authenticate with the FireEye HX API.\
-    \ |\n| Password | String | Yes | The password used to authenticate with the FireEye\
-    \ HX API. |\n| Verify SSL | Boolean | No | If set to true, the action will verify\
-    \ the SSL certificate of the FireEye HX server. Default is false. |\n\n### Flow\
-    \ Description\n1. **Authentication**: The action establishes a session with FireEye\
-    \ HX using the provided credentials and retrieves an API token.\n2. **Entity Filtering**:\
-    \ It identifies supported entities (Hostname and IP Address) from the target list.\n\
-    3. **Data Retrieval**: \n    * For **Hostname** entities, it queries FireEye HX\
-    \ for matching host records.\n    * For **IP Address** entities, it queries FireEye\
-    \ HX for hosts associated with that primary IP.\n4. **Conflict Resolution**: If\
-    \ multiple host records are found for a single entity, the action automatically\
-    \ selects the record with the most recent `last_poll_timestamp` to ensure data\
-    \ accuracy.\n5. **Internal Mutation**: \n    * Updates the entity's `additional_properties`\
-    \ with flattened host data (prefixed with `FireEyeHX`).\n    * Creates a data\
-    \ table attached to the entity containing key metrics like OS version, MAC address,\
-    \ containment state, and alert counts.\n    * Marks the entity as enriched.\n\
-    6. **Cleanup**: The action logs out of the FireEye HX session to release the API\
-    \ token."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity additional properties with host enrichment data and adds a detailed
-      data table to the entity in the SOAR.
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - HOSTNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Indicator:
-  ai_description: >-
-    ### General Description
-
-    The **Get Indicator** action retrieves detailed information about a specific indicator
-    from the FireEye HX server. It is designed to fetch metadata, platform compatibility,
-    and operational statistics (such as alert counts and active conditions) for a
-    known indicator identified by its category and name. This action is typically
-    used for investigative purposes to understand the context of a specific threat
-    indicator.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Indicator Category** | String | Yes | The `uri_name` of the indicator category
-    (e.g., `mandiant_unrestricted`). This value is required to locate the indicator
-    within the FireEye HX hierarchy. |
-
-    | **Indicator Name** | String | Yes | The `uri_name` of the specific indicator
-    (often a UUID or a specific string identifier). This uniquely identifies the indicator
-    within the specified category. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action extracts the FireEye HX integration configuration
-    (API Root, credentials) and the specific action parameters (Indicator Category
-    and Indicator Name).
-
-    2. **Authentication**: Establishes a session with the FireEye HX API to obtain
-    a temporary authentication token.
-
-    3. **Data Retrieval**: Executes a GET request to the FireEye HX indicators endpoint
-    using the provided category and name.
-
-    4. **Parsing**: Processes the raw JSON response into a structured `Indicator`
-    data model, extracting attributes such as ID, display name, description, supported
-    platforms, and alert statistics.
-
-    5. **Output Generation**:
-        *   Creates a formatted data table titled 'Indicator [Name]' containing key
-    attributes for quick review in the case wall.
-        *   Attaches the full raw JSON data to the action results for use in subsequent
-    playbook steps.
-    6. **Session Cleanup**: Logs out of the FireEye HX server to invalidate the session
-    token.
-
-
-    ### Additional Notes
-
-    This action does not operate on SecOps entities (like IP addresses or Hostnames).
-    Instead, it requires explicit string identifiers for the indicator and its category,
-    which are usually retrieved from a preceding 'Get Indicators' action or provided
-    manually.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Indicators:
-  ai_description: >-
-    Retrieves information on indicators of compromise (IOC) from a FireEye HX server
-    based on user-defined search parameters. This action allows for broad searching
-    across indicator categories, names, signatures, and sources to identify relevant
-    threat intelligence data.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Indicator Category | String | No | The specific category of indicators to retrieve.
-    |
-
-    | Search Term | String | No | A term to search across names, categories, signatures,
-    sources, or condition values. |
-
-    | Limit | Integer | No | Maximum number of indicators to return (Default: 100).
-    |
-
-    | Share Mode | String | No | Filter by share mode: any, restricted, unrestricted,
-    or visible. |
-
-    | Sort By Field | String | No | Field name to sort the results in ascending order.
-    |
-
-    | Created by | String | No | Filter indicators by the username of the creator.
-    |
-
-    | Has associated alerts | Boolean | No | If true, only returns indicators that
-    have triggered alerts. |
-
-
-    ### Flow Description
-
-    1. **Authentication**: Establishes a session with the FireEye HX server using
-    provided credentials and retrieves an API token.
-
-    2. **Data Retrieval**: Executes a search for indicators using the provided filters
-    such as category, search term, share mode, and author.
-
-    3. **Processing**: Parses the raw API response into structured indicator objects,
-    extracting fields like ID, Name, OS platforms, and alert statistics.
-
-    4. **Output**: Generates a data table named 'Indicators' containing key details
-    and attaches the full raw JSON results to the action output for further processing.
-
-    5. **Cleanup**: Terminates the session by logging out of the FireEye HX API to
-    ensure security.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get List of File Acquisitions For Host:
-  ai_description: >-
-    ### General Description
-
-    The **Get List of File Acquisitions For Host** action retrieves a historical list
-    of file acquisition requests performed on a specific endpoint via the FireEye
-    HX (Endpoint Security) server. This action is primarily used for forensic auditing
-    and investigation, allowing analysts to see which files have been previously collected
-    from a host. It supports both **HOSTNAME** and **ADDRESS** (IP) entities.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Search Term** | String | No | A search string used to filter the file acquisitions.
-    This can match various condition values within the HX records. |
-
-    | **Limit** | Integer | No | The maximum number of acquisition records to return
-    for each entity. |
-
-    | **Filter Field** | String | No | Allows filtering results by a specific field
-    value, such as an external correlation identifier (`external_id`). |
-
-
-    ### Flow Description
-
-    1. **Entity Validation**: The action iterates through the target entities, filtering
-    for supported types: Hostname and IP Address.
-
-    2. **Host Resolution**: For each entity, the action queries the FireEye HX API
-    to find the corresponding Agent ID. If the entity is a Hostname, it searches by
-    name; if it is an Address, it searches by IP.
-
-    3. **Conflict Resolution**: If multiple agents match a single entity (e.g., an
-    IP shared by multiple hosts over time), the action automatically selects the agent
-    record with the most recent `last_poll_timestamp` to ensure data accuracy.
-
-    4. **Data Retrieval**: The action calls the HX API to fetch file acquisition entries
-    associated with the identified Agent ID, applying any provided search terms, limits,
-    or field filters.
-
-    5. **Result Processing**: Retrieved data is converted into a structured JSON format
-    and attached to the Google SecOps case as a Data Table for each successful entity.
-
-
-    ### Additional Notes
-
-    - If no matching host is found in FireEye HX for a given entity, the action will
-    log the missing entity and continue processing others.
-
-    - The action performs a session logout (token deletion) upon completion to maintain
-    security hygiene.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - HOSTNAME
-    - ADDRESS
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
+    | Filter Field | String | No | Lists only results with the specified field value,
+    results can be filtered by external correlation identifier (external_id). |
 Is Contain Malware Alerts:
   ai_description: >-
     ### General Description
 
-    The **Is Contain Malware Alerts** action checks if malware alerts are associated
-    with specific **HOSTNAME** or **ADDRESS** (IP) entities within a FireEye HX environment.
-    It serves as an enrichment and validation step to determine if a host is currently
-    compromised or has active malware detections.
-
-
-    ### Parameters
-
-    There are no additional parameters for this action. It relies on the integration's
-    configuration (API Root, Username, Password, and Verify SSL).
+    Checks for malware alerts on the FireEye HX server for provided Hostname or IP
+    Address entities. This action retrieves host information and alert statistics
+    from FireEye HX to determine if the asset has associated malware alerts. If alerts
+    are found, the action updates the entity's suspicious status within the SOAR platform.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action establishes a session with the FireEye HX server
-    using the provided credentials and API root.
+    1. Initialize the FireEye HX Manager using the provided API credentials (API Root,
+    Username, Password).
 
-    2. **Entity Processing**: It iterates through the target entities, specifically
-    looking for Hostnames and IP Addresses.
+    2. Iterate through the provided target entities (Hostname or IP Address).
 
-    3. **Host Lookup**:
-       - For **HOSTNAME** entities, it queries FireEye HX for matching host records
-    using the hostname.
-       - For **ADDRESS** entities, it queries FireEye HX for hosts associated with
-    that specific IP address.
-    4. **Selection Logic**: If multiple host records are returned for a single entity,
-    the action automatically selects the record with the most recent `last_poll_timestamp`
-    to ensure the most up-to-date data is used.
+    3. For each entity, query the FireEye HX server to retrieve matching host information.
 
-    5. **Alert Verification**: The action retrieves the host's statistics. If the
-    `malware_alerts` count is greater than zero, the entity is marked as **suspicious**
-    within Google SecOps.
+    4. If multiple hosts are found, select the one with the most recent last_poll_timestamp.
 
-    6. **Data Update**: The action updates the entities in the case and attaches the
-    raw host statistics as JSON results for further investigation.
+    5. Check the retrieved host data for the presence of malware alerts.
+
+    6. If malware alerts are present, set the entity's `is_suspicious` attribute to
+    `True`.
+
+    7. Update the entity in the SOAR platform using `siemplify.update_entities`.
+
+    8. Return the host statistics as a JSON result.
 
 
     ### Additional Notes
 
-    - If no matching host is found in FireEye HX, the action will report that no data
-    was found for that specific entity.
-
-    - The action includes a timeout check to ensure it completes within the execution
-    deadline.
+    This action performs read-only operations on the FireEye HX server. It requires
+    valid API credentials to authenticate and query the FireEye HX API.
+  ai_short_description: >-
+    Checks for malware alerts on FireEye HX for provided Hostname or IP Address entities
+    and updates their suspicious status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: false
+    can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: >-
+      Updates the 'is_suspicious' attribute of the entity within the SOAR platform.
+    reasoning: >-
+      The action fetches host and alert data from FireEye HX (fetches_data=true).
+      It updates the `is_suspicious` flag on the entity and calls `siemplify.update_entities`
+      (can_mutate_internal_data=true, can_update_entities=true). It does not perform
+      any write operations on the external FireEye HX system.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -942,33 +1715,89 @@ Is Contain Malware Alerts:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them based
+      on whether their type is `ADDRESS` or `HOSTNAME`. It does not filter by other
+      attributes like creation time or additional properties.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action retrieves host and alert information from FireEye HX, which provides
+      context for the asset (Enrich Asset). It searches for the asset in the external
+      system (Search Asset) and retrieves specific alert information (Get Alert Information).
+      It does not perform any mutations on external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: true
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | API Root | String | Yes | The base URL for the FireEye HX API. |
+
+    | Username | String | Yes | The username for FireEye HX authentication. |
+
+    | Password | String | Yes | The password for FireEye HX authentication. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates for the API connection.
+    Defaults to False. |
 Ping:
-  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
-    \ designed to verify the connectivity between Google SecOps and the FireEye HX\
-    \ server. Its primary purpose is to ensure that the integration's configuration\
-    \ parameters\u2014such as the API Root, Username, and Password\u2014are correct\
-    \ and that the network path to the server is functional.\n\n### Parameters Description\n\
-    This action does not have any action-specific parameters. It utilizes the global\
-    \ configuration parameters defined at the integration level:\n\n| Parameter |\
-    \ Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **API Root**\
-    \ | String | Yes | The base URL of the FireEye HX API instance. |\n| **Username**\
-    \ | String | Yes | The username used for authentication. |\n| **Password** | String\
-    \ | Yes | The password used for authentication. |\n| **Verify SSL** | Boolean\
-    \ | No | Determines whether to verify the SSL certificate of the FireEye HX server.\
-    \ Defaults to `False`. |\n\n### Flow Description\n1. **Initialization**: The action\
-    \ retrieves the integration's connection settings (API Root, Username, Password,\
-    \ and SSL verification status).\n2. **Authentication Test**: It attempts to establish\
-    \ a connection by initializing the `FireEyeHXManager`, which triggers a request\
-    \ to the `/token` endpoint to obtain an API session token.\n3. **Session Termination**:\
-    \ If the token is successfully retrieved, the action immediately calls the `logout`\
-    \ method to invalidate the token and close the session, ensuring no orphaned sessions\
-    \ are left on the server.\n4. **Execution Result**: \n    * **Success**: If the\
-    \ authentication and logout processes complete without error, the action returns\
-    \ a success message and a result value of `true`.\n    * **Failure**: If any step\
-    \ fails (e.g., due to invalid credentials, network timeout, or SSL errors), the\
-    \ action catches the exception, logs the error, and returns a failure status with\
-    \ a result value of `false`.\n\n### Additional Notes\nThis action does not process\
-    \ any entities and is strictly used for validating the integration setup."
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the FireEye HX server using the provided credentials. This
+    action validates that the integration is correctly configured and can successfully
+    authenticate with the FireEye HX API.
+
+
+    ### Flow Description
+
+    1. The action extracts the required configuration parameters: `API Root`, `Username`,
+    `Password`, and `Verify SSL` from the integration settings.
+
+    2. It initializes the `FireEyeHXManager` using these credentials.
+
+    3. The action performs a connection test by attempting to authenticate and then
+    immediately calling the `logout` method to verify the session.
+
+    4. If the connection is successful, the action returns a success message and a
+    result value of "true".
+
+    5. If an exception occurs during the process, the action catches the error, logs
+    it, and returns a failure message with a result value of "false".
+
+
+    ### Additional Notes
+
+    This action is intended for troubleshooting and verifying the integration setup.
+    It does not perform any data retrieval or modification operations on the FireEye
+    HX platform beyond session validation.
+  ai_short_description: >-
+    Tests connectivity to the FireEye HX server.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -979,10 +1808,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a simple connectivity test by logging in and out of the
+      FireEye HX API. It does not fetch data, mutate external or internal data, or
+      modify any entities or alerts.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -996,3 +1862,50 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It performs a standalone connectivity
+      test using configuration parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping) and does not perform any of the defined
+      outcome operations such as enrichment, ticketing, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | API Root | String | Yes | The base URL for the FireEye HX API. |
+
+    | Username | String | Yes | The username for authentication. |
+
+    | Password | String | Yes | The password for authentication. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates. Defaults to
+    False. |

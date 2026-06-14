@@ -1,53 +1,34 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic tool designed to verify the connectivity between
-    Google SecOps and the Unshorten.me service. It ensures that the integration is
-    correctly configured and that the external API is reachable.
-
-
-    ### Parameters
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action uses a hardcoded sample URL to test the API response and respects
-    the 'Use SSL' configuration setting defined in the integration's general settings.
+    This action tests the connectivity between the SOAR platform and the UnshortenMe
+    service. It verifies that the integration is correctly configured and that the
+    platform can successfully communicate with the external UnshortenMe API.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the 'Use SSL' setting from
-    the UnshortenMe integration configuration.
+    1. The action initializes the `UnshortenMeManager` using the "Use SSL" configuration
+    setting retrieved from the integration configuration.
 
-    2. **Manager Initialization**: It initializes the `UnshortenMeManager` with the
-    specified SSL verification preference.
+    2. The action invokes the `test_connectivity` method.
 
-    3. **Connectivity Test**: The manager executes a GET request to a predefined test
-    URL on the Unshorten.me API.
+    3. The `test_connectivity` method performs an HTTP GET request to the UnshortenMe
+    test endpoint (`https://unshorten.me/json/goo.gl/IGL1lE`).
 
-    4. **Response Validation**: The action validates the HTTP response status and
-    checks for API-specific error messages or rate-limiting flags.
+    4. The response is validated to ensure the service is reachable and functioning
+    correctly.
 
-    5. **Completion**: If the request is successful, the action concludes with a 'Connected
-    successfully' message.
+    5. If the connection is successful, the action terminates with a success message.
+
+
+    ### Additional Notes
+
+    This action does not require any input entities or parameters. It is used primarily
+    for troubleshooting and verifying the health of the integration connection.
+  ai_short_description: >-
+    Tests connectivity to the UnshortenMe service to verify integration health.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -58,10 +39,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs an HTTP GET request to test connectivity, which constitutes
+      fetching data (in the form of a connectivity check). It does not mutate external
+      or internal data, nor does it update entities or insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -75,75 +93,131 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action is a connectivity test that does not interact with or process any
+      entities from the SOAR platform.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test (ping) to an external service. It does
+      not perform enrichment, ticketing, blocking, or any other operational outcome
+      defined in the categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 Unshorten URL:
   ai_description: >-
-    ### General Description
+    General Description
 
-    Resolves shortened URLs into their original, long-form destinations using the
-    Unshorten.me service. This action is useful for security analysts to uncover the
-    actual destination of suspicious links found in alerts, providing better context
-    for phishing or malware investigations.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Use SSL | This is an integration-level configuration parameter. If set to 'true',
-    the action will verify SSL certificates when connecting to the Unshorten.me API.
-    | Boolean | No (Defaults to False) |
+    This action resolves shortened URLs to their original, expanded destination URLs
+    using the Unshorten.me service. It is designed to assist in security investigations,
+    such as phishing triage, by providing visibility into the actual destination of
+    a link.
 
 
-    ### Additional Notes
+    Flow Description
 
-    * **Rate Limiting:** The action is subject to a hardcoded limit of 10 requests
-    per hour as defined in the integration manager. If this limit is reached, the
-    action will raise an error.
+    1. The action retrieves the configuration for the UnshortenMe integration, specifically
+    checking the 'Use SSL' setting.
 
-    * **Entity Enrichment:** Successfully resolved URLs will have a new property `long_url`
-    added to their additional properties and will be marked as 'Enriched' within the
-    platform.
+    2. It iterates through the target entities provided in the SOAR case, filtering
+    for entities of type 'URL'.
+
+    3. For each URL entity, the action calls the Unshorten.me API to retrieve the
+    resolved long URL.
+
+    4. If successful, it updates the entity's 'additional_properties' with the 'long_url'
+    key and marks the entity as enriched.
+
+    5. The action updates the enriched entities within the SOAR platform.
+
+    6. Finally, it adds the results to the action output as a JSON object and terminates
+    with a summary message.
 
 
-    ### Flow Description
+    Additional Notes
 
-    1. **Configuration Retrieval:** The action fetches the 'Use SSL' setting from
-    the UnshortenMe integration configuration.
-
-    2. **Entity Filtering:** It iterates through all target entities in the current
-    context and identifies those of type `URL` (`DestinationURL`).
-
-    3. **External API Interaction:** For each identified URL, the action sends a GET
-    request to the Unshorten.me API to retrieve the resolved (long) URL.
-
-    4. **Data Processing:** The action parses the JSON response, unquotes the resolved
-    URL, and checks against the hourly usage limit.
-
-    5. **Internal Updates:** If a long URL is found, the action updates the entity's
-    `additional_properties` with the `long_url` key and sets the `is_enriched` flag
-    to true.
-
-    6. **Completion:** Finally, it updates the entities in the case, adds a JSON result
-    mapping short URLs to long URLs, and provides a summary message to the case wall.
+    This action relies on the external Unshorten.me service. API usage limits (typically
+    10 requests per hour) apply to the service. If the limit is reached, the action
+    will raise an exception.
+  ai_short_description: >-
+    Resolves shortened URLs to their original destination URLs using the Unshorten.me
+    service and enriches the URL entities with the resolved link.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes by adding the 'long_url' property and marking the
-      entity as enriched.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from an external API (Unshorten.me) to resolve URLs.
+      It does not mutate external systems. It updates internal entities with the resolved
+      URL information, which is an internal update operation.
   entity_usage:
     entity_types:
-    - DestinationURL
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -157,3 +231,46 @@ Unshorten URL:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters specifically
+      for entities where `entity.entity_type == EntityTypes.URL`. It does not filter
+      by other attributes like creation time or modification time.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches the resolved URL from an external service and adds this information
+      to the entity's properties. This matches the 'Enrich IOC' category as it provides
+      contextual intelligence for the URL indicator.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Use SSL | Boolean | No | Whether to use SSL for the connection to the Unshorten.me
+    service. Defaults to False. |

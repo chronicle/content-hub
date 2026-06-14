@@ -1,65 +1,41 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Add Ips to group:
   ai_description: >-
-    Adds IP address entities to a specific static address group in Palo Alto Panorama.
-    This action ensures that each IP address has a corresponding address object in
-    Panorama before adding it to the group. If an address object does not exist for
-    a given IP, the action automatically creates one. It then updates the group's
-    membership and returns the final list of all IP addresses currently in the group
-    as a JSON result.
+    General Description
+
+    Adds specified IP address entities to a designated address group within a Palo
+    Alto Panorama device group. This action interacts with the Panorama API to update
+    the address group configuration and retrieves the updated list of addresses in
+    that group.
 
 
-    ### Parameters
+    Flow Description
 
-    | Parameter Name | Type | Mandatory | Description |
+    1. Extract configuration parameters (API Root, Username, Password, Verify SSL)
+    and action parameters (Device Name, Device Group Name, Address Group Name).
 
-    | :--- | :--- | :--- | :--- |
+    2. Iterate through the provided `target_entities` and filter for entities of type
+    `ADDRESS`.
 
-    | Device Name | String | Yes | The name of the target device. The default for
-    Panorama is 'localhost.localdomain'. |
+    3. Initialize the `PanoramaManager` to communicate with the Palo Alto Panorama
+    API.
 
-    | Device Group Name | String | Yes | The name of the device group where the address
-    group is located. |
+    4. For each identified IP address, call the `EditBlockedIpsInGroup` method to
+    add the IP to the specified address group.
 
-    | Address Group Name | String | Yes | The name of the static address group to
-    which the IPs will be added. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: Retrieves connection settings (API Root, credentials) and
-    action parameters (Device Name, Device Group Name, Address Group Name).
-
-    2. **Entity Filtering**: Identifies all `ADDRESS` entities from the target entities
-    list.
-
-    3. **Address Object Verification**: For each identified IP, the action checks
-    if a corresponding address object already exists in the specified Panorama device
+    5. Call `ListAddressesInGroup` to retrieve the updated list of addresses in the
     group.
 
-    4. **Object Creation**: If an address object is missing for an IP, the action
-    creates a new address object using the IP as the name and value.
+    6. Update the action result with the JSON representation of the updated address
+    group and provide a summary message of successful or failed additions.
 
-    5. **Group Membership Update**: Adds the IPs to the specified static address group.
 
-    6. **Final Retrieval**: Fetches the updated list of all members in the address
-    group to confirm the current state.
+    Additional Notes
 
-    7. **Reporting**: Returns a success message listing the added IPs and provides
-    the full group membership in JSON format.
+    This action performs a mutation on the external Palo Alto Panorama system by modifying
+    address group memberships.
+  ai_short_description: >-
+    Adds specified IP address entities to a designated address group within a Palo
+    Alto Panorama device group.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -68,15 +44,50 @@ Add Ips to group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates new address objects in Palo Alto Panorama if they do not already exist
-      and modifies the static membership of the specified address group.
+      Adds the specified IP addresses to the target address group in Palo Alto Panorama.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to the Panorama API to add IPs to an address
+      group (can_mutate_external_data=true) and fetches the updated group list (fetches_data=true).
+      It does not mutate internal SOAR data or update entities.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -90,31 +101,89 @@ Add Ips to group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering by
+      entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds IP addresses to a Palo Alto Panorama address group, which is
+      a security control update. This aligns with the 'Add IOC To Blocklist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | Yes | Specify name of the device. The default device
+    name for Palo Alto Panorama is localhost.localdomain. |
+
+    | Device Group Name | String | Yes | Specify name of the device group. |
+
+    | Address Group Name | String | Yes | Specify name of the address group. |
 Block Urls:
-  ai_description: "Adds URL entities to a specified URL category on a Palo Alto Panorama\
-    \ device. This action is used to dynamically update blocklists or filtering categories\
-    \ within the Panorama configuration. \n\n### Flow Description:\n1. **Parameter\
-    \ Extraction:** Retrieves the Panorama connection details and action parameters\
-    \ including Device Name, Device Group Name, and the target URL Category Name.\n\
-    2. **Entity Filtering:** Identifies and collects all URL entities from the current\
-    \ context, performing necessary XML character escaping (e.g., ampersands).\n3.\
-    \ **Existing Data Retrieval:** Connects to the Panorama API to fetch the current\
-    \ list of URLs already present in the specified category to avoid duplicates.\n\
-    4. **External Mutation:** Sends a configuration update request to Panorama to\
-    \ add the new URLs to the custom URL category.\n5. **Verification and Reporting:**\
-    \ Retrieves the final list of URLs in the category after the update and provides\
-    \ a summary of successful and failed additions.\n\n### Parameters Description:\n\
-    | Parameter Name | Type | Mandatory | Description |\n| :--- | :--- | :--- | :---\
-    \ |\n| Device Name | String | Yes | The name of the target device in Panorama\
-    \ (e.g., localhost.localdomain). |\n| Device Group Name | String | Yes | The name\
-    \ of the device group where the URL category is defined. |\n| URL Category Name\
-    \ | String | Yes | The name of the custom URL category to which the URLs will\
-    \ be added. |\n\n### Additional Notes:\n* **Policy Requirement:** Simply adding\
-    \ a URL to a category does not block it; a security policy must be configured\
-    \ in Panorama that references this URL category with a 'block' action.\n* **Commit\
-    \ Requirement:** Changes made by this action are applied to the candidate configuration\
-    \ and may require a separate 'Commit' action to become active on the firewall\
-    \ devices."
+  ai_description: >-
+    ### General Description
+
+    Blocks URLs by adding them to a specified URL category in Palo Alto Panorama.
+    This action allows security teams to automate the process of blacklisting malicious
+    URLs directly on the perimeter firewall or management platform.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (API credentials, SSL verification) for the
+    Palo Alto Panorama integration.
+
+    2. Extracts action parameters (Device Name, Device Group Name, URL Category Name).
+
+    3. Iterates through target entities, filtering for `URL` types.
+
+    4. Initializes `PanoramaManager` to interact with the Panorama API.
+
+    5. Calls `api.AddBlockedUrls` to add the identified URLs to the specified URL
+    category.
+
+    6. Calls `api.FindRuleBlockedUrls` to retrieve the updated list of blocked URLs.
+
+    7. Constructs an output message summarizing the success or failure of the operation.
+
+    8. Adds the updated list of blocked URLs to the action results.
+
+
+    ### Additional Notes
+
+    Requires a pre-configured policy and URL category in Panorama to function correctly.
+    The action will fail if the specified URL category does not exist or if the credentials
+    lack sufficient permissions.
+  ai_short_description: >-
+    Blocks URLs by adding them to a specified URL category in Palo Alto Panorama.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -123,15 +192,50 @@ Block Urls:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds URL members to a custom URL category configuration on the Palo Alto Panorama
-      management server.
+      Adds URLs to a URL category (blocklist) in Palo Alto Panorama.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to fetch the current blocked URLs and a POST/SET
+      request to add new URLs to the blocklist in Palo Alto Panorama. This mutates
+      external data (Panorama configuration) and fetches data.
   entity_usage:
     entity_types:
-    - DestinationURL
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -145,49 +249,88 @@ Block Urls:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.URL`. This means it targets URL entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds URLs to a blocklist (URL Category) in Palo Alto Panorama. This
+      matches the 'Add IOC To Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | Yes | Specify name of the device. The default device
+    name for Palo Alto Panorama is localhost.localdomain. |
+
+    | Device Group Name | String | Yes | Specify name of the device group. |
+
+    | URL Category Name | String | Yes | Specify name of the URL Category. |
 Block ips in policy:
   ai_description: >-
-    Blocks IP address entities within a specific Palo Alto Panorama security policy.
-    This action interacts with the Panorama XML API to ensure that the target IP addresses
-    are represented as address objects and then updates the specified policy rule's
-    source or destination fields to include these IPs.
+    ### General Description
 
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Device Name | String | Yes | The name of the target device (e.g., 'localhost.localdomain').
-    |
-
-    | Device Group Name | String | Yes | The name of the device group where the policy
-    is located. |
-
-    | Policy Name | String | Yes | The specific security policy rule to modify. |
-
-    | Target | String | Yes | Specifies which field in the policy to update. Must
-    be either 'source' or 'destination'. |
+    Blocks specified IP address entities within a Palo Alto Panorama security policy.
+    This action interacts with the Palo Alto Panorama API to update the security policy
+    by adding the identified IP addresses to the blocklist, effectively preventing
+    traffic from these sources or to these destinations.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** Retrieves the Panorama connection details and action
-    parameters (Device Name, Group, Policy, and Target).
+    1. Extracts configuration parameters (API credentials, device details) from the
+    integration settings.
 
-    2. **Entity Filtering:** Identifies all 'ADDRESS' entities provided in the current
-    context.
+    2. Validates the `Target` parameter to ensure it is either 'source' or 'destination'.
 
-    3. **Address Object Verification:** For each IP, the action checks if a corresponding
-    address object exists in Panorama. If not, it automatically creates one.
+    3. Iterates through the provided target entities, filtering specifically for `ADDRESS`
+    types.
 
-    4. **Policy Mutation:** Updates the specified security policy rule by adding the
-    IP addresses to the chosen target field (source or destination).
+    4. For each valid IP address, calls `PanoramaManager.EditBlockedIps` to add the
+    IP to the specified policy on the Palo Alto Panorama device.
 
-    5. **Result Reporting:** Retrieves the final list of blocked IPs from the policy
-    and returns it as a JSON result, providing a summary of successful and failed
-    operations.
+    5. Calls `PanoramaManager.FindRuleBlockedIps` to retrieve the updated list of
+    blocked IPs for the policy.
+
+    6. Returns the updated list of blocked IPs as a JSON result and provides a summary
+    message indicating success or failure for each entity.
+
+
+    ### Additional Notes
+
+    Requires valid Palo Alto Panorama credentials and appropriate permissions to modify
+    security policies. The action will fail if the `Target` parameter is not correctly
+    specified as 'source' or 'destination'.
+  ai_short_description: >-
+    Blocks specified IP address entities within a Palo Alto Panorama security policy.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -196,16 +339,51 @@ Block ips in policy:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates new address objects in Palo Alto Panorama if they do not exist and modifies
-      existing security policy rules to include the specified IP addresses in the
-      source or destination fields.
+      Modifies the security policy on the Palo Alto Panorama device to add the specified
+      IP addresses to the blocklist.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches the current blocked IPs list from Panorama and then modifies
+      the security policy on the Palo Alto Panorama device to add the specified IP
+      addresses to the blocklist.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -219,47 +397,86 @@ Block ips in policy:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering by
+      entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies an external security policy (Palo Alto Panorama) to block
+      IPs. This matches the 'Add IOC To Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | Yes | Specify name of the device. The default device
+    name for Palo Alto Panorama is localhost.localdomain. |
+
+    | Device Group Name | String | Yes | Specify name of the device group. |
+
+    | Policy Name | String | Yes | Specify name of the policy. |
+
+    | Target | String | Yes | Specify what should be the target. Possible values:
+    source, destination. |
 Commit Changes:
   ai_description: >-
-    Commits pending configuration changes to Palo Alto Panorama. This action is essential
-    for applying staged administrative changes to the active running configuration
-    of the Panorama management server. It operates asynchronously, meaning it initiates
-    a commit job and then periodically polls the server to verify the job's completion
-    status.
+    ### General Description
 
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Only My Changes | Boolean | Yes | If enabled, the action will only commit changes
-    made by the current administrator. Note: This specific functionality requires
-    the user to have administrative privileges on the Panorama server. |
+    Commits configuration changes in Palo Alto Panorama. This action triggers a commit
+    operation on the Panorama device to apply pending configuration changes.
 
 
     ### Flow Description
 
-    1. **Initiation**: The action sends a request to Panorama to start a commit operation
-    based on the 'Only My Changes' parameter.
+    1. Extracts configuration parameters (API Root, Username, Password, Verify SSL)
+    and the `Only My Changes` parameter.
 
-    2. **Job Tracking**: Upon successful initiation, the server returns a Job ID,
-    and the action enters an 'In Progress' state.
+    2. If `is_first_run` is true, it calls `CommitChanges` on the Panorama manager,
+    which triggers a commit operation on the Panorama device.
 
-    3. **Status Polling**: In subsequent execution cycles, the action uses the Job
-    ID to poll the Panorama API for the current status of the commit job.
+    3. If successful, it returns a `job_id` to track the asynchronous operation.
 
-    4. **Completion**: The action concludes once the job status reaches 'FIN' (Finished).
-    It then reports whether the commit was successful or if it failed based on the
-    result returned by the server.
+    4. If `is_first_run` is false, it retrieves the `job_id` from the `additional_data`
+    and calls `check_commit_status` to verify if the commit job has finished.
+
+    5. Returns the final status of the commit operation.
 
 
     ### Additional Notes
 
-    - This action is marked as asynchronous (`IsAsync: true`), allowing the SOAR platform
-    to perform other tasks while waiting for the network device to process the configuration
-    change.
+    The action supports asynchronous execution. The `Only My Changes` parameter, if
+    enabled, restricts the commit to changes made by the current user (requires admin
+    privileges).
+  ai_short_description: >-
+    Commits configuration changes in Palo Alto Panorama.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -268,14 +485,50 @@ Commit Changes:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Commits the candidate configuration to the running configuration on the Palo
-      Alto Panorama server, effectively applying all pending changes to the system.
+      Commits pending configuration changes to the Palo Alto Panorama device.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a commit operation on the Panorama device, which is a state-changing
+      operation on an external system. It does not fetch contextual data about entities
+      or alerts, nor does it modify internal SOAR data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -289,72 +542,93 @@ Commit Changes:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Edit Blocked Applications:
-  ai_description: >-
-    Modifies the list of blocked applications within a specific security policy on
-    Palo Alto Panorama. This action allows for the simultaneous addition of new applications
-    to a blocklist and the removal of existing ones. It interacts with the Panorama
-    API to fetch the current candidate configuration, updates the application members
-    of the specified policy, and returns the updated list of blocked applications.
-
-
-    ### Parameters
-
+    reasoning: >-
+      The action does not interact with entities. It performs a global configuration
+      commit on the Panorama device, so all entity type flags and filter flags are
+      set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action commits configuration changes to Palo Alto Panorama. This does not
+      fall into any of the provided categories (Enrichment, Alert/Ticket management,
+      Identity management, etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Device Name | String | Yes | The name of the target device. The default for
-    Panorama is usually 'localhost.localdomain'. |
+    | Only My Changes | Boolean | Yes | If enabled, the action will only commit changes
+    that were done by the current user. |
+Edit Blocked Applications:
+  ai_description: >-
+    ### General Description
 
-    | Device Group Name | String | Yes | The name of the device group where the policy
-    is located. |
-
-    | Policy Name | String | Yes | The name of the security policy to be modified.
-    |
-
-    | Applications To Block | String | No | A comma-separated list of application
-    names to add to the policy's block list (e.g., 'apple-siri, windows-azure'). |
-
-    | Applications To UnBlock | String | No | A comma-separated list of application
-    names to remove from the policy's block list. |
-
-
-    ### Additional Notes
-
-    * Either 'Applications To Block' or 'Applications To UnBlock' (or both) must contain
-    values for the action to perform a mutation. If both are empty, the action will
-    finish with a 'false' result and no changes will be made.
-
-    * This action modifies the candidate configuration; a separate 'Commit' action
-    may be required to push changes to the running configuration.
+    This action modifies the security policy on a Palo Alto Panorama device by adding
+    or removing specified applications from the blocklist. It allows security teams
+    to dynamically update network security policies to block or unblock traffic for
+    specific applications based on threat intelligence or operational requirements.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves connection details and user-provided
-    parameters including the target device, group, policy, and the lists of applications
-    to modify.
+    1. The action extracts the required configuration parameters (API Root, Username,
+    Password, Verify SSL) and action parameters (Device Name, Device Group Name, Policy
+    Name, Applications To Block, Applications To UnBlock).
 
-    2. **Data Parsing**: It converts the comma-separated input strings for blocking
-    and unblocking into sets for processing.
+    2. It initializes the `PanoramaManager` to establish a connection with the Palo
+    Alto Panorama API.
 
-    3. **Configuration Retrieval**: If changes are requested, it connects to Panorama
-    and retrieves the current candidate configuration to identify existing applications
-    in the specified policy.
+    3. The action calls the `EditBlockedApplication` method, which performs the following
+    steps:
+        - Retrieves the current configuration of the specified policy.
+        - Updates the application list by adding the applications provided in the
+    'Applications To Block' parameter and removing those in the 'Applications To UnBlock'
+    parameter.
+        - Sends the updated configuration back to the Panorama device.
+    4. After the modification, the action calls `FindRuleBlockedApplications` to retrieve
+    and verify the updated list of blocked applications.
 
-    4. **Policy Modification**: It calculates the new set of applications by adding
-    the 'Applications To Block' and removing the 'Applications To UnBlock' from the
-    current list.
+    5. Finally, it returns a success message indicating which applications were affected
+    and outputs the updated list of blocked applications as a JSON result.
 
-    5. **API Update**: If the list has changed, it sends a delete request for the
-    existing application list and a set request for the new list to the Panorama API.
 
-    6. **Verification**: It fetches the updated list of applications from the rule
-    to confirm the changes.
+    ### Additional Notes
 
-    7. **Output**: The action returns a success message detailing the affected applications
-    and provides the final list of blocked applications in the JSON result.
+    - This action directly modifies the security policy on the Panorama device. Ensure
+    that the provided 'Device Name', 'Device Group Name', and 'Policy Name' are accurate
+    to avoid unintended configuration changes.
+
+    - The action does not operate on specific entities (e.g., IP, Hash) but rather
+    on policy configurations defined by the user parameters.
+  ai_short_description: >-
+    Modifies the security policy on a Palo Alto Panorama device by adding or removing
+    applications from the blocklist.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -363,15 +637,52 @@ Edit Blocked Applications:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action modifies the security policy configuration on Palo Alto Panorama
-      by adding or removing applications from the 'application' field of a specific
-      rule via API 'delete' and 'set' actions.
+      Modifies the security policy on the Palo Alto Panorama device by adding or removing
+      applications from the blocklist.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches the current configuration after modification (fetches_data=true)
+      and performs a state-changing operation on the external Panorama device to update
+      security policies (can_mutate_external_data=true). It does not modify internal
+      SOAR data or entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -385,55 +696,93 @@ Edit Blocked Applications:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates based on user-provided parameters (Device Name, Device Group
+      Name, Policy Name) and does not iterate over or filter any target entities from
+      the SOAR case.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies the security policy on the Panorama device to block or unblock
+      applications. This directly matches the 'Add IOC To Blocklist' and 'Remove IOC
+      From Blocklist' categories. It does not perform enrichment, ticket management,
+      or identity operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Applications To Block | String | No | Comma-separated list of applications to
+    block (e.g., apple-siri,windows-azure). |
+
+    | Applications To UnBlock | String | No | Comma-separated list of applications
+    to unblock (e.g., apple-siri,windows-azure). |
+
+    | Device Name | String | Yes | The name of the device in Panorama. |
+
+    | Device Group Name | String | Yes | The name of the device group in Panorama.
+    |
+
+    | Policy Name | String | Yes | The name of the security policy to modify. |
 Get Blocked Applications:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of applications that are explicitly blocked within a specific
-    security policy on Palo Alto Panorama. This action allows users to audit security
-    rules and verify which applications are restricted under a given policy context
-    (Device and Device Group).
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Device Name | String | Yes | The name of the target device. The default for
-    Panorama is 'localhost.localdomain'. |
-
-    | Device Group Name | String | Yes | The name of the device group where the security
-    policy is defined. |
-
-    | Policy Name | String | Yes | The specific name of the security policy (rule)
-    to inspect for blocked applications. |
-
-
-    ### Additional Notes
-
-    This action does not operate on specific entities (like IPs or Hosts) but rather
-    queries the global configuration of the Panorama management server based on the
-    provided policy parameters.
+    Fetches the list of blocked applications from a specific security policy within
+    a Palo Alto Panorama device group. This action retrieves the current candidate
+    configuration from the Panorama device and parses it to identify the blocked applications
+    associated with the specified policy.
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the Palo Alto Panorama server and retrieves
-    an API key.
+    1. Initializes the `PanoramaManager` with connection details (server address,
+    username, password, and SSL verification).
 
-    2. **Configuration Retrieval**: Fetches the full candidate configuration XML from
-    the server using an operational command.
+    2. Retrieves the current candidate configuration from the Panorama device using
+    the `GetCurrenCanidateConfig` method.
 
-    3. **Parsing**: Utilizes XPath to navigate the XML structure and locate the specific
-    security rule defined by the Device Name, Device Group Name, and Policy Name.
+    3. Parses the configuration to locate the specified security policy within the
+    provided device and device group.
 
-    4. **Extraction**: Identifies and extracts all application members listed within
-    the 'application' section of the rule.
+    4. Extracts the list of blocked applications associated with that policy.
 
-    5. **Result Generation**: Returns the list of blocked applications as a JSON array
-    and provides a formatted output message for the case wall.
+    5. Returns the list of applications as a JSON result and an output message.
+
+
+    ### Additional Notes
+
+    This action is read-only and does not modify any configurations on the Panorama
+    device.
+  ai_short_description: >-
+    Fetches the list of blocked applications from a specified security policy in Palo
+    Alto Panorama.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -444,10 +793,47 @@ Get Blocked Applications:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action makes a GET request to the Panorama API to retrieve the current configuration
+      and extract blocked applications. It does not mutate external data, update internal
+      entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -461,67 +847,85 @@ Get Blocked Applications:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It retrieves configuration data based on provided parameters (Device
+      Name, Device Group Name, Policy Name), so all entity type flags and filter flags
+      are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves policy configuration data from the Panorama device. It
+      does not match any of the predefined outcome categories (e.g., enrichment, containment,
+      ticketing, or alert management).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | Yes | Specify name of the device. |
+
+    | Device Group Name | String | Yes | Specify name of the device group. |
+
+    | Policy Name | String | Yes | Specify name of the policy. |
 Get Correlated Traffic Between IPs:
   ai_description: >-
     ### General Description
 
-    The **Get Correlated Traffic Between IPs** action retrieves network traffic logs
-    from Palo Alto Panorama that match specific source and destination IP address
-    pairs. This action is designed to help security analysts investigate communication
-    patterns between specific network nodes by querying Panorama's traffic logs over
-    a specified historical window.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Source IP** | String | Yes | A comma-separated list of source IP addresses
-    to include in the query. |
-
-    | **Destination IP** | String | Yes | A comma-separated list of destination IP
-    addresses to include in the query. |
-
-    | **Max Hours Backwards** | Integer | No | The number of hours to look back from
-    the current time for relevant logs. |
-
-    | **Max Logs to Return** | Integer | No | The maximum number of log entries to
-    retrieve per query (Default: 50, Max: 1000). |
-
-
-    ### Additional Notes
-
-    - Both **Source IP** and **Destination IP** are mandatory for the action to execute.
-
-    - The action processes IP pairs based on their position in the provided lists
-    (e.g., the first Source IP is matched with the first Destination IP).
-
-    - This is an asynchronous action that initiates a search job on Panorama and polls
-    for completion.
-
-    - Results are provided as both a JSON object and formatted CSV data tables for
-    each IP pair.
+    Fetches correlated network traffic logs from Palo Alto Panorama between a Source
+    IP and a Destination IP.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the Source IP, Destination IP,
-    timeframe, and log limit from the user input.
+    1. Extracts input parameters: `Source IP`, `Destination IP`, `Max Hours Backwards`,
+    and `Max Logs to Return`.
 
-    2. **Job Initialization**: It constructs a Panorama-specific query for each IP
-    pair and sends a request to Panorama to start a log search job.
+    2. Parses the IP inputs into pairs.
 
-    3. **Asynchronous Polling**: The action enters an "In Progress" state, periodically
-    checking the status of each job ID on the Panorama server until the search is
-    complete.
+    3. Initializes a log search query on the Panorama appliance using `initialize_search_log_query`.
 
-    4. **Result Retrieval**: Once a job is marked as finished, the action retrieves
-    the resulting traffic logs from the server.
+    4. Polls the status of the search job using `query_operation_status`.
 
-    5. **Data Formatting**: The logs are converted into JSON format and CSV tables,
-    which are then attached to the action's output in Google SecOps.
+    5. If the job completes, retrieves the log entities.
+
+    6. Constructs a CSV table of the traffic logs and adds the raw JSON results to
+    the action output.
+
+
+    ### Additional Notes
+
+    This action is asynchronous and may require multiple runs to complete if the Panorama
+    job takes time to process.
+  ai_short_description: >-
+    Fetches correlated network traffic logs between specified source and destination
+    IP addresses from Palo Alto Panorama.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -532,10 +936,46 @@ Get Correlated Traffic Between IPs:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action makes a GET request to Panorama to fetch traffic logs (fetches_data=true).
+      It does not mutate external data, update internal entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -549,59 +989,83 @@ Get Correlated Traffic Between IPs:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Ping:
-  ai_description: >-
-    ### General Description
-
-    The **Ping** action is a diagnostic utility designed to verify the connectivity
-    and authentication between Google SecOps and a Palo Alto Panorama instance. Its
-    primary purpose is to ensure that the integration configuration (API Root, credentials,
-    and SSL settings) is valid and that the Panorama API is reachable.
-
-
-    ### Parameters Description
-
-    This action does not have any action-specific parameters. It utilizes the global
-    integration configuration parameters:
-
-
+    reasoning: >-
+      The action uses input parameters for Source and Destination IPs rather than
+      iterating over `siemplify.target_entities`. Therefore, it does not use entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches historical network traffic logs from Palo Alto Panorama based
+      on provided IP parameters. This matches the 'Search Events' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Api Root | String | Yes | The base URL of the Palo Alto Panorama server. |
+    | Source IP | String | Yes | Specify source IP that will be used to get traffic.
+    |
 
-    | Username | String | Yes | The username used to authenticate with Panorama. |
+    | Destination IP | String | Yes | Specify destination IP that will be used to
+    get traffic. |
 
-    | Password | String | Yes | The password used to authenticate with Panorama. |
+    | Max Hours Backwards | String | No | Specify the amount of hours from where to
+    fetch logs. |
 
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the Panorama server. Defaults to True. |
+    | Max Logs to Return | String | No | Specify how many logs to return. Maximum
+    is 1000. |
+Ping:
+  ai_description: >-
+    General Description
+
+    Validates the connectivity between the SOAR platform and the Palo Alto Panorama
+    server.
 
 
-    ### Additional Notes
+    Flow Description
 
-    This action is a standard connectivity test. It does not process entities or modify
-    any data within Panorama or Google SecOps. It is strictly used for verifying the
-    health of the integration link.
+    1. Extracts the `Api Root`, `Username`, `Password`, and `Verify SSL` configuration
+    parameters.
+
+    2. Initializes the `PanoramaManager` class.
+
+    3. The `PanoramaManager` sends a POST request to the Panorama API with the provided
+    credentials to generate an API key.
+
+    4. If the authentication is successful, the action returns a success message.
 
 
-    ### Flow Description
+    Additional Notes
 
-    1. **Parameter Extraction**: The action retrieves the API Root, Username, Password,
-    and SSL verification settings from the integration's configuration.
-
-    2. **Manager Initialization**: It initializes the `PanoramaManager` class, which
-    serves as the interface for the Panorama API.
-
-    3. **Authentication (Keygen)**: During initialization, the manager sends a POST
-    request to the Panorama server's `keygen` endpoint using the provided credentials.
-
-    4. **Response Validation**: The action parses the XML response from Panorama.
-    If a valid API key is returned, the connection is confirmed.
-
-    5. **Final Output**: The action reports a successful connection message and returns
-    a boolean 'true' result to the SOAR platform.
+    This action is primarily used for troubleshooting and verifying that the integration
+    is correctly configured.
+  ai_short_description: >-
+    Tests connectivity to the Palo Alto Panorama server.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -612,10 +1076,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs an authentication request to verify connectivity. It does
+      not fetch contextual data, mutate external or internal data, or interact with
+      entities/alerts.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -629,52 +1130,72 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It is a standalone connectivity
+      test.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test (ping) to verify authentication. It
+      does not perform any of the listed outcome categories (enrichment, ticketing,
+      blocking, etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Push Changes:
   ai_description: >-
     ### General Description
 
-    The **Push Changes** action triggers a commit and push operation in Palo Alto
-    Panorama for a specific device group. This action is used to apply pending configuration
-    changes from Panorama to the managed devices within the designated group. It is
-    an asynchronous action, meaning it initiates the push job and then periodically
-    polls the Panorama API to monitor the job's progress until completion.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Device Group Name** | String | Yes | The name of the device group in Panorama
-    where the changes should be pushed. This identifies the scope of the commit operation.
-    |
+    Pushes pending configuration changes to a specific device group in Palo Alto Panorama.
+    This action initiates a commit/push job on the Panorama device to apply pending
+    changes to the specified device group.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action connects to the Palo Alto Panorama instance
-    using the provided credentials and API root.
+    1. The action is triggered with the `Device Group Name` parameter.
 
-    2. **Initiation (First Run)**: It sends a request to Panorama to start a 'commit-all'
-    operation for the specified `Device Group Name`. Panorama returns a Job ID.
+    2. In the first run, it calls the `PushChanges` method on the Panorama API to
+    initiate a commit/push job for the specified device group.
 
-    3. **Status Polling (Subsequent Runs)**: Because the action is asynchronous, it
-    enters a polling phase. It uses the Job ID to check the status of the push operation.
+    3. The action returns an in-progress status and the `job_id`.
 
-    4. **Completion**: The action continues to poll until the job status reaches a
-    finished state ('FIN'). It then evaluates the result to determine if the push
-    was successful or if it failed, providing detailed error messages from Panorama
-    if a failure occurs.
+    4. In subsequent runs, it uses the `job_id` to poll the `check_commit_status`
+    endpoint on the Panorama API.
+
+    5. Once the job completes, it reports success or failure based on the API response.
 
 
     ### Additional Notes
 
-    - This action can take several minutes to complete depending on the size of the
-    configuration and the number of devices in the group.
-
-    - It does not process or require any specific SecOps entities (like IPs or Hostnames)
-    to run.
+    This action is asynchronous and may take several minutes to complete.
+  ai_short_description: >-
+    Pushes pending configuration changes to a specified device group in Palo Alto
+    Panorama.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -683,15 +1204,50 @@ Push Changes:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Triggers a 'commit-all' (push) operation in Palo Alto Panorama, which modifies
-      the running configuration of managed devices within a specific device group
-      by applying pending changes.
-    fetches_data: false
+      Triggers a configuration commit/push on the Palo Alto Panorama device group.
+    fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data by polling the status of the commit job and mutates
+      external data by triggering a configuration commit/push on the Palo Alto Panorama
+      device.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -705,45 +1261,84 @@ Push Changes:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or use any entities from the Siemplify target_entities
+      list. It operates based on the provided 'Device Group Name' parameter.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a configuration push/commit on an external device (Palo
+      Alto Panorama). This does not match any of the provided outcome categories (e.g.,
+      enrichment, ticketing, blocking, identity management).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Group Name | String | Yes | The device group in which the rule is located,
+    e.g: LCaas. |
 Remove Ips from group:
   ai_description: >-
-    Removes IP address entities from a specified static address group in Palo Alto
-    Panorama. This action is used to manage network access controls by dynamically
-    updating address group memberships based on security orchestration logic.
+    ### General Description
 
-
-    ### Parameters
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Device Name | String | Yes | Specify the name of the device. The default for
-    Panorama is usually 'localhost.localdomain'. |
-
-    | Device Group Name | String | Yes | Specify the name of the device group where
-    the address group is located. |
-
-    | Address Group Name | String | Yes | Specify the name of the static address group
-    from which the IPs should be removed. |
+    Removes specified IP address entities from a designated address group within Palo
+    Alto Panorama. This action interacts with the Palo Alto Panorama API to modify
+    the membership of an address group, effectively removing the specified IP addresses.
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves configuration details (API Root, credentials)
+    1. Extracts configuration parameters (API Root, Username, Password, Verify SSL)
     and action parameters (Device Name, Device Group Name, Address Group Name).
 
-    2. **Entity Filtering**: Identifies all entities of type `ADDRESS` from the target
-    entities list.
+    2. Iterates through the provided `target_entities` to identify those of type `ADDRESS`.
 
-    3. **Removal Logic**: For each identified IP, the action calls the Panorama API
-    to remove the specific IP from the designated address group.
+    3. Initializes the `PanoramaManager` to interact with the Palo Alto Panorama API.
 
-    4. **Verification**: After removal attempts, it fetches the updated list of addresses
-    currently in the group to confirm the state.
+    4. For each identified IP address, calls `api.EditBlockedIpsInGroup` to remove
+    the IP from the specified address group.
 
-    5. **Reporting**: Updates the action results with a JSON list of current group
-    members and provides a summary message of successful and failed removals.
+    5. Retrieves the updated list of addresses in the group using `api.ListAddressesInGroup`.
+
+    6. Constructs an output message summarizing the successful and failed removals.
+
+    7. Adds the updated group address list to the action results using `siemplify.result.add_result_json`.
+
+
+    ### Additional Notes
+
+    This action performs a state-changing operation on the external Palo Alto Panorama
+    device. Ensure the provided credentials have sufficient permissions to modify
+    address groups.
+  ai_short_description: >-
+    Removes specified IP address entities from a designated address group in Palo
+    Alto Panorama.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -752,15 +1347,51 @@ Remove Ips from group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Modifies the configuration of Palo Alto Panorama by removing IP address members
-      from a static address group.
+      Removes IP addresses from an address group on the Palo Alto Panorama device.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes API calls to modify an address group on an external system
+      (Palo Alto Panorama). It fetches the current group state and then performs a
+      mutation to remove the IP. It does not mutate internal SOAR data, update entities,
+      or create insights.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -774,66 +1405,90 @@ Remove Ips from group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering by
+      entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes an IP from an address group on the Palo Alto Panorama device.
+      This matches the 'Remove IOC From Blocklist' category as it modifies the group
+      membership, which is typically used for managing blocked indicators.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | Yes | Specify name of the device. The default device
+    name for Palo Alto Panorama is localhost.localdomain. |
+
+    | Device Group Name | String | Yes | Specify name of the device group. |
+
+    | Address Group Name | String | Yes | Specify name of the address group. |
 Search logs:
   ai_description: >-
     ### General Description
 
-    The **Search logs** action allows users to perform targeted searches within Palo
-    Alto Panorama logs. It supports various log types such as Traffic, Threat, and
-    System logs, and utilizes a query-based filtering mechanism to retrieve specific
-    security events. This action is designed to be asynchronous, meaning it initiates
-    a search job on the Panorama server and polls for completion before retrieving
-    and displaying the results.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Log Type** | String (Enum) | Yes | Specifies the category of logs to search.
-    Options include Traffic, Threat, URL Filtering, WildFire Submissions, Data Filtering,
-    HIP Match, IP Tag, User ID, Tunnel Inspection, Configuration, System, and Authentication.
-    |
-
-    | **Query** | String | No | The filter expression used to define the search criteria
-    (e.g., source or destination IP filters). |
-
-    | **Max Hours Backwards** | Integer | No | Defines the time window for the search,
-    specifying how many hours back from the current time to look for logs. |
-
-    | **Max Logs to Return** | Integer | No | Limits the number of results returned
-    by the search. The maximum allowed value is 1000, with a default of 50. |
+    Searches for logs within Palo Alto Panorama based on specified criteria such as
+    log type, query filters, and time range. This action allows analysts to retrieve
+    historical telemetry data from Panorama for investigation and analysis.
 
 
     ### Flow Description
 
-    1. **Initialization:** The action extracts the connection configuration and search
-    parameters (Log Type, Query, Time Range, and Limit).
+    1. The action initializes the `PanoramaManager` using the configured API credentials.
 
-    2. **Job Creation:** It sends a request to the Palo Alto Panorama API to initialize
-    a log search job based on the provided criteria.
+    2. It extracts the input parameters: `Log Type`, `Query`, `Max Hours Backwards`,
+    and `Max Logs to Return`.
 
-    3. **Asynchronous Polling:** Because log searches can take time, the action enters
-    an 'In Progress' state. It periodically checks the status of the job ID returned
-    by Panorama.
+    3. The action calls the `initialize_search_log_query` method to initiate a log
+    search job on the Panorama appliance.
 
-    4. **Data Retrieval:** Once the Panorama server reports that the job is finished,
-    the action fetches the log entries associated with that job ID.
+    4. It then calls `get_query_result` to retrieve the search results using the job
+    ID.
 
-    5. **Result Processing:** The retrieved logs are converted into JSON format for
-    programmatic use and a CSV-formatted data table for visual representation in the
-    Google SecOps case wall.
+    5. If the search job is complete, the action formats the retrieved logs into a
+    JSON result and a CSV table, which are then added to the action output.
+
+    6. If the search job is still in progress, the action returns an in-progress state
+    with the job ID to allow for subsequent polling.
 
 
     ### Additional Notes
 
-    - This action does not run on specific entities; it is a global search action
-    based on the provided query string.
-
-    - If no logs match the query, the action will complete successfully but indicate
-    that no results were found.
+    This action supports asynchronous execution. If the Panorama search job takes
+    time to complete, the action will return an in-progress state, and the platform
+    will re-trigger the action to check the status until the logs are retrieved or
+    the job fails.
+  ai_short_description: >-
+    Searches for logs in Palo Alto Panorama based on the provided query and log type.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -844,10 +1499,47 @@ Search logs:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches log data from an external system (Palo Alto Panorama) via
+      API calls. It does not mutate external or internal data, nor does it update
+      entities, create insights, or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -861,58 +1553,94 @@ Search logs:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates independently of any specific entities. It performs a search
+      query against the Palo Alto Panorama API based on user-provided parameters rather
+      than iterating over or filtering target entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a search operation against an external system (Palo Alto
+      Panorama) to retrieve historical log data. This directly matches the 'Search
+      Events' outcome category. It does not perform enrichment, ticket creation, or
+      any mutation operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Log Type | ddl | Yes | Specify which log type should be returned (e.g., Traffic,
+    Threat, URL Filtering). |
+
+    | Query | string | No | Specify the query filter to be used to return logs. |
+
+    | Max Hours Backwards | string | No | Specify the number of hours to look back
+    for logs. |
+
+    | Max Logs to Return | string | No | Specify the maximum number of logs to return
+    (Maximum 1000). |
 Unblock Urls:
   ai_description: >-
     ### General Description
 
-    Removes URL entities from a specific custom URL category in Palo Alto Panorama.
-    This action is used to manage URL filtering policies by programmatically unblocking
-    or removing specific URLs from existing categories within a defined Device Group
-    and Device.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Device Name | String | Yes | The name of the target device. For Panorama, this
-    is typically 'localhost.localdomain'. |
-
-    | Device Group Name | String | Yes | The name of the device group where the URL
-    category is defined. |
-
-    | URL Category Name | String | Yes | The name of the custom URL category from
-    which the URLs will be removed. |
+    Removes specified URL entities from a designated URL category (blacklist) within
+    Palo Alto Panorama. This action helps in managing security policies by allowing
+    analysts to programmatically unblock URLs that have been previously blacklisted.
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts connection details (API Root, credentials) and
-    action parameters (Device Name, Device Group, Category Name).
+    1. Extracts configuration parameters (API Root, Username, Password, Verify SSL)
+    and action parameters (Device Name, Device Group Name, URL Category Name).
 
-    2. **Entity Filtering**: Identifies all URL entities within the current context.
+    2. Iterates through the target entities, filtering for those with the `URL` entity
+    type.
 
-    3. **URL Normalization**: Cleans the URL identifiers by replacing HTML-encoded
-    ampersands.
+    3. Initializes the `PanoramaManager` to interact with the Palo Alto Panorama API.
 
-    4. **External Mutation**: For each identified URL, it calls the Panorama API to
-    delete the URL member from the specified custom URL category.
+    4. For each identified URL, calls the `RemoveBlockedUrls` method to remove the
+    URL from the specified URL category.
 
-    5. **Verification**: After the removal attempts, it fetches the current list of
-    URLs in that category to provide an updated state.
+    5. Retrieves the updated list of blocked URLs using `FindRuleBlockedUrls` to confirm
+    the changes.
 
-    6. **Reporting**: Returns a summary of successfully removed URLs and any that
-    failed the operation.
+    6. Returns the result as a JSON object and provides an output message summarizing
+    the successful and failed removals.
 
 
     ### Additional Notes
 
-    This action performs a state change on the Palo Alto Panorama configuration by
-    deleting entries from a policy object. It does not automatically perform a 'Commit'
-    operation; changes may need to be committed to the Panorama device to take effect
-    on the firewalls.
+    Requires valid API credentials and appropriate permissions on the Palo Alto Panorama
+    device. The action assumes the URL category exists and is correctly configured
+    on the target device.
+  ai_short_description: >-
+    Removes URL entities from a specified URL category (blacklist) in Palo Alto Panorama.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -921,15 +1649,50 @@ Unblock Urls:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes URL entries from a custom URL category configuration on the Palo Alto
-      Panorama management server via a DELETE request.
+      Removes the specified URL from the URL category (blacklist) on the Palo Alto
+      Panorama device.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a request to the Panorama API to remove a URL from a blacklist
+      (`RemoveBlockedUrls`). It also fetches the updated list (`FindRuleBlockedUrls`).
   entity_usage:
     entity_types:
-    - DestinationURL
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -943,55 +1706,90 @@ Unblock Urls:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Unblock ips in policy:
-  ai_description: >-
-    Unblocks IP Address entities within a specific security policy on Palo Alto Panorama.
-    This action modifies the configuration of the firewall by removing specified IP
-    addresses from either the source or destination fields of a security rule.
-
-
-    ### Parameters Description
-
-
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `if entity.entity_type
+      == EntityTypes.URL`. This means it targets URL entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes a URL from a blocklist, which directly matches the 'Remove
+      IOC From Blocklist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Device Name | String | Yes | The name of the target device in Panorama (e.g.,
-    'localhost.localdomain'). |
+    | Device Name | String | Yes | Specify name of the device. The default device
+    name for Palo Alto Panorama is localhost.localdomain. |
 
-    | Device Group Name | String | Yes | The name of the device group where the policy
-    is located. |
+    | Device Group Name | String | Yes | Specify name of the device group. |
 
-    | Policy Name | String | Yes | The name of the security policy/rule to be modified.
-    |
+    | URL Category Name | String | Yes | Specify name of the URL Category. |
+Unblock ips in policy:
+  ai_description: >-
+    ### General Description
 
-    | Target | String | Yes | Specifies which field to modify. Must be either 'source'
-    or 'destination'. |
+    Unblocks specific IP addresses from a defined security policy within Palo Alto
+    Panorama. This action interacts with the Panorama API to remove IP addresses from
+    a specified policy (either source or destination), effectively restoring network
+    connectivity or removing restrictions for those indicators.
 
 
     ### Flow Description
 
+    1. **Parameter Extraction**: The action retrieves configuration parameters (API
+    credentials, server address) and action-specific parameters (Device Name, Device
+    Group Name, Policy Name, Target).
 
-    1.  **Initialization**: The action retrieves connection details (API Root, credentials)
-    and action parameters (Device Name, Group, Policy, and Target).
+    2. **Entity Filtering**: The action iterates through the provided `target_entities`,
+    filtering specifically for entities of type `ADDRESS`.
 
-    2.  **Validation**: It validates that the 'Target' parameter is set to either
-    'source' or 'destination'.
+    3. **API Interaction**: For each identified IP address, the action utilizes the
+    `PanoramaManager` to call the `EditBlockedIps` method. This method performs a
+    `delete` operation followed by a `set` operation on the Panorama API to remove
+    the IP from the specified policy.
 
-    3.  **Entity Filtering**: It identifies all 'ADDRESS' entities from the input
-    list to be processed.
+    4. **Verification**: After processing the IPs, the action calls `FindRuleBlockedIps`
+    to retrieve the updated list of blocked IPs for the policy.
 
-    4.  **External Mutation**: For each identified IP, it calls the Panorama API to
-    remove the IP from the specified policy's source or destination list. This involves
-    fetching the current list, removing the entry, and updating the configuration
-    on the Panorama server.
+    5. **Result Reporting**: The action compiles the results, logs the success or
+    failure for each entity, and returns the updated policy state as a JSON result.
 
-    5.  **Result Retrieval**: After the removal process, it fetches the final state
-    of the blocked IPs for that policy to provide as output.
 
-    6.  **Finalization**: The action reports which IPs were successfully unblocked
-    and which failed, returning the updated policy data in JSON format.
+    ### Additional Notes
+
+    This action requires valid Palo Alto Panorama credentials and correct configuration
+    of the Device Name, Device Group Name, and Policy Name. The `Target` parameter
+    must be set to either 'source' or 'destination' to correctly identify which part
+    of the security rule to modify.
+  ai_short_description: >-
+    Unblocks IP addresses from a specified Palo Alto Panorama security policy.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1000,15 +1798,51 @@ Unblock ips in policy:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes specified IP addresses from the source or destination fields of a security
-      policy configuration in Palo Alto Panorama.
+      Removes specified IP addresses from the blocklist policy on the Palo Alto Panorama
+      device.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches the current state of the policy (fetches_data=true) and modifies
+      the policy on the external Palo Alto Panorama device (can_mutate_external_data=true).
+      It does not mutate internal SecOps data or update entities.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1022,3 +1856,54 @@ Unblock ips in policy:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by `entity.entity_type
+      == EntityTypes.ADDRESS`. It does not use other filtering criteria.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies an external security policy on a Palo Alto Panorama device
+      to remove IP addresses from a blocklist. This directly matches the 'Remove IOC
+      From Blocklist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Device Name | String | Yes | Specify the name of the device. The default for
+    Palo Alto Panorama is 'localhost.localdomain'. |
+
+    | Device Group Name | String | Yes | Specify the name of the device group where
+    the policy resides. |
+
+    | Policy Name | String | Yes | Specify the name of the security policy to modify.
+    |
+
+    | Target | String | Yes | Specify the target of the policy rule to modify. Possible
+    values: 'source' or 'destination'. |

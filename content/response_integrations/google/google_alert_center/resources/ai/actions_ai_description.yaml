@@ -1,38 +1,31 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Delete Alert:
-  ai_description: "### General Description\nDeletes a specific alert in the Google\
-    \ Alert Center using its unique identifier. This action is primarily used for\
-    \ automated cleanup or resolution of alerts that have been processed. It is important\
-    \ to note that deleted alerts are not immediately purged; they remain in a recoverable\
-    \ state within the Google Alert Center for 30 days before being permanently deleted.\n\
-    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| Alert ID | String | Yes | The unique identifier\
-    \ of the alert that needs to be deleted from the Google Alert Center. |\n\n###\
-    \ Additional Notes\n- The action is idempotent: if the specified Alert ID does\
-    \ not exist or has already been deleted, the action will still return a successful\
-    \ status.\n- Requires a Service Account with appropriate domain-wide delegation\
-    \ and the `https://www.googleapis.com/auth/apps.alerts` scope.\n\n### Flow Description\n\
-    1. **Setup**: Initializes the Google Alert Center manager using the provided Service\
-    \ Account JSON and Impersonation Email.\n2. **Parameter Retrieval**: Extracts\
-    \ the `Alert ID` from the action parameters.\n3. **Execution**: Sends a `DELETE`\
-    \ request to the Google Alert Center API endpoint (`alerts/{alert_id}`).\n4. **Response\
-    \ Handling**: \n    - If the deletion is successful, the action completes.\n \
-    \   - If the API returns a 404 (Not Found), the action treats this as a success\
-    \ since the alert is already absent.\n    - Other errors (e.g., invalid credentials,\
-    \ network issues) result in a failed execution state."
+  ai_description: >-
+    ### General Description
+
+    Deletes an alert from the Google Alert Center using the provided Alert ID. This
+    action interacts with the Google Alert Center API to remove the specified alert.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (Service Account JSON, Impersonation Email,
+    SSL verification).
+
+    2. Extracts the `Alert ID` parameter.
+
+    3. Initializes the `GoogleAlertCenterManager` with the provided credentials.
+
+    4. Executes a `DELETE` request to the Google Alert Center API endpoint `alerts/{alert_id}`.
+
+    5. Returns a success message or handles cases where the alert is not found.
+
+
+    ### Additional Notes
+
+    Note that it takes 30 days for the alert to fully disappear in Google Alert Center;
+    before that, they can still be recovered.
+  ai_short_description: >-
+    Deletes a specific alert from the Google Alert Center using its unique identifier.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -41,14 +34,50 @@ Delete Alert:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Performs a DELETE request to the Google Alert Center API to remove an alert
-      record.
+      Deletes the specified alert from the Google Alert Center.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a DELETE request to the Google Alert Center API to remove an
+      alert. This is an external mutation. It does not fetch data, update internal
+      entities, or modify alert data within the SecOps platform.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -62,61 +91,80 @@ Delete Alert:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. It takes a standalone
+      `Alert ID` parameter. Therefore, no entity flags are set to true.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes an alert from the Google Alert Center. This does not match
+      any of the provided outcome categories (e.g., Enrich, Update Alert, Blocklist,
+      etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert ID | String | Yes | The unique identifier of the alert to be deleted.
+    |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity to the Google Alert Center API using the provided service
-    account credentials and impersonation settings. This action is primarily used
-    during the initial setup or troubleshooting phase to ensure that the Google SecOps
-    environment can successfully communicate with the Google Alert Center service.
-
-
-    ### Parameters Description
-
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Service Account JSON Secret | String | Yes | The JSON key file content for the
-    Google Service Account used for authentication. |
-
-    | Impersonation Email Address | String | Yes | The email address of the Google
-    Workspace user that the service account will impersonate to access alert data.
-    |
-
-    | Verify SSL | Boolean | Yes | If true, the action will verify the SSL certificate
-    of the Google API endpoint. |
-
-
-    ### Additional Notes
-
-    - This action is a standard 'Ping' utility and does not process any entities or
-    modify any data.
-
-    - It requires a valid Google Service Account with the appropriate scopes (`https://www.googleapis.com/auth/apps.alerts`)
-    and Domain-Wide Delegation if impersonation is used.
+    Tests connectivity to the Google Alert Center API using the provided service account
+    credentials and impersonation email. This action verifies that the integration
+    is correctly configured and can successfully authenticate with the Google Alert
+    Center.
 
 
     ### Flow Description
 
-    1. **Configuration Extraction**: The action retrieves the Service Account JSON,
-    Impersonation Email, and SSL verification preference from the integration's configuration.
+    1. Extracts configuration parameters: `Service Account JSON Secret`, `Impersonation
+    Email Address`, and `Verify SSL` from the integration configuration.
 
-    2. **Client Initialization**: It initializes the `GoogleAlertCenterManager`, which
-    parses the JSON secret and sets up an authorized HTTP client using Google's OAuth2
-    library.
+    2. Initializes the `GoogleAlertCenterManager` with the provided credentials.
 
-    3. **API Request**: The manager executes a `test_connectivity` call, which performs
-    a `GET` request to the `/alerts` endpoint with a `pageSize` limit of 1.
+    3. Executes the `test_connectivity` method, which performs a `GET` request to
+    the Google Alert Center API (`alerts` endpoint with a limit of 1).
 
-    4. **Validation**: The action validates the HTTP response status. If the status
-    is 200, the connection is considered successful.
+    4. Validates the API response to ensure successful authentication and connectivity.
 
-    5. **Error Handling**: If the JSON is malformed or the API returns an error (e.g.,
-    authentication failure), the action catches the exception and reports a descriptive
-    failure message.
+    5. Returns a success or failure message based on the outcome of the connectivity
+    test.
+
+
+    ### Additional Notes
+
+    This action does not modify any data; it is strictly for verifying the integration
+    configuration.
+  ai_short_description: >-
+    Tests connectivity to the Google Alert Center API to verify integration configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -127,10 +175,46 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a GET request to the Google Alert Center API to verify connectivity.
+      It does not mutate any data or update internal entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -144,3 +228,49 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities; it is a global connectivity
+      test.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test ('Ping') and does not perform any of the listed
+      actions such as enriching IOCs, updating tickets, or modifying alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Service Account JSON Secret | String | Yes | JSON string containing the service
+    account keys. |
+
+    | Impersonation Email Address | String | Yes | Email address with access to the
+    alert center. |
+
+    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate. |

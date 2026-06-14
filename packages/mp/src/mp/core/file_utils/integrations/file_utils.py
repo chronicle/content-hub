@@ -142,8 +142,6 @@ def get_marketplace_integration_base_paths() -> list[Path]:
     base_paths: list[Path] = []
     for repo_type_name in [
         constants.COMMERCIAL_REPO_NAME,
-        constants.THIRD_PARTY_REPO_NAME,
-        constants.CUSTOM_REPO_NAME,
     ]:
         base_paths.extend(get_integration_base_folders_paths(repo_type_name))
 

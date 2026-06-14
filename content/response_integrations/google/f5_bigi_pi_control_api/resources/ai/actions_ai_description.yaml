@@ -1,65 +1,44 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Add IP To Address List:
   ai_description: >-
     ### General Description
 
-    The **Add IP To Address List** action appends IP address entities to a specified
-    address list on an F5 BIG-IP device. This action is primarily used for dynamic
-    network security management, such as updating firewall blocklists or allowlists
-    based on observed activity in Google SecOps.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Address List Name | String | Yes | The exact name of the address list on the
-    F5 BIG-IP device that you want to modify. |
+    Adds one or more IP address entities to a specified address list within an F5
+    BIG-IP instance. This action is typically used to update firewall or security
+    policy lists to manage network traffic.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves connection details (API Root, credentials)
-    and the target address list name from the configuration and parameters.
+    1. **Configuration Extraction**: Retrieves the F5 BIG-IP API root, credentials
+    (username, password), and SSL verification settings from the integration configuration.
 
-    2. **Entity Filtering**: It identifies all `ADDRESS` entities within the current
-    alert scope.
+    2. **Parameter Extraction**: Retrieves the `Address List Name` from the action
+    parameters.
 
-    3. **Fetch Current State**: For each entity, the action queries the F5 BIG-IP
-    API to retrieve the current members of the specified address list.
+    3. **Entity Filtering**: Filters the provided `target_entities` to include only
+    those of type `ADDRESS`.
 
-    4. **List Modification**: It appends the identifier of the IP entity to the existing
-    list of addresses.
+    4. **Address List Retrieval**: For each suitable entity, the action calls the
+    F5 BIG-IP API (`GET` request) to retrieve the current configuration of the specified
+    address list.
 
-    5. **External Update**: The action performs a `PATCH` request to the F5 BIG-IP
-    device to update the address list with the new, expanded set of IPs.
+    5. **List Update**: Appends the IP address to the existing list and sends an update
+    request (`PATCH` request) to the F5 BIG-IP API to save the changes.
 
-    6. **Outcome Reporting**: It tracks successful and failed updates, providing a
-    summary message and attaching the updated list data as a JSON result.
+    6. **Result Reporting**: Logs the success or failure of the operation for each
+    entity and adds the updated address list details to the action result.
 
 
     ### Additional Notes
 
-    - This action performs a 'Read-Modify-Write' cycle to ensure that existing entries
-    in the F5 address list are not overwritten or lost.
+    - The action requires valid credentials with sufficient permissions to modify
+    address lists on the F5 BIG-IP device.
 
-    - Only entities of type `ADDRESS` are processed; other entity types in the scope
-    are ignored.
+    - If no suitable entities are found, the action will terminate and report that
+    no entities were processed.
+  ai_short_description: >-
+    Adds IP address entities to a specified address list in F5 BIG-IP to manage network
+    security policies.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -68,15 +47,51 @@ Add IP To Address List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action modifies the configuration of the F5 BIG-IP device by adding new
-      IP addresses to an existing address list via a PATCH request.
+      Updates the specified address list on the F5 BIG-IP device by adding the provided
+      IP addresses.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches the current address list configuration (GET request) and
+      then updates it (PATCH request) on the external F5 BIG-IP system. It does not
+      mutate internal SOAR data or update entities.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -90,27 +105,87 @@ Add IP To Address List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      is defined as `[EntityTypes.ADDRESS]`. Therefore, it explicitly targets ADDRESS
+      entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies an address list on an F5 BIG-IP device. Address lists in
+      F5 BIG-IP are commonly used for firewall rules to block or allow traffic. Adding
+      an IP to such a list aligns with the 'Add IOC To Blocklist' outcome category,
+      as it is a standard method for implementing network-level containment or filtering.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Address List Name | String | Yes | The name of the address list in F5 BIG-IP
+    to which the IP addresses should be added. |
 Add IP To Data Group:
   ai_description: >-
-    ### General Description\nAdds IP Address entities to a specified internal data
-    group within an F5 BIG-IP instance. This action is designed to update existing
-    internal data groups by appending new IP records, which is commonly used for managing
-    dynamic blocklists or traffic control lists.\n\n### Parameters Description\n|
-    Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n|
-    Data Group Name | String | Yes | The name of the internal data group in F5 BIG-IP
-    where the IP addresses will be added. |\n\n### Additional Notes\n- This action
-    only supports **internal** data groups.\n- The target data group must already
-    exist and be configured with the 'ip' type in F5 BIG-IP.\n\n### Flow Description\n1.
-    **Filter Entities**: The action identifies all IP Address entities within the
-    current execution context.\n2. **Retrieve Data Group**: For each entity, it fetches
-    the current state and existing records of the specified data group from the F5
-    BIG-IP API.\n3. **Type Validation**: It verifies that the retrieved data group
-    is of the 'ip' type; otherwise, it raises an error.\n4. **Record Modification**:
-    The action appends the entity's IP address to the list of existing records for
-    that data group.\n5. **External Update**: It performs a PATCH request to the F5
-    BIG-IP API to commit the updated records list.\n6. **Execution Summary**: The
-    action tracks which entities were successfully added and provides a summary message
-    along with the updated data group details in JSON format.
+    ### General Description
+
+    Adds an IP address entity to a specified internal data group within an F5 BIG-IP
+    instance. This action allows security teams to dynamically update F5 BIG-IP configurations,
+    such as blocklists or allowlists, directly from the SOAR platform.
+
+
+    ### Flow Description
+
+    1. The action extracts the required configuration parameters (API Root, Username,
+    Password, Verify SSL) and the action parameter (Data Group Name).
+
+    2. It filters the `target_entities` to identify those of type `ADDRESS`.
+
+    3. For each suitable entity, the action performs the following steps:
+        - Calls the F5 BIG-IP API (`GET` request) to retrieve the current configuration
+    of the specified data group.
+        - Validates that the data group exists and is of the correct type (`IP_GROUP_TYPE`).
+        - Appends the entity's identifier to the data group's record list.
+        - Calls the F5 BIG-IP API (`PATCH` request) to update the data group with
+    the new records.
+    4. The action concludes by adding the updated data group information to the result
+    JSON and providing a summary of successful and failed operations in the output
+    message.
+
+
+    ### Additional Notes
+
+    This action requires the target data group to be configured as an 'internal' data
+    group with the 'IP' type in F5 BIG-IP. If the data group is not found or is of
+    an incorrect type, the action will fail for that entity.
+  ai_short_description: >-
+    Adds an IP address entity to a specified internal data group in F5 BIG-IP to facilitate
+    dynamic network security updates.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -119,15 +194,50 @@ Add IP To Data Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds IP addresses to the records of an internal data group on the F5 BIG-IP
-      system via a PATCH request.
+      Updates the F5 BIG-IP data group by adding the IP address to the records.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data (GET request to retrieve data group) and mutates external
+      data (PATCH request to update data group). It does not mutate internal SOAR
+      data, update entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -141,58 +251,91 @@ Add IP To Data Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      is defined as `[EntityTypes.ADDRESS]`. Therefore, it targets ADDRESS entities
+      and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates an F5 BIG-IP data group by adding an IP address. This is
+      a standard method for managing blocklists or allowlists on network appliances.
+      Therefore, it matches the 'Add IOC To Blocklist' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Data Group Name | String | Yes | Specify the name of the data group to which
+    you want to add IP addresses. |
 Add Port To Port List:
   ai_description: >-
     ### General Description
 
-    This action adds one or more ports to a specified port list within an F5 BIG-IP
-    instance. It is used to dynamically update firewall configurations by appending
-    new port definitions to existing lists. The action processes a comma-separated
-    list of ports and attempts to update the F5 BIG-IP configuration for each.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Port List Name | String | Yes | The exact name of the port list in F5 BIG-IP
-    where the ports should be added. |
-
-    | Ports | String | Yes | A comma-separated list of port numbers or names to be
-    added to the list (e.g., "80, 443, 8080"). |
-
-
-    ### Additional Notes
-
-    - The action performs a 'GET' request to retrieve the current state of the port
-    list before each update to ensure the new port is appended to the existing set.
-
-    - If a port already exists or the update fails for a specific port, the action
-    will continue to process the remaining ports in the list and report the failures
-    at the end.
+    This action adds a specified list of ports to an existing port list within an
+    F5 BIG-IP device. It allows security teams to dynamically update firewall port
+    configurations directly from the SOAR platform, facilitating automated network
+    security management.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the F5 BIG-IP manager using the
-    provided API credentials and connection settings.
+    1. The action extracts the necessary configuration parameters (API Root, Username,
+    Password, Verify SSL) and action parameters (Port List Name, Ports).
 
-    2. **Parameter Parsing**: It extracts the target port list name and splits the
-    comma-separated string of ports into a Python list.
+    2. The `Ports` parameter is converted from a comma-separated string into a list.
 
-    3. **Iterative Update**: For each port provided:
-        - It fetches the current configuration of the specified port list from the
+    3. The action initializes the `F5BIGIPiControlAPIManager` to interact with the
     F5 BIG-IP API.
-        - It appends the new port object to the existing list of ports.
-        - It sends a PATCH request to the F5 BIG-IP API to update the port list with
-    the new combined set.
-    4. **Result Tracking**: The action tracks which ports were successfully added
-    and which encountered errors.
 
-    5. **Finalization**: It returns a summary message indicating success or failure
-    for the batch and provides the final port list state in JSON format.
+    4. For each port in the provided list, the action retrieves the current port list
+    configuration using the `get_port_list` API endpoint.
+
+    5. The new port is appended to the existing list of ports.
+
+    6. The action updates the port list on the F5 BIG-IP device using the `update_port_list`
+    API endpoint.
+
+    7. The action tracks successful and failed additions and returns a summary message
+    and the updated port list JSON.
+
+
+    ### Additional Notes
+
+    This action requires valid credentials and connectivity to the F5 BIG-IP management
+    interface. It performs a PATCH request to update the port list configuration.
+    If a port is already present, the logic simply appends it, which may result in
+    duplicates depending on the F5 BIG-IP implementation; however, the action reports
+    success based on the API response.
+  ai_short_description: >-
+    Adds a list of ports to a specified port list in F5 BIG-IP.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -201,14 +344,51 @@ Add Port To Port List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action modifies the configuration of the F5 BIG-IP device by sending a PATCH
-      request to update the 'ports' attribute of a specific firewall port-list object.
+      Updates the port list configuration on the F5 BIG-IP device by adding the specified
+      ports.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to retrieve the current port list and a PATCH
+      request to update it on the F5 BIG-IP device. It mutates external data (the
+      port list configuration) but does not mutate internal SOAR data or update entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -222,50 +402,89 @@ Add Port To Port List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize `siemplify.target_entities` or any entity-specific
+      logic. It operates on configuration parameters provided directly to the action,
+      therefore no entity types are used and no filtering is applied.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates a port list configuration on an F5 BIG-IP device. While this
+      modifies a security control, it does not specifically match the definition of
+      'Add IOC To Blocklist' (which targets IOCs like IPs/Domains/Hashes) or any other
+      provided outcome category. Therefore, no outcome categories are selected.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Port List Name | String | Yes | Specify the name of the port list to which you
+    want to add ports. |
+
+    | Ports | String | Yes | Specify a comma-separated list of ports that need to
+    be added. |
 Create Address List:
   ai_description: >-
     ### General Description
 
-    Creates a new address list in F5 BIG-IP using the provided IP address entities.
-    This action is used to group IP addresses for use in security policies or firewall
-    rules on the F5 BIG-IP platform.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Name | String | Yes | The unique name for the address list to be created in
-    F5 BIG-IP. |
-
-
-    ### Additional Notes
-
-    - The action requires at least one IP address entity to be present in the current
-    context, as F5 BIG-IP requires an address list to contain at least one member
-    upon creation.
-
-    - Only entities of type ADDRESS are processed.
+    Creates a new address list in the F5 BIG-IP system. This action allows administrators
+    to group IP addresses into a named list, which can subsequently be used for security
+    policies or traffic management rules within the F5 BIG-IP environment.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieves the address list name from the action parameters
-    and connection details from the integration configuration.
+    1. **Parameter Extraction**: The action extracts the required configuration parameters
+    (API Root, Username, Password, Verify SSL) and the action-specific parameter 'Name'
+    from the integration settings.
 
-    2. **Entity Filtering**: Identifies all IP Address entities within the current
-    scope.
+    2. **Entity Filtering**: The action iterates through the provided `target_entities`
+    and filters them to include only those of type 'ADDRESS'.
 
-    3. **Data Preparation**: Formats the identified IP addresses into the structure
-    required by the F5 BIG-IP iControl API.
+    3. **Manager Initialization**: The `F5BIGIPiControlAPIManager` is initialized
+    with the provided credentials and connection settings.
 
-    4. **API Interaction**: Executes a POST request to the F5 BIG-IP management endpoint
-    to create the address list.
+    4. **Resource Creation**: The action calls the `create_address_list` method of
+    the manager, passing the specified list name and the list of IP addresses derived
+    from the filtered entities.
 
-    5. **Result Handling**: Captures the API response and reports the success or failure
-    of the operation.
+    5. **Result Handling**: The resulting address list object is converted to JSON
+    and added to the action results, followed by a success message.
+
+
+    ### Additional Notes
+
+    This action requires at least one IP address entity to be present in the target
+    entities list to successfully create the address list. The action performs a POST
+    request to the F5 BIG-IP API endpoint `/mgmt/tm/security/firewall/address-list/`.
+  ai_short_description: >-
+    Creates a new address list in F5 BIG-IP using the provided IP address entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -274,15 +493,50 @@ Create Address List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new address list resource on the F5 BIG-IP device via a POST request
-      to the iControl API.
+      Creates a new address list resource in the F5 BIG-IP system.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST request to the F5 BIG-IP API to create a new address
+      list, which constitutes a mutation of external data. It does not fetch data,
+      update internal entities, or modify alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -296,54 +550,86 @@ Create Address List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` is defined as `[EntityTypes.ADDRESS]`.
+      This confirms the action filters entities by their type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new address list in the F5 BIG-IP system. While address
+      lists can be used for blocking, this action is a configuration management task
+      and does not directly perform a blocklist update or other predefined outcome
+      category operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Name | String | Yes | Specify the name of the address list that needs to be
+    created. |
 Create Data Group:
   ai_description: >-
     ### General Description
 
-    This action creates a new internal data group within an F5 BIG-IP instance using
-    the iControl REST API. Data groups are used in F5 BIG-IP to group related items
-    (like IP addresses, strings, or integers) for use in iRules or other configurations.
-    This specific action is restricted to creating 'internal' data groups.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Name | String | Yes | The unique name for the data group to be created in the
-    F5 BIG-IP system. |
-
-    | Type | String | Yes | The data type for the group. Supported values are 'IP
-    Address', 'String', and 'Integer'. |
+    Creates a new data group within the F5 BIG-IP system. This action allows administrators
+    to define a new data group by specifying its name and type (IP Address, String,
+    or Integer), which can subsequently be used for traffic management or security
+    policies within the F5 BIG-IP environment.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves connection details (API Root, Username,
-    Password) and action parameters (Name, Type).
+    1. The action initializes the `F5BIGIPiControlAPIManager` using the provided configuration
+    parameters (API Root, Username, Password, and SSL verification settings).
 
-    2. **API Connection**: It establishes a session with the F5 BIG-IP iControl API.
+    2. It extracts the required action parameters: `Name` (the name of the data group
+    to create) and `Type` (the data type of the group).
 
-    3. **Data Transformation**: The user-friendly 'Type' parameter (e.g., 'IP Address')
-    is mapped to the API-specific type identifier (e.g., 'ip').
+    3. The action calls the `create_data_group` method of the manager.
 
-    4. **Creation Request**: A POST request is sent to the `/mgmt/tm/ltm/data-group/internal`
-    endpoint with the specified name and type.
+    4. The manager performs an HTTP POST request to the F5 BIG-IP API endpoint `/mgmt/tm/ltm/data-group/internal`
+    with the specified name and type.
 
-    5. **Result Handling**: If successful, the raw JSON response from F5 BIG-IP is
-    attached to the action results, and a success message is returned. If the API
-    returns an error (e.g., group already exists), the action fails with a descriptive
-    error message.
+    5. The API response is processed, and the result is added to the action's output
+    JSON.
+
+    6. The action completes and returns a success message or an error message if the
+    operation fails.
 
 
     ### Additional Notes
 
-    * This action does not process entities from the Google SecOps case; it relies
-    entirely on the provided input parameters.
-
-    * Only internal data groups are supported by this action.
+    This action only supports the creation of internal data groups. Ensure that the
+    provided `Name` is unique within the F5 BIG-IP instance to avoid conflicts.
+  ai_short_description: >-
+    Creates a new internal data group in F5 BIG-IP with a specified name and type.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -352,14 +638,50 @@ Create Data Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new internal data group configuration object within the F5 BIG-IP
-      system via a POST request.
+      Creates a new data group resource in the F5 BIG-IP system.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST request to the F5 BIG-IP API to create a new data
+      group, which constitutes a mutation of external data. It does not fetch data,
+      update internal entities, or modify alert/case data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -373,48 +695,87 @@ Create Data Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize or iterate over any entities from the SOAR platform.
+      It operates solely based on the provided configuration and action parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new data group in F5 BIG-IP. This is an infrastructure
+      management task. It does not match any of the predefined categories such as
+      enriching IOCs, updating alerts, managing tickets, or modifying security blocklists/allowlists
+      directly.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Type | ddl | Yes | Specify the type for the data group (IP Address, String,
+    or Integer). |
+
+    | Name | string | Yes | Specify the name of the data group that needs to be created.
+    |
 Create Port List:
   ai_description: >-
     ### General Description
 
-    Creates a new port list configuration on an F5 BIG-IP instance. This action allows
-    security administrators to define groups of ports that can be used in firewall
-    rules or other security policies within the F5 BIG-IP environment.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Name | String | Yes | The unique name for the new port list. Note: The name
-    should not contain whitespace due to F5 BIG-IP limitations. |
-
-    | Ports | String | Yes | A comma-separated list of port numbers (e.g., "80, 443,
-    8080") to be included in the list. |
-
-
-    ### Additional Notes
-
-    This action does not operate on specific entities within a case; it is a standalone
-    configuration action. It performs a state-changing operation on the external F5
-    BIG-IP system.
+    Creates a new port list in the F5 BIG-IP system. This action allows administrators
+    to define a collection of ports that can subsequently be used in firewall rules
+    or other security policies within the F5 BIG-IP environment.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieves the F5 BIG-IP connection details (API Root,
-    credentials) and action parameters (List Name and Ports).
+    1. The action extracts the necessary configuration parameters, including the API
+    Root, Username, Password, and SSL verification settings.
 
-    2. **Data Parsing**: Converts the comma-separated string of ports into a Python
-    list format required by the API.
+    2. It extracts the action-specific parameters: the name of the port list and the
+    comma-separated string of ports.
 
-    3. **API Interaction**: Sends a POST request to the F5 BIG-IP iControl API endpoint
-    `/mgmt/tm/security/firewall/port-list` with the specified name and port definitions.
+    3. The action converts the comma-separated string of ports into a list format.
 
-    4. **Result Processing**: Captures the API response containing the created port
-    list details and attaches it as a JSON result to the action.
+    4. It initializes the `F5BIGIPiControlAPIManager` to handle communication with
+    the F5 BIG-IP API.
+
+    5. The action calls the `create_port_list` method, which sends a POST request
+    to the F5 BIG-IP endpoint `/mgmt/tm/security/firewall/port-list` with the provided
+    name and port configuration.
+
+    6. The resulting JSON response from the API is added to the action's result, and
+    a success message is returned.
+
+
+    ### Additional Notes
+
+    The name of the port list must not contain whitespace, as this is a limitation
+    of the F5 BIG-IP system.
+  ai_short_description: Creates a new port list in F5 BIG-IP.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -423,14 +784,50 @@ Create Port List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new port list configuration object on the F5 BIG-IP firewall via a
-      POST request.
+      Creates a new port list resource on the F5 BIG-IP device.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST request to the F5 BIG-IP API to create a new port
+      list resource. This is a state-changing operation on an external system. It
+      does not fetch data, update internal entities, or modify alerts.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -444,50 +841,85 @@ Create Port List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter any entities. It operates on configuration
+      parameters provided by the user to create a resource on the F5 BIG-IP device.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a configuration object (port list) on an external F5 BIG-IP
+      device. It does not match any of the predefined categories such as IOC enrichment,
+      ticket creation, identity management, or direct blocking/unblocking of specific
+      IOCs.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Name | String | Yes | Specify the name of the port list that needs to be created.
+    Note: name shouldn't contain whitespace. This is F5 BIG-IP limitation. |
+
+    | Ports | String | Yes | Specify a comma-separated list of ports that will be
+    a part of the new port list. |
 Create iRule:
   ai_description: >-
     ### General Description
 
-    Creates a new iRule on an F5 BIG-IP instance. iRules are scripts based on the
-    Tool Command Language (TCL) that allow you to customize how the BIG-IP system
-    handles network traffic. This action is used to programmatically deploy traffic
-    management logic to the F5 appliance.
-
-
-    ### Parameters Description
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Name | String | Yes | Specify the unique name for the iRule to be created in
-    the F5 BIG-IP system. |
-
-    | Rule | String | Yes | Specify the actual TCL script logic that the iRule will
-    execute (e.g., `when HTTP_REQUEST { ... }`). |
+    Creates a new iRule on the F5 BIG-IP device using the iControl REST API. This
+    action allows administrators to define and deploy custom traffic management rules
+    directly to the F5 BIG-IP system.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the F5 BIG-IP connection details
-    (API Root, credentials) and the action-specific parameters (Name and Rule).
+    1. The action extracts the necessary configuration parameters, including the API
+    Root, Username, Password, and SSL verification settings.
 
-    2. **Manager Initialization**: Initializes the `F5BIGIPiControlAPIManager` to
-    handle authentication and API requests.
+    2. It extracts the action-specific parameters: the name of the iRule to be created
+    and the rule content itself.
 
-    3. **API Execution**: Sends a POST request to the `/mgmt/tm/ltm/rule` endpoint
-    on the F5 BIG-IP system, passing the iRule name and the script content (as `apiAnonymous`).
+    3. The action initializes the `F5BIGIPiControlAPIManager` with the provided credentials
+    and configuration.
 
-    4. **Result Processing**: If successful, the action captures the metadata of the
-    newly created iRule and adds it to the action's JSON results. If the creation
-    fails, an error is logged and the action status is set to failed.
+    4. It calls the `create_irule` method, which sends a POST request to the F5 BIG-IP
+    API endpoint (`/mgmt/tm/ltm/rule`) to create the specified iRule.
+
+    5. The result of the operation is returned as a JSON object, and the action concludes
+    with a success or failure message.
 
 
     ### Additional Notes
 
-    This action does not operate on specific entities (like IPs or Hostnames) within
-    the Google SecOps case; it is a standalone configuration action.
+    This action requires network connectivity to the F5 BIG-IP management interface
+    and appropriate permissions to create iRules on the target device.
+  ai_short_description: >-
+    Creates a new iRule on the F5 BIG-IP device.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -496,14 +928,50 @@ Create iRule:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates a new iRule configuration object on the F5 BIG-IP appliance via the
-      iControl REST API.
+      Creates a new iRule on the F5 BIG-IP device via the iControl REST API.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST request to the F5 BIG-IP API to create a new iRule,
+      which constitutes a mutation of external data. It does not fetch data, update
+      internal entities, or modify alert/case data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -517,671 +985,80 @@ Create iRule:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Delete Address List:
-  ai_description: "### General Description\nDeletes a specific address list from an\
-    \ F5 BIG-IP instance using the iControl REST API. This action is used to manage\
-    \ firewall configurations by removing named address lists that are no longer required.\n\
-    \n### Parameters Description\n| Parameter Name | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| Name | String | Yes | The exact name of\
-    \ the address list in F5 BIG-IP that you want to delete. |\n\n### Additional Notes\n\
-    - This action does not operate on entities; it requires the specific name of the\
-    \ address list as a manual input parameter.\n- If the specified address list does\
-    \ not exist, the action will complete with a message stating it wasn't found rather\
-    \ than failing.\n\n### Flow Description\n1. **Initialization**: The action initializes\
-    \ the F5 BIG-IP manager using the provided API root, credentials, and SSL verification\
-    \ settings.\n2. **Parameter Extraction**: It retrieves the 'Name' of the address\
-    \ list to be deleted from the action parameters.\n3. **API Execution**: It sends\
-    \ a DELETE request to the F5 BIG-IP iControl API endpoint corresponding to the\
-    \ specified address list name.\n4. **Error Handling**: \n    - If the API returns\
-    \ a 404 (via `InvalidInputException`), it reports that the list doesn't exist.\n\
-    \    - If the deletion is successful, it returns a success message.\n    - If\
-    \ a network or server error occurs, the action fails with the relevant error details."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Deletes an existing address list configuration from the F5 BIG-IP system via
-      a DELETE request to the iControl REST API.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Delete Data Group:
-  ai_description: "### General Description\nDeletes an internal data group in F5 BIG-IP\
-    \ using the iControl REST API. This action is specifically designed to remove\
-    \ existing internal data group configurations from the target F5 system based\
-    \ on a provided name.\n\n### Parameters Description\n| Parameter Name | Type |\
-    \ Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Name | String |\
-    \ Yes | The exact name of the internal data group that needs to be deleted from\
-    \ the F5 BIG-IP instance. |\n\n### Additional Notes\n* This action **only supports\
-    \ internal data groups**. It cannot be used to delete external data groups.\n\
-    * If the specified data group does not exist, the action will complete gracefully\
-    \ with a message indicating it wasn't found, rather than failing.\n\n### Flow\
-    \ Description\n1. **Initialization**: The action retrieves connection details\
-    \ (API Root, Credentials, SSL settings) and the target data group name from the\
-    \ environment and action parameters.\n2. **API Connection**: It establishes a\
-    \ session with the F5 BIG-IP iControl API.\n3. **Execution**: It sends a DELETE\
-    \ request to the specific endpoint for internal data groups (`/mgmt/tm/ltm/data-group/internal/{group_name}`).\n\
-    4. **Error Handling**: \n    * If the API returns a 404 error, the action catches\
-    \ an `InvalidInputException` and reports that the group doesn't exist.\n    *\
-    \ If the deletion is successful, it returns a success message.\n    * For other\
-    \ HTTP errors or connection issues, it logs the error and marks the action as\
-    \ failed."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Deletes a configuration object (internal data group) from the F5 BIG-IP system
-      via a DELETE request to the iControl REST API.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Delete Port List:
-  ai_description: >-
-    ### General Description
-
-    Deletes a specific port list from the F5 BIG-IP firewall configuration using the
-    iControl REST API. This action is used to remove network security configurations
-    that are no longer required within the F5 BIG-IP environment.
-
-
-    ### Parameters
-
-    | Parameter Name | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Name | The unique name of the port list that needs to be deleted from the F5
-    BIG-IP system. | String | Yes |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the F5 BIG-IP manager using the
-    provided API root, username, password, and SSL verification settings.
-
-    2. **API Request**: It constructs the specific endpoint URL for the port list
-    using the provided `Name` parameter and sends a DELETE request to the F5 BIG-IP
-    instance.
-
-    3. **Validation**: The action validates the HTTP response from the server. If
-    the deletion is successful, it returns a success message. If the server returns
-    an error (e.g., 404 if the list doesn't exist or 401 for unauthorized access),
-    an exception is raised and the action fails with a descriptive error message.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Deletes a port list configuration from the F5 BIG-IP firewall security settings
-      via a DELETE request to the iControl REST API.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Delete iRule:
-  ai_description: "### General Description\nDeletes a specific iRule from an F5 BIG-IP\
-    \ instance using the iControl REST API. This action is used to programmatically\
-    \ remove traffic management logic (iRules) that are no longer required or are\
-    \ part of a decommissioning process.\n\n### Parameters Description\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Name |\
-    \ String | Yes | The exact name of the iRule that needs to be deleted from the\
-    \ F5 BIG-IP system. |\n\n### Additional Notes\n- This action does not operate\
-    \ on entities; it requires the specific name of the iRule as a manual input or\
-    \ a dynamic parameter from a previous step.\n- If the specified iRule does not\
-    \ exist, the action will complete successfully with a message stating the iRule\
-    \ was not found.\n\n### Flow Description\n1. **Initialization**: The action initializes\
-    \ the F5 BIG-IP manager using the provided API Root, Username, and Password.\n\
-    2. **Parameter Extraction**: It retrieves the 'Name' of the iRule to be deleted\
-    \ from the action parameters.\n3. **API Execution**: It sends a DELETE request\
-    \ to the F5 iControl API endpoint (`/mgmt/tm/ltm/rule/{name}`).\n4. **Error Handling**:\
-    \ \n    - If the API returns a 404 error, it catches an `InvalidInputException`\
-    \ and informs the user that the iRule doesn't exist.\n    - If the deletion is\
-    \ successful, it returns a success message.\n    - For other HTTP errors or connectivity\
-    \ issues, the action fails with a detailed error reason."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Deletes an existing iRule configuration object from the F5 BIG-IP system via
-      a DELETE request to the iControl REST API.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-List Address Lists:
-  ai_description: >-
-    ### General Description
-
-    The **List Address Lists** action retrieves a list of available address lists
-    from an F5 BIG-IP instance. This discovery action is used to identify existing
-    firewall address groups, which can then be used in other management or containment
-    workflows. The results are presented in a data table and as a JSON object.
-
-
-    ### Parameters Description
-
+    reasoning: >-
+      The action does not utilize any entities from the SOAR platform. It operates
+      solely based on the provided input parameters (Name and Rule) to interact with
+      the F5 BIG-IP API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new iRule on an external F5 BIG-IP device. This does not
+      align with any of the predefined outcome categories such as enrichment, ticketing,
+      or standard IOC blocking/containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Filter Logic** | String | No | Specifies the logic for filtering address lists.
-    Options: `Equal` (exact match) or `Contains` (partial match). Default is `Equal`.
+    | Name | String | Yes | Specify the name of the iRule that needs to be created.
     |
 
-    | **Filter Value** | String | No | The string used to filter the address list
-    names. If empty, no filtering is applied. |
-
-    | **Max Address Lists To Return** | Integer | No | Limits the number of address
-    lists returned. Default is 50. Must be a positive integer. |
-
-
-    ### Additional Notes
-
-    - If no address lists match the criteria, the action will complete successfully
-    but indicate that no results were found.
-
-    - The action uses pagination when a filter value is provided to ensure comprehensive
-    results are retrieved before filtering.
-
-    - The parameter **Max Address Lists To Return** must be greater than 0.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the F5 BIG-IP manager using the
-    provided API credentials and connection settings.
-
-    2. **Data Retrieval**: It sends a GET request to the F5 BIG-IP API endpoint `/mgmt/tm/security/firewall/address-list/`
-    to fetch address lists. Pagination is applied if a filter value is provided.
-
-    3. **Filtering**: The retrieved lists are filtered locally based on the `Filter
-    Logic` and `Filter Value` provided by the user.
-
-    4. **Limiting**: The result set is truncated to the size specified in `Max Address
-    Lists To Return`.
-
-    5. **Output**: The final list of address lists is presented as a data table titled
-    'Available Address Lists' and a JSON result in the SOAR interface.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-List Data Groups:
+    | Rule | String | Yes | Specify the rule that needs to be executed. |
+Delete Address List:
   ai_description: >-
     ### General Description
 
-    This action retrieves a list of available internal data groups from an F5 BIG-IP
-    instance. It is primarily used for discovery and visibility into the LTM (Local
-    Traffic Manager) configuration, allowing users to see which data groups are defined
-    and what records they contain. The action supports filtering by name and limiting
-    the number of results returned.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Filter Logic | String (Dropdown) | No | Defines the comparison method used with
-    the 'Filter Value'. Options are 'Equal' (exact match) or 'Contains' (substring
-    match). Default is 'Equal'. |
-
-    | Filter Value | String | No | The string to search for within the data group
-    names. If left empty, no filtering is performed and all accessible groups are
-    retrieved. |
-
-    | Max Data Groups To Return | Integer | No | The maximum number of data group
-    records to include in the output. Default is 50. Must be greater than 0. |
-
-
-    ### Additional Notes
-
-    - This action specifically targets **internal** data groups within the F5 BIG-IP
-    LTM module.
-
-    - If no data groups match the provided filter criteria, the action will complete
-    successfully but indicate that no results were found.
+    Deletes a specified address list from the F5 BIG-IP system. This action removes
+    the configuration object associated with the provided name from the F5 BIG-IP
+    firewall settings.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the F5 BIG-IP manager using the
-    integration's global configuration (API Root, Username, Password).
+    1. The action initializes the F5 BIG-IP manager using the provided API credentials
+    and configuration (API Root, Username, Password, Verify SSL).
 
-    2. **API Request**: It sends a GET request to the F5 iControl REST API endpoint
-    for internal data groups. If a filter value is provided, it enables pagination
-    to ensure all potential matches are evaluated.
+    2. It extracts the `Name` parameter, which specifies the address list to be deleted.
 
-    3. **Filtering Logic**: The script iterates through the retrieved data groups
-    and applies the selected 'Filter Logic' (Equal or Contains) against the 'Filter
-    Value'.
+    3. The action calls the `delete_address_list` method, which sends a `DELETE` request
+    to the F5 BIG-IP API endpoint `/mgmt/tm/security/firewall/address-list/{list_name}`.
 
-    4. **Result Limiting**: The filtered list is truncated to match the 'Max Data
-    Groups To Return' parameter.
-
-    5. **Output Generation**: The action populates a SOAR data table named 'Available
-    Data Groups' with the names, types, and record counts of the groups. It also attaches
-    the full raw data as a JSON result for downstream use.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-List Port Lists:
-  ai_description: >-
-    ### General Description
-
-    The **List Port Lists** action retrieves a list of available port lists configured
-    on an F5 BIG-IP instance. This utility action allows security analysts to audit
-    or discover existing network security configurations within the F5 firewall module.
-    It supports filtering by name and limiting the number of results returned.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Filter Logic** | String | No | Specifies the matching logic for the `Filter
-    Value`. Options are `Equal` (exact match) or `Contains` (substring match). Defaults
-    to `Equal`. |
-
-    | **Filter Value** | String | No | The specific name or substring to filter the
-    port lists by. If left empty, no filtering is applied. |
-
-    | **Max Port Lists To Return** | Integer | No | The maximum number of port list
-    records to return in the results. Defaults to 50. Must be greater than 0. |
-
-
-    ### Flow Description
-
-    1. **Authentication**: The action establishes a connection to the F5 BIG-IP iControl
-    API using the configured API Root and credentials.
-
-    2. **Data Retrieval**: It fetches port list data from the `/mgmt/tm/security/firewall/port-list`
-    endpoint. If a filter is applied, it uses pagination to ensure all potential matches
-    are retrieved.
-
-    3. **Filtering**: The action performs client-side filtering on the retrieved port
-    lists based on the `Filter Logic` and `Filter Value` provided by the user.
-
-    4. **Limiting**: The resulting list is truncated to match the `Max Port Lists
-    To Return` parameter.
-
-    5. **Output**: If port lists are found, the action populates a data table named
-    "Available Port Lists" and attaches the raw JSON data to the action results. If
-    no matches are found, it returns a negative result value.
+    4. The action handles potential errors, such as the list not existing (InvalidInputException),
+    and returns a success or failure message to the SOAR platform.
 
 
     ### Additional Notes
 
-    - This action does not operate on specific SecOps entities (e.g., IPs or Hostnames)
-    and instead queries the global configuration of the F5 BIG-IP system.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-List iRules:
-  ai_description: >-
-    ### General Description
-
-    The **List iRules** action retrieves a list of available iRules from an F5 BIG-IP
-    instance. This action is primarily used for discovery and auditing, allowing security
-    analysts to identify traffic management scripts configured on the network appliance.
-    It supports filtering results by name and limiting the volume of data returned.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Filter Logic** | String | No | Determines the matching criteria for the filter.
-    Options are `Equal` (exact match) or `Contains` (substring match). Default is
-    `Equal`. |
-
-    | **Filter Value** | String | No | The specific string to search for within the
-    iRule names. If left empty, no filtering is applied. |
-
-    | **Max iRules To Return** | Integer | No | Specifies the maximum number of iRule
-    records to return in the output. Default is 50. |
-
-
-    ### Flow Description
-
-    1. **Connection**: The action establishes a session with the F5 BIG-IP iControl
-    API using the provided credentials and API root.
-
-    2. **Retrieval**: It executes a GET request to the `/mgmt/tm/ltm/rule/` endpoint
-    to fetch the collection of iRules. If a filter is applied, it utilizes pagination
-    to ensure all relevant records are evaluated.
-
-    3. **Filtering**: The script iterates through the retrieved iRules and applies
-    the user-defined `Filter Logic` (Equal or Contains) against the `Filter Value`
-    provided.
-
-    4. **Limiting**: The resulting list is sliced to respect the `Max iRules To Return`
-    parameter.
-
-    5. **Output**: The action populates a data table named "Available iRules" and
-    attaches the raw JSON results to the action output for use in downstream playbook
-    tasks.
-
-
-    ### Additional Notes
-
-    - This action does not require or process specific entities (such as IPs or Hostnames)
-    from the Google SecOps case; it queries the global configuration of the target
-    F5 BIG-IP system.
-
-    - If the `Max iRules To Return` is set to a value less than 1, the action will
-    fail with an error message.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Ping:
-  ai_description: >-
-    ### General Description
-
-    The **Ping** action is designed to verify the connectivity between Google SecOps
-    and the F5 BIG-IP instance. It ensures that the provided credentials and API root
-    URL are correct and that the network path is open. This action is typically used
-    during the initial setup of the integration or for troubleshooting connection
-    issues.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **API Root** | The base URL of the F5 BIG-IP iControl API (e.g., `https://<f5-ip-or-hostname>`).
-    | String | Yes |
-
-    | **Username** | The username used to authenticate with the F5 BIG-IP system.
-    | String | Yes |
-
-    | **Password** | The password associated with the provided username. | String
-    | Yes |
-
-    | **Verify SSL** | If enabled, the action will validate the SSL certificate of
-    the F5 BIG-IP server. | Boolean | Yes |
-
-
-    ### Additional Notes
-
-    - This action does not require or process any entities.
-
-    - It uses the `/mgmt/tm/security/firewall/port-list` endpoint as a health check
-    to verify connectivity.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: The action retrieves the connection details (API
-    Root, Username, Password, and SSL verification preference) from the integration's
-    configuration.
-
-    2. **Manager Initialization**: It initializes the `F5BIGIPiControlAPIManager`
-    with the provided credentials.
-
-    3. **Connectivity Test**: The manager executes a `GET` request to the F5 BIG-IP
-    endpoint `/mgmt/tm/security/firewall/port-list`.
-
-    4. **Response Validation**: The action checks if the server returns a successful
-    HTTP status code.
-
-    5. **Final Result**: If the request is successful, it returns a completion status
-    with a success message; otherwise, it catches the exception and reports a failure.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Remove IP From Address List:
-  ai_description: >-
-    Removes specific IP address entities from a designated address list on an F5 BIG-IP
-    device. This action is used to manage network access control by dynamically updating
-    firewall address lists. It first retrieves the current state of the address list,
-    filters out the target entities, and then updates the list on the F5 BIG-IP system.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Address List Name | String | Yes | The name of the address list in F5 BIG-IP
-    from which the IP addresses will be removed. |
-
-
-    ### Additional Notes
-
-    - **Constraint:** The action will fail with an error if the removal of the specified
-    IPs would result in an empty address list, as F5 BIG-IP requires at least one
-    entry in an address list.
-
-    - **Scope:** This action only processes entities of type `ADDRESS` (IP addresses).
-
-
-    ### Flow Description
-
-    1. **Initialization:** Retrieves integration configuration (API Root, Credentials)
-    and the target `Address List Name`.
-
-    2. **Entity Filtering:** Identifies all `ADDRESS` entities within the current
-    alert scope.
-
-    3. **Data Retrieval:** Connects to the F5 BIG-IP API and fetches the current members
-    of the specified address list.
-
-    4. **List Processing:** Compares the fetched addresses with the target entities
-    and creates a new list excluding the matches.
-
-    5. **Validation:** Checks if the resulting list is empty; if so, it terminates
-    with an error to prevent invalid F5 configurations.
-
-    6. **External Mutation:** Sends a `PATCH` request to the F5 BIG-IP device to update
-    the address list with the new, filtered set of IPs.
-
-    7. **Reporting:** Provides a summary of which IPs were successfully removed and
-    which ones were not found in the list.
+    This action performs a destructive operation on the F5 BIG-IP configuration. Ensure
+    the correct list name is provided to avoid accidental deletion of security configurations.
+  ai_short_description: >-
+    Deletes a specified address list from the F5 BIG-IP system.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1190,168 +1067,50 @@ Remove IP From Address List:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the configuration of a specific address list on the F5 BIG-IP device
-      by removing the specified IP addresses via a PATCH request.
-    fetches_data: true
+      Deletes an address list from the F5 BIG-IP configuration.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a DELETE request to the F5 BIG-IP API to remove an address
+      list. This is a state-changing operation on an external system. It does not
+      fetch data, update entities, or modify internal SOAR data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Remove IP From Data Group:
-  ai_description: >-
-    Removes IP address entities from a specified internal data group in F5 BIG-IP.
-    This action is used to manage network access control lists or traffic management
-    groups by dynamically removing entries based on security events.
-
-
-    ### Parameters
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Data Group Name | String | Yes | Specify the name of the internal data group
-    from which you want to remove IP addresses. |
-
-
-    ### Flow Description
-
-    1. **Fetch Data Group:** The action retrieves the current configuration and records
-    of the specified data group from the F5 BIG-IP instance.
-
-    2. **Validation:** It verifies that the data group exists and is of the 'IP' type.
-
-    3. **Entity Processing:** For each IP address entity in the scope, the action
-    masks the IP (e.g., adding /32 for IPv4) and checks if it exists in the data group's
-    records.
-
-    4. **Record Removal:** If a match is found, the record is removed from the local
-    list of records.
-
-    5. **Update External System:** The action sends a PATCH request to F5 BIG-IP to
-    update the data group with the new, reduced list of records.
-
-
-    ### Additional Notes
-
-    * This action only supports **internal** data groups.
-
-    * The action will fail if an attempt is made to remove all records from a data
-    group, as F5 BIG-IP requires at least one record to remain in the group.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Removes IP address records from an internal data group on the F5 BIG-IP instance
-      using a PATCH request to update the group's record list.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Remove Port From Port List:
-  ai_description: >-
-    ### General Description
-
-    Removes specific ports from a designated port list within the F5 BIG-IP system.
-    This action is used to manage network security policies by dynamically updating
-    port-based access controls. It retrieves the current state of a port list, filters
-    out the specified ports, and updates the configuration on the F5 BIG-IP device.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Port List Name | String | Yes | The unique identifier/name of the port list
-    in F5 BIG-IP from which you want to remove entries. |
-
-    | Ports | String | Yes | A comma-separated list of port numbers (e.g., '80, 443,
-    8080') that should be removed from the specified port list. |
-
-
-    ### Additional Notes
-
-    * **Validation Rule:** The action will fail with an error if an attempt is made
-    to remove all ports from a list. F5 BIG-IP requires that a port list contains
-    at least one port entry.
-
-    * **Non-existent Ports:** If a port specified for removal does not exist in the
-    target list, the action will complete successfully but will note the missing ports
-    in the output message.
-
-
-    ### Flow Description
-
-    1. **Initialization:** The action initializes the F5 BIG-IP manager using the
-    provided API root and credentials.
-
-    2. **Data Retrieval:** It fetches the current configuration and existing ports
-    for the specified `Port List Name` from the F5 BIG-IP instance.
-
-    3. **Filtering Logic:** The script compares the existing ports against the user-provided
-    `Ports` list, creating a new set of ports that excludes the matches.
-
-    4. **Safety Check:** It verifies that the resulting port list is not empty.
-
-    5. **External Mutation:** It performs a PATCH request to the F5 BIG-IP API to
-    update the port list with the new, reduced set of ports.
-
-    6. **Result Processing:** The action identifies which ports were successfully
-    removed and which were not found, then returns a summary message and the updated
-    port list JSON.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Updates the configuration of a port list on the F5 BIG-IP device by removing
-      specific port entries via a PATCH request to the firewall management API.
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1365,51 +1124,82 @@ Remove Port From Port List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Update iRule:
+    reasoning: >-
+      The action does not utilize target entities; it operates based on the provided
+      'Name' parameter to identify the address list to delete.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes an address list on the F5 BIG-IP device. This does not match
+      any of the provided categories (e.g., it is not adding/removing an IOC from
+      a blocklist/allowlist, nor is it an identity or ticket action).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Name | String | Yes | Specify the name of the address list that needs to be
+    deleted. |
+Delete Data Group:
   ai_description: >-
     ### General Description
 
-    Updates the content of an existing iRule on an F5 BIG-IP device. This action allows
-    administrators to programmatically modify the TCL-based logic (iRules) that controls
-    network traffic on the BIG-IP system.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Name | String | Yes | The specific name of the iRule that needs to be updated
-    in the F5 BIG-IP system. |
-
-    | Rule | String | Yes | The new TCL code or rule logic that will replace the existing
-    content of the specified iRule. |
-
-
-    ### Additional Notes
-
-    This action does not operate on entities (such as IPs or Hostnames) from the Google
-    SecOps case. It relies entirely on the provided parameters to identify and update
-    the target iRule. The update is performed using an HTTP PATCH request to the F5
+    Deletes a specified data group from the F5 BIG-IP system. This action allows administrators
+    to remove existing data groups directly from the F5 BIG-IP configuration via the
     iControl REST API.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the F5 BIG-IP manager using the
-    provided integration configuration (API Root, Username, Password).
+    1. **Parameter Extraction**: The action extracts the required configuration parameters
+    (API Root, Username, Password, Verify SSL) and the action-specific parameter `Name`.
 
-    2. **Parameter Extraction**: It retrieves the 'Name' of the iRule and the new
-    'Rule' content from the action parameters.
+    2. **Manager Initialization**: The `F5BIGIPiControlAPIManager` is initialized
+    with the provided credentials and connection settings.
 
-    3. **API Request**: The action sends a PATCH request to the F5 BIG-IP iControl
-    API endpoint (`/mgmt/tm/ltm/rule/{name}`) with the new rule content provided in
-    the `apiAnonymous` field.
+    3. **API Interaction**: The action calls the `delete_data_group` method, which
+    sends a `DELETE` request to the F5 BIG-IP API endpoint `/mgmt/tm/ltm/data-group/internal/{group_name}`.
 
-    4. **Result Processing**: If the request is successful, the updated iRule metadata
-    is returned and added to the action's JSON results. If the request fails (e.g.,
-    iRule not found or invalid TCL syntax), an error is logged and the action fails.
+    4. **Error Handling**: The action catches `InvalidInputException` if the specified
+    data group does not exist and logs any general exceptions encountered during the
+    process.
+
+    5. **Completion**: The action returns a success or failure message based on the
+    outcome of the API request.
+
+
+    ### Additional Notes
+
+    This action performs a destructive operation on the F5 BIG-IP configuration. Ensure
+    the data group name is correct before execution, as this action cannot be undone.
+  ai_short_description: >-
+    Deletes a specified data group from the F5 BIG-IP system.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1418,14 +1208,50 @@ Update iRule:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the logic and configuration of an existing iRule on the F5 BIG-IP system
-      via a PATCH request to the iControl REST API.
+      Deletes a specified data group from the F5 BIG-IP system.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a DELETE request to the F5 BIG-IP API to remove a data group,
+      which constitutes an external data mutation. It does not fetch data, update
+      internal entities, or modify alert/case data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -1439,3 +1265,1644 @@ Update iRule:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize or iterate over any SOAR entities. It operates based
+      on a provided string parameter representing the name of the data group to be
+      deleted.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a management operation (deletion) on an F5 BIG-IP data group.
+      It does not match any of the predefined categories related to IOC enrichment,
+      ticketing, identity management, or email operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Name | String | Yes | Specify the name of the data group that needs to be deleted.
+    |
+Delete Port List:
+  ai_description: >-
+    ### General Description
+
+    Deletes a specified port list from the F5 BIG-IP system. This action allows administrators
+    to remove existing port list configurations directly from the F5 BIG-IP appliance
+    via the iControl REST API.
+
+
+    ### Flow Description
+
+    1. The action extracts the required configuration parameters: `API Root`, `Username`,
+    `Password`, and `Verify SSL`.
+
+    2. The action extracts the `Name` of the port list to be deleted from the action
+    parameters.
+
+    3. The `F5BIGIPiControlAPIManager` is initialized with the provided credentials
+    and connection settings.
+
+    4. The action calls the `delete_port_list` method, which sends a `DELETE` request
+    to the F5 BIG-IP API endpoint (`/mgmt/tm/security/firewall/port-list/{port_list_name}`)
+    to remove the specified port list.
+
+    5. The action returns a success message if the deletion is successful, or an error
+    message if the operation fails.
+
+
+    ### Additional Notes
+
+    This action performs a destructive operation on the F5 BIG-IP configuration. Ensure
+    the port list name is correct before execution, as this action cannot be undone
+    through the SOAR platform.
+  ai_short_description: >-
+    Deletes a specified port list from the F5 BIG-IP system.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes a port list from the F5 BIG-IP configuration.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a DELETE request to the F5 BIG-IP API to remove a port list.
+      This is a state-changing operation on an external system. It does not fetch
+      data, update internal entities, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize any entities from the SOAR platform. It operates
+      solely based on the provided 'Name' parameter to identify the port list to be
+      deleted in the external F5 BIG-IP system.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes a configuration object (port list) from an external firewall
+      system. It does not match any of the predefined categories such as enriching
+      IOCs, managing tickets, or modifying identities.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Name | String | Yes | The name of the port list that needs to be deleted. |
+Delete iRule:
+  ai_description: >-
+    ### General Description
+
+    Deletes a specified iRule from the F5 BIG-IP system. This action allows administrators
+    to remove existing iRules by providing the name of the rule to be deleted.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the necessary connection
+    details (API Root, Username, Password, Verify SSL) from the integration configuration.
+
+    2. **Parameter Extraction**: The action extracts the `Name` of the iRule to be
+    deleted from the action parameters.
+
+    3. **Manager Initialization**: The `F5BIGIPiControlAPIManager` is initialized
+    with the provided credentials and configuration.
+
+    4. **API Execution**: The action calls the `delete_irule` method, which performs
+    a `DELETE` request to the F5 BIG-IP API endpoint `/mgmt/tm/ltm/rule/{name}`.
+
+    5. **Error Handling**: If the iRule does not exist, an `InvalidInputException`
+    is caught, and an appropriate message is returned. General exceptions are logged
+    and reported as a failure.
+
+    6. **Result Reporting**: The action concludes by returning the execution status
+    and a success or error message.
+
+
+    ### Additional Notes
+
+    This action performs a destructive operation on the F5 BIG-IP configuration. Ensure
+    the iRule name is correct before execution, as this action cannot be undone via
+    the SOAR platform.
+  ai_short_description: >-
+    Deletes a specified iRule from the F5 BIG-IP system.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes an iRule from the F5 BIG-IP system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a DELETE request to the F5 BIG-IP API to remove an iRule.
+      It does not fetch data, update internal entities, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter any entities. It operates solely
+      based on the provided 'Name' parameter.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes a configuration object (iRule) from an external system (F5
+      BIG-IP). It does not match any of the predefined outcome categories such as
+      enrichment, ticketing, or IOC management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Name | String | Yes | The name of the iRule that needs to be deleted. |
+List Address Lists:
+  ai_description: >-
+    ### General Description
+
+    Lists available address lists from an F5 BIG-IP instance. This action retrieves
+    a collection of address lists configured on the F5 BIG-IP device, allowing users
+    to filter the results by name and limit the total number of returned items.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action extracts necessary connection details
+    (API Root, Username, Password, Verify SSL) from the integration configuration.
+
+    2. **Parameter Extraction**: It retrieves action-specific parameters, including
+    `Filter Logic`, `Filter Value`, and `Max Address Lists To Return`.
+
+    3. **Manager Initialization**: An instance of `F5BIGIPiControlAPIManager` is initialized
+    using the provided credentials.
+
+    4. **Data Retrieval**: The action calls the F5 BIG-IP API to fetch the list of
+    address lists.
+
+    5. **Filtering**: If a `Filter Value` is provided, the action filters the retrieved
+    list based on the selected `Filter Logic` (Equal or Contains).
+
+    6. **Limiting**: The results are truncated to the specified `Max Address Lists
+    To Return` limit.
+
+    7. **Output Generation**: The final list of address lists is added to the action
+    output as a data table and a JSON result object.
+
+
+    ### Additional Notes
+
+    This action is a read-only operation and does not modify any configurations on
+    the F5 BIG-IP device or within the SOAR platform.
+  ai_short_description: >-
+    Lists and filters available address lists from an F5 BIG-IP instance.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the F5 BIG-IP API via GET requests. It does not
+      mutate any external or internal data, nor does it update entities, create insights,
+      or modify alert/case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action is a utility that retrieves data from an external system (F5 BIG-IP)
+      and does not interact with or filter based on SOAR entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of address lists from an external system. It does
+      not perform enrichment on IOCs or assets, nor does it modify alerts, tickets,
+      or security controls. Therefore, it does not match any of the defined outcome
+      categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Logic | DDL | No | Specify the filter logic to apply: "Equal" or "Contains".
+    |
+
+    | Filter Value | String | No | The value to use for filtering the address lists.
+    If empty, no filter is applied. |
+
+    | Max Address Lists To Return | String | No | The maximum number of address lists
+    to return. Defaults to 50. |
+List Data Groups:
+  ai_description: >-
+    ### General Description
+
+    Lists available data groups from an F5 BIG-IP instance. This action retrieves
+    configuration data from the F5 BIG-IP system, allowing users to view existing
+    data groups with optional filtering and result limiting.
+
+
+    ### Flow Description
+
+    1. Extract configuration parameters (API Root, Username, Password, Verify SSL)
+    to establish a connection to the F5 BIG-IP instance.
+
+    2. Extract action parameters (Filter Logic, Filter Value, Max Data Groups To Return).
+
+    3. Initialize the `F5BIGIPiControlAPIManager` to interact with the F5 BIG-IP API.
+
+    4. Perform a GET request to the F5 BIG-IP API endpoint (`/mgmt/tm/ltm/data-group/internal`)
+    to retrieve the list of data groups.
+
+    5. If a `Filter Value` is provided, apply the specified `Filter Logic` (Equal
+    or Contains) to the retrieved data groups.
+
+    6. Limit the number of returned data groups based on the `Max Data Groups To Return`
+    parameter.
+
+    7. Add the resulting data groups to the action output as a data table and JSON
+    result.
+
+
+    ### Additional Notes
+
+    This action is read-only and does not modify any configuration or state on the
+    F5 BIG-IP system.
+  ai_short_description: >-
+    Lists available data groups from an F5 BIG-IP instance, with optional filtering
+    and result limiting.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the F5 BIG-IP API to retrieve a list of data
+      groups. It does not mutate external data or internal SOAR data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with entities. It retrieves configuration data
+      (data groups) from the F5 BIG-IP system directly, without filtering or processing
+      any SOAR entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration data (data groups) from the F5 BIG-IP system.
+      It does not perform enrichment, alert management, or any other action defined
+      in the outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Logic | ddl | No | Specify what filter logic should be applied. Options:
+    Equal, Contains. |
+
+    | Filter Value | string | No | Specify what value should be used in the filter.
+    If "Equal" is selected, the action will try to find the exact match among record
+    types; if "Contains" is selected, the action will try to find items that contain
+    that substring. If nothing is provided, the filter will not be applied. |
+
+    | Max Data Groups To Return | string | No | Specify how many data groups to return.
+    Default: 50. |
+List Port Lists:
+  ai_description: >-
+    Lists available port lists from an F5 BIG-IP device. This action retrieves a collection
+    of port lists configured on the target F5 BIG-IP system, allowing users to filter
+    the results by name using 'Equal' or 'Contains' logic and limit the number of
+    returned items.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the necessary connection
+    details (API Root, Username, Password, Verify SSL) from the integration configuration.
+
+    2. **Parameter Extraction**: It extracts action-specific parameters: `Filter Logic`,
+    `Filter Value`, and `Max Port Lists To Return`.
+
+    3. **Manager Initialization**: An instance of `F5BIGIPiControlAPIManager` is initialized
+    with the provided credentials.
+
+    4. **Data Retrieval**: The action calls the `list_port_lists` method of the manager
+    to fetch the port lists from the F5 BIG-IP API.
+
+    5. **Filtering**: If a `Filter Value` is provided, the action filters the retrieved
+    port lists based on the selected `Filter Logic` (Equal or Contains).
+
+    6. **Limiting**: The results are truncated to the specified `Max Port Lists To
+    Return` limit.
+
+    7. **Result Output**: The filtered and limited list of port lists is added to
+    the action results as a data table and a JSON object.
+
+
+    ### Additional Notes
+
+    - This action is read-only and does not modify any configurations on the F5 BIG-IP
+    device.
+
+    - If no port lists match the provided criteria, the action will return a message
+    indicating that no results were found.
+  ai_short_description: >-
+    Lists and filters port lists from an F5 BIG-IP device.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to the F5 BIG-IP API to retrieve port list
+      information. It does not mutate any external or internal data, nor does it update
+      entities, create insights, or modify alert/case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action is a standalone utility that retrieves configuration data from the
+      F5 BIG-IP device. It does not interact with or filter based on SOAR entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration data (port lists) from an external system.
+      It does not provide threat intelligence (Enrich IOC), asset context (Enrich
+      Asset), or perform any state-changing operations on alerts, tickets, or security
+      controls. Therefore, it does not match any of the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Logic | ddl | No | Specify the filter logic to apply: 'Equal' or 'Contains'.
+    |
+
+    | Filter Value | string | No | The value to filter by. If 'Equal' is selected,
+    it searches for an exact match. If 'Contains' is selected, it searches for the
+    substring. |
+
+    | Max Port Lists To Return | string | No | The maximum number of port lists to
+    return. Default is 50. |
+List iRules:
+  ai_description: >-
+    ### General Description
+
+    Lists available iRules from an F5 BIG-IP device. This action retrieves the configuration
+    of iRules defined on the F5 BIG-IP system, allowing users to filter the results
+    based on specific criteria and limit the number of returned items.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action extracts the necessary connection
+    parameters (API Root, Username, Password, Verify SSL) from the integration configuration.
+
+    2. **Parameter Extraction**: The action extracts user-defined parameters: `Filter
+    Logic` (Equal or Contains), `Filter Value`, and `Max iRules To Return`.
+
+    3. **Manager Initialization**: The `F5BIGIPiControlAPIManager` is initialized
+    with the provided credentials and connection settings.
+
+    4. **Data Retrieval**: The action calls the `list_irules` method of the manager
+    to fetch the list of iRules from the F5 BIG-IP API.
+
+    5. **Filtering**: If a `Filter Value` is provided, the action filters the retrieved
+    iRules list based on the selected `Filter Logic` (Equal or Contains).
+
+    6. **Limiting**: The results are truncated to the specified `Max iRules To Return`
+    limit.
+
+    7. **Result Output**: The action adds the filtered list of iRules to the action
+    results as a data table and a JSON object, and returns a success message.
+
+
+    ### Additional Notes
+
+    This action is a read-only operation and does not modify any data on the F5 BIG-IP
+    device or within the SOAR platform.
+  ai_short_description: >-
+    Lists available iRules from an F5 BIG-IP device based on optional filtering criteria.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve iRules from the F5 BIG-IP device.
+      It does not mutate any external or internal data, nor does it update entities
+      or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter by any entities. It performs a global
+      retrieval of iRules from the F5 BIG-IP device.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of configuration objects (iRules) from an external
+      system. It does not perform enrichment, containment, ticketing, or alert modification.
+      Therefore, it does not match any of the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Logic | ddl | No | Specify what filter logic should be applied (Equal
+    or Contains). |
+
+    | Filter Value | string | No | Specify what value should be used in the filter.
+    If "Equal" is selected, the action finds exact matches; if "Contains" is selected,
+    it finds results containing the substring. |
+
+    | Max iRules To Return | string | No | Specify how many iRules to return. Default:
+    50. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the F5 BIG-IP server using the configuration parameters
+    defined in the integration settings. This action validates that the SOAR platform
+    can successfully authenticate and communicate with the F5 BIG-IP API.
+
+
+    ### Flow Description
+
+    1. The action extracts the required integration configuration parameters: **API
+    Root**, **Username**, **Password**, and **Verify SSL**.
+
+    2. It initializes the `F5BIGIPiControlAPIManager` using these credentials.
+
+    3. The action calls the `test_connectivity` method, which performs an HTTP GET
+    request to the F5 BIG-IP API endpoint (`/mgmt/tm/security/firewall/port-list`).
+
+    4. If the request is successful, the action completes with a success message.
+    If the request fails (e.g., due to invalid credentials or network issues), the
+    action catches the exception and reports a failure.
+
+
+    ### Additional Notes
+
+    This action is intended for troubleshooting and verifying the integration setup.
+    It does not perform any data retrieval or modifications on the F5 BIG-IP system.
+  ai_short_description: >-
+    Tests connectivity to the F5 BIG-IP server to validate integration configuration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a connectivity test by sending a GET request to the F5 BIG-IP
+      API. It does not fetch contextual data, mutate external or internal data, or
+      interact with entities/alerts.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action is a global connectivity test and does not operate on any entities.
+      Therefore, no entity types are used, and no filtering flags are applicable.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test to validate the integration configuration.
+      It does not perform any of the defined outcome actions such as enrichment, containment,
+      ticketing, or alert modification.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    There are no parameters for this action. The action utilizes the integration configuration
+    parameters (API Root, Username, Password, Verify SSL) defined in the integration
+    settings.
+Remove IP From Address List:
+  ai_description: >-
+    ### General Description
+
+    Removes specified IP address entities from a designated address list within an
+    F5 BIG-IP environment. This action allows security teams to dynamically manage
+    network access control lists by removing indicators that no longer require blocking
+    or restriction.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the F5 BIG-IP API root,
+    credentials, and SSL verification settings from the integration configuration.
+
+    2. **Parameter Extraction**: The action extracts the `Address List Name` parameter
+    provided by the user.
+
+    3. **Entity Filtering**: The action filters the `target_entities` to identify
+    only those of type `ADDRESS`.
+
+    4. **Fetch Current List**: The action calls the `get_address_list` method via
+    the F5 BIG-IP API to retrieve the current contents of the specified address list.
+
+    5. **List Modification**: The action processes the current list, removing the
+    IPs that match the identified `ADDRESS` entities.
+
+    6. **Update External System**: The action performs a `PATCH` request via the `update_address_list`
+    method to push the updated address list configuration to the F5 BIG-IP device.
+
+    7. **Result Reporting**: The action reports the successful removal of IPs or identifies
+    IPs that were not present in the list.
+
+
+    ### Additional Notes
+
+    This action requires valid F5 BIG-IP credentials with sufficient permissions to
+    modify address lists. If the resulting list would be empty, the action will raise
+    an exception, as the system prevents removing all IPs from an address list.
+  ai_short_description: >-
+    Removes specified IP address entities from a designated address list on an F5
+    BIG-IP device.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes specified IP addresses from an existing address list on the F5 BIG-IP
+      device.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches the current address list from the F5 BIG-IP API (fetches_data=true)
+      and then performs a PATCH request to update that list, effectively mutating
+      the external system state (can_mutate_external_data=true). It does not modify
+      internal SecOps data or entities.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      is defined as `[EntityTypes.ADDRESS]`. Therefore, it targets ADDRESS entities
+      and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves an address list from an F5 BIG-IP device and removes specific
+      IP addresses from it. This operation modifies a security control list on an
+      external system, which directly aligns with the 'Remove IOC From Blocklist'
+      category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Address List Name | String | Yes | Specify the name of the address list from
+    which you want to remove IP addresses. |
+Remove IP From Data Group:
+  ai_description: >-
+    ### General Description
+
+    Removes specified IP address entities from a designated data group within an F5
+    BIG-IP system. This action allows security teams to dynamically manage network
+    access control lists or blocklists by removing indicators that no longer require
+    restriction.
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction**: The action retrieves the F5 BIG-IP API root,
+    credentials, and SSL verification settings from the integration configuration.
+
+    2. **Parameter Extraction**: The action retrieves the `Data Group Name` parameter
+    provided by the user.
+
+    3. **Entity Filtering**: The action filters the provided target entities to include
+    only those of type `ADDRESS`.
+
+    4. **Data Group Retrieval**: The action calls the F5 BIG-IP API to fetch the current
+    configuration of the specified data group.
+
+    5. **Validation**: It verifies that the retrieved data group is of the `ip` type.
+
+    6. **Record Modification**: For each valid entity, the action masks the IP address
+    and checks if it exists within the data group's records. If found, the IP is removed
+    from the records list.
+
+    7. **External Update**: If modifications were made, the action sends a PATCH request
+    to the F5 BIG-IP API to update the data group with the new record set.
+
+    8. **Result Reporting**: The action returns a JSON result containing the updated
+    data group configuration and a summary message detailing which IPs were successfully
+    removed or failed to be found.
+
+
+    ### Additional Notes
+
+    This action requires the F5 BIG-IP integration to be properly configured with
+    valid credentials. The action will fail if the specified data group does not exist
+    or is not of the `ip` type.
+  ai_short_description: >-
+    Removes IP address entities from a specified data group in F5 BIG-IP.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes specific IP addresses from an existing data group configuration on the
+      F5 BIG-IP device.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data group information via GET and updates the data group
+      via PATCH (mutation). It does not update internal entities or create insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES` is defined as `[EntityTypes.ADDRESS]`.
+      This confirms the action filters entities strictly by their type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes an IP address from a data group on an F5 BIG-IP device. This
+      aligns with the 'Remove IOC From Blocklist' category, as it restores connectivity
+      or execution rights by removing the indicator from a restricted list (the data
+      group).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Data Group Name | String | Yes | Specify the name of the data group from which
+    you want to remove IP addresses. |
+Remove Port From Port List:
+  ai_description: >-
+    Removes specified ports from a port list in F5 BIG-IP. This action retrieves the
+    current configuration of the target port list, filters out the specified ports,
+    and updates the port list on the F5 BIG-IP device. It provides a summary of the
+    ports successfully removed and identifies any ports that did not exist in the
+    list.
+  ai_short_description: >-
+    Removes specified ports from a port list in F5 BIG-IP.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the port list configuration on the F5 BIG-IP device by removing the
+      specified ports.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to retrieve the current port list and a PATCH
+      request to update the port list on the F5 BIG-IP device. This constitutes fetching
+      data and mutating external data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action operates on configuration parameters provided by the user and does
+      not interact with, iterate over, or filter any entities from the SOAR platform.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies a port list configuration on an F5 BIG-IP device. It does
+      not match any of the predefined categories such as IOC enrichment, ticket management,
+      or identity management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Port List Name | String | Yes | Specify the name of the port list from which
+    you want to remove ports. |
+
+    | Ports | String | Yes | Specify a comma-separated list of ports that need to
+    be removed. |
+Update iRule:
+  ai_description: >-
+    ### General Description
+
+    Updates an existing iRule configuration on an F5 BIG-IP device. This action allows
+    administrators to modify the logic of a specific iRule by providing its name and
+    the new rule content.
+
+
+    ### Flow Description
+
+    1. The action extracts the necessary configuration parameters (API Root, Username,
+    Password, Verify SSL) and the action-specific parameters (Name, Rule) from the
+    integration settings.
+
+    2. The `F5BIGIPiControlAPIManager` is initialized with the provided credentials
+    and connection settings.
+
+    3. The action calls the `update_irule` method, which sends a `PATCH` request to
+    the F5 BIG-IP API endpoint `/mgmt/tm/ltm/rule/{name}` with the new rule content
+    (`apiAnonymous`).
+
+    4. The updated iRule details are returned and added to the action result as a
+    JSON object.
+
+
+    ### Additional Notes
+
+    This action directly modifies the configuration of the F5 BIG-IP device. Ensure
+    that the provided rule syntax is valid according to F5 iRule standards to prevent
+    configuration errors or service disruption.
+  ai_short_description: >-
+    Updates an existing iRule configuration on an F5 BIG-IP device.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the configuration of an iRule on the F5 BIG-IP device via a PATCH request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a PATCH request to an external F5 BIG-IP API to update a
+      configuration object (iRule). It does not fetch data, update internal entities,
+      or modify alert/case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action operates on configuration parameters provided by the user and does
+      not interact with or filter any entities from the SOAR platform.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates a configuration object (iRule) on an external F5 BIG-IP device.
+      It does not match any of the predefined categories such as IOC enrichment, alert
+      management, ticket management, or identity/host containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Name | String | Yes | Specify the name of the iRule that needs to be updated.
+    |
+
+    | Rule | String | Yes | Specify the new rule that needs to be executed. |

@@ -1,38 +1,42 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get domain reputation:
-  ai_description: "Enriches Hostname and URL entities by checking their reputation\
-    \ against multiple blacklist services via URLVoid. This action retrieves comprehensive\
-    \ threat intelligence, including detection rates from various engines, server\
-    \ location, and Alexa ranking data.\n\n### Parameters\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Threshold | Integer | Yes\
-    \ | The minimum number of blacklist detections required to mark an entity as suspicious\
-    \ in Google SecOps. Defaults to 0. |\n\n### Flow Description\n1. **Entity Identification**:\
-    \ The action identifies Hostname and URL entities within the current context.\n\
-    2. **Domain Extraction**: For URL entities, the domain is extracted; for Hostname\
-    \ entities, the identifier is used directly.\n3. **Reputation Retrieval**: Queries\
-    \ the URLVoid API to fetch the reputation report for each identified domain.\n\
-    4. **Data Processing**: Parses the raw API response to extract blacklist engine\
-    \ details, server information (IP, ISP, Country), and detection counts.\n5. **Internal\
-    \ Enrichment**: \n    * Adds a data table to the entity containing the specific\
-    \ blacklist engines that flagged the domain.\n    * Creates an entity insight\
-    \ displaying the domain's country code.\n    * Updates the entity's additional\
-    \ properties with flattened URLVoid data.\n6. **Risk Assessment**: Compares the\
-    \ number of detections against the user-defined `Threshold`. If the count is higher,\
-    \ the entity is marked as suspicious.\n7. **Entity Update**: Updates the entities\
-    \ in Google SecOps with the new enrichment data and status."
+  ai_description: >-
+    ### General Description
+
+    This action retrieves domain reputation data from URLVoid to assess the risk of
+    Hostname and URL entities. It checks against various blacklist services and provides
+    a detailed report, allowing analysts to quickly identify potentially malicious
+    domains.
+
+
+    ### Flow Description
+
+    1. Iterate through the provided target entities (Hostname and URL).
+
+    2. For each entity, extract the domain identifier.
+
+    3. Call the URLVoid API (`get_domain_reputation`) to retrieve reputation data.
+
+    4. Process the raw data to create a blacklist report and flatten server information.
+
+    5. Add an entity insight containing the country code to the SOAR platform.
+
+    6. Update the entity's `additional_properties` with the fetched reputation data.
+
+    7. If the number of detections exceeds the configured `Threshold`, mark the entity
+    as suspicious.
+
+    8. Mark the entity as enriched and update it in the SOAR platform.
+
+    9. Add the results to the action output.
+
+
+    ### Additional Notes
+
+    This action performs enrichment and does not modify external systems. It relies
+    on the URLVoid integration configuration for API connectivity.
+  ai_short_description: >-
+    Enriches Hostname and URL entities with domain reputation data from URLVoid, including
+    blacklist status and risk assessment.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -43,14 +47,48 @@ Get domain reputation:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes with reputation data, sets the 'is_suspicious' flag
-      based on the provided threshold, and adds insights and data tables to the entity.
-  categories:
-    enrichment: true
+      Updates entity additional properties and suspicious status within the SOAR platform.
+    reasoning: >-
+      The action fetches data from an external API (URLVoid). It updates internal
+      entities (`siemplify.update_entities`) and creates insights (`siemplify.add_entity_insight`).
+      It does not mutate external data.
   entity_usage:
     entity_types:
-    - HOSTNAME
-    - DestinationURL
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -64,42 +102,79 @@ Get domain reputation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks for
+      `EntityTypes.HOSTNAME` and `EntityTypes.URL`. It does not filter by other attributes
+      like creation time, modification time, or specific entity properties.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches reputation data (threat intelligence) for indicators (domains/URLs)
+      from an external service. This matches the 'Enrich IOC' category. It does not
+      perform any blocking, ticketing, or other state-changing operations on external
+      systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | Yes | Domain risk threshold. If the number of detections
+    exceeds this value, the entity is marked as suspicious. |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity to the URLVoid API to ensure that the integration can successfully
-    communicate with the service. This action validates the provided API key and network
-    configuration by making a request to the URLVoid statistics endpoint.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action is primarily used for troubleshooting and verifying the integration
-    setup. It does not process any entities or modify any data.
+    Tests the connectivity between the Google SecOps SOAR platform and the URLVoid
+    service to ensure the integration is configured correctly and the API is reachable.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the API URL, API Key, and
-    SSL verification settings from the integration configuration.
+    1. The action retrieves the URLVoid integration configuration, including the API
+    URL, API Key, and SSL verification settings.
 
-    2. **Manager Initialization**: Initializes the URLVoid manager with the retrieved
-    settings.
+    2. It initializes the `URLVoidManager` using these credentials.
 
-    3. **Connectivity Test**: Executes a GET request to the URLVoid 'pay-as-you-go'
-    statistics endpoint.
+    3. The action calls the `test_connectivity` method, which performs an HTTP GET
+    request to the URLVoid API's stats endpoint (`/domainbl/v1/pay-as-you-go/?stats`).
 
-    4. **Response Validation**: Validates the API response to ensure the connection
-    is successful and the API key is valid.
+    4. The response is validated to ensure a successful connection.
 
-    5. **Completion**: Returns a success message and the connectivity status to the
-    SOAR platform.
+    5. The action concludes by returning a success message if the connection is established.
+
+
+    ### Additional Notes
+
+    This action is primarily used for troubleshooting and verifying the health of
+    the integration connection.
+  ai_short_description: >-
+    Tests connectivity to the URLVoid service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -108,12 +183,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a connectivity test via a GET request. It does not fetch
+      contextual data for entities/alerts, nor does it mutate any external or internal
+      data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -127,3 +239,38 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action is a global connectivity test and does not interact with or filter
+      any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test and does not perform any of the defined
+      outcome operations such as enrichment, ticketing, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.

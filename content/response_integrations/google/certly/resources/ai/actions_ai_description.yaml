@@ -1,39 +1,41 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get Url Status:
-  ai_description: "### General Description\nThe **Get Url Status** action queries\
-    \ the Certly service to retrieve reputation data for URL entities. It is primarily\
-    \ used for enrichment, allowing security analysts to automatically determine if\
-    \ a URL is known to be malicious or safe based on Certly's threat intelligence\
-    \ database.\n\n### Parameters Description\nThere are no action-specific parameters\
-    \ for this action. It relies on the global integration configuration (API Token\
-    \ and API Root) to authenticate and communicate with the Certly API.\n\n### Additional\
-    \ Notes\n- This action only processes entities of type **URL** (DestinationURL).\n\
-    - If a URL is identified as 'malicious' by Certly, the action will mark the entity\
-    \ as suspicious within the Google SecOps environment and generate an insight for\
-    \ the case.\n\n### Flow Description\n1. **Initialization**: The action retrieves\
-    \ the API Token and API Root from the integration configuration and initializes\
-    \ the Certly manager.\n2. **Entity Filtering**: It iterates through the target\
-    \ entities in the current context, filtering for those of type `URL`.\n3. **API\
-    \ Request**: For each identified URL, it performs a GET request to the Certly\
-    \ API to fetch its current status.\n4. **Data Enrichment**: \n    - The `Certly_Status`\
-    \ is added to the entity's additional properties.\n    - The entity is marked\
-    \ as enriched.\n5. **Threat Detection**: If the status returned is 'malicious',\
-    \ the entity is flagged as suspicious, and a specific insight is added to the\
-    \ entity.\n6. **Finalization**: The action updates all processed entities in the\
-    \ system and returns a summary message of the results."
+  ai_description: >-
+    ### General Description
+
+    Enriches URL entities by querying the Certly service for reputation status. This
+    action retrieves threat intelligence regarding the safety of a URL, updates the
+    entity with the retrieved status, and flags the entity as suspicious if the status
+    is identified as malicious.
+
+
+    ### Flow Description
+
+    1. The action retrieves the Certly API configuration (API Token and API Root URL)
+    from the integration settings.
+
+    2. It iterates through the provided target entities, filtering specifically for
+    those of type URL.
+
+    3. For each URL entity, the action makes an API GET request to the Certly service
+    (`/v1/lookup`) to retrieve the URL's status.
+
+    4. The retrieved status is added to the entity's `additional_properties` under
+    the key `Certly_Status`, and the entity is marked as enriched.
+
+    5. If the returned status is "malicious", the entity is marked as suspicious,
+    and an insight is added to the entity via `siemplify.add_entity_insight`.
+
+    6. Finally, the action updates the enriched entities in the SOAR platform and
+    returns a summary message indicating which URLs were processed.
+
+
+    ### Additional Notes
+
+    This action performs data enrichment and does not modify any external systems.
+    It only updates internal entity metadata and insights within the SOAR platform.
+  ai_short_description: >-
+    Enriches URL entities by querying the Certly service for reputation status and
+    updating the entity with the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -44,13 +46,49 @@ Get Url Status:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes including 'Certly_Status', 'is_enriched', and 'is_suspicious'.
-      It also creates entity insights for malicious URLs.
-  categories:
-    enrichment: true
+      Updates entity properties (Certly_Status, is_enriched, is_suspicious) and adds
+      entity insights.
+    reasoning: >-
+      The action fetches data from an external API (Certly) to enrich entities. It
+      does not mutate external data. It mutates internal data by updating entity properties
+      and adding insights to the SOAR platform.
   entity_usage:
     entity_types:
-    - DestinationURL
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -64,41 +102,81 @@ Get Url Status:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == EntityTypes.URL`. It does not filter
+      by other attributes like creation time or modification time.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries an external service (Certly) to retrieve reputation data
+      for URL entities. This directly matches the 'Enrich IOC' category. It does not
+      perform any other actions such as ticket creation, blocking, or identity management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Api Token | String | Yes | The API Token used for authenticating with the Certly
+    service. |
+
+    | Api Root | String | Yes | The base URL for the Certly API service. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is designed to validate the connectivity between Google SecOps
-    and the Certly service. It ensures that the provided API Token and API Root URL
-    are correctly configured and that the environment can successfully communicate
-    with the Certly API.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action is a standard health check. It performs a test lookup for a known
-    malicious URL (`http://gumblar.cn`) to verify that the API returns a valid response.
-    It does not process any entities from the Google SecOps case.
+    Validates the connectivity between the SOAR platform and the Certly service. This
+    action ensures that the integration is correctly configured and that the SOAR
+    platform can successfully communicate with the external Certly API.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the `Api Token` and `Api
-    Root` from the integration settings.
+    1. Initialize the `SiemplifyAction` and retrieve the "Certly" configuration (API
+    Token and API Root) from the integration settings.
 
-    2. **Manager Initialization**: It initializes the `CertlyManager` using the retrieved
-    credentials.
+    2. Instantiate the `CertlyManager` with the retrieved credentials.
 
-    3. **Connectivity Test**: The action executes the `test_connectivity` method,
-    which performs a GET request to the Certly lookup endpoint.
+    3. Execute the `test_connectivity` method, which performs a GET request to the
+    Certly API using a test URL (`http://gumblar.cn`).
 
-    4. **Execution Completion**: If the request is successful and no API errors are
-    returned, the action ends with a success message and the raw API response.
+    4. Return the connectivity status (the JSON response from the API) to the SOAR
+    platform using `siemplify.end`.
+
+
+    ### Additional Notes
+
+    This action is primarily used for troubleshooting and verifying that the integration
+    is correctly configured and communicating with the external service. It does not
+    perform any operations on entities or modify any data.
+  ai_short_description: >-
+    Validates connectivity between the SOAR platform and the Certly service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -109,10 +187,46 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a GET request to verify connectivity. It fetches data (the
+      response from the API). It does not mutate external or internal data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -126,3 +240,39 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity
+      identifiers. It performs a static connectivity test and does not interact with
+      any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any of the defined outcome
+      actions (enrichment, ticketing, containment, etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.

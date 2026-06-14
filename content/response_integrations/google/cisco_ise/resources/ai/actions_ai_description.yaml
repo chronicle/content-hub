@@ -1,57 +1,29 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Add Endpoint To Endpoint Identity Group:
   ai_description: >-
-    ### General Description
-
-    This action adds specified endpoints to a designated Endpoint Identity Group within
-    Cisco ISE. It supports both IP Address and MAC Address entities. The action is
-    typically used in network security workflows to dynamically reassign devices to
-    different security groups or segments based on detected behavior or administrative
-    requirements.
+    General Description: Adds an endpoint (identified by IP or MAC address) to a specified
+    Endpoint Identity Group in Cisco ISE.
 
 
-    ### Parameters Description
+    Flow Description:
 
-    | Parameter | Type | Mandatory | Description |
+    1. Extracts configuration parameters (API Root, credentials, SSL verification)
+    and the `Endpoint Identity Group Name` parameter.
 
-    | :--- | :--- | :--- | :--- |
+    2. Filters target entities for `ADDRESS` and `MACADDRESS` types.
 
-    | Endpoint Identity Group Name | String | Yes | The name of the endpoint identity
-    group in Cisco ISE to which the target endpoints will be added. |
+    3. Retrieves the target group ID from Cisco ISE using `get_endpoint_groups`.
+
+    4. Iterates through each entity:
+       * If the entity is an IP address, it resolves the MAC address using `get_endpoint_mac_by_ip`.
+       * Retrieves the endpoint ID from Cisco ISE by matching the MAC address.
+       * Calls `add_endpoint_to_group` to update the endpoint's group membership.
+    5. Returns the operation results and updates the action output.
 
 
-    ### Flow Description
-
-    1. **Group Identification**: The action queries Cisco ISE to retrieve the unique
-    identifier (ID) for the Endpoint Identity Group specified in the parameters.
-
-    2. **Entity Resolution**: For each target entity:
-        * If the entity is an **IP Address**, the action performs a lookup in Cisco
-    ISE to resolve the corresponding **MAC Address**.
-        * If the entity is a **MAC Address**, it uses the identifier directly.
-    3. **Endpoint Lookup**: The action searches for the endpoint's internal Cisco
-    ISE ID using the resolved MAC address.
-
-    4. **Group Assignment**: Once the endpoint ID is found, the action performs a
-    PUT request to Cisco ISE to update the endpoint's configuration, specifically
-    setting its `groupId` to the ID of the target identity group.
-
-    5. **Result Aggregation**: The action collects the status of each operation and
-    returns a summary of successful and failed additions, along with the raw JSON
-    response from the API for each entity.
+    Additional Notes: Requires valid Cisco ISE credentials and network connectivity
+    to the Cisco ISE API.
+  ai_short_description: >-
+    Adds an endpoint to a specified Endpoint Identity Group in Cisco ISE.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -60,17 +32,49 @@ Add Endpoint To Endpoint Identity Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the 'groupId' attribute of an endpoint in Cisco ISE via a PUT request
-      to the /ers/config/endpoint/{id} endpoint, effectively changing the endpoint's
-      group membership.
+      Updates the endpoint's group membership in Cisco ISE.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches endpoint and group information from Cisco ISE and performs
+      a PUT request to update the endpoint's group membership.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - MacAddress
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: true
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -84,60 +88,85 @@ Add Endpoint To Endpoint Identity Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them based
+      on whether their `entity_type` is `ADDRESS` or `MACADDRESS`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies the endpoint's group membership in Cisco ISE, which aligns
+      with the `update_identity` category (modifying group memberships).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Endpoint Identity Group Name | String | Yes | The name of the endpoint identity
+    group to which the endpoint should be added. |
 Enrich Endpoint:
   ai_description: >-
     ### General Description
 
-    The **Enrich Endpoint** action retrieves detailed endpoint information from Cisco
-    ISE for IP Address entities. It resolves the IP address to a MAC address and then
-    fetches both standard endpoint data and extended visibility/enrichment data to
-    provide comprehensive context for security investigations.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The base URL of the Cisco ISE instance used for API
-    calls. |
-
-    | Username | String | Yes | The username for authenticating with the Cisco ISE
-    API. |
-
-    | Password | String | Yes | The password for authenticating with the Cisco ISE
-    API. |
-
-    | Verify SSL | Boolean | Yes | Determines whether to verify the SSL certificate
-    of the Cisco ISE server. |
+    Enriches IP Address entities with endpoint information retrieved from Cisco ISE.
+    This action fetches MAC address, device details, and additional enrichment data
+    to provide context for network assets.
 
 
     ### Flow Description
 
-    1. **Entity Filtering:** The action identifies all `ADDRESS` (IP) entities within
-    the current context.
+    1. Extracts configuration parameters (API Root, Username, Password, Verify SSL)
+    to initialize the Cisco ISE manager.
 
-    2. **MAC Address Resolution:** For each IP address, the action queries the Cisco
-    ISE UI API to find the associated MAC address.
+    2. Filters the target entities to identify those of type `ADDRESS`.
 
-    3. **Endpoint Data Retrieval:** Using the MAC address, the action performs a GET
-    request to the Cisco ISE ERS API to retrieve basic endpoint details.
+    3. For each IP address, retrieves the associated MAC address using the Cisco ISE
+    UI API.
 
-    4. **Extended Enrichment:** The action performs an additional query to the Cisco
-    ISE UI API to fetch extended visibility and enrichment data for the endpoint.
+    4. Fetches detailed endpoint information and additional enrichment data using
+    the retrieved MAC address.
 
-    5. **Data Integration:** The retrieved data is flattened and merged. The action
-    then updates the entity's `additional_properties`, sets the `is_enriched` flag
-    to true, and attaches a detailed data table to the entity in the Google SecOps
-    UI.
+    5. Flattens the retrieved data and updates the entity's `additional_properties`
+    with the new context.
+
+    6. Marks the entity as enriched (`is_enriched = True`) and updates the entity
+    in the SOAR platform.
+
+    7. Adds a table containing the endpoint details to the action results.
 
 
     ### Additional Notes
 
-    This action relies on both the External RESTful Services (ERS) API and the UI
-    API of Cisco ISE. Ensure the provided credentials have sufficient permissions
-    for both interfaces.
+    This action requires valid Cisco ISE credentials and network connectivity to the
+    Cisco ISE API. It specifically targets IP address entities.
+  ai_short_description: >-
+    Enriches IP Address entities with device and network context retrieved from Cisco
+    ISE.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -148,13 +177,49 @@ Enrich Endpoint:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with fetched endpoint data, sets the 'is_enriched'
-      flag to true, and adds an entity data table to the case.
-  categories:
-    enrichment: true
+      Updates the entity's 'additional_properties' and 'is_enriched' status within
+      the SOAR platform.
+    reasoning: >-
+      The action fetches data from Cisco ISE (fetches_data=true). It does not mutate
+      external data. It mutates internal data by updating entity properties (can_update_entities=true).
+      It does not create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -168,60 +233,129 @@ Enrich Endpoint:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering by
+      entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (MAC address, OS, device info) for
+      an IP address, which aligns with the 'Enrich Asset' category. It does not provide
+      reputation or threat intelligence (Enrich IOC), nor does it perform any mutation
+      or alert management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Endpoints:
   ai_description: >-
     ### General Description
 
-    The **Get Endpoints** action retrieves a comprehensive list of all endpoints currently
-    monitored by Cisco ISE. It provides visibility into the devices managed within
-    the network environment by fetching detailed metadata for each endpoint and presenting
-    it in a structured format.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action does not operate on specific entities (such as IP addresses or Hostnames)
-    within a case. Instead, it performs a global fetch of all endpoint data from the
-    Cisco ISE server and attaches the results to the case as a data table.
+    Retrieves a comprehensive list of endpoints from Cisco ISE. This action queries
+    the Cisco ISE API to fetch endpoint data, processes the results into a flat format,
+    and presents the information in a structured data table within the action results.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action initializes a connection to the Cisco ISE API
-    using the configured API Root, Username, and Password.
+    1. The action extracts the necessary configuration parameters (API Root, Username,
+    Password, and Verify SSL) from the integration settings.
 
-    2. **Resource Discovery**: It queries the Cisco ISE endpoint configuration service
-    to retrieve a list of all endpoint resource identifiers.
+    2. It initializes the `CiscoISEManager` to establish a connection with the Cisco
+    ISE API.
 
-    3. **Detailed Retrieval**: For each identified endpoint, the action performs a
-    secondary request to fetch its full detailed object using the unique ID.
+    3. The action calls the `get_endpoints` method, which performs a GET request to
+    the `/ers/config/endpoint` endpoint to retrieve the list of available endpoints.
 
-    4. **Data Transformation**: The retrieved endpoint objects are flattened into
-    a simplified dictionary structure and converted into a CSV-compatible format.
+    4. For each endpoint found, the action fetches detailed information by ID.
 
-    5. **Case Enrichment**: The final dataset is attached to the Google SecOps case
-    as a data table named "Endpoints Data," providing a summary of all found endpoints.
+    5. The retrieved endpoint data is flattened and converted into a CSV format.
+
+    6. The action adds the resulting CSV data table to the SOAR action results.
+
+
+    ### Additional Notes
+
+    This action does not require any specific entities to be present in the case to
+    execute. It operates independently to fetch global endpoint data from the Cisco
+    ISE environment.
+  ai_short_description: >-
+    Retrieves a list of endpoints from Cisco ISE and displays them in a data table.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table named "Endpoints Data" to the Google SecOps case containing
-      the retrieved endpoint information.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to fetch data from Cisco ISE (fetches_data=true).
+      It does not perform any mutations on external systems or internal SOAR data
+      (entities, insights, etc.).
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -235,51 +369,126 @@ Get Endpoints:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or filter any target entities. It performs
+      a global fetch of endpoint data from the Cisco ISE API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of assets (endpoints) from the Cisco ISE product.
+      This aligns with the 'Search Asset' category, as it searches for and returns
+      asset information from the integrated system.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: true
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 Get Sessions:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of active sessions from the Cisco ISE (Identity Services Engine)
-    platform. This action provides visibility into current network connections, allowing
-    security analysts to monitor active sessions across the infrastructure.
-
-
-    ### Parameters
-
-    There are no parameters for this action.
+    Retrieves a list of active sessions from the Cisco ISE platform. This action provides
+    visibility into current network sessions, allowing analysts to monitor active
+    connections and associated session details directly within the SOAR platform.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action establishes a connection to the Cisco ISE API
-    using the configured API Root, Username, and Password.
+    1. The action extracts the necessary integration configuration parameters: `API
+    Root`, `Username`, `Password`, and `Verify SSL`.
 
-    2. **Session Retrieval**: It executes a GET request to the session service node
-    endpoint (`/ers/config/sessionservicenode`) to fetch the current list of active
-    sessions.
+    2. It initializes the `CiscoISEManager` using these credentials to establish a
+    connection to the Cisco ISE API.
 
-    3. **Data Transformation**: The raw JSON response containing session resources
-    is flattened and converted into a CSV format for better readability.
+    3. The action calls the `get_sessions` method, which performs an HTTP GET request
+    to the Cisco ISE endpoint `/ers/config/sessionservicenode`.
 
-    4. **Reporting**: The action attaches a data table named 'Sessions' to the case
-    containing the session details and returns a summary message indicating the total
-    number of active sessions found.
+    4. If active sessions are retrieved, the action flattens the session data and
+    constructs a CSV table.
+
+    5. The resulting CSV table is added to the action results, and a summary message
+    indicating the number of sessions found is displayed.
+
+
+    ### Additional Notes
+
+    This action does not require any specific entities to execute and operates as
+    a global data retrieval task.
+  ai_short_description: >-
+    Retrieves a list of active sessions from the Cisco ISE platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table named 'Sessions' to the Google SecOps case containing the
-      retrieved session information.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a GET request to retrieve session data (fetches_data=true).
+      It does not mutate any external or internal data, nor does it update entities,
+      create insights, or modify alert/case data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -293,66 +502,80 @@ Get Sessions:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or filter any target entities. It performs
+      a global retrieval of session data from the Cisco ISE API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of active sessions, which constitutes telemetry
+      data from the Cisco ISE platform. This aligns with the 'Search Events' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 List Endpoint Identity Group:
   ai_description: >-
     ### General Description
 
-    Lists available endpoint identity groups from Cisco ISE. This action allows users
-    to discover and retrieve information about defined identity groups, which are
-    used to categorize endpoints within the Cisco ISE environment. It supports filtering
-    results by specific fields and limiting the number of records returned.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Filter Key** | String (Dropdown) | No | Specifies the attribute to use for
-    filtering the endpoint identity groups. Options typically include 'Name'. |
-
-    | **Filter Logic** | String (Dropdown) | No | Defines the comparison logic for
-    the filter. Options include 'Equal' or 'Contains'. |
-
-    | **Filter Value** | String | No | The specific string value to search for based
-    on the selected key and logic. |
-
-    | **Max Records To Return** | Integer | No | The maximum number of group records
-    to retrieve. Must be a positive integer up to 100. Default is 100. |
-
-
-    ### Additional Notes
-
-    * **Filter Dependency:** If a 'Filter Logic' is selected, a 'Filter Key' must
-    also be selected, otherwise the action will fail.
-
-    * **Empty Filter Value:** If 'Filter Key' and 'Filter Logic' are provided but
-    'Filter Value' is left empty, the filter will not be applied, and the action will
-    return all results up to the limit.
-
-    * **Record Limit:** The action strictly enforces a maximum limit of 100 records
-    as per Cisco ISE API constraints.
+    Lists available endpoint identity groups from Cisco ISE. This action retrieves
+    a list of endpoint groups based on optional filtering criteria, allowing analysts
+    to view and manage endpoint categorization within the Cisco ISE environment.
 
 
     ### Flow Description
 
-    1. **Initialization:** Retrieves integration configuration (API Root, Credentials)
-    and action parameters.
+    1. Extracts integration configuration parameters (API Root, Username, Password,
+    Verify SSL) and action parameters (Filter Key, Filter Logic, Filter Value, Max
+    Records To Return).
 
-    2. **Validation:** Checks if the 'Filter Key' is provided when 'Filter Logic'
-    is used and ensures the 'Max Records To Return' is within the valid range (1-100).
+    2. Validates the provided parameters, ensuring the 'Max Records To Return' is
+    a positive integer and does not exceed the maximum limit of 100.
 
-    3. **API Connection:** Estantiates the Cisco ISE Manager, which handles authentication
-    and session management.
+    3. Initializes the `CiscoISEManager` to establish a session with the Cisco ISE
+    API.
 
-    4. **Data Retrieval:** Executes a GET request to the Cisco ISE ERS API (`/ers/config/endpointgroup`)
-    with the specified filter parameters and size limit.
+    4. Executes a GET request to the `/ers/config/endpointgroup` endpoint, applying
+    any specified filters and limits.
 
-    5. **Processing:** Parses the API response into structured `EndpointGroup` objects.
+    5. Parses the API response using `CiscoISEParser` to build a list of endpoint
+    group objects.
 
-    6. **Output:** If groups are found, it populates a data table named 'Available
-    Endpoint Entity Groups' and attaches the raw JSON results to the action output.
+    6. Adds the retrieved endpoint groups to the action results as a data table and
+    a JSON object.
+
+
+    ### Additional Notes
+
+    This action is a read-only operation and does not modify any data in Cisco ISE
+    or the SOAR platform. If no endpoint groups are found matching the criteria, the
+    action will return a message indicating that no results were found.
+  ai_short_description: >-
+    Lists available endpoint identity groups from Cisco ISE based on optional filtering
+    criteria.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -363,10 +586,47 @@ List Endpoint Identity Group:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a GET request to retrieve endpoint identity groups from
+      Cisco ISE. It does not mutate any external or internal data, nor does it update
+      entities or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -380,22 +640,82 @@ List Endpoint Identity Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities from the case; it performs a
+      global query to the Cisco ISE API to retrieve endpoint identity groups. Therefore,
+      no entity types or filtering flags are applicable.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of endpoint identity groups from Cisco ISE. This
+      does not match any of the provided outcome categories (e.g., Enrichment, Containment,
+      Ticketing), as it is a configuration lookup action.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Key | ddl | No | Specify the key that needs to be used to filter endpoint
+    entity groups (e.g., Name, ID, Description). |
+
+    | Filter Logic | ddl | No | Specify what filter logic should be applied (e.g.,
+    Equal, Contains). |
+
+    | Filter Value | string | No | Specify what value should be used in the filter.
+    |
+
+    | Max Records To Return | string | No | Specify how many records to return. If
+    nothing is provided, the action will return 100 records. Maximum: 100. |
 Ping:
   ai_description: >-
-    Verifies connectivity to the Cisco ISE server. This action performs a test connection
-    to ensure that the integration can communicate with the Cisco ISE API using the
-    provided configuration parameters (API Root, Username, Password, and SSL verification
-    settings). ### Parameters description: There are no specific parameters for this
-    action. ### Additional notes: This action is primarily used for health checks
-    and troubleshooting connectivity issues between Google SecOps and Cisco ISE. ###
-    Flow description: 1. **Configuration Extraction**: Retrieves the API Root, Username,
-    Password, and SSL verification settings from the integration configuration. 2.
-    **Manager Initialization**: Initializes the CiscoISEManager with the retrieved
-    credentials and establishes a session. 3. **Connectivity Test**: Executes a GET
-    request to the Cisco ISE session service node endpoint (/ers/config/sessionservicenode).
-    4. **Result Handling**: If the request is successful and returns a valid response,
-    the action concludes with a 'Connection Established' message; otherwise, it reports
-    'Connection Failed'.
+    General Description: Tests the connectivity between the SOAR platform and the
+    Cisco ISE instance by performing a GET request to the session service node. This
+    action verifies that the integration is correctly configured and the Cisco ISE
+    API is reachable.
+
+
+    Flow Description:
+
+    1. Initialize the CiscoISEManager using configuration parameters (API Root, Username,
+    Password, Verify SSL).
+
+    2. Execute the `ping` method, which sends a GET request to the Cisco ISE session
+    service endpoint.
+
+    3. Validate the HTTP response to ensure the API is reachable.
+
+    4. Return a success or failure message based on the response.
+
+
+    Additional Notes: This action is used to verify that the integration is correctly
+    configured and the Cisco ISE API is reachable.
+  ai_short_description: Tests connectivity to the Cisco ISE API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -404,12 +724,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a GET request to verify connectivity to the Cisco ISE API.
+      It does not fetch contextual data for entities, mutate external systems, or
+      modify internal SOAR data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -423,47 +780,76 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action is a connectivity test and does not interact with, filter, or process
+      any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any of the defined outcome
+      operations (e.g., enrichment, containment, ticketing).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 Quarantine Address:
   ai_description: >-
     ### General Description
 
-    Quarantines endpoint devices in Cisco ISE by applying a specific network policy
-    based on their IP address. This action is used to isolate potentially compromised
-    hosts from the network by leveraging Cisco ISE's Adaptive Network Control (ANC)
-    capabilities.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Policy Name | String | Yes | The name of the ANC policy (e.g., 'Quarantine',
-    'Isolate') to be applied to the endpoint in Cisco ISE. |
+    Quarantines an endpoint in Cisco ISE by applying a specified policy to its MAC
+    address. This action isolates the endpoint from the network by updating its policy
+    status in Cisco ISE.
 
 
     ### Flow Description
 
-    1. **Entity Filtering:** The action identifies all `ADDRESS` (IP) entities provided
-    in the current context.
+    1. Extracts configuration parameters (API Root, credentials, SSL verification)
+    from the integration settings.
 
-    2. **MAC Address Resolution:** For each IP address, the action performs a lookup
-    via the Cisco ISE UI API to find the corresponding MAC address, as the quarantine
-    operation requires a hardware identifier.
+    2. Extracts the `Policy Name` parameter provided by the user.
 
-    3. **Quarantine Execution:** The action sends a PUT request to the Cisco ISE ERS
-    API to apply the specified 'Policy Name' to the resolved MAC address.
+    3. Iterates through target entities of type `ADDRESS`.
 
-    4. **Result Reporting:** The action tracks successful quarantines and any errors
-    (e.g., MAC not found, API errors) and returns a summary message to the Google
-    SecOps case wall.
+    4. Retrieves the MAC address associated with each IP address using the Cisco ISE
+    UI API.
+
+    5. Sends a request to the Cisco ISE API to apply the specified quarantine policy
+    to the endpoint.
+
+    6. Returns a summary of quarantined addresses or reports any errors encountered
+    during the process.
 
 
     ### Additional Notes
 
-    This action requires both the ERS (External RESTful Services) and UI API components
-    of Cisco ISE to be enabled and accessible.
+    Requires valid Cisco ISE credentials and network connectivity to the ISE API.
+    This action performs a state-changing operation on the Cisco ISE platform.
+  ai_short_description: >-
+    Quarantines an endpoint in Cisco ISE by applying a specified policy to its MAC
+    address.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -472,15 +858,51 @@ Quarantine Address:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Applies a quarantine policy to an endpoint in Cisco ISE, which changes the network
-      access state of the device.
+      Applies a quarantine policy to the endpoint in Cisco ISE, effectively isolating
+      it from the network.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches the MAC address from the IP address (fetches_data=true) and
+      performs a `PUT` request to the Cisco ISE API to change the endpoint's state
+      (can_mutate_external_data=true). It does not modify internal SOAR data or entities.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -494,53 +916,80 @@ Quarantine Address:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering by
+      entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: true
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a `PUT` request to `QUARANTINE_ENDPOINT_URL` to apply a
+      policy, which effectively isolates the endpoint. This matches the 'Contain Host'
+      expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Policy Name | String | Yes | Policy name to attach the endpoint to. |
 Terminate Session:
   ai_description: >-
-    This action terminates an active network session on a Cisco ISE node via the Monitoring
-    and Troubleshooting (MnT) API. It uses a Change of Authorization (CoA) disconnect
-    request to force a session termination for a specific calling station.
+    ### General Description
+
+    Terminates an active network session on Cisco ISE. This action allows security
+    analysts to disconnect a specific session from the network by interacting with
+    the Cisco ISE API.
 
 
-    ### Flow Description:
+    ### Flow Description
 
-    1. **Authentication**: The action establishes a connection to the Cisco ISE manager
-    using the provided credentials and API root.
+    1. Extracts configuration parameters (API Root, credentials, SSL verification)
+    from the integration settings.
 
-    2. **Parameter Extraction**: It retrieves the target Node Server Name, the Calling
-    Station ID (typically the MAC address), and the termination type from the action
-    parameters.
+    2. Initializes the Cisco ISE manager to handle API communication.
 
-    3. **API Execution**: It sends a request to the Cisco ISE MnT API endpoint specifically
-    designed for session disconnection.
+    3. Extracts action parameters: `Node Server Name`, `Calling Station ID`, and `Terminate
+    Type`.
 
-    4. **Result Handling**: The action confirms whether the termination request was
-    successfully sent to the ISE node and updates the action status accordingly.
+    4. Executes the `terminate_session` method, which performs a GET request to the
+    Cisco ISE API endpoint (`/admin/API/mnt/CoA/Disconnect/{node_server_name}/{calling_station_id}/{terminate_type}`).
 
-
-    ### Parameters Description:
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Node Server Name | String | Yes | The name of the Cisco ISE node server where
-    the session is active (e.g., ciscoISE). |
-
-    | Calling Station ID | String | Yes | The identifier of the calling station to
-    be disconnected, usually the MAC address. |
-
-    | Terminate Type | Integer | No | Defines the type of termination: 0 (DYNAMIC_AUTHZ_PORT_DEFAULT),
-    1 (DYNAMIC_AUTHZ_PORT_BOUNCE), or 2 (DYNAMIC_AUTHZ_PORT_SHUTDOWN). Defaults to
-    0. |
+    5. Returns the termination status to the SOAR platform.
 
 
-    ### Additional Notes:
+    ### Additional Notes
 
-    - This action does not run on entities automatically; it requires manual input
-    of the Calling Station ID and Node Server Name.
-
-    - The termination type determines how the network port reacts (e.g., simply disconnecting,
-    bouncing the port, or shutting it down).
+    The `Terminate Type` parameter determines the disconnection method (0=DYNAMIC_AUTHZ_PORT_DEFAULT,
+    1=DYNAMIC_AUTHZ_PORT_BOUNCE, 2=DYNAMIC_AUTHZ_PORT_SHUTDOWN).
+  ai_short_description: >-
+    Terminates a network session on Cisco ISE by sending a disconnect request to the
+    specified node server and calling station ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -549,14 +998,50 @@ Terminate Session:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Triggers a session disconnect or port shutdown on the Cisco ISE node for a specific
-      network session.
+      Terminates an active network session on the Cisco ISE system.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a GET request to the Cisco ISE API to terminate a session,
+      which is a state-changing operation on an external system. It does not fetch
+      data for enrichment or modify internal SOAR data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -570,50 +1055,91 @@ Terminate Session:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It relies on user-provided parameters to identify the session to
+      terminate.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: true
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action terminates an active network session on Cisco ISE. This revokes the
+      session, which aligns with the 'Disable Identity' category (revoking active
+      sessions).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Node Server Name | String | Yes | ISE node server name, e.g. ciscoISE. |
+
+    | Calling Station ID | String | Yes | The ID value of the calling station, e.g.
+    1. |
+
+    | Terminate Type | String | No | Terminate Type value will be an integer between
+    0 and 2, e.g. 0 (0=DYNAMIC_AUTHZ_PORT_DEFAULT, 1=DYNAMIC_AUTHZ_PORT_BOUNCE, 2=DYNAMIC_AUTHZ_PORT_SHUTDOWN).
+    |
 Unquarantine Address:
   ai_description: >-
     ### General Description
 
-    This action unquarantines endpoint devices in Cisco ISE using their IP addresses.
-    It is designed to restore network access to a previously isolated device by clearing
-    its Adaptive Network Control (ANC) quarantine status. The action first resolves
-    the provided IP address to a MAC address using the Cisco ISE UI API and then issues
-    a command to clear the quarantine.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It relies on the target
-    entities (IP Addresses) provided in the context and the global integration configuration
-    (API Root, Username, Password, Verify SSL).
-
-
-    ### Additional Notes
-
-    *   **MAC Resolution:** This action requires the Cisco ISE UI API to be accessible
-    to resolve IP addresses to MAC addresses. If the resolution fails, the unquarantine
-    process for that specific entity will fail.
-
-    *   **Permissions:** The configured user must have sufficient privileges in Cisco
-    ISE to clear ANC endpoint policies.
+    Unquarantines an endpoint in Cisco ISE by resolving the provided IP address to
+    a MAC address and removing the quarantine status. This action is used to restore
+    network access to endpoints that were previously isolated or quarantined due to
+    security policies.
 
 
     ### Flow Description
 
-    1.  **Configuration Retrieval:** Extracts the API Root, Username, Password, and
-    SSL verification settings from the integration configuration.
+    1. The action initializes the `CiscoISEManager` using the integration configuration
+    parameters (API Root, Username, Password, Verify SSL).
 
-    2.  **Entity Filtering:** Identifies all `ADDRESS` (IP) entities within the current
-    scope.
+    2. It iterates through the provided target entities, filtering for those of type
+    `ADDRESS`.
 
-    3.  **MAC Resolution:** For each IP address, it queries the Cisco ISE UI API to
-    retrieve the corresponding MAC address.
+    3. For each IP address, the action calls the `get_endpoint_mac_by_ip` method to
+    retrieve the corresponding MAC address from Cisco ISE.
 
-    4.  **Unquarantine Execution:** Sends a PUT request to the Cisco ISE ANC endpoint
-    clear endpoint (`/ers/config/ancendpoint/clear`) using the resolved MAC address.
+    4. It then calls the `unquarantine_endpoint` method, which performs a PUT request
+    to the Cisco ISE API to remove the quarantine policy from the endpoint.
 
-    5.  **Result Reporting:** Tracks successful unquarantine operations and any errors
-    encountered during the process, providing a summary message at the end.
+    5. The action collects the results and returns a summary message indicating which
+    addresses were successfully unquarantined or if any errors occurred.
+
+
+    ### Additional Notes
+
+    This action requires valid Cisco ISE credentials and network connectivity to the
+    Cisco ISE API. It relies on the ability to resolve IP addresses to MAC addresses
+    within the Cisco ISE environment.
+  ai_short_description: >-
+    Unquarantines an endpoint in Cisco ISE by resolving the provided IP address to
+    a MAC address and removing the quarantine status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -622,16 +1148,51 @@ Unquarantine Address:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Clears the quarantine status of an endpoint in Cisco ISE by sending a PUT request
-      to the ANC endpoint clear API, which changes the network access state of the
-      device.
+      Unquarantines an endpoint in Cisco ISE, restoring network access.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches the MAC address for the given IP (fetches_data=true) and
+      performs a PUT request to Cisco ISE to unquarantine the endpoint (can_mutate_external_data=true).
+      It does not mutate internal data, update entities, create insights, modify alerts,
+      or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -645,91 +1206,80 @@ Unquarantine Address:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering strictly
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a PUT request to Cisco ISE to remove a quarantine policy
+      from an endpoint. This directly aligns with the 'Uncontain Host' expected outcome
+      of removing network isolation.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: true
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 Update Endpoint:
   ai_description: >-
     ### General Description
 
-    Updates endpoint object properties in Cisco ISE for specific IP address entities.
-    This action allows security analysts to modify various attributes of an endpoint,
-    including its description, group membership, and a wide range of Mobile Device
-    Management (MDM) details such as compliance status, OS, and encryption state.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Description | String | No | The new description to set for the endpoint. |
-
-    | Group ID | String | No | The ID of the endpoint group to which the endpoint
-    should be assigned. |
-
-    | Portal User | String | No | The portal user associated with the endpoint. |
-
-    | Identity Store | String | No | The name of the identity store. |
-
-    | Identity Store ID | String | No | The ID of the identity store. |
-
-    | Custom Attributes | String | No | A JSON-formatted string (dictionary) of custom
-    attributes to be added to the endpoint (e.g., `{"key": "value"}`). |
-
-    | MDM Server Name | String | No | The name of the MDM server managing the device.
-    |
-
-    | MDM Reachable | Boolean | No | Whether the device is reachable via MDM. |
-
-    | MDM Enrolled | Boolean | No | Whether the device is enrolled in MDM. |
-
-    | MDM Compliance Status | Boolean | No | The compliance status of the device.
-    |
-
-    | MDM OS | String | No | The operating system of the device. |
-
-    | MDM Manufacturer | String | No | The manufacturer of the device. |
-
-    | MDM Model | String | No | The model of the device. |
-
-    | MDM Encrypted | Boolean | No | Whether the device is encrypted. |
-
-    | MDM Pinlock | Boolean | No | Whether the device has a pinlock enabled. |
-
-    | MDM Jail Broken | Boolean | No | Whether the device is jailbroken or rooted.
-    |
-
-    | MDM IMEI | String | No | The IMEI number of the device. |
-
-    | MDM Phone Number | String | No | The phone number associated with the device.
-    |
-
-
-    ### Additional Notes
-
-    - The **Custom Attributes** parameter must be a valid JSON string representing
-    a dictionary. If the format is incorrect, the action will fail.
-
-    - The action first resolves the IP address (ADDRESS entity) to a MAC address using
-    the Cisco ISE UI API before performing the update.
+    Updates endpoint properties within the Cisco ISE platform. This action allows
+    analysts to modify various attributes of an endpoint, such as its description,
+    group membership, portal user, identity store, and MDM-related status (e.g., compliance,
+    encryption, jailbreak status). It is designed to synchronize endpoint metadata
+    from the SOAR platform to Cisco ISE.
 
 
     ### Flow Description
 
-    1. **MAC Resolution**: For each provided IP address (ADDRESS entity), the action
-    calls the Cisco ISE UI API to retrieve the corresponding MAC address.
+    1. The action extracts configuration parameters (API Root, credentials) and action
+    parameters (endpoint attributes) from the integration settings.
 
-    2. **Data Retrieval**: The action fetches the current endpoint object from Cisco
-    ISE using the resolved MAC address.
+    2. It filters the `target_entities` to identify entities of type `ADDRESS`.
 
-    3. **Attribute Modification**: The retrieved endpoint object is updated locally
-    with the values provided in the action parameters (Description, Group ID, MDM
-    fields, etc.).
+    3. For each identified IP address, the action calls the Cisco ISE API to retrieve
+    the corresponding MAC address (`get_endpoint_mac_by_ip`).
 
-    4. **External Update**: The action sends a PUT request to the Cisco ISE API to
-    save the modified endpoint object.
+    4. Using the retrieved MAC address, the action performs a `PUT` request to the
+    Cisco ISE API (`update_endpoint`) to apply the provided attribute updates to the
+    endpoint object.
 
-    5. **Result Reporting**: The action tracks which endpoints were successfully updated
-    and reports any errors encountered during the process.
+    5. The action returns a summary of updated endpoints or reports any errors encountered
+    during the process.
+
+
+    ### Additional Notes
+
+    This action requires valid Cisco ISE credentials with appropriate permissions
+    to modify endpoint objects. Custom attributes must be provided as a valid JSON
+    string (e.g., `{"param":"val"}`).
+  ai_short_description: >-
+    Updates endpoint properties, including group membership and MDM attributes, for
+    specified IP address entities in Cisco ISE.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -738,15 +1288,52 @@ Update Endpoint:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates endpoint properties (such as description, group ID, and MDM attributes)
-      in the Cisco ISE system via a PUT request to the endpoint configuration API.
+      Updates endpoint properties (description, group, MDM attributes) in the Cisco
+      ISE platform.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data (MAC address) from Cisco ISE to perform the update.
+      It mutates external data by sending a PUT request to update endpoint attributes
+      in Cisco ISE. It does not mutate internal SOAR data, update entities, create
+      insights, or modify alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -760,3 +1347,89 @@ Update Endpoint:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters specifically
+      for entities where `entity_type == EntityTypes.ADDRESS`. It uses the identifier
+      of these address entities to look up the corresponding MAC address in Cisco
+      ISE before performing the update.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies endpoint metadata (group, MDM status, etc.) in Cisco ISE.
+      In the context of Cisco ISE, endpoints are treated as network identities. Therefore,
+      this action aligns with 'Update Identity' as it modifies the attributes of the
+      identity/endpoint within the external system. It does not perform enrichment,
+      blocking, or other listed actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Description | String | No | The endpoint's description to update. |
+
+    | Group ID | String | No | The endpoint's group ID to update. |
+
+    | Portal User | String | No | The endpoint's portal user to update. |
+
+    | Identity Store | String | No | The endpoint's identity store to update. |
+
+    | Identity Store ID | String | No | The endpoint's identity store ID to update.
+    |
+
+    | Custom Attributes | String | No | Custom attributes to add to the entity object,
+    provided as a JSON string (e.g., '{"param":"val"}'). |
+
+    | MDM Server Name | String | No | The MDM server name to update. |
+
+    | MDM Reachable | String | No | The MDM reachable status (true/false) to update.
+    |
+
+    | MDM Enrolled | String | No | The MDM enrolled status (true/false) to update.
+    |
+
+    | MDM Compliance Status | String | No | The MDM compliance status (true/false)
+    to update. |
+
+    | MDM OS | String | No | The MDM OS to update. |
+
+    | MDM Manufacturer | String | No | The MDM manufacturer to update. |
+
+    | MDM Model | String | No | The MDM model to update. |
+
+    | MDM Encrypted | String | No | The MDM encrypted status (true/false) to update.
+    |
+
+    | MDM Pinlock | String | No | The MDM pinlock status (true/false) to update. |
+
+    | MDM Jail Broken | String | No | The MDM jail broken status (true/false) to update.
+    |
+
+    | MDM IMEI | String | No | The MDM IMEI to update. |
+
+    | MDM Phone Number | String | No | The MDM phone number to update. |

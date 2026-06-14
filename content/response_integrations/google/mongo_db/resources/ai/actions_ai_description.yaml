@@ -1,144 +1,178 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Free Query:
   ai_description: >-
     ### General Description
 
-    The **Free Query** action allows users to execute custom MongoDB queries against
-    a specific database and collection. It is designed for flexible data retrieval
-    from MongoDB instances integrated with Google SecOps, enabling users to fetch
-    documents based on specific JSON-formatted criteria.
+    Executes a custom query against a MongoDB database to retrieve documents. This
+    action allows users to perform read-only operations on a specified database and
+    collection using a JSON-formatted query.
 
 
-    ### Parameters Description
+    ### Flow Description
 
+    1. Extracts MongoDB connection details (Server, Port, Auth) and action parameters
+    (Database Name, Collection Name, Query) from the configuration and action settings.
+
+    2. Parses the provided `Query` string into a JSON object.
+
+    3. Initializes a `MongoDBManager` connection to the specified MongoDB server.
+
+    4. Validates the existence of the specified database and collection.
+
+    5. Executes the `find` operation on the MongoDB collection using the provided
+    query.
+
+    6. Processes the results, converting `ObjectId` fields to strings for JSON serialization.
+
+    7. Returns the results to the SOAR platform, either as individual documents or
+    a single JSON result based on the `Return a single JSON result` parameter.
+
+
+    ### Additional Notes
+
+    The action requires a valid JSON query string. It does not modify the database
+    (read-only).
+  ai_short_description: >-
+    Executes a custom query against a MongoDB database and returns the matching documents.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action connects to an external MongoDB instance and executes a `find` query
+      to retrieve documents. It does not modify the database or internal SOAR data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It performs a query against a MongoDB database based on user-provided
+      parameters. Therefore, no entity types or filters are used.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a query against a MongoDB database to retrieve documents.
+      This matches the 'Search Events' category, as it retrieves historical data based
+      on specific criteria. It does not perform any mutation or enrichment of entities.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Database Name** | String | Yes | The name of the MongoDB database to run the
-    query on. |
+    | Database Name | String | Yes | The DB name to run the query on |
 
-    | **Collection Name** | String | Yes | The name of the collection within the specified
-    database to run the query on. |
+    | Collection Name | String | Yes | The collection name to run the query on |
 
-    | **Query** | String | Yes | The key-value query in JSON format (e.g., `{"key":
-    "value"}`). This defines the filter for the search. |
+    | Query | String | Yes | The key-value query. Default: {"key": "value"} |
 
-    | **Return a single JSON result** | Boolean | No | If enabled (True), the action
-    returns a single JSON array containing all results. If disabled (False), it returns
-    each document as an individual JSON result. Default is False. |
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval**: The action starts by extracting the MongoDB server
-    address, port, and authentication credentials from the integration settings.
-
-    2. **Parameter Extraction**: It retrieves the target database name, collection
-    name, the query string, and the output format preference.
-
-    3. **Query Parsing**: The input `Query` string is parsed into a JSON object. If
-    the string is not valid JSON, the action terminates with an error.
-
-    4. **Manager Initialization**: A `MongoDBManager` instance is created to handle
-    the connection and execution logic.
-
-    5. **Validation**: The manager validates that the specified database and collection
-    exist on the server.
-
-    6. **Query Execution**: The action executes a `find` operation on the collection
-    using the provided query criteria.
-
-    7. **Data Serialization**: The results are processed to ensure they are JSON-serializable,
-    specifically converting MongoDB `ObjectId` types into strings.
-
-    8. **Result Reporting**: Depending on the `Return a single JSON result` parameter,
-    the action either adds each document individually or as a single combined JSON
-    array to the action results.
-
-
-    ### Additional Notes
-
-    - This action is strictly for data retrieval (Read-Only) and does not support
-    operations that modify the database state (e.g., insert, update, delete).
-
-    - This action does not process or interact with Google SecOps entities.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
+    | Return a single JSON result | Boolean | No | If enabled, action will return
+    a single JSON result, instead of a few results together, for better and easier
+    usage in Playbooks. |
 Ping:
   ai_description: >-
-    ### General Description
-
-    The Ping action is a diagnostic tool designed to verify the connectivity between
-    Google SecOps and a target MongoDB instance. It ensures that the provided configuration
-    details (Server Address, Port, and Authentication credentials) are correct and
-    that the MongoDB server is reachable and responding to requests.
-
-
-    ### Parameters
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action relies on the integration's global configuration settings (Server
-    Address, Username, Password, Port, and Use Authentication) to establish the connection.
+    Tests connectivity to a MongoDB instance. This action verifies that the integration
+    can successfully communicate with the configured MongoDB server using the provided
+    credentials.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval:** The action fetches the MongoDB integration settings
-    from the environment.
+    1. The action retrieves the MongoDB configuration (Server Address, Username, Password,
+    Port, and Authentication flag) from the integration settings.
 
-    2. **Manager Initialization:** It initializes the `MongoDBManager` with the retrieved
-    server address, port, and authentication details.
+    2. It initializes the `MongoDBManager` with the retrieved credentials.
 
-    3. **Connectivity Test:** The action calls the `test_connectivity` method, which
-    executes a `server_info()` command against the MongoDB instance. This forces a
-    network call to verify the server is active.
+    3. The action calls the `test_connectivity` method, which invokes `client.server_info()`
+    to force a connection check to the MongoDB server.
 
-    4. **Result Reporting:** If the command succeeds, the action terminates with a
-    success message. If a `ConnectionFailure` or other exception occurs, the action
-    fails and reports the error.
+    4. If the connection is successful, the action returns a success message. If the
+    connection fails, an exception is raised.
+
+
+    ### Additional Notes
+
+    This action is primarily used for troubleshooting and verifying that the integration
+    is correctly configured to communicate with the target MongoDB instance.
+  ai_short_description: >-
+    Tests connectivity to a MongoDB instance.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -147,12 +181,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a connectivity test (ping) to a MongoDB instance. It does
+      not fetch data, mutate external or internal data, update entities, create insights,
+      or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -166,3 +237,39 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities; it performs a connectivity test
+      against a configured MongoDB server.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test (ping) to a MongoDB instance. It does
+      not match any of the defined outcome categories such as enrichment, ticketing,
+      or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.

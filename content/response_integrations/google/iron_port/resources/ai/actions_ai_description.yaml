@@ -1,80 +1,43 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get All Recipients By Sender:
   ai_description: >-
     ### General Description
 
-    Retrieves a comprehensive list of email recipients who received messages from
-    a specific sender address within a defined timeframe. This action interacts with
-    the Cisco IronPort AsyncOS API's message tracking feature to identify communication
-    patterns. It is designed to handle large datasets by utilizing pagination and
-    asynchronous execution to prevent timeouts.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Sender | String | Yes | The email address of the sender to filter message tracking
-    logs by. |
-
-    | Search Emails for Last X | Integer | Yes | The numeric value representing the
-    lookback period for the search. |
-
-    | Set Search Email Period in | Enum | Yes | The time unit for the lookback period
-    (Days or Hours). |
-
-    | Max Recipients to Return | Integer | No | The maximum number of unique recipients
-    to include in the final result. Defaults to 20. |
-
-    | Page Size | Integer | No | The number of message records to retrieve per API
-    request. Must be between 1 and 100. Defaults to 100. |
-
-
-    ### Additional Notes
-
-    - Message tracking and the AsyncOS API must be enabled on the IronPort appliance
-    for this action to function.
-
-    - The action runs asynchronously; if the search takes longer than the allowed
-    iteration time, it will save its state and resume in the next cycle.
+    Retrieves a list of email recipients who received messages from a specific sender
+    using the IronPort AsyncOS API. This action allows analysts to investigate email
+    communication patterns by identifying all recipients associated with a given sender
+    email address within a specified time frame.
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts configuration parameters (server, credentials)
-    and action parameters (sender, timeframe, limits).
+    1. The action initializes the `IronportManagerAPI` using the provided configuration
+    parameters (Server Address, Port, Credentials, SSL settings).
 
-    2. **Timeframe Calculation**: Determines the start and end timestamps for the
-    search based on the 'Search Emails for Last X' and 'Set Search Email Period in'
-    inputs.
+    2. It calculates the search time range based on the `Search Emails for Last X`
+    and `Set Search Email Period in` parameters.
 
-    3. **Message Retrieval**: Queries the IronPort `/message-tracking/messages` endpoint
-    using the sender filter and calculated timeframe.
+    3. The action enters a loop to fetch messages from the IronPort appliance using
+    the `get_messages_page` method, which performs a GET request to the IronPort API.
 
-    4. **Pagination & Timeout Management**: Iterates through message pages. If the
-    script approaches the SOAR execution timeout, it saves the current offset and
-    collected recipients to resume later.
+    4. It iterates through the retrieved messages, extracting the recipient lists
+    and updating a set of unique recipients.
 
-    5. **Data Aggregation**: Extracts recipient lists from each message and maintains
-    a unique set of email addresses.
+    5. The action handles pagination and script timeouts; if the execution approaches
+    the timeout limit, it saves the current state (offset, recipients, dates) and
+    returns an `IN_PROGRESS` status to continue in the next iteration.
 
-    6. **Completion**: Once all messages are processed or the 'Max Recipients to Return'
-    limit is reached, it returns the final list of recipients as a JSON result.
+    6. Once all messages are fetched or the `Max Recipients to Return` limit is reached,
+    the action returns the final list of recipients as a JSON result.
+
+
+    ### Additional Notes
+
+    This action is asynchronous and supports state management to handle large volumes
+    of email data without timing out. Ensure that message tracking is enabled in IronPort
+    and the AsyncOS API is configured correctly for this integration to function.
+  ai_short_description: >-
+    Retrieves a list of email recipients who received messages from a specific sender
+    using the IronPort AsyncOS API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -85,10 +48,47 @@ Get All Recipients By Sender:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action performs GET requests to the IronPort API to retrieve message data.
+      It does not mutate any external or internal data, nor does it update entities
+      or alerts.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -102,73 +102,100 @@ Get All Recipients By Sender:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or utilize `siemplify.target_entities`. It
+      operates based on the 'Sender' parameter provided by the user, not on entities
+      attached to the case.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for emails on the IronPort appliance based on a sender address
+      and returns the list of recipients. This directly matches the 'Search Email'
+      outcome category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: true
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Sender | String | Yes | The sender email address to filter by. |
+
+    | Search Emails for Last X | String | Yes | Specify a time frame for which to
+    search for emails. Note that this value should be set accordingly to the amount
+    of emails processed by Ironport, if big enough value will be provided action can
+    time out. |
+
+    | Set Search Email Period in | DDL | Yes | Specify if search emails should be
+    done with the period of days or hours. |
+
+    | Max Recipients to Return | String | No | Specify how many recipients action
+    should return. |
+
+    | Page Size | String | No | Specify the page size for the action to use when searching
+    for emails. |
 Get All Recipients By Subject:
   ai_description: >-
     ### General Description
 
-    Retrieves a comprehensive list of unique email recipients who received messages
-    with a specific subject line from Cisco IronPort. This action is primarily used
-    for incident scoping, such as identifying all users affected by a specific phishing
-    campaign or a malicious email broadcast. It leverages the IronPort AsyncOS API
-    and requires Message Tracking to be enabled on the target appliance.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Subject | String | Yes | The exact or partial email subject line to filter messages
-    by. |
-
-    | Search Emails for Last X | Integer | Yes | The numeric value representing the
-    lookback window for the search. |
-
-    | Set Search Email Period in | Dropdown | Yes | The time unit for the lookback
-    window. Options are 'Days' or 'Hours'. |
-
-    | Max Recipients to Return | Integer | No | The maximum number of unique recipient
-    email addresses to return. Defaults to 20 if not specified or if a non-positive
-    value is provided. |
-
-    | Page Size | Integer | No | The number of message records to retrieve per API
-    request. Defaults to 100. Valid range is 1 to 100. |
-
-
-    ### Additional Notes
-
-    - This action is **Asynchronous**. If the search involves a large volume of data
-    that exceeds the script timeout, the action will save its progress and continue
-    in a subsequent execution cycle.
-
-    - The action ensures uniqueness by returning a set of recipients, even if multiple
-    emails with the same subject were sent to the same person.
+    Retrieves a list of all email recipients who received an email with a specific
+    subject from the IronPort appliance. This action allows security analysts to identify
+    the scope of an email campaign or phishing attempt by querying the IronPort message
+    tracking logs.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts integration configuration (credentials,
-    server details) and user-provided parameters.
+    1. **Initialization**: The action initializes the `IronportManagerAPI` using the
+    provided configuration parameters (Server Address, Port, Credentials, and SSL
+    settings).
 
-    2. **Time Range Calculation**: Based on the 'Search Emails for Last X' and 'Set
-    Search Email Period in' parameters, it calculates the start and end timestamps
-    for the API query.
+    2. **Time Range Calculation**: It calculates the search time range based on the
+    'Search Emails for Last X' and 'Set Search Email Period in' parameters.
 
-    3. **Message Retrieval**: It queries the IronPort Message Tracking API for messages
-    matching the specified subject within the time range.
+    3. **Data Retrieval**: The action performs a series of GET requests to the IronPort
+    AsyncOS API (`/message-tracking/messages`) to fetch messages matching the specified
+    subject, utilizing pagination to handle large result sets.
 
-    4. **Pagination & Timeout Management**: The action fetches messages in pages (defined
-    by 'Page Size'). Before each page request, it checks if the script is approaching
-    its execution timeout. If so, it pauses and stores the current offset and collected
-    recipients to resume later.
+    4. **Aggregation**: It iterates through the retrieved messages, extracting and
+    aggregating unique recipient email addresses.
 
-    5. **Data Extraction**: For every message found, it extracts the recipient list
-    and adds them to a unique collection.
+    5. **Result Output**: The action outputs the final list of unique recipients as
+    a JSON result and provides a summary message.
 
-    6. **Completion**: The process stops when all matching messages are processed
-    or the 'Max Recipients to Return' limit is reached. The final list of unique recipients
-    is then returned as a JSON result.
+
+    ### Additional Notes
+
+    For this action to function correctly, message tracking must be enabled in the
+    IronPort appliance, and the AsyncOS API must be accessible. The action supports
+    asynchronous execution to handle large volumes of data without timing out.
+  ai_short_description: >-
+    Retrieves a list of email recipients for a specified subject from the IronPort
+    appliance.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -179,10 +206,47 @@ Get All Recipients By Subject:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs GET requests to the IronPort API to retrieve message data.
+      It does not mutate external data (no POST/PUT/DELETE) nor does it modify internal
+      SecOps data or entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -196,62 +260,102 @@ Get All Recipients By Subject:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on `target_entities`. It relies entirely on user-provided
+      parameters (Subject, Timeframe) to query the IronPort API. Therefore, no entity
+      type flags are set.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for emails on the IronPort appliance based on a subject
+      and returns the list of recipients. This directly matches the 'Search Email'
+      outcome category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: true
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Subject | String | Yes | The email subject to filter by. |
+
+    | Search Emails for Last X | String | Yes | The time frame duration for the search.
+    |
+
+    | Set Search Email Period in | DDL | Yes | The unit of time for the search period
+    (Days or Hours). |
+
+    | Max Recipients to Return | String | No | The maximum number of recipients to
+    return in the result. |
+
+    | Page Size | String | No | The number of messages to fetch per API request. |
 Get Report:
   ai_description: >-
     ### General Description
 
-    Fetches specific IronPort report information from the AsyncOS API. This action
-    can operate in two modes: global reporting or entity-based enrichment. When specific
-    entities (IP, Hostname, or User) are provided and match the selected report type,
-    the action filters the report data for those entities, updates their 'additional_properties',
-    and marks them as enriched. If no entities are provided, it retrieves the general
-    report data and presents it in a data table.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Report Type | String (Enum) | Yes | The type of report to fetch (e.g., mail_users_detail).
-    This selection determines which entity types (if any) the action will attempt
-    to enrich. |
-
-    | Search Reports Data for Last X Days | Integer | Yes | Specifies the time frame
-    in days for which to search for report data. Defaults to 7 days. |
-
-    | Max Records to Return | Integer | Yes | Limits the number of records returned
-    by the API. Defaults to 20. |
+    Fetches specific Ironport report information based on the selected report type
+    and time range. This action interacts with the Ironport AsyncOS API to retrieve
+    detailed reporting data, such as mail authentication, content filtering, or domain
+    details. It can operate on specific entities (User, IP, or Hostname) to provide
+    targeted enrichment or run globally to retrieve general report data.
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the IronPort server using provided credentials
-    and retrieves a JWT token.
+    1. **Initialization**: The action initializes the `IronportManagerAPI` using the
+    provided configuration parameters (Server Address, Port, Credentials, SSL settings).
 
-    2. **Scope Determination**: Identifies which entity types (ADDRESS, HOSTNAME,
-    or USERUNIQNAME) are relevant based on the chosen `Report Type` using internal
-    mapping.
+    2. **Entity Filtering**: It determines the relevant entity types for the selected
+    `Report Type` using the integration's mapping configuration. It then filters the
+    `siemplify.target_entities` to include only those matching the required types.
 
-    3. **Data Retrieval**: Fetches the requested report from the IronPort AsyncOS
-    API for the specified time range.
+    3. **Data Retrieval**: The action calls the Ironport API (`get_reports`) to fetch
+    report data for the specified time range (`Search Reports Data for Last X Days`)
+    and limit (`Max Records to Return`).
 
-    4. **Entity Processing**: If matching entities are found in the current context,
-    the action filters the report data for each entity, enriches the entity's additional
-    properties, and creates an entity-specific data table.
-
-    5. **Global Processing**: If no matching entities are found, the action outputs
-    the retrieved report data into a single global data table.
-
+    4. **Processing & Output**:
+       - **If entities are present**: The action filters the retrieved reports to
+    match the specific entity identifiers (e.g., matching an IP or User). It updates
+    the entity's `additional_properties` with the report data, marks the entity as
+    enriched (`is_enriched = True`), and adds an entity-specific table to the action
+    results.
+       - **If no entities are present**: The action adds a general data table containing
+    the retrieved report results to the action output.
 
     ### Additional Notes
 
-    - The action supports a variety of report types, some of which are entity-specific
-    (like `mail_users_detail`) and others that are general.
+    - Some report types (e.g., `mail_users_detail`, `mail_sender_ip_hostname_detail`)
+    require specific entity types to function as an enrichment action. Other reports
+    work globally without requiring specific entities.
 
-    - If a report type is selected that doesn't map to the entities present in the
-    case, the action will default to global reporting mode.
+    - The action supports filtering by entity identifier when entities are provided.
+  ai_short_description: >-
+    Fetches and displays Ironport report data, optionally enriching entities with
+    relevant report details.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -262,15 +366,49 @@ Get Report:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with report data and sets the 'is_enriched'
-      flag to true.
-  categories:
-    enrichment: true
+      Updates entity additional_properties and sets is_enriched to True.
+    reasoning: >-
+      The action fetches data from an external API (Ironport). It does not mutate
+      external data. It mutates internal data by updating entity properties (`additional_properties`
+      and `is_enriched`). It does not create insights, modify alert data, or create
+      case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
-    - USERUNIQNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -284,61 +422,91 @@ Get Report:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them based
+      on `ENTITY_TYPES_MAPPING`. It supports `USER`, `ADDRESS`, and `HOSTNAME` entity
+      types. It further filters the reports retrieved from the API by matching the
+      entity's identifier against the report data fields (e.g., 'ip', 'hostname',
+      'user').
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches historical report data from Ironport, which qualifies as
+      'Search Events'. When entities are provided, it enriches them with the retrieved
+      report data, qualifying as 'Enrich IOC' (for IP/Hostname) and 'Enrich Asset'
+      (for User/Hostname).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Report Type | ddl | Yes | The type of the report to fetch (e.g., mail_users_detail,
+    mail_sender_ip_hostname_detail). Some reports require specific entity types. |
+
+    | Search Reports Data for Last X Days | string | Yes | Specify a time frame in
+    days for which to search for reports data. Default is 7. |
+
+    | Max Records to Return | string | Yes | The maximum number of records to return.
+    Default is 20. |
 Ping:
   ai_description: >-
-    The Ping action is designed to verify the connectivity between Google SecOps and
-    the Cisco IronPort (ESA) server using the AsyncOS REST API. It validates the provided
-    configuration parameters, including server address, port, and credentials, by
-    attempting to authenticate and retrieve a JWT token.
+    ### General Description
+
+    Tests connectivity to the IronPort server by attempting to authenticate using
+    the provided credentials. This action validates that the integration configuration
+    is correct and that the SOAR platform can successfully communicate with the IronPort
+    AsyncOS REST API.
 
 
-    ### Flow Description:
+    ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves connection details such as Server
-    Address, Port, Username, Password, and SSL configurations from the integration
-    settings.
+    1. Extracts configuration parameters (Server Address, Port, Username, Password,
+    SSL settings) from the integration configuration.
 
-    2. **API Initialization:** It initializes the `IronportManagerAPI` client with
-    the provided settings.
+    2. Initializes the `IronportManagerAPI` client using the provided parameters.
 
-    3. **Authentication Attempt:** The manager attempts to log in to the IronPort
-    AsyncOS API by sending a POST request to the login endpoint with Base64-encoded
-    credentials.
+    3. The client attempts to authenticate with the IronPort AsyncOS REST API by sending
+    a POST request to the login endpoint to retrieve a JWT token.
 
-    4. **Connectivity Validation:** If a JWT token is successfully returned, the connection
-    is considered valid. If a connection error or authentication failure occurs, the
-    action catches the exception and reports the failure.
+    4. If the authentication is successful, the action logs a success message and
+    completes with a success status.
 
-    5. **Result Reporting:** The action concludes by providing a success or failure
-    message to the Siemplify workbench.
+    5. If the authentication fails or a connection error occurs, the action logs the
+    error and completes with a failed status.
 
 
-    ### Parameters Description:
+    ### Additional Notes
 
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Server Address | String | Yes | The IP address or hostname of the IronPort server.
-    |
-
-    | AsyncOS API Port | Integer | Yes | The port used to communicate with the AsyncOS
-    REST API. |
-
-    | Username | String | Yes | The username for authentication with the IronPort
-    server. |
-
-    | Password | String | Yes | The password for authentication with the IronPort
-    server. |
-
-    | CA Certificate File | String | No | A Base64-encoded string of the CA certificate
-    file used for SSL verification. |
-
-    | Use SSL | Boolean | Yes | Determines whether to use HTTPS (True) or HTTP (False)
-    for the connection. |
-
-    | Verify SSL | Boolean | Yes | Determines whether to verify the SSL certificate
-    of the server. |
+    This action is primarily used for troubleshooting and verifying that the integration
+    is correctly configured before running other actions.
+  ai_short_description: >-
+    Tests connectivity to the IronPort server by validating authentication credentials.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -347,12 +515,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST request to authenticate with the IronPort API. This
+      is a connectivity check and does not constitute data enrichment, external system
+      mutation (in the context of security operations), or internal data modification.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -366,3 +571,57 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It is a configuration validation
+      action that uses only integration parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test (authentication) to verify the integration
+      configuration. It does not perform any of the listed operational outcomes like
+      enrichment, blocking, or ticket management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Server Address | String | Yes | IronPort server IP or hostname. |
+
+    | AsyncOS API Port | Integer | Yes | Port for the AsyncOS API. |
+
+    | Username | String | Yes | Username for the IronPort account. |
+
+    | Password | String | Yes | Password for the IronPort account. |
+
+    | CA Certificate File - parsed into Base64 String | String | No | Optional CA
+    certificate for SSL verification. |
+
+    | Use SSL | Boolean | Yes | Whether to use HTTPS. |
+
+    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate. |

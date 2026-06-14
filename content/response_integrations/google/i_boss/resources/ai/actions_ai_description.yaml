@@ -1,106 +1,99 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Add IP to Policy Block List:
   ai_description: >-
     ### General Description
 
-    Adds IP addresses to a specified iBoss Policy Block List category. This action
-    is used to programmatically block network traffic associated with specific IP
-    entities by adding them to the iBoss web gateway's filtering policies. It supports
-    configuration of traffic direction, port ranges, and priority levels for the block
-    rule.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Category ID | String | Yes | The unique identifier of the iBoss policy category
-    where the IP will be added. |
-
-    | Priority | Integer | Yes | The priority level (0-100) assigned to the block
-    entry. Default is 50. |
-
-    | Direction | Dropdown | Yes | Specifies the traffic direction to block: 'Destination',
-    'Source', or 'Destination and Source'. |
-
-    | Start Port | Integer | No | The beginning of the port range to block. If only
-    one port is specified, it may be applied to both start and end. |
-
-    | End Port | Integer | No | The end of the port range to block. |
-
-    | Note | String | No | An optional descriptive note to attach to the block entry
-    in iBoss. |
-
-    | Is Regular Expression | Boolean | No | If enabled, the IP string will be treated
-    as a regular expression by the iBoss engine. |
-
-
-    ### Additional Notes
-
-    - The action performs a pre-validation check to ensure the provided `Category
-    ID` is associated with a 'Block List' type in iBoss before attempting to add entities.
-
-    - If the category is not a block list, the action will fail with a specific error
-    message.
+    Adds an IP address to a specific policy block list within the iBoss security platform.
+    This action enables automated network security enforcement by pushing IP-based
+    blocking rules to the iBoss infrastructure, helping to mitigate threats from identified
+    malicious indicators.
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves iBoss configuration (API roots and credentials)
-    and action parameters.
+    1. **Parameter Extraction**: The action retrieves configuration parameters (API
+    credentials, endpoints) and action-specific parameters (Category ID, Priority,
+    Direction, etc.) from the SOAR platform.
 
-    2. **Authentication**: Establishes a session with the iBoss API and retrieves
-    necessary authentication tokens and cookies.
+    2. **Entity Filtering**: The action iterates through the `target_entities` and
+    filters for entities of type `ADDRESS`.
 
-    3. **Validation**: Checks the iBoss settings for the provided `Category ID` to
-    confirm it is a valid block list.
+    3. **Validation**: It validates the provided `Category ID` against the iBoss system
+    to ensure it is associated with a valid block list.
 
-    4. **Entity Processing**: Filters the target entities for IP addresses (`ADDRESS`).
+    4. **API Interaction**: For each valid IP entity, the action performs a `PUT`
+    request to the iBoss API (`/json/controls/policyLayers/urls`) to add the IP to
+    the specified block list with the provided configuration (priority, direction,
+    ports, etc.).
 
-    5. **External Mutation**: For each valid IP entity, it sends a request to the
-    iBoss API to add the IP to the specified policy category with the defined priority,
-    direction, and ports.
+    5. **Entity Update**: Upon successful execution, the action updates the entity's
+    `additional_properties` with the `policy_blocked` flag and marks the entity as
+    enriched (`is_enriched = True`).
 
-    6. **Internal Enrichment**: Upon successful blocking, it updates the entity in
-    Google SecOps by adding the property `IBOSS_policy_blocked: True` and marking
-    it as enriched.
+    6. **SOAR Update**: Finally, the action calls `siemplify.update_entities` to persist
+    these changes within the SOAR platform.
 
-    7. **Completion**: Updates all processed entities and returns a summary message
-    of successful and failed operations.
+
+    ### Additional Notes
+
+    This action requires valid iBoss API credentials. The action supports optional
+    parameters such as Start Port, End Port, Note, and a flag to treat the IP as a
+    Regular Expression. If the API call fails for a specific entity, the action logs
+    the error and continues processing remaining entities.
+  ai_short_description: >-
+    Adds an IP address to a specific policy block list in the iBoss security platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: true
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: >-
-      Adds IP addresses to the active filtering policy categories within the iBoss
-      cloud gateway, effectively blocking traffic based on the provided parameters.
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates the 'additional_properties' of the IP entities to include a 'policy_blocked'
-      flag and marks the entities as enriched.
-  categories:
-    enrichment: false
+      Adds the IP address to the specified policy block list in the iBoss system via
+      a PUT request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a PUT request to an external system (iBoss) to modify block
+      list configurations (external mutation). It also updates the SOAR entity's internal
+      properties (is_enriched, additional_properties) using `siemplify.update_entities`.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -114,76 +107,113 @@ Add IP to Policy Block List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters specifically
+      for entities where `entity.entity_type == EntityTypes.ADDRESS`. It does not
+      filter by other attributes like creation time, modification time, or specific
+      internal flags.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a PUT request to the iBoss API to add an IP address to a
+      block list. This directly matches the 'Add IOC To Blocklist' outcome category.
+      It does not perform enrichment (fetching reputation data), nor does it perform
+      other containment or ticketing actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Category ID | String | Yes | Specify to which policy category you want to add
+    the IP. |
+
+    | Priority | String | Yes | Specify priority of the IP that needs to be blocked.
+    |
+
+    | Direction | ddl | Yes | Specify what is the direction of the IP (Destination,
+    Source, Destination and Source). |
+
+    | Start Port | String | No | Specify the start port related to the IP. If only
+    Start or End Port is specified, the value is added to both. |
+
+    | End Port | String | No | Specify the end port related to the IP. If only Start
+    or End Port is specified, the value is added to both. |
+
+    | Note | String | No | Add a note related to the IP that needs to be blocked.
+    |
+
+    | Is Regular Expression | Boolean | No | If enabled, the IP will be considered
+    as a regular expression. |
 Add URL to Policy Block List:
   ai_description: >-
     ### General Description
 
-    This action adds URL and Hostname entities to a specified iBoss Policy Block List
-    category. It enables automated containment by blocking access to malicious web
-    destinations. The action validates the category type before attempting the block
-    and enriches the entities in Google SecOps to reflect their blocked status.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Category ID | Integer | Yes | The unique identifier of the iBoss policy category
-    where the URL will be added. |
-
-    | Priority | Integer | Yes | The priority level assigned to this block entry.
-    |
-
-    | Direction | String | Yes | Specifies the traffic direction: 'Destination', 'Source',
-    or 'Destination and Source'. |
-
-    | Start Port | Integer | No | The starting port for the block rule. |
-
-    | End Port | Integer | No | The ending port for the block rule. |
-
-    | Note | String | No | A descriptive note to be attached to the block entry in
-    iBoss. |
-
-    | Is Regular Expression | Boolean | No | If enabled, the URL identifier will be
-    treated as a regular expression. |
-
-    | Strip Scheme | Boolean | No | If enabled, the action will remove the protocol
-    scheme (e.g., http://) from the URL. |
-
-
-    ### Additional Notes
-
-    - The action specifically targets URL and Hostname entities.
-
-    - If the provided Category ID does not belong to a 'Block List' type in iBoss,
-    the action will return a failure.
-
-    - The action updates the entity's additional properties with a 'policy_blocked'
-    flag.
+    This action adds a specified URL or Hostname to an iBoss policy block list. It
+    allows security analysts to enforce network-level blocking for malicious indicators
+    directly from the SOAR platform, ensuring that traffic to the specified URL is
+    restricted according to the configured policy category.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action initializes the iBoss manager using the provided
-    API roots and credentials to obtain an authentication token.
+    1. The action extracts configuration parameters (API roots, credentials) and action
+    parameters (Category ID, Priority, Direction, etc.).
 
-    2. **Category Validation**: It verifies that the target `Category ID` is configured
-    as a block list in the iBoss settings via a GET request.
+    2. It initializes the `IBossManager` to handle API communication.
 
-    3. **Entity Filtering**: It identifies suitable entities (URLs and Hostnames)
-    from the target list.
+    3. It performs a GET request to validate that the provided `Category ID` is associated
+    with a block list.
 
-    4. **URL Preparation**: For each entity, it optionally strips the scheme and prepares
-    the payload based on the provided parameters (priority, direction, ports, regex
-    flag).
+    4. It iterates through the target entities, filtering for `URL` and `HOSTNAME`
+    types.
 
-    5. **External Mutation**: It sends a PUT request to the iBoss API to add the entity
-    to the policy block list.
+    5. For each valid entity, it performs a PUT request to the iBoss API to add the
+    URL to the specified policy block list.
 
-    6. **Internal Enrichment**: Upon success, it updates the entity in Google SecOps
-    by setting `is_enriched` to true and adding the `IBOSS_policy_blocked` property.
+    6. Upon success, it updates the entity within the SOAR platform by setting `is_enriched`
+    to true and adding a `policy_blocked` enrichment property.
+
+    7. Finally, it updates the entities in the SOAR platform and returns a summary
+    of the operation.
+
+
+    ### Additional Notes
+
+    - The action supports optional parameters like `Start Port`, `End Port`, `Note`,
+    `Is Regular Expression`, and `Strip Scheme` to refine the block list entry.
+
+    - If the `Category ID` is not a block list, the action will fail with a `ListIsNotBlockListException`.
+
+    - The action updates the entity's `additional_properties` with the `policy_blocked`
+    flag to track the blocking status within the case.
+  ai_short_description: >-
+    Adds a URL or Hostname to an iBoss policy block list to restrict network traffic.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -192,18 +222,52 @@ Add URL to Policy Block List:
     can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: >-
-      Adds a URL or Hostname entry to a specified policy block list category in the
-      iBoss web gateway via a PUT request.
+      Adds the URL to the iBoss policy block list.
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates the entity's additional properties with 'IBOSS_policy_blocked: True'
-      and sets the 'is_enriched' status to true.
-  categories:
-    enrichment: false
+      Updates entity properties (adds enrichment data and sets is_enriched to true)
+      and saves these changes to the SOAR platform.
+    reasoning: >-
+      The action fetches data (validates block list via GET) and mutates external
+      data (adds URL to block list via PUT). It also mutates internal data by updating
+      entity properties and calling `siemplify.update_entities`.
   entity_usage:
     entity_types:
-    - DestinationURL
-    - HOSTNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -217,73 +281,140 @@ Add URL to Policy Block List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-List Policy Block List Entries:
-  ai_description: >-
-    ### General Description
-
-    This action retrieves and lists entries (URLs or IP addresses) from a specific
-    iBoss Block List category. It is used to audit or verify the contents of a policy
-    group within the iBoss platform. The action validates that the provided Category
-    ID is indeed a block list before fetching the data, ensuring that only relevant
-    policy information is processed.
-
-
-    ### Parameters Description
-
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.URL or entity.entity_type == EntityTypes.HOSTNAME`. Therefore,
+      it targets URL and Hostname entities, filtering by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a PUT request to add a URL to an iBoss policy block list,
+      which directly matches the 'Add IOC To Blocklist' category. It does not return
+      threat intelligence (enrichment) or perform other listed actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Category ID | String/Integer | Yes | The unique identifier for the iBoss policy
-    category from which to retrieve block list entries. |
+    | Category ID | String | Yes | Specify to which policy category you want to add
+    the URL. |
 
-    | Max Entries to Return | Integer | No | The maximum number of entries to fetch
-    and display. Defaults to 50 if not specified. |
+    | Priority | String | Yes | Specify priority of the URL that needs to be blocked.
+    |
 
+    | Direction | DDL | Yes | Specify what is the direction of the URL (Destination,
+    Source, Destination and Source). |
 
-    ### Additional Notes
+    | Start Port | String | No | Specify the start port related to the URL. If only
+    Start or End Port is specified, the value is added to both. |
 
-    - If the provided Category ID is not associated with a Block List in iBoss, the
-    action will terminate gracefully with a message stating the category type mismatch.
+    | End Port | String | No | Specify the end port related to the URL. If only Start
+    or End Port is specified, the value is added to both. |
 
-    - The results are presented both as a raw JSON object and as a formatted data
-    table on the case wall.
+    | Note | String | No | Add a note related to the URL that needs to be blocked.
+    |
 
+    | Is Regular Expression | Boolean | No | If enabled, URL will be considered as
+    a regular expression. |
 
-    ### Flow Description
-
-    1. **Authentication**: The action connects to the iBoss API using the configured
-    Cloud and Account API roots and credentials.
-
-    2. **Category Validation**: It performs a check against the iBoss settings API
-    to confirm that the `Category ID` provided by the user corresponds to a Block
-    List.
-
-    3. **Data Fetching**: Upon validation, it queries the iBoss policy layers to retrieve
-    the list of blocked entries (URLs/IPs) for that category.
-
-    4. **Result Slicing**: The retrieved list is truncated to match the `Max Entries
-    to Return` parameter.
-
-    5. **Output Generation**: The action attaches a data table to the case wall containing
-    details such as URL/IP, Priority, Weight, Direction, and Ports, and provides the
-    full raw data in the JSON result.
+    | Strip Scheme | Boolean | No | If enabled, action will strip the scheme related
+    to the URL. |
+List Policy Block List Entries:
+  ai_description: "### General Description\nRetrieves a list of block list entries\
+    \ from a specified iBoss policy category. This action allows analysts to view\
+    \ the current configuration of block lists within the iBoss environment, facilitating\
+    \ the auditing of blocked URLs or IPs.\n\n### Flow Description\n1. **Parameter\
+    \ Extraction**: The action extracts the required configuration parameters (API\
+    \ credentials, API roots) and action parameters (Category ID, Max Entries to Return).\n\
+    2. **Manager Initialization**: An `IBossManager` instance is initialized with\
+    \ the provided credentials to handle API communication.\n3. **Validation**: The\
+    \ action calls the `validate_if_block_list` method to ensure the specified `Category\
+    \ ID` corresponds to a valid block list.\n4. **Data Retrieval**: The action calls\
+    \ the `list_policy_block_list_entries` method to fetch the block list entries\
+    \ from the iBoss API.\n5. **Result Processing**: \n    - If entries are found,\
+    \ the action adds the raw JSON data to the result and constructs a CSV data table\
+    \ for the case wall.\n    - If no entries are found, an appropriate message is\
+    \ logged.\n\n### Additional Notes\nThis action is read-only and does not modify\
+    \ any configurations or security policies. It requires valid iBoss API credentials\
+    \ to authenticate and retrieve data."
+  ai_short_description: >-
+    Retrieves and lists block list entries from a specific iBoss policy category.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds a data table to the case wall containing the list of entries
-      retrieved from the iBoss Block List.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the iBoss API (fetches_data=true). It does not
+      mutate external data, update entities, create insights, or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -297,61 +428,84 @@ List Policy Block List Entries:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates based on input parameters (Category ID and Max Entries)
+      and does not interact with or filter any target entities from the SOAR case.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration data (block list entries) from an external
+      system. It does not perform enrichment, alert updates, ticket management, or
+      containment actions. Therefore, it does not match any of the defined outcome
+      categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Category ID | String | Yes | Specify in which policy category do you want to
+    list Block List entries. |
+
+    | Max Entries to Return | String | Yes | Specify how many entries to return. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic tool designed to verify the connectivity between
-    Google SecOps and the IBoss server. It ensures that the provided integration configuration
-    parameters (API roots and credentials) are correct and that the IBoss API is reachable.
-
-
-    ### Parameters Description
-
-    This action does not take any action-specific input parameters. It relies entirely
-    on the **Integration Configuration** parameters:
-
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Cloud API Root | String | Yes | The base URL for the IBoss Cloud API. |
-
-    | Account API Root | String | Yes | The base URL for the IBoss Account API. |
-
-    | Username | String | Yes | The username for the IBoss account. |
-
-    | Password | String | Yes | The password for the IBoss account. |
-
-    | Verify SSL | Boolean | No | If enabled (default), the action verifies the SSL
-    certificate of the IBoss server. |
+    Tests connectivity to the iBoss server using the provided configuration parameters.
+    This action verifies that the integration is correctly configured and can successfully
+    communicate with the iBoss API.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the connection details (API
-    roots, credentials, and SSL settings) from the integration configuration.
+    1. The action extracts the required configuration parameters: `Cloud API Root`,
+    `Account API Root`, `Username`, `Password`, and `Verify SSL` from the integration
+    settings.
 
-    2. **Authentication Flow:** The IBoss Manager is initialized, which triggers a
-    multi-step authentication process:
-        * Retrieves an authentication token using the provided credentials.
-        * Fetches account settings and session identifiers.
-        * Establishes a session cookie for subsequent requests.
-    3. **Connectivity Test:** The action sends a GET request to the IBoss `/json/preferences/time`
-    endpoint to confirm the API is responsive.
+    2. It initializes the `IBossManager` using these credentials to establish a session.
 
-    4. **Result Reporting:** If the request is successful, the action completes with
-    a success message. If any step fails (authentication or network request), it logs
-    the error and reports a failure.
+    3. The action calls the `test_connectivity` method, which performs an HTTP GET
+    request to the iBoss API ping endpoint (`/json/preferences/time`).
+
+    4. The response is validated to ensure the server is reachable and the credentials
+    are valid.
+
+    5. The action logs the success or failure of the connection and terminates with
+    the appropriate execution status.
 
 
     ### Additional Notes
 
-    * This action does not process any entities.
-
-    * It is primarily used during the initial setup of the integration or for troubleshooting
-    connection issues.
+    This action is intended for troubleshooting and verifying the integration setup.
+    It does not perform any data enrichment or state-changing operations.
+  ai_short_description: >-
+    Tests connectivity to the iBoss server to verify integration configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -362,10 +516,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a GET request to the iBoss API to verify connectivity. It
+      does not mutate any external or internal data, nor does it update entities or
+      create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -379,82 +570,146 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action is a standalone connectivity test and does not interact with or filter
+      any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any of the defined outcome
+      operations such as enrichment, blocking, or ticketing.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Cloud API Root | String | Yes | The base URL for the iBoss Cloud API. |
+
+    | Account API Root | String | Yes | The base URL for the iBoss Account API. |
+
+    | Username | String | Yes | The username for the iBoss account. |
+
+    | Password | String | Yes | The password for the iBoss account. |
+
+    | Verify SSL | Boolean | No | If enabled, verifies the SSL certificate for the
+    connection to the iBoss server. Defaults to True. |
 Remove IP from Policy Block List:
   ai_description: >-
     ### General Description
 
-    Removes IP Address entities from a specified policy blocklist within the iBoss
-    platform. This action is used to manage network access by reversing previous blocking
-    actions or cleaning up policy categories during incident response.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Category ID | String | Yes | The unique identifier of the iBoss policy category
-    from which the IP should be removed. |
-
-    | Start Port | Integer | No | The starting network port associated with the IP
-    entry to be deleted. This is required if the original block entry in iBoss was
-    defined with a specific start port. |
-
-    | End Port | Integer | No | The ending network port associated with the IP entry
-    to be deleted. This is required if the original block entry in iBoss was defined
-    with a specific end port. |
-
-
-    ### Additional Notes
-
-    - The action first validates that the provided Category ID is actually associated
-    with a blocklist in iBoss before attempting any removals.
-
-    - If an IP was blocked with specific port constraints, those same ports must be
-    provided to successfully identify and remove the entry due to iBoss API limitations.
+    Removes an IP address from a specific policy block list in the iBoss security
+    platform. This action allows security analysts to manage network access controls
+    directly from the SOAR platform by removing restricted IP addresses from defined
+    policy categories.
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts iBoss configuration (API roots, credentials) and
-    action parameters (Category ID, Ports).
+    1. The action extracts configuration parameters (Cloud API Root, Account API Root,
+    Username, Password, Verify SSL) and action parameters (Category ID, Start Port,
+    End Port).
 
-    2. **Validation**: Calls the iBoss API to verify that the specified Category ID
-    exists and is configured as a blocklist.
+    2. It filters the target entities to identify those of type `ADDRESS`.
 
-    3. **Entity Filtering**: Identifies all IP Address entities (ADDRESS) from the
-    target entities list.
+    3. It initializes the `IBossManager` and performs a GET request to validate that
+    the provided `Category ID` corresponds to a valid block list.
 
-    4. **External Mutation**: For each valid IP entity, sends a DELETE request to
-    the iBoss API to remove the IP and port combination from the specified policy
-    category.
+    4. For each identified IP entity, the action executes a DELETE request via the
+    `IBossManager` to remove the IP from the specified iBoss block list.
 
-    5. **Internal Mutation**: Updates the entity's additional properties in Google
-    SecOps, setting the 'IBOSS_policy_blocked' field to 'False' and marking the entity
-    as enriched.
+    5. Upon successful removal, the action updates the entity's `additional_properties`
+    by setting `policy_blocked` to "False" and marks the entity as enriched.
 
-    6. **Completion**: Updates all processed entities in the case and returns a summary
-    message of successful and failed removals.
+    6. Finally, it updates the entities within the SOAR platform and returns a summary
+    of the operation.
+
+
+    ### Additional Notes
+
+    This action requires valid iBoss credentials and a valid Category ID. The `Start
+    Port` and `End Port` parameters are optional but may be mandatory depending on
+    the specific block list configuration in iBoss.
+  ai_short_description: >-
+    Removes an IP address from a specified policy block list in the iBoss security
+    platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: true
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: >-
-      The action performs a DELETE request to the iBoss API to remove an IP address
-      entry from a specific policy blocklist category.
-    fetches_data: false
-    internal_data_mutation_explanation: >-
-      The action updates the 'additional_properties' of the entities to set 'IBOSS_policy_blocked'
-      to 'False' and marks the entities as enriched.
-  categories:
-    enrichment: false
+      Removes the IP address from the iBoss policy block list.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data to validate the block list (GET request) and mutates
+      external data by removing an IP from the block list (DELETE request). It also
+      updates internal entities with enrichment data.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -468,74 +723,95 @@ Remove IP from Policy Block List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering by
+      entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a DELETE request to remove an IP from an iBoss block list.
+      This directly matches the 'Remove IOC From Blocklist' outcome. It also performs
+      a GET request to validate the category, but the primary purpose is the removal.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Category ID | String | Yes | Specify from which policy category do you want
+    to remove IP. |
+
+    | Start Port | String | No | Specify start port related to the IP that needs to
+    be deleted. This parameter is mandatory, if the desired URL has a defined start
+    port. This is an IBoss limitation. |
+
+    | End Port | String | No | Specify end port related to the IP that needs to be
+    deleted. This parameter is mandatory, if the desired IP has a defined end port.
+    This is an IBoss limitation. |
 Remove URL from Policy Block List:
   ai_description: >-
     ### General Description
 
-    This action removes URL or Hostname entities from a specified iBoss Policy Block
-    List. It is used to programmatically unblock web destinations that were previously
-    restricted within the iBoss secure web gateway. The action validates the category
-    type before attempting removal and updates the entity's status within Google SecOps
-    to reflect the change.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Category ID | Integer | Yes | The unique identifier of the iBoss policy category
-    from which the URL should be removed. |
-
-    | Start Port | Integer | No | The starting port associated with the URL entry.
-    This is required if the original block entry was defined with a specific start
-    port. |
-
-    | End Port | Integer | No | The ending port associated with the URL entry. This
-    is required if the original block entry was defined with a specific end port.
-    |
-
-    | Strip Scheme | Boolean | No | If set to `True`, the action removes the protocol
-    prefix (e.g., `http://` or `https://`) from the entity identifier before sending
-    the request to iBoss. |
-
-
-    ### Additional Notes
-
-    - **iBoss Limitation:** The `Start Port` and `End Port` parameters are technically
-    optional in the UI but may be mandatory for the API call to succeed if the URL
-    was originally blocked with specific port constraints.
-
-    - **Validation:** The action explicitly checks if the provided `Category ID` is
-    associated with a 'Block List' type in iBoss; if it is not, the action will stop
-    to prevent configuration errors.
+    Removes a URL from a specific policy block list in the iBoss system. This action
+    allows security analysts to manage block list entries by removing URLs that are
+    no longer required to be blocked.
 
 
     ### Flow Description
 
-    1. **Initialization:** The action extracts iBoss credentials and configuration
-    from the integration settings and retrieves the action-specific parameters.
+    1. Extracts configuration parameters (API credentials) and action parameters (Category
+    ID, ports, scheme stripping).
 
-    2. **Category Validation:** It calls the iBoss API to verify that the target `Category
-    ID` is a valid blocklist.
+    2. Filters `target_entities` to include only `URL` and `HOSTNAME` types.
 
-    3. **Entity Filtering:** The action identifies all `URL` and `HOSTNAME` entities
-    within the current context.
+    3. Validates that the specified category ID corresponds to a block list using
+    the iBoss API.
 
-    4. **Normalization:** For each entity, it optionally strips the URI scheme (if
-    `Strip Scheme` is enabled) and converts the identifier to lowercase to match iBoss's
-    storage format.
+    4. Iterates through the filtered entities.
 
-    5. **External Deletion:** It executes a `DELETE` request to the iBoss API for
-    each entity to remove it from the specified policy category.
+    5. Optionally strips the URL scheme based on the `Strip Scheme` parameter.
 
-    6. **Internal Enrichment:** Upon successful removal from iBoss, the action updates
-    the entity in Google SecOps by adding an `IBOSS_policy_blocked` property set to
-    `False` and marking the entity as enriched.
+    6. Calls the iBoss API (`DELETE` request) to remove the URL from the specified
+    block list.
 
-    7. **Finalization:** The action provides a summary message of successfully removed
-    entities and any failures encountered during the process.
+    7. Updates the entity's `additional_properties` to reflect that it is no longer
+    blocked and marks it as enriched.
+
+    8. Updates the entities in the SOAR platform.
+
+
+    ### Additional Notes
+
+    Requires valid iBoss API credentials. The `Start Port` and `End Port` parameters
+    are mandatory if the URL has defined ports in iBoss.
+  ai_short_description: >-
+    Removes a URL from a specified policy block list in the iBoss system.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -544,18 +820,52 @@ Remove URL from Policy Block List:
     can_mutate_internal_data: true
     can_update_entities: true
     external_data_mutation_explanation: >-
-      The action performs a DELETE request to the iBoss API to remove a URL or Hostname
-      entry from a specific policy blocklist.
+      Removes the URL from the iBoss policy block list.
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action updates entity 'additional_properties' with the key 'IBOSS_policy_blocked'
-      set to 'False' and sets the 'is_enriched' flag to true.
-  categories:
-    enrichment: false
+      Updates entity `additional_properties` and `is_enriched` status within the SOAR
+      platform.
+    reasoning: >-
+      The action performs a DELETE request to the iBoss API to remove a URL from a
+      blocklist (external mutation). It also updates entity properties and calls `siemplify.update_entities`
+      (internal mutation). It performs a GET request to validate the blocklist (fetches_data).
   entity_usage:
     entity_types:
-    - DestinationURL
-    - HOSTNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -569,59 +879,94 @@ Remove URL from Policy Block List:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-URL Lookup:
-  ai_description: >-
-    ### General Description
-
-    Enriches URL and Hostname entities by querying the iBoss platform to retrieve
-    categorization, policy actions, and status messages. This action helps security
-    analysts understand how a specific URL or Hostname is classified within their
-    web gateway policy and what action (e.g., allow, block) is currently associated
-    with it.
-
-
-    ### Parameters Description
-
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.URL or entity.entity_type == EntityTypes.HOSTNAME`. This means
+      it targets URL and HOSTNAME entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a DELETE request to the iBoss API to remove a URL from a
+      blocklist. This directly aligns with the 'Remove IOC From Blocklist' expected
+      outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Group ID | String | No | Specifies the group for which to perform the URL lookup.
-    If left empty, the "Default" group will be used by the iBoss platform. |
+    | Category ID | String | Yes | Specify from which policy category do you want
+    to remove the URL. |
 
+    | Start Port | String | No | Specify start port related to the URL that needs
+    to be deleted. Mandatory if the URL has a defined start port. |
 
-    ### Additional Notes
+    | End Port | String | No | Specify end port related to the URL that needs to be
+    deleted. Mandatory if the URL has a defined end port. |
 
-    - The action specifically targets entities of type **URL** (mapped to DestinationURL)
-    and **HOSTNAME**.
-
-    - It updates the entity's additional properties with the prefix `IBOSS`.
-
-    - If a lookup is successful, the entity is marked as enriched in the Google SecOps
-    environment.
+    | Strip Scheme | Boolean | No | If enabled, action will strip the scheme related
+    to the URL. |
+URL Lookup:
+  ai_description: >-
+    Performs a URL lookup against the iBoss service to retrieve categorization, policy,
+    and reputation information for specified entities. This action allows analysts
+    to verify the security posture of URLs or hostnames within the iBoss environment.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts integration configuration (API roots,
-    credentials) and the optional `Group ID` parameter.
+    1. The action extracts configuration parameters including API roots, credentials,
+    and SSL verification settings.
 
-    2. **Entity Filtering**: It identifies all `URL` and `HOSTNAME` entities within
-    the current alert or case context.
+    2. It extracts the optional `Group ID` parameter to specify the lookup context.
 
-    3. **External Query**: For each identified entity, it sends a lookup request to
-    the iBoss `url_lookup` endpoint, optionally including the `Group ID` to contextualize
-    the policy check.
+    3. It filters the target entities, processing only those of type `URL` or `HOSTNAME`.
 
-    4. **Data Processing**: The response from iBoss (containing categories, actions,
-    and messages) is parsed and converted into a flat dictionary format.
+    4. For each valid entity, the action calls the `manager.url_lookup` method, which
+    performs a POST request to the iBoss API.
 
-    5. **Internal Update**: The action updates the entity's `additional_properties`
-    with the retrieved data, sets the `is_enriched` flag to `True`, and attaches the
-    raw JSON result to the action output.
+    5. The retrieved data (categories, action, message) is parsed and added to the
+    entity's `additional_properties`.
 
-    6. **Completion**: It provides a summary message indicating which entities were
-    successfully enriched and which failed.
+    6. The action marks the entities as enriched (`is_enriched = True`) and updates
+    them in the SOAR platform using `siemplify.update_entities`.
+
+    7. The results are returned as a JSON object for display in the SOAR interface.
+
+
+    ### Additional Notes
+
+    This action requires valid iBoss API credentials. If no `Group ID` is provided,
+    the "Default" group is used. The action does not modify external system state;
+    it is strictly an enrichment and data retrieval operation.
+  ai_short_description: >-
+    Performs a URL lookup against the iBoss service to retrieve categorization and
+    policy information for URL and Hostname entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -632,14 +977,50 @@ URL Lookup:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity 'additional_properties' with iBoss categorization and policy
-      data, and sets the 'is_enriched' flag to true.
-  categories:
-    enrichment: true
+      Updates entity additional_properties and sets is_enriched status within the
+      SOAR platform.
+    reasoning: >-
+      The action fetches data from the iBoss API (fetches_data=true). It updates the
+      entity's additional properties and marks it as enriched within the SOAR platform
+      (can_mutate_internal_data=true, can_update_entities=true). It does not mutate
+      external data.
   entity_usage:
     entity_types:
-    - DestinationURL
-    - HOSTNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -653,56 +1034,78 @@ URL Lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == EntityTypes.URL or entity.entity_type == EntityTypes.HOSTNAME`. This means
+      it targets URL and Hostname entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves categorization and policy information for URLs and Hostnames
+      from the iBoss service. This matches the 'Enrich IOC' expected outcome. It does
+      not perform any blocking, ticketing, or other state-changing operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Group ID | String | No | Specify for which group to perform\
+    \ a URL Lookup. If nothing is specified, \u201CDefault\u201D group will be used.\
+    \ |"
 URL Recategorization:
   ai_description: >-
     ### General Description
 
-    Submits URL entities to the iBoss platform for recategorization. This action is
-    used to request a change in how a specific URL is classified within the iBoss
-    web gateway security policies, which is useful for correcting misclassifications
-    or updating threat intelligence.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It utilizes the global
-    integration configuration parameters:
-
-    * **Cloud API Root**: The root URL for the iBoss Cloud API.
-
-    * **Account API Root**: The root URL for the iBoss Account API.
-
-    * **Username**: The username for authentication.
-
-    * **Password**: The password for authentication.
-
-    * **Verify SSL**: Boolean flag to enable/disable SSL certificate verification.
-
-
-    ### Additional Notes
-
-    This action performs a state-changing operation on the external iBoss system by
-    submitting a recategorization request. It does not return enrichment data to the
-    SOAR case but rather triggers an external workflow in iBoss.
+    Submits a URL to the iBoss system for recategorization. This action allows security
+    analysts to request a change in how a specific URL is categorized by the iBoss
+    web gateway, which can influence security policies and filtering rules.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the iBoss Manager using the provided
-    API roots and credentials from the integration configuration.
+    1. The action initializes the `IBossManager` using the provided API credentials
+    (Cloud API Root, Account API Root, Username, Password).
 
-    2. **Entity Filtering**: It identifies and filters the target entities to process
-    only those of type URL.
+    2. It filters the `target_entities` to identify those of type `URL`.
 
-    3. **Submission**: For each URL entity, it calls the `url_recategorization` method
-    in the iBoss Manager, which sends a POST request to the `/json/controls/urlLookup/recatSite`
-    endpoint.
+    3. For each identified URL entity, the action calls the `url_recategorization`
+    method.
 
-    4. **Result Tracking**: The action maintains lists of successfully submitted and
-    failed URLs.
+    4. The `url_recategorization` method performs an HTTP POST request to the iBoss
+    API endpoint `/json/controls/urlLookup/recatSite` with the URL as the payload.
 
-    5. **Final Reporting**: It generates a summary message detailing the success or
-    failure of the submission for each entity and sets the action's execution status.
+    5. The action logs the success or failure of each submission and provides a summary
+    in the output message.
+
+
+    ### Additional Notes
+
+    This action requires valid iBoss API credentials and network connectivity to the
+    iBoss cloud infrastructure.
+  ai_short_description: >-
+    Submits a URL to the iBoss system for recategorization.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -711,15 +1114,51 @@ URL Recategorization:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Submits a request to the iBoss platform to change the category classification
-      of a specific URL.
+      Submits a URL for recategorization to the iBoss system, which changes the categorization
+      state of the URL in the external system.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST request to the iBoss API to submit a URL for recategorization.
+      This is a state-changing operation on the external system (can_mutate_external_data=true).
+      It does not fetch data, update internal entities, or create insights.
   entity_usage:
     entity_types:
-    - DestinationURL
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -733,3 +1172,53 @@ URL Recategorization:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.URL`. This means it targets URL entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action submits a URL for recategorization to the iBoss system. This does
+      not match any of the provided outcome categories (e.g., Enrich IOC, Blocklist,
+      etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Cloud API Root | String | Yes | The base URL for the iBoss Cloud API. |
+
+    | Account API Root | String | Yes | The base URL for the iBoss Account API. |
+
+    | Username | String | Yes | The username for the iBoss account. |
+
+    | Password | String | Yes | The password for the iBoss account. |
+
+    | Verify SSL | Boolean | No | Whether to verify the SSL certificate for the connection.
+    Defaults to True. |

@@ -1,51 +1,34 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity to the DeepSight API to ensure that the integration can
-    communicate with the service successfully. This action is primarily used for troubleshooting
-    and verifying that the provided API key and network settings (like SSL) are correctly
-    configured.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action uses a hardcoded IP address (8.8.8.8) to perform a test scan against
-    the DeepSight API. It does not process any entities from the Google SecOps case.
+    Tests connectivity to the DeepSight API to verify that the integration is correctly
+    configured and communicating with the external service. This action performs a
+    sample API request to ensure authentication and network reachability are functional.
 
 
     ### Flow Description
 
-    1. **Initialize Manager**: The action retrieves the API Key and SSL configuration
-    from the integration settings and initializes the DeepSightManager.
+    1. Retrieves the integration configuration, specifically the `ApiKey` and `Use
+    SSL` settings, from the DeepSight integration settings.
 
-    2. **Test Connectivity**: It executes the `test_connectivity` method, which sends
-    a GET request to the DeepSight IP scan endpoint for the address '8.8.8.8'.
+    2. Initializes the `DeepSightManager` with the retrieved credentials and SSL configuration.
 
-    3. **Validate Response**: The manager validates the HTTP response to ensure the
-    API key is valid and the service is reachable.
+    3. Executes the `test_connectivity` method, which triggers a GET request to the
+    DeepSight API using a hardcoded test IP address (8.8.8.8).
 
-    4. **Finalize**: If the request is successful, the action concludes with a success
-    message indicating that the connection was established.
+    4. Validates the API response to confirm successful communication.
+
+    5. Terminates the action with a success message if the connectivity test passes.
+
+
+    ### Additional Notes
+
+    This action is intended for administrative verification of the integration setup.
+    It does not process any entities from the case and does not perform any data enrichment
+    or state changes.
+  ai_short_description: >-
+    Tests connectivity to the DeepSight API to verify integration configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -56,10 +39,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a GET request to the DeepSight API to test connectivity
+      (fetches_data=true). It does not mutate any external or internal data, nor does
+      it update entities or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -73,37 +93,78 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It performs a hardcoded connectivity
+      test against a static IP address (8.8.8.8) to verify API access.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any of the defined functional
+      outcomes such as enrichment, ticketing, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 Scan Domain:
   ai_description: >-
-    Enriches Hostname, URL, and User entities by performing a domain reputation scan
-    using Symantec DeepSight. The action extracts the domain from the provided entities
-    and retrieves detailed information, including WHOIS data (registrar, creation/expiration
-    dates, organization) and whitelist status.
+    ### General Description
 
-
-    ### Parameters
-
-    There are no parameters for this action.
+    Enriches User, Hostname, and URL entities by scanning their associated domains
+    using the DeepSight threat intelligence service. This action retrieves threat
+    intelligence for domains and updates the target entities with the gathered information.
 
 
     ### Flow Description
 
-    1. **Domain Extraction**: Iterates through target entities and extracts the domain
-    name. For User entities, it attempts to parse the domain from the username. For
-    Hostname and URL entities, it extracts the domain part.
+    1. Initialize `DeepSightManager` with the provided API key and SSL configuration.
 
-    2. **External Lookup**: Queries the Symantec DeepSight API's domain endpoint for
-    each extracted domain using a GET request.
+    2. Iterate through the target entities.
 
-    3. **Data Processing**: Flattens the resulting JSON data and adds a 'DeepSight'
-    prefix to the keys for better organization.
+    3. For `USER` entities, extract the domain using `get_domain` or `get_domain_from_entity`.
 
-    4. **Internal Enrichment**: Updates the entity's additional properties with the
-    flattened data, marks the entity as enriched, and attaches a CSV-formatted data
-    table to the entity in the Google SecOps interface.
+    4. For `HOSTNAME` or `URL` entities, extract the domain using `get_domain_from_entity`.
 
-    5. **Final Update**: Commits the changes to the entities within the Google SecOps
-    environment and provides a summary message of enriched entities.
+    5. If a domain is successfully extracted, call `deepsight_manager.scan_domain(domain)`
+    to retrieve threat intelligence.
+
+    6. If scan results are returned, update the entity's `additional_properties` with
+    the results (prefixed with "DeepSight") and mark the entity as enriched.
+
+    7. Add the scan results as a table to the entity and as a JSON result to the action
+    output.
+
+    8. Update the entities in the SOAR platform.
+
+
+    ### Additional Notes
+
+    Requires a valid DeepSight API key.
+  ai_short_description: >-
+    Enriches User, Hostname, and URL entities by scanning their associated domains
+    using the DeepSight threat intelligence service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -114,15 +175,49 @@ Scan Domain:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action updates entity additional properties with domain intelligence data
-      retrieved from DeepSight and sets the 'is_enriched' flag to true.
-  categories:
-    enrichment: true
+      Updates entity `additional_properties` with scan results and marks entities
+      as enriched within the SOAR platform.
+    reasoning: >-
+      The action fetches data from DeepSight (GET request) and updates the entities
+      within the SOAR platform with the retrieved information. It does not mutate
+      external systems.
   entity_usage:
     entity_types:
-    - HOSTNAME
-    - DestinationURL
-    - USERUNIQNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -136,69 +231,137 @@ Scan Domain:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters for `USER`, `HOSTNAME`,
+      and `URL` entity types. It does not filter by other attributes like creation
+      time or case identifier.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence for domains, which is an enrichment
+      of IOCs. Since it also applies this context to User and Hostname entities, it
+      also qualifies as asset enrichment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | ApiKey | String | Yes | DeepSight API Key |
+
+    | Use SSL | String | Yes | Whether to use SSL for API connections (e.g., "true"
+    or "false") |
 Scan Email:
   ai_description: >-
     ### General Description
 
-    The **Scan Email** action enriches User entities by querying Symantec DeepSight
-    for threat intelligence associated with an email address. This action retrieves
-    data such as report IDs, titles, and dates linked to the email, providing security
-    analysts with context on whether a user's email is associated with known threats
-    or malicious infrastructure.
-
-
-    ### Parameters Description
-
-    There are no input parameters for this action. It utilizes the global integration
-    configuration for the API Key and SSL verification settings.
-
-
-    ### Additional Notes
-
-    This action specifically targets entities of type **USER**. It uses the `get_email_address`
-    utility to extract the email string from the entity object before querying the
-    external service. If no email is found for a user entity, that entity is skipped.
+    Enriches User entities by scanning their associated email addresses using the
+    DeepSight service. This action retrieves threat intelligence for the email address
+    and updates the entity with the findings.
 
 
     ### Flow Description
 
-    1. **Initialization**: Connects to the DeepSight service using the configured
-    API Key and SSL settings from the integration configuration.
+    1. The action iterates through the target entities provided in the case.
 
-    2. **Entity Filtering**: Iterates through the target entities and filters for
-    those of type `USER`.
+    2. It filters for entities of type `USER`.
 
-    3. **Email Extraction**: For each user entity, it attempts to extract a valid
-    email address using the `get_email_address` utility.
+    3. For each user entity, it extracts the email address.
 
-    4. **External Lookup**: Queries the DeepSight `mati/emails` endpoint with the
-    extracted email address via a GET request.
+    4. It calls the DeepSight API (`scan_email_address`) to retrieve threat intelligence
+    for the email.
 
-    5. **Data Enrichment**: If a result is found, the action:
-        * Flattens the JSON response and adds a 'DeepSight' prefix to the keys.
-        * Updates the entity's `additional_properties` with the flattened data.
-        * Creates a CSV-formatted data table attached to the entity for visibility
-    in the SOAR UI.
-        * Marks the entity as `enriched`.
-    6. **Update and Result**: Updates all enriched entities within the Google SecOps
-    platform and returns the full aggregated JSON result set.
+    5. If data is retrieved, it updates the entity's `additional_properties` with
+    the scan results and marks the entity as enriched (`is_enriched = True`).
+
+    6. It adds an entity table with the scan results to the action output.
+
+    7. It updates the entities in the SOAR platform.
+
+
+    ### Additional Notes
+
+    This action requires a configured DeepSight integration with a valid API key.
+  ai_short_description: >-
+    Enriches User entities by scanning their associated email addresses using DeepSight
+    threat intelligence.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action updates entity additional properties with threat intelligence data
-      and adds data tables to the entities within the SOAR.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the DeepSight API to fetch threat intelligence.
+      It updates the entity's `additional_properties` and marks it as enriched, then
+      calls `siemplify.update_entities`. It does not mutate external data or create
+      insights.
   entity_usage:
     entity_types:
-    - USERUNIQNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -212,28 +375,64 @@ Scan Email:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.USER`. This means it targets USER entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence for an email address, which is an IOC.
+      This matches the 'Enrich IOC' expected outcome. It does not mutate data on external
+      systems, so it is not a Contain Host or Blocklist action.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 Scan File Name:
-  ai_description: "### General Description\nEnriches `FILENAME` entities using Symantec\
-    \ DeepSight threat intelligence. This action queries the DeepSight API to retrieve\
-    \ contextual information and threat data associated with specific filenames. The\
-    \ retrieved data is used to populate entity properties and provide visual data\
-    \ tables within the Google SecOps interface, aiding analysts in identifying potentially\
-    \ malicious files based on known intelligence.\n\n### Parameters\nThere are no\
-    \ parameters for this action.\n\n### Additional Notes\nThis action specifically\
-    \ targets entities of type `FILENAME`. It performs a read-only lookup and does\
-    \ not modify any data within the Symantec DeepSight platform.\n\n### Flow Description\n\
-    1. **Initialization**: The action initializes the DeepSight manager using the\
-    \ API Key and SSL configuration provided in the integration settings.\n2. **Entity\
-    \ Filtering**: It iterates through the target entities in the current context\
-    \ and filters for those with the type `FILENAME`.\n3. **Data Retrieval**: For\
-    \ each identified filename, it performs a GET request to the DeepSight `mati/files`\
-    \ endpoint.\n4. **Data Processing**: If intelligence data is found, the result\
-    \ is flattened and prefixed with 'DeepSight'.\n5. **Internal Enrichment**: \n\
-    \    *   Adds a data table to the entity containing the flattened results.\n \
-    \   *   Updates the entity's `additional_properties` with the threat intelligence\
-    \ data.\n    *   Marks the entity as `is_enriched`.\n6. **Final Update**: Updates\
-    \ all processed entities within the Google SecOps platform and returns a summary\
-    \ message along with the raw JSON results."
+  ai_description: "### General Description\nThis action enriches file name entities\
+    \ by querying the DeepSight API to retrieve threat intelligence and reputation\
+    \ data. It helps security analysts identify potentially malicious files by providing\
+    \ contextual information directly within the SOAR platform.\n\n### Flow Description\n\
+    1. **Initialization**: The action initializes the `DeepSightManager` using the\
+    \ provided API key and SSL configuration.\n2. **Entity Filtering**: It iterates\
+    \ through the `target_entities` provided in the case, filtering specifically for\
+    \ entities of type `FILENAME`.\n3. **API Interaction**: For each valid file name,\
+    \ the action performs a GET request to the DeepSight API (`/mati/files`) to fetch\
+    \ scan results.\n4. **Data Processing**: \n    - The retrieved data is flattened\
+    \ and prefixed with \"DeepSight\".\n    - An entity table is added to the action\
+    \ results for the specific file name.\n    - The entity's `additional_properties`\
+    \ are updated with the enrichment data, and the `is_enriched` flag is set to `True`.\n\
+    5. **Entity Update**: Finally, the action updates the enriched entities within\
+    \ the SOAR platform and adds a JSON summary of all results.\n\n### Additional\
+    \ Notes\nThis action requires a valid DeepSight API key configured in the integration\
+    \ settings. It does not perform any blocking or containment actions; it is strictly\
+    \ for enrichment purposes."
+  ai_short_description: >-
+    Enriches file name entities by retrieving threat intelligence and reputation data
+    from the DeepSight API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -244,13 +443,49 @@ Scan File Name:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with threat intelligence data and adds
-      entity tables for visualization.
-  categories:
-    enrichment: true
+      Updates entity additional_properties and sets the is_enriched flag to true.
+    reasoning: >-
+      The action fetches data from an external API (DeepSight) to enrich entities.
+      It updates internal entity data (additional_properties, is_enriched) within
+      the SOAR platform. It does not mutate external data (no POST/PUT/DELETE) or
+      modify alert/case data.
   entity_usage:
     entity_types:
-    - FILENAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: true
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -264,28 +499,83 @@ Scan File Name:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == EntityTypes.FILENAME`. It does not
+      filter by other attributes like creation time, modification time, or specific
+      properties.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence and reputation data for a file name
+      (an IOC) from an external service. This directly matches the 'Enrich IOC' category.
+      It does not perform any containment, ticketing, or alert modification actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | ApiKey | String | Yes | The API key used to authenticate with the DeepSight
+    service. |
+
+    | Use SSL | Boolean | Yes | Whether to use SSL/TLS for the connection to the DeepSight
+    API. |
 Scan Hash:
-  ai_description: "### General Description\nThe **Scan Hash** action enriches File\
-    \ Hash entities by querying the Symantec DeepSight threat intelligence platform.\
-    \ It retrieves detailed metadata about files, including reputation, detection\
-    \ names, associated malware reports, and observed activities such as DNS requests,\
-    \ URLs, and file paths.\n\n### Parameters Description\nThere are no specific parameters\
-    \ for this action. It relies on the global integration configuration (API Key\
-    \ and SSL settings) to authenticate and communicate with the DeepSight API.\n\n\
-    ### Flow Description\n1. **Initialization**: The action retrieves the API Key\
-    \ and SSL verification settings from the DeepSight integration configuration.\n\
-    2. **Entity Filtering**: It iterates through the target entities and filters for\
-    \ those of type `FILEHASH`.\n3. **External Lookup**: For each File Hash, the action\
-    \ performs a GET request to the DeepSight API's `/files/` endpoint.\n4. **Data\
-    \ Enrichment**: \n    - If intelligence is found, the action flattens the resulting\
-    \ JSON and adds a 'DeepSight' prefix to the keys.\n    - It populates the entity's\
-    \ `additional_properties` with this data.\n    - It creates an entity-specific\
-    \ data table (CSV format) for display in the SOAR interface.\n    - It marks the\
-    \ entity as enriched.\n5. **Internal Update**: The action updates the entities\
-    \ within Google SecOps to persist the enriched attributes.\n6. **Completion**:\
-    \ It provides a summary message of enriched entities and attaches the raw JSON\
-    \ results to the action output.\n\n### Additional Notes\nThis action is strictly\
-    \ for enrichment and does not modify any data on the Symantec DeepSight platform."
+  ai_description: >-
+    ### General Description
+
+    This action enriches file hash entities using the DeepSight threat intelligence
+    service. It retrieves reputation and threat data for the specified file hash.
+
+
+    ### Flow Description
+
+    1. The action retrieves the DeepSight API configuration (API Key and SSL settings).
+
+    2. It iterates through the target entities, filtering for those of type `FILEHASH`.
+
+    3. For each valid file hash, it calls the `scan_file` method of the `DeepSightManager`
+    to fetch threat intelligence data from the DeepSight API.
+
+    4. If data is retrieved, the action flattens the result, prefixes keys with "DeepSight",
+    and adds the information to the entity's `additional_properties`.
+
+    5. The action updates the entity within the SOAR platform, marking it as enriched.
+
+    6. Finally, it adds the raw JSON results to the action output and terminates.
+
+
+    ### Additional Notes
+
+    This action performs enrichment only and does not modify external system states.
+  ai_short_description: >-
+    Enriches file hash entities with threat intelligence data from the DeepSight service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -296,13 +586,50 @@ Scan Hash:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with threat intelligence data from DeepSight
-      and marks entities as enriched.
-  categories:
-    enrichment: true
+      Updates the entity's additional_properties and sets the is_enriched flag to
+      true within the SOAR platform.
+    reasoning: >-
+      The action makes a GET request to the DeepSight API to retrieve threat intelligence
+      (fetches_data=true). It does not mutate external data. It updates the entity's
+      additional properties and enrichment status within the SOAR platform (can_mutate_internal_data=true,
+      can_update_entities=true).
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -316,49 +643,76 @@ Scan Hash:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.FILEHASH`. This means it targets FILEHASH entities, filtering
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence (reputation, prevalence, etc.) for a
+      file hash from DeepSight. This matches the 'Enrich IOC' category. It does not
+      perform any blocking or ticket creation.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 Scan IP:
   ai_description: >-
     ### General Description
 
-    Enriches IP Address entities using Symantec DeepSight threat intelligence. This
-    action retrieves comprehensive data about an IP, including its geolocation, network
-    details (ASN, carrier), and observed malicious behaviors. It is designed to provide
-    security analysts with immediate context regarding the reputation and origin of
-    an IP address.
+    Enriches IP Address entities using the DeepSight threat intelligence service.
+    This action retrieves threat intelligence data for specified IP addresses to provide
+    context and reputation information.
 
 
-    ### Parameters Description
+    ### Flow Description
 
-    There are no parameters for this action.
+    1. Retrieve configuration (API Key, SSL settings) from the integration settings.
+
+    2. Iterate through the provided target entities, filtering specifically for IP
+    Address types.
+
+    3. For each valid IP, perform a GET request to the DeepSight API (`/v1/ips/{ip}`)
+    to retrieve threat intelligence data.
+
+    4. Flatten the retrieved JSON response and add it to the entity's `additional_properties`.
+
+    5. Mark the entity as enriched (`is_enriched = True`).
+
+    6. Update the entities in the SOAR platform and append the raw JSON results to
+    the action output.
 
 
     ### Additional Notes
 
-    The action requires a valid API Key and SSL configuration to be set in the DeepSight
-    integration settings. It specifically targets entities of type ADDRESS.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action retrieves the API key and SSL verification preference
-    from the DeepSight integration configuration.
-
-    2. **Entity Filtering**: It iterates through the target entities and filters for
-    those with the type `ADDRESS` (IP addresses).
-
-    3. **External Lookup**: For each valid IP entity, the action calls the DeepSight
-    API's `scan_ip` endpoint to fetch intelligence data.
-
-    4. **Data Enrichment**: If data is returned, the action:
-        - Flattens the JSON response and adds a 'DeepSight' prefix to the keys.
-        - Populates the entity's `additional_properties` with the enriched data.
-        - Marks the entity as `is_enriched = True`.
-        - Creates an entity-specific data table containing the flattened results.
-    5. **Internal Update**: The action updates the modified entities within Google
-    SecOps to persist the enrichment data.
-
-    6. **Completion**: It returns a summary message listing the enriched entities
-    and provides the raw JSON results for further downstream use.
+    This action requires a valid DeepSight API Key configured in the integration settings.
+  ai_short_description: >-
+    Enriches IP Address entities by retrieving threat intelligence data from the DeepSight
+    service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -369,13 +723,47 @@ Scan IP:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with DeepSight intelligence data, adds
-      entity data tables, and marks entities as enriched.
-  categories:
-    enrichment: true
+      Updates entity `additional_properties` and sets `is_enriched` to true.
+    reasoning: >-
+      The action makes a GET request to the DeepSight API to fetch IP data. It does
+      not mutate external data but updates internal entities.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -389,41 +777,81 @@ Scan IP:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `if entity.entity_type
+      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering by
+      entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches IP data from DeepSight, returning threat intelligence. This
+      matches the 'Enrich IOC' expected outcome. It does not mutate data on external
+      systems, so it is not a Contain Host or Blocklist action.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 Scan URL:
   ai_description: >-
     ### General Description
 
-    Enriches URL entities using Symantec DeepSight threat intelligence. This action
-    retrieves comprehensive data about a URL, including domain information, WHOIS
-    records, and whitelist status, to help analysts assess the risk associated with
-    specific links.
-
-
-    ### Parameters
-
-    There are no action-specific parameters for this action. It relies on the global
-    integration configuration (API Key and SSL settings).
+    Scans a URL using the DeepSight service to retrieve threat intelligence and reputation
+    data. This action is designed to provide analysts with context regarding potentially
+    malicious URLs found within an investigation.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action fetches the API Key and SSL verification
-    preference from the DeepSight integration settings.
+    1. The action retrieves the DeepSight integration configuration, including the
+    API key and SSL settings.
 
-    2. **Entity Filtering**: It identifies all URL entities within the current context.
+    2. It iterates through the `target_entities` provided in the SOAR case.
 
-    3. **External API Query**: For each URL, it performs a GET request to the DeepSight
-    API to retrieve scan results.
+    3. The action filters the entities to process only those with the type `URL`.
 
-    4. **Data Processing**: The retrieved JSON data is flattened and prefixed with
-    'DeepSight' for clarity.
+    4. For each valid URL entity, the action calls the DeepSight API (`GET /urls/{url}`)
+    to fetch reputation and threat intelligence data.
 
-    5. **Internal Enrichment**: The action updates the entity's additional properties
-    with the scan data, marks the entity as enriched, and creates an entity-specific
-    data table in the UI.
+    5. The retrieved data is flattened and added to the entity's `additional_properties`
+    dictionary.
 
-    6. **Finalization**: It updates the entities in Google SecOps and provides a summary
-    message along with the raw JSON results for further processing.
+    6. The entity is marked as enriched (`is_enriched = True`).
+
+    7. The action updates the entities within the SOAR platform using `siemplify.update_entities`.
+
+    8. Finally, the action adds the raw JSON results and a formatted entity table
+    to the action results.
+
+
+    ### Additional Notes
+
+    This action performs enrichment and does not modify any external systems. It relies
+    on the DeepSight integration configuration for authentication.
+  ai_short_description: >-
+    Scans URL entities using DeepSight to retrieve reputation and threat intelligence.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -434,13 +862,49 @@ Scan URL:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with scan results and sets the 'is_enriched'
-      flag to true.
-  categories:
-    enrichment: true
+      Updates entity additional properties and enrichment status within the SOAR platform.
+    reasoning: >-
+      The action makes a GET request to the DeepSight API to fetch URL reputation
+      data (fetches_data=true). It does not mutate external data. It updates internal
+      entities by adding enrichment data to their additional properties and setting
+      the enriched flag (can_mutate_internal_data=true, can_update_entities=true).
   entity_usage:
     entity_types:
-    - DestinationURL
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -454,3 +918,40 @@ Scan URL:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters for
+      entities where `entity.entity_type == EntityTypes.URL`. It does not filter by
+      other attributes like creation time or case identifier.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches URL reputation data from the DeepSight API and updates the
+      entity with this information. This matches the 'Enrich IOC' category. It does
+      not perform any containment, ticketing, or alert modification actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.

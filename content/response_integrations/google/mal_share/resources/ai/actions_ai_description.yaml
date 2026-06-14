@@ -1,64 +1,43 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Hash:
   ai_description: >-
     ### General Description
 
-    Enriches File Hash entities by retrieving threat intelligence and file metadata
-    from MalShare. This action helps analysts identify potentially malicious files
-    by providing associated hashes (MD5, SHA1, SHA256), file types, and known sources.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Api Key | String | Yes | The API key required to authenticate with the MalShare
-    service. This is configured in the integration settings. |
-
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the MalShare API endpoint. Defaults to false. |
+    Enriches file hash entities by querying the MalShare threat intelligence service.
+    This action retrieves detailed file information, such as malware analysis data,
+    and updates the corresponding entities within the SOAR platform to assist in threat
+    investigation.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves the MalShare API key and SSL configuration
-    from the integration settings.
+    1. The action initializes the `MalShareManager` using the provided API key and
+    SSL verification settings.
 
-    2. **Entity Filtering**: It iterates through the target entities and filters for
-    those of type `FILEHASH`.
+    2. It iterates through all `target_entities` provided to the action.
 
-    3. **External Lookup**: For each identified hash, it performs a GET request to
-    the MalShare API to retrieve file details.
+    3. The action filters for entities of type `FILEHASH`.
 
-    4. **Internal Enrichment**: If a match is found, the action performs the following
-    internal mutations:
-        * Updates the entity's additional properties with flattened MalShare metadata.
-        * Adds a CSV data table to the entity containing the file report.
-        * Sets the entity's `is_enriched` flag to true.
-        * Sets the entity's `is_suspicious` flag to true.
-    5. **Reporting**: Updates the entities in Google SecOps and provides a summary
-    message of enriched versus not found hashes.
+    4. For each matching entity, it calls the `search_hash` method of the `MalShareManager`
+    to retrieve file details from the MalShare API.
+
+    5. If data is found, the action:
+        - Converts the report to a flat dictionary.
+        - Updates the entity's `additional_properties` with the retrieved data.
+        - Sets the entity's `is_enriched` and `is_suspicious` flags to `True`.
+        - Adds a result table containing the file details to the entity using `siemplify.result.add_entity_table`.
+    6. The action updates the enriched entities in the SOAR platform.
+
+    7. Finally, it adds the full JSON response to the action results and terminates.
 
 
     ### Additional Notes
 
-    This action automatically marks any hash found in the MalShare database as suspicious
-    within the Google SecOps environment.
+    This action requires a valid MalShare API key configured in the integration settings.
+    If a hash is not found in MalShare, the entity is skipped, and the action continues
+    processing remaining entities.
+  ai_short_description: >-
+    Enriches file hash entities by retrieving threat intelligence data from the MalShare
+    service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -69,13 +48,51 @@ Enrich Hash:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes (additional_properties), sets the 'is_enriched' and
-      'is_suspicious' flags, and attaches a data table to the entity.
-  categories:
-    enrichment: true
+      Updates entity properties (additional_properties), sets enrichment and suspicious
+      flags, and adds a result table to the entity.
+    reasoning: >-
+      The action fetches data from the MalShare API (fetches_data=true). It does not
+      mutate external systems. It mutates internal data by updating entity properties
+      (`additional_properties`, `is_enriched`, `is_suspicious`) and adding result
+      tables to entities. It does not create insights (via `add_entity_insight`),
+      modify alert data, or create case comments.
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -89,42 +106,82 @@ Enrich Hash:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == EntityTypes.FILEHASH`. No other entity
+      filtering criteria are applied.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence for file hashes from an external service
+      (MalShare) and updates the entity with this information. This directly matches
+      the 'Enrich IOC' category. It does not perform any blocking, ticketing, or other
+      state-changing operations on external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Api Key | String | Yes | The API key used to authenticate with the MalShare
+    service. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates when connecting
+    to the MalShare API. Defaults to false. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is used to verify the connectivity between Google SecOps and
-    the MalShare service. It ensures that the provided API key is valid and that the
-    network configuration allows communication with the MalShare API.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This action is typically used during the initial setup of the MalShare integration
-    or for troubleshooting connection issues. It performs a simple GET request to
-    the MalShare API to list hashes from the past 24 hours as a health check.
+    Validates connectivity to the MalShare service by performing a test request. This
+    action ensures that the integration is correctly configured and that the MalShare
+    API is reachable.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the API Key and SSL verification
-    settings from the integration configuration.
+    1. Initialize the `SiemplifyAction` and retrieve the MalShare integration configuration,
+    including the API Key and SSL verification setting.
 
-    2. **Manager Initialization**: It initializes the `MalShareManager` with the retrieved
-    credentials.
+    2. Instantiate the `MalShareManager` using the retrieved credentials.
 
-    3. **Connectivity Test**: The manager executes a GET request to the MalShare API
-    (specifically the `getlist` action) to verify that the service is reachable and
-    the API key is functional.
+    3. Execute the `test_connectivity` method, which sends a GET request to the MalShare
+    API (`/api.php?action=getlist`) to verify the connection.
 
-    4. **Result Handling**: If the request is successful, the action concludes with
-    a success message. If an error occurs (e.g., invalid API key or network timeout),
-    an exception is raised and the action fails.
+    4. Validate the HTTP response; if the request is successful, terminate the action
+    with a success message.
+
+
+    ### Additional Notes
+
+    This action does not perform any data enrichment or state changes. It is strictly
+    used for troubleshooting and verifying the health of the integration connection.
+  ai_short_description: >-
+    Validates connectivity to the MalShare service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -133,12 +190,48 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a connectivity check to an external API. It does not fetch
+      contextual data for entities, nor does it mutate any internal or external data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -152,48 +245,77 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action is a connectivity test and does not interact with or filter any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any of the defined outcome
+      operations such as enrichment, ticketing, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 Upload File:
   ai_description: >-
     ### General Description
 
-    Uploads a file from a specified local path to the MalShare service for analysis.
-    This action is used to submit potentially malicious files to the MalShare repository
-    to retrieve threat intelligence, including various file hashes (MD5, SHA1, SHA256)
-    and file type information.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | File Path | String | Yes | The absolute path of the file on the system to be
-    uploaded to MalShare. |
-
-
-    ### Additional Notes
-
-    This action does not operate on SecOps entities (like IPs or Hashes) automatically.
-    It requires the user to provide a specific file path as an input parameter. The
-    action performs a POST request to upload the file and a subsequent GET request
-    to fetch the analysis details.
+    Uploads a file to the MalShare service for analysis and retrieves the resulting
+    threat intelligence report. This action allows analysts to submit suspicious files
+    to MalShare, which then provides detailed information about the file, such as
+    its hash and associated threat data.
 
 
     ### Flow Description
 
-    1. **Configuration**: Retrieves the MalShare API key and SSL verification settings
-    from the integration configuration.
+    1. The action initializes the `MalShareManager` using the provided API key and
+    SSL verification settings.
 
-    2. **Input Retrieval**: Extracts the 'File Path' parameter provided by the user.
+    2. It retrieves the `File Path` parameter from the action configuration.
 
-    3. **File Upload**: Submits the file to the MalShare API via a POST request.
+    3. The action executes the `upload_and_scan` method, which performs a POST request
+    to the MalShare API to upload the specified file.
 
-    4. **Data Retrieval**: If the upload is successful, the action uses the resulting
-    file hash to fetch detailed metadata from MalShare.
+    4. Upon a successful upload, the action automatically calls the `search_hash`
+    method (a GET request) to retrieve the file's details and analysis report from
+    MalShare.
 
-    5. **Output Generation**: Creates a data table containing the file report and
-    attaches the raw JSON results to the action output.
+    5. The retrieved report is formatted as a CSV table and added to the action results,
+    along with the raw JSON response.
+
+    6. The action concludes by setting the result status and output message.
+
+
+    ### Additional Notes
+
+    This action requires a valid file path that is accessible by the integration environment.
+    The file is uploaded to an external service (MalShare) for analysis.
+  ai_short_description: >-
+    Uploads a file to MalShare for analysis and retrieves the associated threat intelligence
+    report.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -202,14 +324,50 @@ Upload File:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Uploads a file to the MalShare platform, creating a new entry in their database
-      for analysis.
+      Uploads a file to the MalShare service for analysis.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST request to upload a file (mutating external data)
+      and a GET request to retrieve file details (fetching data). It does not mutate
+      internal SOAR data or update entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -223,3 +381,46 @@ Upload File:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates based on a provided file path parameter and does not iterate
+      over or filter any entities from the SOAR platform's target entities list. Therefore,
+      no entity usage flags are set.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action uploads a file to an external analysis engine (MalShare), which matches
+      the 'Submit File' category. Additionally, it retrieves file details and threat
+      intelligence (hash info), which matches the 'Enrich IOC' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | File Path | String | Yes | The full path of the file to be uploaded to MalShare
+    for analysis. |

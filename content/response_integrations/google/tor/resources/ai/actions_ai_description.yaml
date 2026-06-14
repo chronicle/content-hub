@@ -1,53 +1,35 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Is Exit Node:
   ai_description: >-
     ### General Description
 
-    The **Is Exit Node** action determines if IP Address entities are currently serving
-    as Tor exit nodes. It provides a quick way to identify potential anonymized traffic
-    sources by querying the official Tor Project's real-time exit node list.
-
-
-    ### Parameters
-
-    There are no action-specific parameters for this action. It utilizes the global
-    integration configuration for SSL verification settings.
+    Checks if provided IP address entities are currently listed as Tor exit nodes.
+    This action queries the Tor Project's exit node list to determine if the specified
+    IP addresses are active exit nodes.
 
 
     ### Flow Description
 
-    1. **Fetch Exit Node List**: The action retrieves the latest list of Tor exit
-    nodes from `https://check.torproject.org/exit-addresses`.
+    1. The action retrieves the configuration for the Tor integration.
 
-    2. **Parse and Filter**: It parses the raw text data to extract IP addresses that
-    have been active as exit nodes on the current date.
+    2. It initializes the `TorManager` to handle requests to the Tor Project's exit
+    node list.
 
-    3. **Entity Matching**: It iterates through all `ADDRESS` entities in the scope
-    and checks if their IP address is present in the retrieved list.
+    3. It iterates through the provided IP address entities.
 
-    4. **Result Generation**: It returns a list of all identified exit nodes in the
-    action's output message and as a JSON result for use in downstream playbook logic.
+    4. For each IP, it queries the Tor Project's exit node list (`https://check.torproject.org/exit-addresses`)
+    to determine if the IP is an active exit node.
+
+    5. It collects all identified exit nodes.
+
+    6. Finally, it outputs a message listing the identified exit nodes and returns
+    the list as a JSON result.
 
 
     ### Additional Notes
 
-    - This action is a read-only check and does not modify entity attributes (like
-    'suspicious' status) or create insights within the case.
-
-    - The action requires outbound network connectivity to the Tor Project's domain.
+    This action is read-only and does not modify any entities or external systems.
+  ai_short_description: >-
+    Checks if provided IP address entities are currently listed as Tor exit nodes.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -58,11 +40,46 @@ Is Exit Node:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches data from an external URL (Tor Project) to check the reputation
+      of an IP address. It does not mutate any external or internal data.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -76,47 +93,73 @@ Is Exit Node:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering by
+      entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action checks if an IP is a Tor exit node, which provides threat intelligence
+      regarding the IP's reputation. This matches the 'Enrich IOC' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
   ai_description: >-
-    ### General Description
-
-    The **Ping** action is a diagnostic utility designed to verify the connectivity
-    between the Google SecOps environment and the Tor Project's exit node list. Its
-    primary purpose is to ensure that the integration can successfully reach the external
-    threat intelligence source required for identifying Tor exit nodes.
+    General Description
 
 
-    ### Parameters Description
-
-    There are no input parameters for this action.
-
-
-    ### Additional Notes
-
-    - This action relies on the global integration configuration, specifically the
-    'Use SSL' setting, to determine if SSL certificate verification should be enforced
-    during the connection test.
-
-    - As a 'Ping' type action, it is used for health checks and troubleshooting rather
-    than data enrichment or case management.
+    Tests connectivity to the Tor project's exit node list service to ensure the integration
+    is properly configured and reachable.
 
 
-    ### Flow Description
+    Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the 'Use SSL' parameter from
-    the Tor integration's global configuration.
 
-    2. **Manager Initialization**: It initializes the `TorManager` with the specified
-    SSL verification setting.
+    1. Retrieves the "Use SSL" configuration parameter from the Tor integration settings.
 
-    3. **Connectivity Test**: The action executes an HTTP GET request to the Tor exit
-    nodes list URL (`https://check.torproject.org/exit-addresses`).
+    2. Initializes the `TorManager` with the specified SSL verification setting.
 
-    4. **Response Validation**: It checks the HTTP response status to ensure the external
-    service is reachable and responding correctly.
+    3. Executes the `test_connectivity` method, which performs an HTTP GET request
+    to the Tor exit nodes list URL (`https://check.torproject.org/exit-addresses`).
 
-    5. **Execution Completion**: If the connection is successful, the action returns
-    a success status to the SOAR platform.
+    4. Validates the HTTP response status to ensure the service is reachable.
+
+    5. Terminates the action with a success message if the connection is established.
+
+
+    Additional Notes
+
+
+    This action is used to verify that the SOAR platform can successfully communicate
+    with the external Tor project service.
+  ai_short_description: >-
+    Tests connectivity to the Tor project's exit node list service.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -125,12 +168,48 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs an HTTP GET request to verify connectivity to an external
+      service. It does not mutate any data or update internal SOAR objects.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -144,3 +223,43 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action is a connectivity test and does not process or filter any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test to an external service. It does not
+      perform enrichment, mutation, or any of the listed operational categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Use SSL | String | No | Whether to use SSL verification when connecting to the
+    Tor service. Defaults to False. |

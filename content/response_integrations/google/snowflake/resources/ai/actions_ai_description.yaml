@@ -1,69 +1,42 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Execute Custom Query:
   ai_description: >-
     ### General Description
 
-    Executes a custom SQL query in Snowflake to retrieve data for investigations.
-    This action supports asynchronous execution, meaning it submits the query and
-    then polls for results, making it suitable for long-running queries. The results
-    are returned as a JSON object and displayed in a data table within the SOAR platform.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Query | String | Yes | The SQL query to execute. Note: A LIMIT clause is appended
-    automatically based on the 'Max Results To Return' parameter. |
-
-    | Database | String | Yes | The Snowflake database to run the query against. |
-
-    | Schema | String | No | The specific schema within the database. |
-
-    | Max Results To Return | Integer | No | The maximum number of rows to fetch (Default:
-    50). |
-
-
-    ### Additional Notes
-
-    - The action is asynchronous and may require adjusting the script timeout in the
-    IDE for very large queries.
-
-    - The 'Max Results To Return' parameter must be a positive number.
+    Executes a custom SQL query against a specified Snowflake database and schema.
+    This action allows users to retrieve data by submitting a query and fetching the
+    results asynchronously, providing flexibility for custom data analysis and log
+    retrieval within the Snowflake environment.
 
 
     ### Flow Description
 
-    1. **Authentication**: Generates a JWT token using the provided private key for
-    Snowflake Key Pair authentication.
+    1. The action initializes the `SnowflakeManager` using the provided integration
+    configuration (API Root, Account, Username, Private Key, Verify SSL).
 
-    2. **Query Submission**: Submits the SQL query to the Snowflake REST API. The
-    action automatically appends a `LIMIT` clause to the query.
+    2. It extracts the `Query`, `Database`, `Schema`, and `Max Results To Return`
+    parameters.
 
-    3. **Asynchronous Handling**: If the query is not finished immediately, the action
-    enters an 'In Progress' state, storing the `query_id` to check status in subsequent
-    runs.
+    3. On the first run, it calls the `submit_query` API endpoint to initiate the
+    query execution in Snowflake.
 
-    4. **Data Retrieval**: Once the query completes, the action fetches the result
-    set.
+    4. It then checks the query progress. If the query is still running, it returns
+    an "In Progress" status and stores the `query_id` for the next run.
 
-    5. **Output**: The retrieved data is processed into a JSON result and a CSV-formatted
-    data table named 'Results'.
+    5. If the query is finished, it retrieves the results using the `get_data` API
+    endpoint.
+
+    6. The retrieved results are added to the action output as a CSV table and a JSON
+    object.
+
+
+    ### Additional Notes
+
+    This action is asynchronous. If the query takes time to execute, the action will
+    return an "In Progress" status, and the SOAR platform will trigger the action
+    again to check for completion. Ensure the query does not contain a LIMIT keyword,
+    as it is added automatically based on the 'Max Results To Return' parameter.
+  ai_short_description: >-
+    Executes a custom SQL query in Snowflake and retrieves the results asynchronously.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -74,10 +47,47 @@ Execute Custom Query:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches data from Snowflake via API calls (submit_query and get_data).
+      It does not mutate external data (it performs a SELECT query) and does not mutate
+      internal SOAR data (it only adds results to the action output).
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -91,154 +101,233 @@ Execute Custom Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with entities. It operates on database parameters
+      provided by the user to execute a query.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a custom query to retrieve data from Snowflake, which aligns
+      with the 'Search Events' category as it fetches historical logs or telemetry
+      data.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Query | String | Yes | Specify the query that needs to\
+    \ be executed in Snowflake. Note: query shouldn't contain LIMIT keyword, because\
+    \ it\u2019s added automatically. Only single quotes are supported in the query.\
+    \ |\n| Database | String | Yes | Specify the name of the database in which you\
+    \ want to execute the query. |\n| Schema | String | No | Specify the name of the\
+    \ schema in which you want to execute the query. |\n| Max Results To Return |\
+    \ String | No | Specify how many results to return for the query. Default: 50.\
+    \ |"
 Execute Simple Query:
-  ai_description: >-
-    Executes a SQL SELECT query against a Snowflake database to retrieve specific
-    records based on user-defined parameters. This action is designed for flexible
-    data retrieval, allowing users to specify the database, table, schema, and filtering
-    criteria. It operates asynchronously, submitting the query and then polling for
-    results.
-
-
-    ### Parameters Description
-
-
+  ai_description: "### General Description\nExecutes a SQL query against a Snowflake\
+    \ database to retrieve data based on user-defined parameters. This action allows\
+    \ analysts to perform custom data lookups, filtering, and sorting within their\
+    \ Snowflake environment directly from the SOAR platform.\n\n### Flow Description\n\
+    1. **Parameter Extraction**: The action extracts configuration parameters (API\
+    \ Root, Account, Username, Private Key, Verify SSL) and action parameters (Database,\
+    \ Table, Schema, Where Filter, Fields, Sort, Limit).\n2. **Query Construction**:\
+    \ The action builds a SQL `SELECT` query string using the provided table, filter,\
+    \ and sorting parameters via the `SnowflakeManager`.\n3. **Query Submission**:\
+    \ \n    - On the first run, the action submits the query to Snowflake using a\
+    \ POST request (`/api/v2/statements?async=true`) and receives a `statementHandle`\
+    \ (query ID).\n    - The action then enters an asynchronous polling loop (if configured)\
+    \ or checks for results.\n4. **Result Retrieval**: The action polls the Snowflake\
+    \ API using the query ID via a GET request (`/api/v2/statements/{query_id}`).\n\
+    5. **Output Generation**: If results are found, the action adds the data to the\
+    \ SOAR result table and JSON output. If no results are found, it informs the user\
+    \ accordingly.\n\n### Additional Notes\nThis action is designed to be asynchronous.\
+    \ The script timeout in the SOAR IDE should be adjusted if the query is expected\
+    \ to take a long time to execute. Only single quotes are supported in the `Where\
+    \ Filter` parameter."
+  ai_short_description: >-
+    Executes a custom SQL query against a Snowflake database and returns the results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from Snowflake via API requests (fetches_data=true).
+      It performs a SELECT query, which is read-only, so it does not mutate external
+      or internal data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter based on SOAR entities. It operates
+      entirely on user-provided parameters to query an external database.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a query against a database and retrieves the resulting records.
+      This aligns with the 'Search Events' category, as it retrieves historical data
+      based on search criteria.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Database | String | Yes | The name of the Snowflake database to query. |
-
-    | Table | String | Yes | The name of the table within the database to query. |
-
-    | Schema | String | No | The specific schema to use for the query. |
-
-    | Where Filter | String | No | SQL WHERE clause logic (e.g., `status = 'ACTIVE'`).
-    Do not include the 'WHERE' keyword. |
-
-    | Fields To Return | String | No | Comma-separated list of columns to return.
-    Defaults to `*` (all fields). |
-
-    | Sort Field | String | No | The column name to use for sorting results. |
-
-    | Sort Order | String | No | The direction of sorting: `ASC` (default) or `DESC`.
+    | Database | String | Yes | The name of the database in which to execute the query.
     |
 
-    | Max Results To Return | Integer | No | The maximum number of rows to retrieve.
+    | Table | String | Yes | The name of the table in which to execute the query.
+    |
+
+    | Schema | String | No | The name of the schema in which to execute the query.
+    |
+
+    | Where Filter | String | No | The WHERE filter for the query. Do not include
+    the 'WHERE' keyword. Only single quotes are supported. |
+
+    | Fields To Return | String | No | Comma-separated list of fields to return. Defaults
+    to '*' (all fields). |
+
+    | Sort Field | String | No | The parameter to use for sorting. |
+
+    | Sort Order | DDL | No | The order of sorting (ASC or DESC). Defaults to ASC.
+    |
+
+    | Max Results To Return | String | No | The maximum number of results to return.
     Defaults to 50. |
-
-
-    ### Additional Notes
-
-
-    - This action runs asynchronously. If the query takes time, the action will enter
-    an 'In Progress' state and poll for completion in subsequent cycles.
-
-    - The action results are provided as both a Data Table (for the Case Wall) and
-    a JSON object (for downstream logic).
-
-
-    ### Flow Description
-
-
-    1. **Initialization**: The action initializes the Snowflake manager using the
-    integration's configuration (API Root, Account, Credentials).
-
-    2. **Query Construction**: It builds a SQL SELECT statement by combining the `Fields
-    To Return`, `Table`, `Where Filter`, `Sort Field`, and `Sort Order` parameters.
-
-    3. **Submission**: On the first run, it submits the query to the Snowflake SQL
-    API and receives a `statementHandle` (Query ID).
-
-    4. **Polling**: The action checks the status of the submitted query. If it is
-    still running, the action saves the Query ID and waits for the next execution
-    cycle.
-
-    5. **Data Retrieval**: Once the query is finished, the action fetches the result
-    set.
-
-    6. **Output**: The retrieved data is formatted into a CSV-style table and a JSON
-    array, which are then attached to the action's results in Google SecOps.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility used to verify the connectivity between
-    Google SecOps and a Snowflake instance. It ensures that the integration configuration
-    parameters, such as the API Root, Account, Username, and Private Key, are correctly
-    set and that the network path to the Snowflake SQL API is functional.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It relies on the following
-    integration configuration parameters:
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **API Root** | String | Yes | The base URL for the Snowflake API. |
-
-    | **Account** | String | Yes | The Snowflake account identifier. |
-
-    | **Username** | String | Yes | The username used for authentication. |
-
-    | **Private Key** | String | Yes | The base64-encoded private key used for JWT
-    authentication. |
-
-    | **Verify SSL** | Boolean | Yes | Whether to verify the SSL certificate of the
-    Snowflake server. |
+    Tests connectivity to a Snowflake instance using the provided configuration parameters.
+    This action verifies that the integration is correctly configured and that the
+    Snowflake API is reachable and responsive.
 
 
     ### Flow Description
 
-    1. **Initialization**: Extracts the integration configuration parameters from
-    the Marketplace settings.
+    1. **Parameter Extraction**: The action extracts the required configuration parameters:
+    `API Root`, `Account`, `Username`, `Private Key`, and `Verify SSL`.
 
-    2. **Authentication**: Decodes the provided private key and generates a JSON Web
-    Token (JWT) for secure authentication with the Snowflake SQL API.
+    2. **Manager Initialization**: Initializes the `SnowflakeManager` with the extracted
+    credentials and settings.
 
-    3. **Connectivity Check**: Executes a synchronous POST request to the Snowflake
-    API endpoint with a lightweight metadata query (`SHOW TABLES LIMIT 1`).
+    3. **Connectivity Test**: Calls the `test_connectivity` method, which sends a
+    `POST` request to the Snowflake API endpoint (`/api/v2/statements`) with a `SHOW
+    TABLES LIMIT 1` SQL statement.
 
-    4. **Validation**: Evaluates the HTTP response. If the request is successful,
-    it confirms connectivity; otherwise, it captures and reports the specific error
-    encountered.
+    4. **Response Validation**: Validates the HTTP response from the Snowflake API.
+
+    5. **Result Reporting**: Returns a success message if the connection is established,
+    or an error message if the connection fails.
 
 
     ### Additional Notes
 
-    This action does not process any entities, modify any data in Snowflake, or create
-    any internal records in Google SecOps. It is strictly for configuration validation.
+    This action is intended for troubleshooting and verifying integration settings.
+    It does not perform any data enrichment or modification of entities.
+  ai_short_description: >-
+    Tests connectivity to the Snowflake instance using the provided configuration
+    parameters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -249,10 +338,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a read-only connectivity check (POST request with a SELECT
+      statement) to verify the Snowflake integration. It does not fetch contextual
+      data, mutate external or internal data, or modify entities/alerts.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -266,3 +392,55 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action is a standalone connectivity test and does not interact with or filter
+      any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test (ping) to verify integration settings.
+      It does not perform enrichment, ticket management, or any other operational
+      tasks defined in the outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | API Root | String | Yes | The API root URL of the Snowflake instance. |
+
+    | Account | String | Yes | The name of the Snowflake account. |
+
+    | Username | String | Yes | The username used to authenticate with Snowflake.
+    |
+
+    | Private Key | String | Yes | The private key file content used for JWT authentication.
+    |
+
+    | Verify SSL | Boolean | Yes | Whether to verify the SSL certificate for the connection.
+    |

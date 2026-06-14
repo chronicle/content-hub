@@ -1,36 +1,16 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Asset:
-  ai_description: >-
-    ### General Description\nEnriches **HOSTNAME** and **ADDRESS** entities using
-    **Rapid7 InsightVM**. This action retrieves comprehensive asset details, including
-    network information, operating system data, risk scores, and vulnerability summaries,
-    to provide better context for security investigations.\n\n### Parameters\nThere
-    are no input parameters for this action.\n\n### Flow Description\n1. **Initialization**:
-    Establishes a connection to the Rapid7 InsightVM API using the integration's configuration
-    (API Root, Username, Password).\n2. **Entity Identification**: Iterates through
-    the target entities, specifically looking for IP addresses and hostnames.\n3.
-    **Data Retrieval**: \n    * For **ADDRESS** entities, it queries Rapid7 for asset
-    details matching the IP address.\n    * For **HOSTNAME** entities, it queries
-    Rapid7 for asset details matching the hostname.\n4. **Data Transformation**: Formats
-    the raw asset data into a structured summary including MAC address, OS, risk score,
-    and counts of moderate, severe, and critical vulnerabilities.\n5. **Internal Update**:
-    \n    * Populates the entity's additional properties with the prefixed asset info.\n    *
-    Attaches a CSV data table to the entity for visibility in the UI.\n    * Marks
-    the entity as enriched.\n6. **Completion**: Updates the entities in the case and
-    returns the raw JSON data for further use in the playbook.
+  ai_description: "Enriches asset entities (IP addresses and hostnames) using Rapid7\
+    \ InsightVm. \n\n### Flow Description\n1. Initialize `Rapid7Manager` with configuration\
+    \ credentials.\n2. Iterate through target entities.\n3. For `ADDRESS` entities,\
+    \ call `rapid7_manager.get_asset_by_ip`.\n4. For `HOSTNAME` entities, call `rapid7_manager.get_asset_by_hostname`.\n\
+    5. If asset details are found, construct asset information and update the entity's\
+    \ `additional_properties` with a `Rapid7InsightVm` prefix.\n6. Mark the entity\
+    \ as enriched (`is_enriched = True`).\n7. Add the asset details to the action\
+    \ result as a table and JSON.\n8. Update the entities in the SOAR platform.\n\n\
+    ### Additional Notes\nRequires valid Rapid7 InsightVm credentials."
+  ai_short_description: >-
+    Enriches IP address and hostname entities with contextual asset metadata from
+    Rapid7 InsightVm.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -41,14 +21,50 @@ Enrich Asset:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with asset metadata (IP, MAC, OS, Risk
-      Score, Vulnerability counts) and attaches a data table to the entity.
-  categories:
-    enrichment: true
+      Updates entity `additional_properties` and `is_enriched` status within the SOAR
+      platform.
+    reasoning: >-
+      The action makes GET requests to the Rapid7 InsightVm API to fetch asset details.
+      It does not mutate external data but updates internal entities in the SOAR platform
+      by adding enrichment data to their `additional_properties` and setting the `is_enriched`
+      flag.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -62,26 +78,72 @@ Enrich Asset:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them based on
+      their `entity_type`, specifically targeting `ADDRESS` and `HOSTNAME` entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches asset metadata (OS, MAC, risk score, etc.) from Rapid7 InsightVm
+      for IP and Hostname entities. This matches the 'Enrich Asset' expected outcome.
+      It does not perform threat intelligence lookups (IOC enrichment) or other actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 Get Scan Results:
   ai_description: >-
-    ### General Description\n\nThe **Get Scan Results** action retrieves the comprehensive
-    results and metadata for a specific vulnerability scan from Rapid7 InsightVm.
-    It is designed to be used after a scan has been initiated, providing a mechanism
-    to wait for completion and then ingest the findings into the Google SecOps environment.\n\n###
-    Parameters\n\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |
-    :--- | :--- |\n| **Scan ID** | String/Integer | Yes | The unique identifier of
-    the scan to be retrieved. |\n\n### Flow Description\n\n1. **Authentication**:
-    Establishes a session with the Rapid7 InsightVm API using configured credentials
-    (API Root, Username, Password).\n2. **Status Polling**: Checks the status of the
-    scan identified by the `Scan ID`. The action will pause and retry every 2 seconds
-    until the scan status is 'finished'.\n3. **Data Retrieval**: Once the scan is
-    complete, it fetches the full scan information from the `/scans/{scan_id}` endpoint.\n4.
-    **Data Processing**: Removes unnecessary metadata (like API links) to clean the
-    data for presentation.\n5. **Output Generation**: Populates a data table named
-    'Scan [ID] Info' and provides the full raw JSON result for downstream use in the
-    playbook.\n\n### Additional Notes\n\n- This action does not operate on entities;
-    it requires a specific Scan ID as input.\n- If the scan fails (status: aborted,
-    stopped, error, or paused), the action will raise an error and terminate.
+    General Description: Retrieves detailed information about a specific Rapid7 InsightVM
+    scan by its ID. This action allows users to query the status and results of a
+    scan directly from the Rapid7 InsightVM platform.
+
+
+    Flow Description:
+
+    1. The action retrieves the `Scan ID` parameter provided by the user.
+
+    2. It initiates a polling loop using the `is_scan_completed` method, which checks
+    the scan status via the Rapid7 InsightVM API.
+
+    3. The loop continues until the scan status is confirmed as 'finished'.
+
+    4. Once completed, the action calls `get_scan_by_id` to fetch the full scan details.
+
+    5. The retrieved scan information is formatted into a data table and added to
+    the action results.
+
+    6. The raw scan JSON results are added to the action output using `add_result_json`.
+
+
+    Additional Notes: This action is a polling mechanism that waits for scan completion
+    before returning data. Ensure the provided `Scan ID` is valid and accessible within
+    the configured Rapid7 InsightVM environment.
+  ai_short_description: >-
+    Retrieves and returns detailed information for a specific Rapid7 InsightVM scan
+    by ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -92,10 +154,48 @@ Get Scan Results:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to the Rapid7 InsightVM API to retrieve scan
+      details. It does not mutate external data, nor does it mutate internal SecOps
+      data (entities, alerts, etc.). It simply adds the retrieved data to the action's
+      result output.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -109,67 +209,83 @@ Get Scan Results:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. It relies solely
+      on the `Scan ID` parameter provided by the user to query the Rapid7 InsightVM
+      API. Consequently, no entity types are used, and no entity filtering flags are
+      applicable.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches scan details from the Rapid7 InsightVM API. This aligns with
+      the 'Get Alert Information' category, as it retrieves security-related information
+      (scan results) from the 3rd party product. It does not perform any enrichment,
+      mutation, or other listed actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Scan ID | string | true | The ID of the scan. |
 Launch Scan:
   ai_description: >-
     ### General Description
 
-    This action initiates a vulnerability scan in Rapid7 InsightVM for specific target
-    entities (IP addresses or Hostnames) within a designated site. It allows security
-    teams to trigger on-demand scanning of assets directly from Google SecOps, optionally
-    waiting for the scan to complete to retrieve and attach the results to the case.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Scan Name** | String | No | The name to assign to the scan. If not provided,
-    a default name with the format `siemplify_YYYYMMDD-HHMMSS` is generated. |
-
-    | **Scan Engine** | String | Yes | The name of the scan engine to be used for
-    the operation. |
-
-    | **Scan Template** | String | Yes | The name of the scan template to apply to
-    the scan. |
-
-    | **Site Name** | String | Yes | The name of the site in Rapid7 InsightVM where
-    the scan should be executed. |
-
-    | **Fetch Results** | Boolean | No | If set to `True`, the action will run asynchronously,
-    polling Rapid7 until the scan completes to fetch and report the final results.
-    |
-
-
-    ### Additional Notes
-
-    - The action supports both `ADDRESS` (IP) and `HOSTNAME` entity types.
-
-    - If `Fetch Results` is enabled, the action will remain in an 'In Progress' state
-    until the scan finishes or fails.
+    Launches a vulnerability scan in Rapid7 InsightVM for specified hosts (IP addresses
+    or hostnames). This action initiates a scan on a designated site using a specified
+    engine and template, allowing for automated vulnerability assessment.
 
 
     ### Flow Description
 
-    1. **Entity Filtering:** The action identifies all `ADDRESS` and `HOSTNAME` entities
-    in the current context to use as scan targets.
+    1. Retrieves configuration (API Root, credentials) for the Rapid7 InsightVM integration.
 
-    2. **ID Resolution:** It communicates with Rapid7 InsightVM to resolve the provided
-    Site Name, Scan Engine, and Scan Template names into their respective internal
-    IDs.
+    2. Extracts target hosts from the provided entities, filtering specifically for
+    `ADDRESS` and `HOSTNAME` types.
 
-    3. **Scan Initiation:** A POST request is sent to the Rapid7 API to launch the
-    scan with the specified configuration and target hosts.
+    3. Calls the `launch_scan` method of the `Rapid7Manager` to initiate the scan
+    on the specified site using the provided engine and template.
 
-    4. **Execution Handling:**
-        - If `Fetch Results` is `False`, the action completes immediately, providing
-    the new Scan ID.
-        - If `Fetch Results` is `True`, the action enters an asynchronous polling
-    loop.
-    5. **Result Retrieval (Async):** Once the scan status reaches 'finished', the
-    action retrieves the full scan metadata, adds it as a data table to the case,
-    and provides the raw JSON results.
+    4. If `Fetch Results` is enabled, the action sets the execution state to `IN_PROGRESS`
+    and waits for completion.
+
+    5. Upon completion (or if `Fetch Results` is disabled), the action returns the
+    `scan_id` and, if applicable, adds scan details to the result data.
+
+
+    ### Additional Notes
+
+    This action interacts with the Rapid7 InsightVM API. It requires valid credentials
+    and configuration for the Rapid7 InsightVM integration. If `Fetch Results` is
+    enabled, the action will remain in an `IN_PROGRESS` state until the scan is completed.
+  ai_short_description: >-
+    Launches a vulnerability scan in Rapid7 InsightVM for specified hosts.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -178,16 +294,49 @@ Launch Scan:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Initiates a new vulnerability scan in the Rapid7 InsightVM environment, which
-      creates a new scan record and triggers active network scanning of target assets.
+      Initiates a vulnerability scan in Rapid7 InsightVM.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to launch a scan (mutates external data). It
+      fetches data if `Fetch Results` is true (via `get_scan_by_id`).
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -201,60 +350,96 @@ Launch Scan:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS or entity.entity_type == EntityTypes.HOSTNAME`. This
+      means it targets ADDRESS and HOSTNAME entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a vulnerability scan in Rapid7 InsightVM. This does not
+      match any of the predefined outcome categories (e.g., Enrichment, Containment,
+      Ticket Management, etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Scan Name | String | False | The scan name. If not provided, a default name
+    is generated. |
+
+    | Scan Engine | String | True | The name of the engine to use in the scan. |
+
+    | Scan Template | String | True | The name of the template to use in the scan.
+    |
+
+    | Site Name | String | True | The name of the site to run the scan on. |
+
+    | Fetch Results | Boolean | False | Whether to wait for the scan to complete and
+    get its results or not. |
 List Scans:
   ai_description: >-
     ### General Description
 
-    The **List Scans** action retrieves a list of scan records from the Rapid7 InsightVM
-    platform. It allows users to view historical or ongoing scan activities, providing
-    visibility into the vulnerability management process. The action can be filtered
-    to look back a specific number of days.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Days Backwards** | Number | Yes | The number of days to look back for scans.
-    The action will retrieve scans that started within this timeframe. If set to 0,
-    the action attempts to fetch all available scans without a time filter. |
-
-
-    ### Additional Notes
-
-    - This action does not operate on specific entities and can be run as a standalone
-    utility or discovery step in a playbook.
-
-    - The output includes a formatted data table for easy viewing in the SOAR interface
-    and a raw JSON result for further automated processing.
-
-    - Metadata links (e.g., self-references) are removed from the scan objects to
-    ensure the output remains concise.
+    Retrieves a list of scans from the Rapid7 InsightVM platform. This action allows
+    users to fetch historical scan data, optionally filtered by a specific time range
+    (days backwards), and presents the results in both a structured data table and
+    raw JSON format for further analysis.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action establishes a connection to the Rapid7 InsightVM
-    API using the configured credentials and API root.
+    1. Initialize the `Rapid7Manager` using the provided API credentials and configuration.
 
-    2. **Parameter Parsing**: It retrieves the 'Days Backwards' value to determine
-    the search window.
+    2. Parse the `Days Backwards` parameter to determine the time range for the scan
+    retrieval.
 
-    3. **Time Calculation**: If 'Days Backwards' is greater than zero, the script
-    calculates a start timestamp using the current UTC time minus the specified days.
+    3. Call the Rapid7 API (`GET /scans`) to fetch scan data, applying the `start_time`
+    filter if `Days Backwards` is specified.
 
-    4. **API Request**: The action calls the Rapid7 `list_scans` endpoint. If a start
-    time was calculated, it filters the results to only include scans that started
-    after that time.
+    4. Process the retrieved scan list by removing the `links` field from each scan
+    object.
 
-    5. **Data Cleaning**: The script iterates through the retrieved scan list and
-    removes the 'links' attribute from each scan object to sanitize the data.
+    5. Format the scan data into a CSV-style data table and add it to the action results.
 
-    6. **Result Delivery**: The cleaned data is converted into a CSV-formatted data
-    table named 'Scans' and a raw JSON object, both of which are attached to the action's
-    output.
+    6. Add the raw JSON scan data to the action results.
+
+    7. Return a summary message indicating the total number of scans found.
+
+
+    ### Additional Notes
+
+    This action is a read-only operation and does not modify any data in the Rapid7
+    InsightVM platform or the SecOps environment.
+  ai_short_description: >-
+    Retrieves a list of scans from Rapid7 InsightVM, optionally filtered by a time
+    range, and displays the results in the action output.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -265,10 +450,47 @@ List Scans:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a GET request to the Rapid7 API to retrieve scan information.
+      It does not perform any mutations on external systems or internal SecOps data,
+      nor does it update entities or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -282,42 +504,77 @@ List Scans:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities from the case. It performs a
+      global query to the Rapid7 API to list scans, therefore no entity usage flags
+      are set.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of historical scan records from Rapid7 InsightVM.
+      This aligns with the 'Search Events' category as it returns historical telemetry
+      data based on the provided time range.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Days Backwards | String | Yes | Number of days backwards to fetch scans from.
+    |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity to the Rapid7 InsightVM instance using the provided configuration.
-    This action ensures that the API Root, Username, and Password are valid and that
-    the network connection between Google SecOps and Rapid7 InsightVM is functional.
-
-
-    ### Parameters Description
-
-    There are no parameters for this action.
-
-
-    ### Additional Notes
-
-    This is a standard 'Ping' action used for troubleshooting integration setup and
-    verifying that the environment can reach the external API.
+    Tests connectivity to the Rapid7 InsightVm instance. This action verifies that
+    the SOAR platform can successfully communicate with the configured Rapid7 InsightVm
+    API endpoint.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action fetches the API Root, Username, Password,
-    and SSL verification settings from the integration configuration.
+    1. The action initializes the `Rapid7Manager` using the integration configuration
+    (API Root, Username, Password, and SSL verification settings).
 
-    2. **Manager Initialization**: Initializes the `Rapid7Manager` with the retrieved
-    credentials and connection settings.
+    2. It executes the `test_connectivity` method, which performs an HTTP GET request
+    to the configured API root.
 
-    3. **Connectivity Test**: Executes a GET request to the API Root URL via the `test_connectivity`
-    method in the manager.
+    3. The response is validated to ensure the connection is successful.
 
-    4. **Validation**: Checks the HTTP response status to confirm the service is reachable
-    and credentials are accepted.
+    4. The action concludes by returning a success message indicating the connection
+    status.
 
-    5. **Completion**: Returns a success message and a boolean 'true' result if the
-    connection is established.
+
+    ### Additional Notes
+
+    This action is used for troubleshooting integration configuration issues.
+  ai_short_description: >-
+    Tests connectivity to the Rapid7 InsightVm instance.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -328,10 +585,46 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a GET request to the API root to verify connectivity. It
+      does not fetch contextual data, nor does it mutate any data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -345,3 +638,36 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: The action does not use any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any of the listed operational
+      outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.

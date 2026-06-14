@@ -1,62 +1,98 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get Ip Reputation:
-  ai_description: "### General Description\nThe **Get Ip Reputation** action scans\
-    \ IP Address entities through the IPVoid service. It checks the IP against multiple\
-    \ DNS-based blacklists (DNSBL) and reputation engines to identify potential involvement\
-    \ in malware or spam activities. This action provides deep context regarding the\
-    \ IP's origin, ISP, and anonymity status (VPN, Tor, Proxy).\n\n### Parameters\
-    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
-    \ :--- | :--- |\n| Threshold | Integer | Yes | Defines the minimum number of blacklist\
-    \ detections needed to flag the entity as suspicious within Google SecOps. If\
-    \ the number of engines reporting the IP is greater than this value, the entity's\
-    \ suspicious flag is set to true. |\n\n### Flow Description\n1. **Initialization**:\
-    \ The action initializes the IPVoid manager using the provided API Root and API\
-    \ Key.\n2. **Entity Filtering**: It iterates through the target entities, specifically\
-    \ processing those of type `ADDRESS`.\n3. **Data Retrieval**: For each IP address,\
-    \ it performs a lookup via the IPVoid API to retrieve reputation, anonymity, and\
-    \ blacklist data.\n4. **Data Processing**: \n    *   Extracts geolocation (country,\
-    \ continent), ISP, and detection statistics.\n    *   Constructs a blacklist report\
-    \ detailing which specific engines detected the IP.\n5. **Internal Updates**:\n\
-    \    *   **Tables**: Adds a CSV-formatted table to the entity showing the blacklist\
-    \ engine results.\n    *   **Insights**: Creates an entity insight displaying\
-    \ the country code of the IP.\n    *   **Enrichment**: Updates the entity's additional\
-    \ properties with IPVoid metadata and marks the entity as enriched.\n6. **Risk\
-    \ Evaluation**: Compares the detection count against the user-defined `Threshold`.\
-    \ If the count is higher, the entity is marked as suspicious.\n7. **Completion**:\
-    \ Updates all processed entities in the platform and returns a summary of enriched,\
-    \ missing, or failed entities.\n\n### Additional Notes\n- This action is a read-only\
-    \ enrichment task regarding the external IPVoid service; it does not change any\
-    \ external configurations."
+  ai_description: >-
+    ### General Description
+
+    Scans IP addresses using the IPVoid service to retrieve reputation data, including
+    blacklist status, detection rates, and geographic information. This action helps
+    analysts identify potentially malicious IP addresses involved in spamming or malware
+    incidents.
+
+
+    ### Flow Description
+
+    1. Initialize the IPVoid manager using the API credentials provided in the integration
+    configuration.
+
+    2. Iterate through the target entities, filtering specifically for those of type
+    'ADDRESS'.
+
+    3. For each valid IP address, query the IPVoid API to retrieve reputation and
+    blacklist data.
+
+    4. Process the raw API response to generate a blacklist report and extract key
+    enrichment metrics (e.g., detection rate, engines count).
+
+    5. Update the entity's `additional_properties` with the retrieved enrichment data.
+
+    6. Generate an entity insight containing the country code if available.
+
+    7. Evaluate the number of blacklist detections against the configured 'Threshold'
+    parameter; if the threshold is exceeded, mark the entity as suspicious.
+
+    8. Update the entities within the SOAR platform and attach the full JSON result
+    to the action output.
+
+
+    ### Additional Notes
+
+    This action requires a valid IPVoid API key configured in the integration settings.
+    The 'Threshold' parameter determines the sensitivity for flagging an IP as suspicious
+    based on the number of blacklist detections.
+  ai_short_description: >-
+    Scans IP addresses through IPVoid to retrieve reputation data, blacklist status,
+    and detection metrics, updating entities with enrichment information and suspicious
+    status based on a configurable threshold.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes including 'is_suspicious', 'is_enriched', and 'additional_properties'.
-      It also adds entity insights and data tables to the case.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from an external API (IPVoid) to enrich entities. It
+      updates the entities within the SOAR platform (adding properties and insights)
+      but does not mutate external system state or modify alert metadata.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -70,41 +106,77 @@ Get Ip Reputation:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type == EntityTypes.ADDRESS`. This confirms the action targets
+      and filters by the 'ADDRESS' entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches reputation, prevalence, and threat intelligence (blacklist
+      detections) for an IP address (IOC). This directly matches the 'Enrich IOC'
+      category. It does not perform any blocking, ticketing, or alert modification.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | Yes | IP risk threshold. If the number of blacklist detections
+    exceeds this value, the entity is marked as suspicious. Default is 0. |
 Ping:
   ai_description: >-
-    ### General Description
-
-    Tests the connectivity to the IPVoid service to verify that the provided API Root
-    and API Key are valid and that the Google SecOps environment can reach the IPVoid
-    API endpoints.
+    General Description: Tests the connectivity between the Google SecOps SOAR platform
+    and the IPVoid service to ensure the integration is correctly configured.
 
 
-    ### Parameters
+    Flow Description:
 
-    There are no parameters for this action.
+    1. Retrieves the integration configuration, including the API Root, API Key, and
+    SSL settings, from the IPVoid integration settings.
+
+    2. Initializes the IPVoidManager with the retrieved credentials.
+
+    3. Executes the `test_connectivity` method, which sends a GET request to the IPVoid
+    API endpoint (`/iprep/v1/pay-as-you-go/?stats`) to verify the connection.
+
+    4. Validates the API response to ensure the service is reachable and the credentials
+    are valid.
+
+    5. Terminates the action with a success message if the connection is established.
 
 
-    ### Additional Notes
-
-    This action is primarily used for troubleshooting and initial configuration verification.
-    According to the categorization rules, Ping actions are not classified as enrichment
-    actions.
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval**: The action fetches the 'Api Root', 'Api Key',
-    and 'Use SSL' settings from the IPVoid integration configuration.
-
-    2. **Manager Initialization**: It initializes the `IPVoidManager` with the retrieved
-    settings.
-
-    3. **Connectivity Test**: The manager executes a GET request to the IPVoid stats
-    endpoint (`/iprep/v1/pay-as-you-go/?stats`) to verify the API key and network
-    path.
-
-    4. **Result Reporting**: If the request is successful, the action concludes with
-    a 'Connected successfully' message.
+    Additional Notes: This action is intended for administrative use to verify that
+    the integration is properly set up and that the platform can successfully communicate
+    with the external IPVoid service.
+  ai_short_description: >-
+    Tests connectivity to the IPVoid service to ensure the integration is properly
+    configured.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -113,12 +185,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a connectivity test by sending a GET request to the IPVoid
+      API. It does not fetch contextual data for entities or alerts, nor does it mutate
+      any data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -132,54 +241,130 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action is a global connectivity test and does not interact with or filter
+      any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test and does not perform any of the defined
+      outcome operations such as enrichment, ticketing, or blocking.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
 WhoIs:
   ai_description: >-
     ### General Description
 
-    Queries the Whois database via IPVoid to retrieve registration and ownership information
-    for IP addresses and Hostnames. This action helps analysts identify the owner,
-    registration date, and contact details associated with a network entity by attaching
-    a detailed HTML report to the entity.
-
-
-    ### Parameters
-
-    There are no parameters for this action.
+    Queries the Whois database via the IPVoid service to retrieve registration and
+    ownership information for IP addresses and hostnames. This action provides valuable
+    context for threat hunting and incident investigation by attaching detailed Whois
+    reports directly to the relevant entities within the SecOps platform.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the IPVoid manager using the integration's
-    API configuration (API Root, API Key, and SSL settings).
+    1. Initialize the IPVoid manager using the configuration parameters (Api Root,
+    Api Key, Use SSL) retrieved from the integration settings.
 
-    2. **Entity Filtering**: It identifies all `ADDRESS` (IP) and `HOSTNAME` entities
-    within the current case context.
+    2. Iterate through the `target_entities` provided in the case.
 
-    3. **Data Retrieval**: For each identified entity, it performs a Whois lookup
-    by sending a request to the IPVoid Whois service.
+    3. Filter the entities to process only those of type 'ADDRESS' or 'HOSTNAME'.
 
-    4. **Reporting**: The retrieved HTML content is attached as an HTML report to
-    the corresponding entity in Google SecOps.
+    4. For each valid entity, perform a POST request to the IPVoid Whois service to
+    fetch the HTML report.
 
-    5. **Completion**: The action concludes by providing a summary message listing
-    all entities for which a report was successfully attached.
+    5. Attach the retrieved HTML report to the entity within the SecOps platform using
+    `add_entity_html_report`.
+
+    6. Compile a list of entities for which reports were successfully attached and
+    return a summary message.
+
+
+    ### Additional Notes
+
+    This action is strictly an enrichment operation. It retrieves data from an external
+    service and attaches it to the case entities without modifying any external system
+    states or internal alert metadata.
+  ai_short_description: >-
+    Queries the Whois database via IPVoid to retrieve and attach registration information
+    for IP addresses and hostnames.
   capabilities:
     can_create_case_comments: false
-    can_create_insight: false
+    can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Attaches an HTML Whois report to the entities in the case.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches WhoIs data from an external service (IPVoid) via a POST request.
+      It attaches this data as an HTML report to the entity, which is classified as
+      creating an insight. It does not mutate external data, update internal entities
+      (via update_entities), or modify alert/case data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -193,3 +378,40 @@ WhoIs:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters for
+      entities where the type is either `EntityTypes.ADDRESS` or `EntityTypes.HOSTNAME`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves WhoIs information, which provides contextual metadata for
+      IP addresses (IOCs) and Hostnames (Assets). This matches the 'Enrich IOC' and
+      'Enrich Asset' categories. It does not perform any state-changing operations
+      on external systems or internal alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.

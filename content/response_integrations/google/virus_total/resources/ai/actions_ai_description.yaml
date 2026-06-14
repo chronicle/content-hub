@@ -1,80 +1,97 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get Domain Report:
   ai_description: >-
     ### General Description
 
-    The **Get Domain Report** action retrieves comprehensive threat intelligence for
-    domain-related entities (Hostnames, Users, and URLs) from VirusTotal. It provides
-    critical context such as domain categories, resolutions, and reputation data from
-    various security vendors to help analysts assess the risk associated with specific
-    domains.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Api Key | String | Yes | The API key used to authenticate with the VirusTotal
-    API. |
-
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the VirusTotal API. Default is False. |
+    Enriches domain-related entities (Hostname, URL, and User) using VirusTotal. This
+    action retrieves threat intelligence reports for domains associated with the provided
+    entities, including reputation scores, categories, and related samples. It updates
+    the entities with this contextual data and provides links to the full VirusTotal
+    report.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves the VirusTotal API key and SSL verification
-    settings from the integration configuration.
+    1. **Initialization**: The action initializes the VirusTotal manager using the
+    provided API key and SSL verification setting.
 
-    2. **Entity Filtering**: It identifies entities of type Hostname, User, or URL
-    within the current alert scope.
+    2. **Entity Filtering**: It filters the target entities to include only those
+    of type `HOSTNAME`, `USER`, or `URL`.
 
-    3. **Data Retrieval**: For each valid entity, the action extracts the domain name
-    and queries the VirusTotal API for a domain report.
+    3. **Data Retrieval**: For each supported entity, it extracts the domain and queries
+    the VirusTotal API (`vt.get_domain_report`) to fetch the domain report.
 
-    4. **Enrichment**:
-        * Updates the entity's additional properties with VirusTotal data (prefixed
-    with 'VT').
-        * Marks the entity as enriched.
-        * Adds a data table to the entity containing a score report (categories, BitDefender
-    info, Alexa rank, etc.).
-        * Adds a direct link to the VirusTotal web report for the domain.
-    5. **Completion**: Updates the entities in the SOAR platform and provides a summary
-    message of the results.
+    4. **Enrichment**: If a report is found, it updates the entity's `additional_properties`
+    with the retrieved data (prefixed with `VT_`) and marks the entity as enriched
+    (`is_enriched = True`).
+
+    5. **Result Reporting**: It adds an entity table containing the enrichment data
+    and a link to the VirusTotal web report to the action results.
+
+    6. **Entity Update**: Finally, it updates the enriched entities within the platform
+    and adds the full JSON results to the action output.
+
+
+    ### Additional Notes
+
+    - This action requires a valid VirusTotal API key.
+
+    - If an entity is not found in VirusTotal, it is logged as missing.
+
+    - If API limits are reached, the action logs the limitation and skips the affected
+    entities.
+  ai_short_description: >-
+    Enriches Hostname, URL, and User entities with domain reputation data from VirusTotal.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity additional properties with VirusTotal enrichment data, sets the
-      is_enriched flag, and adds data tables and links to the entity.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from VirusTotal (fetches_data=true) and updates the
+      entities within the platform (can_update_entities=true). It does not mutate
+      external data, create insights, or modify alert data.
   entity_usage:
     entity_types:
-    - HOSTNAME
-    - DestinationURL
-    - USERUNIQNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -88,26 +105,80 @@ Get Domain Report:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them based
+      on `entity.entity_type` being `HOSTNAME`, `USER`, or `URL`. It does not filter
+      by other attributes like creation time or additional properties.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence (reputation, categories) for domain-related
+      entities from VirusTotal. This matches the 'Enrich IOC' category. It does not
+      perform any mutation on external systems or internal alert data.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Api Key | String | Yes | VirusTotal API Key |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates (Default: False)
+    |
 Ping:
-  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
-    \ designed to verify the connectivity between Google SecOps and the VirusTotal\
-    \ API. It ensures that the provided credentials (API Key) are valid and that the\
-    \ network configuration (including SSL verification) allows for successful communication\
-    \ with the VirusTotal service.\n\n### Parameters Description\n| Parameter | Type\
-    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Api Key** |\
-    \ String | Yes | The API key used to authenticate requests to VirusTotal. |\n\
-    | **Verify SSL** | Boolean | No | If enabled, the action will verify the SSL certificate\
-    \ of the VirusTotal API endpoint. Defaults to `False`. |\n\n### Flow Description\n\
-    1. **Initialization**: The action retrieves the `Api Key` and `Verify SSL` settings\
-    \ from the integration configuration.\n2. **Manager Setup**: It initializes the\
-    \ `VirusTotalManager` with the provided credentials.\n3. **Connectivity Test**:\
-    \ The action attempts to fetch a report for a dummy URL (`https://www.google.co.il`)\
-    \ from the VirusTotal API.\n4. **Validation**: \n    * If the API returns a valid\
-    \ response, the connection is marked as established.\n    * If a `403 Forbidden`\
-    \ error occurs, it identifies an invalid API key.\n    * If any other exception\
-    \ occurs (e.g., network timeout), it reports a general failure.\n5. **Completion**:\
-    \ The action returns a boolean result (`true` for success, `false` for failure)\
-    \ and a status message to the SOAR interface."
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the VirusTotal API by performing a sample request. This
+    action verifies that the provided API key is valid and that the integration can
+    successfully communicate with the VirusTotal service.
+
+
+    ### Flow Description
+
+    1. Extracts the `Api Key` and `Verify SSL` configuration parameters from the integration
+    settings.
+
+    2. Initializes the `VirusTotalManager` with the provided credentials.
+
+    3. Executes the `test_connectivity()` method, which performs a sample API request
+    to VirusTotal.
+
+    4. Validates the response; if successful, returns a success message; otherwise,
+    logs and returns an error message.
+
+
+    ### Additional Notes
+
+    This action does not modify any data and is used solely for verifying integration
+    health.
+  ai_short_description: >-
+    Tests connectivity to the VirusTotal API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -118,10 +189,46 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to the VirusTotal API to verify connectivity.
+      It does not mutate external or internal data, update entities, or create insights/comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -135,61 +242,100 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Scan Hash:
-  ai_description: >-
-    Enriches File Hash entities by retrieving threat intelligence reports and comments
-    from VirusTotal. The action supports asynchronous execution, allowing it to trigger
-    new scans if a report is missing or outdated based on a user-defined threshold.
-    It evaluates the risk of the file based on the number of positive detections from
-    various antivirus engines and can automatically mark entities as suspicious within
-    Google SecOps.
-
-
-    ### Flow Description:
-
-    1. **Entity Filtering:** Identifies all `FILEHASH` entities in the current context.
-
-    2. **Initial Check:** Queries VirusTotal for existing reports for each hash. If
-    a report exists and is within the 'Rescan after days' limit, it proceeds to enrichment.
-
-    3. **Scan/Rescan Trigger:** If no report is found or the existing one is too old,
-    the action submits the hash for a new scan and enters an 'In Progress' state.
-
-    4. **Status Polling:** In subsequent runs, the action polls VirusTotal to check
-    if the analysis is complete.
-
-    5. **Data Retrieval:** Once the report is ready, it fetches the full analysis
-    report and any associated community comments.
-
-    6. **Enrichment & Insight:** Updates the entity with detailed metadata (MD5, SHA1,
-    File Type, etc.), attaches a detection engine table, and adds a direct link to
-    the VirusTotal analysis. If the number of positive detections meets or exceeds
-    the 'Threshold', the entity is marked as suspicious and a detailed insight is
-    generated.
-
-
-    ### Parameters Description:
-
+    reasoning: >-
+      The action does not iterate over target entities or use entity-specific identifiers.
+      It performs a connectivity test against the VirusTotal API, so all entity type
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test to the VirusTotal API. It does not perform
+      enrichment, ticket creation, or any other listed outcome category, so all flags
+      are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Threshold | Integer | Yes | The minimum number of positive engine detections
-    required to mark the entity as suspicious and create an insight. Default is 3.
+    | Api Key | String | Yes | VirusTotal API Key |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates (default: False)
     |
+Scan Hash:
+  ai_description: >-
+    ### General Description
 
-    | Rescan after days | Integer | No | If an existing report is older than this
-    number of days, the action will automatically trigger a rescan of the file hash.
-    |
+    This action scans file hash entities using the VirusTotal API to retrieve threat
+    intelligence and reputation data. It evaluates the file's risk based on a configurable
+    threshold of malicious detections from security engines. If the threshold is met,
+    the entity is marked as suspicious, and an insight is generated.
 
 
-    ### Additional Notes:
+    ### Flow Description
 
-    - This action requires a valid VirusTotal API key. Note that 'Rescan' functionality
-    may require a Private API key depending on VirusTotal's current tier limitations.
+    1. **Initialization**: The action initializes the VirusTotal manager using the
+    provided API key and configuration.
 
-    - The action handles API rate limits gracefully by pausing and retrying in subsequent
-    execution cycles.
+    2. **Filtering**: It filters the target entities to process only those of type
+    `FILEHASH`.
+
+    3. **Operation Start**: For each file hash, it checks the existing report status.
+    If a rescan is required (based on the `Rescan after days` parameter) or if the
+    file is missing, it triggers a rescan request via the VirusTotal API.
+
+    4. **Status Querying**: If the action is running asynchronously, it polls the
+    status of the submitted tasks.
+
+    5. **Data Collection**: Once the analysis is complete, it fetches the full report
+    from VirusTotal.
+
+    6. **Enrichment**: It updates the entity with additional properties (e.g., MD5,
+    SHA1, file type, detection engines), adds a data table of engine results, and
+    attaches a link to the VirusTotal report.
+
+    7. **Risk Assessment**: If the number of positive detections meets or exceeds
+    the `Threshold` parameter, the entity is marked as suspicious, and an insight
+    is added to the case.
+
+    8. **Finalization**: The action updates the entities within the SOAR platform
+    with the gathered intelligence.
+
+
+    ### Additional Notes
+
+    This action supports asynchronous execution, allowing it to wait for VirusTotal
+    analysis to complete if the file was not previously scanned or if a rescan was
+    triggered. It requires a valid VirusTotal API key with appropriate permissions
+    for the requested operations.
+  ai_short_description: >-
+    Enriches file hash entities using VirusTotal threat intelligence, evaluates risk
+    based on detection thresholds, and updates entities with reputation data and insights.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -200,14 +346,49 @@ Scan Hash:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity attributes including 'is_suspicious', 'is_enriched', and 'additional_properties'.
-      It also creates entity insights, data tables for scan results and comments,
-      and adds entity links to the case.
-  categories:
-    enrichment: true
+      Updates entity properties and status within the SOAR platform.
+    reasoning: >-
+      The action fetches threat intelligence data from VirusTotal (fetches_data=true).
+      It updates internal entities with enrichment data and insights (can_update_entities=true,
+      can_create_insight=true). It does not mutate external security systems (can_mutate_external_data=false)
+      or modify alert metadata.
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -221,30 +402,93 @@ Scan Hash:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity.entity_type == EntityTypes.FILEHASH`. It does not
+      filter by other attributes like creation time, modification time, or specific
+      entity flags.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence (reputation, detection engines) for
+      file hashes from VirusTotal. This directly matches the 'Enrich IOC' category.
+      It does not perform security control mutations (like blocking) or ticket management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | Yes | Mark entity as suspicious if the number of negative
+    engines is equal to or above this threshold. |
+
+    | Rescan after days | String | No | If the existing report is older than this
+    number of days, the action will automatically trigger a rescan of the entity.
+    |
 Scan IP:
-  ai_description: "### General Description\nScans IP address entities using VirusTotal\
-    \ to retrieve comprehensive threat intelligence and reputation data. This action\
-    \ helps security analysts determine the risk level of external IP addresses by\
-    \ aggregating detection data from multiple antivirus engines and scanning services.\
-    \ It provides context such as geographic location (country), ASN information,\
-    \ and historical domain resolutions.\n\n### Parameters Description\n| Parameter\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Threshold\
-    \ | Integer | No | The minimum number of malicious detections (positives) required\
-    \ to mark the IP entity as suspicious in Google SecOps. Defaults to 25. |\n\n\
-    ### Flow Description\n1. **Entity Filtering**: The action identifies all `ADDRESS`\
-    \ entities in the current scope that are not marked as internal.\n2. **API Query**:\
-    \ For each valid entity, it queries the VirusTotal API to retrieve the IP address\
-    \ report.\n3. **Enrichment**: The action updates the entity's additional properties\
-    \ with the country, related domains, and the latest scan timestamp.\n4. **Risk\
-    \ Assessment**: It compares the number of positive detections from the report\
-    \ against the user-defined `Threshold`. If the threshold is met or exceeded, the\
-    \ entity is marked as suspicious.\n5. **Insight & Visualization**: \n    * Creates\
-    \ an **Entity Insight** summarizing malicious sample counts (referrer, downloaded,\
-    \ communicating) and malicious URLs.\n    * Adds an **Entity Table** containing\
-    \ historical domain resolutions (reverse DNS).\n    * Attaches an **Entity Link**\
-    \ directly to the VirusTotal web report for deeper investigation.\n6. **Result\
-    \ Reporting**: Updates the entities in the case and provides a full JSON result\
-    \ of the VirusTotal report for downstream automation."
+  ai_description: >-
+    ### General Description
+
+    Scans IP addresses using VirusTotal to retrieve threat intelligence, including
+    reputation, related domains, and malicious sample counts. This action helps analysts
+    assess the risk associated with external IP addresses identified in security alerts.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (API Key, SSL verification) and action parameters
+    (Threshold) from the integration settings.
+
+    2. Filters the target entities to process only non-internal IP addresses.
+
+    3. Queries the VirusTotal API for each IP address to retrieve a comprehensive
+    report.
+
+    4. Updates the entity with enrichment data (e.g., country, related domains) and
+    marks it as enriched.
+
+    5. Evaluates the IP's risk score against the provided threshold; if the number
+    of malicious samples exceeds the threshold, the entity is marked as suspicious.
+
+    6. Adds an entity link to the VirusTotal report, a table of resolutions, and an
+    insight message to the case.
+
+    7. Updates the entities in the SOAR platform and returns the full JSON report.
+
+
+    ### Additional Notes
+
+    The action requires a valid VirusTotal API key. It supports filtering by a malicious
+    sample threshold to automatically flag suspicious entities, facilitating faster
+    triage.
+  ai_short_description: >-
+    Scans IP addresses using VirusTotal to retrieve threat intelligence, update entity
+    metadata, and flag suspicious IPs based on a configurable threshold.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -255,14 +499,49 @@ Scan IP:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity enrichment fields (additional_properties), sets the 'is_suspicious'
-      flag based on the detection threshold, and adds insights, links, and data tables
-      to the entities within the case.
-  categories:
-    enrichment: true
+      Updates entity properties, marks entities as enriched/suspicious, adds insights,
+      and attaches result data to the case.
+    reasoning: >-
+      The action fetches data from VirusTotal (fetches_data=true). It does not mutate
+      external systems. It mutates internal data by updating entities, adding insights,
+      and attaching result data to the case (can_mutate_internal_data=true).
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -276,72 +555,85 @@ Scan IP:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Scan URL:
-  ai_description: >-
-    Scans URL entities using VirusTotal to retrieve reputation data and threat intelligence.
-    This action operates asynchronously, meaning it can initiate a new scan if no
-    recent report exists and wait for the results to be processed. It enriches the
-    URL entity with detailed scan information, including risk scores, engine-specific
-    detection results, and permalinks to the full analysis. Additionally, it can fetch
-    user comments associated with the URL. If the number of positive engine detections
-    meets or exceeds a user-defined threshold, the entity is marked as suspicious
-    and a detailed insight is generated within the case.
-
-
-    ### Parameters Description
-
-
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS and not entity.is_internal`. This means it targets ADDRESS
+      entities, filtering by entity_type and is_internal.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence for IP addresses from VirusTotal, which
+      matches the 'Enrich IOC' category. It does not perform any external mutations
+      (blocking/unblocking) or alert/ticket management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Threshold | Integer | Yes | The minimum number of positive engine detections
-    required to mark an entity as suspicious. Default is 3. |
+    | Threshold | String | No | Specify the accepted threshold for the detected samples
+    related to the IP address. If the number of engines that marked related samples
+    as malicious is higher than the specified threshold, IP address will be marked
+    as suspicious. |
+Scan URL:
+  ai_description: >-
+    ### General Description
 
-    | Rescan after days | Integer | No | The number of days after which the action
-    will force a rescan of the URL if a report already exists. If not provided, the
-    action will use the latest available report regardless of age. |
+    Scans URL entities using VirusTotal to retrieve threat intelligence, including
+    reputation scores and detection status from various engines.
 
 
     ### Flow Description
 
+    1. The action filters target entities for URL types.
 
-    1. **Initialization**: The action retrieves the VirusTotal API key and SSL verification
-    settings from the integration configuration.
+    2. It initiates a scan or rescan request to VirusTotal for each URL, based on
+    the provided `Rescan after days` parameter.
 
-    2. **Entity Identification**: It identifies all URL entities within the current
-    scope.
+    3. If the scan is queued, the action waits for completion.
 
-    3. **Report Check/Scan Initiation**: For each URL, it checks if a report exists
-    on VirusTotal. If no report exists, or if the existing report is older than the
-    'Rescan after days' parameter, it initiates a new scan request.
+    4. Once the report is ready, it retrieves the scan results, including detection
+    counts and permalinks.
 
-    4. **Asynchronous Wait**: If new scans are initiated, the action enters an 'In
-    Progress' state, periodically checking the status of the scan tasks until they
-    are completed.
+    5. It updates the entity with enrichment data (e.g., scan date, risk score, detecting
+    engines).
 
-    5. **Data Retrieval**: Once the scan is complete (or if a valid existing report
-    was found), the action retrieves the full report and any associated user comments.
-
-    6. **Enrichment**: The action enriches the URL entities with detailed scan data,
-    including a risk score, detection engines, and a permalink to the VirusTotal analysis.
-    It also attaches data tables for engine results and comments.
-
-    7. **Suspicion & Insights**: If the number of positive detections meets or exceeds
-    the 'Threshold', the entity is marked as suspicious, and a detailed insight is
-    added to the case.
+    6. If the number of malicious detections meets or exceeds the `Threshold` parameter,
+    the entity is marked as suspicious, and an insight is added to the case.
 
 
     ### Additional Notes
 
-
-    - This action requires a valid VirusTotal API key (Public or Private).
-
-    - Public API keys are subject to rate limits which may cause the action to wait
-    longer or fail if limits are exceeded.
-
-    - The action supports asynchronous execution to handle the time required for VirusTotal
-    to complete new URL scans.
+    This action is asynchronous and may require multiple runs to complete if the scan
+    is queued.
+  ai_short_description: >-
+    Scans URL entities using VirusTotal to retrieve threat intelligence and marks
+    them as suspicious if they meet a configurable detection threshold.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -352,14 +644,48 @@ Scan URL:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity enrichment data, sets the suspicious flag based on the detection
-      threshold, adds entity insights, and attaches data tables containing scan results
-      and comments.
-  categories:
-    enrichment: true
+      Updates entity properties (is_enriched, is_suspicious, additional_properties)
+      and adds insights within the SOAR platform.
+    reasoning: >-
+      The action makes requests to VirusTotal API to fetch URL data. It does not mutate
+      external data but updates internal entities and creates insights.
   entity_usage:
     entity_types:
-    - DestinationURL
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -373,55 +699,141 @@ Scan URL:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.URL`. This means it targets URL entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches URL data from VirusTotal, returning threat intelligence and
+      evaluating risk. This matches the 'Enrich IOC' expected outcome. It does not
+      mutate data on external systems, so it is not a Contain Host or Blocklist action.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | Yes | Mark entity as suspicious if number of negative engines
+    is equal or above the given threshold |
+
+    | Rescan after days | String | No | Action will fetch the latest result. If the
+    result is older than mentioned days it will automatically rescan the entity |
 Upload And Scan Files:
-  ai_description: "Uploads and scans files using VirusTotal. This action supports\
-    \ scanning local files or files located on a remote Linux server via SSH/SFTP.\
-    \ It operates asynchronously, submitting files for analysis and then polling for\
-    \ results. Once the scan is complete, it retrieves the full detection report and\
-    \ community comments, attaching them as data tables and providing a direct link\
-    \ to the VirusTotal analysis page. If the number of positive detections exceeds\
-    \ a user-defined threshold, the action automatically generates a case insight\
-    \ to highlight the risk.\n\n### Parameters Description\n\n| Parameter | Type |\
-    \ Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Threshold | Integer\
-    \ | Yes | The number of positive detections required to trigger a risk alert and\
-    \ create a case insight. |\n| File Paths | String | Yes | A comma-separated list\
-    \ of file paths to be uploaded and scanned. |\n| Linux Server Address | String\
-    \ | No | The IP address or hostname of the remote Linux server where the files\
-    \ are located. |\n| Linux User | String | No | The username for SSH/SFTP authentication\
-    \ on the remote Linux server. |\n| Linux Password | Password | No | The password\
-    \ for SSH/SFTP authentication on the remote Linux server. |\n\n### Flow Description\n\
-    \n1. **Initialization**: The action extracts the API key, file paths, and risk\
-    \ threshold. If remote server details are provided, it prepares for SFTP access.\n\
-    2. **File Submission (First Run)**: \n    - If a Linux server is specified, the\
-    \ action connects via SFTP to retrieve the file content.\n    - The files are\
-    \ uploaded to VirusTotal using the scan API.\n    - The action stores the resulting\
-    \ scan IDs and enters an 'In Progress' state.\n3. **Status Polling (Subsequent\
-    \ Runs)**: The action periodically checks VirusTotal to see if the analysis for\
-    \ each scan ID is complete.\n4. **Result Retrieval**: Once scans are finished,\
-    \ the action fetches the full report and any associated community comments.\n\
-    5. **Data Enrichment**: \n    - Detailed detection results and comments are added\
-    \ as data tables to the case.\n    - A permalink to the VirusTotal report is added\
-    \ as a link.\n6. **Risk Assessment**: If the detection count exceeds the specified\
-    \ threshold, a case insight is created to notify the analyst of the malicious\
-    \ findings."
+  ai_description: >-
+    ### General Description
+
+    Uploads files to VirusTotal for scanning and retrieves the analysis report. This
+    action supports both local files and files located on remote Linux servers, providing
+    a comprehensive way to analyze potentially malicious files.
+
+
+    ### Flow Description
+
+    1. The action receives a list of file paths and optional Linux server credentials.
+
+    2. If a Linux server is specified, it connects via SSH/SFTP to retrieve the file
+    content.
+
+    3. It uploads the file(s) to VirusTotal using the `upload_file` API call.
+
+    4. The action enters an asynchronous state (`EXECUTION_STATE_INPROGRESS`) to wait
+    for the scan to complete.
+
+    5. In subsequent runs, it polls the VirusTotal API using `get_report_by_scan_id`
+    to check the scan status.
+
+    6. Once complete, it retrieves the report, adds a CSV data table of engine detections,
+    adds comments, and provides a link to the VirusTotal report.
+
+    7. If the number of malicious detections exceeds the configured `Threshold`, it
+    creates a case insight.
+
+
+    ### Additional Notes
+
+    This action is asynchronous and requires multiple runs to complete the scan and
+    report retrieval. It does not operate on specific SOAR entities but rather on
+    file paths provided as input parameters.
+  ai_short_description: >-
+    Uploads files to VirusTotal for scanning, monitors the scan status, and generates
+    insights if the file is flagged as malicious based on a configurable threshold.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: true
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Uploads files to VirusTotal for scanning and analysis, which creates new scan
-      resources on the platform.
+    external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Creates case insights if a file is found to be risky based on the provided detection
-      threshold.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to VirusTotal API to fetch report data and a
+      POST request to upload files. It does not mutate external data (in the context
+      of security controls), but it does create insights within the SOAR platform.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -435,3 +847,53 @@ Upload And Scan Files:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It operates on file paths provided as input parameters. Therefore,
+      no entity types are used, and no filtering flags are applicable.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action uploads a file to VirusTotal for analysis (matches 'Submit File')
+      and retrieves the report, which provides threat intelligence (matches 'Enrich
+      IOC'). It does not perform any blocking, containment, or ticket management actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: true
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | Yes | Entity risk threshold. |
+
+    | File Paths | String | Yes | Target file path. |
+
+    | Linux Server Address | String | No | Linux server address (e.g: x.x.x.x). |
+
+    | Linux User | String | No | Linux User. |
+
+    | Linux Password | Password | No | Linux Password. |

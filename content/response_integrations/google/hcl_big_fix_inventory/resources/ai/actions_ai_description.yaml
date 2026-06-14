@@ -1,89 +1,102 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Entities:
   ai_description: >-
     ### General Description
 
-    Enriches Hostname and IP Address entities using information retrieved from HCL
-    BigFix Inventory. This action queries the BigFix Inventory API to find matching
-    computer records and populates the entity's context with hardware, software, and
-    health details. It helps analysts understand the state of a device, including
-    its OS, last scan time, and disk space status.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Custom Fields | String | No | A comma-separated list of additional fields to
-    be returned from the BigFix Inventory API in addition to the default set. |
-
-    | Create Insight | Boolean | No | If set to `true` (default), the action will
-    create a detailed insight on the entity containing the retrieved information.
-    |
-
-
-    ### Additional Notes
-
-    - The action uses a prefix `HCLBigFixInv` for all enriched entity attributes.
-
-    - Supported entity types are Hostname and IP Address.
+    Enriches Hostname and IP Address entities using device information retrieved from
+    HCL BigFix Inventory. This action queries the HCL BigFix Inventory API to gather
+    contextual metadata about the specified assets, such as OS, last seen timestamps,
+    and hardware details. The retrieved information is then used to update the entity's
+    properties within the SOAR platform and optionally generate an insight for the
+    analyst.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the HCL BigFix Inventory manager
-    using the provided API Root, Token, and SSL configuration.
+    1. **Initialization**: The action extracts configuration parameters (API Root,
+    API Token, Verify SSL) and action parameters (Custom Fields, Create Insight).
 
-    2. **Connectivity Check**: Performs a test connectivity call to ensure the API
-    is reachable.
+    2. **Filtering**: It filters the `target_entities` to include only those of type
+    `ADDRESS` or `HOSTNAME`.
 
-    3. **Entity Filtering**: Identifies all Hostname and IP Address entities within
-    the current context.
+    3. **Connectivity**: It initializes the `HCLBigFixInventoryManager` and performs
+    a connectivity test to the HCL BigFix Inventory API.
 
-    4. **Data Retrieval**: For each entity, it queries the `/api/sam/v2/computers`
-    endpoint using the entity's identifier (IP or Hostname) as criteria.
+    4. **Enrichment**: For each suitable entity, the action performs an API GET request
+    to retrieve device details based on the entity identifier (IP or Hostname).
 
-    5. **Enrichment**: If a matching device is found:
-        - Updates the entity's `additional_properties` with device metadata.
-        - Sets the entity's `is_enriched` status to `true`.
-        - Adds a data table to the entity containing key device metrics.
-        - Optionally creates an entity insight if the `Create Insight` parameter is
-    enabled.
-    6. **Finalization**: Updates the entities in Google SecOps and returns a summary
-    message and JSON result.
+    5. **Data Processing**: If device data is found:
+        - The entity's `additional_properties` are updated with the retrieved enrichment
+    data.
+        - The entity's `is_enriched` flag is set to `True`.
+        - If `Create Insight` is enabled, an insight is added to the entity.
+        - An entity table is added to the action results.
+    6. **Finalization**: The action updates the enriched entities in the SOAR platform
+    and returns a JSON result containing the retrieved device information.
+
+
+    ### Additional Notes
+
+    - The action supports custom fields, which can be specified as a comma-separated
+    list in the `Custom Fields` parameter to extend the default data returned by the
+    API.
+
+    - If no devices are found for a given entity, the entity is marked as failed for
+    enrichment.
+  ai_short_description: >-
+    Enriches Hostname and IP Address entities with device metadata from HCL BigFix
+    Inventory.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes (additional_properties), sets the enriched status,
-      and adds insights and data tables to the case.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches device data from an external API (HCL BigFix Inventory) via
+      GET requests. It does not mutate external data. It updates internal entities
+      with the retrieved data and optionally creates insights, but does not modify
+      alert data or create case comments.
   entity_usage:
     entity_types:
-    - HOSTNAME
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -97,58 +110,83 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them based
+      on `SUPPORTED_ENTITY_TYPES`, which includes `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`.
+      It does not filter by other attributes like creation time, modification time,
+      or specific entity flags.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (OS, hardware, scan status) for assets
+      (Hostnames and IP addresses) from HCL BigFix Inventory. This aligns with the
+      'Enrich Asset' category. It does not perform threat intelligence lookups (reputation/prevalence)
+      for IOCs, nor does it perform any containment or ticketing actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Custom Fields | String | No | Specify a comma-separated list of fields that
+    needs to be returned in addition to the ones that are returned by default. |
+
+    | Create Insight | Boolean | No | If enabled, action will create an insight containing
+    all of the retrieved information about the entity. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is designed to verify the connectivity between Google SecOps
-    and the HCL BigFix Inventory server. It ensures that the integration configuration
-    parameters, such as the API Root and API Token, are correct and that the server
-    is reachable. This is typically used during the initial setup or for troubleshooting
-    connection issues.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It relies entirely on
-    the global integration configuration parameters:
-
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The base URL of the HCL BigFix Inventory API. |
-
-    | API Token | String | Yes | The authentication token used to authorize requests.
-    |
-
-    | Verify SSL | Boolean | Yes | Determines whether to validate the SSL certificate
-    of the server. |
-
-
-    ### Additional Notes
-
-    - This action does not process any entities.
-
-    - It performs a simple GET request to the `/api/sam/about` endpoint to validate
-    the connection.
+    Tests connectivity to the HCL BigFix Inventory server to ensure the integration
+    is correctly configured and the API is reachable. This action validates the connection
+    using the credentials provided in the integration configuration.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the API Root, API Token, and
-    SSL verification settings from the integration's configuration.
+    1. The action extracts the required integration configuration parameters: `API
+    Root`, `API Token`, and `Verify SSL`.
 
-    2. **Manager Initialization:** It initializes the `HCLBigFixInventoryManager`
-    with the retrieved credentials.
+    2. It initializes the `HCLBigFixInventoryManager` with these parameters.
 
-    3. **Connectivity Test:** The manager executes a GET request to the HCL BigFix
-    Inventory 'about' endpoint.
+    3. The action executes a `GET` request to the `/api/sam/about` endpoint to verify
+    connectivity.
 
-    4. **Result Handling:** If the request is successful (HTTP 200), the action returns
-    a success status. If an error occurs (e.g., authentication failure or network
-    timeout), it catches the exception and reports a failure.
+    4. If the request is successful, the action completes with a success message.
+    If the request fails, it logs the error and marks the action as failed.
+
+
+    ### Additional Notes
+
+    This action is intended for troubleshooting and verifying the health of the integration
+    connection. It does not perform any data enrichment or modification of entities.
+  ai_short_description: >-
+    Tests connectivity to the HCL BigFix Inventory server.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -157,12 +195,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a connectivity test (GET request) to the HCL BigFix Inventory
+      API. It does not fetch contextual data for entities, nor does it mutate any
+      external or internal data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -176,3 +251,39 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action is a standalone connectivity test and does not interact with, filter,
+      or process any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test (ping) to verify the integration configuration.
+      It does not perform enrichment, mutation, or alert management, so it does not
+      match any of the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.

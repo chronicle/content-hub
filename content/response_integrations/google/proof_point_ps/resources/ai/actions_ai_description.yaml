@@ -1,81 +1,91 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Entities:
   ai_description: >-
     ### General Description
 
-    The **Enrich Entities** action retrieves quarantine message information from **ProofPoint
-    Email Protection (PS)** for specific entities. It identifies email traffic associated
-    with Hostnames (via domain) and Users (via email address) to provide context on
-    potential mail-related security events.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not take any input parameters; it uses the
-    global integration configuration. |
-
-
-    ### Additional Notes
-
-    * **User Validation**: User entities are only processed if their identifier matches
-    a standard email regex pattern.
-
-    * **Data Cleaning**: The action automatically strips `dlpviolation` and `messagestatus`
-    fields from the ProofPoint records before enrichment to maintain data relevance.
+    Enriches Hostname and User entities using ProofPoint Email Protection. This action
+    queries the ProofPoint API to retrieve email quarantine records associated with
+    the entity (domain for hostnames, email address for users) and updates the entity's
+    additional properties with the retrieved information.
 
 
     ### Flow Description
 
-    1. **Connection**: Establishes a session with the ProofPoint PS API using the
-    configured API Root and credentials.
+    1. Initialize the `ProofPointPSManager` using configuration parameters (Api Root,
+    Username, Password, Verify SSL).
 
-    2. **Entity Processing**: Iterates through target entities in the current context.
+    2. Iterate through the provided target entities.
 
-    3. **Search Logic**:
-        * **Hostnames**: Extracts the domain from the hostname and searches for quarantine
-    records where the sender or recipient domain matches.
-        * **Users**: Validates the email format and searches for quarantine records
-    where the user is the sender or recipient.
-    4. **Data Transformation**: Flattens the resulting JSON records and applies a
-    `ProofPointPS` prefix.
+    3. For `HOSTNAME` entities, extract the domain and perform a search in ProofPoint
+    for messages where the sender or recipient matches the domain.
 
-    5. **Internal Update**: Updates the `additional_properties` of the entities in
-    Google SecOps and saves the changes.
+    4. For `USER` entities, validate the identifier as an email address and perform
+    a search in ProofPoint for messages where the sender or recipient matches the
+    email address.
+
+    5. For each retrieved record, remove specific fields (`dlpviolation`, `messagestatus`),
+    flatten the record, and add it to the entity's `additional_properties`.
+
+    6. Update the enriched entities in the SOAR platform.
+
+
+    ### Additional Notes
+
+    This action performs read-only operations on the ProofPoint API and updates the
+    entity metadata within the SOAR platform.
+  ai_short_description: >-
+    Enriches Hostname and User entities by querying ProofPoint Email Protection for
+    associated email quarantine records.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates the 'additional_properties' attribute of Hostname and User entities
-      with flattened quarantine data retrieved from ProofPoint.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the ProofPoint API (fetches_data=true) and updates
+      the entity's additional properties in the SOAR platform (can_update_entities=true).
+      It does not mutate external data or create insights.
   entity_usage:
     entity_types:
-    - HOSTNAME
-    - USERUNIQNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -89,45 +99,75 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.HOSTNAME` and `entity.entity_type == EntityTypes.USER`. It also
+      validates the identifier for `USER` entities. This means it targets HOSTNAME
+      and USER entities, filtering by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves email quarantine records for users and hosts, providing
+      context for these assets. This matches the 'Enrich Asset' category. It does
+      not perform any mutation or alert management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity to the ProofPoint Protection Server by attempting to authenticate
-    and perform a basic search query against the quarantine API. This ensures that
-    the integration configuration (API Root, Username, Password) is correct and the
-    server is reachable.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | N/A | N/A | N/A | This action does not have any input parameters. |
+    Tests connectivity to the ProofPoint Protection Server. This action verifies that
+    the integration is correctly configured and that the SOAR platform can successfully
+    communicate with the ProofPoint API.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the integration's configuration,
-    including the API Root, credentials, and SSL verification settings.
+    1. Initialize the `ProofPointPSManager` using the integration configuration (API
+    Root, Username, Password, and SSL verification settings).
 
-    2. **Manager Initialization**: A `ProofPointPSManager` instance is created using
-    the retrieved configuration.
+    2. Call the `test_connectivity` method.
 
-    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
-    executes a GET request to the `/rest/v1/quarantine` endpoint with a wildcard sender
-    filter (`*`).
+    3. The `test_connectivity` method triggers a `GET` request to the ProofPoint API
+    endpoint (`/rest/v1/quarantine`) with a wildcard sender parameter to verify the
+    connection.
 
-    4. **Result Handling**: If the request is successful, the action returns a success
-    message indicating that the connection is established.
+    4. Validate the HTTP response.
+
+    5. Terminate the action with a success message if the connection is established.
 
 
     ### Additional Notes
 
-    This is a standard connectivity test and does not interact with or modify any
-    entities in the environment.
+    This action is used to validate that the ProofPoint Protection Server integration
+    is correctly configured and reachable.
+  ai_short_description: >-
+    Tests connectivity to the ProofPoint Protection Server.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -136,12 +176,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a GET request to verify connectivity to the ProofPoint Protection
+      Server. It does not fetch contextual data for entities or alerts, nor does it
+      mutate any data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -155,3 +232,38 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action performs a connectivity test against the ProofPoint Protection Server
+      and does not interact with any entities from the SOAR platform.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any of the defined functional
+      outcomes such as enrichment, ticketing, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.

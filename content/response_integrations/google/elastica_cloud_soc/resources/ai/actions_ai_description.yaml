@@ -1,71 +1,38 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get User Activities:
   ai_description: >-
     ### General Description
 
-    This action fetches user investigation logs from Elastica Cloud SOC for specific
-    User entities. It is designed to provide security analysts with a historical view
-    of a user's activities (e.g., logins, file access, etc.) within a specified timeframe
-    to assist in incident investigation and threat hunting.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Minutes Back | Integer | No | Specifies the lookback window in minutes from
-    the current time. The action will retrieve all user activities recorded within
-    this period. Defaults to 60 minutes if not provided. |
-
-
-    ### Additional Notes
-
-    * **Case Sensitivity:** The action utilizes the `OriginalIdentifier` attribute
-    of the User entity to query the Elastica API, as usernames in Elastica Cloud SOC
-    are case-sensitive.
-
-    * **Output:** Results are presented as an Entity Table (CSV format) attached to
-    each processed entity and a comprehensive JSON object containing all retrieved
-    logs.
+    Fetches user activity logs from the Elastica Cloud SOC platform for a specified
+    time range. This action retrieves historical investigation logs for target user
+    entities, allowing analysts to review recent user behavior and potential security
+    events.
 
 
     ### Flow Description
 
-    1. **Initialization:** The action initializes the connection to Elastica Cloud
-    SOC using the provided API Root, Key ID, and Key Secret.
+    1. The action initializes the `ElasticaCloudSOCManager` using the configured API
+    credentials.
 
-    2. **Time Calculation:** It calculates the start time for the log search by subtracting
-    the `Minutes Back` value from the current system time.
+    2. It retrieves the `Minutes Back` parameter to determine the time window for
+    the log search (defaulting to 60 minutes).
 
-    3. **Entity Filtering:** The action identifies all `USERUNIQNAME` entities within
-    the target scope.
+    3. It filters the `target_entities` to process only those of type `USER`.
 
-    4. **Data Retrieval:** For each identified user, it calls the Elastica API to
-    fetch investigation logs starting from the calculated timestamp.
+    4. For each identified user, the action calls the `get_user_investigation_logs_since_time`
+    method, utilizing the `OriginalIdentifier` from the entity's `additional_properties`
+    as the username.
 
-    5. **Data Processing:** If logs are found, they are flattened and converted into
-    a CSV table format.
+    5. Retrieved logs are formatted into a CSV table and added to the entity's results,
+    and the full JSON response is attached to the action results.
 
-    6. **Internal Updates:** The action attaches the CSV table to the corresponding
-    entity in Google SecOps and populates the action's JSON result with the raw data.
 
-    7. **Completion:** The action concludes by providing a summary message indicating
-    which users had activities found.
+    ### Additional Notes
+
+    This action is read-only and does not modify any data in the Elastica Cloud SOC
+    or the SOAR platform. It requires valid API credentials for the Elastica Cloud
+    SOC integration.
+  ai_short_description: >-
+    Fetches user activity logs from Elastica Cloud SOC for specified user entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -76,11 +43,47 @@ Get User Activities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action performs a GET request to fetch logs from an external service. It
+      does not mutate external data, nor does it mutate internal SOAR data (it only
+      adds result tables/JSON for display).
   entity_usage:
     entity_types:
-    - USERUNIQNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
     filters_by_additional_properties: true
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -94,42 +97,78 @@ Get User Activities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly filters
+      for entities where `entity_type == EntityTypes.USER`. It also accesses the `additional_properties`
+      dictionary of the user entity to retrieve the `OriginalIdentifier` required
+      for the API request.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves historical logs (telemetry data) for a specific user from
+      an external system. This aligns with the 'Search Events' category. It does not
+      perform enrichment (metadata), update alerts, or mutate any external/internal
+      systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Minutes Back | String | No | The number of minutes to look back for logs. Defaults
+    to 60 if not provided. |
 Ping:
   ai_description: >-
-    ### General Description
-
-    Tests the connectivity between Google SecOps and the ElasticaCloudSOC platform
-    to ensure that the provided credentials and API root are valid and reachable.
+    General Description: Tests connectivity to the Elastica CloudSOC API.
 
 
-    ### Parameters Description
+    Flow Description:
 
-    | Parameter | Description | Type | Mandatory |
+    1. Initialize `SiemplifyAction`.
 
-    | :--- | :--- | :--- | :--- |
+    2. Retrieve configuration parameters (`API Root`, `Key ID`, `Key Secret`, `Verify
+    SSL`) from the integration configuration.
 
-    | None | This action does not have any input parameters. | N/A | N/A |
+    3. Initialize `ElasticaCloudSOCManager` with the retrieved credentials.
+
+    4. Execute the `ping` method, which sends a GET request to the `audit/v2/datasources/`
+    endpoint.
+
+    5. Validate the HTTP response.
+
+    6. Return a success status (`True` or `False`) and output a message indicating
+    whether the connection was established.
 
 
-    ### Additional Notes
-
-    This action relies solely on the integration's global configuration (API Root,
-    Key ID, Key Secret, and Verify SSL) to perform the connectivity test.
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval**: The action retrieves the integration's global
-    settings, including the API Root and authentication credentials.
-
-    2. **Manager Initialization**: An instance of the ElasticaCloudSOCManager is created
-    using the retrieved configuration.
-
-    3. **Connectivity Test**: The action calls the `ping` method, which executes a
-    GET request to the `audit/v2/datasources/` endpoint.
-
-    4. **Result Handling**: If the request is successful, the action returns a success
-    message; otherwise, it reports a connection failure.
+    Additional Notes: This action is used to verify that the integration is correctly
+    configured and can communicate with the Elastica CloudSOC API.
+  ai_short_description: >-
+    Tests connectivity to the Elastica CloudSOC API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -138,12 +177,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a connectivity test (ping) against the Elastica CloudSOC
+      API. It does not fetch contextual data, mutate external or internal data, or
+      interact with entities/alerts.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -157,3 +233,38 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It is a standalone connectivity
+      test.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any of the defined outcome
+      categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.
