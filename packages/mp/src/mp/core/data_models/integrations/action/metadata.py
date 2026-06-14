@@ -77,6 +77,7 @@ ENRICHMENT_OUTCOME_CATEGORIES: set[OutcomeCategoriesEnum] = {
     OutcomeCategoriesEnum.GET_ALERT_INFORMATION,
 }
 
+
 class AiFields(NamedTuple):
     description: str | None
     short_description: str | None
@@ -444,7 +445,6 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
     if action_content is None:
         return empty_results
 
-    action_content = _apply_ai_metadata_fallback(action_content)
     ai_meta: ActionAiMetadata = ActionAiMetadata.model_validate(action_content)
     outcome_categories = (
         [
@@ -496,9 +496,6 @@ def _determine_ai_categories(
     return result
 
 
-
-
-
 def _update_non_built_with_ai_fields(non_built: NonBuiltActionMetadata, ai_fields: AiFields) -> None:
     non_built["ai_description"] = ai_fields.description
     non_built["ai_short_description"] = ai_fields.short_description
@@ -506,82 +503,3 @@ def _update_non_built_with_ai_fields(non_built: NonBuiltActionMetadata, ai_field
     non_built["categories"] = [c.value for c in ai_fields.categories]
     non_built["entity_types"] = [t.value for t in ai_fields.entity_types]
     non_built["outcome_categories"] = [c.value for c in ai_fields.outcome_categories]
-
-
-def _apply_ai_metadata_fallback(data: dict[str, Any]) -> dict[str, Any]:
-    # 1. Fallback for categories
-    categories = data.get("categories")
-    if isinstance(categories, dict):
-        if "remediation" not in categories:
-            categories["remediation"] = False
-        if "enrichment" not in categories:
-            categories["enrichment"] = False
-
-    # 2. Fallback for entity_usage.entity_types list to dict
-    entity_usage = data.get("entity_usage")
-    if isinstance(entity_usage, dict):
-        entity_types = entity_usage.get("entity_types")
-        if isinstance(entity_types, list):
-            val_to_field = {}
-            for field_name, enum_val in ENTITY_TYPE_TO_DEF_ENTITY_TYPE.items():
-                val_to_field[enum_val.value.upper()] = field_name
-                val_to_field[enum_val.value.lower()] = field_name
-                val_to_field[field_name.upper()] = field_name
-                val_to_field[field_name.lower()] = field_name
-
-            types_dict = {}
-            for et in entity_types:
-                field_name = val_to_field.get(str(et).strip().upper())
-                if field_name:
-                    types_dict[field_name] = True
-            entity_usage["entity_types"] = types_dict
-
-    # 3. Fallback for ai_short_description and parameters_description
-    ai_desc = data.get("ai_description")
-    if isinstance(ai_desc, str) and ("ai_short_description" not in data or "parameters_description" not in data):
-        # Parse sections
-        parts = ai_desc.split("### ")
-        general_part = parts[0].strip()
-
-        sections = {}
-        for part in parts[1:]:
-            lines = part.splitlines()
-            if not lines:
-                continue
-            header = lines[0].strip()
-            content = "\n".join(lines[1:]).strip()
-            sections[header.lower()] = content
-
-        explicit_general = sections.get("general description")
-        if explicit_general:
-            general_desc = explicit_general
-        else:
-            general_desc = general_part
-
-        params_desc = sections.get("parameters description") or sections.get("parameters") or ""
-
-        rebuilt_parts = []
-        if general_part:
-            rebuilt_parts.append(general_part)
-        for part in parts[1:]:
-            lines = part.splitlines()
-            if not lines:
-                continue
-            header = lines[0].strip()
-            if header.lower() not in {"parameters description", "parameters"}:
-                rebuilt_parts.append("### " + part.strip())
-
-        new_ai_description = "\n\n".join(rebuilt_parts).strip()
-
-        paragraphs = [p.strip() for p in general_desc.split("\n\n") if p.strip()]
-        short_desc = paragraphs[0] if paragraphs else general_desc
-        if not short_desc:
-            short_desc = "No short description available."
-
-        if "ai_short_description" not in data:
-            data["ai_short_description"] = short_desc
-        if "parameters_description" not in data:
-            data["parameters_description"] = params_desc
-        data["ai_description"] = new_ai_description
-
-    return data
