@@ -75,7 +75,9 @@ class TestIntegrationDescriptionValidation:
             },
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(NonFatalValidationError, match="Integration is missing the 'description' field in pyproject.toml."):
+        with pytest.raises(
+            NonFatalValidationError, match=r"Integration is missing the 'description' field in pyproject\.toml\."
+        ):
             self.runner.run(temp_integration)
 
     def test_empty_description_fails(self, temp_integration: Path) -> None:
@@ -88,7 +90,9 @@ class TestIntegrationDescriptionValidation:
             },
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(NonFatalValidationError, match="Integration has an empty 'description' field in pyproject.toml."):
+        with pytest.raises(
+            NonFatalValidationError, match=r"Integration has an empty 'description' field in pyproject\.toml\."
+        ):
             self.runner.run(temp_integration)
 
     def test_whitespace_description_fails(self, temp_integration: Path) -> None:
@@ -101,7 +105,9 @@ class TestIntegrationDescriptionValidation:
             },
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(NonFatalValidationError, match="Integration has an empty 'description' field in pyproject.toml."):
+        with pytest.raises(
+            NonFatalValidationError, match=r"Integration has an empty 'description' field in pyproject\.toml\."
+        ):
             self.runner.run(temp_integration)
 
     def test_non_string_description_fails(self, temp_integration: Path) -> None:
@@ -114,7 +120,9 @@ class TestIntegrationDescriptionValidation:
             },
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(NonFatalValidationError, match="Integration has an empty 'description' field in pyproject.toml."):
+        with pytest.raises(
+            NonFatalValidationError, match=r"Integration has an empty 'description' field in pyproject\.toml\."
+        ):
             self.runner.run(temp_integration)
 
     def test_missing_pyproject_skips(self, temp_integration: Path) -> None:
@@ -137,7 +145,9 @@ class TestIntegrationDescriptionValidation:
             },
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(NonFatalValidationError, match="Integration is missing the 'project' section in pyproject.toml."):
+        with pytest.raises(
+            NonFatalValidationError, match=r"Integration is missing the 'project' section in pyproject\.toml\."
+        ):
             self.runner.run(temp_integration)
 
     def test_non_dict_project_section_fails(self, temp_integration: Path) -> None:
@@ -146,7 +156,9 @@ class TestIntegrationDescriptionValidation:
             "project": "not a dict"
         }
         _write_pyproject(temp_integration, content)
-        with pytest.raises(NonFatalValidationError, match="Integration is missing the 'project' section in pyproject.toml."):
+        with pytest.raises(
+            NonFatalValidationError, match=r"Integration is missing the 'project' section in pyproject\.toml\."
+        ):
             self.runner.run(temp_integration)
 
     def test_valid_integration_and_actions_passes(self, temp_integration: Path) -> None:
