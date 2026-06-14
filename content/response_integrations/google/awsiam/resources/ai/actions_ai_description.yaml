@@ -1,64 +1,38 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Add a User to a Group:
   ai_description: >-
     ### General Description
 
-    Adds specified AWS IAM users to a designated IAM group. This action is used to
-    manage user permissions by grouping them, allowing for consistent policy application
-    across multiple identities within an AWS environment.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Group Name | String | Yes | The name of the AWS IAM group to which users will
-    be added. Must contain only alphanumeric characters and/or +=.@_-. |
-
-    | User Name | String | Yes | A comma-separated list of AWS IAM usernames to be
-    added to the group. |
+    Adds one or more users to a specified AWS IAM group. This action allows administrators
+    to manage user permissions by updating group memberships directly within AWS IAM.
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves AWS credentials (Access Key, Secret Key) and
-    SSL verification settings from the integration configuration.
+    1. Extracts AWS credentials (Access Key ID, Secret Key) and action parameters
+    (Group Name, User Name) from the integration configuration and action settings.
 
-    2. **Connectivity Check**: Validates the connection to the AWS IAM service using
-    the provided credentials.
+    2. Initializes the AWS IAM manager and performs a connectivity test to ensure
+    the provided credentials are valid.
 
-    3. **Input Parsing**: Processes the 'User Name' parameter, converting the comma-separated
-    string into a list of individual usernames.
+    3. Parses the provided `User Name` parameter, which is expected to be a comma-separated
+    list of usernames.
 
-    4. **Execution**: Iterates through the list of usernames and calls the AWS IAM
-    API to add each user to the specified group.
+    4. Iterates through each user name in the list and calls the AWS IAM API (`add_user_to_group`)
+    to add the user to the specified group.
 
-    5. **Error Handling**: Specifically handles cases where the user or group does
-    not exist, or where AWS account limits (e.g., maximum users per group) are exceeded.
-
-    6. **Finalization**: Aggregates the results and provides a summary message indicating
-    which users were successfully added and which failed.
+    5. Handles potential errors, such as `AWSIAMEntityNotFoundException` (if the user
+    or group does not exist) or `AWSIAMLimitExceededException` (if AWS account limits
+    are reached), and reports the status of each operation.
 
 
     ### Additional Notes
 
-    This action does not utilize or iterate over Google SecOps entities. It relies
-    entirely on the manual input provided in the action parameters.
+    - User names must be provided as a comma-separated string.
+
+    - Group names cannot contain spaces and must adhere to AWS IAM naming conventions
+    (alphanumeric characters and/or +=.@_-).
+  ai_short_description: >-
+    Adds specified users to an AWS IAM group.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -67,14 +41,51 @@ Add a User to a Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds IAM users to an IAM group in the target AWS account, which modifies the
-      users' group memberships and associated permissions.
+      Adds the specified user(s) to an AWS IAM group, modifying the group's membership
+      configuration in AWS.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a state-changing operation on an external system (AWS IAM)
+      by adding users to a group. It does not fetch contextual data, mutate internal
+      SecOps data, or update entities/insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -88,51 +99,85 @@ Add a User to a Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or filter `siemplify.target_entities`. It operates
+      on user-provided input parameters (`User Name` and `Group Name`) to perform
+      AWS IAM operations, therefore no entity usage flags are set.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies AWS IAM group membership, which is a modification of account
+      metadata and permissions. This aligns with the 'Update Identity' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Group Name | String | Yes | The name of the group to update. Note: Group names
+    can not include spaces and must contain only alphanumeric characters and/or the
+    following: +=.@_- |
+
+    | User Name | String | Yes | The name of the user to add. Note: User names can
+    not include spaces and must contain only alphanumeric characters and/or the following:
+    +=.@_-. Comma separated values. |
 Attach a Policy:
   ai_description: >-
     ### General Description
 
-    Attaches a specified AWS managed policy to an IAM identity, which can be a User,
-    Group, or Role. This action is used to programmatically manage permissions within
-    an AWS environment by linking existing policies to identities.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Identity Type | String (Dropdown) | Yes | The type of IAM identity to which
-    the policy will be attached. Supported values: User, Group, Role. |
-
-    | Identity Name | String | Yes | The friendly name (not ARN) of the IAM User,
-    Group, or Role. |
-
-    | Policy Name | String | Yes | The friendly name (not ARN) of the managed policy
-    to attach. |
+    Attaches a specified managed policy to an AWS IAM identity (User, Group, or Role).
+    This action allows administrators to programmatically manage permissions by associating
+    existing AWS managed or customer-managed policies with specific IAM entities.
 
 
     ### Flow Description
 
-    1. **Validation**: The action validates that the `Identity Name` and `Policy Name`
-    contain only allowed characters (alphanumeric and `+=,.@_-`).
+    1. The action extracts AWS credentials and action parameters, including the Identity
+    Type (User, Group, or Role), Identity Name, and Policy Name.
 
-    2. **ARN Retrieval**: It searches for the specified `Policy Name` within the AWS
-    account to retrieve its unique Amazon Resource Name (ARN).
+    2. It validates the provided Identity Name and Policy Name against allowed character
+    sets (alphanumeric and specific symbols).
 
-    3. **Policy Attachment**: Based on the `Identity Type`, it calls the corresponding
-    AWS IAM API (`attach_user_policy`, `attach_group_policy`, or `attach_role_policy`)
-    to link the policy to the identity.
+    3. It calls the AWS IAM API to retrieve the Amazon Resource Name (ARN) for the
+    specified Policy Name.
 
-    4. **Finalization**: The action reports success or failure based on the API response.
+    4. Based on the selected Identity Type, it executes the corresponding AWS IAM
+    API call (`attach_group_policy`, `attach_user_policy`, or `attach_role_policy`)
+    to associate the policy with the target identity.
 
 
     ### Additional Notes
 
-    This action requires valid AWS credentials with permissions to list policies and
-    attach them to the specified identity types. It does not work on SecOps entities
-    directly but uses manual input parameters.
+    This action requires valid AWS IAM credentials with sufficient permissions to
+    attach policies. The identity and policy names must adhere to AWS naming constraints,
+    and the action will fail if the specified identity or policy cannot be found.
+  ai_short_description: >-
+    Attaches a managed policy to an AWS IAM identity (User, Group, or Role).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -141,14 +186,51 @@ Attach a Policy:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Attaches an IAM policy to a user, group, or role in AWS, which modifies the
-      permissions and access control state of that identity in the external AWS environment.
+      Attaches a managed policy to an AWS IAM identity (User, Group, or Role), modifying
+      the identity's permissions.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches the policy ARN from AWS IAM (fetches_data=true) and performs
+      a state-changing operation to attach the policy to an identity (can_mutate_external_data=true).
+      It does not modify internal SOAR data or entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -162,59 +244,92 @@ Attach a Policy:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action operates based on provided input parameters (Identity Name, Policy
+      Name) rather than iterating over or filtering entities from the SOAR case. Therefore,
+      it does not use entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies the permissions of an AWS IAM identity by attaching a policy.
+      This aligns with the 'Update Identity' category, as it changes the configuration/metadata
+      of the account/identity.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Identity Type | ddl | Yes | IAM Identity type (User, Group, or Role). |
+
+    | Identity Name | string | Yes | The friendly name of the identity to attach the
+    policy to. |
+
+    | Policy Name | string | Yes | The friendly name of the policy to attach. |
 Create a Group:
   ai_description: >-
     ### General Description
 
-    This action creates one or more new IAM groups in a target AWS account. It is
-    used to set up administrative or functional containers for users, allowing for
-    centralized permission management within AWS Identity and Access Management (IAM).
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Group Name | String | Yes | A comma-separated list of names for the groups to
-    be created. Group names must be unique within the AWS account and can only contain
-    alphanumeric characters and the following symbols: `+=.@_-`. Spaces are not allowed.
-    |
-
-
-    ### Additional Notes
-
-    - The action performs a connectivity test before attempting to create groups.
-
-    - If a group name already exists, the action will skip that specific name and
-    continue with others, reporting the conflict in the final message.
-
-    - The action handles AWS service limits; if the maximum number of groups for the
-    account is reached, it will stop and report the error.
+    Creates one or more new IAM groups in an AWS account. This action allows administrators
+    to provision new groups by specifying a comma-separated list of names, ensuring
+    that each group name adheres to AWS naming conventions (alphanumeric characters
+    and specific symbols: +=.@_-).
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves AWS credentials (Access Key ID, Secret Key) and
-    SSL verification settings from the integration configuration.
+    1. **Initialization**: The action initializes the `AWSIAMManager` using the provided
+    AWS Access Key ID and Secret Key, and verifies connectivity to the AWS IAM service.
 
-    2. **Parameter Parsing**: Extracts the `Group Name` string and converts it into
-    a list of individual names.
+    2. **Input Parsing**: The `Group Name` parameter is parsed from a comma-separated
+    string into a list of individual group names.
 
-    3. **Connectivity Check**: Establishes a connection to the AWS IAM service and
-    verifies credentials using an account summary request.
+    3. **Validation and Creation**: The action iterates through the list of group
+    names:
+        * Validates each name against allowed character sets.
+        * Calls the AWS IAM API `create_group` method to create the group.
+    4. **Error Handling**: The action catches and logs specific exceptions, including
+    `AWSIAMEntityAlreadyExistsException` (if the group exists), `AWSIAMValidationException`
+    (if the name is invalid), and `AWSIAMLimitExceededException` (if account limits
+    are reached).
 
-    4. **Validation and Creation**: For each group name provided:
-        - Validates that the name adheres to AWS character requirements.
-        - Calls the AWS IAM API to create the group.
-        - Captures the resulting group metadata (ARN, Group ID, Creation Date).
-    5. **Error Handling**: Specifically catches and logs instances where a group already
-    exists, the name is invalid, or account limits are exceeded.
+    5. **Result Reporting**: Successfully created groups are added to the result set,
+    and an output message summarizing the success or failure of each group creation
+    is generated and returned via `siemplify.result.add_result_json`.
 
-    6. **Result Reporting**: Aggregates the results of all creation attempts into
-    a final status message and provides the raw JSON data of successfully created
-    groups.
+
+    ### Additional Notes
+
+    Group names must be unique within the AWS account. The action does not support
+    spaces in group names. If multiple groups are provided, the action processes them
+    individually and reports the status of each.
+  ai_short_description: >-
+    Creates one or more new IAM groups in an AWS account.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -223,13 +338,50 @@ Create a Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates new IAM group resources within the target AWS account.
+      Creates a new IAM group in the AWS account.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a POST-like operation to create a new resource (IAM group)
+      in an external system (AWS). It does not fetch data, mutate internal SOAR data,
+      or update entities/insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -243,17 +395,81 @@ Create a Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter any entities from the SOAR platform.
+      It operates solely on the input parameters provided by the user.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new IAM group in AWS. It does not match any of the provided
+      outcome categories (e.g., it is not an enrichment, ticket, or blocklist action).
+      While it relates to identity management, it does not update an existing identity's
+      metadata, nor does it perform any of the other listed operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Group Name | String | Yes | Name of the group to create. Comma separated values.
+    Note: Group names can not include spaces and must contain only alphanumeric characters
+    and/or the following: +=.@_-. Names must be unique within an account. |
 Create a Policy:
   ai_description: >-
-    ### General Description: Create an IAM customer managed policy for an AWS account.
-    This action creates a policy version with a version identifier of v1 and sets
-    it as the default version. ### Parameters: | Parameter | Type | Mandatory | Description
-    | | :--- | :--- | :--- | :--- | | Policy Name | String | Yes | Unique name for
-    the policy. | | Policy Document | String | Yes | JSON policy document content.
-    | | Description | String | No | Description of the policy. | ### Flow Description:
-    1. Initialize AWS IAM Manager and test connectivity. 2. Validate Policy Document
-    JSON and Policy Name characters. 3. Call AWS API to create the policy. 4. Add
-    policy metadata to JSON results. ### Additional Notes: None.
+    ### General Description
+
+    Creates a new customer-managed IAM policy in an AWS account. This action allows
+    administrators to define granular permissions by providing a JSON policy document
+    and a unique policy name.
+
+
+    ### Flow Description
+
+    1. The action initializes the AWS IAM manager using the provided AWS credentials
+    and SSL verification settings.
+
+    2. It validates the provided JSON policy document to ensure it is correctly formatted.
+
+    3. It validates the requested policy name to ensure it contains only allowed alphanumeric
+    characters and specific symbols (+=.@_-).
+
+    4. The action calls the AWS IAM API to create the new policy with the specified
+    name, document, and optional description.
+
+    5. Upon success, the action returns the created policy details as a JSON result.
+
+
+    ### Additional Notes
+
+    Policy names must be unique within the AWS account. The policy description is
+    immutable once set.
+  ai_short_description: >-
+    Creates a new customer-managed IAM policy in an AWS account.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -265,10 +481,47 @@ Create a Policy:
       Creates a new customer-managed IAM policy in the AWS account.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a state-changing operation (creating a policy) on an external
+      system (AWS IAM). It does not fetch data, update internal entities, or modify
+      alerts.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -282,60 +535,96 @@ Create a Policy:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter any entities. It operates on global
+      AWS IAM resources.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates a new IAM policy in AWS. This does not match any of the provided
+      outcome categories (e.g., Enrich IOC, Update Alert, Contain Host, etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Policy Name | String | Yes | Name of the policy to create. Policy name can not
+    include spaces and must contain only alphanumeric characters and/or the following:
+    +=.@_-. Policy names must be unique within an account. |
+
+    | Policy Document | String | Yes | The JSON policy document that you want to use
+    as the content for the new policy. |
+
+    | Description | String | No | Description of the policy. Typically used to store
+    information about the permissions defined in the policy. |
 Create a User:
   ai_description: >-
     ### General Description
 
-    Creates one or more new IAM users in a target AWS account. This action allows
-    for bulk user creation by providing a comma-separated list of usernames. It validates
-    the provided names against AWS naming conventions and ensures connectivity before
-    attempting the creation. Note that this action only creates the user identities;
-    it does not apply any policies, groups, or login profiles at this stage.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | User Name | String | Yes | A comma-separated list of usernames to create. Usernames
-    must be unique within the AWS account and can only contain alphanumeric characters
-    and the following symbols: `+=.@_-`. |
-
-
-    ### Additional Notes
-
-    - The action will fail if the AWS account user limit has been reached.
-
-    - Usernames are case-insensitive for uniqueness checks (e.g., 'Admin' and 'admin'
-    are considered the same).
-
-    - No permissions or policies are attached to the users during this process.
+    Creates new IAM users in an AWS account. This action allows for the bulk creation
+    of users by providing a comma-separated list of usernames. Please note that no
+    policies are applied to the users during this creation process.
 
 
     ### Flow Description
 
-    1. **Authentication**: Initializes the AWS IAM manager using the provided Access
-    Key ID and Secret Key.
+    1. **Configuration Extraction**: The action extracts the AWS Access Key, Secret
+    Key, and SSL verification settings from the integration configuration.
 
-    2. **Connectivity Check**: Performs a test connection to the AWS IAM service to
-    verify credentials.
+    2. **Parameter Extraction**: The action extracts the `User Name` parameter, which
+    contains the list of usernames to be created.
 
-    3. **Input Parsing**: Splits the 'User Name' input string into a list of individual
-    usernames.
+    3. **Connectivity Test**: The action initializes the `AWSIAMManager` and performs
+    a connectivity test to the AWS IAM service.
 
-    4. **Validation**: Iterates through each username to verify it meets AWS character
-    requirements.
+    4. **Username Processing**: The provided comma-separated string of usernames is
+    parsed into a list.
 
-    5. **Creation**: Calls the AWS IAM API to create each valid user.
+    5. **User Creation**: For each username in the list:
+        * The action validates the username format against AWS requirements (alphanumeric
+    characters and specific symbols: +=.@_-).
+        * The action calls the AWS IAM API (`manager.create_user`) to create the user.
+        * If successful, the user details are added to the results list.
+        * If an error occurs (e.g., user already exists, validation failure, or account
+    limit reached), the error is logged and the username is tracked in the appropriate
+    error list.
+    6. **Result Reporting**: The action compiles the results and returns a JSON object
+    containing the details of the successfully created users, along with an output
+    message summarizing the operation status.
 
-    6. **Error Handling**: Captures specific exceptions such as 'EntityAlreadyExists'
-    (if the user already exists) or 'LimitExceeded' (if the AWS account user limit
-    is reached).
 
-    7. **Reporting**: Aggregates the results and returns a summary message along with
-    the JSON data for all successfully created users.
+    ### Additional Notes
+
+    This action does not apply any IAM policies to the newly created users. Users
+    must be managed or assigned permissions separately after creation.
+  ai_short_description: >-
+    Creates new IAM users in an AWS account based on a provided list of usernames.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -344,13 +633,49 @@ Create a User:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates new IAM user identities within the external AWS environment.
+      Creates a new IAM user in the AWS account.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a call to the AWS IAM API to create a new user (can_mutate_external_data=true).
+      It does not fetch context data, update internal entities, or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -364,51 +689,87 @@ Create a User:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or utilize `siemplify.target_entities`. It
+      operates based on the `User Name` input parameter provided by the user, so no
+      entity flags are set.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates new IAM users in AWS. This does not match any of the provided
+      outcome categories (e.g., it is not updating an existing identity, nor is it
+      creating a ticket or enriching an IOC).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | User Name | String | Yes | Name of the user to create. Comma separated values.
+    Note: Username can not include spaces and must contain only alphanumeric characters
+    and/or the following: +=.@_-. Names must be unique within an account. |
 Disable User Access:
   ai_description: >-
     ### General Description
 
-    The **Disable User Access** action is a remediation capability for AWS Identity
-    and Access Management (IAM). It is designed to immediately revoke a user's permissions
-    by attaching an explicit "Deny All" inline policy named `DisableUserAccessPolicy`.
-    This is particularly useful during incident response to contain a compromised
-    user account without deleting the user or their existing permissions.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **AWS Access Key ID** | String | Yes | The access key ID used to authenticate
-    with AWS IAM. This is retrieved from the integration configuration. |
-
-    | **AWS Secret Key** | String | Yes | The secret access key used to authenticate
-    with AWS IAM. This is retrieved from the integration configuration. |
-
-    | **Verify SSL** | Boolean | No | If enabled (default), the action will verify
-    the SSL certificate of the AWS API endpoint. |
+    Disables access for a specific user in AWS IAM by attaching an inline policy that
+    explicitly denies all actions. This action is designed to immediately revoke a
+    user's permissions within the AWS environment.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts AWS credentials (Access Key and Secret
-    Key) and SSL verification settings from the integration's configuration parameters.
+    1. The action extracts the required AWS credentials (AWS Access Key ID, AWS Secret
+    Key) and the SSL verification setting from the integration configuration.
 
-    2. **Entity Filtering**: The action identifies and processes entities of type
-    `USERUNIQNAME` present in the context.
+    2. The `AWSIAMManager` is initialized using these credentials to establish a connection
+    to the AWS IAM service.
 
-    3. **Username Extraction**: For each user entity, the action parses the `original_identifier`
-    (which may be a full ARN) to extract the specific IAM username.
+    3. The action iterates through the provided User entities.
 
-    4. **External Mutation**: The action calls the AWS IAM `put_user_policy` API to
-    attach an inline policy named `DisableUserAccessPolicy`. This policy contains
-    a JSON document that explicitly denies all actions (`*`) on all resources (`*`).
+    4. For each user, the action extracts the username from the provided ARN.
 
-    5. **Finalization**: The action records the success or failure of the policy application
-    for each user and provides a summary message and JSON results for use in subsequent
-    playbook steps.
+    5. The action calls the AWS IAM API `put_user_policy` to apply an inline policy
+    named "DisableUserAccessPolicy" to the user, which contains a JSON document explicitly
+    denying all actions (`"Effect": "Deny", "Action": "*", "Resource": "*"`).
+
+    6. The action reports the success or failure of the policy application for each
+    user.
+
+
+    ### Additional Notes
+
+    This action performs a destructive change to the user's permissions in AWS. Ensure
+    that the target user entity is correct before execution, as this will immediately
+    block all actions for that user.
+  ai_short_description: >-
+    Disables access for a specific user in AWS IAM by attaching an inline policy that
+    explicitly denies all actions.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -417,16 +778,51 @@ Disable User Access:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Attaches an inline deny-all policy named 'DisableUserAccessPolicy' to the IAM
-      user in AWS, which explicitly denies all actions across all AWS resources for
-      that user.
+      Adds an explicit deny inline policy ('DisableUserAccessPolicy') to the specified
+      AWS IAM user, effectively disabling their access.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a state-changing operation (PUT) on an external system (AWS
+      IAM) to apply a policy. It does not fetch data, mutate internal SecOps data,
+      update entities, create insights, or modify alert data.
   entity_usage:
     entity_types:
-    - USERUNIQNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -440,71 +836,144 @@ Disable User Access:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over the provided target entities and explicitly filters
+      for entities of type 'USER' using the `_get_entity_types` method, which returns
+      `[EntityTypesEnum.USER]`. It does not filter by other attributes like creation
+      time, modification time, or additional properties.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: true
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies an AWS IAM user's policy to explicitly deny all actions,
+      which effectively disables the user's access. This directly matches the 'Disable
+      Identity' outcome category. It does not perform enrichment, ticket creation,
+      or other listed outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | AWS Access Key ID | String | Yes | The AWS Access Key ID used for authentication.
+    |
+
+    | AWS Secret Key | String | Yes | The AWS Secret Key used for authentication.
+    |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates when connecting
+    to AWS. Defaults to True. |
 List Groups:
   ai_description: >-
     ### General Description
 
-    This action retrieves a list of all IAM groups within a specified AWS account.
-    It is primarily used for auditing, visibility, and administrative oversight of
-    group structures in AWS Identity and Access Management (IAM).
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Max Groups to Return | Integer | No | Specifies the maximum number of groups
-    to retrieve. The value must be between 1 and 1000. If not provided, it defaults
-    to 50. |
-
-
-    ### Additional Notes
-
-    - This action does not operate on specific entities; it performs a global fetch
-    of group data for the configured AWS account.
-
-    - The action includes a connectivity test before attempting to list groups to
-    ensure the provided AWS credentials are valid.
+    Lists IAM groups from AWS IAM. This action retrieves a specified number of IAM
+    groups from the AWS environment and presents them in both JSON and CSV formats
+    for analysis.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts AWS credentials (Access Key, Secret
-    Key) and the SSL verification setting from the integration configuration.
+    1. Extracts AWS credentials (Access Key ID, Secret Key) and configuration parameters
+    (Verify SSL) from the integration settings.
 
-    2. **Parameter Validation**: It validates that the `Max Groups to Return` parameter
-    falls within the allowed range (1 to 1000).
+    2. Extracts the optional `Max Groups to Return` parameter.
 
-    3. **Connectivity Test**: It establishes a connection to the AWS IAM service and
-    performs a test call (`get_account_summary`) to verify permissions.
+    3. Initializes the `AWSIAMManager` to establish a connection with the AWS IAM
+    service.
 
-    4. **Data Retrieval**: It calls the AWS IAM API to list groups, handling pagination
-    automatically if the number of groups exceeds the initial page size, up to the
-    specified limit.
+    4. Validates connectivity to the AWS IAM service.
 
-    5. **Data Processing**: The retrieved group objects (containing ARN, Group Name,
-    Group ID, Path, and Creation Date) are converted into JSON and CSV formats.
+    5. Calls the `list_groups` method to fetch the requested number of IAM groups
+    from AWS.
 
-    6. **Output**: The action populates a JSON result and creates a data table named
-    "IAM Groups" in the Google SecOps case.
+    6. Processes the retrieved group data into JSON and CSV formats.
+
+    7. Adds the results to the action output using `siemplify.result.add_result_json`
+    and `siemplify.result.add_data_table`.
+
+
+    ### Additional Notes
+
+    The action requires valid AWS credentials. The `Max Groups to Return` parameter
+    allows users to limit the number of results, with a default of 50 and a maximum
+    of 1000.
+  ai_short_description: Lists IAM groups from AWS IAM.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action creates a data table named 'IAM Groups' within the Google SecOps
-      case to display the retrieved group information.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the AWS IAM API (fetches_data=true). It does not
+      mutate any external or internal data, nor does it update entities, create insights,
+      or modify alert/case data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -518,271 +987,523 @@ List Groups:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter any entities. It operates globally
+      to list groups from the AWS IAM service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves configuration data (IAM groups) from AWS. It does not perform
+      enrichment on IOCs or assets, nor does it modify alerts, tickets, or external
+      systems. It does not fit into the provided outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Groups to Return | String | No | Specify how many groups to return. Maximum
+    is 1000 groups. Default is 50. |
 List Policies:
   ai_description: >-
     ### General Description
 
-    The **List Policies** action retrieves a list of managed policies from an AWS
-    IAM account. It allows security analysts to discover both AWS-managed and customer-defined
-    policies, providing visibility into available permissions. The action supports
-    filtering by attachment status and policy scope, and outputs the results as both
-    a JSON object and a formatted data table.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Only Attached** | Boolean | No | If set to `True`, the action filters results
-    to only include policies currently attached to an IAM user, group, or role. Default
-    is `False`. |
-
-    | **Scope** | Dropdown | No | Filters policies by their origin. Options include
-    `All` (default), `AWS` (AWS-managed policies), and `Local` (Customer-managed policies).
-    |
-
-    | **Max Policies to Return** | Integer | No | Specifies the maximum number of
-    policies to retrieve. The value must be between 1 and 1000. Default is 100. |
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action extracts AWS credentials and validates the `Max
-    Policies to Return` parameter to ensure it falls within the allowed range (1-1000).
-
-    2. **Connectivity Check**: It verifies the connection to the AWS IAM service using
-    the provided Access Key and Secret Key.
-
-    3. **Policy Retrieval**: The action calls the AWS IAM API to list policies based
-    on the specified `Scope` and `Only Attached` filters.
-
-    4. **Pagination Handling**: If the number of policies exceeds the initial API
-    response limit but is less than the requested maximum, the action handles pagination
-    markers to fetch additional results.
-
-    5. **Output Generation**: The retrieved policy data (including Name, ID, ARN,
-    and Creation Date) is added to the action's JSON results and displayed in a data
-    table named "IAM Policies".
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-List Users:
-  ai_description: >-
-    ### General Description
-
-    This action retrieves a list of all users within an AWS Identity and Access Management
-    (IAM) account. It is primarily used for discovery and auditing purposes, allowing
-    security analysts to see which identities exist in the AWS environment. The action
-    returns user details including their Amazon Resource Name (ARN), creation date,
-    path, and unique User ID.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Max Users to Return | Integer | No | Specifies the maximum number of users to
-    retrieve from AWS IAM. The value must be between 1 and 1000. If not provided,
-    it defaults to 50. |
-
-
-    ### Additional Notes
-
-    - The action handles AWS API pagination automatically if the requested number
-    of users exceeds the default page size.
-
-    - Results are provided in both JSON format and as a formatted data table named
-    'IAM Users' within the SOAR interface.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action extracts AWS credentials (Access Key, Secret
-    Key) and the 'Max Users to Return' parameter.
-
-    2. **Validation**: It verifies that the 'Max Users to Return' value falls within
-    the allowed range (1 to 1000).
-
-    3. **Connectivity Check**: It performs a connectivity test to the AWS IAM service
-    using the provided credentials.
-
-    4. **Data Retrieval**: It calls the AWS IAM `list_users` API. If the number of
-    users exceeds the initial response, it uses markers to paginate through the results
-    until the requested limit is reached.
-
-    5. **Data Processing**: The raw AWS response is parsed into structured User data
-    models.
-
-    6. **Output Generation**: The action populates a JSON result for automated processing
-    and creates a CSV-formatted data table for human review in the case wall.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Ping:
-  ai_description: >-
-    ### General Description
-
-    Verifies the connectivity between Google SecOps and the AWS Identity and Access
-    Management (IAM) service. This action ensures that the provided AWS credentials
-    (Access Key ID and Secret Key) are valid and have sufficient permissions to access
-    the IAM API.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | AWS Access Key ID | String | Yes | The access key ID for the AWS account used
-    for authentication. |
-
-    | AWS Secret Key | String | Yes | The secret key for the AWS account used for
-    authentication. |
-
-    | Verify SSL | Boolean | No | If enabled (default), the action will verify the
-    SSL certificate of the AWS endpoint. |
-
-
-    ### Additional Notes
-
-    This is a standard connectivity test (Ping) and does not process any entities
-    or modify any data.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: Retrieves the AWS Access Key, Secret Key, and SSL
-    verification setting from the integration configuration.
-
-    2. **Manager Initialization**: Creates an instance of the `AWSIAMManager` using
-    the provided credentials.
-
-    3. **Connectivity Test**: Calls the `test_connectivity` method, which executes
-    the AWS IAM `get_account_summary` API call.
-
-    4. **Result Handling**: If the API call returns a successful response (HTTP 200),
-    the action completes successfully. If an exception is caught (e.g., authentication
-    failure), the action fails and returns the error message.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Remove a User from a Group:
-  ai_description: >-
-    Removes one or more users from a specified AWS Identity and Access Management
-    (IAM) group. This action is used to manage group memberships by dissociating users
-    from groups, which in turn removes the permissions inherited from those groups.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Group Name | String | Yes | The name of the IAM group from which the user(s)
-    will be removed. |
-
-    | User Name | String | Yes | A comma-separated list of IAM usernames to be removed
-    from the group. |
+    Lists all managed policies available in an AWS account, including customer-defined
+    and AWS-managed policies. This action allows users to retrieve a comprehensive
+    list of IAM policies with optional filtering based on attachment status and policy
+    scope (AWS-managed or local).
 
 
     ### Flow Description
 
     1. **Initialization**: The action initializes the AWS IAM manager using the provided
-    Access Key, Secret Key, and SSL verification settings.
+    AWS Access Key and Secret Key.
 
-    2. **Connectivity Check**: It performs a connectivity test to ensure the credentials
-    are valid and the AWS IAM service is reachable.
+    2. **Validation**: It validates the 'Max Policies to Return' parameter to ensure
+    it falls within the allowed range.
 
-    3. **Input Parsing**: The 'User Name' parameter is parsed from a comma-separated
-    string into a list of individual usernames.
+    3. **Connectivity**: It performs a connectivity test to the AWS IAM service to
+    ensure credentials are valid.
 
-    4. **Execution**: The action iterates through each username and attempts to remove
-    it from the specified group using the AWS SDK.
+    4. **API Interaction**: The action calls the `list_policies` method of the AWS
+    IAM API, applying the specified filters ('Only Attached', 'Scope', and 'Max Policies
+    to Return').
 
-    5. **Error Handling**: It specifically handles cases where the user or group does
-    not exist, or where AWS account limits are exceeded, and logs these events.
+    5. **Result Processing**: If policies are found, the action adds the policy data
+    as a JSON result and generates a data table titled 'IAM Policies' for the analyst
+    to review.
 
-    6. **Reporting**: Finally, it aggregates the results, identifying which users
-    were successfully removed and which failed, and returns a summary message to the
-    SOAR platform.
+
+    ### Additional Notes
+
+    This action is read-only and does not modify any AWS resources. It supports pagination
+    if the number of policies exceeds the default page size, though the final output
+    is limited by the 'Max Policies to Return' parameter.
+  ai_short_description: >-
+    Lists managed policies from an AWS account, supporting filtering by attachment
+    status and policy scope.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from an external system (AWS IAM) to display in the
+      SOAR platform. It does not mutate any external or internal data, nor does it
+      update entities, create insights, or modify alerts.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or filter by any SOAR entities. It operates
+      globally on the AWS account configuration.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of policies from AWS IAM. It does not match any
+      of the provided outcome categories, as it is a listing/discovery action rather
+      than an enrichment, containment, or ticketing action.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Only Attached | Boolean | No | When checked, filters results to only policies
+    attached to an IAM user, group, or role. Default is False. |
+
+    | Scope | DDL | No | The scope for filtering results. Options: All, AWS, Local.
+    Default is All. |
+
+    | Max Policies to Return | String | No | Specifies the maximum number of policies
+    to return. Default is 100. Maximum is 1000. |
+List Users:
+  ai_description: >-
+    ### General Description
+
+    Lists all users from the AWS IAM service. This action retrieves a specified number
+    of IAM users and provides their details, including ARN, creation date, path, user
+    ID, and username, in both JSON and CSV formats for analyst review.
+
+
+    ### Flow Description
+
+    1. Extract configuration parameters (AWS Access Key ID, AWS Secret Key, and Verify
+    SSL) to authenticate with the AWS IAM service.
+
+    2. Extract the optional action parameter `Max Users to Return`.
+
+    3. Validate that the `Max Users to Return` parameter falls within the allowed
+    range (1-1000).
+
+    4. Initialize the `AWSIAMManager` and perform a connectivity test to ensure the
+    credentials are valid.
+
+    5. Call the `manager.list_users` method to fetch the list of users from AWS IAM.
+
+    6. Process the retrieved user data into JSON and CSV formats.
+
+    7. Add the JSON results to the action output using `siemplify.result.add_result_json`
+    and the CSV data to a table using `siemplify.result.add_data_table`.
+
+
+    ### Additional Notes
+
+    This action is read-only and does not modify any data in AWS IAM or the SOAR platform.
+  ai_short_description: >-
+    Lists all users from the AWS IAM service and returns their details in JSON and
+    CSV formats.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from AWS IAM (fetches_data=true). It does not mutate
+      any external or internal data, nor does it update entities, create insights,
+      or modify alert/case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or utilize any target entities from the case.
+      It operates independently of entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of users from AWS IAM. It does not perform enrichment
+      on existing entities, modify alerts, or perform any containment/ticketing actions.
+      Therefore, it does not match any of the defined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Users to Return | String | No | Specify how many users to return. Maximum
+    is 1000 users. Default is 50. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the AWS IAM service using the provided credentials. This
+    action validates that the integration configuration is correct and that the SOAR
+    platform can successfully communicate with the AWS IAM API.
+
+
+    ### Flow Description
+
+    1. The action extracts the `AWS Access Key ID`, `AWS Secret Key`, and `Verify
+    SSL` configuration parameters from the integration settings.
+
+    2. It initializes the `AWSIAMManager` using the provided credentials and SSL verification
+    setting.
+
+    3. The action calls the `test_connectivity` method, which performs an API call
+    to the AWS IAM `get_account_summary` endpoint to verify the connection.
+
+    4. If the API call is successful, the action logs a success message and completes
+    with a status of `EXECUTION_STATE_COMPLETED`.
+
+    5. If the API call fails (e.g., due to invalid credentials), the action logs the
+    error and completes with a status of `EXECUTION_STATE_FAILED`.
+
+
+    ### Additional Notes
+
+    This action does not perform any operations on entities or modify any data. It
+    is strictly used for verifying the connectivity between the SOAR platform and
+    the AWS IAM service.
+  ai_short_description: >-
+    Tests connectivity to the AWS IAM service using the provided credentials.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes an API call (get_account_summary) to verify connectivity, which
+      constitutes fetching data. It does not mutate any external or internal data,
+      nor does it update entities, create insights, or modify alerts.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities. It is a standalone connectivity
+      test that uses configuration parameters only.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test (ping) to verify credentials. It does
+      not perform any of the listed outcome actions such as enrichment, ticket creation,
+      or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | AWS Access Key ID | String | Yes | The AWS Access Key ID used for authentication.
+    |
+
+    | AWS Secret Key | String | Yes | The AWS Secret Key used for authentication.
+    |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates when connecting
+    to AWS. Defaults to True. |
+Remove a User from a Group:
+  ai_description: >-
+    ### General Description
+
+    Removes one or more users from a specified AWS IAM group. This action interacts
+    with the AWS IAM service to update user group memberships, effectively revoking
+    the permissions associated with that group for the specified users.
+
+
+    ### Flow Description
+
+    1. The action extracts the AWS credentials (Access Key, Secret Key) and configuration
+    settings (SSL verification) from the integration configuration.
+
+    2. It extracts the `Group Name` and `User Name` parameters from the action input.
+
+    3. The action initializes the `AWSIAMManager` and performs a connectivity test
+    to the AWS IAM service.
+
+    4. The `User Name` parameter is parsed into a list of individual usernames.
+
+    5. The action iterates through the list of users and calls the `remove_user_from_group`
+    API method for each user.
+
+    6. It handles potential errors such as `AWSIAMEntityNotFoundException` (if the
+    user or group does not exist) or `AWSIAMLimitExceededException`.
+
+    7. Finally, the action logs the outcome for each user and terminates with a status
+    message indicating which users were successfully removed and which failed.
+
+
+    ### Additional Notes
+
+    The `User Name` parameter supports comma-separated values to allow for bulk removal
+    of users from the specified group in a single execution.
+  ai_short_description: >-
+    Removes specified users from an AWS IAM group.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -791,14 +1512,50 @@ Remove a User from a Group:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes user memberships from IAM groups within the AWS environment, altering
-      the access control state of the external AWS account.
+      Removes the specified user(s) from the specified IAM group in AWS.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a state-changing operation (removal of a user from a group)
+      on an external system (AWS IAM). It does not fetch data, update internal entities,
+      or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -812,3 +1569,51 @@ Remove a User from a Group:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not utilize `siemplify.target_entities`. It operates on user-provided
+      input parameters (`Group Name` and `User Name`) rather than entities within
+      the SOAR platform.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action modifies the group membership of an IAM user in AWS. This directly
+      aligns with the 'Update Identity' category, which includes modifying account
+      metadata such as group memberships.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Group Name | String | Yes | The name of the group to update. Note: Group names
+    can not include spaces and must contain only alphanumeric characters and/or the
+    following: +=.@_- |
+
+    | User Name | String | Yes | The name of the user to remove. Note: User names
+    can not include spaces and must contain only alphanumeric characters and/or the
+    following: +=.@_-. Comma separated values. |

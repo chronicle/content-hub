@@ -1,124 +1,44 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Entities:
-  ai_description: "Enriches Host, IP, and User entities with detailed information\
-    \ from Microsoft SCCM (System Center Configuration Manager). The action connects\
-    \ to the SCCM server via WMI and executes WQL queries to retrieve system attributes,\
-    \ user details, and network configurations. \n\n### Parameters\n| Parameter Name\
-    \ | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Server\
-    \ Address | String | Yes | The IP address or hostname of the Microsoft SCCM server.\
-    \ |\n| Domain | String | Yes | The Active Directory domain used for authentication.\
-    \ |\n| Username | String | Yes | The username used to authenticate with the SCCM\
-    \ server. |\n| Password | String | Yes | The password used to authenticate with\
-    \ the SCCM server. |\n\n### Flow Description\n1. **Initialization**: Establishes\
-    \ a connection to the SCCM server using the provided credentials and WMI protocol.\n\
-    2. **Entity Filtering**: Identifies supported entities (User, Hostname, and IP\
-    \ Address) from the current alert context.\n3. **Data Retrieval**: For each entity,\
-    \ it executes a specific WQL query (e.g., querying `SMS_R_System` for hosts/IPs\
-    \ or `SMS_R_User` for users) to fetch enrichment data.\n4. **Data Processing**:\
-    \ Selects the most recent record based on the 'AgentTime' attribute and flattens\
-    \ the data structure.\n5. **Internal Enrichment**: Updates the entity's additional\
-    \ properties with the retrieved SCCM data, marks the entity as enriched, and attaches\
-    \ a detailed CSV table to the entity in the Google SecOps UI.\n6. **Finalization**:\
-    \ Updates all successfully enriched entities and provides a summary of the results."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity additional properties with SCCM enrichment data and adds data
-      tables to the entities within the case.
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - HOSTNAME
-    - USERUNIQNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Computer Properties:
   ai_description: >-
-    Retrieves detailed computer properties from a Microsoft System Center Configuration
-    Manager (SCCM) instance to enrich Hostname entities. This action is deprecated
-    and superseded by the 'Enrich Entities' action. It uses WMI to query the SCCM
-    provider for system information such as Resource ID, Operating System, MAC Addresses,
-    and Last Logon details.
+    ### General Description
 
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Server Address | String | Yes | The network address or hostname of the SCCM
-    server. |
-
-    | Domain | String | Yes | The Active Directory domain used for WMI authentication.
-    |
-
-    | Username | String | Yes | The username used for WMI authentication. |
-
-    | Password | String | Yes | The password used for WMI authentication. |
+    Enriches Siemplify Host, IP, or User entities using data retrieved from Microsoft
+    SCCM. This action queries the SCCM instance to gather contextual information about
+    the specified entities, such as system properties or user details, and updates
+    the entities within the SOAR platform with this enriched data.
 
 
     ### Flow Description
 
-    1. **Authentication**: Establishes a WMI connection to the SCCM server using the
-    provided credentials and namespace.
+    1. **Configuration Initialization**: The action retrieves the required SCCM connection
+    parameters (Server Address, Domain, Username, Password) from the integration configuration.
 
-    2. **Entity Filtering**: Processes only Hostname entities from the current context.
+    2. **Connection Establishment**: A connection to the Microsoft SCCM WMI instance
+    is established using the provided credentials.
 
-    3. **Identifier Normalization**: Strips domain suffixes or email-style formats
-    from the hostname to ensure compatibility with SCCM records.
+    3. **Entity Filtering**: The action iterates through the `target_entities` provided
+    in the case, filtering for supported types: `USER`, `HOSTNAME`, and `ADDRESS`.
 
-    4. **Data Retrieval**: Executes a WQL query against the `SMS_R_System` table to
-    fetch computer properties.
+    4. **Data Retrieval**: For each supported entity, the action calls the `SCCMManager`
+    to query SCCM for relevant information based on the entity type (e.g., `enrich_user`,
+    `enrich_host`, or `enrich_address`).
 
-    5. **Enrichment**: If a match is found, it populates the entity's additional properties
-    with the retrieved data (prefixed with 'SCCM') and attaches a CSV table to the
-    entity.
+    5. **Entity Update**: If enrichment data is found, the action updates the entity's
+    `additional_properties` with the retrieved data, sets the `is_enriched` flag to
+    `True`, and adds a table of the results to the action output.
 
-    6. **Update**: Updates the entities in the Google SecOps platform to reflect the
-    new enrichment data.
+    6. **Finalization**: The action updates the enriched entities in the SOAR platform
+    and returns a summary message indicating which entities were successfully enriched
+    or failed.
 
 
     ### Additional Notes
 
-    - This action requires ports 135, 445, 443, and the RPC service to be open on
-    the SCCM server.
-
-    - It is recommended to use the 'Enrich Entities' action for a more comprehensive
-    enrichment process.
+    This action requires network connectivity to the SCCM server on ports 135, 445,
+    and 443, and the RPC service must be enabled on the SCCM instance.
+  ai_short_description: >-
+    Enriches User, Hostname, and IP Address entities with contextual data from Microsoft
+    SCCM.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -129,13 +49,51 @@ Get Computer Properties:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with SCCM computer information and sets
-      the enriched status.
-  categories:
-    enrichment: true
+      Updates entity 'additional_properties' and 'is_enriched' status within the SOAR
+      platform.
+    reasoning: >-
+      The action fetches data from an external SCCM instance (fetches_data=true).
+      It does not mutate external data (can_mutate_external_data=false). It updates
+      internal entities within the SOAR platform by adding enrichment data to their
+      properties (can_mutate_internal_data=true, can_update_entities=true). It does
+      not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
-    - HOSTNAME
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -149,47 +107,153 @@ Get Computer Properties:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Get Login History:
-  ai_description: "### General Description\nThe **Get Login History** action retrieves\
-    \ historical login data for User entities from a Microsoft System Center Configuration\
-    \ Manager (SCCM) instance. This action helps security analysts understand user\
-    \ activity by providing details on login frequency and the most recent login timestamp\
-    \ across the SCCM-managed environment.\n\n### Parameters\n| Parameter | Type |\
-    \ Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Number of Records\
-    \ to Return | Integer | Yes | The maximum number of login history records to retrieve\
-    \ from SCCM for each processed entity. Default is 100. |\n\n### Flow Description\n\
-    1. **Authentication:** The action connects to the SCCM server using WMI (Windows\
-    \ Management Instrumentation) with the configured server address, domain, and\
-    \ credentials.\n2. **Entity Processing:** It iterates through the target entities\
-    \ provided in the context, specifically filtering for User entities.\n3. **Query\
-    \ Execution:** For each User entity, it executes a WQL (WMI Query Language) query\
-    \ that joins `SMS_UserMachineIntelligence` and `SMS_R_User` tables to find records\
-    \ matching the user's identifier (checking against UniqueUserName, UserPrincipalName,\
-    \ Mail, or UserName).\n4. **Data Enrichment:** \n    *   Retrieved data (Username,\
-    \ Last Login Time, and Login Count) is formatted into a CSV table.\n    *   The\
-    \ table is attached to the entity in Google SecOps using `add_entity_table`.\n\
-    5. **Finalization:** The action returns a JSON object containing the raw login\
-    \ history for all successful entities and provides a summary message of the processing\
-    \ results.\n\n### Additional Notes\n*   This action requires network connectivity\
-    \ to the SCCM server on ports 135, 445, and 443, with RPC services enabled.\n\
-    *   The action is read-only regarding the external SCCM system."
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `SUPPORTED_ENTITY_TYPES`,
+      which includes `EntityTypes.USER`, `EntityTypes.HOSTNAME`, and `EntityTypes.ADDRESS`.
+      Therefore, it targets these three types specifically. It does not filter by
+      other attributes like creation time, modification time, or specific flags.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (enrichment data) for Users, Hostnames,
+      and IP Addresses from Microsoft SCCM. This directly matches the 'Enrich IOC'
+      (for IP/Address) and 'Enrich Asset' (for User/Hostname) categories. It does
+      not perform any containment, ticketing, or alert modification.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Server Address | String | Yes | The address of the SCCM server. |
+
+    | Domain | String | Yes | The domain for authentication. |
+
+    | Username | String | Yes | The username for authentication. |
+
+    | Password | String | Yes | The password for authentication. |
+Get Computer Properties:
+  ai_description: >-
+    ### General Description
+
+    Fetches computer properties from a Microsoft SCCM instance to enrich Hostname
+    entities. This action retrieves detailed system information from SCCM and updates
+    the corresponding Host entities within the SOAR platform, providing analysts with
+    contextual data such as system configuration and status.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the SCCM connection using the provided
+    `Server Address`, `Domain`, `Username`, and `Password` configuration parameters.
+
+    2. **Entity Processing**: The action iterates through all target entities, filtering
+    specifically for `HOSTNAME` types.
+
+    3. **Hostname Normalization**: For each valid entity, the action cleans the hostname
+    by removing any domain suffixes (e.g., splitting by '@' or '.') to ensure accurate
+    querying.
+
+    4. **Data Retrieval**: The action calls the `SCCMManager.get_computer_info` method
+    to query the SCCM instance for the specific computer's properties.
+
+    5. **Enrichment**: If data is retrieved:
+        * The result is flattened into a key-value structure.
+        * The entity's `additional_properties` are updated with the retrieved data,
+    prefixed with 'SCCM'.
+        * A CSV table containing the computer properties is added to the entity's
+    results.
+        * The entity is marked as enriched (`is_enriched = True`).
+    6. **Update**: Finally, the action calls `siemplify.update_entities` to save the
+    changes to the SOAR platform and adds the full JSON result to the action output.
+
+
+    ### Additional Notes
+
+    This action is currently deprecated. It is recommended to use the "Enrich Entities"
+    action instead for similar functionality.
+  ai_short_description: >-
+    Fetches computer properties from Microsoft SCCM to enrich Hostname entities with
+    contextual system data.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
     can_mutate_internal_data: true
-    can_update_entities: false
+    can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action adds a login history CSV table to the entity's data within Google
-      SecOps.
-  categories:
-    enrichment: false
+      Updates the entity's `additional_properties` and `is_enriched` status within
+      the SOAR platform.
+    reasoning: >-
+      The action fetches data from an external SCCM instance (fetches_data=true).
+      It does not mutate external data. It mutates internal data by updating entity
+      properties and status (can_mutate_internal_data=true, can_update_entities=true).
+      It does not create insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
-    - USERUNIQNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -203,64 +267,228 @@ Get Login History:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type == EntityTypes.HOSTNAME`. It performs no other filtering
+      based on time, properties, or other attributes.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual metadata (computer properties) for a Hostname
+      entity and updates the entity within the platform. This aligns with the 'Enrich
+      Asset' category. It does not perform IOC enrichment, alert updates, or external
+      mutations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Server Address | String | Yes | The address of the SCCM server. |
+
+    | Domain | String | Yes | The domain for authentication. |
+
+    | Username | String | Yes | The username for authentication. |
+
+    | Password | String | Yes | The password for authentication. |
+Get Login History:
+  ai_description: >-
+    ### General Description
+
+    Retrieves user login history from a Microsoft SCCM instance. This action queries
+    the SCCM WMI interface to fetch historical login data for specific user entities,
+    providing visibility into user activity across the environment.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (Server Address, Domain, Username, Password)
+    and the action parameter (Number of Records to Return).
+
+    2. Initializes the `SCCMManager` to establish a connection to the SCCM WMI instance.
+
+    3. Iterates through the provided target entities, filtering for those of type
+    `USER`.
+
+    4. For each valid user entity, executes a query against the SCCM instance via
+    the `get_login_history` method to retrieve login records.
+
+    5. If login history is found, adds a formatted table to the action result and
+    stores the JSON data.
+
+    6. Aggregates the results and returns a summary message indicating success or
+    failure for each entity.
+
+
+    ### Additional Notes
+
+    This action requires network connectivity to the SCCM instance via WMI (ports
+    135, 445, 443).
+  ai_short_description: >-
+    Retrieves user login history from Microsoft SCCM.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from an external SCCM instance. It does not mutate external
+      or internal data, nor does it update entities, create insights, modify alerts,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly filters for
+      entities where `entity.entity_type == EntityTypes.USER`. It does not apply any
+      other filters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves contextual login history for a user entity from an external
+      system (SCCM). This aligns with the 'Enrich Asset' category as it provides metadata
+      about a user.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Number of Records to Return | String | Yes | Maximum number of records to return
+    in the action. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a utility designed to verify the connectivity between the
-    Google SecOps (Chronicle) platform and a Microsoft System Center Configuration
-    Manager (SCCM) instance. It ensures that the provided credentials and server details
-    are correct and that the network path (specifically WMI/RPC ports) is open.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Server Address** | String | Yes | The IP address or FQDN of the Microsoft
-    SCCM server. |
-
-    | **Domain** | String | Yes | The Active Directory domain associated with the
-    service account. |
-
-    | **Username** | String | Yes | The username of the service account used to authenticate
-    via WMI. |
-
-    | **Password** | String | Yes | The password of the service account used to authenticate
-    via WMI. |
-
-
-    ### Additional Notes
-
-    - This action does not process any entities.
-
-    - It relies on the `wmi_client_wrapper` to establish a connection to the `ROOT\SMS`
-    namespace and subsequently queries the `SMS_ProviderLocation` to identify the
-    site-specific namespace.
-
-    - Successful execution confirms that the SOAR environment can reach the SCCM server
-    and perform WMI queries.
+    Tests connectivity to the Microsoft SCCM instance using the provided configuration
+    parameters. This action verifies that the integration is correctly configured
+    and can successfully communicate with the target SCCM server.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the connection details (Server
-    Address, Domain, Username, and Password) from the integration configuration.
+    1. The action extracts the required connection parameters: `Server Address`, `Domain`,
+    `Username`, and `Password` from the integration configuration.
 
-    2. **Manager Initialization**: It attempts to instantiate the `SCCMManager` class.
+    2. It initializes the `SCCMManager` class using these credentials.
 
-    3. **Connectivity Test**: Inside the manager, a WMI connection is established
-    to the `ROOT\SMS` namespace. It then executes a query (`SELECT NamespacePath FROM
-    SMS_ProviderLocation`) to verify read access and retrieve the site namespace.
+    3. The `SCCMManager` attempts to establish a WMI connection to the specified SCCM
+    server.
 
-    4. **Namespace Re-connection**: The manager attempts to connect to the specific
-    site namespace returned by the previous query.
+    4. If the connection is successful, the action returns a success message. If the
+    connection fails, it catches the exception, logs the error, and returns a failure
+    message.
 
-    5. **Result Reporting**: If all connection steps succeed, the action returns a
-    success message. If any step fails (e.g., authentication error, timeout, or WMI
-    failure), it catches the exception and reports a failure.
+
+    ### Additional Notes
+
+    This action does not perform any data retrieval or modification operations; it
+    is strictly used for validating the connectivity between the SOAR platform and
+    the Microsoft SCCM instance.
+  ai_short_description: >-
+    Tests connectivity to the Microsoft SCCM instance.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -271,10 +499,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action only performs a connectivity check to the SCCM instance. It does
+      not fetch data, mutate external or internal systems, update entities, or create
+      insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -288,46 +553,85 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Run WQL Query:
-  ai_description: >-
-    Executes custom Windows Management Instrumentation Query Language (WQL) queries
-    against a Microsoft SCCM (System Center Configuration Manager) instance. This
-    action allows users to retrieve specific management data, such as device details,
-    user information, or system status, directly from the SCCM database using standard
-    WQL syntax.
-
-
-    ### Parameters
-
+    reasoning: >-
+      The action is a connectivity test that does not interact with any entities.
+      It operates independently of the case entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test (Ping) and does not perform any enrichment,
+      ticketing, blocking, or other operational tasks defined in the outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Query to run | String | Yes | The specific WQL query to be executed against
-    the SCCM instance. Example: `SELECT * FROM SMS_R_System`. |
+    | Server Address | String | Yes | The address of the SCCM server. |
 
-    | Number of records to return | Integer | Yes | The maximum number of records
-    to return in the action results. If the query returns more records, the list will
-    be truncated. |
+    | Domain | String | Yes | The domain for the SCCM service account. |
+
+    | Username | String | Yes | The username for the SCCM service account. |
+
+    | Password | String | Yes | The password for the SCCM service account. |
+Run WQL Query:
+  ai_description: >-
+    ### General Description
+
+    Executes an arbitrary Windows Management Instrumentation Query Language (WQL)
+    query against a Microsoft SCCM instance. This action allows users to retrieve
+    specific system or user data from SCCM by providing a custom WQL query string.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the SCCM manager using the provided
-    server address, domain, and credentials.
+    1. Initializes the `SCCMManager` using the configured integration parameters (Server
+    Address, Domain, Username, Password).
 
-    2. **Connection**: It establishes a WMI connection to the SCCM server, first targeting
-    the `ROOT\SMS` namespace to find the site-specific namespace, and then reconnecting
-    to that site namespace.
+    2. Extracts the `Query to run` and `Number of records to return` from the action
+    parameters.
 
-    3. **Execution**: The provided WQL query is executed against the SCCM instance.
+    3. Executes the provided WQL query against the SCCM instance via the `SCCMManager`.
 
-    4. **Processing**: The results are parsed into a structured format. If the number
-    of results exceeds the 'Number of records to return' limit, the list is truncated.
+    4. If results are returned, the action truncates the result set if it exceeds
+    the specified `Number of records to return`.
 
-    5. **Output**: The action returns the results in three formats: a JSON object,
-    a data table displayed in the UI, and a full JSON file attached to the action
-    result.
+    5. Adds the results to the action output as a JSON object, a table, and a file
+    attachment for further analysis.
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities and does not require any entities
+    to be selected in the case. It is a standalone query execution action.
+  ai_short_description: >-
+    Executes an arbitrary WQL query against a Microsoft SCCM instance and returns
+    the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -338,10 +642,48 @@ Run WQL Query:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data from an external system (SCCM) via a WQL query. It does
+      not mutate external data (it is a read-only query), nor does it mutate internal
+      SecOps data, update entities, create insights, modify alerts, or create case
+      comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -355,3 +697,49 @@ Run WQL Query:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action is designed to run arbitrary WQL queries against SCCM and does not
+      interact with or filter any Siemplify entities. The description explicitly states:
+      'Note: action is not using Siemplify entities to operate.'
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a WQL query to retrieve data from SCCM. This matches the
+      'Search Events' category, as it returns a collection of historical logs or telemetry
+      data based on the provided query parameters.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query to run | String | Yes | Specify WQL query to run. Consider the default
+    example request for reference. |
+
+    | Number of records to return | String | Yes | Maximum number of records to return
+    in action. |

@@ -1,66 +1,40 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enriches Entities:
   ai_description: >-
     ### General Description
 
-    Enriches IP addresses, Hostnames, URLs, and File Hashes using AlienVault OTX (Open
-    Threat Exchange) threat intelligence. This action retrieves detailed indicator
-    information, including geographical data, pulse information, and malware analysis,
-    to provide context for security investigations.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Api Key | String | Yes | The API key used to authenticate requests to the AlienVault
-    OTX API. |
+    Enriches external IP addresses, file hashes, URLs, and hostnames with threat intelligence
+    from the AlienVault OTX platform. This action retrieves reputation data and associated
+    metadata to provide context for security investigations, helping analysts identify
+    potential threats.
 
 
     ### Flow Description
 
-    1. **Initialization**: Retrieves the mandatory API key from the integration configuration.
+    1. Initialize the `AlienVaultTIManager` using the provided API Key.
 
-    2. **Entity Filtering**: Iterates through target entities, selecting only those
-    of type ADDRESS, HOSTNAME, FILEHASH, or URL. For ADDRESS and HOSTNAME, it specifically
-    excludes internal entities.
+    2. Iterate through the `target_entities` provided in the SOAR case.
 
-    3. **Data Retrieval**: For each valid entity, it queries the AlienVault OTX API
-    to fetch indicator details across various sections (e.g., general, geo, pulses).
+    3. For each entity, check its type (ADDRESS, FILEHASH, URL, or HOSTNAME).
 
-    4. **Data Processing**: If results are found, the data is flattened and prefixed
-    with "AlienVault".
+    4. If the entity is an external IP address or hostname, or a valid file hash or
+    URL, perform an API call to AlienVault OTX to fetch threat intelligence data.
 
-    5. **Internal Mutation**:
-        *   Updates the entity's `additional_properties` with the enriched data.
-        *   Adds a CSV-formatted data table to the entity.
-        *   Sets the entity's `is_enriched` flag to `True`.
-    6. **Finalization**: Updates all enriched entities in the SOAR platform and returns
-    a summary message and JSON result.
+    5. If data is retrieved, parse the response, update the entity's `additional_properties`
+    with the retrieved intelligence, add a CSV table to the entity, and mark the entity
+    as enriched (`is_enriched = True`).
+
+    6. Update the SOAR case with the enriched entities using `siemplify.update_entities`.
+
+    7. Return a JSON result containing the intelligence data for all processed entities.
 
 
     ### Additional Notes
 
-    * Internal IP addresses and Hostnames are skipped to avoid unnecessary API calls
-    and false positives.
-
-    * The action handles API timeouts and specific error messages (like private IP
-    errors) gracefully.
+    The action skips internal IP addresses and hostnames. It handles API timeouts
+    and errors gracefully, ensuring that failed entities do not stop the entire process.
+  ai_short_description: >-
+    Enriches IP addresses, file hashes, URLs, and hostnames with threat intelligence
+    data from AlienVault OTX.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -71,16 +45,50 @@ Enriches Entities:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      Updates entity additional properties with enrichment data and adds a data table
-      to the entity.
-  categories:
-    enrichment: true
+      Updates entity additional properties and marks entities as enriched within the
+      SOAR platform.
+    reasoning: >-
+      The action makes GET requests to the AlienVault OTX API to fetch threat intelligence
+      data (fetches_data=true). It updates the entities within the SOAR platform with
+      additional properties and enrichment status (can_mutate_internal_data=true,
+      can_update_entities=true). It does not mutate external systems or create insights/comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - FILEHASH
-    - HOSTNAME
-    - DestinationURL
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -94,41 +102,80 @@ Enriches Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type`
+      (ADDRESS, FILEHASH, URL, HOSTNAME) and `entity.is_internal` (for ADDRESS and
+      HOSTNAME). This means it targets these specific entity types, filtering by entity_type
+      and is_internal.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence (reputation, metadata) for IOCs (IP,
+      Hash, URL, Host) from AlienVault OTX. This matches the 'Enrich IOC' expected
+      outcome. It does not mutate data on external systems, so it is not a Contain
+      Host or Blocklist action.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Api Key | String | Yes | AlienVault OTX API Key used to authenticate requests
+    to the AlienVault Threat Intelligence platform. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic tool used to verify the connectivity between
-    Google SecOps and the AlienVault OTX (Open Threat Exchange) API. Its primary purpose
-    is to validate that the integration's configuration, specifically the API Key,
-    is correct and that the external service is reachable.
-
-
-    ### Parameters
-
-    There are no parameters for this action.
+    Validates the connectivity between the SOAR platform and the AlienVault OTX API.
+    This action ensures that the integration is correctly configured and that the
+    provided API key has valid access to the AlienVault OTX service.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the AlienVault TI manager using
-    the API Key provided in the integration configuration.
+    1. Retrieve the API Key from the integration configuration.
 
-    2. **Connectivity Check**: It executes the `test_connectivity` method, which performs
-    a simple `GET` request to the AlienVault OTX `user/me` endpoint.
+    2. Initialize the `AlienVaultTIManager` using the retrieved API Key.
 
-    3. **Validation**: The action checks the response from the API. If the request
-    is successful (returning valid user data), the connection is considered established.
+    3. Execute the `test_connectivity` method, which performs a GET request to the
+    AlienVault OTX `user/me` endpoint.
 
-    4. **Final Output**: The action returns a boolean result (`True` for success,
-    `False` for failure) and an informative message indicating whether the connection
-    was established or failed.
+    4. Return a success message ("Connection Established.") if the API call returns
+    a valid response, or a failure message ("Connection Failed.") if an exception
+    occurs.
 
 
     ### Additional Notes
 
-    This action does not process any entities and is strictly used for configuration
-    validation.
+    This action is used for troubleshooting and verifying integration settings. It
+    does not process any entities or modify any data.
+  ai_short_description: >-
+    Validates connectivity to the AlienVault OTX API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -139,10 +186,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to the AlienVault OTX API to verify connectivity.
+      It does not mutate external or internal data, nor does it update entities or
+      create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -156,3 +240,38 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action performs a connectivity test against the AlienVault API and does
+      not interact with any entities in the case.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a connectivity test to verify API access. It does not perform
+      any of the listed outcome actions (enrichment, blocking, ticketing, etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action.

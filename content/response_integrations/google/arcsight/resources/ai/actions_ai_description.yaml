@@ -1,42 +1,38 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Add Entities To Active List:
   ai_description: >-
-    ### General Description\nAdds entities from the current Google SecOps context
-    into a specified **ArcSight Active List**. This action is primarily used to synchronize
-    threat intelligence or observed indicators (like malicious IPs or hostnames) from
-    an investigation into ArcSight for further correlation or monitoring.\n\n### Parameters\n|
-    Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n|
-    **Active List Name** | String | Yes | The name of the active list in ArcSight
-    where the entities should be added. |\n| **Entity Column** | String | Yes | The
-    name of the column in the ArcSight active list that will store the entity identifier.
-    |\n| **Additional Fields** | String (JSON) | No | A JSON object containing additional
-    column-value pairs to be populated in the active list alongside the entity. Example:
-    `{\"Reason\": \"Phishing\", \"Source\": \"SOAR\"}`. |\n\n### Flow Description\n1.
-    **Parameter Extraction**: Retrieves the Active List name, target column, and any
-    additional field data from the action parameters.\n2. **Entity Collection**: Gathers
-    all entities present in the current action scope.\n3. **ArcSight Authentication**:
-    Establishes a session with the ArcSight Manager.\n4. **Resource Identification**:
-    Queries ArcSight to find the unique UUID associated with the provided Active List
-    name.\n5. **Data Preparation**: Constructs a payload mapping each entity's original
-    identifier to the specified 'Entity Column' and merges it with the 'Additional
-    Fields' data.\n6. **External Mutation**: Sends a request to ArcSight to append
-    these entries to the identified Active List.\n7. **Cleanup**: Logs out of the
-    ArcSight session.\n\n### Additional Notes\n- If no entities are found in the scope,
-    the action will fail with an informative error.\n- The `Additional Fields` parameter
-    must be a valid JSON string.
+    ### General Description
+
+    Adds entities to a specified Active List in ArcSight. This action allows analysts
+    to populate ArcSight Active Lists with entities from the current case, enabling
+    further correlation or monitoring within the ArcSight environment.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (API credentials, SSL settings) from the
+    integration configuration.
+
+    2. Extracts action parameters (Active List Name, Entity Column, Additional Fields)
+    from the action configuration.
+
+    3. Iterates over the `target_entities` provided in the case.
+
+    4. Constructs a payload containing the entity identifiers and any additional fields
+    provided in the `Additional Fields` parameter.
+
+    5. Authenticates with the ArcSight API using the provided credentials.
+
+    6. Retrieves the UUID of the specified Active List by name.
+
+    7. Sends a POST request to the ArcSight API to add the entries to the Active List.
+
+
+    ### Additional Notes
+
+    Requires valid ArcSight API credentials and connectivity to the ArcSight manager
+    service.
+  ai_short_description: >-
+    Adds entities to a specified Active List in ArcSight.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -44,110 +40,50 @@ Add Entities To Active List:
     can_mutate_external_data: true
     can_mutate_internal_data: false
     can_update_entities: false
-    external_data_mutation_explanation: >-
-      Adds entity identifiers and optional additional field values as new entries
-      into a specified ArcSight Active List.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
-    - USERUNIQNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Add Entries To Activelist:
-  ai_description: "Adds new entries to a specified Active List in ArcSight. This action\
-    \ allows users to populate ArcSight lists using either delimited string formats\
-    \ or a structured JSON array. It supports identifying the target list by its name\
-    \ or unique UUID. \n\n### Parameters Description\n\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| **Columns** | String | No\
-    \ | Semicolon-separated names of the columns where values should be placed (e.g.,\
-    \ `Column1;Column2`). Required if using the 'Entries' parameter. |\n| **Entries**\
-    \ | String | No | The actual data entries. Values within an entry are separated\
-    \ by '|' and multiple entries are separated by ';' (e.g., `val1|val2;val3|val4`).\
-    \ Required if using the 'Columns' parameter. |\n| **Active List UUID** | String\
-    \ | No | The unique identifier of the target Active List. Takes priority over\
-    \ 'Active list name'. |\n| **Active list name** | String | No | The name of the\
-    \ target Active List. Used to resolve the UUID if 'Active List UUID' is not provided.\
-    \ |\n| **Entries JSON** | String | No | A JSON list of objects representing entries\
-    \ (e.g., `[{\"Col1\": \"Val1\"}, {\"Col1\": \"Val2\"}]`). |\n\n### Additional\
-    \ Notes\n- Either **Active List UUID** or **Active list name** must be provided\
-    \ to identify the target list.\n- Data must be provided using either the combination\
-    \ of **Columns** + **Entries** OR the **Entries JSON** parameter. If both are\
-    \ provided, the Columns/Entries combination takes priority.\n\n### Flow Description\n\
-    1. **Parameter Initialization**: The action retrieves configuration settings (API\
-    \ Root, credentials) and action parameters.\n2. **Validation**: It ensures that\
-    \ a target list is specified and that entry data is provided in one of the supported\
-    \ formats.\n3. **Data Parsing**: \n    - If using string parameters, it splits\
-    \ the columns and entries based on the defined delimiters (`;` and `|`).\n   \
-    \ - If using JSON, it parses the JSON string into a list of dictionaries and maps\
-    \ them to a columnar format.\n4. **ArcSight Connection**: Authenticates with the\
-    \ ArcSight Manager API.\n5. **UUID Resolution**: If only a list name was provided,\
-    \ the action queries ArcSight to retrieve the corresponding UUID.\n6. **Mutation**:\
-    \ Sends a POST request to the ArcSight API to add the parsed entries to the specified\
-    \ Active List.\n7. **Finalization**: Logs out of the session and reports the execution\
-    \ status."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      Adds new data entries to an Active List within the ArcSight ESM system.
+    external_data_mutation_explanation: Adds entries to an ArcSight Active List.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to fetch the Active List UUID and a POST request
+      to add entries to the Active List. This mutates external data (ArcSight Active
+      List) but not internal data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: true
+      alert: true
+      application: true
+      child_hash: true
+      child_process: true
+      cluster: true
+      container: true
+      credit_card: true
+      cve: true
+      cve_id: true
+      database: true
+      deployment: true
+      destination_domain: true
+      domain: true
+      email_message: true
+      event: true
+      file_hash: true
+      file_name: true
+      generic: true
+      host_name: true
+      ip_set: true
+      mac_address: true
+      parent_hash: true
+      parent_process: true
+      phone_number: true
+      pod: true
+      process: true
+      service: true
+      source_domain: true
+      threat_actor: true
+      threat_campaign: true
+      threat_signature: true
+      url: true
+      usb: true
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -161,59 +97,246 @@ Add Entries To Activelist:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` without filtering by type
+      or any other attribute. Therefore, it supports all entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds entries to an ArcSight Active List. This does not match any
+      of the predefined categories (e.g., Enrich IOC, Blocklist, Ticket, etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Active List Name | String | Yes | Specify the name of the active list to which
+    you want to add entities. |
+
+    | Entity Column | String | Yes | Specify the name of the column, where entity
+    value should be put. |
+
+    | Additional Fields | String | No | Specify additional fields that should be added
+    alongside the entity in the active list. Format is a JSON object. Example: {"Column_1":
+    "Value_1","Column_2": "Value_2"} |
+Add Entries To Activelist:
+  ai_description: >-
+    ### General Description
+
+    Adds new entries to an ArcSight Active List. This action allows users to populate
+    an Active List in ArcSight by providing either a set of columns and entries or
+    a JSON representation of the entries.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (API Root, credentials) and action parameters
+    (Columns, Entries, Active List identifiers).
+
+    2. Validates that either an Active List UUID or Name is provided, and that either
+    Entries JSON or Columns/Entries are provided.
+
+    3. Parses the input entries into a structured format.
+
+    4. Authenticates with the ArcSight API.
+
+    5. If an Active List Name is provided instead of a UUID, it retrieves the corresponding
+    UUID.
+
+    6. Sends a POST request to the ArcSight API to add the entries to the specified
+    Active List.
+
+    7. Logs out of the ArcSight session.
+
+
+    ### Additional Notes
+
+    Ensure the ArcSight API is accessible and the provided credentials have sufficient
+    permissions to modify the target Active List. Either 'Active list UUID' or 'Active
+    list name' must be provided. Either 'Entries JSON' or 'Columns' + 'Entries' must
+    be provided.
+  ai_short_description: >-
+    Adds new entries to an ArcSight Active List.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds entries to the specified ArcSight Active List.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches the Active List UUID (if only the name is provided) and performs
+      a POST request to add entries to the Active List. This constitutes fetching
+      data and mutating external data. It does not interact with internal SecOps entities
+      or case data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not use `target_entities`. It relies on user-provided parameters
+      (`Columns`, `Entries`, `Active List UUID`, etc.) to perform its task. Therefore,
+      it does not filter or operate on entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds entries to an ArcSight Active List. This is a generic data mutation
+      in an external system. It does not strictly match the provided categories (e.g.,
+      Blocklist, Allowlist, Ticket, etc.), as an Active List can serve various purposes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Columns | String | No | Specify the name of the columns,\
+    \ where you want to put values for the entries. Format: Column_name1;Column_name2\
+    \ |\n| Entries | String | No | Specify the entries. Format entry1_value1|entry1_value2;entry2_value1|entry2_value2\
+    \ |\n| Active List UUID | String | No | Specify the UUID of the active list, where\
+    \ you want to add new entries. Note: parameter \u201CActive list UUID\u201C takes\
+    \ priority over \u201CActive list name\u201C. |\n| Active list name | String |\
+    \ No | Specify the name of the active list, where you want to add new entries.\
+    \ Note: parameter \u201CActive list UUID\u201C takes priority over \u201CActive\
+    \ list name\u201C. |\n| Entries JSON | String | No | Specify a list of JSON objects\
+    \ that contain information about the entry. Note: Combination of \u2018Columns'\
+    \ and \u2018Entries\u2019 parameters have priority over 'Entries JSON\u2019. Format:\
+    \ [{\"Column_1\": \"Value_1\", \"Column_2\": \"Value_2\"}, {\"Column_1\": \"Value_3\"\
+    , \"Column_2\": \"Value_4\"}] |\n\n### Parameter Notes\nEither 'Active list UUID'\
+    \ or 'Active list name' must be provided. Either 'Entries JSON' or 'Columns' +\
+    \ 'Entries' must be provided."
 Change Case Stage:
   ai_description: >-
     ### General Description
 
-    Updates the stage of a specific case in ArcSight. This action allows users to
-    programmatically transition cases through different lifecycle phases within the
-    ArcSight ESM environment, such as moving a case from 'INITIAL' to 'CLOSED'.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Case Name | String | Yes | The exact name of the case in ArcSight that you want
-    to update. |
-
-    | Stage | String | Yes | The new stage to assign to the case. Acceptable values
-    are: `INITIAL`, `QUEUED`, `CLOSED`, `FINAL`, and `FOLLOW_UP`. |
+    Updates the stage of a specific case within the Arcsight platform. This action
+    allows analysts to transition a case through its lifecycle by modifying its stage
+    field.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves connection settings (API Root,
-    credentials) and action-specific parameters (Case Name and Stage).
+    1. Extracts configuration parameters (API credentials, connection settings) and
+    action parameters (`Case Name`, `Stage`).
 
-    2. **Validation**: The script validates the provided `Stage` against a list of
-    supported ArcSight case stages.
+    2. Validates the provided `Stage` against a list of allowed values (`INITIAL`,
+    `QUEUED`, `CLOSED`, `FINAL`, `FOLLOW_UP`).
 
-    3. **Authentication**: Connects to the ArcSight API and establishes an active
-    session.
+    3. Initializes the `ArcsightManager` and authenticates with the Arcsight REST
+    API.
 
-    4. **Case Retrieval**: Fetches the existing case data from ArcSight using the
-    provided `Case Name`. This is necessary to obtain the full case object required
-    for the update operation.
+    4. Retrieves the case details by name using the `get_case_by_name` method.
 
-    5. **Mutation**: Modifies the `stage` attribute within the case's raw data structure
-    to the new value.
+    5. Updates the stage field in the case's raw data.
 
-    6. **External Update**: Sends a POST request to the ArcSight `update_case` endpoint
-    with the modified case object to commit the change.
+    6. Sends a POST request to the `update_case` endpoint to persist the changes in
+    Arcsight.
 
-    7. **Session Termination**: Logs out of the ArcSight API to close the session.
+    7. Logs out of the Arcsight session.
 
 
     ### Additional Notes
 
-    - This action does not process entities from the Google SecOps environment; it
-    operates strictly based on the provided `Case Name` parameter.
-
-    - If the provided `Stage` is not one of the five valid options, the action will
-    fail before attempting to contact the API.
+    The action requires valid Arcsight credentials and connectivity to the Arcsight
+    REST API. The `Case Name` must exist in Arcsight for the update to succeed.
+  ai_short_description: >-
+    Updates the stage of a case in the Arcsight platform.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -222,14 +345,51 @@ Change Case Stage:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates the 'stage' field of a specific case in ArcSight by sending a POST request
-      to the manager-service update endpoint.
+      Updates the stage of a case in the Arcsight platform via a POST request.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches case data to retrieve the current state before updating it
+      (fetches_data=true). It performs a POST request to update the case stage in
+      Arcsight (can_mutate_external_data=true). It does not modify internal SecOps
+      data, entities, or insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -243,65 +403,90 @@ Change Case Stage:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. It relies on the
+      `Case Name` parameter provided by the user to identify the target case. Therefore,
+      no entity flags are set.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates the stage of a case in Arcsight. This aligns with the 'Update
+      Ticket' category, as Arcsight cases function as tickets/incidents. It does not
+      match other categories like 'Enrich IOC', 'Contain Host', etc.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: true
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Case Name | String | Yes | Specify the name of the case for which you want to
+    update the stage. |
+
+    | Stage | String | Yes | Specify a new stage for the case. Possible values: INITIAL,
+    QUEUED, CLOSED, FINAL, and FOLLOW_UP. |
 Get Activelist Entries:
   ai_description: >-
     ### General Description
 
-    This action retrieves entries from a specified active list within ArcSight. It
-    allows users to fetch data based on either the active list's unique identifier
-    (UUID) or its display name. The retrieved data is presented as a data table and
-    a JSON result, with an option to map column headers directly to values for easier
-    parsing.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Active list UUID | String | No* | The unique identifier of the ArcSight active
-    list. This parameter takes priority over the 'Active list name'. |
-
-    | Active list name | String | No* | The display name of the active list to retrieve
-    entries from. |
-
-    | Map Columns | Boolean | No | If set to true, the action will map column headers
-    to their respective values in the JSON output. Default is false. |
-
-    | Max Entries To Return | Integer | No | Specifies the maximum number of entries
-    to retrieve from the list. |
-
-
-    ### Additional Notes
-
-    *   **Mandatory Inputs:** Either 'Active list UUID' or 'Active list name' must
-    be provided for the action to execute successfully. If both are provided, the
-    UUID is used.
-
-    *   **Output:** The action generates a data table named 'Entries' and a JSON result
-    containing the list data.
+    Retrieves entries from a specified ArcSight Active List. This action allows users
+    to fetch data from ArcSight by providing either the Active List UUID or the Active
+    List name. It supports optional column mapping and entry limits to control the
+    output format and volume.
 
 
     ### Flow Description
 
-    1.  **Initialization:** The action initializes the ArcSight manager using provided
-    credentials and configuration.
+    1. The action extracts configuration parameters (API Root, Username, Password,
+    etc.) and action parameters (Active List UUID, Active List Name, Map Columns,
+    Max Entries To Return).
 
-    2.  **Validation:** It checks if at least one identifier (UUID or Name) for the
-    active list is provided.
+    2. It initializes the `ArcsightManager` and authenticates with the ArcSight REST
+    API.
 
-    3.  **UUID Resolution:** If only a name is provided, the action queries ArcSight
-    to retrieve the corresponding UUID.
+    3. If the Active List UUID is not provided, the action calls the `get_activelist_uuid`
+    API endpoint using the provided Active List name to resolve the UUID.
 
-    4.  **Data Retrieval:** The action calls the ArcSight API to fetch entries for
-    the specified UUID, applying the 'Max Entries To Return' limit if provided.
+    4. The action calls the `get_activelist_entries_by_uuid` API endpoint to retrieve
+    the entries from the Active List.
 
-    5.  **Data Processing:** If entries are found, they are processed into a CSV format
-    for the data table and a JSON format (with optional column mapping).
+    5. If entries are found, the action adds the results to the SOAR action output
+    as a data table and a JSON object.
 
-    6.  **Finalization:** The action attaches the results to the case, logs out of
-    the ArcSight session, and completes the execution.
+    6. Finally, the action logs out of the ArcSight session.
+
+
+    ### Additional Notes
+
+    This action is a data retrieval operation and does not modify any data within
+    ArcSight or the SOAR platform. It requires valid ArcSight credentials to authenticate
+    successfully.
+  ai_short_description: >-
+    Retrieves entries from a specified ArcSight Active List.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -312,10 +497,47 @@ Get Activelist Entries:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to the ArcSight API to retrieve active list entries.
+      It does not mutate external data, nor does it modify internal SOAR case data
+      or entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -329,36 +551,88 @@ Get Activelist Entries:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities; it retrieves data based on user-provided
+      parameters (Active List UUID or Name). Therefore, no entity filtering or usage
+      is performed.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves entries from an ArcSight Active List. This does not match
+      any of the predefined outcome categories (e.g., Enrich IOC, Enrich Asset, Update
+      Alert, etc.), as it is a general data retrieval action.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Active list UUID | String | No | Specify the UUID of the\
+    \ active list for which you want to retrieve entries. Note: parameter \u201CActive\
+    \ list UUID\u201C takes priority over \u201CActive list name\u201C. |\n| Active\
+    \ list name | String | No | Specify the name of the active list for which you\
+    \ want to retrieve entries. Note: parameter \u201CActive list UUID\u201C takes\
+    \ priority over \u201CActive list name\u201C. |\n| Map Columns | Boolean | No\
+    \ | If enabled, action will map columns to the values in the JSON result. |\n\
+    | Max Entries To Return | String | No | Specify how many entries to return. |"
 Get Query Results:
-  ai_description: "### General Description\nRetrieves results for a specified query\
-    \ from Micro Focus ArcSight. This action allows users to fetch data from pre-defined\
-    \ queries within the ArcSight Manager, providing visibility into security events\
-    \ and logs directly within Google SecOps. The action supports retrieving a specific\
-    \ number of items and can identify queries by either their unique ID or their\
-    \ display name.\n\n### Parameters Description\n\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Query ID | String | No | The\
-    \ unique identifier (UUID) of the query for which you want to return results.\
-    \ If provided, this parameter takes priority over 'Query Name'. |\n| Max Items\
-    \ To Return | Integer | No | Specifies the maximum number of result rows to return\
-    \ in the response. Defaults to 100 if not specified. |\n| Query Name | String\
-    \ | No | The name of the query for which you want to return results. This is used\
-    \ to resolve the Query ID if the ID is not explicitly provided. |\n\n### Additional\
-    \ Notes\n* **Mandatory Input**: Either the 'Query ID' or the 'Query Name' must\
-    \ be provided for the action to run. If both are missing, the action will fail.\n\
-    * **Output**: Results are presented in a Data Table named 'Results' and as a JSON\
-    \ object for downstream playbook processing.\n\n### Flow Description\n1. **Authentication**:\
-    \ The action logs into the ArcSight Manager using the configured credentials (API\
-    \ Root, Username, Password).\n2. **Query Identification**: \n    * If a `Query\
-    \ ID` is provided, the action uses it directly.\n    * If only a `Query Name`\
-    \ is provided, the action calls the ArcSight API to retrieve the corresponding\
-    \ UUID for that name.\n3. **Data Retrieval**: The action executes the query on\
-    \ the ArcSight server and retrieves the result set, limited by the `Max Items\
-    \ To Return` parameter.\n4. **Data Processing**: The retrieved rows are parsed\
-    \ and mapped into a structured format.\n5. **Result Reporting**: \n    * If results\
-    \ are found, they are added to the Google SecOps action results as a Data Table\
-    \ ('Results') and a JSON object.\n    * If no results are found, the action completes\
-    \ with a message indicating no data was returned.\n6. **Session Termination**:\
-    \ The action logs out of the ArcSight Manager to close the session."
+  ai_description: >-
+    ### General Description
+
+    Retrieves query results from the Arcsight platform. This action allows users to
+    fetch data based on a specific Query ID or Query Name, providing flexibility in
+    how data is retrieved from the Arcsight environment.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (API Root, credentials, SSL verification
+    settings).
+
+    2. Extracts action parameters (Query ID, Query Name, Max Items To Return).
+
+    3. Validates that at least one of 'Query ID' or 'Query Name' is provided.
+
+    4. Initializes the `ArcsightManager` and authenticates with the Arcsight API.
+
+    5. If 'Query ID' is not provided, retrieves the ID using the provided 'Query Name'.
+
+    6. Executes the query using `arcsight_manager.get_query_result` to fetch the data.
+
+    7. If results are found, adds them to the action result as a data table and JSON.
+
+    8. Logs out of the Arcsight session.
+
+
+    ### Additional Notes
+
+    - Requires valid Arcsight credentials.
+
+    - 'Query ID' takes precedence over 'Query Name' if both are provided.
+  ai_short_description: >-
+    Retrieves query results from the Arcsight platform based on a provided Query ID
+    or Query Name.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -369,10 +643,47 @@ Get Query Results:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to the Arcsight API to retrieve query results
+      (fetches_data=true). It does not mutate any external or internal data, nor does
+      it update entities, create insights, or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -386,293 +697,94 @@ Get Query Results:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It operates on user-provided parameters (`Query ID` or `Query Name`)
+      to fetch data from the Arcsight API. Therefore, all entity type flags and filtering
+      flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves query results from Arcsight, which corresponds to fetching
+      historical logs or telemetry data. This aligns with the 'Search Events' category.
+      It does not perform any other actions like enriching IOCs, updating tickets,
+      or modifying alerts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Query ID | String | No | Specify the ID of the query. Takes priority over Query
+    Name. |
+
+    | Max Items To Return | String | No | Specify how many items to return. Default:
+    100. |
+
+    | Query Name | String | No | Specify the name of the query. |
 Get Report:
   ai_description: >-
     ### General Description
 
-    The **Get Report** action retrieves and downloads a specific report from ArcSight
-    based on its URI. It supports dynamic parameters to filter or customize the report
-    generation at runtime. The downloaded report is attached to the case, and if the
-    format is CSV, the data is also presented as a structured data table and JSON
-    result.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Report Full Path (URI) | String | Yes | The full URI path to the report in ArcSight
-    (e.g., `/All Reports/ArcSight Foundation/MITRE ATT&CK/Mitre ATT&CK Summary`).
-    |
-
-    | Field 2 - Field 10 | String | No | Dynamic fields for the query to generate
-    the report. These should be provided in `key=value` format. |
-
-
-    ### Additional Notes
-
-    - This action does not operate on specific entities; it is a global action used
-    to fetch reporting data.
-
-    - Only CSV reports are currently parsed into data tables and JSON results; other
-    formats (PDF, XLS, etc.) are provided as attachments only.
+    Retrieves a report from ArcSight by its URI. This action authenticates with the
+    ArcSight API, fetches the report metadata, generates a download token, and downloads
+    the report content. If the report is in CSV format, it transforms the data into
+    JSON, adds a data table to the action results, and attaches the raw report file
+    to the action.
 
 
     ### Flow Description
 
-    1. **Authentication**: Logs in to the ArcSight Manager using the provided API
-    root and credentials.
+    1. Authenticates with the ArcSight API using the provided credentials (Api Root,
+    Username, Password).
 
-    2. **Metadata Retrieval**: Fetches report information, including the internal
-    ID and file format, using the provided URI.
+    2. Retrieves report metadata using the provided `Report Full Path (URI)`.
 
-    3. **Token Generation**: Requests a download token from ArcSight, incorporating
-    any dynamic parameters provided in the 'Field' parameters.
+    3. Generates a download token for the report using the report ID and any provided
+    dynamic parameters (Fields 2-10).
 
-    4. **Download**: Retrieves the raw report content from the server using the download
-    token.
+    4. Downloads the report content from the ArcSight server.
 
-    5. **Data Processing**: If the report format is CSV, the action parses the content
-    into JSON and adds a data table to the SOAR case.
+    5. If the report format is CSV, it transforms the data into JSON, adds a data
+    table to the action results, and adds the JSON result.
 
-    6. **Attachment**: Attaches the downloaded report file to the case with a descriptive
-    name.
+    6. Attaches the raw report file to the action results.
 
-    7. **Cleanup**: Logs out of the ArcSight session to ensure security.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action adds a data table to the case (if the report is CSV) and uploads
-      the report file as an attachment to the case.
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Is Value In Activelist Column:
-  ai_description: >-
-    ### General Description
-
-    This action checks if entities within the current Google SecOps scope exist in
-    a specific column of an ArcSight Active List. It is primarily used for enrichment
-    and validation, allowing analysts to determine if an entity (such as an IP, File
-    Hash, or Username) is already present in a managed list within ArcSight. If a
-    match is found, the entity is updated with a specific attribute indicating its
-    presence.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Active list UUID** | String | No | The unique identifier (UUID) of the ArcSight
-    Active List. If provided, this takes priority over the 'Active list name'. |
-
-    | **Column name** | String | Yes | The specific column within the Active List
-    to search for the entity's identifier. |
-
-    | **Active list name** | String | No | The display name of the ArcSight Active
-    List. This is used to resolve the UUID if 'Active list UUID' is not provided.
-    |
+    7. Logs out of the ArcSight session.
 
 
     ### Additional Notes
 
-    - Either **Active list UUID** or **Active list name** must be provided for the
-    action to function.
-
-    - The action uses the entity's 'Original Identifier' for the comparison against
-    the Active List column values.
-
-    - If an entity is found, an additional property `IsInActivelist` is set to `True`
-    on the entity object within Google SecOps.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action retrieves configuration parameters (API Root,
-    credentials) and action parameters (UUID/Name, Column Name).
-
-    2. **Authentication**: Connects to the ArcSight Manager and performs a login to
-    obtain a session token.
-
-    3. **Resource Resolution**: If a UUID is not provided, the action calls the ArcSight
-    API to find the UUID associated with the provided Active List name.
-
-    4. **Data Retrieval**: Fetches all entries from the specified Active List using
-    its UUID.
-
-    5. **Validation**: Verifies that the specified 'Column name' exists within the
-    retrieved Active List data.
-
-    6. **Entity Processing**: Iterates through all target entities in the scope. For
-    each entity, it checks if its identifier exists in the specified column of the
-    fetched entries.
-
-    7. **Internal Mutation**: For every matching entity, it updates the entity's additional
-    properties with `IsInActivelist: True` and prepares the entity for a batch update.
-
-    8. **Result Reporting**: Adds the filtered JSON data (rows from the Active List
-    that matched the entities) to the action results and updates the entities in the
-    Google SecOps platform.
-
-    9. **Cleanup**: Logs out of the ArcSight session.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action updates the 'additional_properties' of entities found in the active
-      list by adding the 'IsInActivelist' key set to True.
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
-    - USERUNIQNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-List Resources:
-  ai_description: >-
-    ### General Description
-
-    The **List Resources** action retrieves a list of available resources from the
-    ArcSight ESM manager. It allows users to discover and list Active Lists, Query
-    Viewers, Cases, and Reports. This is primarily a discovery and utility action
-    used to identify resource IDs or names for use in other ArcSight actions.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Return Active Lists** | Boolean | No | If enabled (default: True), the action
-    retrieves available Active Lists. |
-
-    | **Return Queries** | Boolean | No | If enabled (default: True), the action retrieves
-    available Query Viewers. |
-
-    | **Return Cases** | Boolean | No | If enabled (default: False), the action retrieves
-    available Cases. |
-
-    | **Return Reports** | Boolean | No | If enabled (default: False), the action
-    retrieves available Reports. |
-
-    | **Max Resources To Return** | Integer | No | Specifies the maximum number of
-    resources to return per category (default: 50). |
-
-
-    ### Additional Notes
-
-    - At least one of the "Return ..." parameters must be set to **True** for the
-    action to execute successfully.
-
-    - The action outputs results both as a JSON object and as separate Data Tables
-    for each resource type.
-
-    - For Reports, the action automatically filters out unsupported resource types
-    based on specific UUID prefixes.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the ArcSight manager using the provided
-    API credentials and connection settings.
-
-    2. **Parameter Extraction**: It reads the user-defined flags to determine which
-    resource types (Active Lists, Queries, Cases, Reports) to fetch and sets the retrieval
-    limit.
-
-    3. **Authentication**: Logs into the ArcSight ESM manager to obtain a session
-    token.
-
-    4. **Data Retrieval**:
-       - **Queries**: If requested, fetches Query Viewer IDs and then retrieves their
-    full metadata.
-       - **Active Lists**: If requested, fetches Active List IDs and then retrieves
-    their full metadata.
-       - **Cases**: If requested, fetches Case IDs and then retrieves their full metadata.
-       - **Reports**: If requested, fetches Report IDs, filters out unsupported prefixes,
-    and retrieves metadata for the remaining reports.
-    5. **Output Generation**:
-       - Constructs a consolidated JSON result containing all retrieved resources.
-       - Creates individual Data Tables (e.g., "Available Queries", "Available Active
-    List") for better visibility in the SOAR UI.
-    6. **Cleanup**: Logs out of the ArcSight session to close the connection.
+    The action supports dynamic parameters for report generation, which can be passed
+    via the optional fields.
+  ai_short_description: >-
+    Retrieves and downloads a report from ArcSight by its URI, supporting CSV transformation
+    and file attachment.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -683,10 +795,47 @@ List Resources:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches report data from ArcSight (fetches_data=true). It does not
+      mutate external data or internal SOAR data (entities, insights, case comments).
+      It simply retrieves and attaches a file.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -700,58 +849,400 @@ List Resources:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Ping:
+    reasoning: >-
+      The action does not interact with entities. It operates on a report URI provided
+      as a parameter to fetch a report from ArcSight.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action downloads a report file from ArcSight and attaches it to the action
+      results. This matches the 'Download File' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Report Full Path (URI) | String | Yes | The URI path to the report. |
+
+    | Field 2 | String | No | Dynamic field for report query. |
+
+    | Field 3 | String | No | Dynamic field for report query. |
+
+    | Field 4 | String | No | Dynamic field for report query. |
+
+    | Field 5 | String | No | Dynamic field for report query. |
+
+    | Field 6 | String | No | Dynamic field for report query. |
+
+    | Field 7 | String | No | Dynamic field for report query. |
+
+    | Field 8 | String | No | Dynamic field for report query. |
+
+    | Field 9 | String | No | Dynamic field for report query. |
+
+    | Field 10 | String | No | Dynamic field for report query. |
+Is Value In Activelist Column:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity to the Arcsight server by attempting to authenticate and
-    then terminate the session. This action ensures that the provided credentials
-    and network configuration are correct and that the Arcsight REST API is reachable.
-
-
-    ### Parameters Description
-
-    There are no action-specific parameters for this action. It relies on the following
-    integration configuration parameters:
-
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Api Root | String | Yes | The IP address or hostname of the Arcsight server.
-    |
-
-    | Username | String | Yes | The username used to authenticate with Arcsight. |
-
-    | Password | String | Yes | The password used to authenticate with Arcsight. |
-
-    | CA Certificate File | String | No | Base64 encoded CA certificate file for SSL
-    verification. |
-
-    | Verify SSL | Boolean | No | If enabled, the action will verify the SSL certificate
-    of the server. Default is False. |
-
-
-    ### Additional Notes
-
-    This action is primarily used for troubleshooting and verifying that the SOAR
-    platform can communicate with the Arcsight instance.
+    Checks if entities exist within a specific column of an ArcSight Active List.
+    This action allows analysts to verify if an entity (e.g., IP, domain, user) is
+    present in a specific column of an ArcSight Active List, providing valuable context
+    for investigations.
 
 
     ### Flow Description
 
-    1. **Initialize Manager**: The action initializes the Arcsight API manager using
-    the provided configuration parameters.
+    1. Extracts configuration parameters (API root, credentials, SSL settings).
 
-    2. **Login**: It attempts to log in to the Arcsight server to obtain an authentication
-    token.
+    2. Extracts action parameters (Active list UUID/name, Column name).
 
-    3. **Logout**: Upon a successful login, it immediately calls the logout endpoint
-    to invalidate the token and close the session.
+    3. Authenticates with the ArcSight Manager via `arcsight_manager.login()`.
 
-    4. **Result**: If both steps succeed, the action returns a success status; otherwise,
-    it fails with an error message detailing the cause.
+    4. Resolves the Active List UUID if only the name is provided using `arcsight_manager.get_activelist_uuid()`.
+
+    5. Retrieves entries from the specified Active List using `arcsight_manager.get_activelist_entries_by_uuid()`.
+
+    6. Validates the existence of the specified column.
+
+    7. Iterates through target entities, checking if their original identifier matches
+    any value in the specified column.
+
+    8. Updates entities with `IsInActivelist: True` if found using `siemplify.update_entities()`.
+
+    9. Adds the filtered results to the action output using `siemplify.result.add_result_json()`.
+
+
+    ### Additional Notes
+
+    Requires valid ArcSight credentials and connectivity. The `Active list UUID` parameter
+    takes precedence over `Active list name`.
+  ai_short_description: >-
+    Checks if entities exist within a specific column of an ArcSight Active List.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from ArcSight (fetches_data=true). It updates entities
+      internally (can_update_entities=true). It does not mutate external data or internal
+      alert/case data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: true
+      application: true
+      child_hash: true
+      child_process: true
+      cluster: true
+      container: true
+      credit_card: true
+      cve: true
+      cve_id: true
+      database: true
+      deployment: true
+      destination_domain: true
+      domain: true
+      email_message: true
+      event: true
+      file_hash: true
+      file_name: true
+      generic: true
+      host_name: true
+      ip_set: true
+      mac_address: true
+      parent_hash: true
+      parent_process: true
+      phone_number: true
+      pod: true
+      process: true
+      service: true
+      source_domain: true
+      threat_actor: true
+      threat_campaign: true
+      threat_signature: true
+      url: true
+      usb: true
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and does not apply any filtering
+      based on entity type or other attributes. Therefore, the action supports all
+      entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches data from an external system (ArcSight) to check if an entity
+      exists in an Active List. This provides contextual information about the entity,
+      which matches the 'Enrich IOC' and 'Enrich Asset' categories. It does not perform
+      any mutation or alert management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Active list UUID | String | No | Specify the UUID of the\
+    \ active list. Note: parameter \u201CActive list UUID\u201C takes priority over\
+    \ \u201CActive list name\u201C. |\n| Column name | String | Yes | Specify the\
+    \ name of the column where you want to search for the entity. |\n| Active list\
+    \ name | String | No | Specify the name of the active list. Note: parameter \u201C\
+    Active list UUID\u201C takes priority over \u201CActive list name\u201C. |"
+List Resources:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of available resources (Queries, Active Lists, Cases, Reports)
+    from the ArcSight platform. This action allows users to query the ArcSight API
+    for specific resource types and return them as structured data tables and JSON
+    results.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (API root, credentials, SSL settings) from
+    the integration configuration.
+
+    2. Extracts action parameters (resource types to return, limit) from the user
+    input.
+
+    3. Authenticates with the ArcSight API using the provided credentials.
+
+    4. Based on the enabled resource type parameters, fetches the corresponding resource
+    IDs from ArcSight.
+
+    5. Retrieves detailed information for the identified resources using their IDs.
+
+    6. Constructs CSV tables for each selected resource type and adds them to the
+    action result.
+
+    7. Returns the aggregated resource data in JSON format.
+
+    8. Logs out of the ArcSight session.
+
+
+    ### Additional Notes
+
+    Requires valid ArcSight credentials. The action supports filtering by resource
+    type and limiting the number of returned items. If no resources are found, the
+    action will return a failure status.
+  ai_short_description: >-
+    Retrieves available resources (Queries, Active Lists, Cases, Reports) from the
+    ArcSight platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes requests to ArcSight to retrieve lists of resources (fetches_data=true).
+      It does not mutate external data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action works on other data sources without referencing specific entities,
+      so all flags must be false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves metadata about resources (queries, active lists, cases,
+      reports) from ArcSight. It does not perform any of the listed actions (enrichment,
+      containment, ticketing, etc.).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Return Active Lists | Boolean | No | If enabled, action will return available
+    active lists. |
+
+    | Return Queries | Boolean | No | If enabled, action will return available queries.
+    |
+
+    | Return Cases | Boolean | No | If enabled, action will return available cases.
+    |
+
+    | Return Reports | Boolean | No | If enabled, action will return available reports.
+    |
+
+    | Max Resources To Return | String | No | Specify how many resources to return
+    per type. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Arcsight instance by attempting to authenticate and
+    then immediately logging out. This action is used to verify that the integration
+    configuration is correct and that the SOAR platform can communicate with the Arcsight
+    server.
+
+
+    ### Flow Description
+
+    1. Extracts configuration parameters (Api Root, Username, Password, CA Certificate
+    File, Verify SSL).
+
+    2. Initializes the `ArcsightManager` with the provided credentials.
+
+    3. Calls the `login()` method, which performs a POST request to the Arcsight login
+    endpoint to obtain an authentication token.
+
+    4. Calls the `logout()` method, which performs a GET request to the Arcsight logout
+    endpoint to invalidate the session.
+
+    5. Returns a success or failure message based on the outcome of these operations.
+
+
+    ### Additional Notes
+
+    This action does not perform any data retrieval or modification on the Arcsight
+    platform beyond session management for connectivity testing.
+  ai_short_description: >-
+    Tests connectivity to the Arcsight instance by performing a login and logout operation.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -762,10 +1253,46 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a login and logout to verify connectivity. It does not fetch
+      data, mutate external data, or modify internal data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -779,47 +1306,87 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with any entities; it is a connectivity test that
+      operates independently of the case entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a login and logout to verify connectivity. It does not perform
+      any of the listed outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Api Root | String | Yes | The base URL or IP address of the Arcsight server.
+    |
+
+    | Username | String | Yes | The username for Arcsight authentication. |
+
+    | Password | String | Yes | The password for Arcsight authentication. |
+
+    | CA Certificate File | String | No | The CA certificate file content for SSL
+    verification. |
+
+    | Verify SSL | Boolean | No | Whether to verify the SSL certificate (default:
+    False). |
 Search:
   ai_description: >-
     ### General Description
 
-    The **Search** action enables users to perform free-text searches for available
-    resources within the ArcSight Manager. It is designed to locate various resource
-    types such as Active Lists, Queries, Reports, or Cases based on a user-provided
-    query string. This action is useful for resource discovery and management within
-    the ArcSight ecosystem.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Search Query** | String | Yes | The specific search string used to query the
-    ArcSight Manager for resources. |
-
-    | **Max Items To Return** | Integer | No | Specifies the maximum number of results
-    to be returned in the response. Defaults to 100. |
+    Searches for available resources in ArcSight using a provided query string. This
+    action interacts with the ArcSight manager service to retrieve data matching the
+    specified criteria.
 
 
     ### Flow Description
 
-    1. **Authentication**: The action establishes a session with the ArcSight Manager
-    using the configured API root and credentials.
+    1. Extracts configuration parameters (API Root, credentials, SSL settings) and
+    action parameters (Search Query, Max Items).
 
-    2. **Search Execution**: It calls the `ManagerSearchService` with the provided
-    search query and result limit.
+    2. Initializes the `ArcsightManager` and authenticates with the ArcSight API.
 
-    3. **Data Parsing**: The search hits returned by the API are parsed into structured
-    objects.
+    3. Executes a free-text search query against the ArcSight manager service using
+    the provided query and limit.
 
-    4. **Output Generation**: The action populates a data table named 'Results' with
-    the search findings and attaches the full result set as a JSON object for further
-    use in the playbook.
+    4. If results are found, it formats them into a CSV table and a JSON object, then
+    attaches them to the action results.
 
-    5. **Cleanup**: The action explicitly logs out of the ArcSight Manager to ensure
-    the session is closed correctly.
+    5. Logs out of the ArcSight session.
+
+
+    ### Additional Notes
+
+    The action returns a list of resources matching the search criteria.
+  ai_short_description: >-
+    Searches for resources in ArcSight based on a provided query.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -830,10 +1397,47 @@ Search:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a search request to the ArcSight API to retrieve resources.
+      It does not mutate external data or internal SecOps data. It fetches data, so
+      `fetches_data` is true.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -847,3 +1451,48 @@ Search:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use entity-specific identifiers.
+      It performs a search based on a provided query string, so all entity type flags
+      and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a search query against ArcSight to retrieve resources. This
+      matches the 'Search Events' category as it returns a collection of data matching
+      the search parameters.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Search Query | String | Yes | Specify the search query. |
+
+    | Max Items To Return | String | No | Specify how many items to return in the
+    response. |

@@ -1,55 +1,35 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Execute Script:
   ai_description: >-
     ### General Description
 
-    Executes a predefined script on Zabbix hosts identified by their IP address. This
-    action allows security teams to trigger remote commands, remediation scripts,
-    or diagnostic tools directly from Google SecOps onto systems managed by Zabbix.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Script Name | String | Yes | The exact name of the script to execute, as configured
-    in the Zabbix 'Administration -> Scripts' section. |
+    Executes a predefined script on Zabbix hosts associated with the provided IP address
+    entities. This action allows security analysts to trigger automated remediation
+    or diagnostic scripts directly on endpoints managed by Zabbix.
 
 
     ### Flow Description
 
-    1. **Initialization**: Connects to the Zabbix API using the provided credentials
-    and configuration.
+    1. Connects to the Zabbix instance using the configured credentials.
 
-    2. **Script Retrieval**: Fetches the internal Zabbix ID for the script specified
-    in the 'Script Name' parameter.
+    2. Retrieves the script ID for the specified `Script Name` parameter.
 
-    3. **Host Identification**: For each IP Address entity in the scope, the action
-    queries Zabbix to find all hosts associated with that specific IP.
+    3. Iterates through the provided `ADDRESS` entities.
 
-    4. **Execution**: If matching hosts are found, the action triggers the execution
-    of the script on each identified host.
+    4. Queries the Zabbix API to find hosts associated with the entity's IP address.
 
-    5. **Result Collection**: Captures the execution output (stdout/stderr) and status
-    (success/failure) from Zabbix for each host.
+    5. For each identified host, executes the specified script via the Zabbix API.
 
-    6. **Reporting**: Aggregates the results into a JSON object and provides a summary
-    message indicating which entities succeeded or failed.
+    6. Logs the execution status (success or failure) and appends the result to the
+    action's JSON output.
+
+
+    ### Additional Notes
+
+    This action requires valid Zabbix credentials and that the specified script name
+    exists within the Zabbix environment. It only operates on entities of type `ADDRESS`.
+  ai_short_description: >-
+    Executes a specified script on Zabbix hosts associated with the provided IP address
+    entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -58,15 +38,50 @@ Execute Script:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Executes a script on the remote host via the Zabbix agent or server, which performs
-      actions or changes state on the target system.
+      Executes a predefined script on remote hosts managed by Zabbix.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches host information from Zabbix (fetches_data=true) and executes
+      a script on those hosts (can_mutate_external_data=true). It does not modify
+      internal SecOps data or entities.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -80,60 +95,76 @@ Execute Script:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `if entity.entity_type
+      == EntityTypes.ADDRESS`. It uses the entity identifier (IP) to search for hosts
+      in Zabbix, thus filtering by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: true
+    get_alert_information: false
+    reasoning: >-
+      The action executes a script on a remote host via the Zabbix API. This directly
+      aligns with the 'Execute Command on the Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Script Name | String | Yes | The name of the script to execute in Zabbix. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic tool used to verify the connectivity between
-    Google SecOps and the Zabbix instance. It ensures that the provided credentials
-    (API Root, Username, and Password) are valid and that the network path to the
-    Zabbix API is open.
-
-
-    ### Parameters Description
-
-    This action does not have any action-specific parameters. It relies entirely on
-    the integration's global configuration settings:
-
-
-    | Parameter | Description | Type | Mandatory |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Api Root | The base URL of the Zabbix server API. | String | Yes |
-
-    | Username | The username used to authenticate with the Zabbix API. | String |
-    Yes |
-
-    | Password | The password used to authenticate with the Zabbix API. | String |
-    Yes |
-
-    | Verify SSL | Determines whether to verify the SSL certificate of the Zabbix
-    server. | Boolean | No (Defaults to False) |
-
-
-    ### Additional Notes
-
-    - This action is typically used during the initial setup of the Zabbix integration
-    to confirm that the environment is correctly configured.
-
-    - If the connection fails, the action will raise a `ZabbixManagerError` with details
-    about the failure.
+    Tests the connectivity to the Zabbix instance by attempting to authenticate with
+    the provided credentials. This action ensures that the integration is correctly
+    configured and that the SOAR platform can successfully communicate with the Zabbix
+    server.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action fetches the Zabbix API Root, Username,
-    Password, and SSL verification settings from the integration configuration.
+    1. The action retrieves the required configuration parameters (API Root, Username,
+    Password, and Verify SSL) from the Zabbix integration settings.
 
-    2. **Manager Initialization**: It initializes the `ZabbixManager` class.
+    2. It initializes the `ZabbixManager` using these credentials.
 
-    3. **Authentication**: The `ZabbixManager` attempts to log in to the Zabbix API
-    using the `pyzabbix` library.
+    3. The `ZabbixManager` attempts to establish a session with the Zabbix API.
 
-    4. **Result Reporting**: If the login is successful, the action concludes with
-    a success message indicating a valid connection. If an exception occurs during
-    login, the action fails.
+    4. If the authentication is successful, the action terminates and returns a success
+    message indicating the connection was established.
+
+
+    ### Additional Notes
+
+    This action does not perform any data retrieval or system modifications; it is
+    strictly used for validating the integration's connectivity settings.
+  ai_short_description: >-
+    Tests connectivity to the Zabbix instance by verifying authentication credentials.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -144,10 +175,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a connectivity test by attempting to authenticate against
+      the Zabbix API. It does not fetch data, mutate external/internal systems, or
+      interact with entities.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -161,3 +229,53 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action is a standalone connectivity test and does not interact with, filter,
+      or process any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a connectivity test and does not perform any of the defined operational
+      outcomes such as enrichment, ticketing, or containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Api Root | String | Yes | The base URL or API endpoint of the Zabbix instance.
+    |
+
+    | Username | String | Yes | The username used to authenticate with the Zabbix
+    API. |
+
+    | Password | String | Yes | The password used to authenticate with the Zabbix
+    API. |
+
+    | Verify SSL | Boolean | No | Whether to verify SSL certificates when connecting
+    to the Zabbix instance. Defaults to False. |
