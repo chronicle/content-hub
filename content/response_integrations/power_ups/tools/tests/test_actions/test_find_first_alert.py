@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock, patch
 
 from integration_testing.platform.script_output import MockActionOutput
@@ -123,5 +122,6 @@ def test_find_first_alert_empty_alerts(
     mock_execution_scope.value = 2  # ExecutionScope.Case.value
     mock_siemplify.execution_scope = mock_execution_scope
     
-    with pytest.raises(IndexError):
-        FindFirstAlert.main()
+    FindFirstAlert.main()
+    
+    mock_siemplify.end.assert_called_once_with("No alerts found in the case.", "false")
