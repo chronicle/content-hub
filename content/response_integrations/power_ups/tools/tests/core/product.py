@@ -15,44 +15,53 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 @dataclasses.dataclass(slots=True)
 class Tools:
     case_title: str = "Original Title"
-    workflows: list[dict[str, Any]] = dataclasses.field(default_factory=list)
-    case_metadata: dict[str, Any] = dataclasses.field(default_factory=dict)
-    alerts_full_details: list[dict[str, Any]] = dataclasses.field(default_factory=list)
+    workflows: list[SingleJson] = dataclasses.field(default_factory=list)
+    case_metadata: SingleJson = dataclasses.field(default_factory=dict)
+    alerts_full_details: list[SingleJson] = dataclasses.field(default_factory=list)
+    imported_custom_cases: list[SingleJson] = dataclasses.field(default_factory=list)
 
-    def get_case_metadata(self, case_id: str) -> dict[str, Any]:
+    def get_case_metadata(self, case_id: str) -> SingleJson:
         """Retrieve simulated case metadata header context."""
         return self.case_metadata
 
-    def set_case_metadata(self, metadata: dict[str, Any]) -> None:
+    def set_case_metadata(self, metadata: SingleJson) -> None:
         """Set simulated case metadata header context."""
         self.case_metadata = metadata
 
-    def get_alerts_full_details(self, case_id: str) -> list[dict[str, Any]]:
+    def get_alerts_full_details(self, case_id: str) -> list[SingleJson]:
         """Retrieve simulated full alert details for the case."""
         return self.alerts_full_details
 
-    def set_alerts_full_details(self, alerts: list[dict[str, Any]]) -> None:
+    def set_alerts_full_details(self, alerts: list[SingleJson]) -> None:
         """Set simulated full alert details for the case."""
         self.alerts_full_details = alerts
 
-    def get_workflows(self) -> list[dict[str, Any]]:
+    def get_workflows(self) -> list[SingleJson]:
         """Retrieve all simulated playbooks/workflows."""
         return self.workflows
 
-    def set_workflows(self, workflows: list[dict[str, Any]]) -> None:
+    def set_workflows(self, workflows: list[SingleJson]) -> None:
         """Set simulated playbooks/workflows."""
         self.workflows = workflows
 
-    def rename_case(self, new_title: str) -> dict[str, Any]:
+    def rename_case(self, new_title: str) -> SingleJson:
         """Simulate case renaming."""
         self.case_title = new_title
         # Sync it into case metadata title too!
         if "title" in self.case_metadata:
             self.case_metadata["title"] = new_title
         return {"isSuccessful": True}
+
+    def get_imported_custom_cases(self) -> list[SingleJson]:
+        """Retrieve simulated imported custom cases."""
+        return self.imported_custom_cases
