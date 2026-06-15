@@ -37,6 +37,7 @@ if TYPE_CHECKING:
 OUTPUT_MESSAGE: str = "Action result:  Pushed to Simulated "
 IMPORT_CUSTOM_CASE: str = "importCustomCase"
 
+
 @pytest.mark.execution_scope("Alert")
 @set_metadata(
     parameters={
