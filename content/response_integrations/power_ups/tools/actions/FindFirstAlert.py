@@ -33,7 +33,15 @@ def main():
         siemplify, "execution_scope", ExecutionScope.Alert
     )
     
-    alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+    if execution_scope.value == ExecutionScope.Case.value:
+        alerts = getattr(siemplify.case, "open_alerts", None) or siemplify.case.alerts
+    else:
+        alerts = siemplify.case.alerts
+
+    if not alerts:
+        siemplify.end("No alerts found in the case.", "false")
+        return
+
     alerts.sort(key=lambda x: x.creation_time)
     first_alert: Any = alerts[0]
 

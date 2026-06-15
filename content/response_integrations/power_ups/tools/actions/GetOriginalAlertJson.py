@@ -48,7 +48,7 @@ def main():
 
     else:
         combined_results: list = []
-        case_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        case_alerts = getattr(siemplify.case, "open_alerts", None) or siemplify.case.alerts
         for alert in case_alerts:
             try:
                 if alert.entities:

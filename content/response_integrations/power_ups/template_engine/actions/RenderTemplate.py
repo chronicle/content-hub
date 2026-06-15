@@ -88,7 +88,7 @@ def extract_context_data(
         target_alerts = [siemplify.current_alert]
     else:
         siemplify.LOGGER.info(f"Executing action {SCRIPT_NAME} in Case Scope.")
-        target_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        target_alerts = getattr(siemplify.case, "open_alerts", None) or siemplify.case.alerts
 
     for alert in target_alerts:
         try:

@@ -130,7 +130,7 @@ def main():
         completed_count: int = 0
         not_found_count: int = 0
 
-        case_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        case_alerts = getattr(siemplify.case, "open_alerts", None) or siemplify.case.alerts
         for alert in case_alerts:
             wf_status: int = get_wf_status(
                 siemplify,

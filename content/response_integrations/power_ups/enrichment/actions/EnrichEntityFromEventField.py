@@ -128,8 +128,8 @@ def main() -> None:
         target_alerts: list[Any] = [siemplify.current_alert]
     else:
         target_alerts: list[Any] = getattr(
-            siemplify.case, "open_alerts", siemplify.case.alerts
-        )
+            siemplify.case, "open_alerts", None
+        ) or siemplify.case.alerts
 
     fields: list[str] = siemplify.parameters.get("Fields to enrich").split(",")
     updated_entities: list[Any] = []
