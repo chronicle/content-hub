@@ -37,7 +37,7 @@ class SCCMManager:
         """
         Connect to a SCCM instance
         """
-        import wmi_client_wrapper as wmi
+        import wmi_client_wrapper as wmi  # noqa: PLC0415
         self.parser = SCCMParser()
         self.sensitive_data_arr = [domain, username, password]
 
