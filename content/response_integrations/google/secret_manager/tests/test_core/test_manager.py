@@ -41,7 +41,7 @@ class _FixtureBridge:
     make_sa_json: Callable[..., str] | None = None
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True)  # noqa: RUF076
 def _init_make_sa_json(make_sa_json: Callable[..., str]) -> None:
     _FixtureBridge.make_sa_json = make_sa_json
 
