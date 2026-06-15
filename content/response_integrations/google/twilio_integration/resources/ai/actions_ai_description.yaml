@@ -1,0 +1,210 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Ping:
+  ai_description: >-
+    ### General Description: The Ping action is a diagnostic tool designed to verify
+    the connectivity between Google SecOps and the Twilio service. It ensures that
+    the provided credentials (Account SID and Authentication Token) are valid and
+    that the environment can successfully communicate with the Twilio API. ### Parameters
+    Description: There are no action-specific parameters for this action. It relies
+    on the integration's global configuration (Account SID and Authentication Token).
+    ### Flow Description: 1. **Initialization**: The action retrieves the AccountSid
+    and AuthenticationToken from the Twilio integration configuration. 2. **Connectivity
+    Test**: It initializes the TwilioManager and attempts to retrieve a single message
+    from the Twilio account using the list_messages method. 3. **Validation**: If
+    the API call succeeds, it confirms the connection is established. If it fails
+    (e.g., due to invalid credentials or network issues), it captures the error and
+    reports a failure. ### Additional Notes: This action is primarily used during
+    the initial setup of the Twilio integration or for troubleshooting communication
+    issues.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Send SMS:
+  ai_description: >-
+    ### General Description
+
+    Sends an SMS message to a specified phone number using the Twilio service. This
+    action is primarily used for automated notifications, multi-factor authentication
+    workflows, or out-of-band communication with stakeholders during an incident response
+    process.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Phone Number | String | True | The target phone number that will receive the
+    SMS. This must include the country dial code (e.g., +1234567890). |
+
+    | Message | String | True | The text content of the SMS message to be sent. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action retrieves the Twilio Account SID, Authentication
+    Token, and the 'From' phone number from the integration's global configuration.
+
+    2. **Parameter Extraction**: It extracts the target 'Phone Number' and the 'Message'
+    content provided as action inputs.
+
+    3. **API Interaction**: The action initializes the Twilio client and calls the
+    messaging API to create and send a new SMS message from the configured Twilio
+    number to the target recipient.
+
+    4. **Outcome Reporting**: If the API call is successful, the action completes
+    with a success status and logs the message details. If the API call fails (e.g.,
+    invalid credentials or number), it captures the error and reports a failure.
+
+
+    ### Additional Notes
+
+    - Ensure the 'SmsPhoneNumber' in the integration settings is a valid Twilio-purchased
+    number or a verified caller ID.
+
+    - The target phone number should follow the E.164 formatting standard for reliable
+    delivery.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends an SMS message to an external recipient via the Twilio API, which constitutes
+      an external communication and state change.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Send SMS And Wait:
+  ai_description: >-
+    ### General Description
+
+    Sends an SMS message to a target phone number and waits for a response. This action
+    is useful for out-of-band communication or user verification during an investigation.
+    It appends a unique generated ID to the message to track the specific conversation
+    thread.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Phone Number | String | Yes | The target phone number including the dial code
+    (e.g., +123456789). |
+
+    | Message | String | Yes | The content of the SMS message to be sent. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action generates a unique 5 to 6-digit numeric ID.
+
+    2. **Message Preparation**: The generated ID is appended to the message body along
+    with instructions for the recipient to include the ID in their reply.
+
+    3. **Transmission**: The SMS is sent to the specified phone number using the Twilio
+    service.
+
+    4. **Async Waiting**: The action enters an 'In Progress' state and stores the
+    ID and timestamp.
+
+    5. **Polling (Query Job)**: The action periodically checks Twilio for incoming
+    messages from the target phone number that were sent after the initial message.
+
+    6. **Verification**: It searches the fetched messages for a body that ends with
+    the specific generated ID.
+
+    7. **Completion**: Once a matching message is found, the action retrieves the
+    reply content and marks the execution as completed.
+
+
+    ### Additional Notes
+
+    This is an asynchronous action. It will continue to run in the background until
+    a response is received or the action times out.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Sends an SMS message to a specified phone number via the Twilio API.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

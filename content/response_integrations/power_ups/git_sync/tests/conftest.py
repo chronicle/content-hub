@@ -14,7 +14,10 @@
 
 from __future__ import annotations
 
+import os
+import pathlib
 import sys
+import tempfile
 
 import pytest
 from integration_testing.common import use_live_api
@@ -67,8 +70,10 @@ def script_session(
 
                     def new_init(self, *args, **kwargs):
                         original_init(self, *args, **kwargs)
-                        self.RUN_FOLDER = "/tmp"
-                        self.FILE_SYSTEM_CONTEXT_PATH = "/tmp/context_file.json"
+                        self.RUN_FOLDER = tempfile.gettempdir()
+                        self.FILE_SYSTEM_CONTEXT_PATH = str(
+                            pathlib.Path(self.RUN_FOLDER) / "context_file.json"
+                        )
 
                     cls.__init__ = new_init
                     cls._is_patched_run_folder = True
@@ -111,8 +116,10 @@ def sdk_session(
 
                     def new_init(self, *args, **kwargs):
                         original_init(self, *args, **kwargs)
-                        self.RUN_FOLDER = "/tmp"
-                        self.FILE_SYSTEM_CONTEXT_PATH = "/tmp/context_file.json"
+                        self.RUN_FOLDER = tempfile.gettempdir()
+                        self.FILE_SYSTEM_CONTEXT_PATH = os.path.join(
+                            self.RUN_FOLDER, "context_file.json"
+                        )
 
                     cls.__init__ = new_init
                     cls._is_patched_run_folder = True
