@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-
 @dataclasses.dataclass(slots=True, frozen=True)
 class IntegrationDescriptionValidation:
     """Validate description fields for integrations and their action parameters."""
