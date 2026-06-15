@@ -231,8 +231,8 @@ def main() -> None:
         target_alerts: list[Any] = [siemplify.current_alert]
     else:
         target_alerts: list[Any] = getattr(
-            siemplify.case, "open_alerts", None
-        ) or siemplify.case.alerts
+            siemplify.case, "open_alerts", siemplify.case.alerts
+        )
 
     updated_entities: list[Entity] = []
 

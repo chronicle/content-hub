@@ -168,8 +168,8 @@ class CreateEntityRelationshipsAction(Action):
         return getattr(
             self.soar_action.case,
             "open_alerts",
-            None,
-        ) or self.soar_action.case.alerts
+            self.soar_action.case.alerts,
+        )
 
     def _process_alert(
         self,

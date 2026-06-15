@@ -1645,8 +1645,8 @@ class EmailManager:
             alerts = [self.siemplify.current_alert]
         else:
             alerts = getattr(
-                self.siemplify.case, "open_alerts", None
-            ) or self.siemplify.case.alerts
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
 
         identifiers = []
         for alert in alerts:
@@ -1669,8 +1669,8 @@ class EmailManager:
             alerts = [self.siemplify.current_alert]
         else:
             alerts = getattr(
-                self.siemplify.case, "open_alerts", None
-            ) or self.siemplify.case.alerts
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
 
         identifiers = []
         for alert in alerts:
@@ -1707,8 +1707,8 @@ class EmailManager:
             alerts = [self.siemplify.current_alert]
         else:
             alerts = getattr(
-                self.siemplify.case, "open_alerts", None
-            ) or self.siemplify.case.alerts
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
 
         entities = []
         for alert in alerts:
