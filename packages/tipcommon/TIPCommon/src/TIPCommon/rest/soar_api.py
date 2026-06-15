@@ -1165,9 +1165,7 @@ def set_custom_fields_for_alerts(
             )
             success_results.append(result_dict)
         except Exception as e:
-            chronicle_soar.LOGGER.error(
-                f"Failed to set custom fields for alert {alert_id}: {e}"
-            )
+            chronicle_soar.LOGGER.error(f"Failed to set custom fields for alert {alert_id}: {e}")
             failed_alerts.append(alert_id)
 
     return success_results, failed_alerts
@@ -1202,24 +1200,18 @@ def _set_custom_fields_for_single_alert(
     except Exception:
         custom_field_values = []
 
-    custom_field_values_map: SingleJson = {
-        field.custom_field_id: field.values for field in custom_field_values
-    }
+    custom_field_values_map: SingleJson = {field.custom_field_id: field.values for field in custom_field_values}
 
     custom_fields_values_mapping: SingleJson = {}
     for custom_field, field_value in custom_fields_to_values.items():
-        existing_values = (
-            custom_field_values_map.get(custom_field.id, []) if append_values else []
-        )
+        existing_values = custom_field_values_map.get(custom_field.id, []) if append_values else []
 
         if custom_field.type == free_text_type_id:
             current_value = ["".join(existing_values + field_value)]
         else:
             current_value = existing_values + field_value
 
-        custom_fields_values_mapping[custom_field.id] = [
-            val for val in current_value if val
-        ]
+        custom_fields_values_mapping[custom_field.id] = [val for val in current_value if val]
 
     batch_set_custom_field_values(
         chronicle_soar,
@@ -2004,7 +1996,7 @@ def execute_manual_action(
     target_entities: list[dict] | None = None,
     is_predefined_scope: bool = False,
     action_provider: str = "Scripts",
-) -> requests.Response:
+) -> Response:
     """Execute a manual action on a case.
 
     Args:
@@ -2039,7 +2031,7 @@ def execute_manual_action(
 def get_action_result_by_id(
     chronicle_soar: ChronicleSOAR,
     result_id: str,
-) -> requests.Response:
+) -> Response:
     """Get the result of an action execution by its ID.
 
     Args:
@@ -2053,5 +2045,3 @@ def get_action_result_by_id(
     response = api_client.get_action_result_by_id(result_id)
     validate_response(response)
     return response
-
-
