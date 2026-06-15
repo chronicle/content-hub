@@ -37,7 +37,7 @@ def to_camel_case(key_name: str) -> str:
         key_name: The string to convert.
 
     Returns:
-        str: The camelCase converted string.
+        The camelCase converted string.
     """
     if not key_name:
         return key_name
@@ -62,10 +62,11 @@ def align_enum_field(
     for key in keys:
         if key in data:
             val: Any = data[key]
-            if isinstance(val, int) and val in value_map:
-                data[key] = value_map[val]
-            elif isinstance(val, int):
-                data.pop(key, None)
+            if isinstance(val, int) and not isinstance(val, bool):
+                if val in value_map:
+                    data[key] = value_map[val]
+                else:
+                    data.pop(key, None)
 
 
 def align_case_enum_fields(case_data: SingleJson) -> None:
@@ -92,7 +93,7 @@ def transform_event(event: SingleJson) -> SingleJson:
         event: The raw event dictionary.
 
     Returns:
-        SingleJson: The aligned event dictionary.
+        The aligned event dictionary.
     """
     new_event: SingleJson = {}
     for ek, ev in event.items():
@@ -115,7 +116,7 @@ def transform_events_list(events: list[Any]) -> list[Any]:
         events: The list of raw events.
 
     Returns:
-        list[Any]: The list of aligned events.
+        The list of aligned events.
     """
     new_events: list[Any] = []
     for event in events:
@@ -132,13 +133,14 @@ def align_case_data(case_data: SingleJson) -> SingleJson:
         case_data: The dictionary containing the raw case data.
 
     Returns:
-        SingleJson: The aligned case data dictionary.
+        The aligned case data dictionary.
     """
-    align_case_enum_fields(case_data)
+    case_data_copy = dict(case_data)
+    align_case_enum_fields(case_data_copy)
 
     new_case: SingleJson = {}
 
-    for k, v in case_data.items():
+    for k, v in case_data_copy.items():
         if k.startswith("__") or v == constants.UNDEFINED_VALUE:
             continue
 
