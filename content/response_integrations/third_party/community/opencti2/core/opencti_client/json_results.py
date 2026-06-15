@@ -50,6 +50,13 @@ class BaseJSONResult(BaseModel, ABC):
 
 
 class IncidentJSONResult(BaseJSONResult):
+    entity_type: Literal["Incident"] = Field(
+        description="The type of the object on OpenCTI",
+        examples=["Incident"],
+    )
+
+
+class IncidentResponseJSONResult(BaseJSONResult):
     entity_type: Literal["Case-Incident"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Case-Incident"],

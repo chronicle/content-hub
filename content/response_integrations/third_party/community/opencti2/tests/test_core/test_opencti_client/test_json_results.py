@@ -2,6 +2,7 @@ import pytest
 from core.opencti_client.json_results import (
     BaseJSONResult,
     IncidentJSONResult,
+    IncidentResponseJSONResult,
     RequestForInformationJSONResult,
     RequestForTakedownJSONResult,
 )
@@ -12,7 +13,7 @@ def fake_api_response():
     return {
         "id": "20f7568f-e6f4-4bcc-8cc8-d6d5ba366622",
         "standard_id": "incident--79249898-aaf5-5843-8080-1cab8511771d",
-        "entity_type": "Case-Incident",
+        "entity_type": "Incident",
         "parent_types": ["Basic-Object", "Stix-Object", "Stix-Core-Object"],
         "createdById": None,
     }
@@ -41,6 +42,9 @@ class TestBaseJSONResultChildClasses:
 
     def test_rfi_inherits_from_base(self):
         assert issubclass(RequestForInformationJSONResult, BaseJSONResult)
+
+    def test_incident_response_inherits_from_base(self):
+        assert issubclass(IncidentResponseJSONResult, BaseJSONResult)
 
     def test_rft_inherits_from_base(self):
         assert issubclass(RequestForTakedownJSONResult, BaseJSONResult)

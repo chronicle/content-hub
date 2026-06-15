@@ -3,10 +3,10 @@ from core.datamodels.base_octi_object import BaseOCTIObject
 from pydantic import AwareDatetime
 
 
-class Incident(BaseOCTIObject):
+class IncidentResponse(BaseOCTIObject):
     name: str
     description: str | None = None
-    incident_type: str | None = None
+    response_types: list[str] | None = None
     priority: str | None = None
     severity: str | None = None
     labels: list[str] | None = None
@@ -15,14 +15,14 @@ class Incident(BaseOCTIObject):
     created: AwareDatetime | None = None
 
     def _compute_stix_id(self) -> str:
-        return pycti.Incident.generate_id(name=self.name, created=self.created)
+        return pycti.CaseIncident.generate_id(name=self.name, created=self.created)
 
     def to_input_variables(self) -> dict:
         input = {
             "stix_id": self._compute_stix_id(),
             "name": self.name,
             "description": self.description,
-            "incident_type": self.incident_type,
+            "response_types": self.response_types,
             "priority": self.priority,
             "severity": self.severity,
             "objectLabel": self.labels,

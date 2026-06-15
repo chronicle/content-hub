@@ -2,11 +2,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from core.datamodels.incident import Incident
+from core.datamodels.incident_response import IncidentResponse
 from core.datamodels.request_for_information import RequestForInformation
 from core.datamodels.request_for_takedown import RequestForTakedown
 from core.opencti_client.client import OpenCTIClient, OpenCTIClientError
 from core.opencti_client.json_results import (
     IncidentJSONResult,
+    IncidentResponseJSONResult,
     RequestForInformationJSONResult,
     RequestForTakedownJSONResult,
 )
@@ -18,6 +20,17 @@ def fake_incident_api_response():
         "id": "20f7568f-e6f4-4bcc-8cc8-d6d5ba366622",
         "standard_id": "incident--79249898-aaf5-5843-8080-1cab8511771d",
         "entity_type": "Incident",
+        "parent_types": ["Basic-Object", "Stix-Object", "Stix-Core-Object"],
+        "createdById": None,
+    }
+
+
+@pytest.fixture
+def fake_incident_response_api_response():
+    return {
+        "id": "20f7568f-e6f4-4bcc-8cc8-d6d5ba366622",
+        "standard_id": "case-incident--79249898-aaf5-5843-8080-1cab8511771d",
+        "entity_type": "Case-Incident",
         "parent_types": ["Basic-Object", "Stix-Object", "Stix-Core-Object"],
         "createdById": None,
     }
@@ -70,6 +83,11 @@ def incident():
 @pytest.fixture
 def request_for_information():
     return RequestForInformation(name="Test RFI")
+
+
+@pytest.fixture
+def incident_response():
+    return IncidentResponse(name="Test IRC")
 
 
 @pytest.fixture
@@ -184,6 +202,65 @@ class TestCreateRequestForInformation:
             OpenCTIClientError, match="Failed to create Request for Information"
         ):
             client.create_request_for_information(request_for_information)
+
+
+class TestCreateIncidentResponse:
+    def test_returns_incident_response_json_result(
+        self,
+        client,
+        mock_pycti_client,
+        incident_response,
+        fake_incident_response_api_response,
+    ):
+        mock_pycti_client.case_incident.create.return_value = (
+            fake_incident_response_api_response
+        )
+
+        with patch.object(
+            client, "_upsert_labels", wraps=client._upsert_labels
+        ) as mock_upsert_labels:
+            result = client.create_incident_response(incident_response)
+
+        mock_pycti_client.case_incident.create.assert_called_once_with(
+            **incident_response.to_input_variables()
+        )
+        mock_upsert_labels.assert_called_once_with(
+            incident_response.to_input_variables().get("objectLabel")
+        )
+        assert isinstance(result, IncidentResponseJSONResult)
+
+    def test_raises_when_api_returns_none(
+        self, client, mock_pycti_client, incident_response
+    ):
+        mock_pycti_client.case_incident.create.return_value = None
+
+        with pytest.raises(
+            OpenCTIClientError, match="Failed to create IncidentResponse"
+        ):
+            client.create_incident_response(incident_response)
+
+    def test_raises_on_invalid_response(
+        self, client, mock_pycti_client, incident_response
+    ):
+        mock_pycti_client.case_incident.create.return_value = {"unexpected": "data"}
+
+        with pytest.raises(
+            OpenCTIClientError,
+            match="Unexpected OpenCTI response for IncidentResponse",
+        ):
+            client.create_incident_response(incident_response)
+
+    def test_raises_on_api_exception(
+        self, client, mock_pycti_client, incident_response
+    ):
+        mock_pycti_client.case_incident.create.side_effect = RuntimeError(
+            "network error"
+        )
+
+        with pytest.raises(
+            OpenCTIClientError, match="Failed to create IncidentResponse"
+        ):
+            client.create_incident_response(incident_response)
 
 
 class TestCreateRequestForTakedown:
