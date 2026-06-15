@@ -63,7 +63,7 @@ class AttachmentsManager:
 
         alerts = getattr(
             self.siemplify.case, "open_alerts", None
-        ) or getattr(self.siemplify.case, "alerts", [])
+        ) or self.siemplify.case.alerts
         entities = []
         for alert in alerts:
             try:

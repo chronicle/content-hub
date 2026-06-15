@@ -52,7 +52,7 @@ class AttachmentsManager:
         else:
             alerts = getattr(
                 self.siemplify.case, "open_alerts", None
-            ) or getattr(self.siemplify.case, "alerts", [])
+            ) or self.siemplify.case.alerts
         entities = []
         for alert in alerts:
             try:
@@ -100,7 +100,7 @@ class AttachmentsManager:
             self.siemplify.case,
             "open_alerts",
             None,
-        ) or getattr(self.siemplify.case, "alerts", [])
+        ) or self.siemplify.case.alerts
 
     def get_attachments_for_target_alerts(self) -> list[SingleJson]:
         """Get attachments for the target alerts.
