@@ -200,6 +200,9 @@ class IntegrationsRepo:
             raise FileNotFoundError(msg)
 
         out_name: str = mp.core.utils.str_to_snake_case(integration_path.name)
+        if f"{out_name}_integration" in mp.core.constants.INTEGRATIONS_WITH_INTEGRATION_SUFFIX:
+            out_name = f"{out_name}_integration"
+
         integration_out_path: Path = self.out_dir / out_name
         integration_out_path.mkdir(exist_ok=True)
         self._deconstruct_integration(integration_path, integration_out_path)
