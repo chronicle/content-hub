@@ -34,9 +34,9 @@ def main():
     )
     
     if execution_scope.value == ExecutionScope.Case.value:
-        alerts = getattr(siemplify.case, "open_alerts", None) or siemplify.case.alerts
+        alerts = list(getattr(siemplify.case, "open_alerts", None) or siemplify.case.alerts)
     else:
-        alerts = siemplify.case.alerts
+        alerts = list(siemplify.case.alerts)
 
     if not alerts:
         siemplify.end("No alerts found in the case.", "false")
