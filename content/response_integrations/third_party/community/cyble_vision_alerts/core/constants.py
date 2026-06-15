@@ -11,10 +11,10 @@ INTEGRATION_VERSION = "1.0.0"
 PARAM_API_KEY       = "API Key"
 PARAM_BASE_URL      = "Base URL"
 PARAM_VERIFY_SSL    = "Verify SSL"
-PARAM_TIMEOUT       = "Request Timeout (seconds)"
+PARAM_TIMEOUT       = "Request Timeout In Seconds"
 PARAM_MAX_PER_CYCLE = "Max Alerts Per Service Per Cycle"
-PARAM_SERVICES      = "Services Filter (comma-separated)"
-PARAM_HOURS_BACK    = "Hours Back (initial fetch)"
+PARAM_SERVICES      = "Services Filter"
+PARAM_HOURS_BACK    = "Hours Back"
 PARAM_ENVIRONMENT   = "Environment Field Name"
 
 # ── Defaults ─────────────────────────────────────────────────────────────────

@@ -231,10 +231,13 @@ def _refresh_service(
                 not_in_soar_count += 1
                 continue
 
+            case_id, alert_obj = existing
             raw_updated = raw_alert.get("updated_at", "")
-            last_sync   = existing.get(FIELD_LAST_SYNC_AT, "")
+            last_sync   = (alert_obj.get("additional_properties") or {}).get(
+                FIELD_LAST_SYNC_AT, ""
+            )
             if _is_newer(raw_updated, last_sync):
-                _update_existing_alert(siemplify, existing, raw_alert, now_iso)
+                _update_existing_alert(siemplify, case_id, alert_obj, raw_alert, now_iso)
                 updated_count += 1
             else:
                 skipped_count += 1
@@ -247,10 +250,17 @@ def _refresh_service(
     return updated_count, skipped_count, not_in_soar_count
 
 
-def _find_existing_alert(siemplify, cyble_alert_id):
+def _find_existing_alert(
+    siemplify: SiemplifyJob, cyble_alert_id: str
+) -> tuple[str, dict] | None:
     """
-    Look up an existing SOAR alert by the AlertId custom field. Returns the
-    alert dict, or None if not found / lookup unsupported.
+    Look up an existing SOAR case/alert by the AlertId custom field.
+
+    `get_cases_by_filter` returns a list of case IDs (not Case/Alert objects), so
+    each ID is resolved to a full case via `_get_case_by_id`, and its
+    `cyber_alerts` are scanned for the alert whose AlertId custom field matches
+    `cyble_alert_id`. Returns a ``(case_id, alert_dict)`` tuple, or ``None`` if
+    not found / lookup unsupported on this SOAR build.
     """
     global _DEDUP_LOOKUP_AVAILABLE
 
@@ -267,14 +277,11 @@ def _find_existing_alert(siemplify, cyble_alert_id):
 
     # First try with custom_fields kwarg (newer SOAR builds).
     try:
-        cases = siemplify.get_cases_by_filter(
+        case_ids = siemplify.get_cases_by_filter(
             custom_fields={FIELD_ALERT_ID: cyble_alert_id},
             limit=1,
         )
         _DEDUP_LOOKUP_AVAILABLE = True
-        if cases:
-            return cases[0]
-        return None
     except TypeError:
         # Older build — get_cases_by_filter exists but doesn't accept custom_fields.
         # We can't filter server-side; mark unsupported and bail. Drift refresh
@@ -292,6 +299,20 @@ def _find_existing_alert(siemplify, cyble_alert_id):
         _DEDUP_LOOKUP_AVAILABLE = False
         return None
 
+    # Resolve each matching case ID to a full case and locate the specific alert
+    # carrying our AlertId custom field.
+    for case_id in case_ids or []:
+        try:
+            case = siemplify._get_case_by_id(case_id)
+        except Exception as e:  # noqa: BLE001
+            siemplify.LOGGER.info(f"[WARN] Could not load case {case_id}: {e}.")
+            continue
+        for alert in case.get("cyber_alerts", []) or []:
+            props = alert.get("additional_properties") or {}
+            if props.get(FIELD_ALERT_ID) == cyble_alert_id:
+                return str(case_id), alert
+    return None
+
 
 def _is_newer(raw_updated, last_sync):
     """Return True if raw_updated is strictly after last_sync."""
@@ -305,7 +326,13 @@ def _is_newer(raw_updated, last_sync):
         return False
 
 
-def _update_existing_alert(siemplify, existing, raw_alert, now_iso):
+def _update_existing_alert(
+    siemplify: SiemplifyJob,
+    case_id: str,
+    alert_obj: dict,
+    raw_alert: dict,
+    now_iso: str,
+) -> None:
     """
     Refresh Status / Severity / LastSyncAt on the existing SOAR alert and add
     a wall comment for audit. Field names are vendor-neutral (no "Cyble"
@@ -316,8 +343,8 @@ def _update_existing_alert(siemplify, existing, raw_alert, now_iso):
     if _UPDATE_API_AVAILABLE is False:
         return
 
-    alert_id = existing.get("id") or existing.get("case_id")
-    if not alert_id:
+    alert_identifier = alert_obj.get("identifier")
+    if not alert_identifier:
         return
 
     if not hasattr(siemplify, "update_alert_additional_data"):
@@ -333,7 +360,7 @@ def _update_existing_alert(siemplify, existing, raw_alert, now_iso):
 
     try:
         siemplify.update_alert_additional_data(
-            alert_id=alert_id,
+            alert_id=alert_identifier,
             additional_data={
                 FIELD_LAST_SYNC_AT: now_iso,
                 FIELD_STATUS:       new_status,
@@ -346,13 +373,15 @@ def _update_existing_alert(siemplify, existing, raw_alert, now_iso):
                     f"[Sync] Alert updated upstream at {raw_alert.get('updated_at')}. "
                     f"New status: {new_status}, severity: {new_severity}."
                 ),
-                case_id=alert_id,
+                case_id=case_id,
+                alert_identifier=alert_identifier,
             )
         _UPDATE_API_AVAILABLE = True
     except Exception as e:  # noqa: BLE001
         if _UPDATE_API_AVAILABLE is None:
             siemplify.LOGGER.info(
-                f"[WARN] Could not update alert {alert_id}: {e}. Subsequent updates skipped."
+                f"[WARN] Could not update alert {alert_identifier}: {e}. "
+                "Subsequent updates skipped."
             )
         _UPDATE_API_AVAILABLE = False
 

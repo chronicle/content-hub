@@ -25,8 +25,11 @@ from ..core.constants import (
 )
 
 SCRIPT_NAME = "Ping"
-CONNECTED_MSG    = "Connected successfully to Cyble Vision Alerts."
-NOT_CONNECTED_MSG = "Failed to connect to Cyble Vision Alerts: {reason}"
+CONNECTED_MSG    = (
+    "Successfully connected to the Cyble Vision Alerts server with the provided "
+    "connection parameters!"
+)
+NOT_CONNECTED_MSG = "Failed to connect to the Cyble Vision Alerts server! Error is {reason}"
 
 
 @output_handler

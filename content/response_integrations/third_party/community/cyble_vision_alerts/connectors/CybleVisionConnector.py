@@ -196,16 +196,16 @@ def main(is_test_run):
 
 
 def _poll_service(
-    siemplify,
-    manager,
-    service_name,
-    now,
-    now_iso,
-    hours_back,
-    max_per_cycle,
-    output_alerts,
-    is_test_run,
-):
+    siemplify: SiemplifyConnectorExecution,
+    manager: CybleManager,
+    service_name: str,
+    now: datetime,
+    now_iso: str,
+    hours_back: int,
+    max_per_cycle: int,
+    output_alerts: list[AlertInfo],
+    is_test_run: bool,
+) -> int:
     """
     Poll one Cyble service and append AlertInfo objects to output_alerts.
     Returns the number of alerts appended.
@@ -317,7 +317,7 @@ def _poll_service(
     return emitted_for_service
 
 
-def _build_alert_info(mapped, raw_alert, service_name):
+def _build_alert_info(mapped: dict, raw_alert: dict, service_name: str) -> AlertInfo:
     """
     Convert a mapped Cyble alert dict (from CybleAlertMapper) into an AlertInfo
     object that SOAR can ingest.
