@@ -55,6 +55,11 @@ def get_marketplace_paths_from_names(
         for n in names:
             if (p := path / n).exists():
                 results.add(p)
+
+            # Check if the name matches a suffixed integration (e.g. 'http' -> 'http_integration')
+            suffixed_name: str = f"{n}_integration"
+            if suffixed_name in constants.INTEGRATIONS_WITH_INTEGRATION_SUFFIX and (p := path / suffixed_name).exists():
+                results.add(p)
     return results
 
 
