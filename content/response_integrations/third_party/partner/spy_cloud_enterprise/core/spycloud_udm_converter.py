@@ -4,8 +4,9 @@ import copy
 import hashlib
 import json
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
 
 
 class SpyCloudUdmConverter:
@@ -134,11 +135,11 @@ class SpyCloudUdmConverter:
 
     def convert_records(
         self,
-        records: Iterable[Dict[str, Any]],
-        breach_catalog: Optional[Iterable[Dict[str, Any]]] = None,
-        breach_catalog_by_id: Optional[Dict[str, Dict[str, Any]]] = None,
+        records: Iterable[dict[str, Any]],
+        breach_catalog: Iterable[dict[str, Any]] | None = None,
+        breach_catalog_by_id: dict[str, dict[str, Any]] | None = None,
         merge_endpoint_by_log_id: bool = True,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         base_records = [copy.deepcopy(record) for record in records or []]
 
         if breach_catalog_by_id is None and breach_catalog is not None:
@@ -154,7 +155,7 @@ class SpyCloudUdmConverter:
 
         return [self.convert_record(record) for record in enriched_records]
 
-    def convert_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
+    def convert_record(self, record: dict[str, Any]) -> dict[str, Any]:
         clean_record = self.sanitize_sensitive_fields(record)
 
         source_severity = self.get_severity(clean_record)
@@ -172,7 +173,7 @@ class SpyCloudUdmConverter:
         clean_record["risk_score"] = risk_score
         clean_record["criticality"] = criticality
 
-        event: Dict[str, Any] = {
+        event: dict[str, Any] = {
             "metadata": {
                 "event_timestamp": event_timestamp,
                 "event_type": event_type,
@@ -218,9 +219,9 @@ class SpyCloudUdmConverter:
 
     def build_breach_catalog_index(
         self,
-        breach_catalog: Iterable[Dict[str, Any]],
-    ) -> Dict[str, Dict[str, Any]]:
-        index: Dict[str, Dict[str, Any]] = {}
+        breach_catalog: Iterable[dict[str, Any]],
+    ) -> dict[str, dict[str, Any]]:
+        index: dict[str, dict[str, Any]] = {}
         for item in breach_catalog or []:
             key = self.first_present(item, ["id", "source_id", "catalog_id"])
             if key not in (None, ""):
@@ -229,9 +230,9 @@ class SpyCloudUdmConverter:
 
     def enrich_with_breach_catalog(
         self,
-        record: Dict[str, Any],
-        breach_catalog_by_id: Optional[Dict[str, Dict[str, Any]]],
-    ) -> Dict[str, Any]:
+        record: dict[str, Any],
+        breach_catalog_by_id: dict[str, dict[str, Any]] | None,
+    ) -> dict[str, Any]:
         if not breach_catalog_by_id:
             return record
 
@@ -247,7 +248,7 @@ class SpyCloudUdmConverter:
         merged.update(record)
         return merged
 
-    def merge_records(self, records: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def merge_records(self, records: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
         """
         Merge likely-related botnet / compass records into a single endpoint-centric record.
 
@@ -256,8 +257,8 @@ class SpyCloudUdmConverter:
         2. infected_machine_id
         3. no merge for other records
         """
-        grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-        passthrough: List[Dict[str, Any]] = []
+        grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        passthrough: list[dict[str, Any]] = []
 
         for record in records:
             merge_key = self.first_present(record, ["log_id", "infected_machine_id"])
@@ -270,8 +271,8 @@ class SpyCloudUdmConverter:
         merged_records.extend(passthrough)
         return merged_records
 
-    def _normalize_collection_sources(self, values: Iterable[Any]) -> List[Any]:
-        sources: List[Any] = []
+    def _normalize_collection_sources(self, values: Iterable[Any]) -> list[Any]:
+        sources: list[Any] = []
         for value in values:
             if value in (None, "", [], {}):
                 continue
@@ -281,8 +282,8 @@ class SpyCloudUdmConverter:
                 sources.append(value)
         return self.unique_preserve_order(sources)
 
-    def _merge_group(self, group: List[Dict[str, Any]]) -> Dict[str, Any]:
-        merged: Dict[str, Any] = {}
+    def _merge_group(self, group: list[dict[str, Any]]) -> dict[str, Any]:
+        merged: dict[str, Any] = {}
         keys = set()
         for item in group:
             keys.update(item.keys())
@@ -298,7 +299,7 @@ class SpyCloudUdmConverter:
 
             first_value = values[0]
             if isinstance(first_value, list):
-                combined: List[Any] = []
+                combined: list[Any] = []
                 for value in values:
                     if isinstance(value, list):
                         combined.extend(value)
@@ -311,7 +312,7 @@ class SpyCloudUdmConverter:
         merged["_merged_record_count"] = len(group)
         return merged
 
-    def sanitize_sensitive_fields(self, record: Dict[str, Any]) -> Dict[str, Any]:
+    def sanitize_sensitive_fields(self, record: dict[str, Any]) -> dict[str, Any]:
         clean = {}
         for key, value in record.items():
             if key in self.SENSITIVE_DROP_FIELDS:
@@ -331,8 +332,8 @@ class SpyCloudUdmConverter:
 
         return clean
 
-    def build_principal(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        principal: Dict[str, Any] = {}
+    def build_principal(self, record: dict[str, Any]) -> dict[str, Any]:
+        principal: dict[str, Any] = {}
 
         user = self.build_user(record)
         if user:
@@ -364,7 +365,7 @@ class SpyCloudUdmConverter:
 
         return self._prune_empty(principal)
 
-    def build_principal_file(self, record: Dict[str, Any]) -> Dict[str, Any]:
+    def build_principal_file(self, record: dict[str, Any]) -> dict[str, Any]:
         path_value = self.first_present(record, ["infected_path"])
         if not path_value:
             return {}
@@ -373,8 +374,8 @@ class SpyCloudUdmConverter:
             "full_path": str(path_value),
         }
 
-    def build_user(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        user: Dict[str, Any] = {}
+    def build_user(self, record: dict[str, Any]) -> dict[str, Any]:
+        user: dict[str, Any] = {}
 
         userid = self.first_present(record, ["email", "email_address", "username", "account_id"])
         if userid:
@@ -394,8 +395,8 @@ class SpyCloudUdmConverter:
 
         return self._prune_empty(user)
 
-    def build_target(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        target: Dict[str, Any] = {}
+    def build_target(self, record: dict[str, Any]) -> dict[str, Any]:
+        target: dict[str, Any] = {}
 
         url_value = self.first_present(record, ["target_url"])
         if url_value:
@@ -411,8 +412,8 @@ class SpyCloudUdmConverter:
 
         return self._prune_empty(target)
 
-    def build_network(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        network: Dict[str, Any] = {}
+    def build_network(self, record: dict[str, Any]) -> dict[str, Any]:
+        network: dict[str, Any] = {}
 
         email_from_record = self.first_present(record, ["email", "email_address"])
         if email_from_record:
@@ -428,8 +429,8 @@ class SpyCloudUdmConverter:
 
         return self._prune_empty(network)
 
-    def build_about(self, record: Dict[str, Any]) -> List[Dict[str, Any]]:
-        about_items: List[Dict[str, Any]] = []
+    def build_about(self, record: dict[str, Any]) -> list[dict[str, Any]]:
+        about_items: list[dict[str, Any]] = []
 
         if self.first_present(record, ["target_url"]):
             about_items.append({
@@ -447,7 +448,7 @@ class SpyCloudUdmConverter:
 
         return [self._prune_empty(item) for item in about_items if self._prune_empty(item)]
 
-    def build_additional(self, record: Dict[str, Any]) -> Dict[str, Any]:
+    def build_additional(self, record: dict[str, Any]) -> dict[str, Any]:
         fields = [
             "has_password",
             "has_plaintext_password",
@@ -458,15 +459,15 @@ class SpyCloudUdmConverter:
             "risk_score",
             "criticality",
         ]
-        additional: Dict[str, Any] = {}
+        additional: dict[str, Any] = {}
         for field in fields:
             value = record.get(field)
             if value not in (None, "", [], {}):
                 additional[field] = value
         return additional
 
-    def build_extensions(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        extensions: Dict[str, Any] = {}
+    def build_extensions(self, record: dict[str, Any]) -> dict[str, Any]:
+        extensions: dict[str, Any] = {}
         for key in self.EXTENSION_ALLOWLIST:
             value = record.get(key)
             if value in (None, "", [], {}):
@@ -476,18 +477,18 @@ class SpyCloudUdmConverter:
 
     def build_security_result(
         self,
-        record: Dict[str, Any],
-        source_severity: Optional[int],
+        record: dict[str, Any],
+        source_severity: int | None,
         severity_label: str,
         soar_severity: int,
         risk_score: int,
         criticality: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         summary = self.build_security_summary(record)
         category = self.get_security_categories(record)
         confidence = self.map_confidence(record.get("confidence"))
 
-        security_result: Dict[str, Any] = {
+        security_result: dict[str, Any] = {
             # This is the SecOps/alert severity equivalent
             "severity": soar_severity,
             "summary": summary,
@@ -525,7 +526,7 @@ class SpyCloudUdmConverter:
 
         return cleaned
 
-    def build_security_summary(self, record: Dict[str, Any]) -> str:
+    def build_security_summary(self, record: dict[str, Any]) -> str:
         severity = self.get_severity(record)
         identifier = self.first_present(
             record,
@@ -542,7 +543,7 @@ class SpyCloudUdmConverter:
             return f"SpyCloud email-only exposure detected for {identifier}"
         return f"SpyCloud exposure detected for {identifier}"
 
-    def build_metadata_description(self, record: Dict[str, Any]) -> str:
+    def build_metadata_description(self, record: dict[str, Any]) -> str:
         parts = [
             self.first_present(record, ["title", "short_title"]),
             self.first_present(record, ["description"]),
@@ -552,7 +553,7 @@ class SpyCloudUdmConverter:
             return " | ".join(rendered)
         return self.build_security_summary(record)
 
-    def get_product_event_type(self, record: Dict[str, Any]) -> str:
+    def get_product_event_type(self, record: dict[str, Any]) -> str:
         severity = self.get_severity(record)
         if severity == 25 or self.is_malware_record(record):
             return "SpyCloud Malware Infection"
@@ -564,12 +565,12 @@ class SpyCloudUdmConverter:
             return "SpyCloud Email Exposure"
         return "SpyCloud Exposure Record"
 
-    def select_event_type(self, record: Dict[str, Any]) -> str:
+    def select_event_type(self, record: dict[str, Any]) -> str:
         if self.is_malware_record(record):
             return self.event_type_malware
         return self.event_type_exposure
 
-    def is_malware_record(self, record: Dict[str, Any]) -> bool:
+    def is_malware_record(self, record: dict[str, Any]) -> bool:
         severity = self.get_severity(record)
         if severity == 25:
             return True
@@ -587,8 +588,8 @@ class SpyCloudUdmConverter:
             ]
         )
 
-    def get_security_categories(self, record: Dict[str, Any]) -> List[str]:
-        categories: List[str] = []
+    def get_security_categories(self, record: dict[str, Any]) -> list[str]:
+        categories: list[str] = []
         if self.is_malware_record(record):
             categories.append("SOFTWARE_MALICIOUS")
         if self.first_present(record, ["target_url"]):
@@ -599,7 +600,7 @@ class SpyCloudUdmConverter:
             categories.append("UNKNOWN_CATEGORY")
         return self.unique_preserve_order(categories)
 
-    def get_event_timestamp(self, record: Dict[str, Any]) -> str:
+    def get_event_timestamp(self, record: dict[str, Any]) -> str:
         for key in [
             "infected_time",
             "record_modification_date",
@@ -622,7 +623,7 @@ class SpyCloudUdmConverter:
 
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    def get_product_log_id(self, record: Dict[str, Any]) -> str:
+    def get_product_log_id(self, record: dict[str, Any]) -> str:
         direct_id = self.first_present(
             record,
             ["document_id", "log_id", "infected_machine_id", "id", "_id", "record_id"],
@@ -636,7 +637,7 @@ class SpyCloudUdmConverter:
         return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
     @staticmethod
-    def get_severity(record: Dict[str, Any]) -> Optional[int]:
+    def get_severity(record: dict[str, Any]) -> int | None:
         value = record.get("severity")
         try:
             return int(value) if value is not None else None
@@ -645,8 +646,8 @@ class SpyCloudUdmConverter:
 
     def map_spycloud_to_severity_label(
         self,
-        severity: Optional[int],
-        record: Optional[Dict[str, Any]] = None,
+        severity: int | None,
+        record: dict[str, Any] | None = None,
     ) -> str:
         if severity == 25:
             return "critical"
@@ -674,7 +675,7 @@ class SpyCloudUdmConverter:
         }
         return mapping.get(label, "LOW")
 
-    def calculate_risk_score(self, record: Dict[str, Any]) -> int:
+    def calculate_risk_score(self, record: dict[str, Any]) -> int:
         """
         Smarter risk scoring:
         - Base from SpyCloud severity
@@ -734,7 +735,7 @@ class SpyCloudUdmConverter:
         return mapping.get(label, "UNKNOWN_PRIORITY")
 
     @staticmethod
-    def map_confidence(value: Any) -> Optional[str]:
+    def map_confidence(value: Any) -> str | None:
         """
         SpyCloud catalog confidence values are documented as:
         1 = High Confidence
@@ -768,7 +769,7 @@ class SpyCloudUdmConverter:
         return None
 
     @staticmethod
-    def parse_datetime(value: Any) -> Optional[str]:
+    def parse_datetime(value: Any) -> str | None:
         if value in (None, ""):
             return None
 
@@ -799,7 +800,7 @@ class SpyCloudUdmConverter:
             return None
 
     @staticmethod
-    def first_present(record: Dict[str, Any], keys: Iterable[str]) -> Any:
+    def first_present(record: dict[str, Any], keys: Iterable[str]) -> Any:
         for key in keys:
             value = record.get(key)
             if value not in (None, "", [], {}):
@@ -807,7 +808,7 @@ class SpyCloudUdmConverter:
         return None
 
     @staticmethod
-    def normalize_to_list(value: Any) -> List[Any]:
+    def normalize_to_list(value: Any) -> list[Any]:
         if value in (None, "", [], {}):
             return []
         if isinstance(value, list):
@@ -827,8 +828,8 @@ class SpyCloudUdmConverter:
         return str(value)
 
     @staticmethod
-    def unique_preserve_order(values: Iterable[Any]) -> List[Any]:
-        result: List[Any] = []
+    def unique_preserve_order(values: Iterable[Any]) -> list[Any]:
+        result: list[Any] = []
         seen = set()
         for value in values:
             marker = json.dumps(value, sort_keys=True, default=str) if isinstance(value, (dict, list)) else str(value)

@@ -1,5 +1,10 @@
+from __future__ import annotations
+
 import json
 from datetime import datetime, timedelta, timezone
+from typing import Any
+
+from TIPCommon.extraction import extract_connector_param
 
 from .CheckpointManager import CheckpointManager
 from .Constants import ENDPOINT_PING
@@ -9,6 +14,7 @@ SPYCLOUD_API_KEY = "SPYCLOUD_API_KEY"
 ENABLE_COMPASS = "ENABLE_COMPASS"
 SEVERITIES = "SEVERITIES"
 VERIFY_SSL = "Verify SSL"
+API_ROOT = "API Root"
 
 MAX_WATCHLIST_WINDOW_HOURS = 2
 MAX_COMPASS_WINDOW_HOURS = 2
@@ -60,40 +66,67 @@ SENSITIVE_KEY_FRAGMENTS = (
 
 
 class SpyCloudManager:
-    def __init__(self, siemplify):
+    def __init__(self, siemplify: Any) -> None:
         self.siemplify = siemplify
         self.checkpoint_manager = CheckpointManager(self.siemplify)
 
-        api_key = self.siemplify.extract_connector_param(
+        api_key = extract_connector_param(
+            self.siemplify,
             param_name=SPYCLOUD_API_KEY,
-            print_value=False
+            is_mandatory=True,
+            print_value=False,
         )
 
-        enable_compass = self.siemplify.extract_connector_param(
+        api_root = extract_connector_param(
+            self.siemplify,
+            param_name=API_ROOT,
+            is_mandatory=True,
+            input_type=str,
+            print_value=True,
+        )
+
+        enable_compass = extract_connector_param(
+            self.siemplify,
             param_name=ENABLE_COMPASS,
-            print_value=True
+            is_mandatory=False,
+            input_type=bool,
+            default_value=False,
+            print_value=True,
         )
 
-        severities = self.siemplify.extract_connector_param(
+        severities = extract_connector_param(
+            self.siemplify,
             param_name=SEVERITIES,
-            print_value=True
+            is_mandatory=False,
+            print_value=True,
         )
 
-        verify_ssl = self.siemplify.extract_connector_param(
+        verify_ssl = extract_connector_param(
+            self.siemplify,
             param_name=VERIFY_SSL,
+            is_mandatory=False,
             default_value=True,
             input_type=bool,
             print_value=True,
         )
 
-        self.enable_compass = str(enable_compass).strip().lower() == "true"
+        self.api_root = api_root
+        self.enable_compass = bool(enable_compass)
         self.verify_ssl = verify_ssl
 
         self.severities = []
         if severities:
-            self.severities = [
-                int(x.strip()) for x in str(severities).split(",") if x.strip()
-            ]
+            for raw_severity in str(severities).split(","):
+                cleaned = raw_severity.strip()
+                if not cleaned:
+                    continue
+                try:
+                    self.severities.append(int(cleaned))
+                except ValueError:
+                    self.siemplify.LOGGER.warning(
+                        f"Invalid severity value '{cleaned}' ignored. "
+                        "Please ensure only integers are configured."
+                    )
 
         self.siemplify.LOGGER.info(
             "SpyCloud manager configuration parsed. "
@@ -101,7 +134,11 @@ class SpyCloudManager:
             f"verify_ssl={self.verify_ssl}"
         )
 
-        self.sdk = SpyCloudSDK(api_key, verify_ssl=self.verify_ssl)
+        self.sdk = SpyCloudSDK(
+            api_key,
+            base_url=self.api_root,
+            verify_ssl=self.verify_ssl,
+        )
 
     def _parse_iso_z(self, value: str) -> datetime:
         return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)

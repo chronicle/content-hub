@@ -30,6 +30,7 @@ from ..core.Constants import (
 from ..core.SpyCloudSDK import SpyCloudSDK
 
 SPYCLOUD_API_KEY_PARAM = "SPYCLOUD_API_KEY"
+API_ROOT_PARAM = "API Root"
 VERIFY_SSL_PARAM = "Verify SSL"
 SCRIPT_NAME = PING_SCRIPT_NAME
 
@@ -50,6 +51,27 @@ def _extract_api_key(siemplify: SiemplifyAction) -> str | None:
         param_name=SPYCLOUD_API_KEY_PARAM,
         is_mandatory=True,
         print_value=False,
+    )
+
+
+def _extract_api_root(siemplify: SiemplifyAction) -> str | None:
+    """Extract the SpyCloud API Root from integration configuration."""
+    if extract_configuration_param:
+        return extract_configuration_param(
+            siemplify,
+            provider_name=INTEGRATION_NAME,
+            param_name=API_ROOT_PARAM,
+            is_mandatory=True,
+            input_type=str,
+            print_value=True,
+        )
+
+    return siemplify.extract_configuration_param(
+        provider_name=INTEGRATION_NAME,
+        param_name=API_ROOT_PARAM,
+        is_mandatory=True,
+        input_type=str,
+        print_value=True,
     )
 
 
@@ -89,6 +111,7 @@ def main():
 
     try:
         api_key = _extract_api_key(siemplify)
+        api_root = _extract_api_root(siemplify)
         verify_ssl = _extract_verify_ssl(siemplify)
 
         siemplify.LOGGER.info("----------------- Main - Started -----------------")
@@ -97,7 +120,7 @@ def main():
             f"{ENDPOINT_PING} (verify_ssl={verify_ssl})"
         )
 
-        with SpyCloudSDK(api_key, verify_ssl=verify_ssl) as sdk:
+        with SpyCloudSDK(api_key, base_url=api_root, verify_ssl=verify_ssl) as sdk:
             sdk.breach_catalog.ping()
 
         status = EXECUTION_STATE_COMPLETED

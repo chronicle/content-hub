@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
+from typing import Any
 
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 
@@ -10,7 +11,7 @@ VENDOR = "SpyCloud"
 PRODUCT = "SpyCloud Enterprise"
 
 
-def first_present(record, keys):
+def first_present(record: dict[str, Any], keys: list[str]) -> Any | None:
     for key in keys:
         value = record.get(key)
         if value not in (None, "", [], {}):
@@ -18,7 +19,7 @@ def first_present(record, keys):
     return None
 
 
-def parse_iso_to_unix_ms(value):
+def parse_iso_to_unix_ms(value: Any) -> int | None:
     if not value:
         return None
 
@@ -44,37 +45,37 @@ def parse_iso_to_unix_ms(value):
         return None
 
 
-def get_udm_metadata(udm_event):
+def get_udm_metadata(udm_event: dict[str, Any]) -> dict[str, Any]:
     value = udm_event.get("metadata")
     return value if isinstance(value, dict) else {}
 
 
-def get_udm_principal(udm_event):
+def get_udm_principal(udm_event: dict[str, Any]) -> dict[str, Any]:
     value = udm_event.get("principal")
     return value if isinstance(value, dict) else {}
 
 
-def get_udm_target(udm_event):
+def get_udm_target(udm_event: dict[str, Any]) -> dict[str, Any]:
     value = udm_event.get("target")
     return value if isinstance(value, dict) else {}
 
 
-def get_udm_security_result(udm_event):
+def get_udm_security_result(udm_event: dict[str, Any]) -> dict[str, Any]:
     value = udm_event.get("security_result")
     return value if isinstance(value, dict) else {}
 
 
-def get_udm_extensions(udm_event):
+def get_udm_extensions(udm_event: dict[str, Any]) -> dict[str, Any]:
     value = udm_event.get("extensions")
     return value if isinstance(value, dict) else {}
 
 
-def get_udm_additional(udm_event):
+def get_udm_additional(udm_event: dict[str, Any]) -> dict[str, Any]:
     value = udm_event.get("additional")
     return value if isinstance(value, dict) else {}
 
 
-def get_mapped_alert_severity(udm_event):
+def get_mapped_alert_severity(udm_event: dict[str, Any]) -> int | None:
     """
     Final SecOps/SOAR-facing severity from the converter.
     Expected values: 40, 60, 80, 100
@@ -88,7 +89,7 @@ def get_mapped_alert_severity(udm_event):
         return None
 
 
-def get_source_spycloud_severity(udm_event):
+def get_source_spycloud_severity(udm_event: dict[str, Any]) -> int | None:
     """
     Original SpyCloud source severity preserved in extensions.
     Expected values: 2, 5, 20, 25
@@ -102,7 +103,7 @@ def get_source_spycloud_severity(udm_event):
         return None
 
 
-def get_udm_risk_score(udm_event):
+def get_udm_risk_score(udm_event: dict[str, Any]) -> int | None:
     security_result = get_udm_security_result(udm_event)
     value = security_result.get("risk_score")
 
@@ -112,13 +113,13 @@ def get_udm_risk_score(udm_event):
         return None
 
 
-def get_udm_criticality(udm_event):
+def get_udm_criticality(udm_event: dict[str, Any]) -> str:
     security_result = get_udm_security_result(udm_event)
     value = security_result.get("criticality")
     return str(value) if value not in (None, "") else ""
 
 
-def get_best_identifier_from_udm(udm_event):
+def get_best_identifier_from_udm(udm_event: dict[str, Any]) -> str:
     principal = get_udm_principal(udm_event)
     target = get_udm_target(udm_event)
     extensions = get_udm_extensions(udm_event)
@@ -157,7 +158,7 @@ def get_best_identifier_from_udm(udm_event):
     return "unknown"
 
 
-def build_stable_alert_id_from_udm(udm_event):
+def build_stable_alert_id_from_udm(udm_event: dict[str, Any]) -> str:
     extensions = get_udm_extensions(udm_event)
 
     direct_id = first_present(
@@ -199,7 +200,7 @@ def build_stable_alert_id_from_udm(udm_event):
     return f"spycloud:{digest}"
 
 
-def map_priority_from_mapped_severity(mapped_severity):
+def map_priority_from_mapped_severity(mapped_severity: Any) -> int:
     """
     The converter already normalizes severity into the SecOps-style scale.
     Reuse it directly for alert priority.
@@ -216,7 +217,7 @@ def map_priority_from_mapped_severity(mapped_severity):
     return numeric
 
 
-def build_rule_generator_from_udm(udm_event):
+def build_rule_generator_from_udm(udm_event: dict[str, Any]) -> str:
     source_severity = get_source_spycloud_severity(udm_event)
 
     if source_severity == 25:
@@ -236,7 +237,7 @@ def build_rule_generator_from_udm(udm_event):
     return "SpyCloud"
 
 
-def build_alert_name_from_udm(udm_event):
+def build_alert_name_from_udm(udm_event: dict[str, Any]) -> str:
     source_severity = get_source_spycloud_severity(udm_event)
     identifier = get_best_identifier_from_udm(udm_event)
 
@@ -257,7 +258,7 @@ def build_alert_name_from_udm(udm_event):
     return f"SpyCloud Exposure Detected - {identifier}"
 
 
-def build_event_name_from_udm(udm_event):
+def build_event_name_from_udm(udm_event: dict[str, Any]) -> str:
     source_severity = get_source_spycloud_severity(udm_event)
 
     if source_severity == 25:
@@ -273,7 +274,7 @@ def build_event_name_from_udm(udm_event):
     return metadata.get("event_type") or "SpyCloud UDM Event"
 
 
-def get_udm_event_time_ms(udm_event):
+def get_udm_event_time_ms(udm_event: dict[str, Any]) -> int:
     metadata = get_udm_metadata(udm_event)
 
     for key in ["event_timestamp", "collected_timestamp", "product_event_timestamp"]:
@@ -297,7 +298,7 @@ def get_udm_event_time_ms(udm_event):
     return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
-def normalize_scalar(value):
+def normalize_scalar(value: Any) -> Any:
     if value is None:
         return ""
     if isinstance(value, bool):
@@ -309,11 +310,11 @@ def normalize_scalar(value):
     return str(value)
 
 
-def normalize_event(event_dict):
+def normalize_event(event_dict: dict[str, Any]) -> dict[str, Any]:
     return {key: normalize_scalar(value) for key, value in event_dict.items()}
 
 
-def flatten_udm_event_for_alert(udm_event):
+def flatten_udm_event_for_alert(udm_event: dict[str, Any]) -> dict[str, Any]:
     metadata = get_udm_metadata(udm_event)
     principal = get_udm_principal(udm_event)
     target = get_udm_target(udm_event)
@@ -414,7 +415,11 @@ def flatten_udm_event_for_alert(udm_event):
     return normalize_event(flattened)
 
 
-def build_alert_from_udm_event(udm_event, environment_common=None, device_product_field=None):
+def build_alert_from_udm_event(
+    udm_event: dict[str, Any],
+    environment_common: Any = None,
+    device_product_field: str | None = None,
+) -> AlertInfo:
     event_time_ms = get_udm_event_time_ms(udm_event)
     mapped_severity = get_mapped_alert_severity(udm_event)
     risk_score = get_udm_risk_score(udm_event)
