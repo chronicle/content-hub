@@ -46,6 +46,8 @@ class DataParser:
             guid=data.get("guid"),
             host_ip=data.get("host_ip"),
             localguid=data.get("localguid"),
+            dlpviolation=data.get("dlpviolation"),
+            messagestatus=data.get("messagestatus"),
         )
 
     def parse_quarantine_records(self, data: dict) -> list[QuarantineRecord]:

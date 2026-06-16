@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import dataclasses
 
 
@@ -33,6 +35,8 @@ class QuarantineRecord:
     guid: str | None
     host_ip: str | None
     localguid: str | None
+    dlpviolation: dict | None = None
+    messagestatus: list[dict] | None = None
 
     def to_json(self) -> dict:
         """Convert the record to a standard JSON dict.
@@ -41,7 +45,7 @@ class QuarantineRecord:
             A JSON dictionary.
 
         """
-        return {
+        result: dict[str, Any] = {
             "processingserver": self.processingserver,
             "date": self.date,
             "subject": self.subject,
@@ -55,3 +59,9 @@ class QuarantineRecord:
             "host_ip": self.host_ip,
             "localguid": self.localguid,
         }
+        if self.dlpviolation is not None:
+            result["dlpviolation"] = self.dlpviolation
+        if self.messagestatus is not None:
+            result["messagestatus"] = self.messagestatus
+        return result
+
