@@ -93,6 +93,12 @@ class ReportJSONResult(BaseObjectJSONResult):
         examples=["Report"],
     )
 
+class CampaignJSONResult(BaseObjectJSONResult):
+    entity_type: Literal["Campaign"] = Field(
+        description="The type of the object on OpenCTI",
+        examples=["Campaign"],
+    )
+
 class AttackPatternJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Attack-Pattern"] = Field(
         description="The type of the object on OpenCTI",

@@ -1,6 +1,7 @@
 from typing import Literal
 
 from core.datamodels.attack_pattern import AttackPattern
+from core.datamodels.campaign import Campaign
 from core.datamodels.incident import Incident
 from core.datamodels.incident_response import IncidentResponse
 from core.datamodels.observable import Observable
@@ -10,6 +11,7 @@ from core.datamodels.request_for_takedown import RequestForTakedown
 from core.opencti_client.json_results import (
     AddObjectToContainerJSONResult,
     AttackPatternJSONResult,
+    CampaignJSONResult,
     IncidentJSONResult,
     IncidentResponseJSONResult,
     ObservableJSONResult,
@@ -241,6 +243,28 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Report creation: {str(e)}"
+            ) from e
+
+    def create_campaign(self, campaign: Campaign) -> CampaignJSONResult:
+        try:
+            campaign_args = campaign.to_input_variables()
+            self._upsert_labels(campaign_args.get("objectLabel"))
+            data = self._api_client.campaign.create(**campaign_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the campaign "
+                    "(some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Campaign in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return CampaignJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Campaign creation: {str(e)}"
             ) from e
 
     def create_attack_pattern(self, attack_pattern: AttackPattern) -> AttackPatternJSONResult:
