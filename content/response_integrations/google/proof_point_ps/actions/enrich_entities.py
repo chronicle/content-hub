@@ -83,16 +83,20 @@ class EnrichEntities(BaseProofPointPSAction):
 
         if entity.entity_type == EntityTypes.HOSTNAME:
             domain = get_domain_from_entity(entity)
+            self.logger.info("Hostname entity=%s, extracted domain=%s", entity.identifier, domain)
             for folder in folders:
-                with contextlib.suppress(Exception):
-                    records.extend(
-                        self.api_client.search(sender=f"@{domain}", folder=folder)
-                    )
-                with contextlib.suppress(Exception):
-                    records.extend(
-                        self.api_client.search(recipient=f"@{domain}", folder=folder)
-                    )
-
+                try:
+                    res = self.api_client.search(sender=f"@{domain}", folder=folder)
+                    self.logger.info("Sender search for @%s in %s found %s records", domain, folder, len(res))
+                    records.extend(res)
+                except Exception:
+                    self.logger.exception("Sender search failed for @%s in %s", domain, folder)
+                try:
+                    res = self.api_client.search(recipient=f"@{domain}", folder=folder)
+                    self.logger.info("Recipient search for @%s in %s found %s records", domain, folder, len(res))
+                    records.extend(res)
+                except Exception:
+                    self.logger.exception("Recipient search failed for @%s in %s", domain, folder)
         elif entity.entity_type == EntityTypes.USER and is_valid_email(
             entity.identifier
         ):

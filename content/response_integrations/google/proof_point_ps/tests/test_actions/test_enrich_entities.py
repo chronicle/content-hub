@@ -15,17 +15,22 @@
 from __future__ import annotations
 
 import datetime
+from typing import TYPE_CHECKING
 
 from integration_testing.common import create_entity
-from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
-from proof_point_ps.actions import enrich_entities
-from proof_point_ps.tests.common import CONFIG_PATH
-from proof_point_ps.tests.core.product import ProofPointPSProduct
-from proof_point_ps.tests.core.session import ProofPointPSSession
 from TIPCommon.base.action import EntityTypesEnum, ExecutionState
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
-from TIPCommon.types import Entity
+
+from proof_point_ps.actions import enrich_entities
+from proof_point_ps.tests.common import CONFIG_PATH
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
+    from TIPCommon.types import Entity
+
+    from proof_point_ps.tests.core.product import ProofPointPSProduct
+    from proof_point_ps.tests.core.session import ProofPointPSSession
 
 USER_ENTITY: Entity = create_entity("test_user@example.com", EntityTypesEnum.USER)
 HOST_ENTITY: Entity = create_entity("example.com", EntityTypesEnum.HOST_NAME)

@@ -15,12 +15,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
 
+import requests
 from integration_testing import router
 from integration_testing.common import get_request_payload
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, Response, RouteFunction
+
 from proof_point_ps.tests.core.product import ProofPointPSProduct
 
 
@@ -28,6 +31,22 @@ class ProofPointPSSession(
     MockSession[MockRequest, MockResponse, ProofPointPSProduct]
 ):
     """Mock session class for Proofpoint PS API calls."""
+
+    def request(
+        self,
+        method: str,
+        url: str,
+        *args: Any,      # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> MockResponse:
+        """Override request to raise ConnectionError for unmatched external URLs."""
+        try:
+            return super().request(method, url, *args, **kwargs)
+        except ValueError as e:
+            if "doesn't match with any of the other" in str(e):
+                err_msg = f"Mocked connection failure to unmatched URL: {url}"
+                raise requests.exceptions.ConnectionError(err_msg) from e
+            raise
 
     def get_routed_functions(self) -> Iterable[RouteFunction[Response]]:
         """Return the routed mock methods."""
