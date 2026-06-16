@@ -14,24 +14,25 @@ Parameters:
 """
 from __future__ import annotations
 
+import json
+from datetime import datetime, timedelta, timezone
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from datetime import datetime, timezone, timedelta
-import json
 
-from ..core.CybleManager import CybleManager, CybleAuthError, CybleAPIError
-from ..core.CybleAlertMapper import CybleAlertMapper
 from ..core.constants import (
+    ALL_KNOWN_SERVICES,
+    DEFAULT_BASE_URL,
+    DEFAULT_FETCH_STATUSES,
+    DEFAULT_TIMEOUT,
     INTEGRATION_NAME,
     PARAM_API_KEY,
     PARAM_BASE_URL,
-    PARAM_VERIFY_SSL,
     PARAM_TIMEOUT,
-    DEFAULT_BASE_URL,
-    DEFAULT_TIMEOUT,
-    DEFAULT_FETCH_STATUSES,
-    ALL_KNOWN_SERVICES,
+    PARAM_VERIFY_SSL,
 )
+from ..core.CybleAlertMapper import CybleAlertMapper
+from ..core.CybleManager import CybleAPIError, CybleAuthError, CybleManager
 
 SCRIPT_NAME = "GetAlerts"
 
@@ -41,29 +42,29 @@ def main():
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
 
-    api_key    = siemplify.extract_configuration_param(
+    api_key = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_API_KEY, is_mandatory=True
     )
-    base_url   = siemplify.extract_configuration_param(
+    base_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_BASE_URL, default_value=DEFAULT_BASE_URL
     )
     verify_ssl = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_VERIFY_SSL,
         input_type=bool, default_value=True
     )
-    timeout    = siemplify.extract_configuration_param(
+    timeout = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_TIMEOUT,
         input_type=int, default_value=DEFAULT_TIMEOUT
     )
 
-    services_raw  = siemplify.extract_action_param("Services",    is_mandatory=True)
-    hours_back    = siemplify.extract_action_param("Hours Back",  input_type=int, default_value=24)
-    max_results   = siemplify.extract_action_param("Max Results", input_type=int, default_value=50)
-    statuses_raw  = siemplify.extract_action_param("Statuses",    default_value="")
+    services_raw = siemplify.extract_action_param("Services", is_mandatory=True)
+    hours_back = siemplify.extract_action_param("Hours Back", input_type=int, default_value=24)
+    max_results = siemplify.extract_action_param("Max Results", input_type=int, default_value=50)
+    statuses_raw = siemplify.extract_action_param("Statuses", default_value="")
 
     # Parse and validate services
     services = [s.strip() for s in services_raw.split(",") if s.strip()]
-    unknown  = [s for s in services if s not in ALL_KNOWN_SERVICES]
+    unknown = [s for s in services if s not in ALL_KNOWN_SERVICES]
     if unknown:
         siemplify.LOGGER.info(
             f"[{SCRIPT_NAME}] [WARN] Unknown service names (will attempt anyway): {unknown}"
@@ -103,7 +104,7 @@ def main():
         return
 
     now_iso = now.strftime("%Y-%m-%dT%H:%M:%S+00:00")
-    mapped  = [CybleAlertMapper.cyble_to_secops_alert(r, now_iso) for r in results]
+    mapped = [CybleAlertMapper.cyble_to_secops_alert(r, now_iso) for r in results]
 
     output = json.dumps({
         "total_fetched": len(results),

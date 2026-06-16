@@ -8,20 +8,21 @@ Useful for:
 """
 from __future__ import annotations
 
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler
 import json
 
-from ..core.CybleManager import CybleManager, CybleAuthError, CybleAPIError
+from soar_sdk.SiemplifyAction import SiemplifyAction
+from soar_sdk.SiemplifyUtils import output_handler
+
 from ..core.constants import (
+    DEFAULT_BASE_URL,
+    DEFAULT_TIMEOUT,
     INTEGRATION_NAME,
     PARAM_API_KEY,
     PARAM_BASE_URL,
-    PARAM_VERIFY_SSL,
     PARAM_TIMEOUT,
-    DEFAULT_BASE_URL,
-    DEFAULT_TIMEOUT,
+    PARAM_VERIFY_SSL,
 )
+from ..core.CybleManager import CybleAPIError, CybleAuthError, CybleManager
 
 SCRIPT_NAME = "GetServicesList"
 
@@ -31,23 +32,23 @@ def main():
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
 
-    api_key    = siemplify.extract_configuration_param(
+    api_key = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_API_KEY, is_mandatory=True
     )
-    base_url   = siemplify.extract_configuration_param(
+    base_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_BASE_URL, default_value=DEFAULT_BASE_URL
     )
     verify_ssl = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_VERIFY_SSL,
         input_type=bool, default_value=True
     )
-    timeout    = siemplify.extract_configuration_param(
+    timeout = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_TIMEOUT,
         input_type=int, default_value=DEFAULT_TIMEOUT
     )
 
     try:
-        manager  = CybleManager(api_key=api_key, base_url=base_url, verify_ssl=verify_ssl, timeout=timeout)
+        manager = CybleManager(api_key=api_key, base_url=base_url, verify_ssl=verify_ssl, timeout=timeout)
         services = manager.get_services()
     except CybleAuthError as e:
         siemplify.end(f"Authentication failed: {e}", "false")

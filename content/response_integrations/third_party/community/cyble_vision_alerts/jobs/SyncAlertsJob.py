@@ -24,31 +24,31 @@ manual actions instead.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 from soar_sdk.SiemplifyJob import SiemplifyJob
 
-from ..core.CybleManager import CybleManager, CybleAPIError, CybleAuthError
-from ..core.CybleAlertMapper import CybleAlertMapper
 from ..core.constants import (
+    DEFAULT_BASE_URL,
+    DEFAULT_HOURS_BACK,
+    DEFAULT_MAX_PER_CYCLE,
+    DEFAULT_TIMEOUT,
+    FIELD_ALERT_ID,
+    FIELD_LAST_SYNC_AT,
+    FIELD_SEVERITY,
+    FIELD_STATUS,
     INTEGRATION_NAME,
     PARAM_API_KEY,
     PARAM_BASE_URL,
-    PARAM_VERIFY_SSL,
-    PARAM_TIMEOUT,
+    PARAM_HOURS_BACK,
     PARAM_MAX_PER_CYCLE,
     PARAM_SERVICES,
-    PARAM_HOURS_BACK,
-    DEFAULT_MAX_PER_CYCLE,
-    DEFAULT_HOURS_BACK,
-    DEFAULT_TIMEOUT,
-    DEFAULT_BASE_URL,
+    PARAM_TIMEOUT,
+    PARAM_VERIFY_SSL,
     STATE_KEY_LAST_RUN_PREFIX,
-    FIELD_ALERT_ID,
-    FIELD_LAST_SYNC_AT,
-    FIELD_STATUS,
-    FIELD_SEVERITY,
 )
+from ..core.CybleAlertMapper import CybleAlertMapper
+from ..core.CybleManager import CybleAPIError, CybleAuthError, CybleManager
 
 SCRIPT_NAME = "CybleSyncAlertsJob"
 
@@ -56,18 +56,20 @@ logger = logging.getLogger(SCRIPT_NAME)
 
 # Module-level capability flags — probed once per job run.
 _DEDUP_LOOKUP_AVAILABLE = None  # None = unprobed, True/False = decided
-_UPDATE_API_AVAILABLE   = None
+_UPDATE_API_AVAILABLE = None
 
 
 def main():
     siemplify = SiemplifyJob()
     siemplify.script_name = SCRIPT_NAME
 
-    api_key  = siemplify.extract_job_param(PARAM_API_KEY, is_mandatory=True)
-    base_url = siemplify.extract_job_param(PARAM_BASE_URL,  default_value=DEFAULT_BASE_URL)
+    api_key = siemplify.extract_job_param(PARAM_API_KEY, is_mandatory=True)
+    base_url = siemplify.extract_job_param(PARAM_BASE_URL, default_value=DEFAULT_BASE_URL)
     verify_ssl = siemplify.extract_job_param(PARAM_VERIFY_SSL, input_type=bool, default_value=True)
-    timeout  = siemplify.extract_job_param(PARAM_TIMEOUT,  input_type=int, default_value=DEFAULT_TIMEOUT)
-    max_per_cycle = siemplify.extract_job_param(PARAM_MAX_PER_CYCLE, input_type=int, default_value=DEFAULT_MAX_PER_CYCLE)
+    timeout = siemplify.extract_job_param(PARAM_TIMEOUT, input_type=int, default_value=DEFAULT_TIMEOUT)
+    max_per_cycle = siemplify.extract_job_param(
+        PARAM_MAX_PER_CYCLE, input_type=int, default_value=DEFAULT_MAX_PER_CYCLE
+    )
     hours_back = siemplify.extract_job_param(PARAM_HOURS_BACK, input_type=int, default_value=DEFAULT_HOURS_BACK)
     services_filter = siemplify.extract_job_param(PARAM_SERVICES, default_value="")
 
@@ -113,10 +115,10 @@ def main():
     now = datetime.now(timezone.utc)
     now_iso = now.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
-    total_updated     = 0
-    total_skipped     = 0
+    total_updated = 0
+    total_skipped = 0
     total_not_in_soar = 0
-    failed_services   = []
+    failed_services = []
 
     for service_def in target_services:
         service_name = service_def["name"]
@@ -130,8 +132,8 @@ def main():
                 hours_back=hours_back,
                 max_per_cycle=max_per_cycle,
             )
-            total_updated     += updated
-            total_skipped     += skipped
+            total_updated += updated
+            total_skipped += skipped
             total_not_in_soar += not_in_soar
 
             # Short-circuit: if dedup lookup isn't supported on this SOAR build,
@@ -210,8 +212,8 @@ def _refresh_service(
         f"[{service_name}] Refresh window {gte.isoformat()} → {lte.isoformat()}"
     )
 
-    updated_count     = 0
-    skipped_count     = 0
+    updated_count = 0
+    skipped_count = 0
     not_in_soar_count = 0
 
     for batch in manager.iter_alerts(
@@ -233,7 +235,7 @@ def _refresh_service(
 
             case_id, alert_obj = existing
             raw_updated = raw_alert.get("updated_at", "")
-            last_sync   = (alert_obj.get("additional_properties") or {}).get(
+            last_sync = (alert_obj.get("additional_properties") or {}).get(
                 FIELD_LAST_SYNC_AT, ""
             )
             if _is_newer(raw_updated, last_sync):
@@ -319,7 +321,7 @@ def _is_newer(raw_updated, last_sync):
     if not raw_updated or not last_sync:
         return False
     try:
-        raw_dt  = datetime.fromisoformat(raw_updated).astimezone(timezone.utc)
+        raw_dt = datetime.fromisoformat(raw_updated).astimezone(timezone.utc)
         sync_dt = datetime.fromisoformat(last_sync).astimezone(timezone.utc)
         return raw_dt > sync_dt
     except ValueError:
@@ -356,7 +358,7 @@ def _update_existing_alert(
         return
 
     new_severity = (raw_alert.get("user_severity") or raw_alert.get("severity") or "LOW").upper()
-    new_status   = (raw_alert.get("status") or "UNREVIEWED").upper()
+    new_status = (raw_alert.get("status") or "UNREVIEWED").upper()
 
     try:
         siemplify.update_alert_additional_data(

@@ -11,28 +11,27 @@ Handles:
 """
 from __future__ import annotations
 
-import random
-import time
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import Generator, List, Optional
+import random
+from datetime import datetime, timezone
 from time import sleep
+from typing import Generator, List
 
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .constants import (
-    ENDPOINT_SERVICES,
-    ENDPOINT_ALERTS,
-    ENDPOINT_UPDATE,
-    DEFAULT_TIMEOUT,
+    DEFAULT_FETCH_STATUSES,
     DEFAULT_PAGE_SIZE,
+    DEFAULT_TIMEOUT,
+    ENDPOINT_ALERTS,
+    ENDPOINT_SERVICES,
+    ENDPOINT_UPDATE,
     MAX_RETRIES,
+    PING_TIMEOUT,
     RETRY_BACKOFF_BASE,
     RETRY_STATUS_CODES,
-    DEFAULT_FETCH_STATUSES,
-    PING_TIMEOUT,
 )
 
 logger = logging.getLogger("CybleManager")
@@ -96,10 +95,10 @@ class CybleManager:
         if not base_url or not base_url.strip():
             raise CybleAPIError("Base URL must not be empty.")
 
-        self.api_key   = api_key.strip()
-        self.base_url  = base_url.rstrip("/")
+        self.api_key = api_key.strip()
+        self.base_url = base_url.rstrip("/")
         self.verify_ssl = verify_ssl
-        self.timeout   = timeout
+        self.timeout = timeout
         self.page_size = page_size
         self.sleep_func = sleep_func
 
@@ -148,7 +147,7 @@ class CybleManager:
         Does NOT retry on:
           - 400, 401, 403, 404, 422 (client errors — retrying won't help)
         """
-        url     = f"{self.base_url}{endpoint}"
+        url = f"{self.base_url}{endpoint}"
         timeout = timeout_override or self.timeout
         last_exc = None
 
@@ -253,7 +252,7 @@ class CybleManager:
     @staticmethod
     def _backoff(attempt: int, sleep_func: callable = sleep) -> None:
         """Exponential backoff with ±30% jitter."""
-        base  = RETRY_BACKOFF_BASE ** attempt
+        base = RETRY_BACKOFF_BASE ** attempt
         sleep_time = base * random.uniform(0.7, 1.3)
         logger.debug("Backoff: sleeping %.2fs (attempt %d)", sleep_time, attempt)
         sleep_func(sleep_time)
@@ -277,7 +276,7 @@ class CybleManager:
           - Empty list → returns [] (caller decides whether to warn/skip)
           - allowAlerts=False services → filtered out
         """
-        body     = self._request("GET", ENDPOINT_SERVICES)
+        body = self._request("GET", ENDPOINT_SERVICES)
         services = body.get("data", [])
 
         if not services:
@@ -326,8 +325,8 @@ class CybleManager:
         gte_str = gte.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
         lte_str = lte.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
-        skip      = 0
-        yielded   = 0
+        skip = 0
+        yielded = 0
 
         while True:
             if max_total and yielded >= max_total:
@@ -335,7 +334,7 @@ class CybleManager:
                 break
 
             remaining = (max_total - yielded) if max_total else self.page_size
-            take      = min(self.page_size, remaining)
+            take = min(self.page_size, remaining)
 
             payload = {
                 "filters": {
@@ -352,12 +351,12 @@ class CybleManager:
                 "orderBy":       [{"created_at": "asc"}],
                 "skip":          skip,
                 "take":          take,
-                "countOnly":     False,
-                "taggedAlert":   False,
+                "countOnly": False,
+                "taggedAlert": False,
                 "withDataMessage": True,
             }
 
-            body  = self._request("POST", ENDPOINT_ALERTS, payload=payload)
+            body = self._request("POST", ENDPOINT_ALERTS, payload=payload)
             batch = body.get("data", [])
 
             if not batch:
@@ -372,12 +371,12 @@ class CybleManager:
                 if len(batch) > remaining_quota:
                     batch = batch[:remaining_quota]
 
-            actual     = len(batch)
+            actual = len(batch)
             is_partial = actual < take  # true when this is the last real page
 
             yield batch
             yielded += actual
-            skip    += actual
+            skip += actual
 
             if is_partial:
                 logger.debug(
@@ -416,8 +415,8 @@ class CybleManager:
             "orderBy":       [{"created_at": "asc"}],
             "skip":          0,
             "take":          1,
-            "countOnly":     True,
-            "taggedAlert":   False,
+            "countOnly": True,
+            "taggedAlert": False,
             "withDataMessage": True,
         }
         body = self._request("POST", ENDPOINT_ALERTS, payload=payload)
@@ -470,9 +469,9 @@ class CybleManager:
         BATCH_SIZE = 100
         results = []
         for batch_start in range(0, len(validated), BATCH_SIZE):
-            batch   = validated[batch_start: batch_start + BATCH_SIZE]
+            batch = validated[batch_start: batch_start + BATCH_SIZE]
             payload = {"alerts": batch}
-            result  = self._request("PUT", ENDPOINT_UPDATE, payload=payload)
+            result = self._request("PUT", ENDPOINT_UPDATE, payload=payload)
             results.append(result)
             logger.info("Updated %d alerts (batch starting at %d).", len(batch), batch_start)
 

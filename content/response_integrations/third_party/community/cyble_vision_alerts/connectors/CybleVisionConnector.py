@@ -25,38 +25,38 @@ Deduplication:
 """
 from __future__ import annotations
 
-import sys
 import json
-from datetime import datetime, timezone, timedelta
+import sys
+from datetime import datetime, timedelta, timezone
 
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.CybleManager import CybleManager, CybleAPIError, CybleAuthError
-from ..core.CybleAlertMapper import CybleAlertMapper
 from ..core.constants import (
+    DEFAULT_BASE_URL,
+    DEFAULT_HOURS_BACK,
+    DEFAULT_MAX_PER_CYCLE,
+    DEFAULT_TIMEOUT,
+    FIELD_ALERT_ID,
+    FIELD_LAST_SYNC_AT,
+    FIELD_SERVICE,
+    HIGH_PRIORITY_SERVICES,
     INTEGRATION_NAME,
     PARAM_API_KEY,
     PARAM_BASE_URL,
-    PARAM_VERIFY_SSL,
-    PARAM_TIMEOUT,
+    PARAM_HOURS_BACK,
     PARAM_MAX_PER_CYCLE,
     PARAM_SERVICES,
-    PARAM_HOURS_BACK,
-    DEFAULT_MAX_PER_CYCLE,
-    DEFAULT_HOURS_BACK,
-    DEFAULT_TIMEOUT,
-    DEFAULT_BASE_URL,
+    PARAM_TIMEOUT,
+    PARAM_VERIFY_SSL,
     STATE_KEY_LAST_RUN_PREFIX,
-    FIELD_ALERT_ID,
-    FIELD_SERVICE,
-    FIELD_LAST_SYNC_AT,
-    HIGH_PRIORITY_SERVICES,
 )
+from ..core.CybleAlertMapper import CybleAlertMapper
+from ..core.CybleManager import CybleAPIError, CybleAuthError, CybleManager
 
 CONNECTOR_NAME = "Cyble Vision Alerts Connector"
-VENDOR  = "Cyble"
+VENDOR = "Cyble"
 PRODUCT = "Cyble Vision Alerts"
 
 
@@ -87,8 +87,8 @@ def main(is_test_run):
         )
 
     # ── Parameters ────────────────────────────────────────────────────────────
-    api_key  = siemplify.extract_connector_param(param_name=PARAM_API_KEY,    is_mandatory=True)
-    base_url = siemplify.extract_connector_param(param_name=PARAM_BASE_URL,   default_value=DEFAULT_BASE_URL)
+    api_key = siemplify.extract_connector_param(param_name=PARAM_API_KEY, is_mandatory=True)
+    base_url = siemplify.extract_connector_param(param_name=PARAM_BASE_URL, default_value=DEFAULT_BASE_URL)
     verify_ssl = siemplify.extract_connector_param(
         param_name=PARAM_VERIFY_SSL, input_type=bool, default_value=True
     )
@@ -333,16 +333,16 @@ def _build_alert_info(mapped: dict, raw_alert: dict, service_name: str) -> Alert
     cyble_alert_id = extensions.get(FIELD_ALERT_ID, "")
 
     alert_info = AlertInfo()
-    alert_info.display_id    = cyble_alert_id
-    alert_info.ticket_id     = cyble_alert_id
-    alert_info.name          = mapped.get("name", f"Cyble {service_name} alert")
+    alert_info.display_id = cyble_alert_id
+    alert_info.ticket_id = cyble_alert_id
+    alert_info.name = mapped.get("name", f"Cyble {service_name} alert")
     alert_info.rule_generator = mapped.get("rule_generator", f"Cyble Vision Alerts - {service_name}")
-    alert_info.start_time    = mapped.get("start_time") or 0
-    alert_info.end_time      = mapped.get("end_time") or alert_info.start_time
-    alert_info.priority      = _SECOPS_SEVERITY_TO_PRIORITY.get(mapped.get("severity", 0), 40)
+    alert_info.start_time = mapped.get("start_time") or 0
+    alert_info.end_time = mapped.get("end_time") or alert_info.start_time
+    alert_info.priority = _SECOPS_SEVERITY_TO_PRIORITY.get(mapped.get("severity", 0), 40)
     alert_info.device_vendor = VENDOR
     alert_info.device_product = PRODUCT
-    alert_info.environment   = "Default Environment"
+    alert_info.environment = "Default Environment"
 
     # SecOps SOAR's UI labels `priority` as "Severity" in the alert details panel.
     # Risk Score is a separate, optional float; populate from Cyble's `risk_score`

@@ -21,33 +21,37 @@ On failure:
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.CybleManager import (
-    CybleManager, CybleAuthError, CybleAPIError,
-    CybleNotFoundError, CybleValidationError,
-)
-from ..core.CybleAlertMapper import CybleAlertMapper
 from ..core.constants import (
+    CYBLE_STATUSES,
+    DEFAULT_BASE_URL,
+    DEFAULT_TIMEOUT,
+    FIELD_ALERT_ID,
+    FIELD_LAST_SYNC_AT,
+    FIELD_SERVICE,
+    FIELD_STATUS,
     INTEGRATION_NAME,
     PARAM_API_KEY,
     PARAM_BASE_URL,
-    PARAM_VERIFY_SSL,
     PARAM_TIMEOUT,
-    DEFAULT_BASE_URL,
-    DEFAULT_TIMEOUT,
-    CYBLE_STATUSES,
-    FIELD_ALERT_ID,
-    FIELD_SERVICE,
-    FIELD_STATUS,
-    FIELD_LAST_SYNC_AT,
+    PARAM_VERIFY_SSL,
 )
-from datetime import datetime, timezone
+from ..core.CybleAlertMapper import CybleAlertMapper
+from ..core.CybleManager import (
+    CybleAPIError,
+    CybleAuthError,
+    CybleManager,
+    CybleNotFoundError,
+    CybleValidationError,
+)
 
-SCRIPT_NAME     = "UpdateAlertStatus"
-PARAM_ALERT_ID  = "Cyble Alert ID"
-PARAM_SERVICE   = "Cyble Service"
+SCRIPT_NAME = "UpdateAlertStatus"
+PARAM_ALERT_ID = "Cyble Alert ID"
+PARAM_SERVICE = "Cyble Service"
 PARAM_NEW_STATUS = "New Status"
 
 
@@ -57,10 +61,10 @@ def main():
     siemplify.script_name = SCRIPT_NAME
 
     # ── Load integration config ───────────────────────────────────────────────
-    api_key    = siemplify.extract_configuration_param(
+    api_key = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_API_KEY, is_mandatory=True
     )
-    base_url   = siemplify.extract_configuration_param(
+    base_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_BASE_URL,
         default_value=DEFAULT_BASE_URL
     )
@@ -68,7 +72,7 @@ def main():
         provider_name=INTEGRATION_NAME, param_name=PARAM_VERIFY_SSL,
         input_type=bool, default_value=True
     )
-    timeout    = siemplify.extract_configuration_param(
+    timeout = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_TIMEOUT,
         input_type=int, default_value=DEFAULT_TIMEOUT
     )

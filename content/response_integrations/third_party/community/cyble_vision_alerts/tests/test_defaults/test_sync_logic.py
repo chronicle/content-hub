@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from ...core.CybleAlertMapper import CybleAlertMapper
 from ...core.constants import FIELD_ALERT_ID
+from ...core.CybleAlertMapper import CybleAlertMapper
 from ...jobs import SyncAlertsJob
 
 

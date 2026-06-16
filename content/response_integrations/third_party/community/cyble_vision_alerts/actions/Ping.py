@@ -13,19 +13,19 @@ from __future__ import annotations
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.CybleManager import CybleManager, CybleAuthError, CybleAPIError
 from ..core.constants import (
+    DEFAULT_BASE_URL,
+    DEFAULT_TIMEOUT,
     INTEGRATION_NAME,
     PARAM_API_KEY,
     PARAM_BASE_URL,
-    PARAM_VERIFY_SSL,
     PARAM_TIMEOUT,
-    DEFAULT_BASE_URL,
-    DEFAULT_TIMEOUT,
+    PARAM_VERIFY_SSL,
 )
+from ..core.CybleManager import CybleAPIError, CybleAuthError, CybleManager
 
 SCRIPT_NAME = "Ping"
-CONNECTED_MSG    = (
+CONNECTED_MSG = (
     "Successfully connected to the Cyble Vision Alerts server with the provided "
     "connection parameters!"
 )
@@ -37,10 +37,10 @@ def main():
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
 
-    api_key    = siemplify.extract_configuration_param(
+    api_key = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_API_KEY, is_mandatory=True
     )
-    base_url   = siemplify.extract_configuration_param(
+    base_url = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_BASE_URL,
         default_value=DEFAULT_BASE_URL
     )
@@ -48,7 +48,7 @@ def main():
         provider_name=INTEGRATION_NAME, param_name=PARAM_VERIFY_SSL,
         input_type=bool, default_value=True
     )
-    timeout    = siemplify.extract_configuration_param(
+    timeout = siemplify.extract_configuration_param(
         provider_name=INTEGRATION_NAME, param_name=PARAM_TIMEOUT,
         input_type=int, default_value=DEFAULT_TIMEOUT
     )
