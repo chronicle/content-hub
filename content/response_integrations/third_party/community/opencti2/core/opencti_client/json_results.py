@@ -93,6 +93,12 @@ class ReportJSONResult(BaseObjectJSONResult):
         examples=["Report"],
     )
 
+class AttackPatternJSONResult(BaseObjectJSONResult):
+    entity_type: Literal["Attack-Pattern"] = Field(
+        description="The type of the object on OpenCTI",
+        examples=["Attack-Pattern"],
+    )
+
 class AddObjectToContainerJSONResult(BaseJSONResult):
     """Result for `AddObjectToContainer` action.
 

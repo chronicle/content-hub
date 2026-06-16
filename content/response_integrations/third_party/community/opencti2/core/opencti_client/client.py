@@ -1,5 +1,6 @@
 from typing import Literal
 
+from core.datamodels.attack_pattern import AttackPattern
 from core.datamodels.incident import Incident
 from core.datamodels.incident_response import IncidentResponse
 from core.datamodels.observable import Observable
@@ -8,6 +9,7 @@ from core.datamodels.request_for_information import RequestForInformation
 from core.datamodels.request_for_takedown import RequestForTakedown
 from core.opencti_client.json_results import (
     AddObjectToContainerJSONResult,
+    AttackPatternJSONResult,
     IncidentJSONResult,
     IncidentResponseJSONResult,
     ObservableJSONResult,
@@ -239,6 +241,28 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Report creation: {str(e)}"
+            ) from e
+
+    def create_attack_pattern(self, attack_pattern: AttackPattern) -> AttackPatternJSONResult:
+        try:
+            attack_pattern_args = attack_pattern.to_input_variables()
+            self._upsert_labels(attack_pattern_args.get("objectLabel"))
+            data = self._api_client.attack_pattern.create(**attack_pattern_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the attack pattern "
+                    "(some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Attack Pattern in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return AttackPatternJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Attack Pattern creation: {str(e)}"
             ) from e
 
     def add_object_to_container(
