@@ -3,6 +3,7 @@ from typing import Literal
 from core.datamodels.incident import Incident
 from core.datamodels.incident_response import IncidentResponse
 from core.datamodels.observable import Observable
+from core.datamodels.report import Report
 from core.datamodels.request_for_information import RequestForInformation
 from core.datamodels.request_for_takedown import RequestForTakedown
 from core.opencti_client.json_results import (
@@ -10,6 +11,7 @@ from core.opencti_client.json_results import (
     IncidentJSONResult,
     IncidentResponseJSONResult,
     ObservableJSONResult,
+    ReportJSONResult,
     RequestForInformationJSONResult,
     RequestForTakedownJSONResult,
 )
@@ -211,6 +213,32 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Observable creation: {str(e)}"
+            ) from e
+
+    def create_report(self, report: Report) -> ReportJSONResult:
+        try:
+            report_args = report.to_input_variables()
+            self._upsert_vocabulary_entries(
+                "report_types_ov", *(report_args.get("report_types") or [])
+            )
+            labels = report_args.get("objectLabel")
+            self._upsert_labels(labels)
+            data = self._api_client.report.create(**report_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the "
+                    "report (some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Report in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return ReportJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Report creation: {str(e)}"
             ) from e
 
     def add_object_to_container(

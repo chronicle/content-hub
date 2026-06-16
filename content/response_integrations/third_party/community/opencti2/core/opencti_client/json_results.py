@@ -87,6 +87,12 @@ class ObservableJSONResult(BaseObjectJSONResult):
     )
 
 
+class ReportJSONResult(BaseObjectJSONResult):
+    entity_type: Literal["Report"] = Field(
+        description="The type of the object on OpenCTI",
+        examples=["Report"],
+    )
+
 class AddObjectToContainerJSONResult(BaseJSONResult):
     """Result for `AddObjectToContainer` action.
 
