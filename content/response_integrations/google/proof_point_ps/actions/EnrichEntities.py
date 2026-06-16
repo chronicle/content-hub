@@ -1,111 +1,141 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
-from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import dict_to_flat, add_prefix_to_dict, get_domain_from_entity
-from soar_sdk.SiemplifyDataModel import EntityTypes
-from ..core.ProofPointPSManager import ProofPointPSManager
+
+import contextlib
 import re
+from typing import TYPE_CHECKING
+
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import add_prefix_to_dict, dict_to_flat, get_domain_from_entity
+from TIPCommon.base.action import EntityTypesEnum
+
+from ..core.base_action import BaseProofPointPSAction
+from ..core.constants import ENRICH_ACTION_NAME
+
+if TYPE_CHECKING:
+    from typing import NoReturn
+
+    from TIPCommon.types import Entity
 
 
-PROVIDER = "ProofPointPS"
-ACTION_NAME = "ProofPoint - Enriched Entities"
+def is_valid_email(email: str) -> bool:
+    """Validate if a string is a valid email format.
 
+    Args:
+        email: The string to validate.
 
-def is_valid_email(email):
+    Returns:
+        True if valid email, False otherwise.
+
+    """
     return (
         re.match(
-            "^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$",
+            r"^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4})$",
             email,
+            re.IGNORECASE,
         )
         is not None
     )
 
 
-@output_handler
-def main():
-    siemplify = SiemplifyAction()
-    siemplify.action_definition_name = ACTION_NAME
-    conf = siemplify.get_configuration(PROVIDER)
-    verify_ssl = conf.get("Verify SSL").lower() == "true"
-    proofpoint_manager = ProofPointPSManager(
-        server_address=conf.get("Api Root"),
-        username=conf.get("Username"),
-        password=conf.get("Password"),
-        verify_ssl=verify_ssl,
-    )
+class EnrichEntities(BaseProofPointPSAction):
+    """Enrich entities with ProofPoint PS integration."""
 
-    entities_to_enrich = []
+    def __init__(self) -> None:
+        super().__init__(ENRICH_ACTION_NAME)
+        self.successful_entities: list[Entity] = []
+        self.failed_entities: list[Entity] = []
+        self.json_results: dict[str, list[dict]] = {}
 
-    for entity in siemplify.target_entities:
-        try:
-            records = []
+    def _get_entity_types(self) -> list[EntityTypesEnum]:
+        """Get the supported entity types for this action.
 
-            if entity.entity_type == EntityTypes.HOSTNAME:
-                records.extend(
-                    proofpoint_manager.search(
-                        sender=f"@{get_domain_from_entity(entity)}"
+        Returns:
+            A list of EntityTypesEnum.
+
+        """
+        return [EntityTypesEnum.HOST_NAME, EntityTypesEnum.USER]
+
+    def _perform_action(self, entity: Entity | None) -> None:
+        """Enrich a single host/user entity from quarantined records.
+
+        Args:
+            entity: The entity to enrich.
+
+        """
+        if entity is None:
+            return
+
+        folders = ["Quarantine", "Spam", "Virus"]
+        records = []
+
+        if entity.entity_type == EntityTypes.HOSTNAME:
+            domain = get_domain_from_entity(entity)
+            for folder in folders:
+                with contextlib.suppress(Exception):
+                    records.extend(
+                        self.api_client.search(sender=f"@{domain}", folder=folder)
                     )
-                )
-                records.extend(
-                    proofpoint_manager.search(
-                        recipient=f"@{get_domain_from_entity(entity)}"
+                with contextlib.suppress(Exception):
+                    records.extend(
+                        self.api_client.search(recipient=f"@{domain}", folder=folder)
                     )
-                )
 
-            elif entity.entity_type == EntityTypes.USER and is_valid_email(
-                entity.identifier
-            ):
-                records.extend(proofpoint_manager.search(sender=entity.identifier))
-                records.extend(proofpoint_manager.search(recipient=entity.identifier))
+        elif entity.entity_type == EntityTypes.USER and is_valid_email(
+            entity.identifier
+        ):
+            for folder in folders:
+                with contextlib.suppress(Exception):
+                    records.extend(
+                        self.api_client.search(sender=entity.identifier, folder=folder)
+                    )
+                with contextlib.suppress(Exception):
+                    records.extend(
+                        self.api_client.search(
+                            recipient=entity.identifier, folder=folder
+                        )
+                    )
 
-            if records:
-                for index, record in enumerate(records):
-                    # Delete from enrichment the unuseful data
-                    if "dlpviolation" in record:
-                        del record["dlpviolation"]
+        if records:
+            for index, record_obj in enumerate(records):
+                record = record_obj.to_json()
+                if "dlpviolation" in record:
+                    del record["dlpviolation"]
 
-                    if "messagestatus" in record:
-                        del record["messagestatus"]
+                if "messagestatus" in record:
+                    del record["messagestatus"]
 
-                    flat_record = dict_to_flat(record)
-                    flat_record = add_prefix_to_dict(flat_record, index)
-                    flat_record = add_prefix_to_dict(flat_record, "ProofPointPS")
-                    entity.additional_properties.update(flat_record)
+                flat_record = dict_to_flat(record)
+                flat_record = add_prefix_to_dict(flat_record, index)
+                flat_record = add_prefix_to_dict(flat_record, "ProofPointPS")
+                entity.additional_properties.update(flat_record)
 
-                entities_to_enrich.append(entity)
+            self.json_results[entity.identifier] = [r.to_json() for r in records]
+            self.successful_entities.append(entity)
+            self.entities_to_update.append(entity)
+        else:
+            self.failed_entities.append(entity)
 
-        except Exception as e:
-            # An error occurred - skip entity and continue
-            siemplify.LOGGER.error(
-                f"An error occurred on entity: {entity.identifier}.\n{str(e)}."
+    def _finalize_action_on_success(self) -> None:
+        """Finalizes action execution by preparing output messages."""
+        if self.successful_entities:
+            successful_names = ", ".join(e.identifier for e in self.successful_entities)
+            self.output_message = (
+                f"Successfully enriched the following entities using "
+                f"ThreatConnect: {successful_names}"
             )
-            siemplify.LOGGER.exception(e)
+            if self.failed_entities:
+                failed_names = ", ".join(e.identifier for e in self.failed_entities)
+                self.output_message += (
+                    f"\nAction wasn't able to enrich the following entities "
+                    f"using ThreatConnect: {failed_names}"
+                )
+        else:
+            self.output_message = "None of the provided entities were enriched."
+            self.result_value = False
 
-    if entities_to_enrich:
-        entities_names = [entity.identifier for entity in entities_to_enrich]
-        output_message = "The following entities were enriched:\n" + "\n".join(
-            entities_names
-        )
-        siemplify.update_entities(entities_to_enrich)
 
-    else:
-        output_message = "No entities were enriched."
-
-    siemplify.end(output_message, "true")
+def main() -> NoReturn:
+    EnrichEntities().run()
 
 
 if __name__ == "__main__":
