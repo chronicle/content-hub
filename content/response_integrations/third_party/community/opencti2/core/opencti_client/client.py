@@ -2,6 +2,7 @@ from typing import Literal
 
 from core.datamodels.attack_pattern import AttackPattern
 from core.datamodels.campaign import Campaign
+from core.datamodels.grouping import Grouping
 from core.datamodels.incident import Incident
 from core.datamodels.incident_response import IncidentResponse
 from core.datamodels.observable import Observable
@@ -12,6 +13,7 @@ from core.opencti_client.json_results import (
     AddObjectToContainerJSONResult,
     AttackPatternJSONResult,
     CampaignJSONResult,
+    GroupingJSONResult,
     IncidentJSONResult,
     IncidentResponseJSONResult,
     ObservableJSONResult,
@@ -243,6 +245,32 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Report creation: {str(e)}"
+            ) from e
+
+    def create_grouping(self, grouping: Grouping) -> GroupingJSONResult:
+        try:
+            grouping_args = grouping.to_input_variables()
+            context = grouping_args.get("context")
+            self._upsert_vocabulary_entries("grouping_context_ov", context)
+
+            labels = grouping_args.get("objectLabel")
+            self._upsert_labels(labels)
+            data = self._api_client.grouping.create(**grouping_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the "
+                    "grouping (some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Grouping in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return GroupingJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Grouping creation: {str(e)}"
             ) from e
 
     def create_campaign(self, campaign: Campaign) -> CampaignJSONResult:
