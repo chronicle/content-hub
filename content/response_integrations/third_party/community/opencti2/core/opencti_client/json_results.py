@@ -14,6 +14,14 @@ class BaseJSONResult(BaseModel, ABC):
         validate_default=True,
     )
 
+    def json(self) -> dict[str, Any]:
+        """
+        Serialize the model to a JSON-compatible dictionary.
+        """
+        return self.model_dump(mode="json")
+
+
+class BaseObjectJSONResult(BaseJSONResult):
     id: str = Field(
         description="The unique identifier of the object on OpenCTI",
         examples=["20f7568f-e6f4-4bcc-8cc8-d6d5ba366622"],
@@ -42,36 +50,38 @@ class BaseJSONResult(BaseModel, ABC):
         examples=["bd0f37dc-27a8-4ead-aa7d-1d63082a9318"],
     )
 
-    def json(self) -> dict[str, Any]:
-        """
-        Serialize the model to a JSON-compatible dictionary.
-        """
-        return self.model_dump(mode="json")
 
-
-class IncidentJSONResult(BaseJSONResult):
+class IncidentJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Incident"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Incident"],
     )
 
 
-class IncidentResponseJSONResult(BaseJSONResult):
+class IncidentResponseJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Case-Incident"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Case-Incident"],
     )
 
 
-class RequestForInformationJSONResult(BaseJSONResult):
+class RequestForInformationJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Case-Rfi"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Case-Rfi"],
     )
 
 
-class RequestForTakedownJSONResult(BaseJSONResult):
+class RequestForTakedownJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Case-Rft"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Case-Rft"],
+    )
+
+
+class ObservableJSONResult(BaseObjectJSONResult):
+    # Entity type can vary for observables depending on API projection.
+    entity_type: str = Field(
+        description="The type of the observable object on OpenCTI",
+        examples=["Stix-Cyber-Observable"],
     )

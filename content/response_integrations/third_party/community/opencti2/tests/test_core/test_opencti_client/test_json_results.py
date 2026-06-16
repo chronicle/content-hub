@@ -1,8 +1,10 @@
 import pytest
 from core.opencti_client.json_results import (
     BaseJSONResult,
+    BaseObjectJSONResult,
     IncidentJSONResult,
     IncidentResponseJSONResult,
+    ObservableJSONResult,
     RequestForInformationJSONResult,
     RequestForTakedownJSONResult,
 )
@@ -19,9 +21,12 @@ def fake_api_response():
     }
 
 
-class TestBaseJSONResultFields:
+class TestBaseObjectJSONResultFields:
+    def test_class_inherits_from_base(self):
+        assert issubclass(BaseObjectJSONResult, BaseJSONResult)
+
     def test_instance_has_expected_fields(self, fake_api_response):
-        result = IncidentJSONResult(**fake_api_response)
+        result = BaseObjectJSONResult(**fake_api_response)
 
         assert result.id == fake_api_response["id"]
         assert result.standard_id == fake_api_response["standard_id"]
@@ -31,26 +36,10 @@ class TestBaseJSONResultFields:
 
     def test_extra_fields_are_ignored(self, fake_api_response):
         data = {**fake_api_response, "unexpected_field": "ignored"}
-        result = IncidentJSONResult(**data)
+        result = BaseObjectJSONResult(**data)
 
         assert not hasattr(result, "unexpected_field")
 
-
-class TestBaseJSONResultChildClasses:
-    def test_incident_inherits_from_base(self):
-        assert issubclass(IncidentJSONResult, BaseJSONResult)
-
-    def test_rfi_inherits_from_base(self):
-        assert issubclass(RequestForInformationJSONResult, BaseJSONResult)
-
-    def test_incident_response_inherits_from_base(self):
-        assert issubclass(IncidentResponseJSONResult, BaseJSONResult)
-
-    def test_rft_inherits_from_base(self):
-        assert issubclass(RequestForTakedownJSONResult, BaseJSONResult)
-
-
-class TestBaseJSONResultJson:
     def test_json_serialization(self, fake_api_response):
         result = IncidentJSONResult(**fake_api_response)
         serialized = result.json()
@@ -60,3 +49,20 @@ class TestBaseJSONResultJson:
         assert serialized["entity_type"] == fake_api_response["entity_type"]
         assert serialized["parent_types"] == fake_api_response["parent_types"]
         assert serialized["created_by_id"] is None
+
+
+class TestBaseObjectJSONResultChildClasses:
+    def test_incident_inherits_from_base(self):
+        assert issubclass(IncidentJSONResult, BaseObjectJSONResult)
+
+    def test_rfi_inherits_from_base(self):
+        assert issubclass(RequestForInformationJSONResult, BaseObjectJSONResult)
+
+    def test_incident_response_inherits_from_base(self):
+        assert issubclass(IncidentResponseJSONResult, BaseObjectJSONResult)
+
+    def test_rft_inherits_from_base(self):
+        assert issubclass(RequestForTakedownJSONResult, BaseObjectJSONResult)
+
+    def test_observable_inherits_from_base(self):
+        assert issubclass(ObservableJSONResult, BaseObjectJSONResult)

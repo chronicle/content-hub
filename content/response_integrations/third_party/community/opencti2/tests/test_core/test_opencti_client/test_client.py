@@ -3,12 +3,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 from core.datamodels.incident import Incident
 from core.datamodels.incident_response import IncidentResponse
+from core.datamodels.observable import Observable
 from core.datamodels.request_for_information import RequestForInformation
 from core.datamodels.request_for_takedown import RequestForTakedown
 from core.opencti_client.client import OpenCTIClient, OpenCTIClientError
 from core.opencti_client.json_results import (
     IncidentJSONResult,
     IncidentResponseJSONResult,
+    ObservableJSONResult,
     RequestForInformationJSONResult,
     RequestForTakedownJSONResult,
 )
@@ -59,6 +61,17 @@ def fake_rft_api_response():
 
 
 @pytest.fixture
+def fake_observable_api_response():
+    return {
+        "id": "f0a4d1e0-02ad-4de4-af73-2f54aa07fdba",
+        "standard_id": "domain-name--f5d26a47-6f1c-5d61-a24f-9f6f8f5fbf36",
+        "entity_type": "Stix-Cyber-Observable",
+        "parent_types": ["Basic-Object", "Stix-Object", "Stix-Cyber-Observable"],
+        "createdById": None,
+    }
+
+
+@pytest.fixture
 def mock_pycti_client():
     """Return a MagicMock replacing pycti.OpenCTIApiClient."""
     with patch("core.opencti_client.client.OpenCTIApiClient") as mock_cls:
@@ -93,6 +106,11 @@ def incident_response():
 @pytest.fixture
 def request_for_takedown():
     return RequestForTakedown(name="Test RFT")
+
+
+@pytest.fixture
+def observable():
+    return Observable(type="Domain-Name", value="google.com")
 
 
 class TestOpenCTIClientInit:
@@ -291,6 +309,50 @@ class TestCreateRequestForTakedown:
             OpenCTIClientError, match="Failed to create Request for Takedown"
         ):
             client.create_request_for_takedown(request_for_takedown)
+
+
+class TestCreateObservable:
+    def test_returns_observable_json_result(
+        self, client, mock_pycti_client, observable, fake_observable_api_response
+    ):
+        mock_pycti_client.stix_cyber_observable.create.return_value = (
+            fake_observable_api_response
+        )
+
+        with patch.object(
+            client, "_upsert_labels", wraps=client._upsert_labels
+        ) as mock_upsert_labels:
+            result = client.create_observable(observable)
+
+        mock_pycti_client.stix_cyber_observable.create.assert_called_once_with(
+            **observable.to_input_variables()
+        )
+        mock_upsert_labels.assert_called_once_with(
+            observable.to_input_variables().get("objectLabel")
+        )
+        assert isinstance(result, ObservableJSONResult)
+
+    def test_raises_when_api_returns_none(self, client, mock_pycti_client, observable):
+        mock_pycti_client.stix_cyber_observable.create.return_value = None
+
+        with pytest.raises(OpenCTIClientError, match="Failed to create Observable"):
+            client.create_observable(observable)
+
+    def test_raises_on_invalid_response(self, client, mock_pycti_client, observable):
+        mock_pycti_client.stix_cyber_observable.create.return_value = {"id": "only"}
+
+        with pytest.raises(
+            OpenCTIClientError, match="Unexpected OpenCTI response for Observable"
+        ):
+            client.create_observable(observable)
+
+    def test_raises_on_api_exception(self, client, mock_pycti_client, observable):
+        mock_pycti_client.stix_cyber_observable.create.side_effect = RuntimeError(
+            "network error"
+        )
+
+        with pytest.raises(OpenCTIClientError, match="Failed to create Observable"):
+            client.create_observable(observable)
 
 
 class TestUpsertLabels:
