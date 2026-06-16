@@ -1,7 +1,20 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import email
-import os
 import pathlib
 import re
 import shutil
@@ -14,9 +27,10 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import DOWNLOAD_ACTION_NAME
+from ..core.exceptions import ProofPointPSError
 
 if TYPE_CHECKING:
-    from typing import Never, NoReturn
+    from typing import Never
 
 
 class DownloadQuarantinedEmail(BaseProofPointPSAction):
@@ -77,13 +91,13 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
                 temp_dir = tempfile.mkdtemp()
                 safe_subject = self._get_safe_subject(raw_content)
                 file_name = f"{guid}-{safe_subject}.eml"
-                temp_file_path = os.path.join(temp_dir, file_name)
+                temp_file_path = pathlib.Path(temp_dir) / file_name
 
-                pathlib.Path(temp_file_path).write_bytes(raw_content)
+                temp_file_path.write_bytes(raw_content)
 
                 try:
                     self.soar_action.add_attachment(
-                        file_path=temp_file_path,
+                        file_path=str(temp_file_path),
                         description=(
                             f"Quarantined email raw content for Message GUID {guid}."
                         ),
@@ -102,7 +116,7 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
                 f"Failed to download any quarantined emails. Errors: "
                 f"{'; '.join(f'{g}: {err}' for g, err in failed_guids)}"
             )
-            raise Exception(
+            raise ProofPointPSError(
                 msg
             )
 
@@ -116,10 +130,13 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
             return
 
         self.result_value = True
-        self.output_message = f"Successfully downloaded and attached quarantined email raw content for Message GUID(s): {', '.join(successful_guids)}."
+        self.output_message = (
+            f"Successfully downloaded and attached quarantined email raw content "
+            f"for Message GUID(s): {', '.join(successful_guids)}."
+        )
 
 
-def main() -> NoReturn:
+def main() -> None:
     DownloadQuarantinedEmail().run()
 
 

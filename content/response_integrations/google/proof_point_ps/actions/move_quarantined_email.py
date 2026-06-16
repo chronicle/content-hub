@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -7,18 +21,18 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.api_utils import calculate_time_range
 from ..core.base_action import BaseProofPointPSAction
-from ..core.constants import RESUBMIT_ACTION_NAME, TIME_FORMAT
+from ..core.constants import MOVE_ACTION_NAME, TIME_FORMAT
 from ..core.exceptions import InvalidParameterError
 
 if TYPE_CHECKING:
-    from typing import Never, NoReturn
+    from typing import Never
 
 
-class ResubmitQuarantinedEmail(BaseProofPointPSAction):
-    """Resubmit Quarantined Email action."""
+class MoveQuarantinedEmail(BaseProofPointPSAction):
+    """Move Quarantined Email action."""
 
     def __init__(self) -> None:
-        super().__init__(RESUBMIT_ACTION_NAME)
+        super().__init__(MOVE_ACTION_NAME)
 
     def _extract_action_parameters(self) -> None:
         """Extracts action-specific parameters."""
@@ -53,9 +67,15 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
             is_mandatory=True,
             print_value=True,
         )
+        self.params.target_folder = extract_action_param(
+            self.soar_action,
+            param_name="Target Folder Name",
+            is_mandatory=True,
+            print_value=True,
+        )
 
     def _perform_action(self, _: Never) -> None:
-        """Execute the resubmit operation.
+        """Execute the move operation.
 
         Args:
             _: Never input.
@@ -115,9 +135,10 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
 
             try:
                 self.api_client.execute_quarantine_action(
-                    action="resubmit",
+                    action="move",
                     folder=self.params.folder,
                     localguid=guid,
+                    targetfolder=self.params.target_folder,
                 )
                 successful_guids.append(guid)
             except Exception as e:
@@ -125,7 +146,7 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
 
         if not successful_guids:
             msg = (
-                f"Failed to resubmit any quarantined emails. Errors: "
+                f"Failed to move any quarantined emails. Errors: "
                 f"{'; '.join(f'{g}: {err}' for g, err in failed_guids)}"
             )
             raise Exception(
@@ -134,10 +155,11 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
 
         if failed_guids:
             self.result_value = False
-            output_msg = "Failed to resubmit some quarantined emails."
+            output_msg = "Failed to move some quarantined emails."
             if successful_guids:
                 output_msg += (
-                    f" Successfully resubmitted: {', '.join(successful_guids)}."
+                    f" Successfully moved: {', '.join(successful_guids)} "
+                    f"to {self.params.target_folder}."
                 )
             output_msg += f" Failed for: {', '.join(f'{g} (Error: {err})' for g, err in failed_guids)}"
             self.output_message = output_msg
@@ -145,13 +167,13 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
 
         self.result_value = True
         self.output_message = (
-            f"Successfully resubmitted quarantined email(s): "
-            f"{', '.join(successful_guids)}"
+            f"Successfully moved quarantined email(s): "
+            f"{', '.join(successful_guids)} to {self.params.target_folder}."
         )
 
 
-def main() -> NoReturn:
-    ResubmitQuarantinedEmail().run()
+def main() -> None:
+    MoveQuarantinedEmail().run()
 
 
 if __name__ == "__main__":

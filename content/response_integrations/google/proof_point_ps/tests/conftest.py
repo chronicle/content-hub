@@ -12,14 +12,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+from collections.abc import Generator
+
 import pytest
 import requests
+from integration_testing.common import use_live_api
+from soar_sdk.SiemplifyBase import SiemplifyBase
+from TIPCommon.base.utils import CreateSession
+
+from proof_point_ps.tests.core.product import ProofPointPSProduct
+from proof_point_ps.tests.core.session import ProofPointPSSession
+
 pytest_plugins = ("integration_testing.conftest",)
 
+
+@pytest.fixture
+def proofpoint() -> ProofPointPSProduct:
+    """Fixture for mock product database."""
+    return ProofPointPSProduct()
+
+
 @pytest.fixture(autouse=True)
-def script_session(monkeypatch):
-    from TIPCommon.base.utils import CreateSession
-    import requests
-    session = requests.Session()
-    monkeypatch.setattr(CreateSession, 'create_session', lambda *args, **kwargs: session)
+def script_session(
+    monkeypatch: pytest.MonkeyPatch,
+    proofpoint: ProofPointPSProduct,
+) -> ProofPointPSSession:
+    """Mock Proofpoint scripts' session and return the mock session object."""
+    session = ProofPointPSSession(proofpoint)
+
+    if not use_live_api():
+        class MockSessionClass(requests.Session):
+            def __new__(cls, *args, **kwargs):
+                return session
+
+        monkeypatch.setattr(CreateSession, "create_session", lambda *_: session)
+        monkeypatch.setattr("requests.Session", MockSessionClass)
+
     return session
+
+
+@pytest.fixture(autouse=True)
+def sdk_session(
+    monkeypatch: pytest.MonkeyPatch,
+    proofpoint: ProofPointPSProduct,
+) -> Generator[ProofPointPSSession, None, None]:
+    """Mock the SDK session and return the mock session object."""
+    session = ProofPointPSSession(proofpoint)
+
+    if not use_live_api():
+        monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)
+
+    yield session

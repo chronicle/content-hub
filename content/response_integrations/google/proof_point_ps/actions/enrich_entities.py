@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import contextlib
@@ -12,7 +26,6 @@ from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import ENRICH_ACTION_NAME
 
 if TYPE_CHECKING:
-    from typing import NoReturn
 
     from TIPCommon.types import Entity
 
@@ -121,20 +134,20 @@ class EnrichEntities(BaseProofPointPSAction):
             successful_names = ", ".join(e.identifier for e in self.successful_entities)
             self.output_message = (
                 f"Successfully enriched the following entities using "
-                f"ThreatConnect: {successful_names}"
+                f"Proofpoint Email Protection: {successful_names}"
             )
             if self.failed_entities:
                 failed_names = ", ".join(e.identifier for e in self.failed_entities)
                 self.output_message += (
                     f"\nAction wasn't able to enrich the following entities "
-                    f"using ThreatConnect: {failed_names}"
+                    f"using Proofpoint Email Protection: {failed_names}"
                 )
         else:
             self.output_message = "None of the provided entities were enriched."
             self.result_value = False
 
 
-def main() -> NoReturn:
+def main() -> None:
     EnrichEntities().run()
 
 

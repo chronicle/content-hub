@@ -31,20 +31,18 @@ class DataParser:
             A QuarantineRecord object.
 
         """
+        size_val = data.get("size")
+        spamscore_val = data.get("spamscore")
         return QuarantineRecord(
             processingserver=data.get("processingserver"),
             date=data.get("date"),
             subject=data.get("subject"),
             messageid=data.get("messageid"),
             folder=data.get("folder"),
-            size=(int(data.get("size")) if data.get("size") is not None else None),
+            size=int(size_val) if size_val is not None else None,
             rcpts=data.get("rcpts") or [],
             from_address=data.get("from"),
-            spamscore=(
-                int(data.get("spamscore"))
-                if data.get("spamscore") is not None
-                else None
-            ),
+            spamscore=int(spamscore_val) if spamscore_val is not None else None,
             guid=data.get("guid"),
             host_ip=data.get("host_ip"),
             localguid=data.get("localguid"),

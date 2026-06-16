@@ -23,7 +23,7 @@ from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import SEARCH_ACTION_NAME, TIME_FORMAT
 
 if TYPE_CHECKING:
-    from typing import Never, NoReturn
+    from typing import Never
 
 
 DLP_VIOLATION_MAPPING = {
@@ -140,7 +140,7 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
             self.result_value = False
 
 
-def main() -> NoReturn:
+def main() -> None:
     SearchQuarantinedEmails().run()
 
 
