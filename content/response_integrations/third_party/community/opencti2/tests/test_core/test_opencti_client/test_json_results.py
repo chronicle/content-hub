@@ -66,3 +66,8 @@ class TestBaseObjectJSONResultChildClasses:
 
     def test_observable_inherits_from_base(self):
         assert issubclass(ObservableJSONResult, BaseObjectJSONResult)
+
+
+class TestBaseJSONResultChildClasses:
+    def test_add_object_to_container_inherits_from_base(self):
+        assert issubclass(ObservableJSONResult, BaseJSONResult)

@@ -1,8 +1,15 @@
+from typing import Literal
+
 from core.datamodels.incident import Incident
+from core.datamodels.incident_response import IncidentResponse
+from core.datamodels.observable import Observable
 from core.datamodels.request_for_information import RequestForInformation
 from core.datamodels.request_for_takedown import RequestForTakedown
 from core.opencti_client.json_results import (
+    AddObjectToContainerJSONResult,
     IncidentJSONResult,
+    IncidentResponseJSONResult,
+    ObservableJSONResult,
     RequestForInformationJSONResult,
     RequestForTakedownJSONResult,
 )
@@ -65,10 +72,11 @@ class OpenCTIClient:
 
             labels = incident_args.get("objectLabel")
             self._upsert_labels(labels)
-            data = self._api_client.case_incident.create(**incident_args)
+            data = self._api_client.incident.create(**incident_args)
             if data is None:
                 raise OpenCTIClientError(
-                    "pycti could not perform the request to create Incident."
+                    "pycti could not perform the request to create the "
+                    "incident (some arguments may be missing or invalid)."
                 )
         except Exception as e:
             raise OpenCTIClientError(
@@ -80,6 +88,39 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Incident creation: {str(e)}"
+            ) from e
+
+    def create_incident_response(
+        self, incident_response: IncidentResponse
+    ) -> IncidentResponseJSONResult:
+        try:
+            incident_response_args = incident_response.to_input_variables()
+            information_types = incident_response_args.get("information_types") or []
+            priority = incident_response_args.get("priority")
+            severity = incident_response_args.get("severity")
+            self._upsert_vocabulary_entries("incident_type_ov", *information_types)
+            self._upsert_vocabulary_entries("case_priority_ov", priority)
+            self._upsert_vocabulary_entries("case_severity_ov", severity)
+
+            labels = incident_response_args.get("objectLabel")
+            self._upsert_labels(labels)
+            data = self._api_client.case_incident.create(**incident_response_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the "
+                    "incident response (some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create IncidentResponse in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return IncidentResponseJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                "Unexpected OpenCTI response for IncidentResponse creation: "
+                f"{str(e)}"
             ) from e
 
     def create_request_for_information(
@@ -101,7 +142,8 @@ class OpenCTIClient:
             data = self._api_client.case_rfi.create(**rfi_args)
             if data is None:
                 raise OpenCTIClientError(
-                    "pycti could not perform the request to create Request for Information."
+                    "pycti could not perform the request to create the "
+                    "request for information (some arguments may be missing or invalid)."
                 )
         except Exception as e:
             raise OpenCTIClientError(
@@ -134,7 +176,8 @@ class OpenCTIClient:
             data = self._api_client.case_rft.create(**rft_args)
             if data is None:
                 raise OpenCTIClientError(
-                    "pycti could not perform the request to create Request for Takedown."
+                    "pycti could not perform the request to create the "
+                    "request for takedown (some arguments may be missing or invalid)."
                 )
         except Exception as e:
             raise OpenCTIClientError(
@@ -147,3 +190,69 @@ class OpenCTIClient:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for RFT creation: {str(e)}"
             ) from e
+
+    def create_observable(self, observable: Observable) -> ObservableJSONResult:
+        try:
+            observable_args = observable.to_input_variables()
+            self._upsert_labels(observable_args.get("objectLabel"))
+            data = self._api_client.stix_cyber_observable.create(**observable_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the "
+                    "observable (some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Observable in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return ObservableJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Observable creation: {str(e)}"
+            ) from e
+
+    def add_object_to_container(
+        self,
+        container_type: Literal[
+            "Report", "Case-Incident", "Case-Rfi", "Case-Rft", "Grouping"
+        ],
+        container_id: str,
+        object_id: str,
+    ) -> AddObjectToContainerJSONResult:
+        add_methods = {
+            "Report": self._api_client.report.add_stix_object_or_stix_relationship,
+            "Case-Incident": self._api_client.case_incident.add_stix_object_or_stix_relationship,
+            "Case-Rfi": self._api_client.case_rfi.add_stix_object_or_stix_relationship,
+            "Case-Rft": self._api_client.case_rft.add_stix_object_or_stix_relationship,
+            "Grouping": self._api_client.grouping.add_stix_object_or_stix_relationship,
+        }
+
+        try:
+            add_method = add_methods[container_type]
+        except KeyError as e:
+            raise OpenCTIClientError(
+                f"Unsupported container type: {container_type}"
+            ) from e
+
+        try:
+            data = add_method(
+                id=container_id,
+                stixObjectOrStixRelationshipId=object_id,
+            )
+            if data is False:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to add object to "
+                    f"{container_type} (some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to add object to {container_type} in OpenCTI: {str(e)}"
+            ) from e
+
+        return AddObjectToContainerJSONResult(
+            container_entity_type=container_type,
+            container_id=container_id,
+            object_id=object_id,
+        )

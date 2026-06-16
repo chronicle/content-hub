@@ -8,6 +8,7 @@ from core.datamodels.request_for_information import RequestForInformation
 from core.datamodels.request_for_takedown import RequestForTakedown
 from core.opencti_client.client import OpenCTIClient, OpenCTIClientError
 from core.opencti_client.json_results import (
+    AddObjectToContainerJSONResult,
     IncidentJSONResult,
     IncidentResponseJSONResult,
     ObservableJSONResult,
@@ -353,6 +354,77 @@ class TestCreateObservable:
 
         with pytest.raises(OpenCTIClientError, match="Failed to create Observable"):
             client.create_observable(observable)
+
+
+class TestAddObjectToContainer:
+    @pytest.mark.parametrize(
+        ("container_type", "attr_name"),
+        [
+            ("Report", "report"),
+            ("Case-Incident", "case_incident"),
+            ("Case-Rfi", "case_rfi"),
+            ("Case-Rft", "case_rft"),
+            ("Grouping", "grouping"),
+        ],
+    )
+    def test_dispatches_to_expected_container_api(
+        self,
+        client,
+        mock_pycti_client,
+        container_type,
+        attr_name,
+    ):
+        container_api = getattr(mock_pycti_client, attr_name)
+        container_api.add_stix_object_or_stix_relationship.return_value = True
+
+        result = client.add_object_to_container(
+            container_type=container_type,
+            container_id="container-1",
+            object_id="object-1",
+        )
+
+        container_api.add_stix_object_or_stix_relationship.assert_called_once_with(
+            id="container-1",
+            stixObjectOrStixRelationshipId="object-1",
+        )
+        assert isinstance(result, AddObjectToContainerJSONResult)
+        assert result.container_entity_type == container_type
+        assert result.container_id == "container-1"
+        assert result.object_id == "object-1"
+
+    def test_raises_when_pycti_returns_false(self, client, mock_pycti_client):
+        mock_pycti_client.report.add_stix_object_or_stix_relationship.return_value = (
+            False
+        )
+
+        with pytest.raises(OpenCTIClientError, match="Failed to add object to Report"):
+            client.add_object_to_container(
+                container_type="Report",
+                container_id="container-1",
+                object_id="object-1",
+            )
+
+    def test_raises_on_unsupported_container_type(self, client):
+        with pytest.raises(OpenCTIClientError, match="Unsupported container type"):
+            client.add_object_to_container(
+                container_type="unsupported",
+                container_id="container-1",
+                object_id="object-1",
+            )
+
+    def test_raises_on_api_exception(self, client, mock_pycti_client):
+        mock_pycti_client.report.add_stix_object_or_stix_relationship.side_effect = (
+            RuntimeError("network error")
+        )
+
+        with pytest.raises(
+            OpenCTIClientError, match="Failed to add object to Report in OpenCTI"
+        ):
+            client.add_object_to_container(
+                container_type="Report",
+                container_id="container-1",
+                object_id="object-1",
+            )
 
 
 class TestUpsertLabels:

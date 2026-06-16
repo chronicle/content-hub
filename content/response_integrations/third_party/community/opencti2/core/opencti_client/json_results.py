@@ -85,3 +85,30 @@ class ObservableJSONResult(BaseObjectJSONResult):
         description="The type of the observable object on OpenCTI",
         examples=["Stix-Cyber-Observable"],
     )
+
+
+class AddObjectToContainerJSONResult(BaseJSONResult):
+    """Result for `AddObjectToContainer` action.
+
+    pycti's `add_stix_object_or_stix_relationship` methods return `True` on success and
+    `False` on failure — it never returns the container payload.
+    This model builds a result based on input paramters so the action's output
+    can be re-used in subsequent actions (typically in a playbook).
+    """
+
+    container_entity_type: Literal[
+        "Report",
+        "Case-Incident",
+        "Case-Rfi",
+        "Case-Rft",
+        "Grouping",
+    ] = Field(
+        description="Normalized container type used for the add operation.",
+        examples=["Report", "Case-Incident", "Case-Rfi", "Case-Rft", "Grouping"],
+    )
+    container_id: str = Field(
+        description="Identifier of the target container used for the add operation.",
+    )
+    object_id: str = Field(
+        description="Identifier of the object that was added to the container.",
+    )
