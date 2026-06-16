@@ -14,8 +14,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import requests
 from integration_testing import router
@@ -25,6 +24,9 @@ from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, Response, RouteFunction
 
 from proof_point_ps.tests.core.product import ProofPointPSProduct
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 class ProofPointPSSession(
@@ -86,8 +88,6 @@ class ProofPointPSSession(
             guid=params.get("guid"),
             msgid=params.get("msgid"),
         )
-        print(f"\n[DEBUG MOCK SESSION] Params: {params}")
-        print(f"[DEBUG MOCK SESSION] Found records: {records}")
         return MockResponse(content={"records": records}, status_code=200)
 
     @router.post(r"/rest/v1/quarantine")

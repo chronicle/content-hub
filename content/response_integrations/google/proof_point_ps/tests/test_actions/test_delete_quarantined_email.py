@@ -14,13 +14,19 @@
 
 from __future__ import annotations
 
-from integration_testing.platform.script_output import MockActionOutput
+from typing import TYPE_CHECKING
+
 from integration_testing.set_meta import set_metadata
+from TIPCommon.base.action import ExecutionState
+
 from proof_point_ps.actions import delete_quarantined_email
 from proof_point_ps.tests.common import CONFIG_PATH
-from proof_point_ps.tests.core.product import ProofPointPSProduct
-from proof_point_ps.tests.core.session import ProofPointPSSession
-from TIPCommon.base.action import ExecutionState
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
+
+    from proof_point_ps.tests.core.product import ProofPointPSProduct
+    from proof_point_ps.tests.core.session import ProofPointPSSession
 
 PARAMETERS_SUCCESS: dict[str, str] = {
     "Message GUIDs": "guid-111,guid-222",
@@ -71,6 +77,7 @@ class TestDeleteQuarantinedEmail:
         success_msg = (
             "Successfully deleted quarantined email(s): guid-111, guid-222"
         )
+        assert action_output.results is not None
         assert action_output.results.output_message == success_msg
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
@@ -104,6 +111,7 @@ class TestDeleteQuarantinedEmail:
             "Failed to delete some quarantined emails. Successfully deleted: "
             "guid-111. Failed for: guid-333 (Error: Message not found)"
         )
+        assert action_output.results is not None
         assert action_output.results.output_message == partial_msg
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
@@ -125,6 +133,7 @@ class TestDeleteQuarantinedEmail:
         """Test complete failure when no messages are found to delete."""
         delete_quarantined_email.main()
 
+        assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert (
             "Failed to delete any quarantined emails"

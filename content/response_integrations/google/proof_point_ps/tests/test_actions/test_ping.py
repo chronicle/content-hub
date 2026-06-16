@@ -14,13 +14,19 @@
 
 from __future__ import annotations
 
-from integration_testing.platform.script_output import MockActionOutput
+from typing import TYPE_CHECKING
+
 from integration_testing.set_meta import set_metadata
+from TIPCommon.base.action import ExecutionState
+
 from proof_point_ps.actions import ping
 from proof_point_ps.tests.common import CONFIG_PATH
-from proof_point_ps.tests.core.product import ProofPointPSProduct
-from proof_point_ps.tests.core.session import ProofPointPSSession
-from TIPCommon.base.action import ExecutionState
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
+
+    from proof_point_ps.tests.core.product import ProofPointPSProduct
+    from proof_point_ps.tests.core.session import ProofPointPSSession
 
 
 class TestPing:
@@ -46,5 +52,6 @@ class TestPing:
         assert request.url.path.endswith("/rest/v1/quarantine")
         assert request.method.value == "GET"
 
+        assert action_output.results is not None
         assert action_output.results.output_message == success_output_msg
         assert action_output.results.execution_state == ExecutionState.COMPLETED

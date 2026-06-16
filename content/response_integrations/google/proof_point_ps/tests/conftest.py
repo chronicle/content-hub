@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
+from typing import Any
 
 import pytest
 import requests
@@ -44,7 +44,7 @@ def script_session(
 
     if not use_live_api():
         class MockSessionClass(requests.Session):
-            def __new__(cls, *args, **kwargs):
+            def __new__(cls, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401, PYI034
                 return session
 
         monkeypatch.setattr(CreateSession, "create_session", lambda *_: session)
@@ -57,11 +57,11 @@ def script_session(
 def sdk_session(
     monkeypatch: pytest.MonkeyPatch,
     proofpoint: ProofPointPSProduct,
-) -> Generator[ProofPointPSSession, None, None]:
+) -> ProofPointPSSession:
     """Mock the SDK session and return the mock session object."""
     session = ProofPointPSSession(proofpoint)
 
     if not use_live_api():
         monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)
 
-    yield session
+    return session

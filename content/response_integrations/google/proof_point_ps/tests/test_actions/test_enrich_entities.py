@@ -27,13 +27,12 @@ from proof_point_ps.tests.common import CONFIG_PATH
 
 if TYPE_CHECKING:
     from integration_testing.platform.script_output import MockActionOutput
-    from TIPCommon.types import Entity
 
     from proof_point_ps.tests.core.product import ProofPointPSProduct
     from proof_point_ps.tests.core.session import ProofPointPSSession
 
-USER_ENTITY: Entity = create_entity("test_user@example.com", EntityTypesEnum.USER)
-HOST_ENTITY: Entity = create_entity("example.com", EntityTypesEnum.HOST_NAME)
+USER_ENTITY = create_entity("test_user@example.com", EntityTypesEnum.USER)
+HOST_ENTITY = create_entity("example.com", EntityTypesEnum.HOST_NAME)
 
 
 def get_deadline_context() -> dict:
@@ -84,10 +83,14 @@ class TestEnrichEntities:
             "Successfully enriched the following entities using "
             "Proofpoint Email Protection: TEST_USER@EXAMPLE.COM"
         )
+        assert action_output.results is not None
         assert action_output.results.output_message == success_msg
         assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.json_output is not None
 
         json_results = action_output.results.json_output.json_result
+        assert json_results is not None
+        assert isinstance(json_results, list)
         assert len(json_results) == 1
         assert json_results[0]["Entity"] == "TEST_USER@EXAMPLE.COM"
         assert len(json_results[0]["EntityResult"]) == 1
@@ -127,6 +130,7 @@ class TestEnrichEntities:
             "Successfully enriched the following entities using "
             "Proofpoint Email Protection: EXAMPLE.COM"
         )
+        assert action_output.results is not None
         assert action_output.results.output_message == success_msg
         assert action_output.results.execution_state == ExecutionState.COMPLETED
 
@@ -144,6 +148,7 @@ class TestEnrichEntities:
         """Test case where no matching records are returned."""
         enrich_entities.main()
 
+        assert action_output.results is not None
         assert (
             action_output.results.output_message
             == "None of the provided entities were enriched."
