@@ -54,16 +54,16 @@ def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
         # Serialize the config back into DataDefinitionJson
         data_definition_json = json.dumps(config)
 
-        cg = meta.get("conditionsGroup")
-        if cg is None:
+        cg_data = meta.get("conditionsGroup")
+        if not isinstance(cg_data, dict):
             cg = {"LogicalOperator": 1, "Conditions": []}
         else:
-            op = cg.get("logicalOperator")
+            op = cg_data.get("logicalOperator")
             if op is None:
-                op = cg.get("LogicalOperator", 1)
-            conds = cg.get("conditions")
+                op = cg_data.get("LogicalOperator", 1)
+            conds = cg_data.get("conditions")
             if conds is None:
-                conds = cg.get("Conditions", [])
+                conds = cg_data.get("Conditions", [])
             cg = {
                 "LogicalOperator": op,
                 "Conditions": conds,

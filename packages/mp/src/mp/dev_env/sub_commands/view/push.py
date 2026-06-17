@@ -69,19 +69,19 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
             }
 
         meta = {
-            "title": w.get("Title", ""),
-            "description": w.get("Description", ""),
-            "identifier": w.get("Identifier", ""),
-            "order": w.get("Order", 0),
-            "templateIdentifier": w.get("TemplateIdentifier", ""),
-            "type": w.get("Type", 0),
-            "width": w.get("GridColumns", 1),
+            "title": w.get("Title") or "",
+            "description": w.get("Description") or "",
+            "identifier": w.get("Identifier") or "",
+            "order": w.get("Order") or 0,
+            "templateIdentifier": w.get("TemplateIdentifier") or "",
+            "type": w.get("Type") or 0,
+            "width": w.get("GridColumns") or 1,
             "actionWidgetTemplateIdentifier": w.get("ActionWidgetTemplateIdentifier"),
             "stepIdentifier": w.get("StepIdentifier"),
             "stepIntegration": w.get("StepIntegration"),
             "blockStepIdentifier": w.get("BlockStepIdentifier"),
             "blockStepInstanceName": w.get("BlockStepInstanceName"),
-            "presentIfEmpty": w.get("PresentIfEmpty", False),
+            "presentIfEmpty": w.get("PresentIfEmpty") or False,
             "conditionsGroup": flat_cg,
             "integrationName": w.get("IntegrationName"),
         }
@@ -90,15 +90,15 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
 
     # 2. Map overview template details
     return {
-        "identifier": template.get("Identifier", ""),
-        "name": template.get("Name", ""),
+        "identifier": template.get("Identifier") or "",
+        "name": template.get("Name") or "",
         "creator": template.get("Creator"),
-        "playbookIdentifier": template.get("PlaybookDefinitionIdentifier", ""),
-        "type": template.get("Type", 0),
+        "playbookIdentifier": template.get("PlaybookDefinitionIdentifier") or "",
+        "type": template.get("Type") or 0,
         "alertRuleType": template.get("AlertRuleType"),
         "widgets": flat_widgets,
-        "roles": template.get("Roles", []),
-        "roleNames": built_view.get("Roles", []),
+        "roles": template.get("Roles") or [],
+        "roleNames": built_view.get("Roles") or [],
     }
 
 
@@ -132,6 +132,9 @@ def push_view(
 
     if not built_json_path.exists():
         logger.error("Built view file not found at: %s", built_json_path)
+        raise typer.Exit(1)
+
+    if not mp.core.file_utils.is_built_view(built_json_path):
         raise typer.Exit(1)
 
     # 3. Load built JSON data

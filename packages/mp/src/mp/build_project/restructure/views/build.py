@@ -66,7 +66,9 @@ class ViewBuilder:
         widgets_folder_path: Path = self.view_path / mp.core.constants.WIDGETS_DIR
         for w in overview.widgets or []:
             if w.type is WidgetType.HTML:
-                html_file_path = widgets_folder_path / f"{sanitize_widget_filename(w.title)}.html"
+                sanitized_title = sanitize_widget_filename(w.title or "")
+                filename = sanitized_title or f"widget_{w.identifier}"
+                html_file_path = widgets_folder_path / f"{filename}.html"
                 if html_file_path.exists():
                     if hasattr(w.data_definition, "html_content"):
                         w.data_definition.html_content = html_file_path.read_text(encoding="utf-8")

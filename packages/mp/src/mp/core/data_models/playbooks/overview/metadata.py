@@ -168,7 +168,9 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
         all_widget: list[PlaybookWidgetMetadata] = PlaybookWidgetMetadata.from_non_built_path(path)
 
         widget_details: list[OverviewWidgetDetails] = non_built_view.get("widgets_details") or []
-        widget_names: frozenset[WidgetName] = frozenset([w_d["title"] for w_d in widget_details])
+        widget_names: frozenset[WidgetName] = frozenset(
+            [w_d["title"] for w_d in widget_details if w_d.get("title") is not None]
+        )
         widgets: list[PlaybookWidgetMetadata] = [w for w in all_widget if w.title in widget_names]
 
         ov: Self = cls._from_non_built(non_built_view)
