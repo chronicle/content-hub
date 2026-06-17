@@ -54,7 +54,7 @@ def test_pull_view_cli(
             {
                 "metadata": {
                     "title": "Widget One",
-                    "description": "HTML Widget",
+                    "description": None,
                     "identifier": "widget_one_id",
                     "order": 1,
                     "templateIdentifier": "temp_one",

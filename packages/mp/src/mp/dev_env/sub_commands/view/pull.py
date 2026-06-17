@@ -56,12 +56,12 @@ def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
             }
 
         built_widget: dict[str, Any] = {
-            "Title": meta.get("title", ""),
-            "Description": meta.get("description", ""),
-            "Identifier": meta.get("identifier", ""),
-            "Order": meta.get("order", 0),
-            "TemplateIdentifier": meta.get("templateIdentifier", ""),
-            "Type": meta.get("type", 0),
+            "Title": meta.get("title") or "",
+            "Description": meta.get("description") or "",
+            "Identifier": meta.get("identifier") or "",
+            "Order": meta.get("order") or 0,
+            "TemplateIdentifier": meta.get("templateIdentifier") or "",
+            "Type": meta.get("type") or 0,
             "DataDefinitionJson": data_definition_json,
             "GridColumns": meta.get("width", 1),
             "ActionWidgetTemplateIdentifier": meta.get("actionWidgetTemplateIdentifier"),
