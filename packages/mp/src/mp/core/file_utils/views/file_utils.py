@@ -90,21 +90,24 @@ def is_built_view(path: Path) -> bool:
     try:
         with path.open(encoding="utf-8") as f:
             data: dict[str, Any] = json.load(f)
-
-        required_keys = {"OverviewTemplate", "Roles"}
-        if not isinstance(data, dict) or not required_keys.issubset(data.keys()):
-            logger.error(
-                "View is invalid, File %s is missing one or more required keys: %s",
-                path.name,
-                required_keys - data.keys(),
-            )
-            return False
-
     except json.JSONDecodeError:
         logger.exception("View is invalid, File %s is not a valid JSON file.", path.name)
         return False
     except OSError:
         logger.exception("Error reading file %s", path.name)
+        return False
+
+    if not isinstance(data, dict):
+        logger.error("View is invalid, File %s is not a JSON object.", path.name)
+        return False
+
+    required_keys = {"OverviewTemplate", "Roles"}
+    if not required_keys.issubset(data.keys()):
+        logger.error(
+            "View is invalid, File %s is missing one or more required keys: %s",
+            path.name,
+            required_keys - data.keys(),
+        )
         return False
 
     return True

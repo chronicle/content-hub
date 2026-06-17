@@ -76,9 +76,10 @@ class ViewDeconstructor:
                 raise
 
         for w in self.overview.widgets:
-            widget_path: Path = widgets_path / (f"{sanitize_widget_filename(w.title)}.{mp.core.constants.HTML_SUFFIX}")
-            html_content: str = ""
             if w.type is WidgetType.HTML:
+                widget_filename = f"{sanitize_widget_filename(w.title)}.{mp.core.constants.HTML_SUFFIX}"
+                widget_path: Path = widgets_path / widget_filename
+                html_content: str = ""
                 if hasattr(w.data_definition, "html_content"):
                     html_content = w.data_definition.html_content or ""
                 else:
@@ -88,7 +89,6 @@ class ViewDeconstructor:
                         w.title,
                         type(w.data_definition),
                     )
-            if html_content:
                 widget_path.write_text(html_content, encoding="utf-8")
 
 
