@@ -20,10 +20,13 @@ from mp.core.data_models.playbooks.overview.metadata import (
 
 from .constants import (
     BUILT_OVERVIEW,
+    BUILT_OVERVIEW_V2_CASE,
     BUILT_OVERVIEW_WITH_NONE,
     NON_BUILT_OVERVIEW,
+    NON_BUILT_OVERVIEW_V2_CASE,
     NON_BUILT_OVERVIEW_WITH_NONE,
     OVERVIEW,
+    OVERVIEW_V2_CASE,
     OVERVIEW_WITH_NONE,
 )
 
@@ -60,3 +63,15 @@ class TestOverviewDataModel:
 
     def test_from_built_to_built_is_idempotent(self) -> None:
         assert Overview.from_built(BUILT_OVERVIEW).to_built() == BUILT_OVERVIEW
+
+    def test_from_built_with_v2_case_view(self) -> None:
+        assert Overview.from_built(BUILT_OVERVIEW_V2_CASE) == OVERVIEW_V2_CASE
+
+    def test_to_built_with_v2_case_view(self) -> None:
+        assert OVERVIEW_V2_CASE.to_built() == BUILT_OVERVIEW_V2_CASE
+
+    def test_to_non_built_with_v2_case_view(self) -> None:
+        assert OVERVIEW_V2_CASE.to_non_built() == NON_BUILT_OVERVIEW_V2_CASE
+
+    def test_from_built_to_built_with_v2_case_view_is_idempotent(self) -> None:
+        assert Overview.from_built(BUILT_OVERVIEW_V2_CASE).to_built() == BUILT_OVERVIEW_V2_CASE

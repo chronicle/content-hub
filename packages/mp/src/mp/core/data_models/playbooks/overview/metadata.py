@@ -37,6 +37,9 @@ class OverviewType(RepresentableEnum):
     SYSTEM_ALERT = 2
     SYSTEM_CASE = 3
     ALERT_TYPE = 4
+    SYSTEM_CASE_V2 = 5  # TODO: Do we need to add it? based on OverviewTemplateEnum from view.proto
+    SYSTEM_ALERT_V2 = 6  # TODO: Do we need to add it? based on OverviewTemplateEnum from view.proto
+    SYSTEM_DETECTION = 7  # TODO: Do we need to add it? based on OverviewTemplateEnum from view.proto
 
 
 class OverviewWidgetDetails(TypedDict):
@@ -136,6 +139,39 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
             res.append(ov)
 
         return res
+
+    @classmethod
+    def from_non_built_view_path(cls, path: Path) -> Self:
+        """Create an Overview object from a non-built view directory path.
+
+        Args:
+            path: The path to the non-built view directory (e.g. content/views/some_view).
+
+        Returns:
+            An Overview object.
+
+        Raises:
+            FileNotFoundError: If the view.yaml file doesn't exist.
+
+        """
+        view_yaml_path: Path = path / mp.core.constants.VIEW_FILE_NAME
+        if not view_yaml_path.exists():
+            msg: str = f"Missing view config at: {view_yaml_path}"
+            raise FileNotFoundError(msg)
+
+        non_built_view: NonBuiltOverview = yaml.safe_load(view_yaml_path.read_text(encoding="utf-8"))
+
+        # Load all widgets from widgets/ directory
+        all_widget: list[PlaybookWidgetMetadata] = PlaybookWidgetMetadata.from_non_built_path(path)
+
+        widget_details: list[OverviewWidgetDetails] = non_built_view.get("widgets_details", [])
+        widget_names: frozenset[WidgetName] = frozenset([w_d["title"] for w_d in widget_details])
+        widgets: list[PlaybookWidgetMetadata] = [w for w in all_widget if w.title in widget_names]
+
+        ov: Self = cls._from_non_built(non_built_view)
+        ov.widgets = widgets
+
+        return ov
 
     @classmethod
     def _from_built(cls, built: BuiltOverview) -> Self:
