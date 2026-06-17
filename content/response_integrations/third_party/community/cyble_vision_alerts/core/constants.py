@@ -29,9 +29,9 @@ RETRY_BACKOFF_BASE = 2            # seconds; jittered exponential
 RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
 
 # ── API Endpoints (relative to base_url) ─────────────────────────────────────
-ENDPOINT_SERVICES = "/splunk/alerts/services"
-ENDPOINT_ALERTS = "/splunk/alerts"
-ENDPOINT_UPDATE = "/splunk/alerts"
+ENDPOINT_SERVICES = "/secops/alerts/services"
+ENDPOINT_ALERTS = "/secops/alerts"
+ENDPOINT_UPDATE = "/secops/alerts"
 
 # ── Cyble alert statuses ──────────────────────────────────────────────────────
 CYBLE_STATUSES = [

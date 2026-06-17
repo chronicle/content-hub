@@ -26,8 +26,7 @@ from ..core.CybleManager import CybleAPIError, CybleAuthError, CybleManager
 
 SCRIPT_NAME = "Ping"
 CONNECTED_MSG = (
-    "Successfully connected to the Cyble Vision Alerts server with the provided "
-    "connection parameters!"
+    "Successfully connected to the Cyble Vision Alerts server with the provided connection parameters!"
 )
 NOT_CONNECTED_MSG = "Failed to connect to the Cyble Vision Alerts server! Error is {reason}"
 
