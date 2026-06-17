@@ -64,18 +64,20 @@ class ViewBuilder:
 
         """
         widgets_folder_path: Path = self.view_path / mp.core.constants.WIDGETS_DIR
-        for w in overview.widgets or []:
+        for i, w in enumerate(overview.widgets or []):
             if w.type is WidgetType.HTML:
                 sanitized_title = sanitize_widget_filename(w.title or "")
-                filename = sanitized_title or f"widget_{w.identifier}"
+                filename = sanitized_title or f"widget_{w.identifier or i}"
                 html_file_path = widgets_folder_path / f"{filename}.html"
                 if html_file_path.exists():
                     if hasattr(w.data_definition, "html_content"):
                         w.data_definition.html_content = html_file_path.read_text(encoding="utf-8")
+                    elif isinstance(w.data_definition, dict):
+                        w.data_definition["html_content"] = html_file_path.read_text(encoding="utf-8")
                     else:
                         logger.warning(
                             "HTML content file exists for widget %s, but data_definition does not have"
-                            " 'html_content' attribute (type is %s)",
+                            " 'html_content' attribute or key (type is %s)",
                             w.title,
                             type(w.data_definition),
                         )

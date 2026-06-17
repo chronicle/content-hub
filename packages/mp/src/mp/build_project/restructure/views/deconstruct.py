@@ -89,19 +89,21 @@ class ViewDeconstructor:
                 )
                 raise
 
-        for w in self.overview.widgets:
+        for i, w in enumerate(self.overview.widgets):
             if w.type is WidgetType.HTML:
                 sanitized_title = sanitize_widget_filename(w.title or "")
-                filename = sanitized_title or f"widget_{w.identifier}"
+                filename = sanitized_title or f"widget_{w.identifier or i}"
                 widget_filename = f"{filename}.{mp.core.constants.HTML_SUFFIX}"
                 widget_path: Path = widgets_path / widget_filename
                 html_content: str = ""
                 if hasattr(w.data_definition, "html_content"):
                     html_content = w.data_definition.html_content or ""
+                elif isinstance(w.data_definition, dict):
+                    html_content = w.data_definition.get("html_content") or ""
                 else:
                     logger.warning(
                         "Widget %s type is HTML, but data_definition does not have"
-                        " 'html_content' attribute (type is %s)",
+                        " 'html_content' attribute or key (type is %s)",
                         w.title,
                         type(w.data_definition),
                     )

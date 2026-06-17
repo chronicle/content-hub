@@ -179,7 +179,7 @@ def _find_view_identifier(view_name_or_id: str, installed_views: list[dict[str, 
         identifier = view.get("Identifier") or view.get("identifier")
         name = view.get("Name") or view.get("name")
 
-        if view_name_or_id in {identifier, name} and identifier:
+        if identifier and (view_name_or_id.lower() == identifier.lower() or view_name_or_id == name):
             return cast("str", identifier)
 
     logger.error("View '%s' not found in installed views in SOAR platform.", view_name_or_id)
