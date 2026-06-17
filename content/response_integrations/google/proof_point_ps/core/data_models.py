@@ -64,4 +64,3 @@ class QuarantineRecord:
         if self.messagestatus is not None:
             result["messagestatus"] = self.messagestatus
         return result
-

@@ -29,9 +29,7 @@ class ProofPointPSProduct:
             "Virus": [],
         }
     )
-    actions_executed: list[dict[str, Any]] = dataclasses.field(
-        default_factory=list
-    )
+    actions_executed: list[dict[str, Any]] = dataclasses.field(default_factory=list)
     email_contents: dict[str, bytes] = dataclasses.field(default_factory=dict)
 
     def add_record(
@@ -72,10 +70,13 @@ class ProofPointPSProduct:
                     recipient_lower = recipient.lower()
                     if recipient.startswith("@"):
                         if not any(
-                            r.lower().endswith(recipient_lower) for r in record.get("rcpts", [])
+                            r.lower().endswith(recipient_lower)
+                            for r in record.get("rcpts", [])
                         ):
                             continue
-                    elif not any(r.lower() == recipient_lower for r in record.get("rcpts", [])):
+                    elif not any(
+                        r.lower() == recipient_lower for r in record.get("rcpts", [])
+                    ):
                         continue
                 if subject and record.get("subject") != subject:
                     continue

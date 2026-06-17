@@ -14,19 +14,21 @@
 
 from __future__ import annotations
 
-import contextlib
 import re
 from typing import TYPE_CHECKING
 
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from soar_sdk.SiemplifyUtils import add_prefix_to_dict, dict_to_flat, get_domain_from_entity
+from soar_sdk.SiemplifyUtils import (
+    add_prefix_to_dict,
+    dict_to_flat,
+    get_domain_from_entity,
+)
 from TIPCommon.base.action import EntityTypesEnum
 
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import ENRICH_ACTION_NAME
 
 if TYPE_CHECKING:
-
     from TIPCommon.types import Entity
 
 
@@ -68,23 +70,23 @@ class EnrichEntities(BaseProofPointPSAction):
         """
         return [EntityTypesEnum.HOST_NAME, EntityTypesEnum.USER]
 
-    def _perform_action(self, entity: Entity | None) -> None:
+    def _perform_action(self, current_entity: Entity | None) -> None:
         """Enrich a single host/user entity from quarantined records.
 
         Args:
-            entity: The entity to enrich.
+            current_entity: The entity to enrich.
 
         """
-        if entity is None:
+        if current_entity is None:
             return
 
         folders = ["Quarantine", "Spam", "Virus"]
         records = []
 
-        if entity.entity_type == EntityTypes.HOSTNAME:
-            domain = get_domain_from_entity(entity)
+        if current_entity.entity_type == EntityTypes.HOSTNAME:
+            domain = get_domain_from_entity(current_entity)
             self.logger.info(
-                f"Hostname entity={entity.identifier}, extracted domain={domain}"
+                f"Hostname entity={current_entity.identifier}, extracted domain={domain}"
             )
             for folder in folders:
                 try:
@@ -107,19 +109,29 @@ class EnrichEntities(BaseProofPointPSAction):
                     self.logger.exception(
                         f"Recipient search failed for @{domain} in {folder}"
                     )
-        elif entity.entity_type == EntityTypes.USER and is_valid_email(
-            entity.identifier
+        elif current_entity.entity_type == EntityTypes.USER and is_valid_email(
+            current_entity.identifier
         ):
             for folder in folders:
-                with contextlib.suppress(Exception):
-                    records.extend(
-                        self.api_client.search(sender=entity.identifier, folder=folder)
-                    )
-                with contextlib.suppress(Exception):
+                try:
                     records.extend(
                         self.api_client.search(
-                            recipient=entity.identifier, folder=folder
+                            sender=current_entity.identifier, folder=folder
                         )
+                    )
+                except Exception:
+                    self.logger.exception(
+                        f"Sender search failed for {current_entity.identifier} in {folder}"
+                    )
+                try:
+                    records.extend(
+                        self.api_client.search(
+                            recipient=current_entity.identifier, folder=folder
+                        )
+                    )
+                except Exception:
+                    self.logger.exception(
+                        f"Recipient search failed for {current_entity.identifier} in {folder}"
                     )
 
         if records:
@@ -134,13 +146,15 @@ class EnrichEntities(BaseProofPointPSAction):
                 flat_record = dict_to_flat(record)
                 flat_record = add_prefix_to_dict(flat_record, index)
                 flat_record = add_prefix_to_dict(flat_record, "ProofPointPS")
-                entity.additional_properties.update(flat_record)
+                current_entity.additional_properties.update(flat_record)
 
-            self.json_results[entity.identifier] = [r.to_json() for r in records]
-            self.successful_entities.append(entity)
-            self.entities_to_update.append(entity)
+            self.json_results[current_entity.identifier] = [
+                record.to_json() for record in records
+            ]
+            self.successful_entities.append(current_entity)
+            self.entities_to_update.append(current_entity)
         else:
-            self.failed_entities.append(entity)
+            self.failed_entities.append(current_entity)
 
     def _finalize_action_on_success(self) -> None:
         """Finalizes action execution by preparing output messages."""

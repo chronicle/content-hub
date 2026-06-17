@@ -29,16 +29,14 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-class ProofPointPSSession(
-    MockSession[MockRequest, MockResponse, ProofPointPSProduct]
-):
+class ProofPointPSSession(MockSession[MockRequest, MockResponse, ProofPointPSProduct]):
     """Mock session class for Proofpoint PS API calls."""
 
     def request(
         self,
         method: str,
         url: str,
-        *args: Any,      # noqa: ANN401
+        *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
     ) -> MockResponse:
         """Override request to raise ConnectionError for unmatched external URLs."""

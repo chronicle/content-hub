@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from .api_utils import validate_response
 from .constants import QUARANTINE_ENDPOINT
-from .data_parser import DataParser
+from .data_parser import parse_quarantine_records
 from .exceptions import ProofPointPSHTTPError
 
 if TYPE_CHECKING:
@@ -37,7 +37,6 @@ class ProofPointPSApiClient:
     ) -> None:
         self.server_address = server_address
         self.session = authenticated_session
-        self.parser = DataParser()
 
     def test_connectivity(self) -> bool:
         """Test connectivity to ProofPoint PS.
@@ -57,7 +56,6 @@ class ProofPointPSApiClient:
         start_date: str | None = None,
         end_date: str | None = None,
         folder: str | None = None,
-        guid: str | None = None,
         msgid: str | None = None,
         queryid: str | None = None,
         dlpviolation: str | None = None,
@@ -73,7 +71,6 @@ class ProofPointPSApiClient:
             start_date: The UTC start date of the range.
             end_date: The UTC end date of the range.
             folder: The quarantine folder name.
-            guid: The message GUID.
             msgid: The message ID.
             queryid: ID for keeping track of search results.
             dlpviolation: "t" or "details" to fetch DLP data.
@@ -100,7 +97,7 @@ class ProofPointPSApiClient:
             "limit": limit,
         }
 
-        data = {k: v for k, v in data.items() if v is not None}
+        data = {key: value for key, value in data.items() if value is not None}
         response = self.session.get(url, params=data)
 
         validate_response(response, "Unable to search emails.")
@@ -112,11 +109,9 @@ class ProofPointPSApiClient:
                 f"empty JSON response. Status Code: {response.status_code}. "
                 f"Content Preview: {response.text[:200]}"
             )
-            raise ProofPointPSHTTPError(
-                msg
-            ) from error
+            raise ProofPointPSHTTPError(msg) from error
 
-        return self.parser.parse_quarantine_records(response_json)
+        return parse_quarantine_records(response_json)
 
     def execute_quarantine_action(
         self,
@@ -181,7 +176,7 @@ class ProofPointPSApiClient:
             "comment": comment,
         }
 
-        payload = {k: v for k, v in payload.items() if v is not None}
+        payload = {key: value for key, value in payload.items() if value is not None}
         response = self.session.post(url, json=payload)
 
         validate_response(response, f"Unable to {action} email(s).")

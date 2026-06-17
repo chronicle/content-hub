@@ -59,21 +59,21 @@ def parse_iso8601_to_utc_datetime(time_str: str) -> datetime:
         time_str = time_str[:-1] + "+00:00"
 
     try:
-        dt = datetime.fromisoformat(time_str)
-    except ValueError:
+        datetime_obj = datetime.fromisoformat(time_str)
+    except ValueError as exc:
         for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
             try:
-                dt = datetime.strptime(time_str, fmt)
+                datetime_obj = datetime.strptime(time_str, fmt)
                 break
             except ValueError:
                 continue
         else:
             msg = f"Invalid datetime format: {time_str}"
-            raise ValueError(msg)
+            raise ValueError(msg) from exc
 
-    if dt.tzinfo is not None:
-        dt = dt.astimezone(UTC).replace(tzinfo=None)
-    return dt
+    if datetime_obj.tzinfo is not None:
+        datetime_obj = datetime_obj.astimezone(UTC).replace(tzinfo=None)
+    return datetime_obj
 
 
 def calculate_time_range(
@@ -100,9 +100,7 @@ def calculate_time_range(
     if time_frame == "Custom":
         if not start_time_str:
             msg = "Start Time is required when Time Frame is set to 'Custom'."
-            raise InvalidParameterError(
-                msg
-            )
+            raise InvalidParameterError(msg)
 
         try:
             start = parse_iso8601_to_utc_datetime(start_time_str)
@@ -135,9 +133,7 @@ def calculate_time_range(
             "Start Time or End Time can only be provided when 'Custom' is "
             "selected for the Time Frame parameter."
         )
-        raise InvalidParameterError(
-            msg
-        )
+        raise InvalidParameterError(msg)
 
     delta_map = {
         "Last Hour": timedelta(hours=1),

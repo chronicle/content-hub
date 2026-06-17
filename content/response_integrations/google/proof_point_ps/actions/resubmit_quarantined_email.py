@@ -22,7 +22,7 @@ from TIPCommon.transformation import string_to_multi_value
 from ..core.api_utils import calculate_time_range
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import RESUBMIT_ACTION_NAME, TIME_FORMAT
-from ..core.exceptions import InvalidParameterError
+from ..core.exceptions import ProofPointPSError
 
 if TYPE_CHECKING:
     from typing import Never
@@ -75,22 +75,6 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
             _: Never input.
 
         """
-        if self.params.time_frame == "Custom" and not self.params.start_time:
-            msg = "Start Time is required when Time Frame is set to 'Custom'."
-            raise InvalidParameterError(
-                msg
-            )
-        if self.params.time_frame != "Custom" and (
-            self.params.start_time or self.params.end_time
-        ):
-            msg = (
-                "Start Time or End Time can only be provided when 'Custom' is "
-                "selected for the Time Frame parameter."
-            )
-            raise InvalidParameterError(
-                msg
-            )
-
         guids = string_to_multi_value(self.params.guid_input)
         successful_guids = []
         failed_guids = []
@@ -111,11 +95,11 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
                 end_date=end_date,
             )
             valid_guids = set()
-            for r in records:
-                if r.guid:
-                    valid_guids.add(r.guid.lower().strip())
-                if r.localguid:
-                    valid_guids.add(r.localguid.lower().strip())
+            for record in records:
+                if record.guid:
+                    valid_guids.add(record.guid.lower().strip())
+                if record.localguid:
+                    valid_guids.add(record.localguid.lower().strip())
         except Exception as e:
             valid_guids = None
             self.soar_action.LOGGER.exception(
@@ -140,11 +124,9 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
         if not successful_guids:
             msg = (
                 f"Failed to resubmit any quarantined emails. Errors: "
-                f"{'; '.join(f'{g}: {err}' for g, err in failed_guids)}"
+                f"{'; '.join(f'{guid}: {err}' for guid, err in failed_guids)}"
             )
-            raise Exception(
-                msg
-            )
+            raise ProofPointPSError(msg)
 
         if failed_guids:
             self.result_value = False
@@ -153,7 +135,10 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
                 output_msg += (
                     f" Successfully resubmitted: {', '.join(successful_guids)}."
                 )
-            output_msg += f" Failed for: {', '.join(f'{g} (Error: {err})' for g, err in failed_guids)}"
+            failed_str = ", ".join(
+                f"{guid} (Error: {err})" for guid, err in failed_guids
+            )
+            output_msg += f" Failed for: {failed_str}"
             self.output_message = output_msg
             return
 

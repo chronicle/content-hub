@@ -17,48 +17,45 @@ from __future__ import annotations
 from .data_models import QuarantineRecord
 
 
-class DataParser:
-    """Data parser for ProofPointPS."""
+def parse_quarantine_record(data: dict) -> QuarantineRecord:
+    """Parse a raw record into QuarantineRecord.
 
-    @staticmethod
-    def parse_quarantine_record(data: dict) -> QuarantineRecord:
-        """Parse a raw record into QuarantineRecord.
+    Args:
+        data: The raw JSON dictionary.
 
-        Args:
-            data: The raw JSON dictionary.
+    Returns:
+        A QuarantineRecord object.
 
-        Returns:
-            A QuarantineRecord object.
+    """
+    size_val = data.get("size")
+    spamscore_val = data.get("spamscore")
+    return QuarantineRecord(
+        processingserver=data.get("processingserver"),
+        date=data.get("date"),
+        subject=data.get("subject"),
+        messageid=data.get("messageid"),
+        folder=data.get("folder"),
+        size=int(size_val) if size_val is not None else None,
+        rcpts=data.get("rcpts") or [],
+        from_address=data.get("from"),
+        spamscore=int(spamscore_val) if spamscore_val is not None else None,
+        guid=data.get("guid"),
+        host_ip=data.get("host_ip"),
+        localguid=data.get("localguid"),
+        dlpviolation=data.get("dlpviolation"),
+        messagestatus=data.get("messagestatus"),
+    )
 
-        """
-        size_val = data.get("size")
-        spamscore_val = data.get("spamscore")
-        return QuarantineRecord(
-            processingserver=data.get("processingserver"),
-            date=data.get("date"),
-            subject=data.get("subject"),
-            messageid=data.get("messageid"),
-            folder=data.get("folder"),
-            size=int(size_val) if size_val is not None else None,
-            rcpts=data.get("rcpts") or [],
-            from_address=data.get("from"),
-            spamscore=int(spamscore_val) if spamscore_val is not None else None,
-            guid=data.get("guid"),
-            host_ip=data.get("host_ip"),
-            localguid=data.get("localguid"),
-            dlpviolation=data.get("dlpviolation"),
-            messagestatus=data.get("messagestatus"),
-        )
 
-    def parse_quarantine_records(self, data: dict) -> list[QuarantineRecord]:
-        """Parse a list of raw records.
+def parse_quarantine_records(data: dict) -> list[QuarantineRecord]:
+    """Parse a list of raw records.
 
-        Args:
-            data: The raw JSON payload containing 'records' key.
+    Args:
+        data: The raw JSON payload containing 'records' key.
 
-        Returns:
-            A list of QuarantineRecord objects.
+    Returns:
+        A list of QuarantineRecord objects.
 
-        """
-        records = data.get("records") or []
-        return [self.parse_quarantine_record(r) for r in records]
+    """
+    records = data.get("records") or []
+    return [parse_quarantine_record(record) for record in records]

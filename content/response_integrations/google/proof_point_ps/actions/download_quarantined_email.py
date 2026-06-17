@@ -114,18 +114,22 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
         if not successful_guids:
             msg = (
                 f"Failed to download any quarantined emails. Errors: "
-                f"{'; '.join(f'{g}: {err}' for g, err in failed_guids)}"
+                f"{'; '.join(f'{guid}: {err}' for guid, err in failed_guids)}"
             )
-            raise ProofPointPSError(
-                msg
-            )
+            raise ProofPointPSError(msg)
 
         if failed_guids:
             self.result_value = False
             output_msg = "Failed to download some quarantined emails."
             if successful_guids:
-                output_msg += f" Successfully downloaded and attached: {', '.join(successful_guids)}."
-            output_msg += f" Failed for: {', '.join(f'{g} (Error: {err})' for g, err in failed_guids)}"
+                output_msg += (
+                    f" Successfully downloaded and attached: "
+                    f"{', '.join(successful_guids)}."
+                )
+            failed_str = ", ".join(
+                f"{guid} (Error: {err})" for guid, err in failed_guids
+            )
+            output_msg += f" Failed for: {failed_str}"
             self.output_message = output_msg
             return
 

@@ -121,11 +121,7 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
         )
 
         if self.params.guid:
-            records = [
-                r
-                for r in records
-                if self.params.guid in {r.guid, r.localguid}
-            ]
+            records = [r for r in records if self.params.guid in {r.guid, r.localguid}]
 
         if records:
             self.json_results = [r.to_json() for r in records]

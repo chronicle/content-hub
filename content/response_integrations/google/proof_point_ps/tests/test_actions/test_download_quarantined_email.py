@@ -54,8 +54,13 @@ class TestDownloadQuarantinedEmail:
 
         assert len(script_session.request_history) == 2
         assert script_session.request_history[0].request.method.value == "GET"
-        assert script_session.request_history[0].request.url.path == "/rest/v1/quarantine"
-        assert script_session.request_history[0].request.kwargs["params"]["guid"] == "guid-111"
+        assert (
+            script_session.request_history[0].request.url.path == "/rest/v1/quarantine"
+        )
+        assert (
+            script_session.request_history[0].request.kwargs["params"]["guid"]
+            == "guid-111"
+        )
 
         success_msg = (
             "Successfully downloaded and attached quarantined email raw content "
@@ -87,8 +92,14 @@ class TestDownloadQuarantinedEmail:
         assert len(script_session.request_history) == 3
 
         assert action_output.results is not None
-        assert "Failed to download some quarantined emails." in action_output.results.output_message
-        assert "Successfully downloaded and attached: guid-111" in action_output.results.output_message
+        assert (
+            "Failed to download some quarantined emails."
+            in action_output.results.output_message
+        )
+        assert (
+            "Successfully downloaded and attached: guid-111"
+            in action_output.results.output_message
+        )
         assert "Failed for: guid-222" in action_output.results.output_message
         assert "Unable to download email" in action_output.results.output_message
         assert action_output.results.execution_state == ExecutionState.COMPLETED
@@ -111,5 +122,8 @@ class TestDownloadQuarantinedEmail:
 
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.FAILED
-        assert "Failed to download any quarantined emails" in action_output.results.output_message
+        assert (
+            "Failed to download any quarantined emails"
+            in action_output.results.output_message
+        )
         assert "Unable to download email" in action_output.results.output_message

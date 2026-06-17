@@ -74,9 +74,7 @@ class TestDeleteQuarantinedEmail:
         assert proofpoint.actions_executed[0]["localguid"] == "guid-111"
         assert proofpoint.actions_executed[1]["localguid"] == "guid-222"
 
-        success_msg = (
-            "Successfully deleted quarantined email(s): guid-111, guid-222"
-        )
+        success_msg = "Successfully deleted quarantined email(s): guid-111, guid-222"
         assert action_output.results is not None
         assert action_output.results.output_message == success_msg
         assert action_output.results.execution_state == ExecutionState.COMPLETED

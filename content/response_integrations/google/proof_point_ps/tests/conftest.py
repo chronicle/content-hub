@@ -43,6 +43,7 @@ def script_session(
     session = ProofPointPSSession(proofpoint)
 
     if not use_live_api():
+
         class MockSessionClass(requests.Session):
             def __new__(cls, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401, PYI034
                 return session
