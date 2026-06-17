@@ -1,3 +1,4 @@
+# ruff: noqa: N999
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,13 +52,11 @@ class ChangeAccountPassword(CyberArkPamAction):
             try:
                 self.api_client.change_password(account=account)
                 self.successful_accounts.append(account)
-            except CyberArkPamNotFoundError as e:
+            except CyberArkPamNotFoundError:
                 self.logger.exception(f"Account with id {account} was not found in CyberArk PAM.")
-                self.logger.exception(e)
                 self.failed_accounts[account] = "Account was not found in CyberArk PAM."
             except Exception as e:
-                self.logger.exception(f"Error executing action on account {account}. Reason: {e}")
-                self.logger.exception(e)
+                self.logger.exception(f"Error executing action on account {account}.")
                 self.failed_accounts[account] = str(e)
 
         self._finalize_output()
