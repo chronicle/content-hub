@@ -1012,6 +1012,20 @@ class OnePlatformSoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
+    def update_case_tag(self) -> requests.Response:
+        """Update case tag"""
+        case_tag = self.params.case_tag
+        existing_case_tag = self.params.existing_case_tag
+        resource_name = existing_case_tag.get("name")
+        if resource_name:
+            prefix = "projects/project/locations/location/instances/instance/"
+            clean_path = resource_name.replace(prefix, "")
+            endpoint = f"/{clean_path}"
+            return self._make_request(
+                HttpMethod.PATCH, endpoint, json_payload=case_tag
+            )
+
+    @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def add_case_stage(self) -> requests.Response:
         """Add case stage"""
         endpoint = "/system/settings/caseStageDefinitions"

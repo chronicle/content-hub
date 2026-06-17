@@ -2336,6 +2336,23 @@ def add_case_tag(
         return False
 
 
+def update_case_tag(
+    chronicle_soar: ChronicleSOAR,
+    case_tag: SingleJson,
+    existing_case_tag: dict,
+) -> bool:
+    """Update case tag"""
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.case_tag = case_tag
+    api_client.params.existing_case_tag = existing_case_tag
+    response = api_client.update_case_tag()
+    try:
+        validate_response(response, validate_json=False)
+        return True
+    except (HTTPError, InternalJSONDecoderError):
+        return False
+
+
 def add_case_stage(
     chronicle_soar: ChronicleSOAR,
     case_stage: SingleJson,
