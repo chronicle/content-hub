@@ -21,8 +21,13 @@ import yaml
 
 from mp.build_project.restructure.views.build import ViewBuilder
 from mp.build_project.restructure.views.deconstruct import ViewDeconstructor
-from mp.core.data_models.common.condition.condition_group import ConditionGroup
-from mp.core.data_models.common.widget.data import HtmlWidgetDataDefinition, WidgetSize, WidgetType
+from mp.core.data_models.common.condition.condition_group import ConditionGroup, LogicalOperator
+from mp.core.data_models.common.widget.data import (
+    HtmlWidgetDataDefinition,
+    WidgetDefinitionScope,
+    WidgetSize,
+    WidgetType,
+)
 from mp.core.data_models.playbooks.overview.metadata import (
     Overview,
     OverviewType,
@@ -52,7 +57,7 @@ def test_view_deconstruct_and_build_roundtrip(tmp_path: Path) -> None:
                 data_definition=HtmlWidgetDataDefinition(
                     html_height=100,
                     safe_rendering=True,
-                    widget_definition_scope=1,  # alert
+                    widget_definition_scope=WidgetDefinitionScope.ALERT,
                     type=WidgetType.HTML,
                     html_content="<h1>Hello World</h1>",
                 ),
@@ -63,7 +68,7 @@ def test_view_deconstruct_and_build_roundtrip(tmp_path: Path) -> None:
                 block_step_id=None,
                 block_step_instance_name=None,
                 present_if_empty=False,
-                conditions_group=ConditionGroup(logical_operator=1, conditions=[]),
+                conditions_group=ConditionGroup(logical_operator=LogicalOperator.OR, conditions=[]),
                 integration_name=None,
             ),
             PlaybookWidgetMetadata(
@@ -81,7 +86,7 @@ def test_view_deconstruct_and_build_roundtrip(tmp_path: Path) -> None:
                 block_step_id=None,
                 block_step_instance_name=None,
                 present_if_empty=True,
-                conditions_group=ConditionGroup(logical_operator=1, conditions=[]),
+                conditions_group=ConditionGroup(logical_operator=LogicalOperator.OR, conditions=[]),
                 integration_name=None,
             ),
         ],

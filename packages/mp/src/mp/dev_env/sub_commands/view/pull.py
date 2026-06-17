@@ -31,7 +31,7 @@ from mp.telemetry import track_command
 logger: logging.Logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from mp.core.data_models.playbooks.overview.metadata import BuiltOverview, BuiltOverviewTemplate
+    from mp.core.data_models.playbooks.overview.metadata import BuiltOverview, BuiltOverviewDetails
 
 
 def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
@@ -92,7 +92,7 @@ def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
     }
 
     return {
-        "OverviewTemplate": cast("BuiltOverviewTemplate", overview_template),
+        "OverviewTemplate": cast("BuiltOverviewDetails", overview_template),
         "Roles": flat_view.get("roleNames", []),
     }
 
@@ -157,8 +157,8 @@ def _find_view_identifier(view_name_or_id: str, installed_views: list[dict[str, 
         identifier = view.get("Identifier") or view.get("identifier")
         name = view.get("Name") or view.get("name")
 
-        if view_name_or_id in {identifier, name}:
-            return identifier
+        if view_name_or_id in {identifier, name} and identifier:
+            return cast("str", identifier)
 
     logger.error("View '%s' not found in installed views in SOAR platform.", view_name_or_id)
     raise typer.Exit(1)

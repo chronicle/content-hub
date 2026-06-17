@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Annotated, Any, cast
 import typer
 import yaml
 
+import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.restructure.views.build import ViewBuilder
 from mp.core.utils.common.utils import to_snake_case
