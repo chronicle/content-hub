@@ -26,6 +26,7 @@ from mp.core.utils import to_snake_case
 
 if TYPE_CHECKING:
     from pathlib import Path
+
     from mp.core.data_models.playbooks.overview.metadata import BuiltOverview
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -59,6 +60,14 @@ class ViewBuilder:
             if w.type is WidgetType.HTML:
                 html_file_path = widgets_folder_path / f"{w.title}.html"
                 if html_file_path.exists():
-                    w.data_definition.html_content = html_file_path.read_text(encoding="utf-8")
+                    if hasattr(w.data_definition, "html_content"):
+                        w.data_definition.html_content = html_file_path.read_text(encoding="utf-8")
+                    else:
+                        logger.warning(
+                            "HTML content file exists for widget %s, but data_definition does not have"
+                            " 'html_content' attribute (type is %s)",
+                            w.title,
+                            type(w.data_definition),
+                        )
                 else:
                     logger.warning("HTML content file not found for widget: %s", w.title)

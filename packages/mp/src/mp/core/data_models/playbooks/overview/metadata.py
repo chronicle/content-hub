@@ -159,7 +159,7 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
             msg: str = f"Missing view config at: {view_yaml_path}"
             raise FileNotFoundError(msg)
 
-        non_built_view: NonBuiltOverview = yaml.safe_load(view_yaml_path.read_text(encoding="utf-8"))
+        non_built_view: NonBuiltOverview = yaml.safe_load(view_yaml_path.read_text(encoding="utf-8")) or {}
 
         # Load all widgets from widgets/ directory
         all_widget: list[PlaybookWidgetMetadata] = PlaybookWidgetMetadata.from_non_built_path(path)

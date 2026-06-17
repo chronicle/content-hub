@@ -14,17 +14,17 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
-from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any
+from pathlib import Path  # noqa: TC003
+from typing import TYPE_CHECKING, Annotated, Any, cast
 
 import typer
 import yaml
 
 import mp.core.file_utils
 from mp.build_project.restructure.views.build import ViewBuilder
-from mp.core.data_models.playbooks.overview.metadata import BuiltOverview
 from mp.core.utils.common.utils import to_snake_case
 from mp.dev_env.sub_commands.push import push_app
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
@@ -33,23 +33,26 @@ from mp.telemetry import track_command
 logger: logging.Logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from mp.core.data_models.playbooks.overview.metadata import BuiltOverview
     from mp.dev_env.api import BackendAPI
 
 
-
 def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
-    """Convert wrapped PascalCase BuiltOverview back into flat camelCase payload expected by SOAR."""
-    template = built_view["OverviewTemplate"]
+    """Convert wrapped PascalCase BuiltOverview back into flat camelCase payload expected by SOAR.
+
+    Returns:
+        The flat camelCase dictionary payload.
+
+    """
+    template = built_view.get("OverviewTemplate") or {}
 
     # 1. Map widgets
     flat_widgets = []
     for w in template.get("Widgets", []):
         config_dict = {}
         if w.get("DataDefinitionJson"):
-            try:
+            with contextlib.suppress(json.JSONDecodeError):
                 config_dict = json.loads(w["DataDefinitionJson"])
-            except json.JSONDecodeError:
-                pass
 
         cg = w.get("ConditionsGroup")
         flat_cg = None
@@ -80,7 +83,7 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
         flat_widgets.append({"metadata": meta, "config": config_dict})
 
     # 2. Map overview template details
-    flat_view = {
+    return {
         "identifier": template.get("Identifier", ""),
         "name": template.get("Name", ""),
         "creator": template.get("Creator"),
@@ -92,8 +95,6 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
         "roleNames": built_view.get("Roles", []),
     }
 
-    return flat_view
-
 
 @push_app.command(name="view")
 @track_command
@@ -104,91 +105,120 @@ def push_view(
         typer.Option(help="Source folder containing the view directory."),
     ] = None,
 ) -> None:
-    """Build and push a view template to the SOAR environment."""
+    """Build and push a view template to the SOAR environment.
+
+    Raises:
+        typer.Exit: If the built view file cannot be found or parsed.
+
+    """
+    # 1. Locate source path
+    view_src_path = _get_view_path_by_name(view_name_or_id, src)
+    logger.info("Found source view path at: %s", view_src_path)
+
+    # 2. Build the view to a temp or output directory
+    out_dir = mp.core.file_utils.get_view_out_dir()
+    builder = ViewBuilder(view_src_path, out_dir)
+    builder.build()
+
+    # The built JSON name is to_snake_case(view_src_path.stem).json
+    built_json_name = f"{to_snake_case(view_src_path.stem)}{mp.core.constants.JSON_SUFFIX}"
+    built_json_path = out_dir / built_json_name
+
+    if not built_json_path.exists():
+        logger.error("Built view file not found at: %s", built_json_path)
+        raise typer.Exit(1)
+
+    # 3. Load built JSON data
+    logger.info("Loading built view JSON...")
     try:
-        # 1. Locate source path
-        view_src_path = _get_view_path_by_name(view_name_or_id, src)
-        logger.info("Found source view path at: %s", view_src_path)
-
-        # 2. Build the view to a temp or output directory
-        # We can build it directly into `get_view_out_dir()`
-        out_dir = mp.core.file_utils.get_view_out_dir()
-        builder = ViewBuilder(view_src_path, out_dir)
-        builder.build()
-
-        # The built JSON name is to_snake_case(view_src_path.stem).json
-        built_json_name = f"{to_snake_case(view_src_path.stem)}{mp.core.constants.JSON_SUFFIX}"
-        built_json_path = out_dir / built_json_name
-
-        if not built_json_path.exists():
-            logger.error("Built view file not found at: %s", built_json_path)
-            raise typer.Exit(1)
-
-        # 3. Load built JSON data
-        logger.info("Loading built view JSON...")
         view_data: dict[str, Any] = json.loads(built_json_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.exception("Failed to parse built view JSON")
+        raise typer.Exit(1) from e
 
-        # 4. Upload to SOAR
-        config = load_dev_env_config()
-        backend_api: BackendAPI = get_backend_api(config)
+    # 4. Upload to SOAR
+    _upload_built_view_data(view_data, view_name_or_id)
 
-        logger.info("Uploading view to SOAR platform...")
-        flat_view_data = _denormalize_pushed_view(view_data) # type: ignore
 
-        # Resolve ID from server to perform UPDATE instead of INSERT
-        try:
-            installed_views = backend_api.list_views()
-            target_uuid = flat_view_data.get("identifier")
-            for v in installed_views:
-                v_uuid = v.get("identifier") or v.get("Identifier")
-                if v_uuid == target_uuid:
-                    existing_id = v.get("id") or v.get("Id")
-                    if existing_id:
-                        logger.info("Resolved existing view ID %s on server.", existing_id)
-                        flat_view_data["id"] = existing_id
-                        break
-        except Exception as ex:
-            logger.warning("Failed to resolve existing view ID on server: %s. Proceeding as new view.", ex)
+def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -> int | None:
+    if not identifier:
+        return None
+    try:
+        installed_views = backend_api.list_views()
+        for v in installed_views:
+            v_uuid = v.get("identifier") or v.get("Identifier")
+            if v_uuid == identifier:
+                return v.get("id") or v.get("Id")
+    except Exception as ex:  # noqa: BLE001
+        logger.warning("Failed to resolve existing view ID on server: %s. Proceeding as new view.", ex)
+    return None
 
+
+def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str) -> None:
+    config = load_dev_env_config()
+    backend_api = get_backend_api(config)
+
+    logger.info("Uploading view to SOAR platform...")
+    flat_view_data = _denormalize_pushed_view(cast("BuiltOverview", view_data))
+
+    # Resolve ID from server to perform UPDATE instead of INSERT
+    existing_id = _resolve_existing_view_id(backend_api, flat_view_data.get("identifier"))
+    if existing_id:
+        logger.info("Resolved existing view ID %s on server.", existing_id)
+        flat_view_data["id"] = existing_id
+
+    try:
         result = backend_api.upload_view(flat_view_data)
         logger.debug("Upload response: %s", result)
-
-        logger.info("✅ View '%s' pushed successfully.", view_name_or_id)
-
     except Exception as e:
         logger.exception("Upload failed for view '%s'", view_name_or_id)
         raise typer.Exit(1) from e
+
+    logger.info("✅ View '%s' pushed successfully.", view_name_or_id)
+
+
+def _find_view_dir_in_root(views_root: Path, view_name_or_id: str) -> Path | None:
+    if not views_root.exists():
+        return None
+
+    for folder in views_root.iterdir():
+        if not folder.is_dir():
+            continue
+        view_yaml_path = folder / mp.core.constants.VIEW_FILE_NAME
+        if not view_yaml_path.exists():
+            continue
+
+        try:
+            view_meta = yaml.safe_load(view_yaml_path.read_text(encoding="utf-8"))
+            if view_meta and view_meta.get("name") == view_name_or_id:
+                return folder
+        except Exception as ex:  # noqa: BLE001
+            logger.debug("Failed to read view.yaml in %s: %s", folder, ex)
+
+    return None
 
 
 def _get_view_path_by_name(view_name_or_id: str, src: Path | None = None) -> Path:
     if src is not None:
         candidate = src / view_name_or_id
-        if candidate.exists():
+        if candidate.is_dir():
             return candidate
-        if src.name == view_name_or_id or (src / mp.core.constants.VIEW_FILE_NAME).exists():
+        if src.is_dir() and (src.name == view_name_or_id or (src / mp.core.constants.VIEW_FILE_NAME).exists()):
             return src
 
     views_root = mp.core.file_utils.create_or_get_views_root_dir()
     candidate = views_root / view_name_or_id
-    if candidate.exists():
+    if candidate.is_dir():
         return candidate
 
     candidate_snake = views_root / to_snake_case(view_name_or_id)
-    if candidate_snake.exists():
+    if candidate_snake.is_dir():
         return candidate_snake
 
     # Try searching for view.yaml name fields inside the views directories
-    if views_root.exists():
-        for folder in views_root.iterdir():
-            if folder.is_dir():
-                view_yaml_path = folder / mp.core.constants.VIEW_FILE_NAME
-                if view_yaml_path.exists():
-                    try:
-                        view_meta = yaml.safe_load(view_yaml_path.read_text(encoding="utf-8"))
-                        if view_meta.get("name") == view_name_or_id:
-                            return folder
-                    except Exception:  # pylint: disable=broad-except
-                        pass
+    matched_folder = _find_view_dir_in_root(views_root, view_name_or_id)
+    if matched_folder:
+        return matched_folder
 
     logger.error("Could not find source view directory for '%s'", view_name_or_id)
     raise typer.Exit(1)

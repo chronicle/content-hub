@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from pathlib import Path  # noqa: TC003
 
 import yaml
 
@@ -32,54 +32,6 @@ from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 
 def test_view_deconstruct_and_build_roundtrip(tmp_path: Path) -> None:
     # 1. Setup mock Overview object
-    html_widget_data = HtmlWidgetDataDefinition(
-        html_height=100,
-        safe_rendering=True,
-        widget_definition_scope=1,  # alert
-        type=WidgetType.HTML,
-        html_content="<h1>Hello World</h1>",
-    )
-
-    regular_widget_data = "{}"  # JSON string
-
-    widget1 = PlaybookWidgetMetadata(
-        title="Widget One",
-        description="HTML Widget",
-        identifier="widget_one_id",
-        order=1,
-        template_identifier="temp_one",
-        type=WidgetType.HTML,
-        data_definition=html_widget_data,
-        widget_size=WidgetSize.HALF_WIDTH,
-        action_widget_template_id=None,
-        step_id=None,
-        step_integration=None,
-        block_step_id=None,
-        block_step_instance_name=None,
-        present_if_empty=False,
-        conditions_group=ConditionGroup(logical_operator=1, conditions=[]),
-        integration_name=None,
-    )
-
-    widget2 = PlaybookWidgetMetadata(
-        title="Widget Two",
-        description="Regular Widget",
-        identifier="widget_two_id",
-        order=2,
-        template_identifier="temp_two",
-        type=WidgetType.KEY_VALUE,
-        data_definition=regular_widget_data,
-        widget_size=WidgetSize.FULL_WIDTH,
-        action_widget_template_id=None,
-        step_id=None,
-        step_integration=None,
-        block_step_id=None,
-        block_step_instance_name=None,
-        present_if_empty=True,
-        conditions_group=ConditionGroup(logical_operator=1, conditions=[]),
-        integration_name=None,
-    )
-
     overview = Overview(
         identifier="system_case_v2_default",
         name="Default Case View",
@@ -89,7 +41,50 @@ def test_view_deconstruct_and_build_roundtrip(tmp_path: Path) -> None:
         alert_rule_type=None,
         roles=[1, 2],
         role_names=["Tier 1", "Tier 2"],
-        widgets=[widget1, widget2],
+        widgets=[
+            PlaybookWidgetMetadata(
+                title="Widget One",
+                description="HTML Widget",
+                identifier="widget_one_id",
+                order=1,
+                template_identifier="temp_one",
+                type=WidgetType.HTML,
+                data_definition=HtmlWidgetDataDefinition(
+                    html_height=100,
+                    safe_rendering=True,
+                    widget_definition_scope=1,  # alert
+                    type=WidgetType.HTML,
+                    html_content="<h1>Hello World</h1>",
+                ),
+                widget_size=WidgetSize.HALF_WIDTH,
+                action_widget_template_id=None,
+                step_id=None,
+                step_integration=None,
+                block_step_id=None,
+                block_step_instance_name=None,
+                present_if_empty=False,
+                conditions_group=ConditionGroup(logical_operator=1, conditions=[]),
+                integration_name=None,
+            ),
+            PlaybookWidgetMetadata(
+                title="Widget Two",
+                description="Regular Widget",
+                identifier="widget_two_id",
+                order=2,
+                template_identifier="temp_two",
+                type=WidgetType.KEY_VALUE,
+                data_definition="{}",
+                widget_size=WidgetSize.FULL_WIDTH,
+                action_widget_template_id=None,
+                step_id=None,
+                step_integration=None,
+                block_step_id=None,
+                block_step_instance_name=None,
+                present_if_empty=True,
+                conditions_group=ConditionGroup(logical_operator=1, conditions=[]),
+                integration_name=None,
+            ),
+        ],
     )
 
     # 2. Deconstruct
@@ -98,22 +93,20 @@ def test_view_deconstruct_and_build_roundtrip(tmp_path: Path) -> None:
     deconstructor.deconstruct()
 
     # Assert deconstructed files exist
-    view_yaml_path = src_dir / "view.yaml"
-    assert view_yaml_path.exists()
+    assert (src_dir / "view.yaml").exists()
 
-    view_data = yaml.safe_load(view_yaml_path.read_text(encoding="utf-8"))
+    view_data = yaml.safe_load((src_dir / "view.yaml").read_text(encoding="utf-8"))
     assert view_data["identifier"] == "system_case_v2_default"
     assert view_data["type"] == "system_case_v2"
     assert len(view_data["widgets_details"]) == 2
 
-    widgets_dir = src_dir / "widgets"
-    assert widgets_dir.exists()
-    assert (widgets_dir / "Widget One.yaml").exists()
-    assert (widgets_dir / "Widget One.html").exists()
-    assert (widgets_dir / "Widget Two.yaml").exists()
-    assert not (widgets_dir / "Widget Two.html").exists()
+    assert (src_dir / "widgets").exists()
+    assert (src_dir / "widgets" / "Widget One.yaml").exists()
+    assert (src_dir / "widgets" / "Widget One.html").exists()
+    assert (src_dir / "widgets" / "Widget Two.yaml").exists()
+    assert not (src_dir / "widgets" / "Widget Two.html").exists()
 
-    assert (widgets_dir / "Widget One.html").read_text(encoding="utf-8") == "<h1>Hello World</h1>"
+    assert (src_dir / "widgets" / "Widget One.html").read_text(encoding="utf-8") == "<h1>Hello World</h1>"
 
     # 3. Build
     out_dir = tmp_path / "out"
@@ -121,10 +114,9 @@ def test_view_deconstruct_and_build_roundtrip(tmp_path: Path) -> None:
     builder.build()
 
     # Assert built file exists
-    built_json_path = out_dir / "src.json"  # stemming uses view_path directory name, which is "src"
-    assert built_json_path.exists()
+    assert (out_dir / "src.json").exists()
 
-    built_data = json.loads(built_json_path.read_text(encoding="utf-8"))
+    built_data = json.loads((out_dir / "src.json").read_text(encoding="utf-8"))
     assert built_data["OverviewTemplate"]["Identifier"] == "system_case_v2_default"
     assert built_data["OverviewTemplate"]["Type"] == OverviewType.SYSTEM_CASE_V2.value
     assert len(built_data["OverviewTemplate"]["Widgets"]) == 2

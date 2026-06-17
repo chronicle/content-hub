@@ -17,8 +17,8 @@ from __future__ import annotations
 import dataclasses
 import logging
 import re
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from pathlib import Path  # noqa: TC003
+from typing import TYPE_CHECKING
 
 import mp.core.constants
 import mp.core.file_utils
@@ -67,7 +67,7 @@ class ViewDeconstructor:
                 mp.core.file_utils.save_yaml(w, widget_path)
             except OSError:
                 logger.exception(
-                    "Failed to create a file for a widget with name '%s'."
+                    "Failed to create a file for a widget with name '%s' at path '%s'."
                     " Please verify this type of widget title can be created as a file in your"
                     " system",
                     widget_path.stem,
@@ -77,7 +77,17 @@ class ViewDeconstructor:
 
         for w in self.overview.widgets:
             widget_path: Path = widgets_path / (f"{_sanitize_widget_filename(w.title)}.{mp.core.constants.HTML_SUFFIX}")
-            html_content: str = w.data_definition.html_content if w.type is WidgetType.HTML else ""
+            html_content: str = ""
+            if w.type is WidgetType.HTML:
+                if hasattr(w.data_definition, "html_content"):
+                    html_content = w.data_definition.html_content or ""
+                else:
+                    logger.warning(
+                        "Widget %s type is HTML, but data_definition does not have"
+                        " 'html_content' attribute (type is %s)",
+                        w.title,
+                        type(w.data_definition),
+                    )
             if html_content:
                 widget_path.write_text(html_content, encoding="utf-8")
 
@@ -92,7 +102,7 @@ def _sanitize_widget_filename(filename: str) -> str:
         The sanitized filename.
 
     """
-    invalid_chars: str = r'./<>!@#$%^&*()+={};:~`"'
+    invalid_chars: str = r'[./<>!@#$%^&*()+={};:~`"]'
     sanitized: str = re.sub(invalid_chars, " ", filename)
 
     return " ".join(sanitized.split())

@@ -16,14 +16,14 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any
+from pathlib import Path  # noqa: TC003
+from typing import TYPE_CHECKING, Annotated, Any, cast
 
 import typer
 
 import mp.core.file_utils
 from mp.build_project.restructure.views.deconstruct import ViewDeconstructor
-from mp.core.data_models.playbooks.overview.metadata import BuiltOverview, Overview
+from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
@@ -31,15 +31,20 @@ from mp.telemetry import track_command
 logger: logging.Logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from mp.dev_env.api import BackendAPI
+    from mp.core.data_models.playbooks.overview.metadata import BuiltOverview, BuiltOverviewTemplate
 
 
 def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
-    """Normalize flat camelCase view payload from SOAR REST API into BuiltOverview."""
+    """Normalize flat camelCase view payload from SOAR REST API into BuiltOverview.
+
+    Returns:
+        The normalized BuiltOverview structure.
+
+    """
     built_widgets = []
-    for w in flat_view.get("widgets", []):
-        meta = w.get("metadata", {})
-        config = w.get("config", {})
+    for w in flat_view.get("widgets") or []:
+        meta = w.get("metadata") or {}
+        config = w.get("config") or {}
 
         # If data is HTML, we must include the htmlContent in config
         # Actually in widgets list, htmlContent was inside DataDefinitionJson
@@ -87,7 +92,7 @@ def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
     }
 
     return {
-        "OverviewTemplate": overview_template, # type: ignore
+        "OverviewTemplate": cast("BuiltOverviewTemplate", overview_template),
         "Roles": flat_view.get("roleNames", []),
     }
 
@@ -101,49 +106,58 @@ def pull_view(
         typer.Option(help="Destination folder. Defaults to 'content/views/<view_identifier>'."),
     ] = None,
 ) -> None:
-    """Pull and deconstruct a view template from the SOAR environment."""
+    """Pull and deconstruct a view template from the SOAR environment.
+
+    Raises:
+        typer.Exit: If the pull or deconstruction fails.
+
+    """
+    config = load_dev_env_config()
+    backend_api = get_backend_api(config)
+
+    logger.info("Fetching installed views...")
     try:
-        config = load_dev_env_config()
-        backend_api: BackendAPI = get_backend_api(config)
+        installed_views = backend_api.list_views()
+    except Exception as e:
+        logger.exception("Failed to fetch installed views")
+        raise typer.Exit(1) from e
 
-        logger.info("Fetching installed views...")
-        installed_views: list[dict[str, Any]] = backend_api.list_views()
+    view_identifier = _find_view_identifier(view_name_or_id, installed_views)
+    logger.info("Downloading view '%s' (ID: %s)...", view_name_or_id, view_identifier)
 
-        view_identifier = _find_view_identifier(view_name_or_id, installed_views)
-        logger.info("Downloading view '%s' (ID: %s)...", view_name_or_id, view_identifier)
+    try:
+        built_view_data = backend_api.download_view(view_identifier)
+    except Exception as e:
+        logger.exception("Failed to download view '%s'", view_name_or_id)
+        raise typer.Exit(1) from e
 
-        # Download built view template JSON payload
-        built_view_data: dict[str, Any] = backend_api.download_view(view_identifier)
+    # Determine destination path
+    if dst is None:
+        views_root = mp.core.file_utils.create_or_get_views_root_dir()
+        dst = views_root / view_identifier
+    else:
+        dst /= view_identifier
 
-        # Determine destination path
-        if dst is None:
-            views_root = mp.core.file_utils.create_or_get_views_root_dir()
-            dst = views_root / view_identifier
-        else:
-            dst = dst / view_identifier
-
-        # Parse built payload into Overview model
+    # Parse built payload into Overview model and deconstruct
+    try:
         normalized_view_data = _normalize_downloaded_view(built_view_data)
         overview = Overview.from_built(normalized_view_data)
-
-        # Deconstruct view into destination folder
         logger.info("Deconstructing view to %s...", dst)
         deconstructor = ViewDeconstructor(overview, dst)
         deconstructor.deconstruct()
-
-        logger.info("✅ View '%s' pulled and deconstructed successfully to %s", view_name_or_id, dst)
-
     except Exception as e:
-        logger.exception("Pull failed for view '%s'", view_name_or_id)
+        logger.exception("Deconstruction failed for view '%s'", view_name_or_id)
         raise typer.Exit(1) from e
 
+    logger.info("✅ View '%s' pulled and deconstructed successfully to %s", view_name_or_id, dst)
 
-def _find_view_identifier(view_name_or_id: str, installed_views: list[dict[str, Any]]) -> str:
-    for view in installed_views:
+
+def _find_view_identifier(view_name_or_id: str, installed_views: list[dict[str, Any]] | None) -> str:
+    for view in installed_views or []:
         identifier = view.get("Identifier") or view.get("identifier")
         name = view.get("Name") or view.get("name")
 
-        if view_name_or_id in (identifier, name):
+        if view_name_or_id in {identifier, name}:
             return identifier
 
     logger.error("View '%s' not found in installed views in SOAR platform.", view_name_or_id)
