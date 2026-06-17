@@ -92,7 +92,7 @@ def is_built_view(path: Path) -> bool:
             data: dict[str, Any] = json.load(f)
 
         required_keys = {"OverviewTemplate", "Roles"}
-        if not required_keys.issubset(data.keys()):
+        if not isinstance(data, dict) or not required_keys.issubset(data.keys()):
             logger.error(
                 "View is invalid, File %s is missing one or more required keys: %s",
                 path.name,

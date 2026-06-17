@@ -55,9 +55,15 @@ def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
         if cg is None:
             cg = {"LogicalOperator": 1, "Conditions": []}
         else:
+            op = cg.get("logicalOperator")
+            if op is None:
+                op = cg.get("LogicalOperator", 1)
+            conds = cg.get("conditions")
+            if conds is None:
+                conds = cg.get("Conditions", [])
             cg = {
-                "LogicalOperator": cg.get("logicalOperator") or cg.get("LogicalOperator") or 1,
-                "Conditions": cg.get("conditions") or cg.get("Conditions") or [],
+                "LogicalOperator": op,
+                "Conditions": conds,
             }
 
         built_widget: dict[str, Any] = {

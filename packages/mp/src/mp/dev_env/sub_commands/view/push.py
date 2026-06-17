@@ -192,7 +192,7 @@ def _find_view_dir_in_root(views_root: Path, view_name_or_id: str) -> Path | Non
 
         try:
             view_meta = yaml.safe_load(view_yaml_path.read_text(encoding="utf-8"))
-            if view_meta and view_meta.get("name") == view_name_or_id:
+            if isinstance(view_meta, dict) and view_meta.get("name") == view_name_or_id:
                 return folder
         except Exception as ex:  # noqa: BLE001
             logger.debug("Failed to read view.yaml in %s: %s", folder, ex)
@@ -204,10 +204,7 @@ def _get_view_path_by_name(view_name_or_id: str, src: Path | None = None) -> Pat
     views_root = src if src is not None else mp.core.file_utils.create_or_get_views_root_dir()
 
     # 1. If views_root is already a view directory (contains view.yaml), return it
-    if views_root.is_dir() and (
-        views_root.name == view_name_or_id
-        or (views_root / mp.core.constants.VIEW_FILE_NAME).exists()
-    ):
+    if views_root.is_dir() and (views_root / mp.core.constants.VIEW_FILE_NAME).exists():
         return views_root
 
     # 2. Check candidate directly under views_root
