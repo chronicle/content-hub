@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
@@ -27,18 +27,17 @@ def main():
 
     format = siemplify.extract_action_param("Datetime Format", print_value=True)
 
-    status = EXECUTION_STATE_COMPLETED  # used to flag back to siemplify system, the action final status
-    output_message = (
-        "output message :"  # human readable message, showed in UI as the action result
-    )
-    result_value = (
-        None  # Set a simple result value, used for playbook if\else and placeholders.
-    )
+    status = EXECUTION_STATE_COMPLETED
 
-    now = datetime.now()
-
-    current_time = now.strftime(format)
-    print("Current Time =", current_time)
+    try:
+        now = datetime.now()
+        current_time = now.strftime(format)
+    except Exception as e:
+        siemplify.LOGGER.info(f"Error: {e}")
+        status = EXECUTION_STATE_FAILED
+        siemplify.end(output_message, "false/failed", status)
+    
+    output_message = f"{current_time}"
     siemplify.end(output_message, current_time, status)
 
 
