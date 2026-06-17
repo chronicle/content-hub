@@ -5,6 +5,7 @@ from core.datamodels.campaign import Campaign
 from core.datamodels.grouping import Grouping
 from core.datamodels.incident import Incident
 from core.datamodels.incident_response import IncidentResponse
+from core.datamodels.indicator import Indicator
 from core.datamodels.observable import Observable
 from core.datamodels.report import Report
 from core.datamodels.request_for_information import RequestForInformation
@@ -16,6 +17,7 @@ from core.opencti_client.json_results import (
     GroupingJSONResult,
     IncidentJSONResult,
     IncidentResponseJSONResult,
+    IndicatorJSONResult,
     ObservableJSONResult,
     ReportJSONResult,
     RequestForInformationJSONResult,
@@ -315,6 +317,32 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Attack Pattern creation: {str(e)}"
+            ) from e
+
+    def create_indicator(self, indicator: Indicator) -> IndicatorJSONResult:
+        try:
+            indicator_args = indicator.to_input_variables()
+            pattern_types = indicator_args.get("pattern_type") or []
+            self._upsert_vocabulary_entries("pattern_type_ov", *pattern_types)
+
+            labels = indicator_args.get("objectLabel")
+            self._upsert_labels(labels)
+            data = self._api_client.indicator.create(**indicator_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the indicator "
+                    "(some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Indicator in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return IndicatorJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Indicator creation: {str(e)}"
             ) from e
 
     def add_object_to_container(
