@@ -7,6 +7,7 @@ from core.datamodels.incident import Incident
 from core.datamodels.incident_response import IncidentResponse
 from core.datamodels.indicator import Indicator
 from core.datamodels.intrusion_set import IntrusionSet
+from core.datamodels.malware import Malware
 from core.datamodels.observable import Observable
 from core.datamodels.report import Report
 from core.datamodels.request_for_information import RequestForInformation
@@ -20,6 +21,7 @@ from core.opencti_client.json_results import (
     IncidentResponseJSONResult,
     IndicatorJSONResult,
     IntrusionSetJSONResult,
+    MalwareJSONResult,
     ObservableJSONResult,
     ReportJSONResult,
     RequestForInformationJSONResult,
@@ -275,6 +277,32 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Grouping creation: {str(e)}"
+            ) from e
+
+    def create_malware(self, malware: Malware) -> MalwareJSONResult:
+        try:
+            malware_args = malware.to_input_variables()
+            malware_types = malware_args.get("malware_types") or []
+            self._upsert_vocabulary_entries("malware_type_ov", *malware_types)
+
+            labels = malware_args.get("objectLabel")
+            self._upsert_labels(labels)
+            data = self._api_client.malware.create(**malware_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the malware "
+                    "(some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Malware in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return MalwareJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Malware creation: {str(e)}"
             ) from e
 
     def create_intrusion_set(self, intrusion_set: IntrusionSet) -> IntrusionSetJSONResult:
