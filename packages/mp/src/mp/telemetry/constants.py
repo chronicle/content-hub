@@ -51,6 +51,8 @@ NAME_MAPPER: dict[str, str] = {
     "pull_integration": "dev-env pull integration",
     "push_playbook": "dev-env push playbook",
     "pull_playbook": "dev-env pull playbook",
+    "push_view": "dev-env push view",
+    "pull_view": "dev-env pull view",
     "push_custom_integration_repository": "dev-env push custom integration repository",
     "describe_action_with_ai": "describe action",
     "update": "self update",
