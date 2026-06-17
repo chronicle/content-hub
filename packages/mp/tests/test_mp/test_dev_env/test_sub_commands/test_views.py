@@ -39,16 +39,16 @@ def test_pull_view_cli(
 
     # Mock list_views response
     mock_api.list_views.return_value = [
-        {"Identifier": "system_case_v2_default", "Name": "Default Case View"}
+        {"Identifier": "system_case_default", "Name": "Default Case View"}
     ]
 
     # Mock download_view response (flat camelCase REST API structure)
     mock_api.download_view.return_value = {
-        "identifier": "system_case_v2_default",
+        "identifier": "system_case_default",
         "name": "Default Case View",
         "creator": "system",
         "playbookIdentifier": "playbook_1",
-        "type": 5,  # SYSTEM_CASE_V2
+        "type": 3,  # SYSTEM_CASE
         "alertRuleType": None,
         "widgets": [
             {
@@ -94,10 +94,10 @@ def test_pull_view_cli(
     assert result.exit_code == 0
 
     # Verify download_view was called with the identifier
-    mock_api.download_view.assert_called_once_with("system_case_v2_default")
+    mock_api.download_view.assert_called_once_with("system_case_default")
 
-    # Verify files are written to tmp_path / content_views / system_case_v2_default
-    view_folder = dst_dir / "system_case_v2_default"
+    # Verify files are written to tmp_path / content_views / system_case_default
+    view_folder = dst_dir / "system_case_default"
     assert view_folder.exists()
     assert (view_folder / "view.yaml").exists()
     assert (view_folder / "widgets" / "Widget One.yaml").exists()
@@ -117,20 +117,20 @@ def test_push_view_cli(
     mock_api = mock.MagicMock()
     mock_get_backend_api.return_value = mock_api
     mock_api.upload_view.return_value = {"success": True}
-    mock_api.list_views.return_value = [{"identifier": "system_case_v2_default", "id": 100}]
+    mock_api.list_views.return_value = [{"identifier": "system_case_default", "id": 100}]
 
     # Setup source directory structure to build from
     src_dir = tmp_path / "views"
-    view_folder = src_dir / "system_case_v2_default"
+    view_folder = src_dir / "system_case_default"
     view_folder.mkdir(parents=True)
 
     # Create view.yaml
     view_yaml_data = {
-        "identifier": "system_case_v2_default",
+        "identifier": "system_case_default",
         "name": "Default Case View",
         "creator": "system",
         "playbook_id": "playbook_1",
-        "type": "system_case_v2",
+        "type": "system_case",
         "alert_rule_type": None,
         "roles": [1, 2],
         "role_names": ["Tier 1", "Tier 2"],
@@ -170,11 +170,11 @@ def test_push_view_cli(
     (widgets_dir / "Widget One.html").write_text("<h1>Hello from push</h1>", encoding="utf-8")
 
     # Invoke mp push view command
-    # Usage: mp push view "system_case_v2_default" --src <src_dir>
+    # Usage: mp push view "system_case_default" --src <src_dir>
     with mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"):
         result = runner.invoke(
             push_app,
-            ["view", "system_case_v2_default", "--src", str(src_dir)],
+            ["view", "system_case_default", "--src", str(src_dir)],
         )
 
     assert result.exit_code == 0
@@ -183,8 +183,8 @@ def test_push_view_cli(
     mock_api.upload_view.assert_called_once()
     called_args = mock_api.upload_view.call_args[0][0]
 
-    assert called_args["identifier"] == "system_case_v2_default"
-    assert called_args["type"] == 5  # SYSTEM_CASE_V2
+    assert called_args["identifier"] == "system_case_default"
+    assert called_args["type"] == 3  # SYSTEM_CASE
     assert called_args["id"] == 100
 
     widgets = called_args["widgets"]
@@ -217,7 +217,7 @@ def test_push_view_by_display_name_cli(
         "name": "My Custom View",
         "creator": "system",
         "playbook_id": "playbook_1",
-        "type": "system_case_v2",
+        "type": "system_case",
         "alert_rule_type": None,
         "roles": [1, 2],
         "role_names": ["Tier 1", "Tier 2"],

@@ -911,13 +911,13 @@ OVERVIEW_WITH_NONE = Overview(
     widgets=[],
 )
 
-BUILT_OVERVIEW_V2_CASE: BuiltOverview = {
+BUILT_OVERVIEW_CASE: BuiltOverview = {
     "OverviewTemplate": {
         "Identifier": "identifier",
         "Name": "name",
         "Creator": "creator",
         "PlaybookDefinitionIdentifier": "playbook_id",
-        "Type": 5,
+        "Type": 3,
         "AlertRuleType": "alert_rule_type",
         "Widgets": [BUILT_PLAYBOOK_WIDGET_METADATA],
         "Roles": [1, 2],
@@ -925,24 +925,24 @@ BUILT_OVERVIEW_V2_CASE: BuiltOverview = {
     "Roles": ["role1", "role2"],
 }
 
-NON_BUILT_OVERVIEW_V2_CASE: NonBuiltOverview = {
+NON_BUILT_OVERVIEW_CASE: NonBuiltOverview = {
     "identifier": "identifier",
     "name": "name",
     "creator": "creator",
     "playbook_id": "playbook_id",
     "widgets_details": [OVER_VIEW_WIDGET_DETAILS],
-    "type": "system_case_v2",
+    "type": "system_case",
     "alert_rule_type": "alert_rule_type",
     "roles": [1, 2],
     "role_names": ["role1", "role2"],
 }
 
-OVERVIEW_V2_CASE = Overview(
+OVERVIEW_CASE = Overview(
     identifier="identifier",
     name="name",
     creator="creator",
     playbook_id="playbook_id",
-    type_=OverviewType.SYSTEM_CASE_V2,
+    type_=OverviewType.SYSTEM_CASE,
     alert_rule_type="alert_rule_type",
     roles=[1, 2],
     role_names=["role1", "role2"],

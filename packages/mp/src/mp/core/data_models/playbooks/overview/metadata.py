@@ -37,9 +37,6 @@ class OverviewType(RepresentableEnum):
     SYSTEM_ALERT = 2
     SYSTEM_CASE = 3
     ALERT_TYPE = 4
-    SYSTEM_CASE_V2 = 5
-    SYSTEM_ALERT_V2 = 6
-    SYSTEM_DETECTION = 7
 
 
 class OverviewWidgetDetails(TypedDict):

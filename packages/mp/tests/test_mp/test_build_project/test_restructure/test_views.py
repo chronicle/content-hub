@@ -38,11 +38,11 @@ from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 def test_view_deconstruct_and_build_roundtrip(tmp_path: Path) -> None:
     # 1. Setup mock Overview object
     overview = Overview(
-        identifier="system_case_v2_default",
+        identifier="system_case_default",
         name="Default Case View",
         creator="system",
         playbook_id="playbook_1",
-        type_=OverviewType.SYSTEM_CASE_V2,
+        type_=OverviewType.SYSTEM_CASE,
         alert_rule_type=None,
         roles=[1, 2],
         role_names=["Tier 1", "Tier 2"],
@@ -101,8 +101,8 @@ def test_view_deconstruct_and_build_roundtrip(tmp_path: Path) -> None:
     assert (src_dir / "view.yaml").exists()
 
     view_data = yaml.safe_load((src_dir / "view.yaml").read_text(encoding="utf-8"))
-    assert view_data["identifier"] == "system_case_v2_default"
-    assert view_data["type"] == "system_case_v2"
+    assert view_data["identifier"] == "system_case_default"
+    assert view_data["type"] == "system_case"
     assert len(view_data["widgets_details"]) == 2
 
     assert (src_dir / "widgets").exists()
@@ -122,8 +122,8 @@ def test_view_deconstruct_and_build_roundtrip(tmp_path: Path) -> None:
     assert (out_dir / "src.json").exists()
 
     built_data = json.loads((out_dir / "src.json").read_text(encoding="utf-8"))
-    assert built_data["OverviewTemplate"]["Identifier"] == "system_case_v2_default"
-    assert built_data["OverviewTemplate"]["Type"] == OverviewType.SYSTEM_CASE_V2.value
+    assert built_data["OverviewTemplate"]["Identifier"] == "system_case_default"
+    assert built_data["OverviewTemplate"]["Type"] == OverviewType.SYSTEM_CASE.value
     assert len(built_data["OverviewTemplate"]["Widgets"]) == 2
 
     # Check HTML content was successfully re-loaded into the built JSON
