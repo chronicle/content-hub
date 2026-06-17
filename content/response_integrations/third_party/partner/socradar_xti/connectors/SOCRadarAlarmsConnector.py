@@ -471,7 +471,8 @@ def main(is_test_run: bool = False) -> None:
         siemplify.LOGGER.info(f"Fetched {len(alarms)} alarms (total: {total})")
 
         # Deduplication — skip already-ingested alarm IDs
-        existing_ids = siemplify.get_connector_context_property("processed_ids") or ""
+        connector_id = siemplify.context.connector_info.identifier
+        existing_ids = siemplify.get_connector_context_property(connector_id, "processed_ids") or ""
         processed_set = {x for x in existing_ids.split(",") if x} if existing_ids else set()
 
         last_processed_ts = last_run
@@ -505,7 +506,7 @@ def main(is_test_run: bool = False) -> None:
         for alert in alerts:
             processed_set.add(alert.display_id)
         trimmed = sorted(processed_set, key=lambda x: int(x) if x.isdigit() else 0)[-1000:]
-        siemplify.set_connector_context_property("processed_ids", ",".join(trimmed))
+        siemplify.set_connector_context_property(connector_id, "processed_ids", ",".join(trimmed))
 
         if not is_test_run:
             # Save the newest processed alarm's timestamp (not "now") so we

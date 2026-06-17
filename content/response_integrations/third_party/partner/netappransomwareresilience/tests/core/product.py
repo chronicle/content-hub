@@ -27,6 +27,7 @@ class RansomwareResilience:
     volume_offline_response: Optional[SingleJson] = None
     volume_online_response: Optional[SingleJson] = None
     block_user_response: SingleJson | None = None
+    unblock_user_response: SingleJson | None = None
 
     # Error simulation — set to a non-2xx code to trigger error responses
     token_status_code: Optional[int] = None
@@ -37,6 +38,7 @@ class RansomwareResilience:
     volume_offline_status_code: Optional[int] = None
     volume_online_status_code: int | None = None
     block_user_status_code: Optional[int] = None
+    unblock_user_status_code: Optional[int] = None
 
     def get_token(self) -> SingleJson:
         """Return mock OAuth token response."""
@@ -115,4 +117,12 @@ class RansomwareResilience:
             return self.block_user_response
         return {
             "message": "User blocked successfully",
+        }
+
+    def get_unblock_user(self) -> SingleJson:
+        """Return mock unblock user response."""
+        if self.unblock_user_response:
+            return self.unblock_user_response
+        return {
+            "message": "User unblocked successfully",
         }
