@@ -140,6 +140,10 @@ def pull_view(
         logger.exception("Failed to download view '%s'", view_name_or_id)
         raise typer.Exit(1) from e
 
+    if not isinstance(built_view_data, dict):
+        logger.error("Downloaded view data is not a valid JSON object.")
+        raise typer.Exit(1)
+
     # Determine destination path
     if dst is None:
         views_root = mp.core.file_utils.create_or_get_views_root_dir()

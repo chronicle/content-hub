@@ -192,7 +192,7 @@ def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str) -> 
 
     # Resolve ID from server to perform UPDATE instead of INSERT
     existing_id = _resolve_existing_view_id(backend_api, flat_view_data.get("identifier"))
-    if existing_id:
+    if existing_id is not None:
         logger.info("Resolved existing view ID %s on server.", existing_id)
         flat_view_data["id"] = existing_id
 

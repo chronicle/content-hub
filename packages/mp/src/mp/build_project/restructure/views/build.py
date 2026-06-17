@@ -70,7 +70,9 @@ class ViewBuilder:
                 filename = sanitized_title or f"widget_{w.identifier or i}"
                 html_file_path = widgets_folder_path / f"{filename}.html"
                 if html_file_path.exists():
-                    if hasattr(w.data_definition, "html_content"):
+                    if dataclasses.is_dataclass(w.data_definition) and hasattr(w.data_definition, "html_content"):
+                        w.data_definition = dataclasses.replace(w.data_definition, html_content=html_file_path.read_text(encoding="utf-8"))
+                    elif hasattr(w.data_definition, "html_content"):
                         w.data_definition.html_content = html_file_path.read_text(encoding="utf-8")
                     elif isinstance(w.data_definition, dict):
                         w.data_definition["html_content"] = html_file_path.read_text(encoding="utf-8")
