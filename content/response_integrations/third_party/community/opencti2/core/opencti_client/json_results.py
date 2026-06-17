@@ -99,6 +99,12 @@ class GroupingJSONResult(BaseObjectJSONResult):
         examples=["Grouping"],
     )
 
+class RelationshipJSONResult(BaseObjectJSONResult):
+    entity_type: str = Field(
+        description="The type of the object on OpenCTI",
+        examples=["related-to", "stix-core-relationship"],
+    )
+
 class MalwareJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Malware"] = Field(
         description="The type of the object on OpenCTI",

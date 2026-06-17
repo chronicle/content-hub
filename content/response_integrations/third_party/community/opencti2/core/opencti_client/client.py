@@ -8,6 +8,7 @@ from core.datamodels.incident_response import IncidentResponse
 from core.datamodels.indicator import Indicator
 from core.datamodels.intrusion_set import IntrusionSet
 from core.datamodels.malware import Malware
+from core.datamodels.relationship import Relationship
 from core.datamodels.observable import Observable
 from core.datamodels.report import Report
 from core.datamodels.request_for_information import RequestForInformation
@@ -22,6 +23,7 @@ from core.opencti_client.json_results import (
     IndicatorJSONResult,
     IntrusionSetJSONResult,
     MalwareJSONResult,
+    RelationshipJSONResult,
     ObservableJSONResult,
     ReportJSONResult,
     RequestForInformationJSONResult,
@@ -277,6 +279,27 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Grouping creation: {str(e)}"
+            ) from e
+
+    def create_relationship(self, relationship: Relationship) -> RelationshipJSONResult:
+        try:
+            relationship_args = relationship.to_input_variables()
+            data = self._api_client.stix_core_relationship.create(**relationship_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the relationship "
+                    "(some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Relationship in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return RelationshipJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Relationship creation: {str(e)}"
             ) from e
 
     def create_malware(self, malware: Malware) -> MalwareJSONResult:
