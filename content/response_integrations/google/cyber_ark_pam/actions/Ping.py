@@ -87,7 +87,7 @@ def main() -> None:
         )
 
         log_message = (
-            f"Successfully connected to the {INTEGRATION_NAME} installation with the provided connection parameters!"
+            f"Successfully connected to the {INTEGRATION_NAME} server with the provided connection parameters!"
         )
         siemplify.LOGGER.info(log_message)
         output_message = log_message
@@ -95,7 +95,7 @@ def main() -> None:
         status = EXECUTION_STATE_COMPLETED
 
     except Exception as e:
-        log_message = f"Failed to connect to the {INTEGRATION_NAME} installation! Error is {e}"
+        log_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error is {e}"
         siemplify.LOGGER.error(log_message)
         siemplify.LOGGER.exception(e)
         output_message = log_message

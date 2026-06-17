@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Base action module for CyberArk PAM integration."""
+
+
 from __future__ import annotations
 
 from abc import ABC
@@ -83,6 +86,7 @@ class CyberArkPamAction(Action, ABC):
                 param_name="Verify SSL",
                 is_mandatory=False,
                 input_type=bool,
+                default_value=True,
                 print_value=True,
             )
             ca_certificate = extract_configuration_param(

@@ -225,7 +225,7 @@ class CyberArkPamManager:
         records_offset: int | None,
         filter_query: str | None,
         saved_filter: str | None,
-    ):
+    ) -> list[Account]:
         """List PAM accounts matching specified criteria.
 
         Args:

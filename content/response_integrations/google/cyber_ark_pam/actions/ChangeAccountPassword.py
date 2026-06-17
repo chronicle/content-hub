@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+"""Change Account Password action for CyberArk PAM integration."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -53,10 +56,10 @@ class ChangeAccountPassword(CyberArkPamAction):
                 self.api_client.change_password(account=account)
                 self.successful_accounts.append(account)
             except CyberArkPamNotFoundError:
-                self.logger.exception(f"Account with id {account} was not found in CyberArk PAM.")
+                self.logger.error(f"Account with id {account} was not found in CyberArk PAM.")
                 self.failed_accounts[account] = "Account was not found in CyberArk PAM."
             except Exception as e:
-                self.logger.exception(f"Error executing action on account {account}.")
+                self.logger.error(f"Error executing action on account {account}. {str(e)}")
                 self.failed_accounts[account] = str(e)
 
         self._finalize_output()

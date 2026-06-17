@@ -20,7 +20,7 @@ from TIPCommon.transformation import dict_to_flat
 
 
 class BaseModel:
-    def __init__(self, raw_data) -> None:
+    def __init__(self, raw_data: dict) -> None:
         self.raw_data = raw_data
 
     def to_json(self):

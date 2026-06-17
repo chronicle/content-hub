@@ -121,7 +121,7 @@ def main() -> None:
         result_value = "false"
         log_message = f"Error executing action “{SCRIPT_NAME}”. Reason: {e}"
         output_message = log_message
-        siemplify.LOGGER.exception(log_message)
+        siemplify.LOGGER.error(log_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
 
