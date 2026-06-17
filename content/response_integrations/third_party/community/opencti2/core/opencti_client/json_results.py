@@ -15,9 +15,7 @@ class BaseJSONResult(BaseModel, ABC):
     )
 
     def json(self) -> dict[str, Any]:
-        """
-        Serialize the model to a JSON-compatible dictionary.
-        """
+        """Serialize the model to a JSON-compatible dictionary."""
         return self.model_dump(mode="json")
 
 
@@ -93,11 +91,13 @@ class ReportJSONResult(BaseObjectJSONResult):
         examples=["Report"],
     )
 
+
 class GroupingJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Grouping"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Grouping"],
     )
+
 
 class RelationshipJSONResult(BaseObjectJSONResult):
     entity_type: str = Field(
@@ -105,11 +105,20 @@ class RelationshipJSONResult(BaseObjectJSONResult):
         examples=["related-to", "stix-core-relationship"],
     )
 
+
+class VulnerabilityJSONResult(BaseObjectJSONResult):
+    entity_type: Literal["Vulnerability"] = Field(
+        description="The type of the object on OpenCTI",
+        examples=["Vulnerability"],
+    )
+
+
 class MalwareJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Malware"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Malware"],
     )
+
 
 class ThreatActorGroupJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Threat-Actor-Group"] = Field(
@@ -117,11 +126,13 @@ class ThreatActorGroupJSONResult(BaseObjectJSONResult):
         examples=["Threat-Actor-Group"],
     )
 
+
 class IntrusionSetJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Intrusion-Set"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Intrusion-Set"],
     )
+
 
 class CampaignJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Campaign"] = Field(
@@ -129,11 +140,13 @@ class CampaignJSONResult(BaseObjectJSONResult):
         examples=["Campaign"],
     )
 
+
 class ToolJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Tool"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Tool"],
     )
+
 
 class AttackPatternJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Attack-Pattern"] = Field(
@@ -141,11 +154,13 @@ class AttackPatternJSONResult(BaseObjectJSONResult):
         examples=["Attack-Pattern"],
     )
 
+
 class IndicatorJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Indicator"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Indicator"],
     )
+
 
 class SightingJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Sighting", "stix-sighting-relationship"] = Field(
@@ -153,12 +168,13 @@ class SightingJSONResult(BaseObjectJSONResult):
         examples=["Sighting", "stix-sighting-relationship"],
     )
 
+
 class AddObjectToContainerJSONResult(BaseJSONResult):
     """Result for `AddObjectToContainer` action.
 
     pycti's `add_stix_object_or_stix_relationship` methods return `True` on success and
     `False` on failure — it never returns the container payload.
-    This model builds a result based on input paramters so the action's output
+    This model builds a result based on input parameters so the action's output
     can be re-used in subsequent actions (typically in a playbook).
     """
 

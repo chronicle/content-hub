@@ -8,14 +8,15 @@ from core.datamodels.incident_response import IncidentResponse
 from core.datamodels.indicator import Indicator
 from core.datamodels.intrusion_set import IntrusionSet
 from core.datamodels.malware import Malware
-from core.datamodels.relationship import Relationship
-from core.datamodels.sighting import Sighting
-from core.datamodels.threat_actor_group import ThreatActorGroup
-from core.datamodels.tool import Tool
 from core.datamodels.observable import Observable
+from core.datamodels.relationship import Relationship
 from core.datamodels.report import Report
 from core.datamodels.request_for_information import RequestForInformation
 from core.datamodels.request_for_takedown import RequestForTakedown
+from core.datamodels.sighting import Sighting
+from core.datamodels.threat_actor_group import ThreatActorGroup
+from core.datamodels.tool import Tool
+from core.datamodels.vulnerability import Vulnerability
 from core.opencti_client.json_results import (
     AddObjectToContainerJSONResult,
     AttackPatternJSONResult,
@@ -26,14 +27,15 @@ from core.opencti_client.json_results import (
     IndicatorJSONResult,
     IntrusionSetJSONResult,
     MalwareJSONResult,
-    RelationshipJSONResult,
-    SightingJSONResult,
-    ThreatActorGroupJSONResult,
-    ToolJSONResult,
     ObservableJSONResult,
+    RelationshipJSONResult,
     ReportJSONResult,
     RequestForInformationJSONResult,
     RequestForTakedownJSONResult,
+    SightingJSONResult,
+    ThreatActorGroupJSONResult,
+    ToolJSONResult,
+    VulnerabilityJSONResult,
 )
 from pycti import OpenCTIApiClient
 from pydantic import ValidationError
@@ -85,15 +87,17 @@ class OpenCTIClient:
     def create_incident(self, incident: Incident) -> IncidentJSONResult:
         try:
             incident_args = incident.to_input_variables()
-            information_types = incident_args.get("information_types") or []
+
+            incident_type = incident_args.get("incident_type")
             priority = incident_args.get("priority")
             severity = incident_args.get("severity")
-            self._upsert_vocabulary_entries("incident_type_ov", *information_types)
+            self._upsert_vocabulary_entries("incident_type_ov", incident_type)
             self._upsert_vocabulary_entries("case_priority_ov", priority)
             self._upsert_vocabulary_entries("case_severity_ov", severity)
 
             labels = incident_args.get("objectLabel")
             self._upsert_labels(labels)
+
             data = self._api_client.incident.create(**incident_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -117,15 +121,19 @@ class OpenCTIClient:
     ) -> IncidentResponseJSONResult:
         try:
             incident_response_args = incident_response.to_input_variables()
-            information_types = incident_response_args.get("information_types") or []
+
+            response_types = incident_response_args.get("response_types") or []
             priority = incident_response_args.get("priority")
             severity = incident_response_args.get("severity")
-            self._upsert_vocabulary_entries("incident_type_ov", *information_types)
+            self._upsert_vocabulary_entries(
+                "incident_response_types_ov", *response_types
+            )
             self._upsert_vocabulary_entries("case_priority_ov", priority)
             self._upsert_vocabulary_entries("case_severity_ov", severity)
 
             labels = incident_response_args.get("objectLabel")
             self._upsert_labels(labels)
+
             data = self._api_client.case_incident.create(**incident_response_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -150,6 +158,7 @@ class OpenCTIClient:
     ) -> RequestForInformationJSONResult:
         try:
             rfi_args = request_for_information.to_input_variables()
+
             information_types = rfi_args.get("information_types") or []
             priority = rfi_args.get("priority")
             severity = rfi_args.get("severity")
@@ -161,6 +170,7 @@ class OpenCTIClient:
 
             labels = rfi_args.get("objectLabel")
             self._upsert_labels(labels)
+
             data = self._api_client.case_rfi.create(**rfi_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -184,6 +194,7 @@ class OpenCTIClient:
     ) -> RequestForTakedownJSONResult:
         try:
             rft_args = request_for_takedown.to_input_variables()
+
             takedown_types = rft_args.get("takedown_types") or []
             priority = rft_args.get("priority")
             severity = rft_args.get("severity")
@@ -195,6 +206,7 @@ class OpenCTIClient:
 
             labels = rft_args.get("objectLabel")
             self._upsert_labels(labels)
+
             data = self._api_client.case_rft.create(**rft_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -216,6 +228,7 @@ class OpenCTIClient:
     def create_observable(self, observable: Observable) -> ObservableJSONResult:
         try:
             observable_args = observable.to_input_variables()
+
             self._upsert_labels(observable_args.get("objectLabel"))
             data = self._api_client.stix_cyber_observable.create(**observable_args)
             if data is None:
@@ -238,11 +251,14 @@ class OpenCTIClient:
     def create_report(self, report: Report) -> ReportJSONResult:
         try:
             report_args = report.to_input_variables()
+
             self._upsert_vocabulary_entries(
                 "report_types_ov", *(report_args.get("report_types") or [])
             )
+
             labels = report_args.get("objectLabel")
             self._upsert_labels(labels)
+
             data = self._api_client.report.create(**report_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -264,11 +280,13 @@ class OpenCTIClient:
     def create_grouping(self, grouping: Grouping) -> GroupingJSONResult:
         try:
             grouping_args = grouping.to_input_variables()
+
             context = grouping_args.get("context")
             self._upsert_vocabulary_entries("grouping_context_ov", context)
 
             labels = grouping_args.get("objectLabel")
             self._upsert_labels(labels)
+
             data = self._api_client.grouping.create(**grouping_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -308,14 +326,43 @@ class OpenCTIClient:
                 f"Unexpected OpenCTI response for Relationship creation: {str(e)}"
             ) from e
 
+    def create_vulnerability(
+        self, vulnerability: Vulnerability
+    ) -> VulnerabilityJSONResult:
+        try:
+            vulnerability_args = vulnerability.to_input_variables()
+
+            labels = vulnerability_args.get("objectLabel")
+            self._upsert_labels(labels)
+
+            data = self._api_client.vulnerability.create(**vulnerability_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the "
+                    "vulnerability (some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Vulnerability in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return VulnerabilityJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Vulnerability creation: {str(e)}"
+            ) from e
+
     def create_malware(self, malware: Malware) -> MalwareJSONResult:
         try:
             malware_args = malware.to_input_variables()
+
             malware_types = malware_args.get("malware_types") or []
             self._upsert_vocabulary_entries("malware_type_ov", *malware_types)
 
             labels = malware_args.get("objectLabel")
             self._upsert_labels(labels)
+
             data = self._api_client.malware.create(**malware_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -334,9 +381,12 @@ class OpenCTIClient:
                 f"Unexpected OpenCTI response for Malware creation: {str(e)}"
             ) from e
 
-    def create_threat_actor_group(self, threat_actor_group: ThreatActorGroup) -> ThreatActorGroupJSONResult:
+    def create_threat_actor_group(
+        self, threat_actor_group: ThreatActorGroup
+    ) -> ThreatActorGroupJSONResult:
         try:
             threat_actor_group_args = threat_actor_group.to_input_variables()
+
             threat_actor_types = threat_actor_group_args.get("threat_actor_types") or []
             self._upsert_vocabulary_entries(
                 "threat_actor_group_type_ov",
@@ -345,6 +395,7 @@ class OpenCTIClient:
 
             labels = threat_actor_group_args.get("objectLabel")
             self._upsert_labels(labels)
+
             data = self._api_client.threat_actor_group.create(**threat_actor_group_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -364,10 +415,14 @@ class OpenCTIClient:
                 f"{str(e)}"
             ) from e
 
-    def create_intrusion_set(self, intrusion_set: IntrusionSet) -> IntrusionSetJSONResult:
+    def create_intrusion_set(
+        self, intrusion_set: IntrusionSet
+    ) -> IntrusionSetJSONResult:
         try:
             intrusion_set_args = intrusion_set.to_input_variables()
+
             self._upsert_labels(intrusion_set_args.get("objectLabel"))
+
             data = self._api_client.intrusion_set.create(**intrusion_set_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -389,7 +444,9 @@ class OpenCTIClient:
     def create_campaign(self, campaign: Campaign) -> CampaignJSONResult:
         try:
             campaign_args = campaign.to_input_variables()
+
             self._upsert_labels(campaign_args.get("objectLabel"))
+
             data = self._api_client.campaign.create(**campaign_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -411,11 +468,13 @@ class OpenCTIClient:
     def create_tool(self, tool: Tool) -> ToolJSONResult:
         try:
             tool_args = tool.to_input_variables()
+
             tool_types = tool_args.get("tool_types") or []
             self._upsert_vocabulary_entries("tool_types_ov", *tool_types)
 
             labels = tool_args.get("objectLabel")
             self._upsert_labels(labels)
+
             data = self._api_client.tool.create(**tool_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -434,10 +493,14 @@ class OpenCTIClient:
                 f"Unexpected OpenCTI response for Tool creation: {str(e)}"
             ) from e
 
-    def create_attack_pattern(self, attack_pattern: AttackPattern) -> AttackPatternJSONResult:
+    def create_attack_pattern(
+        self, attack_pattern: AttackPattern
+    ) -> AttackPatternJSONResult:
         try:
             attack_pattern_args = attack_pattern.to_input_variables()
+
             self._upsert_labels(attack_pattern_args.get("objectLabel"))
+
             data = self._api_client.attack_pattern.create(**attack_pattern_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -459,11 +522,13 @@ class OpenCTIClient:
     def create_indicator(self, indicator: Indicator) -> IndicatorJSONResult:
         try:
             indicator_args = indicator.to_input_variables()
+
             pattern_types = indicator_args.get("pattern_type") or []
             self._upsert_vocabulary_entries("pattern_type_ov", *pattern_types)
 
             labels = indicator_args.get("objectLabel")
             self._upsert_labels(labels)
+
             data = self._api_client.indicator.create(**indicator_args)
             if data is None:
                 raise OpenCTIClientError(
@@ -485,7 +550,9 @@ class OpenCTIClient:
     def create_sighting(self, sighting: Sighting) -> SightingJSONResult:
         try:
             sighting_args = sighting.to_input_variables()
+
             self._upsert_labels(sighting_args.get("objectLabel"))
+
             data = self._api_client.stix_sighting_relationship.create(**sighting_args)
             if data is None:
                 raise OpenCTIClientError(

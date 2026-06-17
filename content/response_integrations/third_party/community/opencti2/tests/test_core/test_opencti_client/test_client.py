@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 from core.datamodels.incident import Incident
@@ -83,10 +83,23 @@ def mock_pycti_client():
 
 @pytest.fixture
 def client(mock_pycti_client):
-    return OpenCTIClient(
+    opencti_client = OpenCTIClient(
         base_url="https://opencti.example.com",
         api_token="token",
     )
+    with (
+        patch.object(
+            opencti_client,
+            "_upsert_labels",
+            wraps=opencti_client._upsert_labels,
+        ),
+        patch.object(
+            opencti_client,
+            "_upsert_vocabulary_entries",
+            wraps=opencti_client._upsert_vocabulary_entries,
+        ),
+    ):
+        yield opencti_client
 
 
 @pytest.fixture
@@ -135,21 +148,27 @@ class TestOpenCTIClientInit:
 
 class TestCreateIncident:
     def test_returns_incident_json_result(
-        self, client, mock_pycti_client, incident, fake_incident_api_response
+        self,
+        client,
+        mock_pycti_client,
+        incident,
+        fake_incident_api_response,
     ):
         mock_pycti_client.incident.create.return_value = fake_incident_api_response
+        incident_args = incident.to_input_variables()
 
-        with patch.object(
-            client, "_upsert_labels", wraps=client._upsert_labels
-        ) as mock_upsert_labels:
-            result = client.create_incident(incident)
+        result = client.create_incident(incident)
 
-        mock_pycti_client.incident.create.assert_called_once_with(
-            **incident.to_input_variables()
+        mock_pycti_client.incident.create.assert_called_once_with(**incident_args)
+        client._upsert_labels.assert_called_once_with(incident_args.get("objectLabel"))
+        client._upsert_vocabulary_entries.assert_has_calls(
+            [
+                call("incident_type_ov", incident_args.get("incident_type")),
+                call("case_priority_ov", incident_args.get("priority")),
+                call("case_severity_ov", incident_args.get("severity")),
+            ]
         )
-        mock_upsert_labels.assert_called_once_with(
-            incident.to_input_variables().get("objectLabel")
-        )
+        assert client._upsert_vocabulary_entries.call_count == 3
         assert isinstance(result, IncidentJSONResult)
 
     def test_raises_when_api_returns_none(self, client, mock_pycti_client, incident):
@@ -175,21 +194,30 @@ class TestCreateIncident:
 
 class TestCreateRequestForInformation:
     def test_returns_rfi_json_result(
-        self, client, mock_pycti_client, request_for_information, fake_rfi_api_response
+        self,
+        client,
+        mock_pycti_client,
+        request_for_information,
+        fake_rfi_api_response,
     ):
         mock_pycti_client.case_rfi.create.return_value = fake_rfi_api_response
+        rfi_args = request_for_information.to_input_variables()
 
-        with patch.object(
-            client, "_upsert_labels", wraps=client._upsert_labels
-        ) as mock_upsert_labels:
-            result = client.create_request_for_information(request_for_information)
+        result = client.create_request_for_information(request_for_information)
 
-        mock_pycti_client.case_rfi.create.assert_called_once_with(
-            **request_for_information.to_input_variables()
+        mock_pycti_client.case_rfi.create.assert_called_once_with(**rfi_args)
+        client._upsert_labels.assert_called_once_with(rfi_args.get("objectLabel"))
+        client._upsert_vocabulary_entries.assert_has_calls(
+            [
+                call(
+                    "request_for_information_types_ov",
+                    *(rfi_args.get("information_types") or []),
+                ),
+                call("case_priority_ov", rfi_args.get("priority")),
+                call("case_severity_ov", rfi_args.get("severity")),
+            ]
         )
-        mock_upsert_labels.assert_called_once_with(
-            request_for_information.to_input_variables().get("objectLabel")
-        )
+        assert client._upsert_vocabulary_entries.call_count == 3
         assert isinstance(result, RequestForInformationJSONResult)
 
     def test_raises_when_api_returns_none(
@@ -234,18 +262,27 @@ class TestCreateIncidentResponse:
         mock_pycti_client.case_incident.create.return_value = (
             fake_incident_response_api_response
         )
+        incident_response_args = incident_response.to_input_variables()
 
-        with patch.object(
-            client, "_upsert_labels", wraps=client._upsert_labels
-        ) as mock_upsert_labels:
-            result = client.create_incident_response(incident_response)
+        result = client.create_incident_response(incident_response)
 
         mock_pycti_client.case_incident.create.assert_called_once_with(
-            **incident_response.to_input_variables()
+            **incident_response_args
         )
-        mock_upsert_labels.assert_called_once_with(
-            incident_response.to_input_variables().get("objectLabel")
+        client._upsert_labels.assert_called_once_with(
+            incident_response_args.get("objectLabel")
         )
+        client._upsert_vocabulary_entries.assert_has_calls(
+            [
+                call(
+                    "incident_response_types_ov",
+                    *(incident_response_args.get("response_types") or []),
+                ),
+                call("case_priority_ov", incident_response_args.get("priority")),
+                call("case_severity_ov", incident_response_args.get("severity")),
+            ]
+        )
+        assert client._upsert_vocabulary_entries.call_count == 3
         assert isinstance(result, IncidentResponseJSONResult)
 
     def test_raises_when_api_returns_none(
@@ -284,21 +321,30 @@ class TestCreateIncidentResponse:
 
 class TestCreateRequestForTakedown:
     def test_returns_rft_json_result(
-        self, client, mock_pycti_client, request_for_takedown, fake_rft_api_response
+        self,
+        client,
+        mock_pycti_client,
+        request_for_takedown,
+        fake_rft_api_response,
     ):
         mock_pycti_client.case_rft.create.return_value = fake_rft_api_response
+        rft_args = request_for_takedown.to_input_variables()
 
-        with patch.object(
-            client, "_upsert_labels", wraps=client._upsert_labels
-        ) as mock_upsert_labels:
-            result = client.create_request_for_takedown(request_for_takedown)
+        result = client.create_request_for_takedown(request_for_takedown)
 
-        mock_pycti_client.case_rft.create.assert_called_once_with(
-            **request_for_takedown.to_input_variables()
+        mock_pycti_client.case_rft.create.assert_called_once_with(**rft_args)
+        client._upsert_labels.assert_called_once_with(rft_args.get("objectLabel"))
+        client._upsert_vocabulary_entries.assert_has_calls(
+            [
+                call(
+                    "request_for_takedown_types_ov",
+                    *(rft_args.get("takedown_types") or []),
+                ),
+                call("case_priority_ov", rft_args.get("priority")),
+                call("case_severity_ov", rft_args.get("severity")),
+            ]
         )
-        mock_upsert_labels.assert_called_once_with(
-            request_for_takedown.to_input_variables().get("objectLabel")
-        )
+        assert client._upsert_vocabulary_entries.call_count == 3
         assert isinstance(result, RequestForTakedownJSONResult)
 
     def test_raises_when_api_returns_none(
@@ -314,23 +360,26 @@ class TestCreateRequestForTakedown:
 
 class TestCreateObservable:
     def test_returns_observable_json_result(
-        self, client, mock_pycti_client, observable, fake_observable_api_response
+        self,
+        client,
+        mock_pycti_client,
+        observable,
+        fake_observable_api_response,
     ):
         mock_pycti_client.stix_cyber_observable.create.return_value = (
             fake_observable_api_response
         )
+        observable_args = observable.to_input_variables()
 
-        with patch.object(
-            client, "_upsert_labels", wraps=client._upsert_labels
-        ) as mock_upsert_labels:
-            result = client.create_observable(observable)
+        result = client.create_observable(observable)
 
         mock_pycti_client.stix_cyber_observable.create.assert_called_once_with(
-            **observable.to_input_variables()
+            **observable_args
         )
-        mock_upsert_labels.assert_called_once_with(
-            observable.to_input_variables().get("objectLabel")
+        client._upsert_labels.assert_called_once_with(
+            observable_args.get("objectLabel")
         )
+        client._upsert_vocabulary_entries.assert_not_called()
         assert isinstance(result, ObservableJSONResult)
 
     def test_raises_when_api_returns_none(self, client, mock_pycti_client, observable):
