@@ -57,6 +57,12 @@ class ViewBuilder:
         logger.info("View built successfully to: %s", built_view_path)
 
     def _load_widgets_html_content(self, overview: Overview) -> None:
+        """Load external HTML content for HTML widgets from the widgets folder.
+
+        Args:
+            overview: The Overview object containing the widgets to load HTML content for.
+
+        """
         widgets_folder_path: Path = self.view_path / mp.core.constants.WIDGETS_DIR
         for w in overview.widgets or []:
             if w.type is WidgetType.HTML:

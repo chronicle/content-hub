@@ -47,11 +47,23 @@ class ViewDeconstructor:
         self._create_widgets_files()
 
     def _create_view_file(self, non_built_view: NonBuiltOverview) -> None:
+        """Create the view metadata YAML file in the destination folder.
+
+        Args:
+            non_built_view: The NonBuiltOverview dictionary representing the view.
+
+        """
         logger.info("Creating view file")
         view_path: Path = self.out_path / mp.core.constants.VIEW_FILE_NAME
         mp.core.file_utils.save_yaml(non_built_view, view_path)
 
     def _create_widgets_files(self) -> None:
+        """Create separate YAML and HTML files for all widgets in the view.
+
+        Raises:
+            OSError: If writing a widget file fails.
+
+        """
         if not self.overview.widgets:
             return
 

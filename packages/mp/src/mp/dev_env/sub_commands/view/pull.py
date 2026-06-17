@@ -37,6 +37,9 @@ if TYPE_CHECKING:
 def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
     """Normalize flat camelCase view payload from SOAR REST API into BuiltOverview.
 
+    Args:
+        flat_view: The flat camelCase dictionary representing the view downloaded from SOAR.
+
     Returns:
         The normalized BuiltOverview structure.
 
@@ -159,6 +162,19 @@ def pull_view(
 
 
 def _find_view_identifier(view_name_or_id: str, installed_views: list[dict[str, Any]] | None) -> str:
+    """Find the view identifier matching the given name or identifier.
+
+    Args:
+        view_name_or_id: The view name or identifier to search for.
+        installed_views: The list of installed views fetched from SOAR.
+
+    Returns:
+        The matching view identifier.
+
+    Raises:
+        typer.Exit: If the view is not found in the installed views.
+
+    """
     for view in installed_views or []:
         identifier = view.get("Identifier") or view.get("identifier")
         name = view.get("Name") or view.get("name")

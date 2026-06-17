@@ -26,7 +26,7 @@ import yaml
 import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.restructure.views.build import ViewBuilder
-from mp.core.utils.common.utils import to_snake_case
+from mp.core.utils import to_snake_case
 from mp.dev_env.sub_commands.push import push_app
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
@@ -40,6 +40,9 @@ if TYPE_CHECKING:
 
 def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
     """Convert wrapped PascalCase BuiltOverview back into flat camelCase payload expected by SOAR.
+
+    Args:
+        built_view: The BuiltOverview dictionary structure representing the view.
 
     Returns:
         The flat camelCase dictionary payload.
@@ -144,6 +147,16 @@ def push_view(
 
 
 def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -> int | None:
+    """Resolve the integer database ID of an existing view on the SOAR server.
+
+    Args:
+        backend_api: The backend API client.
+        identifier: The UUID identifier of the view.
+
+    Returns:
+        The integer database ID of the view if resolved, otherwise None.
+
+    """
     if not identifier:
         return None
     try:
@@ -158,6 +171,16 @@ def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -
 
 
 def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str) -> None:
+    """Upload built view template data to the SOAR environment.
+
+    Args:
+        view_data: The built view template dictionary structure.
+        view_name_or_id: The view name or identifier.
+
+    Raises:
+        typer.Exit: If the upload fails.
+
+    """
     config = load_dev_env_config()
     backend_api = get_backend_api(config)
 
@@ -181,6 +204,16 @@ def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str) -> 
 
 
 def _find_view_dir_in_root(views_root: Path, view_name_or_id: str) -> Path | None:
+    """Find a view directory in views root by scanning view.yaml name fields.
+
+    Args:
+        views_root: The root views directory.
+        view_name_or_id: The view name to search for.
+
+    Returns:
+        The matching view directory Path if found, otherwise None.
+
+    """
     if not views_root.is_dir():
         return None
 
@@ -202,6 +235,19 @@ def _find_view_dir_in_root(views_root: Path, view_name_or_id: str) -> Path | Non
 
 
 def _get_view_path_by_name(view_name_or_id: str, src: Path | None = None) -> Path:
+    """Resolve the view directory path by search priority.
+
+    Args:
+        view_name_or_id: The view name or identifier.
+        src: The custom source directory path if provided.
+
+    Returns:
+        The resolved view directory Path.
+
+    Raises:
+        typer.Exit: If the view directory is not found.
+
+    """
     views_root = src if src is not None else mp.core.file_utils.create_or_get_views_root_dir()
 
     # 1. If views_root is already a view directory (contains view.yaml), return it
