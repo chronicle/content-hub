@@ -9,6 +9,7 @@ from core.datamodels.indicator import Indicator
 from core.datamodels.intrusion_set import IntrusionSet
 from core.datamodels.malware import Malware
 from core.datamodels.relationship import Relationship
+from core.datamodels.sighting import Sighting
 from core.datamodels.observable import Observable
 from core.datamodels.report import Report
 from core.datamodels.request_for_information import RequestForInformation
@@ -24,6 +25,7 @@ from core.opencti_client.json_results import (
     IntrusionSetJSONResult,
     MalwareJSONResult,
     RelationshipJSONResult,
+    SightingJSONResult,
     ObservableJSONResult,
     ReportJSONResult,
     RequestForInformationJSONResult,
@@ -418,6 +420,28 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Indicator creation: {str(e)}"
+            ) from e
+
+    def create_sighting(self, sighting: Sighting) -> SightingJSONResult:
+        try:
+            sighting_args = sighting.to_input_variables()
+            self._upsert_labels(sighting_args.get("objectLabel"))
+            data = self._api_client.stix_sighting_relationship.create(**sighting_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the sighting relationship "
+                    "(some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Sighting in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return SightingJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Sighting creation: {str(e)}"
             ) from e
 
     def add_object_to_container(

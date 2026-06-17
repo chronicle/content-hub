@@ -135,6 +135,12 @@ class IndicatorJSONResult(BaseObjectJSONResult):
         examples=["Indicator"],
     )
 
+class SightingJSONResult(BaseObjectJSONResult):
+    entity_type: Literal["Sighting", "stix-sighting-relationship"] = Field(
+        description="The type of the object on OpenCTI",
+        examples=["Sighting", "stix-sighting-relationship"],
+    )
+
 class AddObjectToContainerJSONResult(BaseJSONResult):
     """Result for `AddObjectToContainer` action.
 
