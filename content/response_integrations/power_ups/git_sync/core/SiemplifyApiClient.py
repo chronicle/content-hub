@@ -95,6 +95,7 @@ from TIPCommon.rest.soar_api import (
     add_or_update_company_logo,
     update_network,
     update_sla_record,
+    update_case_tag,
 )
 
 if TYPE_CHECKING:
@@ -631,6 +632,9 @@ class SiemplifyApiClient:
 
     def add_case_tag(self, siemplify, tag):
         return add_case_tag(siemplify, tag)
+
+    def update_case_tag(self, siemplify, tag, existing_tag):
+        return update_case_tag(siemplify, tag, existing_tag)
 
     def get_close_reasons(self, chronicle_soar: ChronicleSoar) -> list[SingleJson]:
         """Gets case close reasons.

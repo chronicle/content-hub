@@ -217,14 +217,27 @@ def main():
             siemplify.LOGGER.info("Installing tags")
             current_tags = gitsync.api.get_case_tags(chronicle_soar=siemplify)
             for tag in gitsync.content.get_tags():
-                current_tag = id_validator(tag, "name", "id", current_tags)
-                current_tag = (
-                    CaseTag.from_json(current_tag).to_json_1p()
-                    if platform_supports_1p_api()
-                    else CaseTag.from_json(current_tag).to_json()
-                )
+                if platform_supports_1p_api():
+                    git_tag_obj = CaseTag.from_json(tag)
+                    current_tag = git_tag_obj.to_json_1p()
+                    existing_tag = next(
+                        (
+                            x
+                            for x in current_tags
+                            if (x.get("displayName") or x.get("name")) == git_tag_obj.name
+                        ),
+                        None,
+                    )
+                    if existing_tag:
+                        gitsync.api.update_case_tag(siemplify, current_tag, existing_tag)
+                    else:
+                        gitsync.api.add_case_tag(siemplify, current_tag)
+                else:
+                    current_tag = id_validator(tag, "name", "id", current_tags)
+                    current_tag = CaseTag.from_json(current_tag).to_json()
+                    gitsync.api.add_case_tag(siemplify, current_tag)
 
-                gitsync.api.add_case_tag(siemplify, current_tag)
+
 
         if features["Case Stages"]:
             siemplify.LOGGER.info("Installing stages")

@@ -25,6 +25,8 @@ from ..core.constants import (
     IGNORED_INTEGRATIONS,
     IGNORED_JOBS,
     INTEGRATION_NAME,
+    DATA_DRIVEN_MATCH_CRITERIA,
+    SYSTEM_MATCH_CRITERIA
 )
 from ..core.definitions import (
     Connector,
@@ -309,7 +311,17 @@ def main():
 
         if features["Case Tags"]:
             siemplify.LOGGER.info("Pushing case tags")
-            gitsync.content.push_tags(gitsync.api.get_case_tags(chronicle_soar=siemplify))
+            tags = gitsync.api.get_case_tags(chronicle_soar=siemplify)
+            if platform_supports_1p_api():
+                filtered_tags = []
+                for tag in tags:
+                    match_criteria = tag.get("matchCriteria")
+                    tag_lower = match_criteria.replace("_", "").lower()
+                    if isinstance(match_criteria, str) and tag_lower == DATA_DRIVEN_MATCH_CRITERIA or tag_lower == SYSTEM_MATCH_CRITERIA:
+                        continue
+                    filtered_tags.append(tag)
+                tags = filtered_tags
+            gitsync.content.push_tags(tags)
 
         if features["Case Stages"]:
             siemplify.LOGGER.info("Pushing case stages")

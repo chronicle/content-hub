@@ -68,22 +68,28 @@ def main():
             ):
                 siemplify.LOGGER.info(f"Pushing Playbook {playbook['name']}")
 
-                if readme_addon:
-                    siemplify.LOGGER.info(
-                        "Readme addon found - adding to GitSync metadata file (GitSync.json)",
-                    )
-                    gitsync.content.metadata.set_readme_addon(
-                        "Playbook",
-                        playbook.get("name"),
-                        readme_addon,
-                    )
-
                 playbook = gitsync.api.get_playbook(
                     chronicle_soar=siemplify,
                     identifier=playbook.get("identifier"),
                 )
                 workflow = Workflow(playbook)
                 workflow.update_instance_name_in_steps(gitsync.api, siemplify)
+
+                if readme_addon:
+                    siemplify.LOGGER.info(
+                        "Readme addon found - adding to GitSync metadata file (GitSync.json)",
+                    )
+                    content_type = (
+                        "Block"
+                        if workflow.type == WorkflowTypes.BLOCK
+                        else "Playbook"
+                    )
+                    gitsync.content.metadata.set_readme_addon(
+                        content_type,
+                        workflow.name,
+                        readme_addon,
+                    )
+
                 if workflow.type == WorkflowTypes.BLOCK:
                     gitsync.content.push_block(workflow)
                 else:
