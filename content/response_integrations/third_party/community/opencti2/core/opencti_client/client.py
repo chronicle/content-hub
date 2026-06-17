@@ -6,6 +6,7 @@ from core.datamodels.grouping import Grouping
 from core.datamodels.incident import Incident
 from core.datamodels.incident_response import IncidentResponse
 from core.datamodels.indicator import Indicator
+from core.datamodels.intrusion_set import IntrusionSet
 from core.datamodels.observable import Observable
 from core.datamodels.report import Report
 from core.datamodels.request_for_information import RequestForInformation
@@ -18,6 +19,7 @@ from core.opencti_client.json_results import (
     IncidentJSONResult,
     IncidentResponseJSONResult,
     IndicatorJSONResult,
+    IntrusionSetJSONResult,
     ObservableJSONResult,
     ReportJSONResult,
     RequestForInformationJSONResult,
@@ -273,6 +275,28 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Grouping creation: {str(e)}"
+            ) from e
+
+    def create_intrusion_set(self, intrusion_set: IntrusionSet) -> IntrusionSetJSONResult:
+        try:
+            intrusion_set_args = intrusion_set.to_input_variables()
+            self._upsert_labels(intrusion_set_args.get("objectLabel"))
+            data = self._api_client.intrusion_set.create(**intrusion_set_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the intrusion set "
+                    "(some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Intrusion Set in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return IntrusionSetJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Intrusion Set creation: {str(e)}"
             ) from e
 
     def create_campaign(self, campaign: Campaign) -> CampaignJSONResult:
