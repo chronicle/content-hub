@@ -13,11 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon import dict_to_flat
+
+from dataclasses import dataclass
+
+from TIPCommon.transformation import dict_to_flat
 
 
 class BaseModel:
-    def __init__(self, raw_data):
+    def __init__(self, raw_data) -> None:
         self.raw_data = raw_data
 
     def to_json(self):
@@ -39,3 +42,14 @@ class Account(BaseModel):
             "User Name": flat_dict.get("userName"),
             "Secret Type": flat_dict.get("secretType"),
         }
+
+
+@dataclass
+class IntegrationParameters:
+    api_root: str
+    username: str
+    password: str
+    verify_ssl: bool
+    ca_certificate: str | None
+    client_certificate: str | None
+    client_certificate_passphrase: str | None

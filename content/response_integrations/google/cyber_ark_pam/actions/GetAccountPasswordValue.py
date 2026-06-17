@@ -13,18 +13,20 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED, EXECUTION_STATE_COMPLETED
-from ..core.CyberArkPamManager import CyberArkPamManager, CyberArkPamNotFoundError
-from TIPCommon import extract_configuration_param, extract_action_param
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
+
 from ..core.constants import INTEGRATION_NAME
+from ..core.CyberArkPamManager import CyberArkPamManager, CyberArkPamNotFoundError
 
 SCRIPT_NAME = "Get Account Password Value"
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME} - {SCRIPT_NAME}"
     siemplify.LOGGER.info("================= Main - Param Init =================")
@@ -58,9 +60,7 @@ def main():
         input_type=bool,
         print_value=True,
     )
-    ca_certificate = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="CA Certificate"
-    )
+    ca_certificate = extract_configuration_param(siemplify, provider_name=INTEGRATION_NAME, param_name="CA Certificate")
     client_certificate = extract_configuration_param(
         siemplify, provider_name=INTEGRATION_NAME, param_name="Client Certificate"
     )
@@ -71,21 +71,11 @@ def main():
         remove_whitespaces=False,
     )
 
-    account = extract_action_param(
-        siemplify, param_name="Account", print_value=True, is_mandatory=True
-    )
-    reason = extract_action_param(
-        siemplify, param_name="Reason", print_value=True, is_mandatory=True
-    )
-    ticketing_system_name = extract_action_param(
-        siemplify, param_name="Ticketing System Name", print_value=True
-    )
-    ticket_id = extract_action_param(
-        siemplify, param_name="Ticket ID", input_type=int, print_value=True
-    )
-    version = extract_action_param(
-        siemplify, param_name="Version", input_type=int, print_value=True
-    )
+    account = extract_action_param(siemplify, param_name="Account", print_value=True, is_mandatory=True)
+    reason = extract_action_param(siemplify, param_name="Reason", print_value=True, is_mandatory=True)
+    ticketing_system_name = extract_action_param(siemplify, param_name="Ticketing System Name", print_value=True)
+    ticket_id = extract_action_param(siemplify, param_name="Ticket ID", input_type=int, print_value=True)
+    version = extract_action_param(siemplify, param_name="Version", input_type=int, print_value=True)
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     status = EXECUTION_STATE_COMPLETED
@@ -119,7 +109,7 @@ def main():
         siemplify.LOGGER.info(log_message)
         siemplify.result.add_result_json({"content": password})
 
-    except CyberArkPamNotFoundError as e:
+    except CyberArkPamNotFoundError:
         log_message = (
             f"Password value for account with id {account}"
             f"and supplied version {version} was not found in the CyberArk PAM"
@@ -131,7 +121,7 @@ def main():
         result_value = "false"
         log_message = f"Error executing action “{SCRIPT_NAME}”. Reason: {e}"
         output_message = log_message
-        siemplify.LOGGER.error(log_message)
+        siemplify.LOGGER.exception(log_message)
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
 

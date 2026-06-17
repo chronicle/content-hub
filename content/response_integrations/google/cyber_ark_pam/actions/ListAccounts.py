@@ -13,18 +13,21 @@
 # limitations under the License.
 
 from __future__ import annotations
-from soar_sdk.SiemplifyUtils import output_handler
+
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED, EXECUTION_STATE_COMPLETED
-from ..core.CyberArkPamManager import CyberArkPamManager
-from TIPCommon import extract_configuration_param, extract_action_param, construct_csv
+from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.extraction import extract_action_param, extract_configuration_param
+from TIPCommon.transformation import construct_csv
+
 from ..core.constants import INTEGRATION_NAME
+from ..core.CyberArkPamManager import CyberArkPamManager
 
 SCRIPT_NAME = "List Accounts"
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME} - {SCRIPT_NAME}"
     siemplify.LOGGER.info("================= Main - Param Init =================")
@@ -58,9 +61,7 @@ def main():
         input_type=bool,
         print_value=True,
     )
-    ca_certificate = extract_configuration_param(
-        siemplify, provider_name=INTEGRATION_NAME, param_name="CA Certificate"
-    )
+    ca_certificate = extract_configuration_param(siemplify, provider_name=INTEGRATION_NAME, param_name="CA Certificate")
     client_certificate = extract_configuration_param(
         siemplify, provider_name=INTEGRATION_NAME, param_name="Client Certificate"
     )
@@ -71,24 +72,14 @@ def main():
         remove_whitespaces=False,
     )
 
-    search_query = extract_action_param(
-        siemplify, param_name="Search Query", print_value=True
-    )
-    search_operator = extract_action_param(
-        siemplify, param_name="Search operator", print_value=True
-    )
+    search_query = extract_action_param(siemplify, param_name="Search Query", print_value=True)
+    search_operator = extract_action_param(siemplify, param_name="Search operator", print_value=True)
     max_records_to_return = extract_action_param(
         siemplify, param_name="Max Records To Return", input_type=int, print_value=True
     )
-    records_offset = extract_action_param(
-        siemplify, param_name="Records Offset", input_type=int, print_value=True
-    )
-    filter_query = extract_action_param(
-        siemplify, param_name="Filter Query", print_value=True
-    )
-    saved_filter = extract_action_param(
-        siemplify, param_name="Saved Filter", print_value=True
-    )
+    records_offset = extract_action_param(siemplify, param_name="Records Offset", input_type=int, print_value=True)
+    filter_query = extract_action_param(siemplify, param_name="Filter Query", print_value=True)
+    saved_filter = extract_action_param(siemplify, param_name="Saved Filter", print_value=True)
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     status = EXECUTION_STATE_COMPLETED
@@ -98,21 +89,22 @@ def main():
     try:
         if filter_query and saved_filter:
             output_message += (
-                "Both the Filter Query and Saved Filter parameters are provided, "
-                "Saved Filter takes priority"
+                "Both the Filter Query and Saved Filter parameters are provided, Saved Filter takes priority"
             )
 
         if max_records_to_return is not None and max_records_to_return <= 0:
-            raise Exception(
+            msg = (
                 f"Invalid value was provided for “Max Records to Return”: "
                 f"{max_records_to_return}. Positive number should be provided”."
             )
+            raise Exception(msg)
 
         if records_offset is not None and records_offset < 0:
-            raise Exception(
+            msg = (
                 f"Invalid value was provided for “Records Offset to Return”: "
                 f"{records_offset}. Non negative number should be provided"
             )
+            raise Exception(msg)
 
         cyber_ark_manager = CyberArkPamManager(
             api_root=api_root,
@@ -135,23 +127,17 @@ def main():
             saved_filter=saved_filter,
         )
         if accounts:
-            siemplify.result.add_result_json(
-                [account.to_flat() for account in accounts]
-            )
+            siemplify.result.add_result_json([account.to_flat() for account in accounts])
             siemplify.result.add_data_table(
                 "Available PAM Accounts",
                 construct_csv([account.to_csv() for account in accounts]),
             )
             result_value = "true"
-            log_message = (
-                "Successfully found accounts for the provided criteria in CyberArk PAM"
-            )
+            log_message = "Successfully found accounts for the provided criteria in CyberArk PAM"
             output_message += log_message
             siemplify.LOGGER.info(log_message)
         else:
-            log_message = (
-                "No accounts were found for the provided criteria in CyberArk PAM"
-            )
+            log_message = "No accounts were found for the provided criteria in CyberArk PAM"
             output_message += log_message
             siemplify.LOGGER.info(log_message)
 
