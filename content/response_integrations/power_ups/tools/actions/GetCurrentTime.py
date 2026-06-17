@@ -27,17 +27,18 @@ def main():
 
     format = siemplify.extract_action_param("Datetime Format", print_value=True)
 
-    status = EXECUTION_STATE_COMPLETED
+    status = EXECUTION_STATE_FAILED
+    current_time = "failed"
 
     try:
         now = datetime.now()
         current_time = now.strftime(format)
+        output_message = f"{current_time}"
+        status = EXECUTION_STATE_COMPLETED
     except Exception as e:
-        siemplify.LOGGER.info(f"Error: {e}")
-        status = EXECUTION_STATE_FAILED
-        siemplify.end(output_message, "false/failed", status)
+        siemplify.LOGGER.error(f"Error: {e}")
+        output_message = f"ERROR: Failed to get current time - {e}"
     
-    output_message = f"{current_time}"
     siemplify.end(output_message, current_time, status)
 
 
