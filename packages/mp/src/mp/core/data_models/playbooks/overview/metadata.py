@@ -37,9 +37,9 @@ class OverviewType(RepresentableEnum):
     SYSTEM_ALERT = 2
     SYSTEM_CASE = 3
     ALERT_TYPE = 4
-    SYSTEM_CASE_V2 = 5  # TODO: Do we need to add it? based on OverviewTemplateEnum from view.proto
-    SYSTEM_ALERT_V2 = 6  # TODO: Do we need to add it? based on OverviewTemplateEnum from view.proto
-    SYSTEM_DETECTION = 7  # TODO: Do we need to add it? based on OverviewTemplateEnum from view.proto
+    SYSTEM_CASE_V2 = 5
+    SYSTEM_ALERT_V2 = 6
+    SYSTEM_DETECTION = 7
 
 
 class OverviewWidgetDetails(TypedDict):
