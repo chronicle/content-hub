@@ -10,6 +10,7 @@ from core.datamodels.intrusion_set import IntrusionSet
 from core.datamodels.malware import Malware
 from core.datamodels.relationship import Relationship
 from core.datamodels.sighting import Sighting
+from core.datamodels.threat_actor_group import ThreatActorGroup
 from core.datamodels.observable import Observable
 from core.datamodels.report import Report
 from core.datamodels.request_for_information import RequestForInformation
@@ -26,6 +27,7 @@ from core.opencti_client.json_results import (
     MalwareJSONResult,
     RelationshipJSONResult,
     SightingJSONResult,
+    ThreatActorGroupJSONResult,
     ObservableJSONResult,
     ReportJSONResult,
     RequestForInformationJSONResult,
@@ -328,6 +330,36 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Malware creation: {str(e)}"
+            ) from e
+
+    def create_threat_actor_group(self, threat_actor_group: ThreatActorGroup) -> ThreatActorGroupJSONResult:
+        try:
+            threat_actor_group_args = threat_actor_group.to_input_variables()
+            threat_actor_types = threat_actor_group_args.get("threat_actor_types") or []
+            self._upsert_vocabulary_entries(
+                "threat_actor_group_type_ov",
+                *threat_actor_types,
+            )
+
+            labels = threat_actor_group_args.get("objectLabel")
+            self._upsert_labels(labels)
+            data = self._api_client.threat_actor_group.create(**threat_actor_group_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the threat actor group "
+                    "(some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Threat Actor Group in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return ThreatActorGroupJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                "Unexpected OpenCTI response for Threat Actor Group creation: "
+                f"{str(e)}"
             ) from e
 
     def create_intrusion_set(self, intrusion_set: IntrusionSet) -> IntrusionSetJSONResult:

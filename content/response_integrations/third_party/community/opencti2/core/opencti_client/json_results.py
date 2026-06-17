@@ -111,6 +111,12 @@ class MalwareJSONResult(BaseObjectJSONResult):
         examples=["Malware"],
     )
 
+class ThreatActorGroupJSONResult(BaseObjectJSONResult):
+    entity_type: Literal["Threat-Actor-Group"] = Field(
+        description="The type of the object on OpenCTI",
+        examples=["Threat-Actor-Group"],
+    )
+
 class IntrusionSetJSONResult(BaseObjectJSONResult):
     entity_type: Literal["Intrusion-Set"] = Field(
         description="The type of the object on OpenCTI",
