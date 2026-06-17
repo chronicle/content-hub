@@ -11,6 +11,7 @@ from core.datamodels.malware import Malware
 from core.datamodels.relationship import Relationship
 from core.datamodels.sighting import Sighting
 from core.datamodels.threat_actor_group import ThreatActorGroup
+from core.datamodels.tool import Tool
 from core.datamodels.observable import Observable
 from core.datamodels.report import Report
 from core.datamodels.request_for_information import RequestForInformation
@@ -28,6 +29,7 @@ from core.opencti_client.json_results import (
     RelationshipJSONResult,
     SightingJSONResult,
     ThreatActorGroupJSONResult,
+    ToolJSONResult,
     ObservableJSONResult,
     ReportJSONResult,
     RequestForInformationJSONResult,
@@ -404,6 +406,32 @@ class OpenCTIClient:
         except ValidationError as e:
             raise OpenCTIClientError(
                 f"Unexpected OpenCTI response for Campaign creation: {str(e)}"
+            ) from e
+
+    def create_tool(self, tool: Tool) -> ToolJSONResult:
+        try:
+            tool_args = tool.to_input_variables()
+            tool_types = tool_args.get("tool_types") or []
+            self._upsert_vocabulary_entries("tool_types_ov", *tool_types)
+
+            labels = tool_args.get("objectLabel")
+            self._upsert_labels(labels)
+            data = self._api_client.tool.create(**tool_args)
+            if data is None:
+                raise OpenCTIClientError(
+                    "pycti could not perform the request to create the tool "
+                    "(some arguments may be missing or invalid)."
+                )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to create Tool in OpenCTI: {str(e)}"
+            ) from e
+
+        try:
+            return ToolJSONResult(**data)
+        except ValidationError as e:
+            raise OpenCTIClientError(
+                f"Unexpected OpenCTI response for Tool creation: {str(e)}"
             ) from e
 
     def create_attack_pattern(self, attack_pattern: AttackPattern) -> AttackPatternJSONResult:
