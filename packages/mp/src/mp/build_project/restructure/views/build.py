@@ -24,6 +24,8 @@ from mp.core.data_models.common.widget.data import WidgetType
 from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.utils import to_snake_case
 
+from .deconstruct import sanitize_widget_filename
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -58,7 +60,7 @@ class ViewBuilder:
         widgets_folder_path: Path = self.view_path / mp.core.constants.WIDGETS_DIR
         for w in overview.widgets:
             if w.type is WidgetType.HTML:
-                html_file_path = widgets_folder_path / f"{w.title}.html"
+                html_file_path = widgets_folder_path / f"{sanitize_widget_filename(w.title)}.html"
                 if html_file_path.exists():
                     if hasattr(w.data_definition, "html_content"):
                         w.data_definition.html_content = html_file_path.read_text(encoding="utf-8")

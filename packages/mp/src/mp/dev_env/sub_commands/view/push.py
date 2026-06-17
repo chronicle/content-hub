@@ -51,9 +51,10 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
     flat_widgets = []
     for w in template.get("Widgets", []):
         config_dict = {}
-        if w.get("DataDefinitionJson"):
+        data_def = w.get("DataDefinitionJson")
+        if isinstance(data_def, str):
             with contextlib.suppress(json.JSONDecodeError):
-                config_dict = json.loads(w["DataDefinitionJson"])
+                config_dict = json.loads(data_def)
 
         cg = w.get("ConditionsGroup")
         flat_cg = None
@@ -146,7 +147,7 @@ def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -
         return None
     try:
         installed_views = backend_api.list_views()
-        for v in installed_views:
+        for v in installed_views or []:
             v_uuid = v.get("identifier") or v.get("Identifier")
             if v_uuid == identifier:
                 return v.get("id") or v.get("Id")
@@ -179,7 +180,7 @@ def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str) -> 
 
 
 def _find_view_dir_in_root(views_root: Path, view_name_or_id: str) -> Path | None:
-    if not views_root.exists():
+    if not views_root.is_dir():
         return None
 
     for folder in views_root.iterdir():
@@ -200,26 +201,29 @@ def _find_view_dir_in_root(views_root: Path, view_name_or_id: str) -> Path | Non
 
 
 def _get_view_path_by_name(view_name_or_id: str, src: Path | None = None) -> Path:
-    if src is not None:
-        candidate = src / view_name_or_id
-        if candidate.is_dir():
-            return candidate
-        if src.is_dir() and (src.name == view_name_or_id or (src / mp.core.constants.VIEW_FILE_NAME).exists()):
-            return src
+    views_root = src if src is not None else mp.core.file_utils.create_or_get_views_root_dir()
 
-    views_root = mp.core.file_utils.create_or_get_views_root_dir()
+    # 1. If views_root is already a view directory (contains view.yaml), return it
+    if views_root.is_dir() and (
+        views_root.name == view_name_or_id
+        or (views_root / mp.core.constants.VIEW_FILE_NAME).exists()
+    ):
+        return views_root
+
+    # 2. Check candidate directly under views_root
     candidate = views_root / view_name_or_id
     if candidate.is_dir():
         return candidate
 
+    # 3. Check snake_case candidate under views_root
     candidate_snake = views_root / to_snake_case(view_name_or_id)
     if candidate_snake.is_dir():
         return candidate_snake
 
-    # Try searching for view.yaml name fields inside the views directories
+    # 4. Try searching for view.yaml name fields inside the views directories
     matched_folder = _find_view_dir_in_root(views_root, view_name_or_id)
     if matched_folder:
         return matched_folder
 
-    logger.error("Could not find source view directory for '%s'", view_name_or_id)
+    logger.error("Could not find source view directory for '%s' inside '%s'", view_name_or_id, views_root)
     raise typer.Exit(1)

@@ -62,7 +62,7 @@ class ViewDeconstructor:
         non_built_widgets: list[NonBuiltPlaybookWidgetMetadata] = [w.to_non_built() for w in self.overview.widgets]
 
         for w in non_built_widgets:
-            widget_path: Path = widgets_path / f"{_sanitize_widget_filename(w['title'])}{mp.core.constants.YAML_SUFFIX}"
+            widget_path: Path = widgets_path / f"{sanitize_widget_filename(w['title'])}{mp.core.constants.YAML_SUFFIX}"
             try:
                 mp.core.file_utils.save_yaml(w, widget_path)
             except OSError:
@@ -76,7 +76,7 @@ class ViewDeconstructor:
                 raise
 
         for w in self.overview.widgets:
-            widget_path: Path = widgets_path / (f"{_sanitize_widget_filename(w.title)}.{mp.core.constants.HTML_SUFFIX}")
+            widget_path: Path = widgets_path / (f"{sanitize_widget_filename(w.title)}.{mp.core.constants.HTML_SUFFIX}")
             html_content: str = ""
             if w.type is WidgetType.HTML:
                 if hasattr(w.data_definition, "html_content"):
@@ -92,7 +92,7 @@ class ViewDeconstructor:
                 widget_path.write_text(html_content, encoding="utf-8")
 
 
-def _sanitize_widget_filename(filename: str) -> str:
+def sanitize_widget_filename(filename: str) -> str:
     """Sanitizes a filename to be used as a YAML file name.
 
     Args:
