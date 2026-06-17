@@ -74,13 +74,13 @@ def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
             "TemplateIdentifier": meta.get("templateIdentifier") or "",
             "Type": meta.get("type") or 0,
             "DataDefinitionJson": data_definition_json,
-            "GridColumns": meta.get("width", 1),
+            "GridColumns": meta.get("width") or 1,
             "ActionWidgetTemplateIdentifier": meta.get("actionWidgetTemplateIdentifier"),
             "StepIdentifier": meta.get("stepIdentifier"),
             "StepIntegration": meta.get("stepIntegration"),
             "BlockStepIdentifier": meta.get("blockStepIdentifier"),
             "BlockStepInstanceName": meta.get("blockStepInstanceName"),
-            "PresentIfEmpty": meta.get("presentIfEmpty", False),
+            "PresentIfEmpty": meta.get("presentIfEmpty") or False,
             "ConditionsGroup": cg,
             "IntegrationName": meta.get("integrationName"),
         }
@@ -91,15 +91,15 @@ def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
         "Name": flat_view.get("name") or "",
         "Creator": flat_view.get("creator"),
         "PlaybookDefinitionIdentifier": flat_view.get("playbookIdentifier") or "",
-        "Type": flat_view.get("type", 0),
+        "Type": flat_view.get("type") or 0,
         "AlertRuleType": flat_view.get("alertRuleType"),
         "Widgets": built_widgets,
-        "Roles": flat_view.get("roles", []),
+        "Roles": flat_view.get("roles") or [],
     }
 
     return {
         "OverviewTemplate": cast("BuiltOverviewDetails", overview_template),
-        "Roles": flat_view.get("roleNames", []),
+        "Roles": flat_view.get("roleNames") or [],
     }
 
 

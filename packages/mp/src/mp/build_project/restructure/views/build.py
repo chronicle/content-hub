@@ -58,7 +58,7 @@ class ViewBuilder:
 
     def _load_widgets_html_content(self, overview: Overview) -> None:
         widgets_folder_path: Path = self.view_path / mp.core.constants.WIDGETS_DIR
-        for w in overview.widgets:
+        for w in overview.widgets or []:
             if w.type is WidgetType.HTML:
                 html_file_path = widgets_folder_path / f"{sanitize_widget_filename(w.title)}.html"
                 if html_file_path.exists():

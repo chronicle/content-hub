@@ -49,7 +49,7 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
 
     # 1. Map widgets
     flat_widgets = []
-    for w in template.get("Widgets", []):
+    for w in template.get("Widgets") or []:
         config_dict = {}
         data_def = w.get("DataDefinitionJson")
         if isinstance(data_def, str):
@@ -59,9 +59,10 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
         cg = w.get("ConditionsGroup")
         flat_cg = None
         if cg:
+            op = cg.get("LogicalOperator")
             flat_cg = {
-                "logicalOperator": cg.get("LogicalOperator", 1),
-                "conditions": cg.get("Conditions", []),
+                "logicalOperator": op if op is not None else 1,
+                "conditions": cg.get("Conditions") or [],
             }
 
         meta = {
