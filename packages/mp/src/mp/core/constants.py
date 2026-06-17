@@ -200,6 +200,11 @@ EXCLUDED_INTEGRATIONS_IDS_WITHOUT_PING: set[str] = {
     "lacework",
 }
 
+INTEGRATIONS_WITH_INTEGRATION_SUFFIX: set[str] = {
+    "http_integration",
+    "twilio_integration",
+}
+
 VALID_SSL_PARAM_NAMES: set[str] = {
     "Verify SSL",
     "Verify SSL Certificate",

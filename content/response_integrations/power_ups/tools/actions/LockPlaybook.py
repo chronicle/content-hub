@@ -71,7 +71,7 @@ def main():
     if execution_scope.value == ExecutionScope.Alert.value:
         case: Any = siemplify.case
         current_alert_index: int | None = None
-        case_alerts = getattr(case, "open_alerts", case.alerts)
+        case_alerts = case.alerts
         alerts: list = list(sorted(
             case_alerts,
             key=lambda x: x.creation_time,
@@ -119,7 +119,7 @@ def main():
     else:
         all_complete: bool = True
         waiting_for: list = []
-        case_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        case_alerts = getattr(siemplify.case, "open_alerts", None) or siemplify.case.alerts
         for alert in case_alerts:
             if not are_playbooks_complete(siemplify, alert.alert_group_identifier):
                 all_complete = False
