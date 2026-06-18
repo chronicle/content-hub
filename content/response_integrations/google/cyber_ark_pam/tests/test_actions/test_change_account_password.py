@@ -45,7 +45,7 @@ class TestChangeAccountPassword:
         assert action_output.results.result_value is True
         assert (
             "Successfully queued a task for the CPM to perform an immediate "
-            "credentials change to a new random value for the following accounts: 28_11" in action_output.results.output_message
+            "password change to a new random value for the following accounts: 28_11" in action_output.results.output_message
         )
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "25_30"})
@@ -127,7 +127,7 @@ class TestChangeAccountPassword:
         assert action_output.results.result_value is False
         assert (
             "Successfully queued a task for the CPM to perform an immediate "
-            "credentials change to a new random value for the following accounts: 28_11" in action_output.results.output_message
+            "password change to a new random value for the following accounts: 28_11" in action_output.results.output_message
         )
         assert (
             "Action wasn't able to queue a password change task for the following accounts in CyberArk PAM:\n"

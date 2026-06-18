@@ -74,7 +74,7 @@ class ChangeAccountPassword(CyberArkPamAction):
         output_parts: list[str] = []
         if self.successful_accounts:
             output_parts.append(
-                "Successfully queued a task for the CPM to perform an immediate credentials change to a "
+                "Successfully queued a task for the CPM to perform an immediate password change to a "
                 f"new random value for the following accounts: {', '.join(self.successful_accounts)}"
             )
 
