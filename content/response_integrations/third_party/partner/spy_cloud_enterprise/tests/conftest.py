@@ -11,6 +11,9 @@ pytest_plugins = ("integration_testing.conftest",)
 def spycloud_sdk() -> MagicMock:
     """Mock SpyCloud SDK with a successful breach catalog ping by default."""
     sdk = MagicMock()
+    # The action uses the SDK as a context manager (`with SpyCloudSDK(...) as sdk`),
+    # so __enter__ must return the same mock for the ping stubs to take effect.
+    sdk.__enter__.return_value = sdk
     sdk.breach_catalog.ping.return_value = True
     return sdk
 

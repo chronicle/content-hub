@@ -29,7 +29,7 @@ from ..core.Constants import (
 )
 from ..core.SpyCloudSDK import SpyCloudSDK
 
-SPYCLOUD_API_KEY_PARAM = "SPYCLOUD_API_KEY"
+SPYCLOUD_API_KEY_PARAM = "API Key"
 API_ROOT_PARAM = "API Root"
 VERIFY_SSL_PARAM = "Verify SSL"
 SCRIPT_NAME = PING_SCRIPT_NAME

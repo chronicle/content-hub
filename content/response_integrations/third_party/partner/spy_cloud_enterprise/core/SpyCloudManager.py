@@ -10,8 +10,8 @@ from .CheckpointManager import CheckpointManager
 from .Constants import ENDPOINT_PING
 from .SpyCloudSDK import SpyCloudSDK
 
-SPYCLOUD_API_KEY = "SPYCLOUD_API_KEY"
-ENABLE_COMPASS = "ENABLE_COMPASS"
+SPYCLOUD_API_KEY = "API Key"
+ENABLE_COMPASS = "Enable Compass"
 SEVERITIES = "SEVERITIES"
 VERIFY_SSL = "Verify SSL"
 API_ROOT = "API Root"
