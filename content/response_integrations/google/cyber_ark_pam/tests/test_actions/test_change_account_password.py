@@ -57,6 +57,8 @@ class TestChangeAccountPassword:
         """Test the all-failed scenario where all accounts fail to rotate."""
         mock_error_response = MagicMock()
         mock_error_response.status_code = 400
+        mock_error_response.reason = "Bad Request"
+        mock_error_response.json.side_effect = ValueError("No JSON")
         mock_error_response.raise_for_status.side_effect = requests.HTTPError(
             "400 Client Error: Bad Request", response=mock_error_response
         )
@@ -80,8 +82,7 @@ class TestChangeAccountPassword:
         assert action_output.results.result_value is False
         assert "None of the provided accounts were queued for a password change task." in action_output.results.output_message
         assert "Reasons:" in action_output.results.output_message
-        assert "25_30" in action_output.results.output_message
-        assert "400 Client Error: Bad Request" in action_output.results.output_message
+        assert "- 25_30 - Reason: Bad Request" in action_output.results.output_message
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_11, 25_30"})
     def test_change_password_mixed(
@@ -97,6 +98,8 @@ class TestChangeAccountPassword:
 
         mock_error_response = MagicMock()
         mock_error_response.status_code = 400
+        mock_error_response.reason = "Bad Request"
+        mock_error_response.json.side_effect = ValueError("No JSON")
         mock_error_response.raise_for_status.side_effect = requests.HTTPError(
             "400 Client Error: Bad Request", response=mock_error_response
         )
@@ -127,8 +130,8 @@ class TestChangeAccountPassword:
             "credentials change to a new random value for the following accounts: 28_11" in action_output.results.output_message
         )
         assert (
-            "Action wasn't able to queue a password change task for "
-            "the following accounts in CyberArk PAM: 25_30" in action_output.results.output_message
+            "Action wasn't able to queue a password change task for the following accounts in CyberArk PAM:\n"
+            "- 25_30 - Reason: Bad Request" in action_output.results.output_message
         )
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "36_4"})
@@ -153,6 +156,7 @@ class TestChangeAccountPassword:
                 mock_logon = MagicMock()
                 mock_logon.status_code = 200
                 mock_logon.text = '"mock-token"'
+                mock_logon.raise_for_value = None
                 mock_logon.raise_for_status.return_value = None
 
                 return mock_logon
@@ -167,4 +171,4 @@ class TestChangeAccountPassword:
         assert action_output.results.result_value is False
         assert "None of the provided accounts were queued for a password change task." in action_output.results.output_message
         assert "Reasons:" in action_output.results.output_message
-        assert "- 36_4: Account is not managed by the CPM." in action_output.results.output_message
+        assert "- 36_4 - Reason: The account is not managed by the CPM" in action_output.results.output_message

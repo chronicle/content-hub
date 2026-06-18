@@ -58,12 +58,12 @@ class ChangeAccountPassword(CyberArkPamAction):
             try:
                 self.api_client.change_password(account=account)
                 self.successful_accounts.append(account)
-            except CyberArkPamNotFoundError:
+            except CyberArkPamNotFoundError as e:
                 self.logger.error(f"Account with id {account} was not found in CyberArk PAM.")
-                self.failed_accounts[account] = "Account was not found in CyberArk PAM."
-            except CyberArkPamAccountNotManagedError:
+                self.failed_accounts[account] = str(e)
+            except CyberArkPamAccountNotManagedError as e:
                 self.logger.error(f"Account with id {account} is not managed by the CPM.")
-                self.failed_accounts[account] = "Account is not managed by the CPM."
+                self.failed_accounts[account] = str(e)
             except Exception as e:
                 self.logger.error(f"Error executing action on account {account}. {str(e)}")
                 self.failed_accounts[account] = str(e)
@@ -79,10 +79,11 @@ class ChangeAccountPassword(CyberArkPamAction):
             )
 
         if self.failed_accounts:
-            failed_details = [f"{acc} (Reason: {reason})" for acc, reason in self.failed_accounts.items()]
+            failed_details = [f"- {acc} - Reason: {reason}" for acc, reason in self.failed_accounts.items()]
+            reasons_str = "\n".join(failed_details)
             output_parts.append(
-                "Action wasn't able to queue a password change task for the following accounts in CyberArk PAM: "
-                f"{', '.join(failed_details)}"
+                "Action wasn't able to queue a password change task for the following accounts in CyberArk PAM:\n"
+                f"{reasons_str}"
             )
 
         self.output_message = "\n".join(output_parts)
@@ -93,7 +94,7 @@ class ChangeAccountPassword(CyberArkPamAction):
 
         if not self.successful_accounts:
             self.result_value = False
-            failed_details = [f"- {acc}: {reason}" for acc, reason in self.failed_accounts.items()]
+            failed_details = [f"- {acc} - Reason: {reason}" for acc, reason in self.failed_accounts.items()]
             reasons_str = "\n".join(failed_details)
             self.output_message = "None of the provided accounts were queued for a password change task."
             if reasons_str:

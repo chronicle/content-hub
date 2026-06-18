@@ -223,11 +223,11 @@ class CyberArkPamManager:
                 error_message = error_json.get("ErrorMessage", "")
                 error_code = error_json.get("ErrorCode", "")
                 if error_message:
-                    msg = f"{e}. CyberArk Error: {error_code} - {error_message}"
+                    msg = error_message
                 else:
-                    msg = f"{e}. Response: {response.text}"
+                    msg = response.reason or str(e)
             except Exception:
-                msg = f"{e}. Response: {response.text}"
+                msg = response.reason or str(e)
 
             if response.status_code == 404:
                 raise CyberArkPamNotFoundError(msg) from e
