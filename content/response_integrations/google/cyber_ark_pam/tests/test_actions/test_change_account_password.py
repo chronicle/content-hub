@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
 
 class TestChangeAccountPassword:
+    """Test suite for the ChangeAccountPassword action."""
     @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_11"})
     def test_change_password_success(
         self,
@@ -44,9 +45,13 @@ class TestChangeAccountPassword:
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
         assert (
-            "Successfully queued a task for the CPM to perform an immediate "
-            "password change to a new random value for the following accounts: 28_11" in action_output.results.output_message
+            "Successfully queued an immediate password change task in CyberArk PAM for the following accounts: 28_11"
+            in action_output.results.output_message
         )
+        assert action_output.results.json_output.json_result == {
+            "successful_accounts": ["28_11"],
+            "failed_accounts": [],
+        }
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "25_30"})
     def test_change_password_all_fail(
@@ -80,9 +85,16 @@ class TestChangeAccountPassword:
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
-        assert "None of the provided accounts were queued for a password change task." in action_output.results.output_message
-        assert "Reasons:" in action_output.results.output_message
-        assert "- 25_30 - Reason: Bad Request" in action_output.results.output_message
+        assert (
+            "None of the provided accounts were queued for a password change task. Please check JSON Result for more information."
+            in action_output.results.output_message
+        )
+        assert action_output.results.json_output.json_result == {
+            "successful_accounts": [],
+            "failed_accounts": [
+                {"account_id": "25_30", "error": "Bad Request"}
+            ],
+        }
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_11, 25_30"})
     def test_change_password_mixed(
@@ -126,13 +138,19 @@ class TestChangeAccountPassword:
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
         assert (
-            "Successfully queued a task for the CPM to perform an immediate "
-            "password change to a new random value for the following accounts: 28_11" in action_output.results.output_message
+            "Successfully queued an immediate password change task in CyberArk PAM for the following accounts: 28_11"
+            in action_output.results.output_message
         )
         assert (
-            "Action wasn't able to queue a password change task for the following accounts in CyberArk PAM:\n"
-            "- 25_30 - Reason: Bad Request" in action_output.results.output_message
+            "Action wasn't able to queue an immediate password change task in CyberArk PAM for the following accounts: 25_30. Please check JSON Result for more information."
+            in action_output.results.output_message
         )
+        assert action_output.results.json_output.json_result == {
+            "successful_accounts": ["28_11"],
+            "failed_accounts": [
+                {"account_id": "25_30", "error": "Bad Request"}
+            ],
+        }
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "36_4"})
     def test_change_password_account_not_managed(
@@ -169,6 +187,13 @@ class TestChangeAccountPassword:
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
-        assert "None of the provided accounts were queued for a password change task." in action_output.results.output_message
-        assert "Reasons:" in action_output.results.output_message
-        assert "- 36_4 - Reason: The account is not managed by the CPM" in action_output.results.output_message
+        assert (
+            "None of the provided accounts were queued for a password change task. Please check JSON Result for more information."
+            in action_output.results.output_message
+        )
+        assert action_output.results.json_output.json_result == {
+            "successful_accounts": [],
+            "failed_accounts": [
+                {"account_id": "36_4", "error": "The account is not managed by the CPM"}
+            ],
+        }

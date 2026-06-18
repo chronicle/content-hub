@@ -17,24 +17,25 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from TIPCommon.transformation import dict_to_flat
+from TIPCommon.types import SingleJson
 
 
 class BaseModel:
     def __init__(self, raw_data: dict) -> None:
         self.raw_data = raw_data
 
-    def to_json(self):
+    def to_json(self) -> SingleJson:
         return self.raw_data
 
-    def to_flat(self):
+    def to_flat(self) -> SingleJson:
         return dict_to_flat(self.to_json())
 
-    def to_csv(self):
+    def to_csv(self) -> SingleJson:
         return self.to_flat()
 
 
 class Account(BaseModel):
-    def to_csv(self):
+    def to_csv(self) -> SingleJson:
         flat_dict = self.to_flat()
         return {
             "Id": flat_dict.get("id"),
@@ -46,6 +47,7 @@ class Account(BaseModel):
 
 @dataclass
 class IntegrationParameters:
+    """Integration parameters for CyberArk PAM."""
     api_root: str
     username: str
     password: str

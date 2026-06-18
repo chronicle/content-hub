@@ -33,6 +33,7 @@ from cryptography.hazmat.primitives.serialization.pkcs12 import (
 from requests_toolbelt.adapters.x509 import X509Adapter
 
 from .CyberArkPamParser import CyberArkPamParser
+from .datamodels import Account
 
 # ============================= CONSTS ===================================== #
 CA_CERT_PATH = "cacert.pem"
@@ -204,7 +205,7 @@ class CyberArkPamManager:
         return response.text[1:-1]
 
     @staticmethod
-    def validate_response(response) -> None:
+    def validate_response(response: requests.Response) -> None:
         """Validate HTTP response and raise appropriate exceptions on failure.
 
         Args:

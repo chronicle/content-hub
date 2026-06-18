@@ -31,20 +31,22 @@ from ..core.CyberArkPamManager import (
 )
 
 if TYPE_CHECKING:
-    from typing import NoReturn
-
     from TIPCommon.types import Entity
 
 SCRIPT_NAME = "Change Account Password"
 
 
 class ChangeAccountPassword(CyberArkPamAction):
+    """Change Account Password action class."""
+
     def __init__(self) -> None:
+        """Initialize the ChangeAccountPassword action."""
         super().__init__(f"{INTEGRATION_NAME} - {SCRIPT_NAME}")
         self.successful_accounts: list[str] = []
         self.failed_accounts: dict[str, str] = {}
 
     def _extract_action_parameters(self) -> None:
+        """Extract action parameters from SOAR."""
         account_str = extract_action_param(
             self.soar_action,
             param_name="Account ID",
@@ -54,6 +56,7 @@ class ChangeAccountPassword(CyberArkPamAction):
         self.params.accounts = string_to_multi_value(account_str)
 
     def _perform_action(self, _: Entity | None = None) -> None:
+        """Perform the action logic."""
         for account in self.params.accounts:
             try:
                 self.api_client.change_password(account=account)
@@ -71,37 +74,40 @@ class ChangeAccountPassword(CyberArkPamAction):
         self._finalize_output()
 
     def _finalize_output(self) -> None:
+        """Finalize the action output message and result value."""
         output_parts: list[str] = []
-        if self.successful_accounts:
-            output_parts.append(
-                "Successfully queued a task for the CPM to perform an immediate password change to a "
-                f"new random value for the following accounts: {', '.join(self.successful_accounts)}"
-            )
-
-        if self.failed_accounts:
-            failed_details = [f"- {acc} - Reason: {reason}" for acc, reason in self.failed_accounts.items()]
-            reasons_str = "\n".join(failed_details)
-            output_parts.append(
-                "Action wasn't able to queue a password change task for the following accounts in CyberArk PAM:\n"
-                f"{reasons_str}"
-            )
-
-        self.output_message = "\n".join(output_parts)
         self.result_value = True
 
+        if self.successful_accounts:
+            output_parts.append(
+                "Successfully queued an immediate password change task in CyberArk PAM for the following accounts: "
+                f"{', '.join(self.successful_accounts)}"
+            )
+
         if self.failed_accounts:
             self.result_value = False
+            if self.successful_accounts:
+                output_parts.append(
+                    "Action wasn't able to queue an immediate password change task in CyberArk PAM for the following accounts: "
+                    f"{', '.join(self.failed_accounts.keys())}. Please check JSON Result for more information."
+                )
+            else:
+                output_parts.append(
+                    "None of the provided accounts were queued for a password change task. Please check JSON Result for more information."
+                )
 
-        if not self.successful_accounts:
-            self.result_value = False
-            failed_details = [f"- {acc} - Reason: {reason}" for acc, reason in self.failed_accounts.items()]
-            reasons_str = "\n".join(failed_details)
-            self.output_message = "None of the provided accounts were queued for a password change task."
-            if reasons_str:
-                self.output_message += f"\nReasons:\n{reasons_str}"
+        self.output_message = "\n".join(output_parts)
+
+        self.json_results = {
+            "successful_accounts": self.successful_accounts,
+            "failed_accounts": [
+                {"account_id": acc, "error": reason}
+                for acc, reason in self.failed_accounts.items()
+            ],
+        }
 
 
-def main() -> NoReturn:
+def main() -> None:
     """Run the ChangeAccountPassword action."""
     ChangeAccountPassword().run()
 
