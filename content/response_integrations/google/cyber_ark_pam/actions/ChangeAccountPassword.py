@@ -62,13 +62,19 @@ class ChangeAccountPassword(CyberArkPamAction):
                 self.api_client.change_password(account=account)
                 self.successful_accounts.append(account)
             except CyberArkPamNotFoundError as e:
-                self.logger.error(f"Account with id {account} was not found in CyberArk PAM.")
+                self.logger.error(
+                    f"Account with id {account} was not found in CyberArk PAM."
+                )
                 self.failed_accounts[account] = str(e)
             except CyberArkPamAccountNotManagedError as e:
-                self.logger.error(f"Account with id {account} is not managed by the CPM.")
+                self.logger.error(
+                    f"Account with id {account} is not managed by the CPM."
+                )
                 self.failed_accounts[account] = str(e)
             except Exception as e:
-                self.logger.error(f"Error executing action on account {account}. {str(e)}")
+                self.logger.error(
+                    f"Error executing action on account {account}. {str(e)}"
+                )
                 self.failed_accounts[account] = str(e)
 
         self._finalize_output()
