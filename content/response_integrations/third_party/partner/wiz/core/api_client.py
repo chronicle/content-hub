@@ -228,7 +228,6 @@ class WizApiClient(Apiable):
         has_fix: bool | None = None,
         has_exploit: bool | None = None,
         cve_ids: list[str] | None = None,
-        related_issue_severity: list[str] | None = None,
         first: int = 100,
     ) -> list[datamodels.VulnerabilityFinding]:
         """Get vulnerability findings for a specific resource.
@@ -239,7 +238,6 @@ class WizApiClient(Apiable):
             has_fix: Filter by fix availability.
             has_exploit: Filter by exploit availability.
             cve_ids: Filter by CVE IDs.
-            related_issue_severity: Filter by related issue severity.
             first: Max findings to return.
 
         Returns:
@@ -255,7 +253,6 @@ class WizApiClient(Apiable):
             has_fix=has_fix,
             has_exploit=has_exploit,
             cve_ids=cve_ids,
-            related_issue_severity=related_issue_severity,
             first=api_first,
         )
 

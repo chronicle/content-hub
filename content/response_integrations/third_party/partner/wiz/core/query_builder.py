@@ -198,7 +198,7 @@ class VulnerabilityFindingsQueryBuilder:
     has_fix: bool | None = None
     has_exploit: bool | None = None
     cve_ids: list[str] | None = None
-    related_issue_severity: list[str] | None = None
+
     first: int = 100
 
     def build_fields(self) -> list[Field]:
@@ -257,8 +257,6 @@ class VulnerabilityFindingsQueryBuilder:
             filter_by["hasExploit"] = self.has_exploit
         if self.cve_ids and len(self.cve_ids) == 1:
             filter_by["vulnerabilityExternalIdV2"] = {"equals": self.cve_ids[0]}
-        if self.related_issue_severity:
-            filter_by["relatedIssueSeverity"] = self.related_issue_severity
 
         return {
             "query": operation.render(),
