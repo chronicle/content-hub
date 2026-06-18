@@ -28,7 +28,7 @@ from TIPCommon.rest.soar_api import create_entity
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.types import SingleJson
 
-from ..core.ToolsCommon import ExecutionScope
+from ..core.ToolsCommon import ExecutionScope, get_case_alerts
 
 if TYPE_CHECKING:
     from typing import Never, NoReturn
@@ -164,12 +164,7 @@ class CreateEntityRelationshipsAction(Action):
             self.output_message = "No Entity was created"
             return [self.soar_action.current_alert]
         
-        self.output_message = ""
-        return getattr(
-            self.soar_action.case,
-            "open_alerts",
-            self.soar_action.case.alerts,
-        )
+        return get_case_alerts(self.soar_action)
 
     def _process_alert(
         self,
