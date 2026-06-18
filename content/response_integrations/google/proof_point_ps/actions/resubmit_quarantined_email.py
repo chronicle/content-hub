@@ -19,9 +19,9 @@ from typing import TYPE_CHECKING
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 
-from ..core.api_utils import calculate_time_range
+
 from ..core.base_action import BaseProofPointPSAction
-from ..core.constants import RESUBMIT_ACTION_NAME, TIME_FORMAT
+from ..core.constants import RESUBMIT_ACTION_NAME
 from ..core.exceptions import ProofPointPSError
 
 if TYPE_CHECKING:
@@ -42,25 +42,7 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
             is_mandatory=True,
             print_value=True,
         )
-        self.params.time_frame = extract_action_param(
-            self.soar_action,
-            param_name="Time Frame",
-            is_mandatory=False,
-            default_value="Last Hour",
-            print_value=True,
-        )
-        self.params.start_time = extract_action_param(
-            self.soar_action,
-            param_name="Start Time",
-            is_mandatory=False,
-            print_value=True,
-        )
-        self.params.end_time = extract_action_param(
-            self.soar_action,
-            param_name="End Time",
-            is_mandatory=False,
-            print_value=True,
-        )
+
         self.params.folder = extract_action_param(
             self.soar_action,
             param_name="Folder Name",
@@ -79,35 +61,15 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
         successful_guids = []
         failed_guids = []
 
-        try:
-            start_dt, end_dt = calculate_time_range(
-                time_frame=self.params.time_frame,
-                start_time_str=self.params.start_time,
-                end_time_str=self.params.end_time,
-            )
-            start_date = start_dt.strftime(TIME_FORMAT)
-            end_date = end_dt.strftime(TIME_FORMAT)
-
-            records = self.api_client.search(
-                sender="*",
-                folder=self.params.folder,
-                start_date=start_date,
-                end_date=end_date,
-            )
-            valid_guids = set()
-            for record in records:
-                if record.guid:
-                    valid_guids.add(record.guid.lower().strip())
-                if record.localguid:
-                    valid_guids.add(record.localguid.lower().strip())
-        except Exception as e:
-            valid_guids = None
-            self.soar_action.LOGGER.exception(
-                "Failed to pre-validate GUIDs via search API: %s", e
-            )
-
         for guid in guids:
-            if valid_guids is not None and guid.lower() not in valid_guids:
+            guid_valid = False
+            try:
+                self.api_client.download_message(guid)
+                guid_valid = True
+            except Exception:
+                guid_valid = False
+
+            if not guid_valid:
                 failed_guids.append((guid, "Message not found"))
                 continue
 

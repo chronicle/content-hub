@@ -65,7 +65,7 @@ class ProofPointPSSession(MockSession[MockRequest, MockResponse, ProofPointPSPro
         # If it's a download (has guid, no sender/recipient/subject filters)
         if "guid" in params and "from" not in params and "rcpt" not in params:
             guid = params["guid"]
-            if guid not in self._product.email_contents:
+            if not self._product.search_records(guid=guid):
                 return MockResponse(
                     content={"error": "Message not found"}, status_code=404
                 )
