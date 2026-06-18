@@ -68,7 +68,7 @@ class TestChangeAccountPassword:
             "400 Client Error: Bad Request", response=mock_error_response
         )
 
-        def mock_post_fail(url: str, *args: Any, **kwargs: Any) -> MagicMock:
+        def mock_post_fail(url: str, *args: object, **kwargs: object) -> MagicMock:
             if "/Auth/CyberArk/Logon" in url:
                 mock_logon = MagicMock()
                 mock_logon.status_code = 200
@@ -116,7 +116,7 @@ class TestChangeAccountPassword:
             "400 Client Error: Bad Request", response=mock_error_response
         )
 
-        def mock_post_mixed(url: str, *args: Any, **kwargs: Any) -> MagicMock:
+        def mock_post_mixed(url: str, *args: object, **kwargs: object) -> MagicMock:
             if "/Auth/CyberArk/Logon" in url:
                 mock_logon = MagicMock()
                 mock_logon.status_code = 200
@@ -169,7 +169,7 @@ class TestChangeAccountPassword:
             "400 Client Error: Bad Request", response=mock_error_response
         )
 
-        def mock_post_fail(url: str, *args: Any, **kwargs: Any) -> MagicMock:
+        def mock_post_fail(url: str, *args: object, **kwargs: object) -> MagicMock:
             if "/Auth/CyberArk/Logon" in url:
                 mock_logon = MagicMock()
                 mock_logon.status_code = 200
