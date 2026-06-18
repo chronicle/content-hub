@@ -44,8 +44,8 @@ class TestChangeAccountPassword:
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
         assert (
-            "Successfully marked the following accounts for an immediate "
-            "credentials change by the CPM to a new random value: 28_11" in action_output.results.output_message
+            "Successfully queued a task for the CPM to perform an immediate "
+            "credentials change to a new random value for the following accounts: 28_11" in action_output.results.output_message
         )
 
     @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "25_30"})
@@ -78,7 +78,7 @@ class TestChangeAccountPassword:
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
-        assert "None of the provided accounts were marked for password change." in action_output.results.output_message
+        assert "None of the provided accounts were queued for a password change task." in action_output.results.output_message
         assert "Reasons:" in action_output.results.output_message
         assert "25_30" in action_output.results.output_message
         assert "400 Client Error: Bad Request" in action_output.results.output_message
@@ -123,10 +123,48 @@ class TestChangeAccountPassword:
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
         assert (
-            "Successfully marked the following accounts for an immediate "
-            "credentials change by the CPM to a new random value: 28_11" in action_output.results.output_message
+            "Successfully queued a task for the CPM to perform an immediate "
+            "credentials change to a new random value for the following accounts: 28_11" in action_output.results.output_message
         )
         assert (
-            "Action wasn't able to mark the following accounts for "
-            "password change in CyberArk PAM: 25_30" in action_output.results.output_message
+            "Action wasn't able to queue a password change task for "
+            "the following accounts in CyberArk PAM: 25_30" in action_output.results.output_message
         )
+
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "36_4"})
+    def test_change_password_account_not_managed(
+        self,
+        action_output: MockActionOutput,
+        mock_session: MagicMock,
+    ) -> None:
+        """Test the scenario where the account is not managed by CPM (ErrorCode: CAWS00001E)."""
+        mock_error_response = MagicMock()
+        mock_error_response.status_code = 400
+        mock_error_response.json.return_value = {
+            "ErrorCode": "CAWS00001E",
+            "ErrorMessage": "The account is not managed by the CPM",
+        }
+        mock_error_response.raise_for_status.side_effect = requests.HTTPError(
+            "400 Client Error: Bad Request", response=mock_error_response
+        )
+
+        def mock_post_fail(url: str, *args: Any, **kwargs: Any) -> MagicMock:
+            if "/Auth/CyberArk/Logon" in url:
+                mock_logon = MagicMock()
+                mock_logon.status_code = 200
+                mock_logon.text = '"mock-token"'
+                mock_logon.raise_for_status.return_value = None
+
+                return mock_logon
+
+            return mock_error_response
+
+        mock_session.post.side_effect = mock_post_fail
+
+        ChangeAccountPassword.main()
+
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is False
+        assert "None of the provided accounts were queued for a password change task." in action_output.results.output_message
+        assert "Reasons:" in action_output.results.output_message
+        assert "- 36_4: Account is not managed by the CPM." in action_output.results.output_message

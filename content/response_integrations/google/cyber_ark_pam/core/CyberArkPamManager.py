@@ -68,6 +68,10 @@ class CyberArkPamNotFoundError(CyberArkPamManagerError):
     """Not Found Exception for CyberArk PAM manager."""
 
 
+class CyberArkPamAccountNotManagedError(CyberArkPamManagerError):
+    """Account Not Managed Exception for CyberArk PAM manager."""
+
+
 class CyberArkPamManager:
     """CyberArk PAM Manager."""
 
@@ -213,9 +217,23 @@ class CyberArkPamManager:
         try:
             response.raise_for_status()
         except requests.HTTPError as e:
-            if e.response.status_code == 404:
-                raise CyberArkPamNotFoundError(e)
-            raise CyberArkPamManagerError(e)
+            error_code = ""
+            try:
+                error_json = response.json()
+                error_message = error_json.get("ErrorMessage", "")
+                error_code = error_json.get("ErrorCode", "")
+                if error_message:
+                    msg = f"{e}. CyberArk Error: {error_code} - {error_message}"
+                else:
+                    msg = f"{e}. Response: {response.text}"
+            except Exception:
+                msg = f"{e}. Response: {response.text}"
+
+            if response.status_code == 404:
+                raise CyberArkPamNotFoundError(msg) from e
+            if response.status_code == 400 and (error_code == "CAWS00001E" or "not managed by the cpm" in msg.lower()):
+                raise CyberArkPamAccountNotManagedError(msg) from e
+            raise CyberArkPamManagerError(msg) from e
 
     def list_accounts(
         self,
@@ -298,7 +316,9 @@ class CyberArkPamManager:
         Args:
             account: ID of the account to rotate.
         """
+        payload = {"ChangeEntireGroup": "true"}
         response = self.session.post(
             url=self.__build_full_uri("change_password", account_id=account),
+            json=payload,
         )
         self.validate_response(response)

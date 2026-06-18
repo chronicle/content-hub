@@ -25,7 +25,10 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import CyberArkPamAction
 from ..core.constants import INTEGRATION_NAME
-from ..core.CyberArkPamManager import CyberArkPamNotFoundError
+from ..core.CyberArkPamManager import (
+    CyberArkPamAccountNotManagedError,
+    CyberArkPamNotFoundError,
+)
 
 if TYPE_CHECKING:
     from typing import NoReturn
@@ -58,6 +61,9 @@ class ChangeAccountPassword(CyberArkPamAction):
             except CyberArkPamNotFoundError:
                 self.logger.error(f"Account with id {account} was not found in CyberArk PAM.")
                 self.failed_accounts[account] = "Account was not found in CyberArk PAM."
+            except CyberArkPamAccountNotManagedError:
+                self.logger.error(f"Account with id {account} is not managed by the CPM.")
+                self.failed_accounts[account] = "Account is not managed by the CPM."
             except Exception as e:
                 self.logger.error(f"Error executing action on account {account}. {str(e)}")
                 self.failed_accounts[account] = str(e)
@@ -68,14 +74,14 @@ class ChangeAccountPassword(CyberArkPamAction):
         output_parts: list[str] = []
         if self.successful_accounts:
             output_parts.append(
-                "Successfully marked the following accounts for an immediate credentials change by the CPM to a "
-                f"new random value: {', '.join(self.successful_accounts)}"
+                "Successfully queued a task for the CPM to perform an immediate credentials change to a "
+                f"new random value for the following accounts: {', '.join(self.successful_accounts)}"
             )
 
         if self.failed_accounts:
             failed_details = [f"{acc} (Reason: {reason})" for acc, reason in self.failed_accounts.items()]
             output_parts.append(
-                "Action wasn't able to mark the following accounts for password change in CyberArk PAM: "
+                "Action wasn't able to queue a password change task for the following accounts in CyberArk PAM: "
                 f"{', '.join(failed_details)}"
             )
 
@@ -89,7 +95,7 @@ class ChangeAccountPassword(CyberArkPamAction):
             self.result_value = False
             failed_details = [f"- {acc}: {reason}" for acc, reason in self.failed_accounts.items()]
             reasons_str = "\n".join(failed_details)
-            self.output_message = "None of the provided accounts were marked for password change."
+            self.output_message = "None of the provided accounts were queued for a password change task."
             if reasons_str:
                 self.output_message += f"\nReasons:\n{reasons_str}"
 
