@@ -14,13 +14,15 @@
 
 from __future__ import annotations
 
+from TIPCommon.types import SingleJson
+
 from .datamodels import Account
 
 
 class CyberArkPamParser:
-    def build_account(self, account_json):
+    def build_account(self, account_json: SingleJson) -> Account:
         return Account(account_json)
 
-    def build_accounts(self, json_response):
+    def build_accounts(self, json_response: SingleJson) -> list[Account]:
         accounts_json = json_response["value"]
         return [self.build_account(account_json) for account_json in accounts_json]
