@@ -69,6 +69,11 @@ TERMINAL_STATUSES = {"success", "partial_success", "error"}
 HEADER_AUTHORIZATION = "Authorization"
 HEADER_CONTENT_TYPE = "Content-Type"
 HEADER_USER_AGENT = "User-Agent"
+# Identifies SOAR-originated API calls to the Abnormal Security backend. The
+# Abnormal SOAR API reads this header to apply the Google SecOps egress subnet
+# allowlist and origin metrics; without it requests default to "Rest API".
+HEADER_SOAR_INTEGRATION_ORIGIN = "Soar-Integration-Origin"
+SOAR_INTEGRATION_ORIGIN = "Google SecOps"
 CONTENT_TYPE_JSON = "application/json"
 
 # Connector
