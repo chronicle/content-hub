@@ -1,3 +1,4 @@
+# ruff: noqa: N999
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +19,7 @@ from __future__ import annotations
 import base64
 import pathlib
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin
 
 import requests
@@ -33,7 +35,11 @@ from cryptography.hazmat.primitives.serialization.pkcs12 import (
 from requests_toolbelt.adapters.x509 import X509Adapter
 
 from .CyberArkPamParser import CyberArkPamParser
-from .datamodels import Account
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
+    from .datamodels import Account
 
 # ============================= CONSTS ===================================== #
 CA_CERT_PATH = "cacert.pem"
@@ -51,13 +57,19 @@ GET_TOKEN_TIMEOUT = 60
 @dataclass
 class ListAccountsQuery:
     search: str | None = None
-    searchType: str | None = None
+    searchType: str | None = None  # noqa: N815
     offset: int | None = None
     limit: int | None = None
     filter: str | None = None
     savedfilter: str | None = None
 
-    def as_query(self):
+    def as_query(self) -> SingleJson:
+        """Convert the dataclass into a query parameters dictionary.
+
+        Returns:
+            A dictionary containing not-None query parameters.
+
+        """
         return {key: value for key, value in self.__dict__.items() if value is not None}
 
 
@@ -76,13 +88,13 @@ class CyberArkPamAccountNotManagedError(CyberArkPamManagerError):
 class CyberArkPamManager:
     """CyberArk PAM Manager."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         api_root: str,
         username: str,
         password: str,
-        siemplify=None,
-        verify_ssl: bool = False,
+        siemplify: object | None = None,
+        verify_ssl: bool = False,  # noqa: FBT001, FBT002
         ca_certificate: str | None = None,
         client_certificate: str | None = None,
         client_certificate_passphrase: str | None = None,
@@ -98,6 +110,7 @@ class CyberArkPamManager:
             ca_certificate: Base64 encoded CA certificate content.
             client_certificate: Base64 encoded client PKCS12 certificate.
             client_certificate_passphrase: Passphrase for the client certificate.
+
         """
         self.siemplify = siemplify
         self.session = requests.Session()
@@ -121,6 +134,7 @@ class CyberArkPamManager:
         Args:
             client_certificate_passphrase: The passphrase for the certificate.
             client_certificate: Base64 encoded PKCS12 certificate.
+
         """
         if not client_certificate:
             return
@@ -151,12 +165,13 @@ class CyberArkPamManager:
         self.session.mount("https://", adapter)
         self.siemplify.LOGGER.info("Set Client's certificate for session")
 
-    def __set_verify(self, verify_ssl: bool, ca_certificate: str | None = None) -> None:
+    def __set_verify(self, verify_ssl: bool, ca_certificate: str | None = None) -> None:  # noqa: FBT001
         """Set SSL verification for the session.
 
         Args:
             verify_ssl: True if SSL certificates should be verified.
             ca_certificate: Base64 encoded CA certificate content.
+
         """
         if verify_ssl and ca_certificate:
             ca_cert = base64.b64decode(ca_certificate)
@@ -170,7 +185,7 @@ class CyberArkPamManager:
         else:
             self.session.verify = False
 
-    def __build_full_uri(self, url_key: str, **kwargs) -> str:
+    def __build_full_uri(self, url_key: str, **kwargs: object) -> str:
         """Build the full URI from a URL key.
 
         Args:
@@ -179,6 +194,7 @@ class CyberArkPamManager:
 
         Returns:
             The formatted full URI.
+
         """
         return urljoin(self.api_root, URLS[url_key].format(**kwargs))
 
@@ -191,6 +207,7 @@ class CyberArkPamManager:
 
         Returns:
             The access token.
+
         """
         payload = {"username": username, "password": password}
 
@@ -213,7 +230,9 @@ class CyberArkPamManager:
 
         Raises:
             CyberArkPamNotFoundError: If HTTP status code is 404.
+            CyberArkPamAccountNotManagedError: If account is not managed by CPM.
             CyberArkPamManagerError: If any other HTTP error status is returned.
+
         """
         try:
             response.raise_for_status()
@@ -223,20 +242,17 @@ class CyberArkPamManager:
                 error_json = response.json()
                 error_message = error_json.get("ErrorMessage", "")
                 error_code = error_json.get("ErrorCode", "")
-                if error_message:
-                    msg = error_message
-                else:
-                    msg = response.reason or str(e)
-            except Exception:
+                msg = error_message or (response.reason or str(e))
+            except Exception:  # noqa: BLE001
                 msg = response.reason or str(e)
 
-            if response.status_code == 404:
+            if response.status_code == 404:  # noqa: PLR2004
                 raise CyberArkPamNotFoundError(msg) from e
-            if response.status_code == 400 and (error_code == "CAWS00001E" or "not managed by the cpm" in msg.lower()):
+            if response.status_code == 400 and (error_code == "CAWS00001E" or "not managed by the cpm" in msg.lower()):  # noqa: PLR2004
                 raise CyberArkPamAccountNotManagedError(msg) from e
             raise CyberArkPamManagerError(msg) from e
 
-    def list_accounts(
+    def list_accounts(  # noqa: PLR0913, PLR0917
         self,
         search_query: str | None,
         search_operator: str | None,
@@ -257,6 +273,7 @@ class CyberArkPamManager:
 
         Returns:
             A list of Account data models.
+
         """
         list_accounts_query = ListAccountsQuery(
             search=search_query,
@@ -294,6 +311,7 @@ class CyberArkPamManager:
 
         Returns:
             The password value.
+
         """
         payload = {
             "reason": reason,
@@ -316,6 +334,7 @@ class CyberArkPamManager:
 
         Args:
             account: ID of the account to rotate.
+
         """
         payload = {"ChangeEntireGroup": "true"}
         response = self.session.post(

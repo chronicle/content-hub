@@ -1,3 +1,4 @@
+# ruff: noqa: N999
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +28,8 @@ SCRIPT_NAME = "List Accounts"
 
 
 @output_handler
-def main() -> None:
+def main() -> None:  # noqa: PLR0914, PLR0915
+    """Run the ListAccounts action."""
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME} - {SCRIPT_NAME}"
     siemplify.LOGGER.info("================= Main - Param Init =================")
@@ -86,26 +88,30 @@ def main() -> None:
     result_value = "false"
     output_message = ""
 
+    if filter_query and saved_filter:
+        output_message += (
+            "Both the Filter Query and Saved Filter parameters are provided, Saved Filter takes priority"
+        )
+
+    if max_records_to_return is not None and max_records_to_return <= 0:
+        output_message = (
+            f"Invalid value was provided for “Max Records to Return”: "
+            f"{max_records_to_return}. Positive number should be provided”."
+        )
+        siemplify.LOGGER.error(output_message)
+        siemplify.end(output_message, "false", EXECUTION_STATE_FAILED)
+        return
+
+    if records_offset is not None and records_offset < 0:
+        output_message = (
+            f"Invalid value was provided for “Records Offset to Return”: "
+            f"{records_offset}. Non negative number should be provided"
+        )
+        siemplify.LOGGER.error(output_message)
+        siemplify.end(output_message, "false", EXECUTION_STATE_FAILED)
+        return
+
     try:
-        if filter_query and saved_filter:
-            output_message += (
-                "Both the Filter Query and Saved Filter parameters are provided, Saved Filter takes priority"
-            )
-
-        if max_records_to_return is not None and max_records_to_return <= 0:
-            msg = (
-                f"Invalid value was provided for “Max Records to Return”: "
-                f"{max_records_to_return}. Positive number should be provided”."
-            )
-            raise Exception(msg)
-
-        if records_offset is not None and records_offset < 0:
-            msg = (
-                f"Invalid value was provided for “Records Offset to Return”: "
-                f"{records_offset}. Non negative number should be provided"
-            )
-            raise Exception(msg)
-
         cyber_ark_manager = CyberArkPamManager(
             api_root=api_root,
             username=username,
@@ -126,6 +132,13 @@ def main() -> None:
             filter_query=filter_query,
             saved_filter=saved_filter,
         )
+    except Exception as e:
+        log_message = f"Error executing action “{SCRIPT_NAME}”. Reason: {e}"
+        siemplify.LOGGER.exception(log_message)
+        status = EXECUTION_STATE_FAILED
+        result_value = "false"
+        output_message = log_message
+    else:
         if accounts:
             siemplify.result.add_result_json([account.to_flat() for account in accounts])
             siemplify.result.add_data_table(
@@ -140,14 +153,6 @@ def main() -> None:
             log_message = "No accounts were found for the provided criteria in CyberArk PAM"
             output_message += log_message
             siemplify.LOGGER.info(log_message)
-
-    except Exception as e:
-        log_message = f"Error executing action “{SCRIPT_NAME}”. Reason: {e}"
-        siemplify.LOGGER.error(log_message)
-        siemplify.LOGGER.exception(e)
-        status = EXECUTION_STATE_FAILED
-        result_value = "false"
-        output_message = log_message
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}:")

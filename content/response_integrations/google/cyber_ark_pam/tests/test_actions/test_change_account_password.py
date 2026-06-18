@@ -17,14 +17,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import requests
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
-from cyber_ark_pam.actions import ChangeAccountPassword
+from cyber_ark_pam.actions import change_account_password
 from cyber_ark_pam.tests.common import CONFIG_PATH
 
 if TYPE_CHECKING:
@@ -40,7 +40,7 @@ class TestChangeAccountPassword:
         mock_session: MagicMock,
     ) -> None:
         """Test successfully marking an account for password rotation."""
-        ChangeAccountPassword.main()
+        change_account_password.main()
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
@@ -81,12 +81,13 @@ class TestChangeAccountPassword:
 
         mock_session.post.side_effect = mock_post_fail
 
-        ChangeAccountPassword.main()
+        change_account_password.main()
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
         assert (
-            "None of the provided accounts were queued for a password change task. Please check JSON Result for more information."
+            "None of the provided accounts were queued for a password change task. "
+            "Please check JSON Result for more information."
             in action_output.results.output_message
         )
         assert action_output.results.json_output.json_result == {
@@ -133,7 +134,7 @@ class TestChangeAccountPassword:
 
         mock_session.post.side_effect = mock_post_mixed
 
-        ChangeAccountPassword.main()
+        change_account_password.main()
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
@@ -142,7 +143,8 @@ class TestChangeAccountPassword:
             in action_output.results.output_message
         )
         assert (
-            "Action wasn't able to queue an immediate password change task in CyberArk PAM for the following accounts: 25_30. Please check JSON Result for more information."
+            "Action wasn't able to queue an immediate password change task in CyberArk PAM for the following "
+            "accounts: 25_30. Please check JSON Result for more information."
             in action_output.results.output_message
         )
         assert action_output.results.json_output.json_result == {
@@ -183,12 +185,13 @@ class TestChangeAccountPassword:
 
         mock_session.post.side_effect = mock_post_fail
 
-        ChangeAccountPassword.main()
+        change_account_password.main()
 
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
         assert (
-            "None of the provided accounts were queued for a password change task. Please check JSON Result for more information."
+            "None of the provided accounts were queued for a password change task. "
+            "Please check JSON Result for more information."
             in action_output.results.output_message
         )
         assert action_output.results.json_output.json_result == {

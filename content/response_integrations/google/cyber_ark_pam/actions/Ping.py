@@ -1,3 +1,4 @@
+# ruff: noqa: N999
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +28,7 @@ SCRIPT_NAME = "Ping"
 
 @output_handler
 def main() -> None:
+    """Run the Ping action."""
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME} - {SCRIPT_NAME}"
     siemplify.LOGGER.info("================= Main - Param Init =================")
@@ -85,7 +87,13 @@ def main() -> None:
             client_certificate=client_certificate,
             client_certificate_passphrase=client_certificate_passphrase,
         )
-
+    except Exception as e:
+        log_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error is {e}"
+        siemplify.LOGGER.exception(log_message)
+        output_message = log_message
+        result_value = "false"
+        status = EXECUTION_STATE_FAILED
+    else:
         log_message = (
             f"Successfully connected to the {INTEGRATION_NAME} server with the provided connection parameters!"
         )
@@ -93,14 +101,6 @@ def main() -> None:
         output_message = log_message
         result_value = "true"
         status = EXECUTION_STATE_COMPLETED
-
-    except Exception as e:
-        log_message = f"Failed to connect to the {INTEGRATION_NAME} server! Error is {e}"
-        siemplify.LOGGER.error(log_message)
-        siemplify.LOGGER.exception(e)
-        output_message = log_message
-        result_value = "false"
-        status = EXECUTION_STATE_FAILED
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}:")

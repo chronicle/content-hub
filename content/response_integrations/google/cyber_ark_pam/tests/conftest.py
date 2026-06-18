@@ -45,7 +45,7 @@ def mock_session() -> Generator[MagicMock, Any, None]:
         change_response.text = ""
         change_response.raise_for_status.return_value = None
 
-        def mock_post(url: str, *args: Any, **kwargs: Any) -> MagicMock:
+        def mock_post(url: str, *args: object, **kwargs: object) -> MagicMock:
             if "/Auth/CyberArk/Logon" in url:
                 return logon_response
             if "/Change" in url:

@@ -1,3 +1,4 @@
+# ruff: noqa: N999
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +27,8 @@ SCRIPT_NAME = "Get Account Password Value"
 
 
 @output_handler
-def main() -> None:
+def main() -> None:  # noqa: PLR0914
+    """Run the GetAccountPasswordValue action."""
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME} - {SCRIPT_NAME}"
     siemplify.LOGGER.info("================= Main - Param Init =================")
@@ -102,13 +104,6 @@ def main() -> None:
             ticket_id=ticket_id,
             version=version,
         )
-
-        result_value = "true"
-        log_message = f"Successfully fetched password value for account id {account}"
-        output_message += log_message
-        siemplify.LOGGER.info(log_message)
-        siemplify.result.add_result_json({"content": password})
-
     except CyberArkPamNotFoundError:
         log_message = (
             f"Password value for account with id {account}"
@@ -116,14 +111,18 @@ def main() -> None:
         )
         output_message += log_message
         siemplify.LOGGER.info(log_message)
-
     except Exception as e:
         result_value = "false"
         log_message = f"Error executing action “{SCRIPT_NAME}”. Reason: {e}"
         output_message = log_message
-        siemplify.LOGGER.error(log_message)
-        siemplify.LOGGER.exception(e)
+        siemplify.LOGGER.exception(log_message)
         status = EXECUTION_STATE_FAILED
+    else:
+        result_value = "true"
+        log_message = f"Successfully fetched password value for account id {account}"
+        output_message += log_message
+        siemplify.LOGGER.info(log_message)
+        siemplify.result.add_result_json({"content": password})
 
     siemplify.LOGGER.info("----------------- Main - Finished -----------------")
     siemplify.LOGGER.info(f"Status: {status}:")

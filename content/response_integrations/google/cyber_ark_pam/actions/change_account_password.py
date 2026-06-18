@@ -1,4 +1,3 @@
-# ruff: noqa: N999
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -62,18 +61,18 @@ class ChangeAccountPassword(CyberArkPamAction):
                 self.api_client.change_password(account=account)
                 self.successful_accounts.append(account)
             except CyberArkPamNotFoundError as e:
-                self.logger.error(
+                self.logger.exception(
                     f"Account with id {account} was not found in CyberArk PAM."
                 )
                 self.failed_accounts[account] = str(e)
             except CyberArkPamAccountNotManagedError as e:
-                self.logger.error(
+                self.logger.exception(
                     f"Account with id {account} is not managed by the CPM."
                 )
                 self.failed_accounts[account] = str(e)
             except Exception as e:
-                self.logger.error(
-                    f"Error executing action on account {account}. {str(e)}"
+                self.logger.exception(
+                    f"Error executing action on account {account}."
                 )
                 self.failed_accounts[account] = str(e)
 

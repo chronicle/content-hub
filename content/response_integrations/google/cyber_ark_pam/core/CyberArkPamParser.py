@@ -1,3 +1,4 @@
+# ruff: noqa: N999
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,15 +15,34 @@
 
 from __future__ import annotations
 
-from TIPCommon.types import SingleJson
+from typing import TYPE_CHECKING
 
 from .datamodels import Account
 
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
+
 
 class CyberArkPamParser:
-    def build_account(self, account_json: SingleJson) -> Account:
+    """CyberArk PAM Response Parser."""
+
+    @staticmethod
+    def build_account(account_json: SingleJson) -> Account:
+        """Build an Account object from raw JSON.
+
+        Returns:
+            The parsed Account data model object.
+
+        """
         return Account(account_json)
 
-    def build_accounts(self, json_response: SingleJson) -> list[Account]:
+    @staticmethod
+    def build_accounts(json_response: SingleJson) -> list[Account]:
+        """Build a list of Account objects from raw JSON response.
+
+        Returns:
+            A list of parsed Account data model objects.
+
+        """
         accounts_json = json_response["value"]
-        return [self.build_account(account_json) for account_json in accounts_json]
+        return [CyberArkPamParser.build_account(account_json) for account_json in accounts_json]
