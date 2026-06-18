@@ -164,6 +164,7 @@ class CreateEntityRelationshipsAction(Action):
             self.output_message = "No Entity was created"
             return [self.soar_action.current_alert]
         
+        self.output_message = ""
         return get_case_alerts(self.soar_action)
 
     def _process_alert(
