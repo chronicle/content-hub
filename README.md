@@ -50,8 +50,6 @@ For more detailed information, use the following guides as a reference while you
 
 ### **Google Cloud Security Integration Ecosystem Program**
 
-This program is designed specifically for technology vendors and developers looking to join our global security ecosystem. By partnering with us, you can accelerate your time-to-market with a **NFR
-development license**, seamlessly validate your integrations and showcase your solution directly in the **Google SecOps Content Hub**.
+This program is designed specifically for technology vendors and developers looking to join our global security ecosystem. By partnering with us, you can accelerate your time-to-market with a **NFR development license**, seamlessly validate your integrations and showcase your solution directly in the **Google SecOps Content Hub**.
 
-**Get started today:** Please **[submit your request using this form](https://docs.google.com/forms/d/e/1FAIpQLSf7LYpIPhzFAYLo2NPpl5NUBX6h2zG4rDlLjWjm2Ic_U2FhZg/viewform)
-**. Once reviewed and approved, you will connect directly with our Google Cloud Security Tech Partners team to secure your development environment and gain official access to our dedicated support ecosystem.
+**Get started today:** Please **[submit your request using this form](https://docs.google.com/forms/d/e/1FAIpQLSf7LYpIPhzFAYLo2NPpl5NUBX6h2zG4rDlLjWjm2Ic_U2FhZg/viewform)**. Once reviewed and approved, you will connect directly with our Google Cloud Security Tech Partners team to secure your development environment and gain official access to our dedicated support ecosystem.
