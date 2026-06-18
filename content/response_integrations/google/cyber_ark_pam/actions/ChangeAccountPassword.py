@@ -80,20 +80,22 @@ class ChangeAccountPassword(CyberArkPamAction):
 
         if self.successful_accounts:
             output_parts.append(
-                "Successfully queued an immediate password change task in CyberArk PAM for the following accounts: "
-                f"{', '.join(self.successful_accounts)}"
+                "Successfully queued an immediate password change task in CyberArk PAM for "
+                f"the following accounts: {', '.join(self.successful_accounts)}"
             )
 
         if self.failed_accounts:
             self.result_value = False
             if self.successful_accounts:
                 output_parts.append(
-                    "Action wasn't able to queue an immediate password change task in CyberArk PAM for the following accounts: "
-                    f"{', '.join(self.failed_accounts.keys())}. Please check JSON Result for more information."
+                    "Action wasn't able to queue an immediate password change task in CyberArk PAM for "
+                    f"the following accounts: {', '.join(self.failed_accounts.keys())}. "
+                    "Please check JSON Result for more information."
                 )
             else:
                 output_parts.append(
-                    "None of the provided accounts were queued for a password change task. Please check JSON Result for more information."
+                    "None of the provided accounts were queued for a password change task. "
+                    "Please check JSON Result for more information."
                 )
 
         self.output_message = "\n".join(output_parts)
