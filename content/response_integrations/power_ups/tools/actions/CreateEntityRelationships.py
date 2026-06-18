@@ -31,7 +31,7 @@ from TIPCommon.types import SingleJson
 from ..core.ToolsCommon import ExecutionScope, get_case_alerts
 
 if TYPE_CHECKING:
-    from typing import Never, NoReturn
+    from typing import Never
 
 ACTION_NAME: str = "Create Entity Relationships"
 
@@ -529,7 +529,7 @@ class CreateEntityRelationshipsAction(Action):
         create_entity(self.soar_action, entity_to_create)
 
 
-def main() -> NoReturn:
+def main() -> None:
     CreateEntityRelationshipsAction().run()
 
 

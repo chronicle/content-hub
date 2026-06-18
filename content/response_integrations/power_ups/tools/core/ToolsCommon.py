@@ -161,6 +161,7 @@ def find_key_path_recursive(
                     iteration=iteration + 1,
                 )
             return []
+        return []
     else:
         if isinstance(current_json, dict):
             return [current_json]
