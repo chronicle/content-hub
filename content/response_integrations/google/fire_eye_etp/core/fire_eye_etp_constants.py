@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+"""Constants for FireEye ETP integration."""
+
 from __future__ import annotations
+
 PROVIDER_NAME = "FireEye ETP"
 
 # ACTIONS
@@ -25,10 +29,15 @@ ENDPOINTS = {
 }
 
 # AUTHENTICATION
-TOKEN_URL = "https://auth.trellix.com/auth/realms/IAM/protocol/openid-connect/token"
+
+AUTH_URL = "https://auth.trellix.com/auth/realms/IAM/protocol/openid-connect/token"
 NEW_AUTH_HEADER = "Authorization"
 LEGACY_AUTH_HEADER = "x-fireeye-api-key"
-ETP_SCOPES = "etp.conf.ro etp.trce.rw etp.admn.ro etp.domn.ro etp.accs.rw etp.quar.rw etp.domn.rw etp.rprt.rw etp.accs.ro etp.quar.ro etp.alrt.rw etp.rprt.ro etp.conf.rw etp.trce.ro etp.alrt.ro etp.admn.rw"
+ETP_SCOPES = (
+    "etp.conf.ro etp.trce.rw etp.admn.ro etp.domn.ro etp.accs.rw etp.quar.rw "
+    "etp.domn.rw etp.rprt.rw etp.accs.ro etp.quar.ro etp.alrt.rw etp.rprt.ro "
+    "etp.conf.rw etp.trce.ro etp.alrt.ro etp.admn.rw"
+)
 
 
 HEADERS = {"Content-Type": "application/json", "Accept": "application/json"}
