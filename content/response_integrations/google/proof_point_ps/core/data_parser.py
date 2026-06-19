@@ -47,15 +47,20 @@ def parse_quarantine_record(data: dict) -> QuarantineRecord:
     )
 
 
-def parse_quarantine_records(data: dict) -> list[QuarantineRecord]:
+def parse_quarantine_records(data: dict | list) -> list[QuarantineRecord]:
     """Parse a list of raw records.
 
     Args:
-        data: The raw JSON payload containing 'records' key.
+        data: The raw JSON payload (either a list of records or a dictionary containing 'records' key).
 
     Returns:
         A list of QuarantineRecord objects.
 
     """
-    records = data.get("records") or []
+    if isinstance(data, list):
+        records = data
+    elif isinstance(data, dict):
+        records = data.get("records") or []
+    else:
+        records = []
     return [parse_quarantine_record(record) for record in records]

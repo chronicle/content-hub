@@ -121,7 +121,14 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
         )
 
         if self.params.guid:
-            records = [r for r in records if self.params.guid in {r.guid, r.localguid}]
+            guid_lower = self.params.guid.lower()
+            records = [
+                r for r in records
+                if guid_lower in {
+                    r.guid.lower() if r.guid else "",
+                    r.localguid.lower() if r.localguid else "",
+                }
+            ]
 
         if records:
             self.json_results = [r.to_json() for r in records]
@@ -130,6 +137,7 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
                 f"Successfully found {len(records)} quarantined emails."
             )
         else:
+            self.json_results = []
             self.output_message = (
                 "No quarantined emails were found matching the criteria."
             )
