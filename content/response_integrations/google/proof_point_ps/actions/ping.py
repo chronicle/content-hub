@@ -45,7 +45,7 @@ class Ping(BaseProofPointPSAction):
             )
         except Exception as e:
             self.output_message = (
-                f"Failed to connect to the Proofpoint Email Protection server! "
+                "Failed to connect to the Proofpoint Email Protection server! "
                 f"Error is {e}"
             )
             raise
