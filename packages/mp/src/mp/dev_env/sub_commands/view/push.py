@@ -63,9 +63,19 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
         flat_cg = None
         if cg:
             op = cg.get("LogicalOperator")
+            flat_conds = [
+                {
+                    "fieldName": cond.get("FieldName") or "",
+                    "value": cond.get("Value"),
+                    "matchType": cond.get("MatchType") or 0,
+                    "customOperatorName": cond.get("CustomOperatorName"),
+                }
+                for cond in cg.get("Conditions") or []
+                if isinstance(cond, dict)
+            ]
             flat_cg = {
                 "logicalOperator": op if op is not None else 1,
-                "conditions": cg.get("Conditions") or [],
+                "conditions": flat_conds,
             }
 
         meta = {

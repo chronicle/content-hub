@@ -64,9 +64,21 @@ def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
             conds = cg_data.get("conditions")
             if conds is None:
                 conds = cg_data.get("Conditions", [])
+
+            normalized_conds = [
+                {
+                    "FieldName": cond.get("fieldName") or cond.get("FieldName") or "",
+                    "Value": cond.get("value") or cond.get("Value"),
+                    "MatchType": cond.get("matchType") or cond.get("MatchType") or 0,
+                    "CustomOperatorName": cond.get("customOperatorName") or cond.get("CustomOperatorName"),
+                }
+                for cond in conds
+                if isinstance(cond, dict)
+            ]
+
             cg = {
                 "LogicalOperator": op,
-                "Conditions": conds,
+                "Conditions": normalized_conds,
             }
 
         built_widget: dict[str, Any] = {
