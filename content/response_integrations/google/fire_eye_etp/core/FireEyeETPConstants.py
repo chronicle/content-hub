@@ -19,10 +19,17 @@ PROVIDER_NAME = "FireEye ETP"
 PING_SCRIPT_NAME = f"{PROVIDER_NAME} - Ping"
 
 ENDPOINTS = {
-    "test_connectivity": "/api/v1/alerts",
-    "get_alerts": "/api/v1/alerts",
-    "get_alert_details": "/api/v1/alerts/{alert_id}",
+    "test_connectivity": "/api/v2/public/alerts/search",
+    "get_alerts": "/api/v2/public/alerts/search",
+    "get_alert_details": "/api/v2/public/alerts/{alert_id}",
 }
+
+# AUTHENTICATION
+TOKEN_URL = "https://auth.trellix.com/auth/realms/IAM/protocol/openid-connect/token"
+NEW_AUTH_HEADER = "Authorization"
+LEGACY_AUTH_HEADER = "x-fireeye-api-key"
+ETP_SCOPES = "etp.conf.ro etp.trce.rw etp.admn.ro etp.domn.ro etp.accs.rw etp.quar.rw etp.domn.rw etp.rprt.rw etp.accs.ro etp.quar.ro etp.alrt.rw etp.rprt.ro etp.conf.rw etp.trce.ro etp.alrt.ro etp.admn.rw"
+
 
 HEADERS = {"Content-Type": "application/json", "Accept": "application/json"}
 

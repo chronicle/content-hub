@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+from typing import Any
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -23,12 +24,12 @@ from ..core.FireEyeETPConstants import PROVIDER_NAME, PING_SCRIPT_NAME
 
 
 @output_handler
-def main():
-    siemplify = SiemplifyAction()
+def main() -> None:
+    siemplify: SiemplifyAction = SiemplifyAction()
     siemplify.script_name = PING_SCRIPT_NAME
     siemplify.LOGGER.info("=" * 20 + " Main - Params Init " + "=" * 20)
 
-    api_root = extract_configuration_param(
+    api_root: str = extract_configuration_param(
         siemplify,
         provider_name=PROVIDER_NAME,
         param_name="API Root",
@@ -36,15 +37,31 @@ def main():
         print_value=True,
     )
 
-    api_key = extract_configuration_param(
+    api_key: str | None = extract_configuration_param(
         siemplify,
         provider_name=PROVIDER_NAME,
         param_name="API Key",
-        is_mandatory=True,
+        is_mandatory=False,
         print_value=False,
     )
 
-    verify_ssl = extract_configuration_param(
+    client_id: str | None = extract_configuration_param(
+        siemplify,
+        provider_name=PROVIDER_NAME,
+        param_name="Client ID",
+        is_mandatory=False,
+        print_value=True,
+    )
+
+    client_secret: str | None = extract_configuration_param(
+        siemplify,
+        provider_name=PROVIDER_NAME,
+        param_name="Client Secret",
+        is_mandatory=False,
+        print_value=False,
+    )
+
+    verify_ssl: bool = extract_configuration_param(
         siemplify,
         provider_name=PROVIDER_NAME,
         param_name="Verify SSL",
@@ -55,21 +72,38 @@ def main():
 
     siemplify.LOGGER.info("=" * 20 + " Main - Started " + "=" * 20)
 
+    output_message: str
+    result: bool
+    status: int
+
     try:
-        manager = FireEyeETPManager(
+        if not (api_key or (client_id and client_secret)):
+            raise Exception(
+                "Either Client ID and Client Secret, or API Key (legacy) "
+                "must be provided."
+            )
+
+        manager: FireEyeETPManager = FireEyeETPManager(
             api_root=api_root,
+            client_id=client_id,
+            client_secret=client_secret,
             api_key=api_key,
             verify_ssl=verify_ssl,
             siemplify_logger=siemplify.LOGGER,
         )
 
         manager.test_connectivity()
-        output_message = "Successfully connected to the FireEye ETP server with the provided connection parameters!"
+        output_message = (
+            "Successfully connected to the FireEye ETP server with the "
+            "provided connection parameters!"
+        )
         result = True
         status = EXECUTION_STATE_COMPLETED
 
     except Exception as e:
-        output_message = f"Failed to connect to the FireEye ETP server! Error is {e}"
+        output_message = (
+            f"Failed to connect to the FireEye ETP server! Error is {e}"
+        )
         result = False
         status = EXECUTION_STATE_FAILED
         siemplify.LOGGER.error(output_message)
