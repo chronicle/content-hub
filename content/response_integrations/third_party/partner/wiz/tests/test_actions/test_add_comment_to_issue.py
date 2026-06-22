@@ -35,13 +35,10 @@ if TYPE_CHECKING:
 
 
 ISSUE: datamodels.Issue = common.ISSUE
-JSON_OUTPUT_RESULT: datamodels.Issue = data_parser.build_issue_comment_object(
-    common.ADD_COMMENT_TO_ISSUE
-)
+JSON_OUTPUT_RESULT: datamodels.Issue = data_parser.build_issue_comment_object(common.ADD_COMMENT_TO_ISSUE)
 
 SUCCESS_OUTPUT_MESSAGE: str = (
-    f"Successfully added a comment to the issue with ID {ISSUE.issue_id} in "
-    f"{constants.INTEGRATION_NAME}."
+    f"Successfully added a comment to the issue with ID {ISSUE.issue_id} in {constants.INTEGRATION_NAME}."
 )
 FAILED_OUTPUT_MESSAGE: str = (
     f'Error executing action "{constants.ADD_COMMENT_TO_ISSUE_SCRIPT_NAME}"\nReason: '

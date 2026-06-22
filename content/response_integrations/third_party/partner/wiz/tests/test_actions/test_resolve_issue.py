@@ -38,9 +38,7 @@ if TYPE_CHECKING:
 ISSUE_ID: str = "test_id"
 JSON_RESULT_OBJECT: datamodels.Issue = data_parser.build_update_issue_object(common.RESOLVE_ISSUE)
 
-SUCCESS_OUTPUT_MESSAGE: str = (
-    f"Successfully resolved issue with ID {ISSUE_ID} in {constants.INTEGRATION_NAME}."
-)
+SUCCESS_OUTPUT_MESSAGE: str = f"Successfully resolved issue with ID {ISSUE_ID} in {constants.INTEGRATION_NAME}."
 FAILED_OUTPUT_MESSAGE: str = (
     f'Error executing action "{constants.RESOLVE_ISSUE_SCRIPT_NAME}"\nReason: '
     f"Issue with ID {common.INVALID_ISSUE_ID} wasn't found in "

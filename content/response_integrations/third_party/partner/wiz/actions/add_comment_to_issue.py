@@ -53,8 +53,7 @@ class AddCommentToIssue(Action):
     def _perform_action(self, _) -> None:
         self.json_results: SingleJson = self._add_comment_to_issue().to_json()
         self.output_message: str = (
-            "Successfully added a comment to the issue with ID "
-            f"{self.params.issue_id} in {constants.INTEGRATION_NAME}."
+            f"Successfully added a comment to the issue with ID {self.params.issue_id} in {constants.INTEGRATION_NAME}."
         )
 
     def _add_comment_to_issue(self) -> datamodels.IssueComment:
@@ -66,8 +65,7 @@ class AddCommentToIssue(Action):
 
         except exceptions.IssueNotFoundError as e:
             raise exceptions.IssueNotFoundError(
-                f"Issue with ID {self.params.issue_id} wasn't found in "
-                f"{constants.INTEGRATION_NAME}."
+                f"Issue with ID {self.params.issue_id} wasn't found in {constants.INTEGRATION_NAME}."
             ) from e
 
 
