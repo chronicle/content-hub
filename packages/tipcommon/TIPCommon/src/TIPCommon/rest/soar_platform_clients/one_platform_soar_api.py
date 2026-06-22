@@ -42,6 +42,12 @@ _EMAIL_TEMPLATES_PAGE_SIZE = 50
 class OnePlatformSoarApi(BaseSoarApi):
     """Chronicle SOAR API client using 1P endpoints."""
 
+    def _clean_resource_name(self, resource_name: str) -> str:
+        """Strips the projects/.../instances/... prefix from the resource name."""
+        if not resource_name:
+            return ""
+        return re.sub(r"^projects/[^/]+/locations/[^/]+/instances/[^/]+/", "", resource_name)
+
     def save_attachment_to_case_wall(self) -> requests.Response:
         """Save an attachment to the case wall using 1P API."""
         payload = {
@@ -1018,8 +1024,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         existing_case_tag = self.params.existing_case_tag
         resource_name = existing_case_tag.get("name")
         if resource_name:
-            prefix = "projects/project/locations/location/instances/instance/"
-            clean_path = resource_name.replace(prefix, "")
+            clean_path = self._clean_resource_name(resource_name)
             endpoint = f"/{clean_path}"
             return self._make_request(
                 HttpMethod.PATCH, endpoint, json_payload=case_tag
@@ -1138,8 +1143,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         detailed_data_list = []
         for name in connector_names:
-            prefix = "projects/project/locations/location/instances/instance/"
-            clean_path = name.replace(prefix, "")
+            clean_path = self._clean_resource_name(name)
             detail_response = self._make_request(HttpMethod.GET, f"/{clean_path}")
             if detail_response.status_code == 200:
                 data = detail_response.json()
@@ -1167,7 +1171,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             root_response_key="connector_instances"
         )
 
-        return self._enrich_connector_instances_with_params({"connector_instances": results})
+        return self._enrich_connector_instances_with_params({"connector_instances": results}) #QA fixes
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_connector_params(self) -> requests.Response:
@@ -1544,15 +1548,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = "/legacyPlaybooks:legacyGetWorkflowCategories"
         return self._make_request(HttpMethod.GET, endpoint)
 
-    # @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    # def update_connector(self) -> requests.Response:
-    #     """Update connector."""
-    #     name = self.params.integration_name
-    #     connector = self.params.connector_id
-    #     endpoint = f"/integrations/{name}/connectors/{connector}/connectorInstances/"
-    #     return self._make_request(
-    #         HttpMethod.POST, endpoint, json_payload=self.params.connector_data
-    #     )
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_connector(self) -> requests.Response:
@@ -1572,8 +1567,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         existing_connector = self.params.existing_connector
         resource_name = existing_connector.get("name")
         if resource_name:
-            prefix = "projects/project/locations/location/instances/instance/"
-            clean_path = resource_name.replace(prefix, "")
+            clean_path = self._clean_resource_name(resource_name)
             endpoint = f"/{clean_path}"
             return self._make_request(
                 HttpMethod.PATCH, endpoint, json_payload=connector_data
@@ -1605,8 +1599,7 @@ class OnePlatformSoarApi(BaseSoarApi):
     def update_job_instance(self) -> requests.Response:
         """Update job instance."""
         resource_name = self.params.job_instance_name
-        prefix = "projects/project/locations/location/instances/instance/"
-        clean_path = resource_name.replace(prefix, "")
+        clean_path = self._clean_resource_name(resource_name)
         endpoint = f"/{clean_path}"
         return self._make_request(HttpMethod.PATCH, endpoint, json_payload=self.params.job)
 
@@ -1626,8 +1619,7 @@ class OnePlatformSoarApi(BaseSoarApi):
         existing_template = self.params.existing_template
         resource_name = existing_template.get("name")
         if resource_name:
-            prefix = "projects/project/locations/location/instances/instance/"
-            clean_path = resource_name.replace(prefix, "")
+            clean_path = self._clean_resource_name(resource_name)
             endpoint = f"/{clean_path}"
             return self._make_request(
                 HttpMethod.PATCH, endpoint, json_payload=template
@@ -1805,8 +1797,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                 resource_name = f"projects/project/locations/location/instances/instance/ontologyRecords/{mr_id}/visualFamilies/{vf_id}"
 
         if resource_name:
-            prefix = "projects/project/locations/location/instances/instance/"
-            clean_path = resource_name.replace(prefix, "")
+            clean_path = self._clean_resource_name(resource_name)
             endpoint = f"/{clean_path}"
 
             if isinstance(family_data, dict) and "visualFamilyDataModel" in family_data:
