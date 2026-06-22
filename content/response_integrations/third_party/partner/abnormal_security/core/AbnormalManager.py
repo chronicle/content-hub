@@ -39,6 +39,7 @@ from .constants import (
     ERROR_MSG_TIMEOUT,
     HEADER_AUTHORIZATION,
     HEADER_CONTENT_TYPE,
+    HEADER_SOAR_INTEGRATION_ORIGIN,
     HEADER_USER_AGENT,
     INQUIRY_ENDPOINT,
     MAX_RETRIES,
@@ -46,6 +47,7 @@ from .constants import (
     MESSAGES_SEARCH_ENDPOINT,
     RETRY_BACKOFF_FACTOR,
     RETRY_STATUS_CODES,
+    SOAR_INTEGRATION_ORIGIN,
     THREAT_ATTACHMENTS_ENDPOINT,
     THREAT_BY_ID_ENDPOINT,
     THREAT_LINKS_ENDPOINT,
@@ -189,6 +191,7 @@ class AbnormalManager:
             HEADER_AUTHORIZATION: f"Bearer {self.api_key}",
             HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON,
             HEADER_USER_AGENT: USER_AGENT,
+            HEADER_SOAR_INTEGRATION_ORIGIN: SOAR_INTEGRATION_ORIGIN,
         })
         session.verify = self.verify_ssl
         return session
