@@ -8,7 +8,7 @@ from TIPCommon.extraction import extract_configuration_param
 class BaseAction(Action, ABC):
     """Base action class."""
 
-    INTEGRATION_IDENTIFIER: str = "OpenCTI2"
+    INTEGRATION_IDENTIFIER: str = "OpenCTI"
 
     def __init__(self, script_name: str) -> None:
         script_name = self.build_script_name(script_name)
