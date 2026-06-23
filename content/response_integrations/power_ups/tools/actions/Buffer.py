@@ -20,7 +20,8 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 
 
-def main():
+def main() -> None:
+    """Main execution logic for the Buffer action."""
     siemplify = SiemplifyAction()
     status = EXECUTION_STATE_COMPLETED
 
