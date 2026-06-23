@@ -41,7 +41,7 @@ class MockedCreateEntityRelationshipsAction(CreateEntityRelationshipsAction):
         "Enrichment JSON": "{}",
     },
 )
-@patch("TIPCommon.rest.soar_api.create_entity")
+@patch("tools.actions.CreateEntityRelationships.create_entity")
 def test_create_entity_relationships_success(
     mock_create_entity: MagicMock,
     action_output: MockActionOutput,
@@ -75,3 +75,63 @@ def test_create_entity_relationships_success(
         action.run()
     
     assert action.execution_state == ExecutionState.COMPLETED
+
+
+@set_metadata(
+    integration_config={},
+    parameters={
+        "Separator Character": ",",
+        "Entity Identifier(s)": "entity1, entity2",
+        "Target Entity Identifier(s)": "",
+        "Target Entity Type": "USER",
+        "Entity Identifier(s) Type": "USER",
+        "Connect As": "Source",
+        "Enrichment JSON": "{}",
+    },
+)
+@patch("tools.actions.CreateEntityRelationships.create_entity")
+def test_create_entity_relationships_by_type_accumulation(
+    mock_create_entity: MagicMock,
+    action_output: MockActionOutput,
+) -> None:
+    mock_siemplify: MagicMock = MagicMock()
+    mock_siemplify.load_case_data.return_value = None
+    
+    mock_siemplify.parameters = {
+        "Separator Character": ",",
+        "Entity Identifier(s)": "entity1, entity2",
+        "Target Entity Identifier(s)": "",
+        "Target Entity Type": "USER",
+        "Entity Identifier(s) Type": "USER",
+        "Connect As": "Source",
+        "Enrichment JSON": "{}",
+    }
+    
+    mock_entity: MagicMock = MagicMock()
+    mock_entity.entity_type = "USER"
+    mock_entity.identifier = "target1"
+    
+    mock_alert: MagicMock = MagicMock()
+    mock_alert.identifier = "alert1"
+    mock_alert.entities = [mock_entity]
+    mock_siemplify.current_alert = mock_alert
+    mock_siemplify.case_id = "123"
+    
+    mock_case: MagicMock = MagicMock()
+    mock_case.alerts = [mock_alert]
+    mock_siemplify.case = mock_case
+    
+    action: MockedCreateEntityRelationshipsAction = MockedCreateEntityRelationshipsAction(mock_siemplify)
+    
+    with patch.object(CreateEntityRelationshipsAction, "_get_target_alerts", return_value=[mock_alert]):
+        action.run()
+    
+    assert action.execution_state == ExecutionState.COMPLETED
+    
+    assert mock_create_entity.call_count == 2
+    first_call_arg = mock_create_entity.call_args_list[0][0][1]
+    second_call_arg = mock_create_entity.call_args_list[1][0][1]
+    
+    assert first_call_arg.types_to_connect == ["USER"]
+    assert second_call_arg.types_to_connect == ["USER"]
+

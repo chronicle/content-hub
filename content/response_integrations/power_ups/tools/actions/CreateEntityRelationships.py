@@ -492,8 +492,8 @@ class CreateEntityRelationshipsAction(Action):
         entity_type: str,
         json_payload: SingleJson,
     ) -> None:
-        payload = json_payload.copy()
-        payload["typesToConnect"].append(entity_type)
+        payload = dict(json_payload)
+        payload["typesToConnect"] = payload.get("typesToConnect", []) + [entity_type]
         payload["entityIdentifier"] = new_entity
         entity_to_create: CreateEntity = CreateEntity(
             case_id=payload["caseId"],
@@ -513,7 +513,7 @@ class CreateEntityRelationshipsAction(Action):
         linked_entity: str,
         json_payload: SingleJson,
     ) -> None:
-        payload = json_payload.copy()
+        payload = dict(json_payload)
         payload["entityToConnectRegEx"] = f"{re.escape(linked_entity)}$"
         payload["entityIdentifier"] = new_entity
         entity_to_create: CreateEntity = CreateEntity(
