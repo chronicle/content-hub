@@ -493,7 +493,7 @@ class CreateEntityRelationshipsAction(Action):
         json_payload: SingleJson,
     ) -> None:
         payload = dict(json_payload)
-        payload["typesToConnect"] = payload.get("typesToConnect", []) + [entity_type]
+        payload["typesToConnect"] = (payload.get("typesToConnect") or []) + [entity_type]
         payload["entityIdentifier"] = new_entity
         entity_to_create: CreateEntity = CreateEntity(
             case_id=payload["caseId"],

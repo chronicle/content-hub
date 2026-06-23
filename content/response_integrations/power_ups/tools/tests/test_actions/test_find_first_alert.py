@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from integration_testing.set_meta import set_metadata
+from pytest_mock import MockerFixture
 
 from ...actions import FindFirstAlert
 
@@ -24,7 +25,7 @@ from ...actions import FindFirstAlert
     parameters={},
 )
 def test_find_first_alert_alert_scope_success(
-    mocker,
+    mocker: MockerFixture,
 ) -> None:
     mock_siemplify = mocker.MagicMock()
     mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)
@@ -61,7 +62,7 @@ def test_find_first_alert_alert_scope_success(
     parameters={},
 )
 def test_find_first_alert_case_scope_success(
-    mocker,
+    mocker: MockerFixture,
 ) -> None:
     mock_siemplify = mocker.MagicMock()
     mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)
@@ -98,7 +99,7 @@ def test_find_first_alert_case_scope_success(
     parameters={},
 )
 def test_find_first_alert_empty_alerts(
-    mocker,
+    mocker: MockerFixture,
 ) -> None:
     mock_siemplify = mocker.MagicMock()
     mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)
@@ -123,7 +124,7 @@ def test_find_first_alert_empty_alerts(
     parameters={},
 )
 def test_find_first_alert_empty_open_alerts_fallback(
-    mocker,
+    mocker: MockerFixture,
 ) -> None:
     mock_siemplify = mocker.MagicMock()
     mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)
