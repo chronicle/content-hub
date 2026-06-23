@@ -4,7 +4,7 @@ from ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from SiemplifyAction import SiemplifyAction
 
 from constants import INTEGRATION_NAME, SCRIPT_NAME_LISTUSERS
-from PagerDutyManagerv2 import PagerDutyManager
+from PagerDutyManager import PagerDutyManager
 import json
 
 
