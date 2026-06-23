@@ -65,15 +65,20 @@ class ProofPointPSSession(MockSession[MockRequest, MockResponse, ProofPointPSPro
         # If it's a download (has guid, no sender/recipient/subject filters)
         if "guid" in params and "from" not in params and "rcpt" not in params:
             guid = params["guid"]
-            if not self._product.search_records(guid=guid):
+            records = self._product.search_records(guid=guid)
+            if not records:
                 return MockResponse(
                     content={"error": "Message not found"}, status_code=404
                 )
+            folder = records[0].get("folder", "Quarantine")
             content = self._product.get_email_content(guid)
             return MockResponse(
                 content=content.decode("latin1"),
                 encoding="latin1",
-                headers={"Content-Type": "application/octet-stream"},
+                headers={
+                    "Content-Type": "application/octet-stream",
+                    "x-pps-folder": folder
+                },
                 status_code=200,
             )
 
@@ -86,7 +91,10 @@ class ProofPointPSSession(MockSession[MockRequest, MockResponse, ProofPointPSPro
             guid=params.get("guid"),
             msgid=params.get("msgid"),
         )
-        return MockResponse(content={"records": records}, status_code=200)
+        return MockResponse(
+            content={"meta": {"queryid": "query-from-api"}, "records": records},
+            status_code=200,
+        )
 
     @router.post(r"/rest/v1/quarantine")
     def handle_post_quarantine(self, request: MockRequest) -> MockResponse:

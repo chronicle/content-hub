@@ -75,6 +75,8 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
             self.soar_action, param_name="Fetch DLP Violation", print_value=True
         )
         self.params.dlpviolation = DLP_VIOLATION_MAPPING.get(dlp_violation_raw)
+        self.params.dlp_violation_raw = dlp_violation_raw
+
         status_bool = extract_action_param(
             self.soar_action,
             param_name="Fetch Message Status",
@@ -113,8 +115,6 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
             start_date=start_date,
             end_date=end_date,
             folder=self.params.folder,
-            msgid=self.params.msgid,
-            queryid=self.params.queryid,
             dlpviolation=self.params.dlpviolation,
             messagestatus=self.params.messagestatus,
             limit=self.params.limit,
@@ -129,6 +129,29 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
                     r.localguid.lower() if r.localguid else "",
                 }
             ]
+
+        if self.params.msgid:
+            msgid_lower = self.params.msgid.lower()
+            records = [
+                r for r in records
+                if r.messageid and msgid_lower in r.messageid.lower()
+            ]
+
+        if self.params.dlp_violation_raw == "Basic":
+            records = [
+                r for r in records
+                if r.dlpviolation and r.dlpviolation == "t"
+            ]
+        elif self.params.dlp_violation_raw == "Detailed":
+            records = [
+                r for r in records
+                if r.dlpviolation and isinstance(r.dlpviolation, dict)
+            ]
+
+        if self.params.queryid:
+            response_query_id = getattr(records, 'query_id', None)
+            if response_query_id and response_query_id != self.params.queryid:
+                records = []
 
         if records:
             self.json_results = [r.to_json() for r in records]

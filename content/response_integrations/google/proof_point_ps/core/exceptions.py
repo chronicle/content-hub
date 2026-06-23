@@ -25,3 +25,7 @@ class ProofPointPSHTTPError(ProofPointPSError):
 
 class InvalidParameterError(ProofPointPSError):
     """Invalid parameter exception for ProofPointPS integration."""
+
+
+class FolderMismatchError(ProofPointPSError):
+    """Folder mismatch exception for ProofPointPS validation."""

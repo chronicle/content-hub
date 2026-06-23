@@ -14,10 +14,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import datetime
+import email
+from typing import Any, TYPE_CHECKING
 
 from .api_utils import validate_response
-from .constants import QUARANTINE_ENDPOINT
+from .constants import QUARANTINE_ENDPOINT, TIME_FORMAT
 from .data_parser import parse_quarantine_records
 from .exceptions import ProofPointPSHTTPError
 
@@ -25,6 +27,15 @@ if TYPE_CHECKING:
     import requests
 
     from .data_models import QuarantineRecord
+
+
+class SearchResults(list):
+    """Custom list subclass that holds search results and metadata such as query_id."""
+    query_id: str | None
+
+    def __init__(self, records: list[Any], query_id: str | None = None) -> None:
+        super().__init__(records)
+        self.query_id = query_id
 
 
 class ProofPointPSApiClient:
@@ -56,11 +67,11 @@ class ProofPointPSApiClient:
         start_date: str | None = None,
         end_date: str | None = None,
         folder: str | None = None,
-        msgid: str | None = None,
-        queryid: str | None = None,
         dlpviolation: str | None = None,
         messagestatus: str | None = None,
         limit: int | None = None,
+        guid: str | None = None,
+        msgid: str | None = None,
     ) -> list[QuarantineRecord]:
         """Search for quarantine messages with the specified parameters.
 
@@ -71,11 +82,11 @@ class ProofPointPSApiClient:
             start_date: The UTC start date of the range.
             end_date: The UTC end date of the range.
             folder: The quarantine folder name.
-            msgid: The message ID.
-            queryid: ID for keeping track of search results.
             dlpviolation: "t" or "details" to fetch DLP data.
             messagestatus: "t" to fetch message status and comments.
             limit: The maximum number of records to return.
+            guid: Optional message GUID filter.
+            msgid: Optional message-id filter.
 
         Returns:
             A list of found records.
@@ -90,17 +101,17 @@ class ProofPointPSApiClient:
             "startdate": start_date,
             "enddate": end_date,
             "folder": folder,
-            "msgid": msgid,
-            "queryid": queryid,
             "dlpviolation": dlpviolation,
             "messagestatus": messagestatus,
             "limit": limit,
+            "guid": guid,
+            "msgid": msgid,
         }
 
         data = {key: value for key, value in data.items() if value is not None}
         response = self.session.get(url, params=data)
 
-        validate_response(response, "Unable to search emails.")
+        validate_response(response, "Unable to search emails")
         try:
             response_json = response.json()
         except ValueError as error:
@@ -111,7 +122,12 @@ class ProofPointPSApiClient:
             )
             raise ProofPointPSHTTPError(msg) from error
 
-        return parse_quarantine_records(response_json)
+        records_list = parse_quarantine_records(response_json)
+
+        meta = response_json.get("meta", {})
+        query_id_meta = meta.get("queryid") or meta.get("query_id")
+
+        return SearchResults(records_list, query_id=query_id_meta)
 
     def execute_quarantine_action(
         self,
@@ -179,8 +195,36 @@ class ProofPointPSApiClient:
         payload = {key: value for key, value in payload.items() if value is not None}
         response = self.session.post(url, json=payload)
 
-        validate_response(response, f"Unable to {action} email(s).")
+        validate_response(response, f"Unable to {action} email(s)")
         return True
+
+    def get_record_by_guid(self, guid: str, folder: str | None = None) -> QuarantineRecord | None:
+        """Retrieve a quarantined message record by GUID and optional folder constraint.
+
+        Args:
+            guid: The Message GUID to search for.
+            folder: Optional folder name to search in.
+
+        Returns:
+            The QuarantineRecord if found, None otherwise.
+
+        """
+        start_date = (
+            datetime.datetime.utcnow() - datetime.timedelta(days=30)
+        ).strftime(TIME_FORMAT)
+        end_date = datetime.datetime.utcnow().strftime(TIME_FORMAT)
+
+        records = self.search(
+            sender="*",
+            folder=folder,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        for r in records:
+            if r.guid == guid or r.localguid == guid:
+                return r
+
+        return None
 
     def download_message(self, guid: str) -> bytes:
         """Retrieve raw quarantined message bytes by GUID.
@@ -196,5 +240,5 @@ class ProofPointPSApiClient:
         params = {"guid": guid}
         response = self.session.get(url, params=params)
 
-        validate_response(response, "Unable to download email.")
+        validate_response(response, "Unable to download email")
         return response.content

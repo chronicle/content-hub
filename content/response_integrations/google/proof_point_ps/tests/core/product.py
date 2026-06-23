@@ -113,7 +113,14 @@ class ProofPointPSProduct:
 
     def get_email_content(self, guid: str) -> bytes:
         """Get raw email content or default bytes."""
-        return self.email_contents.get(
-            guid,
-            b"From: sender@test.com\nTo: recipient@test.com\nSubject: Mock Email\n\nDefault Mock Email Content",
-        )
+        if guid in self.email_contents:
+            return self.email_contents[guid]
+
+        folder = "Quarantine"
+        for f, records in self.records.items():
+            for r in records:
+                if r.get("guid") == guid or r.get("localguid") == guid:
+                    folder = f
+                    break
+
+        return f"From: sender@test.com\nTo: recipient@test.com\nSubject: Mock Email\nX-Proofpoint-Folder: {folder}\n\nDefault Mock Email Content".encode("utf-8")

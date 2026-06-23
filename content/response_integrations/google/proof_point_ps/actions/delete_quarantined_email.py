@@ -22,7 +22,7 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import DELETE_ACTION_NAME
-from ..core.exceptions import ProofPointPSError
+from ..core.exceptions import ProofPointPSError, FolderMismatchError
 
 if TYPE_CHECKING:
     from typing import Never
@@ -61,19 +61,39 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
 
         """
         guids = string_to_multi_value(self.params.guid_input)
+        successful_records = []
         successful_guids = []
-        failed_guids = []
+        failed_entries = []
+        folder_error = None
 
         for guid in guids:
-            guid_valid = False
             try:
-                self.api_client.download_message(guid)
-                guid_valid = True
+                raw_content = self.api_client.download_message(guid)
             except Exception:
-                guid_valid = False
+                failed_entries.append({
+                    "guid": guid,
+                    "error": "Message not found"
+                })
+                continue
 
-            if not guid_valid:
-                failed_guids.append((guid, "Message not found"))
+            folder_name = self.params.folder
+            try:
+                record = self.api_client.get_record_by_guid(guid, folder=folder_name)
+            except Exception as e:
+                failed_entries.append({
+                    "guid": guid,
+                    "error": str(e)
+                })
+                if "folder" in str(e).lower():
+                    folder_error = str(e)
+                continue
+
+            if not record:
+                err_msg = f"The quarantined email with GUID {guid} does not exist in the '{folder_name}' folder."
+                failed_entries.append({
+                    "guid": guid,
+                    "error": err_msg
+                })
                 continue
 
             try:
@@ -83,27 +103,54 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
                     localguid=guid,
                     deletedfolder=self.params.deleted_folder,
                 )
+                successful_records.append(record.to_json())
                 successful_guids.append(guid)
             except Exception as e:
-                failed_guids.append((guid, str(e)))
+                failed_entries.append({
+                    "guid": guid,
+                    "error": str(e)
+                })
+                if "folder" in str(e).lower():
+                    folder_error = str(e)
+                continue
+
+        self.json_results = {
+            "success": successful_records,
+            "failed": failed_entries
+        }
+
+        if folder_error:
+            self.result_value = False
+            failed_details = [
+                f"{entry.get('guid')} (Error: {entry.get('error')})"
+                for entry in failed_entries
+            ]
+            self.output_message = (
+                f"Failed to delete quarantined email(s): {', '.join(failed_details)}"
+            )
+            return
 
         if not successful_guids:
-            msg = (
-                f"Failed to delete any quarantined emails. Errors: "
-                f"{'; '.join(f'{guid}: {err}' for guid, err in failed_guids)}"
-            )
-            raise ProofPointPSError(msg)
-
-        if failed_guids:
             self.result_value = False
-            output_msg = "Failed to delete some quarantined emails."
-            if successful_guids:
-                output_msg += f" Successfully deleted: {', '.join(successful_guids)}."
-            failed_str = ", ".join(
-                f"{guid} (Error: {err})" for guid, err in failed_guids
+            failed_details = [
+                f"{entry.get('guid')} (Error: {entry.get('error')})"
+                for entry in failed_entries
+            ]
+            self.output_message = (
+                f"Failed to delete quarantined email(s): {', '.join(failed_details)}"
             )
-            output_msg += f" Failed for: {failed_str}"
-            self.output_message = output_msg
+            return
+
+        if failed_entries:
+            self.result_value = True
+            failed_details = [
+                f"{entry.get('guid')} (Error: {entry.get('error')})"
+                for entry in failed_entries
+            ]
+            self.output_message = (
+                f"Successfully deleted quarantined email(s): {', '.join(successful_guids)}. "
+                f"Failed to delete quarantined email(s): {', '.join(failed_details)}"
+            )
             return
 
         self.result_value = True

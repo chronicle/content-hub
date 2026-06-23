@@ -56,7 +56,7 @@ class TestDownloadQuarantinedEmail:
 
         download_quarantined_email.main()
 
-        assert len(script_session.request_history) == 1
+        assert len(script_session.request_history) == 3
         assert script_session.request_history[0].request.method.value == "GET"
         assert (
             script_session.request_history[0].request.url.path == "/rest/v1/quarantine"
@@ -74,6 +74,26 @@ class TestDownloadQuarantinedEmail:
         assert action_output.results.output_message == success_msg
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
+        assert action_output.results.json_output is not None
+        assert action_output.results.json_output.json_result == {
+            "success": [
+                {
+                    "processingserver": None,
+                    "date": None,
+                    "subject": None,
+                    "messageid": None,
+                    "folder": "Quarantine",
+                    "size": None,
+                    "rcpts": [],
+                    "from": None,
+                    "spamscore": None,
+                    "guid": "guid-111",
+                    "host_ip": None,
+                    "localguid": None,
+                }
+            ],
+            "failed": []
+        }
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
@@ -97,21 +117,42 @@ class TestDownloadQuarantinedEmail:
 
         download_quarantined_email.main()
 
-        # guid-111 triggers 1 download attempt, guid-222 triggers 1 download attempt
-        assert len(script_session.request_history) == 2
+        # guid-111 triggers download + search + add_attachment, guid-222 triggers download (fails)
+        assert len(script_session.request_history) == 4
 
         assert action_output.results is not None
         assert (
-            "Failed to download some quarantined emails."
+            "Successfully downloaded and attached quarantined email raw content for Message GUID(s): guid-111."
             in action_output.results.output_message
         )
         assert (
-            "Successfully downloaded and attached: guid-111"
+            "Failed to download quarantined email(s): guid-222"
             in action_output.results.output_message
         )
-        assert "Failed for: guid-222" in action_output.results.output_message
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.result_value is False
+        assert action_output.results.result_value is True
+        assert action_output.results.json_output is not None
+        assert action_output.results.json_output.json_result == {
+            "success": [
+                {
+                    "processingserver": None,
+                    "date": None,
+                    "subject": None,
+                    "messageid": None,
+                    "folder": "Quarantine",
+                    "size": None,
+                    "rcpts": [],
+                    "from": None,
+                    "spamscore": None,
+                    "guid": "guid-111",
+                    "host_ip": None,
+                    "localguid": None,
+                }
+            ],
+            "failed": [
+                {"guid": "guid-222", "error": 'Unable to download email: 404 Client Error: None for url: None - {"error": "Message not found"}'}
+            ]
+        }
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
@@ -130,8 +171,16 @@ class TestDownloadQuarantinedEmail:
 
         assert len(script_session.request_history) == 1
         assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is False
         assert (
-            "Failed to download any quarantined emails"
+            "Failed to download quarantined email(s): guid-222 (Error: Unable to download email: 404 Client Error: None for url: None - {\"error\": \"Message not found\"})"
             in action_output.results.output_message
         )
+        assert action_output.results.json_output is not None
+        assert action_output.results.json_output.json_result == {
+            "success": [],
+            "failed": [
+                {"guid": "guid-222", "error": 'Unable to download email: 404 Client Error: None for url: None - {"error": "Message not found"}'}
+            ]
+        }

@@ -47,6 +47,9 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
             is_mandatory=True,
             print_value=True,
         )
+        self.params.folder = extract_action_param(
+            self.soar_action, param_name="Folder Name", print_value=True
+        )
 
     def _get_safe_subject(self, raw_content: bytes) -> str:
         """Extract and sanitize the Subject header from raw email bytes."""
@@ -80,57 +83,85 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
 
         """
         guids = string_to_multi_value(self.params.guid_input)
+        successful_records = []
         successful_guids = []
         failed_guids = []
-
+        folder_error = None
         for guid in guids:
-            temp_dir = None
             try:
                 raw_content = self.api_client.download_message(guid)
+            except Exception as e:
+                err_msg = str(e)
+                failed_guids.append((guid, err_msg))
+                continue
 
-                temp_dir = tempfile.mkdtemp()
-                safe_subject = self._get_safe_subject(raw_content)
-                file_name = f"{guid}-{safe_subject}.eml"
-                temp_file_path = pathlib.Path(temp_dir) / file_name
+            folder_name = self.params.folder
+            try:
+                record = self.api_client.get_record_by_guid(guid, folder=folder_name)
+            except Exception as e:
+                failed_guids.append((guid, str(e)))
+                if "folder" in str(e).lower():
+                    folder_error = str(e)
+                continue
 
-                temp_file_path.write_bytes(raw_content)
+            if not record:
+                err_msg = f"The quarantined email with GUID {guid} does not exist in the '{folder_name}' folder."
+                failed_guids.append((guid, err_msg))
+                continue
 
-                try:
+            try:
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    safe_subject = self._get_safe_subject(raw_content)
+                    file_name = f"{guid}-{safe_subject}.eml"
+                    temp_file_path = pathlib.Path(temp_dir) / file_name
+
+                    temp_file_path.write_bytes(raw_content)
+
                     self.soar_action.add_attachment(
                         file_path=str(temp_file_path),
                         description=(
                             f"Quarantined email raw content for Message GUID {guid}."
                         ),
                     )
+                    successful_records.append(record.to_json())
                     successful_guids.append(guid)
-                finally:
-                    if pathlib.Path(temp_dir).exists():
-                        shutil.rmtree(temp_dir)
             except Exception as e:
-                if temp_dir and pathlib.Path(temp_dir).exists():
-                    shutil.rmtree(temp_dir)
                 failed_guids.append((guid, str(e)))
 
-        if not successful_guids:
-            msg = (
-                f"Failed to download any quarantined emails. Errors: "
-                f"{'; '.join(f'{guid}: {err}' for guid, err in failed_guids)}"
-            )
-            raise ProofPointPSError(msg)
+        self.json_results = {
+            "success": successful_records,
+            "failed": [
+                {"guid": guid, "error": err} for guid, err in failed_guids
+            ]
+        }
 
-        if failed_guids:
+        if folder_error:
             self.result_value = False
-            output_msg = "Failed to download some quarantined emails."
-            if successful_guids:
-                output_msg += (
-                    f" Successfully downloaded and attached: "
-                    f"{', '.join(successful_guids)}."
-                )
-            failed_str = ", ".join(
+            failed_details = [
                 f"{guid} (Error: {err})" for guid, err in failed_guids
+            ]
+            self.output_message = (
+                f"Failed to download quarantined email(s): {', '.join(failed_details)}"
             )
-            output_msg += f" Failed for: {failed_str}"
-            self.output_message = output_msg
+            return
+
+        if not successful_guids:
+            self.result_value = False
+            failed_details = [
+                f"{guid} (Error: {err})" for guid, err in failed_guids
+            ]
+            self.output_message = (
+                f"Failed to download quarantined email(s): {', '.join(failed_details)}"
+            )
+            return
+        if failed_guids:
+            self.result_value = True
+            self.output_message = (
+                f"Successfully downloaded and attached quarantined email raw content "
+                f"for Message GUID(s): {', '.join(successful_guids)}. "
+                f"Failed to download quarantined email(s): "
+                f"{', '.join(f'{guid} (Error: {err})' for guid, err in failed_guids)}"
+            )
             return
 
         self.result_value = True

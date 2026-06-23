@@ -69,7 +69,7 @@ class TestDeleteQuarantinedEmail:
 
         delete_quarantined_email.main()
 
-        assert len(script_session.request_history) == 4
+        assert len(script_session.request_history) == 6
         assert proofpoint.actions_executed[0]["action"] == "delete"
         assert proofpoint.actions_executed[0]["localguid"] == "guid-111"
         assert proofpoint.actions_executed[1]["localguid"] == "guid-222"
@@ -79,6 +79,40 @@ class TestDeleteQuarantinedEmail:
         assert action_output.results.output_message == success_msg
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is True
+        assert action_output.results.json_output is not None
+        assert action_output.results.json_output.json_result == {
+            "success": [
+                {
+                    "processingserver": None,
+                    "date": None,
+                    "subject": None,
+                    "messageid": None,
+                    "folder": "Quarantine",
+                    "size": None,
+                    "rcpts": [],
+                    "from": None,
+                    "spamscore": None,
+                    "guid": "guid-111",
+                    "host_ip": None,
+                    "localguid": "local-111",
+                },
+                {
+                    "processingserver": None,
+                    "date": None,
+                    "subject": None,
+                    "messageid": None,
+                    "folder": "Quarantine",
+                    "size": None,
+                    "rcpts": [],
+                    "from": None,
+                    "spamscore": None,
+                    "guid": "guid-222",
+                    "host_ip": None,
+                    "localguid": "local-222",
+                },
+            ],
+            "failed": []
+        }
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
@@ -101,18 +135,40 @@ class TestDeleteQuarantinedEmail:
 
         delete_quarantined_email.main()
 
-        assert len(script_session.request_history) == 3
+        assert len(script_session.request_history) == 4
         assert len(proofpoint.actions_executed) == 1
         assert proofpoint.actions_executed[0]["localguid"] == "guid-111"
 
         partial_msg = (
-            "Failed to delete some quarantined emails. Successfully deleted: "
-            "guid-111. Failed for: guid-333 (Error: Message not found)"
+            "Successfully deleted quarantined email(s): guid-111. "
+            "Failed to delete quarantined email(s): guid-333 (Error: Message not found)"
         )
         assert action_output.results is not None
         assert action_output.results.output_message == partial_msg
         assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.result_value is False
+        assert action_output.results.result_value is True
+        assert action_output.results.json_output is not None
+        assert action_output.results.json_output.json_result == {
+            "success": [
+                {
+                    "processingserver": None,
+                    "date": None,
+                    "subject": None,
+                    "messageid": None,
+                    "folder": "Quarantine",
+                    "size": None,
+                    "rcpts": [],
+                    "from": None,
+                    "spamscore": None,
+                    "guid": "guid-111",
+                    "host_ip": None,
+                    "localguid": None,
+                }
+            ],
+            "failed": [
+                {"guid": "guid-333", "error": "Message not found"}
+            ]
+        }
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
@@ -133,8 +189,46 @@ class TestDeleteQuarantinedEmail:
 
         assert len(script_session.request_history) == 1
         assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.FAILED
-        assert (
-            "Failed to delete any quarantined emails"
-            in action_output.results.output_message
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is False
+        assert "Failed to delete quarantined email(s): guid-444 (Error: Message not found)" in action_output.results.output_message
+        assert action_output.results.json_output is not None
+        assert action_output.results.json_output.json_result == {
+            "success": [],
+            "failed": [
+                {"guid": "guid-444", "error": "Message not found"}
+            ]
+        }
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={
+            "Message GUIDs": "guid-555",
+            "Folder Name": "Spam",
+            "Time Frame": "Last Hour",
+        },
+    )
+    def test_delete_folder_mismatch(
+        self,
+        script_session: ProofPointPSSession,
+        action_output: MockActionOutput,
+        proofpoint: ProofPointPSProduct,
+    ) -> None:
+        """Test deletion where the message exists but belongs to a different folder than specified."""
+        proofpoint.add_record(
+            "Quarantine", {"guid": "guid-555", "folder": "Quarantine"}
         )
+
+        delete_quarantined_email.main()
+
+        assert action_output.results is not None
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is False
+        assert "does not exist in the 'Spam' folder" in action_output.results.output_message
+        assert action_output.results.json_output is not None
+        assert action_output.results.json_output.json_result == {
+            "success": [],
+            "failed": [
+                {"guid": "guid-555", "error": "The quarantined email with GUID guid-555 does not exist in the 'Spam' folder."}
+            ]
+        }
