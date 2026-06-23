@@ -501,7 +501,7 @@ class CreateEntityRelationshipsAction(Action):
             entity_type=payload["entityType"],
             entity_identifier=new_entity,
             entity_to_connect_regex=None,
-            types_to_connect=payload["typesToConnect"].append(entity_type),
+            types_to_connect=payload["typesToConnect"],
             is_primary_link=payload["isPrimaryLink"],
             is_directional=payload["isDirectional"],
         )
