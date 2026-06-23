@@ -120,6 +120,13 @@ def push_view(
         Path | None,
         typer.Option(help="Source folder containing the view directory."),
     ] = None,
+    allow_create: Annotated[
+        bool,
+        typer.Option(
+            "--allow-create",
+            help="Allow creating a new view if it does not already exist on the platform.",
+        ),
+    ] = False,
 ) -> None:
     """Build and push a view template to the SOAR environment.
 
@@ -156,7 +163,7 @@ def push_view(
         raise typer.Exit(1) from e
 
     # 4. Upload to SOAR
-    _upload_built_view_data(view_data, view_name_or_id)
+    _upload_built_view_data(view_data, view_name_or_id, allow_create)
 
 
 def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -> int | None:
@@ -183,12 +190,13 @@ def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -
     return None
 
 
-def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str) -> None:
+def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, allow_create: bool = False) -> None:
     """Upload built view template data to the SOAR environment.
 
     Args:
         view_data: The built view template dictionary structure.
         view_name_or_id: The view name or identifier.
+        allow_create: Allow creating a new view if it doesn't exist.
 
     Raises:
         typer.Exit: If the upload fails.
@@ -205,6 +213,10 @@ def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str) -> 
     if existing_id is not None:
         logger.info("Resolved existing view ID %s on server.", existing_id)
         flat_view_data["id"] = existing_id
+    elif not allow_create:
+        logger.error("View '%s' (UUID: '%s') does not exist on the platform.", view_name_or_id, flat_view_data.get("identifier"))
+        logger.error("Creation of new views is blocked by default. Use the --allow-create flag to force creation.")
+        raise typer.Exit(1)
 
     try:
         result = backend_api.upload_view(flat_view_data)
