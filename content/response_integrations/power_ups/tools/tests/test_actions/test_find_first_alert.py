@@ -14,14 +14,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from integration_testing.set_meta import set_metadata
 
 from ...actions import FindFirstAlert
-
-if TYPE_CHECKING:
-    from integration_testing.platform.script_output import MockActionOutput
 
 
 @set_metadata(
@@ -30,7 +25,6 @@ if TYPE_CHECKING:
 )
 def test_find_first_alert_alert_scope_success(
     mocker,
-    action_output: MockActionOutput,
 ) -> None:
     mock_siemplify = mocker.MagicMock()
     mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)
@@ -68,7 +62,6 @@ def test_find_first_alert_alert_scope_success(
 )
 def test_find_first_alert_case_scope_success(
     mocker,
-    action_output: MockActionOutput,
 ) -> None:
     mock_siemplify = mocker.MagicMock()
     mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)
@@ -106,7 +99,6 @@ def test_find_first_alert_case_scope_success(
 )
 def test_find_first_alert_empty_alerts(
     mocker,
-    action_output: MockActionOutput,
 ) -> None:
     mock_siemplify = mocker.MagicMock()
     mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)
@@ -132,7 +124,6 @@ def test_find_first_alert_empty_alerts(
 )
 def test_find_first_alert_empty_open_alerts_fallback(
     mocker,
-    action_output: MockActionOutput,
 ) -> None:
     mock_siemplify = mocker.MagicMock()
     mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)

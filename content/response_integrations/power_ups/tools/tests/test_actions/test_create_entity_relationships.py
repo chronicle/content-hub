@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
@@ -44,7 +43,6 @@ class MockedCreateEntityRelationshipsAction(CreateEntityRelationshipsAction):
 @patch("tools.actions.CreateEntityRelationships.create_entity")
 def test_create_entity_relationships_success(
     mock_create_entity: MagicMock,
-    action_output: MockActionOutput,
 ) -> None:
     mock_siemplify: MagicMock = MagicMock()
     mock_siemplify.load_case_data.return_value = None
@@ -92,7 +90,6 @@ def test_create_entity_relationships_success(
 @patch("tools.actions.CreateEntityRelationships.create_entity")
 def test_create_entity_relationships_by_type_accumulation(
     mock_create_entity: MagicMock,
-    action_output: MockActionOutput,
 ) -> None:
     mock_siemplify: MagicMock = MagicMock()
     mock_siemplify.load_case_data.return_value = None
