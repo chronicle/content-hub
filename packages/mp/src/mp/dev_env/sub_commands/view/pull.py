@@ -34,90 +34,6 @@ if TYPE_CHECKING:
     from mp.core.data_models.playbooks.overview.metadata import BuiltOverview, BuiltOverviewDetails
 
 
-def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
-    """Normalize flat camelCase view payload from SOAR REST API into BuiltOverview.
-
-    Args:
-        flat_view: The flat camelCase dictionary representing the view downloaded from SOAR.
-
-    Returns:
-        The normalized BuiltOverview structure.
-
-    """
-    built_widgets = []
-    for w in flat_view.get("widgets") or []:
-        meta = w.get("metadata") or {}
-        config = w.get("config") or {}
-
-        # If data is HTML, we must include the htmlContent in config
-        # Actually in widgets list, htmlContent was inside DataDefinitionJson
-        # Serialize the config back into DataDefinitionJson
-        data_definition_json = json.dumps(config)
-
-        cg_data = meta.get("conditionsGroup")
-        if not isinstance(cg_data, dict):
-            cg = {"LogicalOperator": 1, "Conditions": []}
-        else:
-            op = cg_data.get("logicalOperator")
-            if op is None:
-                op = cg_data.get("LogicalOperator", 1)
-            conds = cg_data.get("conditions")
-            if conds is None:
-                conds = cg_data.get("Conditions", [])
-
-            normalized_conds = [
-                {
-                    "FieldName": cond.get("fieldName") or cond.get("FieldName") or "",
-                    "Value": cond.get("value") or cond.get("Value"),
-                    "MatchType": cond.get("matchType") or cond.get("MatchType") or 0,
-                    "CustomOperatorName": cond.get("customOperatorName") or cond.get("CustomOperatorName"),
-                }
-                for cond in conds
-                if isinstance(cond, dict)
-            ]
-
-            cg = {
-                "LogicalOperator": op,
-                "Conditions": normalized_conds,
-            }
-
-        built_widget: dict[str, Any] = {
-            "Title": meta.get("title") or "",
-            "Description": meta.get("description") or "",
-            "Identifier": meta.get("identifier") or "",
-            "Order": meta.get("order") or 0,
-            "TemplateIdentifier": meta.get("templateIdentifier") or "",
-            "Type": meta.get("type") or 0,
-            "DataDefinitionJson": data_definition_json,
-            "GridColumns": meta.get("width") or 1,
-            "ActionWidgetTemplateIdentifier": meta.get("actionWidgetTemplateIdentifier"),
-            "StepIdentifier": meta.get("stepIdentifier"),
-            "StepIntegration": meta.get("stepIntegration"),
-            "BlockStepIdentifier": meta.get("blockStepIdentifier"),
-            "BlockStepInstanceName": meta.get("blockStepInstanceName"),
-            "PresentIfEmpty": meta.get("presentIfEmpty") or False,
-            "ConditionsGroup": cg,
-            "IntegrationName": meta.get("integrationName"),
-        }
-        built_widgets.append(built_widget)
-
-    overview_template: dict[str, Any] = {
-        "Identifier": flat_view.get("identifier") or "",
-        "Name": flat_view.get("name") or "",
-        "Creator": flat_view.get("creator"),
-        "PlaybookDefinitionIdentifier": flat_view.get("playbookIdentifier") or "",
-        "Type": flat_view.get("type") or 0,
-        "AlertRuleType": flat_view.get("alertRuleType"),
-        "Widgets": built_widgets,
-        "Roles": flat_view.get("roles") or [],
-    }
-
-    return {
-        "OverviewTemplate": cast("BuiltOverviewDetails", overview_template),
-        "Roles": flat_view.get("roleNames") or [],
-    }
-
-
 @pull_app.command(name="view")
 @track_command
 def pull_view(
@@ -200,3 +116,87 @@ def _find_view_identifier(view_name_or_id: str, installed_views: list[dict[str, 
 
     logger.error("View '%s' not found in installed views in SOAR platform.", view_name_or_id)
     raise typer.Exit(1)
+
+
+def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
+    """Normalize flat camelCase view payload from SOAR REST API into BuiltOverview.
+
+    Args:
+        flat_view: The flat camelCase dictionary representing the view downloaded from SOAR.
+
+    Returns:
+        The normalized BuiltOverview structure.
+
+    """
+    built_widgets = []
+    for w in flat_view.get("widgets") or []:
+        meta = w.get("metadata") or {}
+        config = w.get("config") or {}
+
+        # If data is HTML, we must include the htmlContent in config
+        # Actually in widgets list, htmlContent was inside DataDefinitionJson
+        # Serialize the config back into DataDefinitionJson
+        data_definition_json = json.dumps(config)
+
+        cg_data = meta.get("conditionsGroup")
+        if not isinstance(cg_data, dict):
+            cg = {"LogicalOperator": 1, "Conditions": []}
+        else:
+            op = cg_data.get("logicalOperator")
+            if op is None:
+                op = cg_data.get("LogicalOperator", 1)
+            conds = cg_data.get("conditions")
+            if conds is None:
+                conds = cg_data.get("Conditions", [])
+
+            normalized_conds = [
+                {
+                    "FieldName": cond.get("fieldName") or cond.get("FieldName") or "",
+                    "Value": cond.get("value") or cond.get("Value"),
+                    "MatchType": cond.get("matchType") or cond.get("MatchType") or 0,
+                    "CustomOperatorName": cond.get("customOperatorName") or cond.get("CustomOperatorName"),
+                }
+                for cond in conds
+                if isinstance(cond, dict)
+            ]
+
+            cg = {
+                "LogicalOperator": op,
+                "Conditions": normalized_conds,
+            }
+
+        built_widget: dict[str, Any] = {
+            "Title": meta.get("title") or "",
+            "Description": meta.get("description") or "",
+            "Identifier": meta.get("identifier") or "",
+            "Order": meta.get("order") or 0,
+            "TemplateIdentifier": meta.get("templateIdentifier") or "",
+            "Type": meta.get("type") or 0,
+            "DataDefinitionJson": data_definition_json,
+            "GridColumns": meta.get("width") or 1,
+            "ActionWidgetTemplateIdentifier": meta.get("actionWidgetTemplateIdentifier"),
+            "StepIdentifier": meta.get("stepIdentifier"),
+            "StepIntegration": meta.get("stepIntegration"),
+            "BlockStepIdentifier": meta.get("blockStepIdentifier"),
+            "BlockStepInstanceName": meta.get("blockStepInstanceName"),
+            "PresentIfEmpty": meta.get("presentIfEmpty") or False,
+            "ConditionsGroup": cg,
+            "IntegrationName": meta.get("integrationName"),
+        }
+        built_widgets.append(built_widget)
+
+    overview_template: dict[str, Any] = {
+        "Identifier": flat_view.get("identifier") or "",
+        "Name": flat_view.get("name") or "",
+        "Creator": flat_view.get("creator"),
+        "PlaybookDefinitionIdentifier": flat_view.get("playbookIdentifier") or "",
+        "Type": flat_view.get("type") or 0,
+        "AlertRuleType": flat_view.get("alertRuleType"),
+        "Widgets": built_widgets,
+        "Roles": flat_view.get("roles") or [],
+    }
+
+    return {
+        "OverviewTemplate": cast("BuiltOverviewDetails", overview_template),
+        "Roles": flat_view.get("roleNames") or [],
+    }
