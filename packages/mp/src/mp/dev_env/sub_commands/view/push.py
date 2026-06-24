@@ -194,6 +194,86 @@ def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -
     return None
 
 
+def _verify_widgets(
+    backend_api: BackendAPI,
+    existing_identifier: str,
+    flat_view_data: dict[str, Any],
+    *,
+    allow_create: bool,
+) -> None:
+    """Verify that pushed widgets exist on the server unless allow_create is True.
+
+    Raises:
+        typer.Exit: If a widget doesn't exist on the server and allow_create is False.
+
+    """
+    existing_view = None
+    try:
+        existing_view = backend_api.download_view(existing_identifier)
+    except Exception as ex:  # noqa: BLE001
+        logger.warning("Failed to verify existing widgets on server: %s. Proceeding.", ex)
+
+    if existing_view is not None:
+        existing_widget_ids = set()
+        for w in existing_view.get("widgets") or []:
+            meta = w.get("metadata") or {}
+            w_id = meta.get("identifier")
+            if w_id:
+                existing_widget_ids.add(w_id.lower())
+
+        for w in flat_view_data.get("widgets") or []:
+            meta = w.get("metadata") or {}
+            w_id = meta.get("identifier")
+            if (not w_id or w_id.lower() not in existing_widget_ids) and not allow_create:
+                logger.error(
+                    "Widget '%s' (UUID: '%s') does not exist in the view on the platform.",
+                    meta.get("title") or "unnamed",
+                    w_id or "missing",
+                )
+                logger.error(
+                    "Creation of new widgets is blocked by default. "
+                    "Use the --allow-create flag to force creation."
+                )
+                raise typer.Exit(1)
+
+
+def _validate_push_preconditions(
+    backend_api: BackendAPI,
+    view_name_or_id: str,
+    flat_view_data: dict[str, Any],
+    *,
+    allow_create: bool,
+) -> None:
+    """Validate push preconditions, resolving view ID and verifying widgets.
+
+    Raises:
+        typer.Exit: If the view doesn't exist and allow_create is False, or if a widget check fails.
+
+    """
+    existing_identifier = flat_view_data.get("identifier")
+    existing_id = _resolve_existing_view_id(backend_api, existing_identifier)
+    if existing_id is not None and existing_identifier:
+        logger.info("Resolved existing view ID %s on server.", existing_id)
+        flat_view_data["id"] = existing_id
+        _verify_widgets(
+            backend_api,
+            existing_identifier,
+            flat_view_data,
+            allow_create=allow_create,
+        )
+    elif not allow_create:
+        logger.error(
+            "View '%s' (UUID: '%s') does not exist on the platform.",
+            view_name_or_id,
+            flat_view_data.get("identifier"),
+        )
+        logger.error(
+            "Creation of new views is blocked by default. "
+            "Use the --allow-create flag to force creation."
+        )
+        raise typer.Exit(1)
+
+
 def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, *, allow_create: bool = False) -> None:
     """Upload built view template data to the SOAR environment.
 
@@ -212,53 +292,12 @@ def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, *, 
     logger.info("Uploading view to SOAR platform...")
     flat_view_data = _denormalize_pushed_view(cast("BuiltOverview", view_data))
 
-    # Resolve ID from server to perform UPDATE instead of INSERT
-    existing_identifier = flat_view_data.get("identifier")
-    existing_id = _resolve_existing_view_id(backend_api, existing_identifier)
-    if existing_id is not None and existing_identifier:
-        logger.info("Resolved existing view ID %s on server.", existing_id)
-        flat_view_data["id"] = existing_id
-
-        # Verify that we are not adding new widgets unless allow_create is True
-        existing_view = None
-        try:
-            existing_view = backend_api.download_view(existing_identifier)
-        except Exception as ex:  # noqa: BLE001
-            logger.warning("Failed to verify existing widgets on server: %s. Proceeding.", ex)
-
-        if existing_view is not None:
-            existing_widget_ids = set()
-            for w in existing_view.get("widgets") or []:
-                meta = w.get("metadata") or {}
-                w_id = meta.get("identifier")
-                if w_id:
-                    existing_widget_ids.add(w_id.lower())
-
-            for w in flat_view_data.get("widgets") or []:
-                meta = w.get("metadata") or {}
-                w_id = meta.get("identifier")
-                if (not w_id or w_id.lower() not in existing_widget_ids) and not allow_create:
-                    logger.error(
-                        "Widget '%s' (UUID: '%s') does not exist in the view on the platform.",
-                        meta.get("title") or "unnamed",
-                        w_id or "missing",
-                    )
-                    logger.error(
-                        "Creation of new widgets is blocked by default. "
-                        "Use the --allow-create flag to force creation."
-                    )
-                    raise typer.Exit(1)
-    elif not allow_create:
-        logger.error(
-            "View '%s' (UUID: '%s') does not exist on the platform.",
-            view_name_or_id,
-            flat_view_data.get("identifier"),
-        )
-        logger.error(
-            "Creation of new views is blocked by default. "
-            "Use the --allow-create flag to force creation."
-        )
-        raise typer.Exit(1)
+    _validate_push_preconditions(
+        backend_api,
+        view_name_or_id,
+        flat_view_data,
+        allow_create=allow_create,
+    )
 
     try:
         result = backend_api.upload_view(flat_view_data)
