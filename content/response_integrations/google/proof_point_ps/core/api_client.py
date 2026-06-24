@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import datetime
-import email
 from typing import Any, TYPE_CHECKING
 
 from .api_utils import validate_response

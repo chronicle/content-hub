@@ -22,7 +22,7 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import RESUBMIT_ACTION_NAME
-from ..core.exceptions import ProofPointPSError, FolderMismatchError
+from ..core.exceptions import ProofPointPSHTTPError
 
 if TYPE_CHECKING:
     from typing import Never
@@ -65,8 +65,8 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
 
         for guid in guids:
             try:
-                raw_content = self.api_client.download_message(guid)
-            except Exception:
+                self.api_client.download_message(guid)
+            except ProofPointPSHTTPError:
                 failed_entries.append({
                     "guid": guid,
                     "error": "Message not found"
@@ -76,7 +76,7 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
             folder_name = self.params.folder
             try:
                 record = self.api_client.get_record_by_guid(guid, folder=folder_name)
-            except Exception as e:
+            except ProofPointPSHTTPError as e:
                 failed_entries.append({
                     "guid": guid,
                     "error": str(e)
@@ -101,7 +101,7 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
                 )
                 successful_records.append(record.to_json())
                 successful_guids.append(guid)
-            except Exception as e:
+            except ProofPointPSHTTPError as e:
                 failed_entries.append({
                     "guid": guid,
                     "error": str(e)

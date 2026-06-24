@@ -17,7 +17,6 @@ from __future__ import annotations
 import email
 import pathlib
 import re
-import shutil
 import tempfile
 from email.header import decode_header
 from typing import TYPE_CHECKING
@@ -27,7 +26,7 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import DOWNLOAD_ACTION_NAME
-from ..core.exceptions import ProofPointPSError
+from ..core.exceptions import ProofPointPSHTTPError
 
 if TYPE_CHECKING:
     from typing import Never
@@ -90,7 +89,7 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
         for guid in guids:
             try:
                 raw_content = self.api_client.download_message(guid)
-            except Exception as e:
+            except ProofPointPSHTTPError as e:
                 err_msg = str(e)
                 failed_guids.append((guid, err_msg))
                 continue
@@ -98,7 +97,7 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
             folder_name = self.params.folder
             try:
                 record = self.api_client.get_record_by_guid(guid, folder=folder_name)
-            except Exception as e:
+            except ProofPointPSHTTPError as e:
                 failed_guids.append((guid, str(e)))
                 if "folder" in str(e).lower():
                     folder_error = str(e)
