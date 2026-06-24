@@ -116,6 +116,7 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
 @track_command
 def push_view(
     view_name_or_id: Annotated[str, typer.Argument(help="The view name or identifier to build and push.")],
+    *,
     src: Annotated[
         Path | None,
         typer.Option(help="Source folder containing the view directory."),
@@ -163,7 +164,7 @@ def push_view(
         raise typer.Exit(1) from e
 
     # 4. Upload to SOAR
-    _upload_built_view_data(view_data, view_name_or_id, allow_create)
+    _upload_built_view_data(view_data, view_name_or_id, allow_create=allow_create)
 
 
 def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -> int | None:
@@ -190,7 +191,7 @@ def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -
     return None
 
 
-def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, allow_create: bool = False) -> None:
+def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, *, allow_create: bool = False) -> None:
     """Upload built view template data to the SOAR environment.
 
     Args:
@@ -216,8 +217,13 @@ def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, all
         flat_view_data["id"] = existing_id
 
         # Verify that we are not adding new widgets unless allow_create is True
+        existing_view = None
         try:
             existing_view = backend_api.download_view(existing_identifier)
+        except Exception as ex:  # noqa: BLE001
+            logger.warning("Failed to verify existing widgets on server: %s. Proceeding.", ex)
+
+        if existing_view is not None:
             existing_widget_ids = set()
             for w in existing_view.get("widgets") or []:
                 meta = w.get("metadata") or {}
@@ -228,24 +234,27 @@ def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, all
             for w in flat_view_data.get("widgets") or []:
                 meta = w.get("metadata") or {}
                 w_id = meta.get("identifier")
-                if not w_id or w_id.lower() not in existing_widget_ids:
-                    if not allow_create:
-                        logger.error(
-                            "Widget '%s' (UUID: '%s') does not exist in the view on the platform.",
-                            meta.get("title") or "unnamed",
-                            w_id or "missing",
-                        )
-                        logger.error(
-                            "Creation of new widgets is blocked by default. Use the --allow-create flag to force creation."
-                        )
-                        raise typer.Exit(1)
-        except typer.Exit:
-            raise
-        except Exception as ex:  # noqa: BLE001
-            logger.warning("Failed to verify existing widgets on server: %s. Proceeding.", ex)
+                if (not w_id or w_id.lower() not in existing_widget_ids) and not allow_create:
+                    logger.error(
+                        "Widget '%s' (UUID: '%s') does not exist in the view on the platform.",
+                        meta.get("title") or "unnamed",
+                        w_id or "missing",
+                    )
+                    logger.error(
+                        "Creation of new widgets is blocked by default. "
+                        "Use the --allow-create flag to force creation."
+                    )
+                    raise typer.Exit(1)
     elif not allow_create:
-        logger.error("View '%s' (UUID: '%s') does not exist on the platform.", view_name_or_id, flat_view_data.get("identifier"))
-        logger.error("Creation of new views is blocked by default. Use the --allow-create flag to force creation.")
+        logger.error(
+            "View '%s' (UUID: '%s') does not exist on the platform.",
+            view_name_or_id,
+            flat_view_data.get("identifier"),
+        )
+        logger.error(
+            "Creation of new views is blocked by default. "
+            "Use the --allow-create flag to force creation."
+        )
         raise typer.Exit(1)
 
     try:

@@ -386,4 +386,3 @@ def test_push_view_allows_new_widget_with_flag(
     # Should succeed with the --allow-create flag
     assert result.exit_code == 0
     mock_api.upload_view.assert_called_once()
-
