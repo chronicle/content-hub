@@ -48,17 +48,17 @@ class DescribeIntegration(DescribeBase[IntegrationAiMetadata]):
 
     @property
     def metadata_file_name(self) -> str:
-        """Get the name of the metadata file."""
+        """Name of the metadata file."""
         return constants.INTEGRATIONS_AI_DESCRIPTION_FILE
 
     @property
     def resource_type_name(self) -> str:
-        """Get the resource type name."""
+        """The resource type name."""
         return "integration"
 
     @property
     def response_schema(self) -> type[IntegrationAiMetadata]:
-        """Get the response schema."""
+        """The response schema."""
         return IntegrationAiMetadata
 
     async def _get_all_resources(self, status: IntegrationStatus) -> set[str]:
