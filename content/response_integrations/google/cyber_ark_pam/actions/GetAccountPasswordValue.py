@@ -113,7 +113,7 @@ def main() -> None:  # noqa: PLR0914
         siemplify.LOGGER.info(log_message)
     except Exception as e:
         result_value = "false"
-        log_message = f"Error executing action “{SCRIPT_NAME}”. Reason: {e}"
+        log_message = f'Error executing action "{SCRIPT_NAME}". Reason: {e}'
         output_message = log_message
         siemplify.LOGGER.exception(log_message)
         status = EXECUTION_STATE_FAILED

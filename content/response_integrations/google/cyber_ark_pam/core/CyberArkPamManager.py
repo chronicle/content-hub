@@ -19,7 +19,7 @@ from __future__ import annotations
 import base64
 import pathlib
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
 import requests
@@ -93,7 +93,7 @@ class CyberArkPamManager:
         api_root: str,
         username: str,
         password: str,
-        siemplify: object | None = None,
+        siemplify: Any = None,  # noqa: ANN401
         verify_ssl: bool = False,  # noqa: FBT001, FBT002
         ca_certificate: str | None = None,
         client_certificate: str | None = None,
@@ -135,6 +135,9 @@ class CyberArkPamManager:
             client_certificate_passphrase: The passphrase for the certificate.
             client_certificate: Base64 encoded PKCS12 certificate.
 
+        Raises:
+            CyberArkPamManagerError: If the certificate or private key is missing or invalid.
+
         """
         if not client_certificate:
             return
@@ -150,8 +153,15 @@ class CyberArkPamManager:
         decoded_cert = load_key_and_certificates(data=encoded_cert, password=encoded_passphrase, backend=backend)
         self.siemplify.LOGGER.info("Loaded Client's certificate")
 
-        cert_bytes = decoded_cert[1].public_bytes(Encoding.DER)
-        pk_bytes = decoded_cert[0].private_bytes(
+        private_key = decoded_cert[0]
+        certificate = decoded_cert[1]
+
+        if private_key is None or certificate is None:
+            error_message = "Client certificate or private key is missing or invalid."
+            raise CyberArkPamManagerError(error_message)
+
+        cert_bytes = certificate.public_bytes(Encoding.DER)
+        pk_bytes = private_key.private_bytes(
             encoding=Encoding.DER,
             format=PrivateFormat.PKCS8,
             encryption_algorithm=NoEncryption(),
@@ -336,7 +346,7 @@ class CyberArkPamManager:
             account: ID of the account to rotate.
 
         """
-        payload = {"ChangeEntireGroup": "true"}
+        payload = {"ChangeEntireGroup": True}
         response = self.session.post(
             url=self.__build_full_uri("change_password", account_id=account),
             json=payload,

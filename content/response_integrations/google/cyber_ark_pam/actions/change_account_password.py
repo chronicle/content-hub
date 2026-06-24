@@ -41,6 +41,7 @@ class ChangeAccountPassword(CyberArkPamAction):
     def __init__(self) -> None:
         """Initialize the ChangeAccountPassword action."""
         super().__init__(f"{INTEGRATION_NAME} - {SCRIPT_NAME}")
+        self.accounts: list[str] = []
         self.successful_accounts: list[str] = []
         self.failed_accounts: dict[str, str] = {}
 
@@ -52,11 +53,11 @@ class ChangeAccountPassword(CyberArkPamAction):
             print_value=True,
             is_mandatory=True,
         )
-        self.params.accounts = string_to_multi_value(account_str)
+        self.accounts = string_to_multi_value(account_str)
 
     def _perform_action(self, _: Entity | None = None) -> None:
         """Perform the action logic."""
-        for account in self.params.accounts:
+        for account in self.accounts:
             try:
                 self.api_client.change_password(account=account)
                 self.successful_accounts.append(account)
