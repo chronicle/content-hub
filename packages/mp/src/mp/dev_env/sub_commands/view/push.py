@@ -38,6 +38,64 @@ if TYPE_CHECKING:
     from mp.dev_env.api import BackendAPI
 
 
+@push_app.command(name="view")
+@track_command
+def push_view(
+    view_name_or_id: Annotated[str, typer.Argument(help="The view name or identifier to build and push.")],
+    *,
+    src: Annotated[
+        Path | None,
+        typer.Option(
+            "--custom",
+            help="Source folder containing the view directory.",
+        ),
+    ] = None,
+    allow_create: Annotated[
+        bool,
+        typer.Option(
+            "--allow-create",
+            help="Allow creating a new view if it does not already exist on the platform.",
+        ),
+    ] = False,
+) -> None:
+    """Build and push a view template to the SOAR environment.
+
+    Raises:
+        typer.Exit: If the built view file cannot be found or parsed.
+
+    """
+    # 1. Locate source path
+    view_src_path = _get_view_path_by_name(view_name_or_id, src)
+    logger.info("Found source view path at: %s", view_src_path)
+
+    # 2. Build the view to a temp or output directory
+    out_dir = mp.core.file_utils.get_view_out_dir()
+    builder = ViewBuilder(view_src_path, out_dir)
+    builder.build()
+
+    # The built JSON name is to_snake_case(view_src_path.stem).json
+    built_json_name = f"{to_snake_case(view_src_path.stem)}{mp.core.constants.JSON_SUFFIX}"
+    built_json_path = out_dir / built_json_name
+
+    if not built_json_path.exists():
+        logger.error("Built view file not found at: %s", built_json_path)
+        raise typer.Exit(1)
+
+    if not mp.core.file_utils.is_built_view(built_json_path):
+        raise typer.Exit(1)
+
+    # 3. Load built JSON data
+    logger.info("Loading built view JSON...")
+    try:
+        view_data: dict[str, Any] = json.loads(built_json_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.exception("Failed to parse built view JSON")
+        raise typer.Exit(1) from e
+
+    # 4. Upload to SOAR
+    _upload_built_view_data(view_data, view_name_or_id, allow_create=allow_create)
+
+
 def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
     """Convert wrapped PascalCase BuiltOverview back into flat camelCase payload expected by SOAR.
 
@@ -110,64 +168,6 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
         "roles": template.get("Roles") or [],
         "roleNames": built_view.get("Roles") or [],
     }
-
-
-@push_app.command(name="view")
-@track_command
-def push_view(
-    view_name_or_id: Annotated[str, typer.Argument(help="The view name or identifier to build and push.")],
-    *,
-    src: Annotated[
-        Path | None,
-        typer.Option(
-            "--custom",
-            help="Source folder containing the view directory.",
-        ),
-    ] = None,
-    allow_create: Annotated[
-        bool,
-        typer.Option(
-            "--allow-create",
-            help="Allow creating a new view if it does not already exist on the platform.",
-        ),
-    ] = False,
-) -> None:
-    """Build and push a view template to the SOAR environment.
-
-    Raises:
-        typer.Exit: If the built view file cannot be found or parsed.
-
-    """
-    # 1. Locate source path
-    view_src_path = _get_view_path_by_name(view_name_or_id, src)
-    logger.info("Found source view path at: %s", view_src_path)
-
-    # 2. Build the view to a temp or output directory
-    out_dir = mp.core.file_utils.get_view_out_dir()
-    builder = ViewBuilder(view_src_path, out_dir)
-    builder.build()
-
-    # The built JSON name is to_snake_case(view_src_path.stem).json
-    built_json_name = f"{to_snake_case(view_src_path.stem)}{mp.core.constants.JSON_SUFFIX}"
-    built_json_path = out_dir / built_json_name
-
-    if not built_json_path.exists():
-        logger.error("Built view file not found at: %s", built_json_path)
-        raise typer.Exit(1)
-
-    if not mp.core.file_utils.is_built_view(built_json_path):
-        raise typer.Exit(1)
-
-    # 3. Load built JSON data
-    logger.info("Loading built view JSON...")
-    try:
-        view_data: dict[str, Any] = json.loads(built_json_path.read_text(encoding="utf-8"))
-    except Exception as e:
-        logger.exception("Failed to parse built view JSON")
-        raise typer.Exit(1) from e
-
-    # 4. Upload to SOAR
-    _upload_built_view_data(view_data, view_name_or_id, allow_create=allow_create)
 
 
 def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -> int | None:
