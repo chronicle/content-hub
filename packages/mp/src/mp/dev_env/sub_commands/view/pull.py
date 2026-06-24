@@ -155,8 +155,14 @@ def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
             normalized_conds = [
                 {
                     "FieldName": cond.get("fieldName") or cond.get("FieldName") or "",
-                    "Value": cond.get("value") or cond.get("Value"),
-                    "MatchType": cond.get("matchType") or cond.get("MatchType") or 0,
+                    "Value": cond.get("value") if cond.get("value") is not None else cond.get("Value"),
+                    "MatchType": (
+                        cond.get("matchType")
+                        if cond.get("matchType") is not None
+                        else cond.get("MatchType")
+                        if cond.get("MatchType") is not None
+                        else 0
+                    ),
                     "CustomOperatorName": cond.get("customOperatorName") or cond.get("CustomOperatorName"),
                 }
                 for cond in conds

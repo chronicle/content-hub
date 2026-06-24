@@ -165,12 +165,16 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
         all_widget: list[PlaybookWidgetMetadata] = PlaybookWidgetMetadata.from_non_built_path(path)
 
         widget_details: list[OverviewWidgetDetails] = non_built_view.get("widgets_details") or []
-        widget_by_title = {w.title: w for w in all_widget if w.title}
+        widget_by_title: dict[str, list[PlaybookWidgetMetadata]] = {}
+        for w in all_widget:
+            if w.title:
+                widget_by_title.setdefault(w.title, []).append(w)
+
         widgets: list[PlaybookWidgetMetadata] = []
         for w_d in widget_details:
             title = w_d.get("title")
-            if title and title in widget_by_title:
-                widgets.append(widget_by_title[title])
+            if title and title in widget_by_title and widget_by_title[title]:
+                widgets.append(widget_by_title[title].pop(0))
 
         ov: Self = cls._from_non_built(non_built_view)
         ov.widgets = widgets
