@@ -119,7 +119,10 @@ def push_view(
     *,
     src: Annotated[
         Path | None,
-        typer.Option(help="Source folder containing the view directory."),
+        typer.Option(
+            "--custom",
+            help="Source folder containing the view directory.",
+        ),
     ] = None,
     allow_create: Annotated[
         bool,

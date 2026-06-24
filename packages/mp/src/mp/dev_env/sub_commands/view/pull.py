@@ -40,7 +40,10 @@ def pull_view(
     view_name_or_id: Annotated[str, typer.Argument(help="The view name or identifier to pull.")],
     dst: Annotated[
         Path | None,
-        typer.Option(help="Destination folder. Defaults to 'content/views/<view_identifier>'."),
+        typer.Option(
+            "--custom",
+            help="Destination folder. Defaults to 'content/views/<view_identifier>'.",
+        ),
     ] = None,
 ) -> None:
     """Pull and deconstruct a view template from the SOAR environment.

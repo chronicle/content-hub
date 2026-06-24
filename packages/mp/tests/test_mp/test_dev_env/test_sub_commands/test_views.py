@@ -85,10 +85,10 @@ def test_pull_view_cli(
     dst_dir = tmp_path / "content_views"
 
     # Invoke mp pull view command
-    # Usage: mp pull view "Default Case View" --dst <dst_dir>
+    # Usage: mp pull view "Default Case View" --custom <dst_dir>
     result = runner.invoke(
         pull_app,
-        ["view", "Default Case View", "--dst", str(dst_dir)],
+        ["view", "Default Case View", "--custom", str(dst_dir)],
     )
 
     assert result.exit_code == 0
@@ -171,11 +171,11 @@ def test_push_view_cli(
     (widgets_dir / "Widget One.html").write_text("<h1>Hello from push</h1>", encoding="utf-8")
 
     # Invoke mp push view command
-    # Usage: mp push view "system_case_default" --src <src_dir>
+    # Usage: mp push view "system_case_default" --custom <src_dir>
     with mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"):
         result = runner.invoke(
             push_app,
-            ["view", "system_case_default", "--src", str(src_dir)],
+            ["view", "system_case_default", "--custom", str(src_dir)],
         )
 
     assert result.exit_code == 0
@@ -309,7 +309,7 @@ def test_push_view_blocks_new_widget_by_default(
     with mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"):
         result = runner.invoke(
             push_app,
-            ["view", "system_case_default", "--src", str(src_dir)],
+            ["view", "system_case_default", "--custom", str(src_dir)],
         )
 
     # Output should exit with code 1 (blocked)
@@ -380,7 +380,7 @@ def test_push_view_allows_new_widget_with_flag(
     with mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"):
         result = runner.invoke(
             push_app,
-            ["view", "system_case_default", "--src", str(src_dir), "--allow-create"],
+            ["view", "system_case_default", "--custom", str(src_dir), "--allow-create"],
         )
 
     # Should succeed with the --allow-create flag
