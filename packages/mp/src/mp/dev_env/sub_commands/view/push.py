@@ -188,7 +188,7 @@ def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -
         for v in installed_views or []:
             v_uuid = v.get("identifier") or v.get("Identifier")
             if isinstance(v_uuid, str) and v_uuid.lower() == identifier.lower():
-                return v.get("id") or v.get("Id")
+                return v.get("id") if v.get("id") is not None else v.get("Id")
     except Exception as ex:  # noqa: BLE001
         logger.warning("Failed to resolve existing view ID on server: %s. Proceeding as new view.", ex)
     return None
