@@ -25,7 +25,7 @@ import mp.core.file_utils
 from mp.core.data_models.common.widget.data import WidgetType
 
 if TYPE_CHECKING:
-    from mp.core.data_models.playbooks.overview.metadata import NonBuiltOverview, Overview
+    from mp.core.data_models.common.overview.metadata import NonBuiltOverview, Overview
     from mp.core.data_models.playbooks.widget.metadata import NonBuiltPlaybookWidgetMetadata
 
 logger: logging.Logger = logging.getLogger(__name__)

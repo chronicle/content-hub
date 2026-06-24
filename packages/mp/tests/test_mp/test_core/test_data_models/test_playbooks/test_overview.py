@@ -14,7 +14,7 @@
 
 import pytest
 
-from mp.core.data_models.playbooks.overview.metadata import (
+from mp.core.data_models.common.overview.metadata import (
     Overview,
 )
 

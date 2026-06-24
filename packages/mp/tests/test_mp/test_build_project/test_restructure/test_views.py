@@ -22,15 +22,15 @@ import yaml
 from mp.build_project.restructure.views.build import ViewBuilder
 from mp.build_project.restructure.views.deconstruct import ViewDeconstructor
 from mp.core.data_models.common.condition.condition_group import ConditionGroup, LogicalOperator
+from mp.core.data_models.common.overview.metadata import (
+    Overview,
+    OverviewType,
+)
 from mp.core.data_models.common.widget.data import (
     HtmlWidgetDataDefinition,
     WidgetDefinitionScope,
     WidgetSize,
     WidgetType,
-)
-from mp.core.data_models.playbooks.overview.metadata import (
-    Overview,
-    OverviewType,
 )
 from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 

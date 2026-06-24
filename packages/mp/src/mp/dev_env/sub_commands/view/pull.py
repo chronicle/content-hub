@@ -23,7 +23,7 @@ import typer
 
 import mp.core.file_utils
 from mp.build_project.restructure.views.deconstruct import ViewDeconstructor
-from mp.core.data_models.playbooks.overview.metadata import Overview
+from mp.core.data_models.common.overview.metadata import Overview
 from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
@@ -31,7 +31,7 @@ from mp.telemetry import track_command
 logger: logging.Logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from mp.core.data_models.playbooks.overview.metadata import BuiltOverview, BuiltOverviewDetails
+    from mp.core.data_models.common.overview.metadata import BuiltOverview, BuiltOverviewDetails
 
 
 @pull_app.command(name="view")

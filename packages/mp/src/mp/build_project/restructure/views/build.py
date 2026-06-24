@@ -20,8 +20,8 @@ import logging
 from typing import TYPE_CHECKING
 
 import mp.core.constants
+from mp.core.data_models.common.overview.metadata import Overview
 from mp.core.data_models.common.widget.data import WidgetType
-from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.utils import to_snake_case
 
 from .deconstruct import sanitize_widget_filename
@@ -29,7 +29,7 @@ from .deconstruct import sanitize_widget_filename
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from mp.core.data_models.playbooks.overview.metadata import BuiltOverview
+    from mp.core.data_models.common.overview.metadata import BuiltOverview
 
 logger: logging.Logger = logging.getLogger(__name__)
 

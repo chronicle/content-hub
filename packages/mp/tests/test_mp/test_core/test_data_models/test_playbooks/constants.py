@@ -26,6 +26,13 @@ from mp.core.data_models.common.condition.condition_group import (
     LogicalOperator,
     NonBuiltConditionGroup,
 )
+from mp.core.data_models.common.overview.metadata import (
+    BuiltOverview,
+    NonBuiltOverview,
+    Overview,
+    OverviewType,
+    OverviewWidgetDetails,
+)
 from mp.core.data_models.common.widget.data import (
     BuiltWidgetDataDefinition,
     HtmlWidgetDataDefinition,
@@ -51,13 +58,6 @@ from mp.core.data_models.playbooks.meta.metadata import (
     NonBuiltPlaybookMetadata,
     PlaybookCreationSource,
     PlaybookMetadata,
-)
-from mp.core.data_models.playbooks.overview.metadata import (
-    BuiltOverview,
-    NonBuiltOverview,
-    Overview,
-    OverviewType,
-    OverviewWidgetDetails,
 )
 from mp.core.data_models.playbooks.step.metadata import BuiltStep, NonBuiltStep, Step, StepType
 from mp.core.data_models.playbooks.step.step_debug_data import (

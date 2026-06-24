@@ -34,7 +34,7 @@ from mp.telemetry import track_command
 logger: logging.Logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from mp.core.data_models.playbooks.overview.metadata import BuiltOverview
+    from mp.core.data_models.common.overview.metadata import BuiltOverview
     from mp.dev_env.api import BackendAPI
 
 
