@@ -24,7 +24,6 @@ from typing import Any, TYPE_CHECKING
 
 from jinja2 import Template
 
-from TIPCommon.types import SingleJson
 from .cache import Cache, Context, get_context_factory
 from .constants import (
     ALL_ENVIRONMENTS_IDENTIFIER,
@@ -41,7 +40,6 @@ from .definitions import Connector, File, Integration, Job, Mapping, Workflow
 from .GitContentManager import GitContentManager
 from .GitManager import Git
 from .SiemplifyApiClient import SiemplifyApiClient
-
 
 if TYPE_CHECKING:
     from soar_sdk.SiemplifyAction import SiemplifyAction
@@ -84,7 +82,9 @@ class GitSyncManager:
         self.logger = siemplify.LOGGER
         self._siemplify = siemplify
         self._cache = {}
-        self._wd = tempfile.TemporaryDirectory(dir=siemplify.RUN_FOLDER, ignore_cleanup_errors=True)
+        self._wd = tempfile.TemporaryDirectory(
+            dir=siemplify.RUN_FOLDER, ignore_cleanup_errors=True
+        )
         self.api = SiemplifyApiClient(
             siemplify.API_ROOT,
             siemplify.api_key,
@@ -156,9 +156,13 @@ class GitSyncManager:
         if not branch:
             branch = get_conf_param("Branch", print_value=True)
 
-        git_server_fingerprint = siemplify.extract_job_param("Git Server Fingerprint", print_value=True)
+        git_server_fingerprint = siemplify.extract_job_param(
+            "Git Server Fingerprint", print_value=True
+        )
         if not git_server_fingerprint:
-            git_server_fingerprint = get_conf_param("Git Server Fingerprint", print_value=True)
+            git_server_fingerprint = get_conf_param(
+                "Git Server Fingerprint", print_value=True
+            )
 
         git_author = siemplify.extract_job_param("Commit Author", print_value=True)
         if not git_author:
@@ -238,7 +242,9 @@ class GitSyncManager:
                 self.logger.info(
                     f"{integration.identifier} is not installed - installing from the marketplace",
                 )
-                if not self.install_marketplace_integration(integration.identifier, fallback_version=integration.version):
+                if not self.install_marketplace_integration(
+                    integration.identifier, fallback_version=integration.version
+                ):
                     self.logger.warn(
                         f"Couldn't install integration {integration.identifier} "
                         "from the marketplace",
@@ -261,7 +267,8 @@ class GitSyncManager:
                     (
                         x
                         for x in integration_cards
-                        if x.get("name") == script["name"] and x.get("type") == script["type"]
+                        if x.get("name") == script["name"]
+                        and x.get("type") == script["type"]
                     ),
                     None,
                 )
@@ -330,18 +337,19 @@ class GitSyncManager:
                 f"Using Default Environment instead",
             )
 
-
         existing_connectors = self.api.get_connectors(chronicle_soar=self._siemplify)
         connector_definition_id = None
         if platform_supports_1p_api():
             try:
-                integration_connectors = self.api.get_integration_connectors(self._siemplify, connector.integration)
+                integration_connectors = self.api.get_integration_connectors(
+                    self._siemplify, connector.integration
+                )
                 connector_def = next(
                     (
                         x
                         for x in integration_connectors
-                        
-                        if x.get("displayName") == connector.raw_data.get("connectorDefinitionName") 
+                        if x.get("displayName")
+                        == connector.raw_data.get("connectorDefinitionName")
                         or x.get("displayName") == connector.name
                     ),
                     None,
@@ -349,7 +357,9 @@ class GitSyncManager:
                 if connector_def:
                     connector_definition_id = str(connector_def.get("id"))
             except Exception as e:
-                self.logger.warn(f"Failed to retrieve connector definition for {connector.name}: {e}")
+                self.logger.warn(
+                    f"Failed to retrieve connector definition for {connector.name}: {e}"
+                )
 
             existing_connector = next(
                 (
@@ -366,14 +376,18 @@ class GitSyncManager:
 
             if existing_connector:
                 self.logger.info(f"Updating {connector.name}")
-                self.api.update_existing_connector(connector.raw_data, existing_connector)
+                self.api.update_existing_connector(
+                    connector.raw_data, existing_connector
+                )
             else:
                 self.logger.info(f"Installing {connector.name}")
-                self.api.update_connector(connector.raw_data, connector_definition_id=connector_definition_id)
+                self.api.update_connector(
+                    connector.raw_data, connector_definition_id=connector_definition_id
+                )
         else:
             self.api.update_connector(connector.raw_data)
 
-    def install_mappings(self, mappings: Mapping) -> None: #mp
+    def install_mappings(self, mappings: Mapping) -> None:  # mp
         """Install or update mappings definitions
 
         Args:
@@ -381,31 +395,26 @@ class GitSyncManager:
 
         """
         self.logger.info(f"Installing mappings for {mappings.integrationName}")
-        
+
         all_records = self.api.get_ontology_records(self._siemplify)
-        records = [r for r in all_records if r.get("source") == mappings.integrationName]
-        
-        # If we can't find a record for the specific integration, use the first available or None
-        record_id = records[0].get("id") if records else (all_records[0].get("id") if all_records else None)
+        records = [
+            r for r in all_records if r.get("source") == mappings.integrationName
+        ]
+
+        record_id = (
+            records[0].get("id")
+            if records
+            else (all_records[0].get("id") if all_records else None)
+        )
 
         for rule in mappings.rules:
-            if isinstance(rule, dict) and ("familyFields" in rule or "systemFields" in rule):
+            if isinstance(rule, dict) and (
+                "familyFields" in rule or "systemFields" in rule
+            ):
                 self.api.add_mapping_rules(rule.get("familyFields", []), record_id)
                 self.api.add_mapping_rules(rule.get("systemFields", []), record_id)
             else:
                 self.api.add_mapping_rules(rule, record_id)
-
-        # for record in mappings.records:
-        #     matching_live_records = [r for r in all_records if r.get("source") == record.get("source") and r.get("product") == record.get("product") and r.get("eventName") == record.get("eventName")]
-        #     live_record_id = matching_live_records[0].get("id") if matching_live_records else None
-        #     
-        #     self.api.set_mappings_visual_family(
-        #         record.get("source"),
-        #         record.get("product"),
-        #         record.get("eventName"),
-        #         record.get("familyName"),
-        #         record_id=live_record_id
-        #     )
 
     def install_workflows(self, workflows: list[Workflow]) -> None:
         """Install or update playbooks and blocks
@@ -424,7 +433,9 @@ class GitSyncManager:
             + [ALL_ENVIRONMENTS_IDENTIFIER]
         )
         for p in workflows:
-            invalid_environments = [x for x in (p.environments or []) if x not in environments]
+            invalid_environments = [
+                x for x in (p.environments or []) if x not in environments
+            ]
             if invalid_environments:
                 raise Exception(
                     f"Playbook '{p.name}' is assigned to environment(s) that don't "
@@ -432,15 +443,11 @@ class GitSyncManager:
                     f"Available environments: {', '.join(environments)}"
                 )
 
-        # Remove duplicates and split by type
         workflows = list(set(workflows))
         siemplify_context: Context = get_context_factory(self._siemplify)
         cache: Cache[str, int] = Cache(siemplify_context)
         playbook_installer = WorkflowInstaller(
-            self._siemplify,
-            self.api,
-            self.logger,
-            cache
+            self._siemplify, self.api, self.logger, cache
         )
         blocks, playbooks = [], []
         for workflow in workflows:
@@ -466,17 +473,22 @@ class GitSyncManager:
             job: A Job object instance to install
 
         """
-        if not self.get_installed_integration_version(job.integration) or self.get_installed_integration_version(job.integration) == "0.0":
+        if (
+            not self.get_installed_integration_version(job.integration)
+            or self.get_installed_integration_version(job.integration) == "0.0"
+        ):
             self.logger.warn(
                 f"Error installing job {job.name} - Job integration ({job.integration}) "
                 "is not installed",
             )
             return
-        # Try to find and fix the jobDefinitionId field
+
         job_definition_id = None
         if platform_supports_1p_api():
             try:
-                integration_jobs = self.api.get_integration_jobs(self._siemplify, job.integration)
+                integration_jobs = self.api.get_integration_jobs(
+                    self._siemplify, job.integration
+                )
                 job_def = next(
                     (
                         x
@@ -491,12 +503,16 @@ class GitSyncManager:
                     job_definition_id = str(job_def.get("id"))
                     job.raw_data["jobDefinitionId"] = job_definition_id
             except Exception as e:
-                self.logger.warn(f"Failed to retrieve job definition for {job.name}: {e}")
+                self.logger.warn(
+                    f"Failed to retrieve job definition for {job.name}: {e}"
+                )
 
             existing_job = next(
                 (
                     x
-                    for x in self.api.get_jobs(chronicle_soar=self._siemplify, enrich=False)
+                    for x in self.api.get_jobs(
+                        chronicle_soar=self._siemplify, enrich=False
+                    )
                     if x.get("displayName") == job.raw_data.get("displayName")
                 ),
                 None,
@@ -512,7 +528,8 @@ class GitSyncManager:
         else:
             integration_cards = next(
                 (
-                    x for x in self.api.get_ide_cards(job.integration)
+                    x
+                    for x in self.api.get_ide_cards(job.integration)
                     if x["identifier"] == job.integration
                 ),
                 {},
@@ -532,16 +549,17 @@ class GitSyncManager:
             existing_job = next(
                 (
                     x
-                    for x in self.api.get_jobs(chronicle_soar=self._siemplify, enrich=False)
+                    for x in self.api.get_jobs(
+                        chronicle_soar=self._siemplify, enrich=False
+                    )
                     if x.get("name") == job.name or x.get("displayName") == job.name
                 ),
                 None,
             )
             if existing_job:
                 job.raw_data["id"] = existing_job.get("id")
-                
-        self.api.add_job(job.raw_data, job_definition_id=job_definition_id)
 
+        self.api.add_job(job.raw_data, job_definition_id=job_definition_id)
 
     def generate_root_readme(self) -> str:
         """Generates the readme file contents for the root of the repository
@@ -650,7 +668,9 @@ class GitSyncManager:
         if item_name in self._cache:
             del self._cache[item_name]
 
-    def install_marketplace_integration(self, integration_name: str, fallback_version: str = None) -> bool:
+    def install_marketplace_integration(
+        self, integration_name: str, fallback_version: str = None
+    ) -> bool:
         """Installs or update an integration from the marketplace.
 
         Args:
@@ -668,10 +688,20 @@ class GitSyncManager:
             ),
             None,
         )
-        
-        version = store_integration.get("version", fallback_version) if store_integration else fallback_version
-        is_certified = store_integration.get("isCertified", store_integration.get("certified", True)) if store_integration else True
-        
+
+        version = (
+            store_integration.get("version", fallback_version)
+            if store_integration
+            else fallback_version
+        )
+        is_certified = (
+            store_integration.get(
+                "isCertified", store_integration.get("certified", True)
+            )
+            if store_integration
+            else True
+        )
+
         if not version:
             self.logger.warn(
                 f"Integration {integration_name} wasn't found in the marketplace and no fallback version provided",
@@ -718,7 +748,7 @@ class WorkflowInstaller:
 
     def __init__(
         self,
-        chronicle_soar: ChronicleSOAR, # type: ignore
+        chronicle_soar: ChronicleSOAR,  # type: ignore
         api: SiemplifyApiClient,
         logger: SiemplifyLogger,
         mod_time_cache: Cache[str, int],
@@ -785,7 +815,9 @@ class WorkflowInstaller:
         (with the same name) identifiers.
         """
         playbook_id: str = self._installed_playbooks[workflow.name]["identifier"]
-        local_playbook: dict[str, Any] = self.api.get_playbook(chronicle_soar=self.chronicle_soar, identifier=playbook_id)
+        local_playbook: dict[str, Any] = self.api.get_playbook(
+            chronicle_soar=self.chronicle_soar, identifier=playbook_id
+        )
         self._copy_ids_from_existing_workflow(workflow, local_playbook)
         self._process_steps(workflow, local_playbook)
 
@@ -865,11 +897,7 @@ class WorkflowInstaller:
             # Take the step identifier if the same step instance name already exists.
             existing_step = (
                 next(
-                    (
-                        x
-                        for x in old_steps
-                        if self._is_matching_step(x, step)
-                    ),
+                    (x for x in old_steps if self._is_matching_step(x, step)),
                     None,
                 )
                 if old_steps
@@ -938,7 +966,10 @@ class WorkflowInstaller:
                 param_value = param.get("value")
 
                 # Handle Start/EndLoopStepIdentifier parameter
-                if (param_name in {"StartLoopStepIdentifier", "EndLoopStepIdentifier"} and param_value):
+                if (
+                    param_name in {"StartLoopStepIdentifier", "EndLoopStepIdentifier"}
+                    and param_value
+                ):
                     mapped_id = identifier_mappings.get(param_value)
                     if mapped_id:
                         param["value"] = mapped_id
@@ -1029,17 +1060,23 @@ class WorkflowInstaller:
             # Validate the existing instance before copying it.
             # If it's invalid (e.g. from a prior failed import), fall through
             # to the instance-discovery logic below.
-            instance_to_validate = fallback if instance == "AutomaticEnvironment" else instance
+            instance_to_validate = (
+                fallback if instance == "AutomaticEnvironment" else instance
+            )
             if instance_to_validate and self._is_valid_existing_instance(
                 step.get("integration"),
                 instance_to_validate,
                 environments,
             ):
                 self._set_step_parameter_by_name(
-                    step, "IntegrationInstance", instance,
+                    step,
+                    "IntegrationInstance",
+                    instance,
                 )
                 self._set_step_parameter_by_name(
-                    step, "FallbackIntegrationInstance", fallback,
+                    step,
+                    "FallbackIntegrationInstance",
+                    fallback,
                 )
                 return
 
@@ -1081,7 +1118,7 @@ class WorkflowInstaller:
                 instance_id = self.api.get_integration_instance_id_by_name(
                     self.chronicle_soar,
                     step.get("integration"),
-                    environments=environments, # type: ignore
+                    environments=environments,  # type: ignore
                     display_name=instance_display_name,
                     consider_404_to_none=True,
                 )
@@ -1164,17 +1201,22 @@ class WorkflowInstaller:
         """
         cache_key = f"integration_instances_{environment}"
         if cache_key not in self._cache:
-            self._cache[cache_key] = self.api.get_integrations_instances(chronicle_soar=self.chronicle_soar, environment=environment) or []
+            self._cache[cache_key] = (
+                self.api.get_integrations_instances(
+                    chronicle_soar=self.chronicle_soar, environment=environment
+                )
+                or []
+            )
 
         instances = self._cache.get(cache_key, [])
 
         filtered_instances = [
-            x
-            for x in instances
-            if x.integration_identifier == integration_name
+            x for x in instances if x.integration_identifier == integration_name
         ]
 
-        configured_instances = [x for x in filtered_instances if x.instance.get("isConfigured")]
+        configured_instances = [
+            x for x in filtered_instances if x.instance.get("isConfigured")
+        ]
         if configured_instances:
             return sorted(configured_instances, key=lambda x: x.instance_name or "")
 

@@ -13,8 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import time
-import threading
 from io import BytesIO
 
 from soar_sdk.SiemplifyJob import SiemplifyJob

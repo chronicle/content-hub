@@ -26,7 +26,7 @@ from ..core.constants import (
     IGNORED_JOBS,
     INTEGRATION_NAME,
     DATA_DRIVEN_MATCH_CRITERIA,
-    SYSTEM_MATCH_CRITERIA
+    SYSTEM_MATCH_CRITERIA,
 )
 from ..core.definitions import (
     Connector,
@@ -102,7 +102,10 @@ def main():
                     else:
                         gitsync.content.push_playbook(workflow)
                 except Exception as e:
-                    siemplify.LOGGER.error(f"Couldn't upload playbook {playbook_summary['name']}. ERROR: {e}")
+                    siemplify.LOGGER.error(
+                        "Couldn't upload playbook "
+                        f"{playbook_summary['name']}. ERROR: {e}"
+                    )
                     siemplify.LOGGER.exception(e)
         # Jobs
         if features["Jobs"]:
@@ -112,10 +115,14 @@ def main():
                 for x in gitsync.api.get_jobs(chronicle_soar=siemplify)
                 if x.get("displayName", x.get("name")) not in IGNORED_JOBS
                 and x.get("integration") != INTEGRATION_NAME
-                and not x.get("displayName",  x.get("name")).startswith("Cases Collector DB")
-                and not x.get("displayName",  x.get("name")).startswith("Logs Collector")
+                and not x.get("displayName", x.get("name")).startswith(
+                    "Cases Collector DB"
+                )
+                and not x.get("displayName", x.get("name")).startswith("Logs Collector")
             ]:
-                siemplify.LOGGER.info(f"Pushing {job.get('displayName', job.get('name'))}")
+                siemplify.LOGGER.info(
+                    f"Pushing {job.get('displayName', job.get('name'))}"
+                )
                 gitsync.content.push_job(Job(job))
 
         # Connectors
@@ -139,14 +146,15 @@ def main():
         if features["Integration Instances"]:
             siemplify.LOGGER.info("========== Integration Instances ==========")
             integration_instances = []
-            for environment in gitsync.api.get_environment_names(chronicle_soar=siemplify) + [
+            for environment in gitsync.api.get_environment_names(
+                chronicle_soar=siemplify
+            ) + [
                 ALL_ENVIRONMENTS_IDENTIFIER,
             ]:
                 for instance in [
                     x
                     for x in gitsync.api.get_integrations_instances(
-                        chronicle_soar=siemplify, 
-                        environment=environment
+                        chronicle_soar=siemplify, environment=environment
                     )
                     if x.integration_identifier not in IGNORED_INTEGRATIONS
                 ]:
@@ -178,23 +186,21 @@ def main():
                                 "Skipping passwords"
                             )
                     settings_dict_list = [
-                            {
-                                "propertyName": s.property_name,
-                                "value": s.value,
-                                "creationTimeUnixTimeInMs": 0,
-                                "modificationTimeUnixTimeInMs": 0,
-                                "propertyType": s.property_type,
-                                "isMandatory": s.is_mandatory,
-                                "id": s._id,
-                                "propertyDisplayName": s.display_name,
-                                "propertyDescription": s.property_description,
-                                "integrationIdentifier": (
-                                    instance.integration_identifier
-                                ),
-                                "integrationInstance": instance.identifier,
-                            }
-                            for s in settings
-                        ]
+                        {
+                            "propertyName": s.property_name,
+                            "value": s.value,
+                            "creationTimeUnixTimeInMs": 0,
+                            "modificationTimeUnixTimeInMs": 0,
+                            "propertyType": s.property_type,
+                            "isMandatory": s.is_mandatory,
+                            "id": s._id,
+                            "propertyDisplayName": s.display_name,
+                            "propertyDescription": s.property_description,
+                            "integrationIdentifier": (instance.integration_identifier),
+                            "integrationInstance": instance.identifier,
+                        }
+                        for s in settings
+                    ]
                     integration_instances.append(
                         {
                             "environment": environment,
@@ -238,17 +244,20 @@ def main():
                         record["exampleEventFields"] = []  # remove event assets
                         rule = gitsync.api.get_mapping_rules(
                             source=record["source"],
-                            mr_id=record["id"], 
+                            mr_id=record["id"],
                             product=record["product"],
                             event_name=record["eventName"],
                         )
+
                         def get_fields(rule):
                             """Extract iterable fields from either response format."""
                             if isinstance(rule, list):
                                 return rule
                             if isinstance(rule, dict):
                                 if "familyFields" in rule or "systemFields" in rule:
-                                    return rule.get("familyFields", []) + rule.get("systemFields", [])
+                                    return rule.get("familyFields", []) + rule.get(
+                                        "systemFields", []
+                                    )
                                 elif "mapping_rules" in rule:
                                     return rule.get("mapping_rules", [])
                                 elif "mappingRules" in rule:
@@ -282,10 +291,16 @@ def main():
             converted_envs = []
 
             for env in raw_envs:
-                env_obj = env if isinstance(env, Environment) else Environment.from_json(env)
+                env_obj = (
+                    env if isinstance(env, Environment) else Environment.from_json(env)
+                )
                 env_obj.identifier = 0
 
-                converted = env_obj.to_1p() if platform_supports_1p_api() else env_obj.to_legacy()
+                converted = (
+                    env_obj.to_1p()
+                    if platform_supports_1p_api()
+                    else env_obj.to_legacy()
+                )
                 converted_envs.append(converted)
 
             gitsync.content.push_environments(converted_envs)
@@ -303,7 +318,7 @@ def main():
             if isinstance(logo, dict) and logo.get("imageBase64"):
                 base64_str = logo["imageBase64"]
                 prefix = "data:image/png;base64,"
-                
+
                 if not base64_str.startswith("data:"):
                     logo["imageBase64"] = prefix + base64_str
 
@@ -317,7 +332,11 @@ def main():
                 for tag in tags:
                     match_criteria = tag.get("matchCriteria")
                     tag_lower = match_criteria.replace("_", "").lower()
-                    if isinstance(match_criteria, str) and tag_lower == DATA_DRIVEN_MATCH_CRITERIA or tag_lower == SYSTEM_MATCH_CRITERIA:
+                    if (
+                        isinstance(match_criteria, str)
+                        and tag_lower == DATA_DRIVEN_MATCH_CRITERIA
+                        or tag_lower == SYSTEM_MATCH_CRITERIA
+                    ):
                         continue
                     filtered_tags.append(tag)
                 tags = filtered_tags
@@ -325,7 +344,9 @@ def main():
 
         if features["Case Stages"]:
             siemplify.LOGGER.info("Pushing case stages")
-            gitsync.content.push_stages(gitsync.api.get_case_stages(chronicle_soar=siemplify))
+            gitsync.content.push_stages(
+                gitsync.api.get_case_stages(chronicle_soar=siemplify)
+            )
 
         if features["Case Title Settings"]:
             siemplify.LOGGER.info("Pushing case title settings")
@@ -333,31 +354,45 @@ def main():
 
         if features["Case Close Reasons"]:
             siemplify.LOGGER.info("Pushing case close reasons")
-            gitsync.content.push_case_close_causes(gitsync.api.get_close_reasons(chronicle_soar=siemplify))
+            gitsync.content.push_case_close_causes(
+                gitsync.api.get_close_reasons(chronicle_soar=siemplify)
+            )
 
         if features["Networks"]:
             siemplify.LOGGER.info("Pushing networks")
-            gitsync.content.push_networks(gitsync.api.get_networks(chronicle_soar=siemplify))
+            gitsync.content.push_networks(
+                gitsync.api.get_networks(chronicle_soar=siemplify)
+            )
 
         if features["Domains"]:
             siemplify.LOGGER.info("Pushing domains")
-            gitsync.content.push_domains(gitsync.api.get_domains(chronicle_soar=siemplify))
+            gitsync.content.push_domains(
+                gitsync.api.get_domains(chronicle_soar=siemplify)
+            )
 
         if features["Custom Lists"]:
             siemplify.LOGGER.info("Pushing custom lists")
-            gitsync.content.push_custom_lists(gitsync.api.get_custom_lists(chronicle_soar=siemplify))
+            gitsync.content.push_custom_lists(
+                gitsync.api.get_custom_lists(chronicle_soar=siemplify)
+            )
 
         if features["Email Templates"]:
             siemplify.LOGGER.info("Pushing email templates")
-            gitsync.content.push_email_templates(gitsync.api.get_email_templates(chronicle_soar=siemplify))
+            gitsync.content.push_email_templates(
+                gitsync.api.get_email_templates(chronicle_soar=siemplify)
+            )
 
         if features["Blacklists"]:
             siemplify.LOGGER.info("Pushing denylists")
-            gitsync.content.push_denylists(gitsync.api.get_denylists(chronicle_soar=siemplify))
+            gitsync.content.push_denylists(
+                gitsync.api.get_denylists(chronicle_soar=siemplify)
+            )
 
         if features["SLA Records"]:
             siemplify.LOGGER.info("Pushing SLA records")
-            gitsync.content.push_sla_definitions(gitsync.api.get_sla_records(chronicle_soar=siemplify))
+            gitsync.content.push_sla_definitions(
+                gitsync.api.get_sla_records(chronicle_soar=siemplify)
+            )
 
         siemplify.LOGGER.info("Done! uploading everything to git")
         gitsync.commit_and_push(commit_msg)

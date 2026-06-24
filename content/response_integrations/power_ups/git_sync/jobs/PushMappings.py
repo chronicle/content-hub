@@ -37,18 +37,20 @@ def main():
         siemplify.LOGGER.info(f"Pushing mappings of {source}")
         all_records = gitsync.api.get_ontology_records(chronicle_soar=siemplify)
         records_integrations = {x.get("source") for x in all_records if x.get("source")}
-        
+
         if source:
             matched_integration = None
             for integration in records_integrations:
                 if integration.lower() == source.lower():
                     matched_integration = integration
                     break
-            
+
             if matched_integration:
                 records_integrations = {matched_integration}
             else:
-                siemplify.LOGGER.warn(f"Source '{source}' not found in ontology records. Pushing nothing.")
+                siemplify.LOGGER.warn(
+                    f"Source '{source}' not found in ontology records. Pushing nothing."
+                )
                 records_integrations = set()
 
         for integration in records_integrations:
@@ -73,7 +75,9 @@ def main():
                             return rule
                         if isinstance(rule, dict):
                             if "familyFields" in rule or "systemFields" in rule:
-                                return rule.get("familyFields", []) + rule.get("systemFields", [])
+                                return rule.get("familyFields", []) + rule.get(
+                                    "systemFields", []
+                                )
                             elif "mapping_rules" in rule:
                                 return rule.get("mapping_rules", [])
                             elif "mappingRules" in rule:
@@ -89,7 +93,10 @@ def main():
                     for r in get_fields(rule):
                         mapping_rule = get_mapping_rule(r, rule)
                         rule_source = mapping_rule.get("source")
-                        if not rule_source or rule_source.lower() == integration.lower():
+                        if (
+                            not rule_source
+                            or rule_source.lower() == integration.lower()
+                        ):
                             if isinstance(rule, list):
                                 rules.append(r)
                             else:
@@ -97,12 +104,13 @@ def main():
                                 break
                 if readme_addon:
                     siemplify.LOGGER.info(
-                        "Readme addon found - adding to GitSync metadata file (GitSync.json)",
+                        "Readme addon found - "
+                        "adding to GitSync metadata file (GitSync.json)",
                     )
-                    gitsync.content.metadata.set_readme_addon("Mappings", integration, readme_addon)
+                    gitsync.content.metadata.set_readme_addon(
+                        "Mappings", integration, readme_addon
+                    )
                 gitsync.content.push_mapping(Mapping(integration, records, rules))
-
-
 
         gitsync.commit_and_push(commit_msg)
 

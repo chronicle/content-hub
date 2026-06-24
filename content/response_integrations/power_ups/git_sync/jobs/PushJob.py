@@ -63,13 +63,12 @@ def main():
                 and job_name not in IGNORED_JOBS
                 and job.get("integration") != INTEGRATION_NAME
             ):
-                siemplify.LOGGER.info(
-                    f"Pushing {job.get(job_name)}"
-                )
+                siemplify.LOGGER.info(f"Pushing {job.get(job_name)}")
                 job = Job(job)
                 if readme_addon:
                     siemplify.LOGGER.info(
-                        "Readme addon found - adding to GitSync metadata file (GitSync.json)",
+                        "Readme addon found - "
+                        "adding to GitSync metadata file (GitSync.json)",
                     )
                     gitsync.content.metadata.set_readme_addon(
                         "Job",

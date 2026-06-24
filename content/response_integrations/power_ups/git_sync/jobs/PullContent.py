@@ -27,7 +27,6 @@ from TIPCommon.data_models import (
     CustomList,
     Network,
     CaseCloseReasons,
-    SlaDefinition,
     Environment,
     SimulatedCases,
 )
@@ -50,7 +49,11 @@ def id_validator(resource, fields_to_compare, id_field, current_state):
     if isinstance(fields_to_compare, str):
         fields_to_compare = [fields_to_compare]
     current = next(
-        (x for x in current_state if all(x[y] == resource[y] for y in fields_to_compare)),
+        (
+            x
+            for x in current_state
+            if all(x[y] == resource[y] for y in fields_to_compare)
+        ),
         None,
     )
     if current:
@@ -70,12 +73,8 @@ def main():
     try:
         gitsync = GitSyncManager.from_siemplify_object(siemplify)
 
-        if features["Dynamic Parameters"]: # 20 jan
+        if features["Dynamic Parameters"]:
             siemplify.LOGGER.info("======== Environment Dynamic Parameters ========")
-
-            # current_parameters = gitsync.api.get_env_dynamic_parameters(chronicle_soar=siemplify)
-
-            # current_by_name = {p.get("name"): p for p in current_parameters}
 
             for dyn_param in gitsync.content.get_dynamic_parameters():
                 name = dyn_param.get("name")
@@ -97,7 +96,7 @@ def main():
 
                 if existing_env:
                     environment["id"] = existing_env.identifier
-                    environment["name"] = existing_env.name  # 🔒 preserve immutable name
+                    environment["name"] = existing_env.name
                     siemplify.LOGGER.info(f"Updating environment {env_name}")
                 else:
                     siemplify.LOGGER.info(f"Adding environment {env_name}")
@@ -138,15 +137,21 @@ def main():
                             x
                             for x in current_instances
                             if x.environment_identifier == instance["environment"]
-                            and x.integration_identifier == instance["integrationIdentifier"]
+                            and x.integration_identifier
+                            == instance["integrationIdentifier"]
                             and x.instance_name == instance["settings"]["instanceName"]
                         ),
                         None,
                     )
 
                     if current:
-                        display_name = instance.get("displayName") or instance["settings"].get("instanceName")
-                        if platform_supports_1p_api() and display_name == "System Default Instance":
+                        display_name = instance.get("displayName") or instance[
+                            "settings"
+                        ].get("instanceName")
+                        if (
+                            platform_supports_1p_api()
+                            and display_name == "System Default Instance"
+                        ):
                             siemplify.LOGGER.info(f"Skipping update for {display_name}")
                             continue
 
@@ -173,7 +178,9 @@ def main():
 
                     settings_to_save = instance["settings"]
                     if platform_supports_1p_api():
-                        settings_to_save = IntegrationInstance.from_dict(instance).to_1p(instance_identifier)
+                        settings_to_save = IntegrationInstance.from_dict(
+                            instance
+                        ).to_1p(instance_identifier)
 
                     gitsync.api.save_integration_instance_settings(
                         instance_identifier=instance_identifier,
@@ -191,7 +198,6 @@ def main():
             for connector in gitsync.content.get_connectors():
                 gitsync.install_connector(connector)
 
-
         if features["Jobs"]:
             siemplify.LOGGER.info("========== Jobs ==========")
             for job in gitsync.content.get_jobs():
@@ -202,11 +208,9 @@ def main():
             siemplify.LOGGER.info("Installing Simulated Cases")
 
             for raw_payload in gitsync.content.get_simulated_cases():
-                normalized_payload = (
-                    SimulatedCases
-                    .from_legacy_or_1p(raw_payload)
-                    .to_1p()
-                )
+                normalized_payload = SimulatedCases.from_legacy_or_1p(
+                    raw_payload
+                ).to_1p()
 
                 gitsync.api.import_simulated_case(
                     siemplify,
@@ -224,20 +228,21 @@ def main():
                         (
                             x
                             for x in current_tags
-                            if (x.get("displayName") or x.get("name")) == git_tag_obj.name
+                            if (x.get("displayName") or x.get("name"))
+                            == git_tag_obj.name
                         ),
                         None,
                     )
                     if existing_tag:
-                        gitsync.api.update_case_tag(siemplify, current_tag, existing_tag)
+                        gitsync.api.update_case_tag(
+                            siemplify, current_tag, existing_tag
+                        )
                     else:
                         gitsync.api.add_case_tag(siemplify, current_tag)
                 else:
                     current_tag = id_validator(tag, "name", "id", current_tags)
                     current_tag = CaseTag.from_json(current_tag).to_json()
                     gitsync.api.add_case_tag(siemplify, current_tag)
-
-
 
         if features["Case Stages"]:
             siemplify.LOGGER.info("Installing stages")
@@ -256,12 +261,12 @@ def main():
             siemplify.LOGGER.info("Installing case close reasons")
             current_causes = gitsync.api.get_close_reasons(chronicle_soar=siemplify)
             for cause in gitsync.content.get_case_close_causes():
-                current_cause= id_validator(
-                        cause,
-                        "rootCause",
-                        "id",
-                        current_causes,
-                    )
+                current_cause = id_validator(
+                    cause,
+                    "rootCause",
+                    "id",
+                    current_causes,
+                )
                 current_cause = (
                     CaseCloseReasons.from_legacy_or_1p(current_cause).to_1p()
                     if platform_supports_1p_api()
@@ -272,24 +277,26 @@ def main():
                     current_cause["forCloseReason"] = cause["forCloseReason"]
                 gitsync.api.add_close_reason(siemplify, current_cause)
 
-
         if features["Case Title Settings"]:
             case_title_settings = gitsync.content.get_case_titles()
             if case_title_settings:
                 siemplify.LOGGER.info("Installing case title settings")
 
-                if isinstance(case_title_settings, dict) and "items" in case_title_settings:
+                if (
+                    isinstance(case_title_settings, dict)
+                    and "items" in case_title_settings
+                ):
                     for item in case_title_settings.get("items", []):
                         val = item.get("value")
                         if not val or not val.strip():
                             continue
-                        
+
                         gitsync.api.save_case_title_settings(
                             name=item.get("name"),
                             display_name=item.get("displayName"),
                             value=val,
                             type_=item.get("type", 2),
-                            settings=None
+                            settings=None,
                         )
 
                 elif isinstance(case_title_settings, list):
@@ -298,43 +305,66 @@ def main():
                         display_name=None,
                         value=None,
                         type_=None,
-                        settings=case_title_settings
-                )
+                        settings=case_title_settings,
+                    )
 
         if features["Visual Families"]:
             siemplify.LOGGER.info("Installing visual families")
             current_vfs = gitsync.api.get_custom_families(chronicle_soar=siemplify)
-            all_records = gitsync.api.get_ontology_records(chronicle_soar=siemplify) #vf
-            valid_record_id = all_records[0].get("id") if all_records else None #vf
+            all_records = gitsync.api.get_ontology_records(chronicle_soar=siemplify)
+            valid_record_id = all_records[0].get("id") if all_records else None
             for family in gitsync.content.get_visual_families():
-                validated_family = id_validator(family.raw_data, "family", "id", current_vfs)
-                
+                validated_family = id_validator(
+                    family.raw_data, "family", "id", current_vfs
+                )
+
                 if platform_supports_1p_api():
                     name_to_check = validated_family.get("family")
                     existing_vf = next(
                         (vf for vf in current_vfs if vf.get("family") == name_to_check),
-                        None
+                        None,
                     )
                     if existing_vf:
-                        siemplify.LOGGER.info(f"Updating visual family \"{name_to_check}\"")
-                        gitsync.api.update_visual_family(validated_family, existing_vf, valid_record_id)
+                        siemplify.LOGGER.info(
+                            f'Updating visual family "{name_to_check}"'
+                        )
+                        gitsync.api.update_visual_family(
+                            validated_family, existing_vf, valid_record_id
+                        )
                     else:
-                        siemplify.LOGGER.info(f"Installing visual family \"{name_to_check}\"")
+                        siemplify.LOGGER.info(
+                            f'Installing visual family "{name_to_check}"'
+                        )
                         response_content = gitsync.api.add_custom_family(
                             {"visualFamilyDataModel": validated_family},
                             valid_record_id,
                         )
                         try:
-                            created_vf = json.loads(response_content.decode('utf-8'))
+                            created_vf = json.loads(response_content.decode("utf-8"))
                             created_id = created_vf.get("id")
                             if created_id:
-                                siemplify.LOGGER.info(f"Successfully created visual family \"{name_to_check}\" with ID {created_id}. Now updating image via PATCH.")
-                                new_existing_vf = {"id": created_id, "family": name_to_check}
-                                gitsync.api.update_visual_family(validated_family, new_existing_vf, valid_record_id)
+                                siemplify.LOGGER.info(
+                                    "Successfully created visual "
+                                    f'family "{name_to_check}" with ID {created_id}.'
+                                    " Now updating image via PATCH."
+                                )
+                                new_existing_vf = {
+                                    "id": created_id,
+                                    "family": name_to_check,
+                                }
+                                gitsync.api.update_visual_family(
+                                    validated_family, new_existing_vf, valid_record_id
+                                )
                             else:
-                                siemplify.LOGGER.warn(f"Created visual family response did not contain ID: {response_content}")
+                                siemplify.LOGGER.warn(
+                                    f"Created visual family response did not "
+                                    f"contain ID: {response_content}"
+                                )
                         except Exception as e:
-                            siemplify.LOGGER.error(f"Failed to parse response or update image for new family: {e}")
+                            siemplify.LOGGER.error(
+                                "Failed to parse response or "
+                                f"update image for new family: {e}"
+                            )
                 else:
                     gitsync.api.add_custom_family(
                         {
@@ -388,21 +418,36 @@ def main():
 
         if features["Email Templates"]:
             siemplify.LOGGER.info("Installing email templates")
-            current_templates = gitsync.api.get_email_templates(chronicle_soar=siemplify)
+            current_templates = gitsync.api.get_email_templates(
+                chronicle_soar=siemplify
+            )
             for template in gitsync.content.get_email_templates():
-                validated_template = id_validator(template, "name", "id", current_templates)
-                
+                validated_template = id_validator(
+                    template, "name", "id", current_templates
+                )
+
                 if platform_supports_1p_api():
                     name_to_check = template.get("displayName") or template.get("name")
                     existing_template = next(
-                        (t for t in current_templates if t.get("displayName") == name_to_check or t.get("name") == name_to_check),
-                        None
+                        (
+                            t
+                            for t in current_templates
+                            if t.get("displayName") == name_to_check
+                            or t.get("name") == name_to_check
+                        ),
+                        None,
                     )
                     if existing_template:
-                        siemplify.LOGGER.info(f"Updating email template \"{name_to_check}\"")
-                        gitsync.api.update_email_template(validated_template, existing_template)
+                        siemplify.LOGGER.info(
+                            f'Updating email template "{name_to_check}"'
+                        )
+                        gitsync.api.update_email_template(
+                            validated_template, existing_template
+                        )
                     else:
-                        siemplify.LOGGER.info(f"Installing email template \"{name_to_check}\"")
+                        siemplify.LOGGER.info(
+                            f'Installing email template "{name_to_check}"'
+                        )
                         gitsync.api.add_email_template(validated_template)
                 else:
                     gitsync.api.add_email_template(validated_template)
@@ -414,26 +459,41 @@ def main():
                 try:
                     denylists = json.loads(denylists)
                 except Exception:
-                    siemplify.LOGGER.warn(f"Failed to parse denylists string as JSON: {denylists}")
+                    siemplify.LOGGER.warn(
+                        f"Failed to parse denylists string as JSON: {denylists}"
+                    )
                     denylists = []
 
             if isinstance(denylists, dict):
-                denylists = denylists.get("soar_block_entities") or denylists.get("items") or denylists.get("soarBlockEntities") or []
+                denylists = (
+                    denylists.get("soar_block_entities")
+                    or denylists.get("items")
+                    or denylists.get("soarBlockEntities")
+                    or []
+                )
 
             for definition in denylists:
                 if isinstance(definition, str):
                     try:
                         definition = json.loads(definition)
                     except Exception:
-                        siemplify.LOGGER.warn(f"Skipping invalid denylist definition (not valid JSON): {definition}")
+                        siemplify.LOGGER.warn(
+                            "Skipping invalid denylist definition "
+                            f"(not valid JSON): {definition}"
+                        )
                         continue
 
                 if not isinstance(definition, dict):
-                    siemplify.LOGGER.warn(f"Skipping invalid denylist definition (expected dict, got {type(definition)}): {definition}")
+                    siemplify.LOGGER.warn(
+                        "Skipping invalid denylist definition (expected dict, got "
+                        f"{type(definition)}): {definition}"
+                    )
                     continue
 
                 action_val = definition.get("action") or definition.get("Action")
-                envs_json_val = definition.get("environmentsJson") or definition.get("EnvironmentsJson")
+                envs_json_val = definition.get("environmentsJson") or definition.get(
+                    "EnvironmentsJson"
+                )
 
                 definition = (
                     BlockRecord.from_legacy_or_1p(definition).to_1p()
@@ -446,7 +506,7 @@ def main():
                 if envs_json_val:
                     definition["environmentsJson"] = envs_json_val
                 gitsync.api.update_denylist(siemplify, definition)
-        
+
         if features["SLA Records"]:
             siemplify.LOGGER.info("Installing SLA definition")
             current_sla_records = gitsync.api.get_sla_records(chronicle_soar=siemplify)
@@ -454,27 +514,56 @@ def main():
                 if not isinstance(definition, dict):
                     continue
 
-                def_type = definition.get("slaType") or definition.get("Type") or definition.get("valueType")
-                def_val = definition.get("slaTypeValue") or definition.get("TypeValue") or definition.get("value")
-                def_envs = definition.get("environments") or ([definition.get("environment")] if definition.get("environment") else []) or ([definition.get("Environment")] if definition.get("Environment") else [])
+                def_type = (
+                    definition.get("slaType")
+                    or definition.get("Type")
+                    or definition.get("valueType")
+                )
+                def_val = (
+                    definition.get("slaTypeValue")
+                    or definition.get("TypeValue")
+                    or definition.get("value")
+                )
+                def_envs = (
+                    definition.get("environments")
+                    or (
+                        [definition.get("environment")]
+                        if definition.get("environment")
+                        else []
+                    )
+                    or (
+                        [definition.get("Environment")]
+                        if definition.get("Environment")
+                        else []
+                    )
+                )
                 def_envs = [e for e in def_envs if e]
-                
+
                 is_duplicate = False
                 for c in current_sla_records:
                     if not isinstance(c, dict):
                         continue
                     c_type = c.get("slaType") or c.get("Type") or c.get("valueType")
-                    c_val = c.get("slaTypeValue") or c.get("TypeValue") or c.get("value")
-                    c_envs = c.get("environments") or ([c.get("environment")] if c.get("environment") else []) or ([c.get("Environment")] if c.get("Environment") else [])
+                    c_val = (
+                        c.get("slaTypeValue") or c.get("TypeValue") or c.get("value")
+                    )
+                    c_envs = (
+                        c.get("environments")
+                        or ([c.get("environment")] if c.get("environment") else [])
+                        or ([c.get("Environment")] if c.get("Environment") else [])
+                    )
                     c_envs = [e for e in c_envs if e]
-                    
+
                     if c_type == def_type and c_val == def_val:
                         if any(e in def_envs for e in c_envs):
                             is_duplicate = True
                             break
-                
+
                 if is_duplicate:
-                    siemplify.LOGGER.info(f"SLA Record of type \"{def_type}\" (\"{def_val}\") already exists for overlapping environments. Skipping.")
+                    siemplify.LOGGER.info(
+                        f'SLA Record of type "{def_type}" ("{def_val}") '
+                        "already exists for overlapping environments. Skipping."
+                    )
                     continue
 
                 try:
@@ -498,7 +587,7 @@ def main():
                             val = item["value"]
                             if not val.startswith("data:image/png;base64,"):
                                 item["value"] = "data:image/png;base64," + val
-                    
+
                         payload = item
                         gitsync.api.update_logo(payload)
 
@@ -506,7 +595,6 @@ def main():
                 else:
                     gitsync.api.update_logo(gitsync.content.get_logo())
                 siemplify.LOGGER.info("Finished Successfully")
-        
 
     except Exception as e:
         siemplify.LOGGER.error(f"General error performing Job {SCRIPT_NAME}")

@@ -77,12 +77,11 @@ def main():
 
                 if readme_addon:
                     siemplify.LOGGER.info(
-                        "Readme addon found - adding to GitSync metadata file (GitSync.json)",
+                        "Readme addon found - "
+                        "adding to GitSync metadata file (GitSync.json)",
                     )
                     content_type = (
-                        "Block"
-                        if workflow.type == WorkflowTypes.BLOCK
-                        else "Playbook"
+                        "Block" if workflow.type == WorkflowTypes.BLOCK else "Playbook"
                     )
                     gitsync.content.metadata.set_readme_addon(
                         content_type,
@@ -108,7 +107,8 @@ def main():
 
                         if not installed_block:
                             siemplify.LOGGER.warn(
-                                f"Block '{block_step.get('name')}' not found in installed playbooks. Skipping."
+                                f"Block '{block_step.get('name')}' not "
+                                "found in installed playbooks. Skipping."
                             )
                             continue
 
@@ -120,7 +120,9 @@ def main():
                         if block_definition:
                             block = Workflow(block_definition)
                             block.update_instance_name_in_steps(gitsync.api, siemplify)
-                            gitsync.content.push_block(block, category=workflow.category)
+                            gitsync.content.push_block(
+                                block, category=workflow.category
+                            )
             else:
                 siemplify.LOGGER.warn(
                     f"Playbook {playbook.get('name')} not found, Skipping",
