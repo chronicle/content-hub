@@ -209,14 +209,15 @@ def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, all
     flat_view_data = _denormalize_pushed_view(cast("BuiltOverview", view_data))
 
     # Resolve ID from server to perform UPDATE instead of INSERT
-    existing_id = _resolve_existing_view_id(backend_api, flat_view_data.get("identifier"))
-    if existing_id is not None:
+    existing_identifier = flat_view_data.get("identifier")
+    existing_id = _resolve_existing_view_id(backend_api, existing_identifier)
+    if existing_id is not None and existing_identifier:
         logger.info("Resolved existing view ID %s on server.", existing_id)
         flat_view_data["id"] = existing_id
 
         # Verify that we are not adding new widgets unless allow_create is True
         try:
-            existing_view = backend_api.download_view(flat_view_data.get("identifier"))
+            existing_view = backend_api.download_view(existing_identifier)
             existing_widget_ids = set()
             for w in existing_view.get("widgets") or []:
                 meta = w.get("metadata") or {}
