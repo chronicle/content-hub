@@ -17,12 +17,11 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, NotRequired, Self, TypedDict, cast
 
-import yaml
-
 import mp.core.constants
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum, SequentialMetadata
 from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
+from mp.core.file_utils import load_yaml_file
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -127,7 +126,8 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
         all_widget: list[PlaybookWidgetMetadata] = PlaybookWidgetMetadata.from_non_built_path(path)
         res: list[Self] = []
 
-        for non_built_overview in yaml.safe_load(meta_path.read_text(encoding="utf-8")):
+        overviews_data = cast("list[NonBuiltOverview]", load_yaml_file(meta_path) or [])
+        for non_built_overview in overviews_data:
             widget_details: list[OverviewWidgetDetails] = non_built_overview.get("widgets_details", [])
             widget_names: frozenset[WidgetName] = frozenset([w_d["title"] for w_d in widget_details])
             widgets: list[PlaybookWidgetMetadata] = [w for w in all_widget if w.title in widget_names]
@@ -158,7 +158,7 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
 
         non_built_view: NonBuiltOverview = cast(
             "NonBuiltOverview",
-            yaml.safe_load(view_yaml_path.read_text(encoding="utf-8")) or {},
+            load_yaml_file(view_yaml_path) or {},
         )
 
         # Load all widgets from widgets/ directory
