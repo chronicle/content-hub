@@ -213,6 +213,35 @@ def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, all
     if existing_id is not None:
         logger.info("Resolved existing view ID %s on server.", existing_id)
         flat_view_data["id"] = existing_id
+
+        # Verify that we are not adding new widgets unless allow_create is True
+        try:
+            existing_view = backend_api.download_view(flat_view_data.get("identifier"))
+            existing_widget_ids = set()
+            for w in existing_view.get("widgets") or []:
+                meta = w.get("metadata") or {}
+                w_id = meta.get("identifier")
+                if w_id:
+                    existing_widget_ids.add(w_id.lower())
+
+            for w in flat_view_data.get("widgets") or []:
+                meta = w.get("metadata") or {}
+                w_id = meta.get("identifier")
+                if not w_id or w_id.lower() not in existing_widget_ids:
+                    if not allow_create:
+                        logger.error(
+                            "Widget '%s' (UUID: '%s') does not exist in the view on the platform.",
+                            meta.get("title") or "unnamed",
+                            w_id or "missing",
+                        )
+                        logger.error(
+                            "Creation of new widgets is blocked by default. Use the --allow-create flag to force creation."
+                        )
+                        raise typer.Exit(1)
+        except typer.Exit:
+            raise
+        except Exception as ex:  # noqa: BLE001
+            logger.warning("Failed to verify existing widgets on server: %s. Proceeding.", ex)
     elif not allow_create:
         logger.error("View '%s' (UUID: '%s') does not exist on the platform.", view_name_or_id, flat_view_data.get("identifier"))
         logger.error("Creation of new views is blocked by default. Use the --allow-create flag to force creation.")
