@@ -6,5 +6,5 @@ Google SecOps parser for [Jamf for Mac Threat Prevention](https://learn.jamf.com
 
 - Jamf Protect agent version 8.12.0 or later
 - Enable beta on the Plan settings page
-- Create a pland with either Managed or Custom strategies
+- Create a plan with either Managed or Custom strategies
 
