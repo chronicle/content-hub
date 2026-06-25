@@ -32,6 +32,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from mp.core.data_models.common.overview.metadata import BuiltOverview, BuiltOverviewDetails
+    from mp.dev_env.api import BackendAPI
 
 
 @pull_app.command(name="view")
@@ -63,17 +64,6 @@ def pull_view(
         raise typer.Exit(1) from e
 
     view_identifier = _find_view_identifier(view_name_or_id, installed_views)
-    logger.info("Downloading view '%s' (ID: %s)...", view_name_or_id, view_identifier)
-
-    try:
-        built_view_data = backend_api.download_view(view_identifier)
-    except Exception as e:
-        logger.exception("Failed to download view '%s'", view_name_or_id)
-        raise typer.Exit(1) from e
-
-    if not isinstance(built_view_data, dict):
-        logger.error("Downloaded view data is not a valid JSON object.")
-        raise typer.Exit(1)
 
     # Determine destination path
     if dst is None:
@@ -82,7 +72,28 @@ def pull_view(
     else:
         dst /= view_identifier
 
-    # Parse built payload into Overview model and deconstruct
+    download_and_deconstruct_view(backend_api, view_identifier, dst)
+    logger.info("✅ View '%s' pulled and deconstructed successfully to %s", view_name_or_id, dst)
+
+
+def download_and_deconstruct_view(backend_api: BackendAPI, view_identifier: str, dst: Path) -> None:
+    """Download and deconstruct a view template from the SOAR environment directly to the destination path.
+
+    Raises:
+        typer.Exit: If the download or deconstruction fails.
+
+    """
+    logger.info("Downloading view (ID: %s)...", view_identifier)
+    try:
+        built_view_data = backend_api.download_view(view_identifier)
+    except Exception as e:
+        logger.exception("Failed to download view '%s'", view_identifier)
+        raise typer.Exit(1) from e
+
+    if not isinstance(built_view_data, dict):
+        logger.error("Downloaded view data is not a valid JSON object.")
+        raise typer.Exit(1)
+
     try:
         normalized_view_data = _normalize_downloaded_view(built_view_data)
         overview = Overview.from_built(normalized_view_data)
@@ -90,10 +101,8 @@ def pull_view(
         deconstructor = ViewDeconstructor(overview, dst)
         deconstructor.deconstruct()
     except Exception as e:
-        logger.exception("Deconstruction failed for view '%s'", view_name_or_id)
+        logger.exception("Deconstruction failed for view '%s'", view_identifier)
         raise typer.Exit(1) from e
-
-    logger.info("✅ View '%s' pulled and deconstructed successfully to %s", view_name_or_id, dst)
 
 
 def _find_view_identifier(view_name_or_id: str, installed_views: list[dict[str, Any]] | None) -> str:

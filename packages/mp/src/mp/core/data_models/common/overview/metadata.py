@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, NotRequired, Self, TypedDict, cast
 import mp.core.constants
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum, SequentialMetadata
+from mp.core.data_models.common.widget.data import WidgetSize
 from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 from mp.core.file_utils import load_yaml_file
 
@@ -174,7 +175,12 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
         for w_d in widget_details:
             title = w_d.get("title")
             if title and title in widget_by_title and widget_by_title[title]:
-                widgets.append(widget_by_title[title].pop(0))
+                widget = widget_by_title[title].pop(0)
+                if "order" in w_d:
+                    widget.order = w_d["order"]
+                if "size" in w_d:
+                    widget.widget_size = WidgetSize.from_string(w_d["size"])
+                widgets.append(widget)
 
         ov: Self = cls._from_non_built(non_built_view)
         ov.widgets = widgets

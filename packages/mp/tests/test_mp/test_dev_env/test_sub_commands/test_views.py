@@ -118,7 +118,46 @@ def test_push_view_cli(
     mock_get_backend_api.return_value = mock_api
     mock_api.upload_view.return_value = {"success": True}
     mock_api.list_views.return_value = [{"identifier": "system_case_default", "id": 100}]
-    mock_api.download_view.return_value = {"widgets": [{"metadata": {"identifier": "widget_one_id"}}]}
+
+    download_mock_response = {
+        "identifier": "system_case_default",
+        "name": "Default Case View - Server Updated Name",
+        "creator": "system",
+        "playbookIdentifier": "playbook_1",
+        "type": 3,  # SYSTEM_CASE
+        "alertRuleType": None,
+        "widgets": [
+            {
+                "metadata": {
+                    "title": "Widget One",
+                    "description": "HTML Widget",
+                    "identifier": "widget_one_id",
+                    "order": 1,
+                    "templateIdentifier": "temp_one",
+                    "type": 3,  # HTML
+                    "width": 1,
+                    "actionWidgetTemplateIdentifier": None,
+                    "stepIdentifier": None,
+                    "stepIntegration": None,
+                    "blockStepIdentifier": None,
+                    "blockStepInstanceName": None,
+                    "presentIfEmpty": False,
+                    "conditionsGroup": {"logicalOperator": 1, "conditions": []},
+                    "integrationName": None,
+                },
+                "config": {
+                    "htmlHeight": 100,
+                    "safeRendering": True,
+                    "widgetDefinitionScope": 1,
+                    "type": 3,
+                    "htmlContent": "<h1>Hello from server</h1>",
+                },
+            }
+        ],
+        "roles": [1, 2],
+        "roleNames": ["Tier 1", "Tier 2"],
+    }
+    mock_api.download_view.return_value = download_mock_response
 
     # Setup source directory structure to build from
     src_dir = tmp_path / "views"
@@ -192,6 +231,16 @@ def test_push_view_cli(
     assert len(widgets) == 1
     assert widgets[0]["metadata"]["title"] == "Widget One"
     assert widgets[0]["config"]["htmlContent"] == "<h1>Hello from push</h1>"
+
+    # Verify automatic pull-back updated local directory with server values
+    assert mock_api.download_view.call_count == 2
+    assert (view_folder / "view.yaml").exists()
+    with (view_folder / "view.yaml").open(encoding="utf-8") as f:
+        updated_view_data = yaml.safe_load(f)
+    assert updated_view_data["name"] == "Default Case View - Server Updated Name"
+
+    assert (view_folder / "widgets" / "Widget One.html").exists()
+    assert (view_folder / "widgets" / "Widget One.html").read_text(encoding="utf-8") == "<h1>Hello from server</h1>"
 
 
 @mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")

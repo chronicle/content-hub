@@ -28,6 +28,7 @@ import mp.core.file_utils
 from mp.build_project.restructure.views.build import ViewBuilder
 from mp.core.utils import to_snake_case
 from mp.dev_env.sub_commands.push import push_app
+from mp.dev_env.sub_commands.view.pull import download_and_deconstruct_view
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
 
@@ -94,6 +95,18 @@ def push_view(
 
     # 4. Upload to SOAR
     _upload_built_view_data(view_data, view_name_or_id, allow_create=allow_create)
+
+    # 5. Automatically pull back the view from the server to sync local changes (e.g. order, system predefined details)
+    view_identifier = view_data.get("OverviewTemplate", {}).get("Identifier")
+    if view_identifier:
+        logger.info(
+            "Automatically pulling back view '%s' (ID: %s) to sync local folder...",
+            view_name_or_id,
+            view_identifier,
+        )
+        config = load_dev_env_config()
+        backend_api = get_backend_api(config)
+        download_and_deconstruct_view(backend_api, view_identifier, view_src_path)
 
 
 def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
