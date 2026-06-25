@@ -73,7 +73,7 @@ def pull_view(
         dst /= view_identifier
 
     download_and_deconstruct_view(backend_api, view_identifier, dst)
-    logger.info("✅ View '%s' pulled and deconstructed successfully to %s", view_name_or_id, dst)
+    logger.info("View '%s' pulled and deconstructed successfully to %s", view_name_or_id, dst)
 
 
 def download_and_deconstruct_view(backend_api: BackendAPI, view_identifier: str, dst: Path) -> None:

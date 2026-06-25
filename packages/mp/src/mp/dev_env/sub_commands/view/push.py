@@ -209,6 +209,7 @@ def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -
 
 def _verify_widgets(
     backend_api: BackendAPI,
+    view_name_or_id: str,
     existing_identifier: str,
     flat_view_data: dict[str, Any],
     *,
@@ -247,6 +248,7 @@ def _verify_widgets(
                     "Creation of new widgets is blocked by default. "
                     "Use the --allow-create flag to force creation."
                 )
+                logger.error("Failed to push view '%s'.", view_name_or_id)
                 raise typer.Exit(1)
 
 
@@ -270,6 +272,7 @@ def _validate_push_preconditions(
         flat_view_data["id"] = existing_id
         _verify_widgets(
             backend_api,
+            view_name_or_id,
             existing_identifier,
             flat_view_data,
             allow_create=allow_create,
@@ -284,6 +287,7 @@ def _validate_push_preconditions(
             "Creation of new views is blocked by default. "
             "Use the --allow-create flag to force creation."
         )
+        logger.error("Failed to push view '%s'.", view_name_or_id)
         raise typer.Exit(1)
 
 
@@ -319,7 +323,7 @@ def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, *, 
         logger.exception("Upload failed for view '%s'", view_name_or_id)
         raise typer.Exit(1) from e
 
-    logger.info("✅ View '%s' pushed successfully.", view_name_or_id)
+    logger.info("View '%s' pushed successfully.", view_name_or_id)
 
 
 def _find_view_dir_in_root(views_root: Path, view_name_or_id: str) -> Path | None:
@@ -377,6 +381,12 @@ def _get_view_path_by_name(view_name_or_id: str, src: Path | None = None) -> Pat
     candidate = views_root / view_name_or_id
     if candidate.is_dir():
         return candidate
+
+    # Check case-insensitively under views_root
+    if views_root.is_dir():
+        for folder in views_root.iterdir():
+            if folder.is_dir() and folder.name.lower() == view_name_or_id.lower():
+                return folder
 
     # 3. Check snake_case candidate under views_root
     candidate_snake = views_root / to_snake_case(view_name_or_id)
