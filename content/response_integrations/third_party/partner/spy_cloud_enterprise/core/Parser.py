@@ -92,7 +92,7 @@ def get_mapped_alert_severity(udm_event: dict[str, Any]) -> int | None:
 def get_source_spycloud_severity(udm_event: dict[str, Any]) -> int | None:
     """
     Original SpyCloud source severity preserved in extensions.
-    Expected values: 2, 5, 20, 25
+    Expected values: 2, 5, 20, 25, 30
     """
     extensions = get_udm_extensions(udm_event)
     value = extensions.get("severity")
@@ -220,6 +220,8 @@ def map_priority_from_mapped_severity(mapped_severity: Any) -> int:
 def build_rule_generator_from_udm(udm_event: dict[str, Any]) -> str:
     source_severity = get_source_spycloud_severity(udm_event)
 
+    if source_severity == 30:
+        return "SpyCloud Session Cookie Theft"
     if source_severity == 25:
         return "SpyCloud Malware Infection"
     if source_severity == 20:
@@ -241,6 +243,8 @@ def build_alert_name_from_udm(udm_event: dict[str, Any]) -> str:
     source_severity = get_source_spycloud_severity(udm_event)
     identifier = get_best_identifier_from_udm(udm_event)
 
+    if source_severity == 30:
+        return f"SpyCloud Session Cookie Theft - {identifier}"
     if source_severity == 25:
         return f"SpyCloud Malware Infection - {identifier}"
     if source_severity == 20:
@@ -261,6 +265,8 @@ def build_alert_name_from_udm(udm_event: dict[str, Any]) -> str:
 def build_event_name_from_udm(udm_event: dict[str, Any]) -> str:
     source_severity = get_source_spycloud_severity(udm_event)
 
+    if source_severity == 30:
+        return "SpyCloud Session Cookie Theft"
     if source_severity == 25:
         return "SpyCloud Malware Infection"
     if source_severity == 20:

@@ -533,6 +533,8 @@ class SpyCloudUdmConverter:
             ["email", "username", "infected_machine_id", "log_id", "target_url", "domain"],
         ) or "record"
 
+        if severity == 30:
+            return f"SpyCloud stolen session (identity + session cookie) detected for {identifier}"
         if severity == 25 or self.is_malware_record(record):
             return f"SpyCloud malware-related credential exposure detected for {identifier}"
         if severity == 20:
@@ -555,6 +557,8 @@ class SpyCloudUdmConverter:
 
     def get_product_event_type(self, record: dict[str, Any]) -> str:
         severity = self.get_severity(record)
+        if severity == 30:
+            return "SpyCloud Session Cookie Theft"
         if severity == 25 or self.is_malware_record(record):
             return "SpyCloud Malware Infection"
         if severity == 20:
@@ -649,6 +653,8 @@ class SpyCloudUdmConverter:
         severity: int | None,
         record: dict[str, Any] | None = None,
     ) -> str:
+        if severity == 30:
+            return "critical"
         if severity == 25:
             return "critical"
         if severity == 20:
@@ -691,6 +697,7 @@ class SpyCloudUdmConverter:
             5: 50,
             20: 80,
             25: 100,
+            30: 100,
         }.get(severity, 30)
 
         if self.first_present(record, ["infected_machine_id", "log_id"]):
