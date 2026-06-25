@@ -30,6 +30,7 @@ class Wiz:
     def __init__(self) -> None:
         self._issues: MutableMapping[str, Issue] = {}
         self._comments: MutableMapping[str, common.Comment] = {}
+        self._vulnerabilities: MutableMapping[str, list[SingleJson]] = {}
 
     def add_issue(self, issue: Issue) -> None:
         self._issues[issue.issue_id] = issue
@@ -48,3 +49,14 @@ class Wiz:
 
     def cleanup_issues(self) -> None:
         self._issues = {}
+
+    def add_vulnerability(self, resource_name: str, vuln: SingleJson) -> None:
+        if resource_name not in self._vulnerabilities:
+            self._vulnerabilities[resource_name] = []
+        self._vulnerabilities[resource_name].append(vuln)
+
+    def get_vulnerabilities(self, resource_name: str) -> list[SingleJson]:
+        return self._vulnerabilities.get(resource_name, [])
+
+    def cleanup_vulnerabilities(self) -> None:
+        self._vulnerabilities = {}

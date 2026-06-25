@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import dataclasses
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from TIPCommon.base.interfaces.logger import ScriptLogger
@@ -59,3 +58,20 @@ class IssueComment(BaseModel):
     def from_json(cls, json_data: SingleJson) -> IssueComment:
         """Create an IssueComment instance from JSON data."""
         return cls(raw_data=json_data, comment_id=json_data["id"])
+
+
+@dataclasses.dataclass(slots=True)
+class VulnerabilityFinding(BaseModel):
+    finding_id: str
+    name: str
+    severity: str
+
+    @classmethod
+    def from_json(cls, json_data: SingleJson) -> VulnerabilityFinding:
+        """Create a VulnerabilityFinding instance from JSON data."""
+        return cls(
+            raw_data=json_data,
+            finding_id=json_data["id"],
+            name=json_data.get("name", ""),
+            severity=json_data.get("severity", ""),
+        )
