@@ -19,11 +19,7 @@ from typing import TYPE_CHECKING
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 
-from ..core import action_init
-from ..core import api_client
-from ..core import constants
-from ..core import exceptions
-
+from ..core import action_init, api_client, constants, exceptions
 
 if TYPE_CHECKING:
     from typing import NoReturn
