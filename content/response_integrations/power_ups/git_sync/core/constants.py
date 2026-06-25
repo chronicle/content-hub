@@ -364,7 +364,7 @@ JOB_README = """## {{ job.displayName }}
 |Name|Type|Is Mandatory|Value|
 |----|----|------------|-----|
 {% for param in job.parameters -%}
-|{{ param.name or param.displayName }}|{{ (param.type|base_param_type) or param.type }}|{{ param.isMandatory or param.mandatory }}|{% if param.type != 3 and param.type != 'Password' %}{{ param.value or param.DefaultValue }}{% else %}*****{% endif %}|
+|{{ param.name or param.displayName }}|{{ (param.type|base_param_type) or param.type }}|{{ param.isMandatory or param.mandatory or 'False'}}|{% if param.type != 3 and param.type != 'Password' %}{{ param.value or param.DefaultValue }}{% else %}*****{% endif %}|
 {% endfor -%}
 {% endif %}
 
