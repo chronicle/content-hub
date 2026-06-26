@@ -19,9 +19,6 @@ from abc import ABC
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_configuration_param
 
-import email
-from email.header import decode_header
-
 from typing import TYPE_CHECKING
 
 from .api_client import ProofPointPSApiClient
