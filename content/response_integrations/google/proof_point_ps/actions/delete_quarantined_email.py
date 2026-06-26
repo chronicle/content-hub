@@ -22,7 +22,7 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import DELETE_ACTION_NAME
-from ..core.exceptions import ProofPointPSError, ProofPointPSHTTPError
+from ..core.exceptions import ProofPointPSError
 
 if TYPE_CHECKING:
     from typing import Never

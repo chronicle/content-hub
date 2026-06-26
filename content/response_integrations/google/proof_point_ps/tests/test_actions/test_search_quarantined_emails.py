@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import datetime
-import pytest
 from typing import TYPE_CHECKING
 
 from integration_testing.common import create_entity

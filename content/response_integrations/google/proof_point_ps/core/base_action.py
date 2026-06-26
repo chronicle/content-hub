@@ -22,10 +22,15 @@ from TIPCommon.extraction import extract_configuration_param
 import email
 from email.header import decode_header
 
+from typing import TYPE_CHECKING
+
 from .api_client import ProofPointPSApiClient
 from .auth import AuthenticatedSession, SessionAuthenticationParameters
 from .constants import PROVIDER
 from .exceptions import ProofPointPSError
+
+if TYPE_CHECKING:
+    from .data_models import QuarantineRecord
 
 
 class BaseProofPointPSAction(Action, ABC):
@@ -88,60 +93,6 @@ class BaseProofPointPSAction(Action, ABC):
     def result_value(self, value: bool) -> None:
         self._result_value = value
 
-    def _parse_email_details(self, raw_content: bytes, guid: str, folder: str) -> dict:
-        """Parse raw email bytes to extract complete message details.
-
-        Args:
-            raw_content: Raw email bytes.
-            guid: Message GUID.
-            folder: Quarantine folder.
-
-        Returns:
-            A dict containing parsed message metadata.
-
-        """
-        def decode_mime_header(header_val: str | None) -> str:
-            if not header_val:
-                return ""
-            try:
-                decoded_parts = decode_header(header_val)
-                result_parts = []
-                for part, encoding in decoded_parts:
-                    if isinstance(part, bytes):
-                        result_parts.append(
-                            part.decode(encoding or "utf-8", errors="replace")
-                        )
-                    else:
-                        result_parts.append(str(part))
-                return "".join(result_parts).strip()
-            except Exception:
-                return str(header_val).strip()
-
-        try:
-            msg = email.message_from_bytes(raw_content)
-            return {
-                "processingserver": "N/A",  # Not present in raw email
-                "date": decode_mime_header(msg.get("Date")),
-                "subject": decode_mime_header(msg.get("Subject")),
-                "messageid": decode_mime_header(msg.get("Message-ID")),
-                "folder": folder,
-                "size": len(raw_content),
-                "rcpts": [decode_mime_header(msg.get("To"))] if msg.get("To") else [],
-                "from": decode_mime_header(msg.get("From")),
-                "spamscore": 0,
-                "guid": guid,
-                "host_ip": "N/A",
-                "localguid": guid,
-                "dlpviolation": "Not Applicable",
-                "messagestatus": []
-            }
-        except Exception:
-            return {
-                "guid": guid,
-                "folder": folder,
-                "subject": "Unknown",
-                "size": len(raw_content)
-            }
 
     def _validate_folder(self, folder_name: str, folder_type: str = "Folder") -> None:
         """Validate if a folder exists on Proofpoint Protection Server.
