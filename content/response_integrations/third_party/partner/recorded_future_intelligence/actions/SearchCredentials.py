@@ -197,7 +197,7 @@ def main():
     status = EXECUTION_STATE_COMPLETED
 
     try:
-        # parse emails from target entities
+        # parse domains from target entities
         domains = [
             subject.identifier
             for subject in siemplify.target_entities
