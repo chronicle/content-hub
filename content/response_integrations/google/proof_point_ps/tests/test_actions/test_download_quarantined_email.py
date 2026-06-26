@@ -92,9 +92,9 @@ class TestDownloadQuarantinedEmail:
             assert action_output.results.json_output.json_result == {
                 "success": [
                     {
-                        "downloaded_file_path": (
-                            f"{TEST_DIR}/"
-                            f"guid-111-Critical_Security_Warning.eml"
+                        "downloaded_file_path": str(
+                            pathlib.Path(TEST_DIR)
+                            / "guid-111-Critical_Security_Warning.eml"
                         ),
                         "processingserver": None,
                         "date": None,
