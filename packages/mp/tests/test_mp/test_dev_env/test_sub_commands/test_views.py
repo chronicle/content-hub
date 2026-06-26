@@ -435,3 +435,69 @@ def test_push_view_allows_new_widget_with_flag(
     # Should succeed with the --allow-create flag
     assert result.exit_code == 0
     mock_api.upload_view.assert_called_once()
+
+
+@mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.push.get_backend_api")
+def test_push_view_fallback_to_name_and_type_matching(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    # Setup mock backend API
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+    mock_api.upload_view.return_value = {"success": True}
+
+    # Mock list_views:
+    # Local has identifier: "local_uuid"
+    # Server has identifier: "server_uuid" for Name: "Default Case View" and Type: 3 (SYSTEM_CASE)
+    mock_api.list_views.return_value = [
+        {"identifier": "server_uuid", "name": "Default Case View", "type": 3, "id": 100}
+    ]
+    # download_view should be called with the resolved server UUID
+    mock_api.download_view.return_value = {"widgets": []}
+
+    # Setup source directory structure to build from
+    src_dir = tmp_path / "views"
+    view_folder = src_dir / "local_uuid"
+    view_folder.mkdir(parents=True)
+
+    # Create view.yaml
+    view_yaml_data = {
+        "identifier": "local_uuid",
+        "name": "Default Case View",
+        "creator": "system",
+        "playbook_id": "playbook_1",
+        "type": "system_case",  # maps to 3
+        "alert_rule_type": None,
+        "roles": [1, 2],
+        "role_names": ["Tier 1", "Tier 2"],
+        "widgets_details": [],
+    }
+    with (view_folder / "view.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(view_yaml_data, f)
+
+    # Invoke mp push view command
+    with mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"):
+        result = runner.invoke(
+            push_app,
+            ["view", "local_uuid", "--custom", str(src_dir)],
+        )
+
+    assert result.exit_code == 0
+
+    # Verify upload_view was called with the server ID, but kept the local UUID
+    mock_api.upload_view.assert_called_once()
+    called_args = mock_api.upload_view.call_args[0][0]
+
+    assert called_args["identifier"] == "local_uuid"  # Local UUID is preserved
+    assert called_args["id"] == 100                 # Server ID is injected
+    assert called_args["type"] == 3
+
+    # Verify download_view was called twice:
+    # 1. With server_uuid for widget verification
+    # 2. With local_uuid for the auto-pull sync post-upload
+    assert mock_api.download_view.call_count == 2
+    assert mock_api.download_view.call_args_list[0][0][0] == "server_uuid"
+    assert mock_api.download_view.call_args_list[1][0][0] == "local_uuid"

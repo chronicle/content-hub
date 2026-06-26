@@ -183,28 +183,68 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
     }
 
 
-def _resolve_existing_view_id(backend_api: BackendAPI, identifier: str | None) -> int | None:
-    """Resolve the integer database ID of an existing view on the SOAR server.
+def _resolve_existing_view(
+    backend_api: BackendAPI,
+    local_identifier: str | None,
+    local_name: str | None,
+    local_type: int | None,
+) -> tuple[int | None, str | None]:
+    """Resolve the integer database ID and server UUID of an existing view on the SOAR server.
 
     Args:
         backend_api: The backend API client.
-        identifier: The UUID identifier of the view.
+        local_identifier: The UUID identifier of the view.
+        local_name: The name of the view.
+        local_type: The type of the view (integer enum).
 
     Returns:
-        The integer database ID of the view if resolved, otherwise None.
+        A tuple of (database_id, server_uuid) if resolved, otherwise (None, None).
 
     """
-    if not identifier:
-        return None
+    if not local_identifier:
+        return None, None
     try:
         installed_views = backend_api.list_views()
+
+        # 1. Match by UUID (case-insensitive)
         for v in installed_views or []:
             v_uuid = v.get("identifier") or v.get("Identifier")
-            if isinstance(v_uuid, str) and v_uuid.lower() == identifier.lower():
-                return v.get("id") if v.get("id") is not None else v.get("Id")
+            if isinstance(v_uuid, str) and v_uuid.lower() == local_identifier.lower():
+                v_id = v.get("id") if v.get("id") is not None else v.get("Id")
+                return v_id, v_uuid
+
+        # 2. Fallback: Match by Name and Type (case-insensitive name)
+        if local_name and local_type is not None:
+            for v in installed_views or []:
+                v_name = v.get("name") or v.get("Name")
+                v_type_raw = v.get("type") if v.get("type") is not None else v.get("Type")
+
+                v_type = None
+                if v_type_raw is not None:
+                    try:
+                        v_type = int(v_type_raw)
+                    except (ValueError, TypeError):
+                        pass
+
+                if (
+                    isinstance(v_name, str)
+                    and v_name.lower() == local_name.lower()
+                    and v_type == local_type
+                ):
+                    v_id = v.get("id") if v.get("id") is not None else v.get("Id")
+                    v_uuid = v.get("identifier") or v.get("Identifier")
+                    logger.info(
+                        "View matched by Name '%s' and Type %s. Target server UUID is '%s'. "
+                        "UUID will be aligned to local '%s' during push.",
+                        v_name,
+                        local_type,
+                        v_uuid,
+                        local_identifier,
+                    )
+                    return v_id, v_uuid
     except Exception as ex:  # noqa: BLE001
-        logger.warning("Failed to resolve existing view ID on server: %s. Proceeding as new view.", ex)
-    return None
+        logger.warning("Failed to resolve existing view on server: %s. Proceeding as new view.", ex)
+    return None, None
 
 
 def _verify_widgets(
@@ -265,23 +305,29 @@ def _validate_push_preconditions(
         typer.Exit: If the view doesn't exist and allow_create is False, or if a widget check fails.
 
     """
-    existing_identifier = flat_view_data.get("identifier")
-    existing_id = _resolve_existing_view_id(backend_api, existing_identifier)
-    if existing_id is not None and existing_identifier:
+    local_identifier = flat_view_data.get("identifier")
+    local_name = flat_view_data.get("name")
+    local_type = flat_view_data.get("type")
+
+    existing_id, server_uuid = _resolve_existing_view(
+        backend_api, local_identifier, local_name, local_type
+    )
+
+    if existing_id is not None and server_uuid:
         logger.info("Resolved existing view ID %s on server.", existing_id)
         flat_view_data["id"] = existing_id
         _verify_widgets(
             backend_api,
             view_name_or_id,
-            existing_identifier,
+            server_uuid,
             flat_view_data,
             allow_create=allow_create,
         )
     elif not allow_create:
         logger.error(
-            "View '%s' (UUID: '%s') does not exist on the platform.",
+            "View '%s' (UUID: '%s') does not exist on the platform (checked by UUID and Name).",
             view_name_or_id,
-            flat_view_data.get("identifier"),
+            local_identifier,
         )
         logger.error(
             "Creation of new views is blocked by default. "
