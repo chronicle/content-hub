@@ -22,7 +22,7 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import FORWARD_ACTION_NAME
-from ..core.exceptions import ProofPointPSHTTPError
+from ..core.exceptions import ProofPointPSError, ProofPointPSHTTPError
 
 if TYPE_CHECKING:
     from typing import Never
@@ -49,6 +49,8 @@ class ForwardQuarantinedEmail(BaseProofPointPSAction):
             is_mandatory=True,
             print_value=True,
         )
+        if not self.params.folder or self.params.folder == "None":
+            self.params.folder = "Quarantine"
         self.params.deleted_folder = extract_action_param(
             self.soar_action, param_name="Deleted Folder Name", print_value=True
         )
@@ -86,41 +88,24 @@ class ForwardQuarantinedEmail(BaseProofPointPSAction):
 
         """
         guids = string_to_multi_value(self.params.guid_input)
+        folder_name = self.params.folder
+        deleted_folder = self.params.deleted_folder
+
+        try:
+            self._validate_folder(folder_name, "Folder")
+            records = self._pre_validate_guids(guids, folder_name)
+            if deleted_folder:
+                self._validate_folder(deleted_folder, "Deleted folder")
+        except ProofPointPSError as e:
+            raise ProofPointPSError(f"Failed to forward quarantined email(s). Error:\n{e}")
+
         successful_records = []
         successful_guids = []
-        failed_entries = []
-        folder_error = None
+
+        records_map = {r.guid: r for r in records if r.guid}
+        records_map.update({r.localguid: r for r in records if r.localguid})
 
         for guid in guids:
-            try:
-                self.api_client.download_message(guid)
-            except ProofPointPSHTTPError:
-                failed_entries.append({
-                    "guid": guid,
-                    "error": "Message not found"
-                })
-                continue
-
-            folder_name = self.params.folder
-            try:
-                record = self.api_client.get_record_by_guid(guid, folder=folder_name)
-            except ProofPointPSHTTPError as e:
-                failed_entries.append({
-                    "guid": guid,
-                    "error": str(e)
-                })
-                if "folder" in str(e).lower():
-                    folder_error = str(e)
-                continue
-
-            if not record:
-                err_msg = f"The quarantined email with GUID {guid} does not exist in the '{folder_name}' folder."
-                failed_entries.append({
-                    "guid": guid,
-                    "error": err_msg
-                })
-                continue
-
             try:
                 self.api_client.execute_quarantine_action(
                     action="forward",
@@ -134,60 +119,21 @@ class ForwardQuarantinedEmail(BaseProofPointPSAction):
                     to_address=self.params.to_address,
                     comment=self.params.comment,
                 )
-                successful_records.append(record.to_json())
+                record = records_map.get(guid)
+                if record:
+                    successful_records.append(record.to_json())
                 successful_guids.append(guid)
             except ProofPointPSHTTPError as e:
-                failed_entries.append({
-                    "guid": guid,
-                    "error": str(e)
-                })
-                if "folder" in str(e).lower():
-                    folder_error = str(e)
-                continue
+                raise ProofPointPSError(f"Failed to forward quarantined email(s): GUID {guid} failed during execution. Error: {e}")
 
         self.json_results = {
-            "success": successful_records,
-            "failed": failed_entries
+            "success": successful_records
         }
-
-        if folder_error:
-            self.result_value = False
-            failed_details = [
-                f"{entry.get('guid')} (Error: {entry.get('error')})"
-                for entry in failed_entries
-            ]
-            self.output_message = (
-                f"Failed to forward quarantined email(s): {', '.join(failed_details)}"
-            )
-            return
-
-        if not successful_guids:
-            self.result_value = False
-            failed_details = [
-                f"{entry.get('guid')} (Error: {entry.get('error')})"
-                for entry in failed_entries
-            ]
-            self.output_message = (
-                f"Failed to forward quarantined email(s): {', '.join(failed_details)}"
-            )
-            return
-
-        if failed_entries:
-            self.result_value = True
-            failed_details = [
-                f"{entry.get('guid')} (Error: {entry.get('error')})"
-                for entry in failed_entries
-            ]
-            self.output_message = (
-                f"Successfully forwarded quarantined email(s): {', '.join(successful_guids)}. "
-                f"Failed to forward quarantined email(s): {', '.join(failed_details)}"
-            )
-            return
-
         self.result_value = True
         self.output_message = (
             f"Successfully forwarded quarantined email(s): {', '.join(successful_guids)}"
         )
+
 
 
 def main() -> None:

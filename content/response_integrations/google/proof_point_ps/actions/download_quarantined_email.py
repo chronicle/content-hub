@@ -26,7 +26,7 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import DOWNLOAD_ACTION_NAME
-from ..core.exceptions import ProofPointPSHTTPError
+from ..core.exceptions import ProofPointPSError, ProofPointPSHTTPError
 
 if TYPE_CHECKING:
     from typing import Never
@@ -49,6 +49,8 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
         self.params.folder = extract_action_param(
             self.soar_action, param_name="Folder Name", print_value=True
         )
+        if not self.params.folder or self.params.folder == "None":
+            self.params.folder = "Quarantine"
 
     def _get_safe_subject(self, raw_content: bytes) -> str:
         """Extract and sanitize the Subject header from raw email bytes."""
@@ -82,33 +84,22 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
 
         """
         guids = string_to_multi_value(self.params.guid_input)
+        folder_name = self.params.folder
+
+        try:
+            self._validate_folder(folder_name, "Folder")
+            self._pre_validate_guids(guids, folder_name)
+        except ProofPointPSError as e:
+            raise ProofPointPSError(f"Failed to download quarantined email(s). Error:\n{e}")
+
         successful_records = []
         successful_guids = []
-        failed_guids = []
-        folder_error = None
+
         for guid in guids:
             try:
                 raw_content = self.api_client.download_message(guid)
-            except ProofPointPSHTTPError as e:
-                err_msg = str(e)
-                failed_guids.append((guid, err_msg))
-                continue
-
-            folder_name = self.params.folder
-            try:
                 record = self.api_client.get_record_by_guid(guid, folder=folder_name)
-            except ProofPointPSHTTPError as e:
-                failed_guids.append((guid, str(e)))
-                if "folder" in str(e).lower():
-                    folder_error = str(e)
-                continue
-
-            if not record:
-                err_msg = f"The quarantined email with GUID {guid} does not exist in the '{folder_name}' folder."
-                failed_guids.append((guid, err_msg))
-                continue
-
-            try:
+                
                 with tempfile.TemporaryDirectory() as temp_dir:
                     safe_subject = self._get_safe_subject(raw_content)
                     file_name = f"{guid}-{safe_subject}.eml"
@@ -122,52 +113,21 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
                             f"Quarantined email raw content for Message GUID {guid}."
                         ),
                     )
+                if record:
                     successful_records.append(record.to_json())
-                    successful_guids.append(guid)
-            except Exception as e:
-                failed_guids.append((guid, str(e)))
+                successful_guids.append(guid)
+            except ProofPointPSHTTPError as e:
+                raise ProofPointPSError(f"Failed to download quarantined email(s): GUID {guid} failed during execution. Error: {e}")
 
         self.json_results = {
-            "success": successful_records,
-            "failed": [
-                {"guid": guid, "error": err} for guid, err in failed_guids
-            ]
+            "success": successful_records
         }
-
-        if folder_error:
-            self.result_value = False
-            failed_details = [
-                f"{guid} (Error: {err})" for guid, err in failed_guids
-            ]
-            self.output_message = (
-                f"Failed to download quarantined email(s): {', '.join(failed_details)}"
-            )
-            return
-
-        if not successful_guids:
-            self.result_value = False
-            failed_details = [
-                f"{guid} (Error: {err})" for guid, err in failed_guids
-            ]
-            self.output_message = (
-                f"Failed to download quarantined email(s): {', '.join(failed_details)}"
-            )
-            return
-        if failed_guids:
-            self.result_value = True
-            self.output_message = (
-                f"Successfully downloaded and attached quarantined email raw content "
-                f"for Message GUID(s): {', '.join(successful_guids)}. "
-                f"Failed to download quarantined email(s): "
-                f"{', '.join(f'{guid} (Error: {err})' for guid, err in failed_guids)}"
-            )
-            return
-
         self.result_value = True
         self.output_message = (
             f"Successfully downloaded and attached quarantined email raw content "
             f"for Message GUID(s): {', '.join(successful_guids)}."
         )
+
 
 
 def main() -> None:

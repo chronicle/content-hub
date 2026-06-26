@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import datetime
+import pytest
 from typing import TYPE_CHECKING
 
 from integration_testing.common import create_entity
@@ -316,84 +317,23 @@ class TestSearchQuarantinedEmails:
             "Folder Name": "Quarantine",
             "Fetch DLP Violation": "No",
             "Fetch Message Status": False,
-            "Max Results To Return": "100",
-            "Query ID": "query-from-api",
+            "Max Results To Return": "-5",
         }
     )
-    def test_search_by_query_id_filter_valid(
+    def test_search_invalid_limit(
         self,
         script_session: ProofPointPSSession,
         action_output: MockActionOutput,
         proofpoint: ProofPointPSProduct,
     ) -> None:
-        """Test searching with Query ID matching response query_id returns records."""
-        record1 = {
-            "processingserver": "pps-server-01",
-            "date": "2026-06-21T12:00:00Z",
-            "subject": "Test",
-            "messageid": "msg-123",
-            "folder": "Quarantine",
-            "size": 1000,
-            "rcpts": ["rcpt@example.com"],
-            "from": "sender@example.com",
-            "spamscore": 0,
-            "guid": "guid-123",
-            "host_ip": "1.1.1.1",
-            "localguid": "guid-123",
-            "dlpviolation": "Not Applicable",
-        }
-        proofpoint.add_record("Quarantine", record1)
-
+        """Test search with invalid non-positive limit parameter fails."""
         search_quarantined_emails.main()
 
         assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.json_output is not None
-
-        json_results = action_output.results.json_output.json_result
-        assert isinstance(json_results, list)
-        assert len(json_results) == 1
-        assert json_results[0]["messageid"] == "msg-123"
-
-    @set_metadata(
-        integration_config_file_path=CONFIG_PATH,
-        entities=[],
-        input_context=get_deadline_context(),
-        parameters={
-            "Time Frame": "Last 24 Hours",
-            "Folder Name": "Quarantine",
-            "Fetch DLP Violation": "No",
-            "Fetch Message Status": False,
-            "Max Results To Return": "100",
-            "Query ID": "invalid-query-id",
-        }
-    )
-    def test_search_by_query_id_filter_invalid(
-        self,
-        script_session: ProofPointPSSession,
-        action_output: MockActionOutput,
-        proofpoint: ProofPointPSProduct,
-    ) -> None:
-        """Test searching with Query ID not matching response query_id returns empty records."""
-        record1 = {
-            "processingserver": "pps-server-01",
-            "date": "2026-06-21T12:00:00Z",
-            "subject": "Test",
-            "messageid": "msg-123",
-            "folder": "Quarantine",
-            "size": 1000,
-            "rcpts": ["rcpt@example.com"],
-            "from": "sender@example.com",
-            "spamscore": 0,
-            "guid": "guid-123",
-            "host_ip": "1.1.1.1",
-            "localguid": "guid-123",
-            "dlpviolation": "Not Applicable",
-        }
-        proofpoint.add_record("Quarantine", record1)
-
-        search_quarantined_emails.main()
-
-        assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.results.result_value is False
+        assert (
+            'Error executing action "ProofPointPS - Search Quarantined Emails"\nReason: Failed to search quarantined email(s) (Error: "Max Results To Return" must be greater than 0.)'
+            in action_output.results.output_message
+        )
         assert action_output.results.json_output is None

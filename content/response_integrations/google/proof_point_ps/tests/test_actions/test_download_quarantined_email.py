@@ -56,13 +56,13 @@ class TestDownloadQuarantinedEmail:
 
         download_quarantined_email.main()
 
-        assert len(script_session.request_history) == 3
-        assert script_session.request_history[0].request.method.value == "GET"
+        assert len(script_session.request_history) == 6
+        assert script_session.request_history[1].request.method.value == "GET"
         assert (
-            script_session.request_history[0].request.url.path == "/rest/v1/quarantine"
+            script_session.request_history[1].request.url.path == "/rest/v1/quarantine"
         )
         assert (
-            script_session.request_history[0].request.kwargs["params"]["guid"]
+            script_session.request_history[1].request.kwargs["params"]["guid"]
             == "guid-111"
         )
 
@@ -91,8 +91,7 @@ class TestDownloadQuarantinedEmail:
                     "host_ip": None,
                     "localguid": None,
                 }
-            ],
-            "failed": []
+            ]
         }
 
     @set_metadata(
@@ -117,42 +116,17 @@ class TestDownloadQuarantinedEmail:
 
         download_quarantined_email.main()
 
-        # guid-111 triggers download + search + add_attachment, guid-222 triggers download (fails)
+        # pre-validation of guid-222 fails, so it requests folder check, guid-111 check, guid-222 check and stops.
         assert len(script_session.request_history) == 4
 
         assert action_output.results is not None
         assert (
-            "Successfully downloaded and attached quarantined email raw content for Message GUID(s): guid-111."
+            'Error executing action "ProofPointPS - Download Quarantined Email"\nReason: Failed to download quarantined email(s). Error:\nThe following message guids were not found in Proofpoint: guid-222.'
             in action_output.results.output_message
         )
-        assert (
-            "Failed to download quarantined email(s): guid-222"
-            in action_output.results.output_message
-        )
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
-        assert action_output.results.result_value is True
-        assert action_output.results.json_output is not None
-        assert action_output.results.json_output.json_result == {
-            "success": [
-                {
-                    "processingserver": None,
-                    "date": None,
-                    "subject": None,
-                    "messageid": None,
-                    "folder": "Quarantine",
-                    "size": None,
-                    "rcpts": [],
-                    "from": None,
-                    "spamscore": None,
-                    "guid": "guid-111",
-                    "host_ip": None,
-                    "localguid": None,
-                }
-            ],
-            "failed": [
-                {"guid": "guid-222", "error": 'Unable to download email: 404 Client Error: None for url: None - {"error": "Message not found"}'}
-            ]
-        }
+        assert action_output.results.execution_state == ExecutionState.FAILED
+        assert action_output.results.result_value is False
+        assert action_output.results.json_output is None
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
@@ -169,18 +143,12 @@ class TestDownloadQuarantinedEmail:
         """Test complete failure when no messages can be downloaded."""
         download_quarantined_email.main()
 
-        assert len(script_session.request_history) == 1
+        assert len(script_session.request_history) == 2
         assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
         assert (
-            "Failed to download quarantined email(s): guid-222 (Error: Unable to download email: 404 Client Error: None for url: None - {\"error\": \"Message not found\"})"
+            'Error executing action "ProofPointPS - Download Quarantined Email"\nReason: Failed to download quarantined email(s). Error:\nThe following message guids were not found in Proofpoint: guid-222.'
             in action_output.results.output_message
         )
-        assert action_output.results.json_output is not None
-        assert action_output.results.json_output.json_result == {
-            "success": [],
-            "failed": [
-                {"guid": "guid-222", "error": 'Unable to download email: 404 Client Error: None for url: None - {"error": "Message not found"}'}
-            ]
-        }
+        assert action_output.results.json_output is None

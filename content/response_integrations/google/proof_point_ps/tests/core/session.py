@@ -83,6 +83,13 @@ class ProofPointPSSession(MockSession[MockRequest, MockResponse, ProofPointPSPro
             )
 
         # Otherwise it's a search
+        folder = params.get("folder")
+        if folder and folder not in self._product.records:
+            return MockResponse(
+                content={"error": f"Folder {folder} not found"},
+                status_code=400,
+            )
+
         records = self._product.search_records(
             sender=params.get("from"),
             recipient=params.get("rcpt"),

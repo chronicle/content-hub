@@ -197,12 +197,18 @@ class ProofPointPSApiClient:
         validate_response(response, f"Unable to {action} email(s)")
         return True
 
-    def get_record_by_guid(self, guid: str, folder: str | None = None) -> QuarantineRecord | None:
+    def get_record_by_guid(
+        self,
+        guid: str,
+        folder: str | None = None,
+        sender: str | None = "*",
+    ) -> QuarantineRecord | None:
         """Retrieve a quarantined message record by GUID and optional folder constraint.
 
         Args:
             guid: The Message GUID to search for.
             folder: Optional folder name to search in.
+            sender: Optional sender email address to search by.
 
         Returns:
             The QuarantineRecord if found, None otherwise.
@@ -214,7 +220,7 @@ class ProofPointPSApiClient:
         end_date = datetime.datetime.utcnow().strftime(TIME_FORMAT)
 
         records = self.search(
-            sender="*",
+            sender=sender or "*",
             folder=folder,
             start_date=start_date,
             end_date=end_date,

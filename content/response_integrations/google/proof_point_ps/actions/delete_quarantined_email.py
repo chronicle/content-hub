@@ -22,7 +22,7 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import DELETE_ACTION_NAME
-from ..core.exceptions import ProofPointPSHTTPError
+from ..core.exceptions import ProofPointPSError, ProofPointPSHTTPError
 
 if TYPE_CHECKING:
     from typing import Never
@@ -63,37 +63,37 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
         guids = string_to_multi_value(self.params.guid_input)
         successful_records = []
         successful_guids = []
-        failed_entries = []
+        failed_guids = []
+
+        folder_name = self.params.folder
+        deleted_folder = self.params.deleted_folder
+
+
+
+        folder_checked = False
         folder_error = None
 
         for guid in guids:
             try:
                 self.api_client.download_message(guid)
-            except ProofPointPSHTTPError:
-                failed_entries.append({
-                    "guid": guid,
-                    "error": "Message not found"
-                })
-                continue
-
-            folder_name = self.params.folder
-            try:
+                folder_name = self.params.folder
                 record = self.api_client.get_record_by_guid(guid, folder=folder_name)
-            except ProofPointPSHTTPError as e:
-                failed_entries.append({
-                    "guid": guid,
-                    "error": str(e)
-                })
-                if "folder" in str(e).lower():
-                    folder_error = str(e)
+                if not record:
+                    failed_guids.append(guid)
+                    continue
+            except ProofPointPSError:
+                failed_guids.append(guid)
                 continue
 
-            if not record:
-                err_msg = f"The quarantined email with GUID {guid} does not exist in the '{folder_name}' folder."
-                failed_entries.append({
-                    "guid": guid,
-                    "error": err_msg
-                })
+            if deleted_folder and not folder_checked:
+                try:
+                    self._validate_folder(deleted_folder, "Deleted folder")
+                except ProofPointPSError as e:
+                    folder_error = f"Deleted folder '{deleted_folder}' does not exist."
+                    self.logger.error(f"{folder_error} Error: {e}")
+                folder_checked = True
+
+            if folder_error:
                 continue
 
             try:
@@ -105,58 +105,35 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
                 )
                 successful_records.append(record.to_json())
                 successful_guids.append(guid)
-            except ProofPointPSHTTPError as e:
-                failed_entries.append({
-                    "guid": guid,
-                    "error": str(e)
-                })
-                if "folder" in str(e).lower():
-                    folder_error = str(e)
-                continue
+            except ProofPointPSError:
+                pass
 
-        self.json_results = {
-            "success": successful_records,
-            "failed": failed_entries
-        }
+
+
+        if successful_guids:
+            self.json_results = {
+                "success": successful_records
+            }
+            self.result_value = True
+            if failed_guids:
+                self.output_message = (
+                    f"Successfully deleted quarantined email(s): {', '.join(successful_guids)}. "
+                    f"The following message guids were not found in Proofpoint: {', '.join(failed_guids)}."
+                )
+            else:
+                self.output_message = (
+                    f"Successfully deleted quarantined email(s): {', '.join(successful_guids)}"
+                )
+        else:
+            self.json_results = {}
+            self.result_value = False
+            self.output_message = (
+                f"The following message guids were not found in Proofpoint: {', '.join(failed_guids)}."
+            )
 
         if folder_error:
-            self.result_value = False
-            failed_details = [
-                f"{entry.get('guid')} (Error: {entry.get('error')})"
-                for entry in failed_entries
-            ]
-            self.output_message = (
-                f"Failed to delete quarantined email(s): {', '.join(failed_details)}"
-            )
-            return
+            self.output_message += f"\n{folder_error}"
 
-        if not successful_guids:
-            self.result_value = False
-            failed_details = [
-                f"{entry.get('guid')} (Error: {entry.get('error')})"
-                for entry in failed_entries
-            ]
-            self.output_message = (
-                f"Failed to delete quarantined email(s): {', '.join(failed_details)}"
-            )
-            return
-
-        if failed_entries:
-            self.result_value = True
-            failed_details = [
-                f"{entry.get('guid')} (Error: {entry.get('error')})"
-                for entry in failed_entries
-            ]
-            self.output_message = (
-                f"Successfully deleted quarantined email(s): {', '.join(successful_guids)}. "
-                f"Failed to delete quarantined email(s): {', '.join(failed_details)}"
-            )
-            return
-
-        self.result_value = True
-        self.output_message = (
-            f"Successfully deleted quarantined email(s): {', '.join(successful_guids)}"
-        )
 
 
 def main() -> None:

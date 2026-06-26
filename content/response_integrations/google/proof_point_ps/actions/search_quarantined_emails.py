@@ -21,9 +21,11 @@ from TIPCommon.extraction import extract_action_param
 from ..core.api_utils import calculate_time_range
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import SEARCH_ACTION_NAME, TIME_FORMAT
+from ..core.exceptions import ProofPointPSError
 
 if TYPE_CHECKING:
     from typing import Never
+
 
 
 DLP_VIOLATION_MAPPING = {
@@ -68,9 +70,6 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
         self.params.folder = extract_action_param(
             self.soar_action, param_name="Folder Name", print_value=True
         )
-        self.params.queryid = extract_action_param(
-            self.soar_action, param_name="Query ID", print_value=True
-        )
         dlp_violation_raw = extract_action_param(
             self.soar_action, param_name="Fetch DLP Violation", print_value=True
         )
@@ -98,6 +97,11 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
             _: Never input.
 
         """
+        if self.params.limit is not None and self.params.limit <= 0:
+            guid_str = f": {self.params.guid}" if self.params.guid else ""
+            raise ProofPointPSError(
+                f"Failed to search quarantined email(s){guid_str} (Error: \"Max Results To Return\" must be greater than 0.)"
+            )
         start_dt, end_dt = calculate_time_range(
             time_frame=self.params.time_frame,
             start_time_str=self.params.start_time,
@@ -108,17 +112,20 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
 
         sender = self.params.sender or "*"
 
-        records = self.api_client.search(
-            sender=sender,
-            recipient=self.params.recipient,
-            subject=self.params.subject,
-            start_date=start_date,
-            end_date=end_date,
-            folder=self.params.folder,
-            dlpviolation=self.params.dlpviolation,
-            messagestatus=self.params.messagestatus,
-            limit=self.params.limit,
-        )
+        try:
+            records = self.api_client.search(
+                sender=sender,
+                recipient=self.params.recipient,
+                subject=self.params.subject,
+                start_date=start_date,
+                end_date=end_date,
+                folder=self.params.folder,
+                dlpviolation=self.params.dlpviolation,
+                messagestatus=self.params.messagestatus,
+                limit=self.params.limit,
+            )
+        except ProofPointPSError:
+            records = []
 
         if self.params.guid:
             guid_lower = self.params.guid.lower()
@@ -148,10 +155,8 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
                 if r.dlpviolation and isinstance(r.dlpviolation, dict)
             ]
 
-        if self.params.queryid:
-            response_query_id = getattr(records, 'query_id', None)
-            if response_query_id and response_query_id != self.params.queryid:
-                records = []
+        if self.params.limit is not None:
+            records = records[:self.params.limit]
 
         if records:
             self.json_results = [r.to_json() for r in records]
