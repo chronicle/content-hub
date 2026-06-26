@@ -61,7 +61,7 @@ def main():
         verify_ssl=verify_ssl,
     )
 
-    output_message = "Connection Established."
+    output_message = "Successfully connected to the Recorded Future API."
     connectivity_result = True
     status = EXECUTION_STATE_COMPLETED
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
@@ -73,7 +73,7 @@ def main():
         )
 
     except Exception as e:
-        output_message = f"An error occurred when trying to connect to the API: {e}"
+        output_message = f"Failed to connect to the Recorded Future API: {e}"
         connectivity_result = False
         siemplify.LOGGER.error(
             f"Connection to API failed, performing action {PING_SCRIPT_NAME}",
