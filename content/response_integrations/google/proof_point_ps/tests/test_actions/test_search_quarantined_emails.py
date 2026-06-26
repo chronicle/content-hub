@@ -194,7 +194,8 @@ class TestSearchQuarantinedEmails:
         action_output: MockActionOutput,
         proofpoint: ProofPointPSProduct,
     ) -> None:
-        """Test searching with Fetch DLP Violation set to Basic returns only records with Basic DLP violation."""
+        """Test searching with Fetch DLP Violation set to Basic returns only records
+        with Basic DLP violation."""
         record1 = {
             "processingserver": "pps-server-01",
             "date": "2026-06-21T12:00:00Z",
@@ -258,7 +259,8 @@ class TestSearchQuarantinedEmails:
         action_output: MockActionOutput,
         proofpoint: ProofPointPSProduct,
     ) -> None:
-        """Test searching with Fetch DLP Violation set to Detailed returns only records with Detailed DLP violation."""
+        """Test searching with Fetch DLP Violation set to Detailed returns only records
+        with Detailed DLP violation."""
         record1 = {
             "processingserver": "pps-server-01",
             "date": "2026-06-21T12:00:00Z",
@@ -332,7 +334,9 @@ class TestSearchQuarantinedEmails:
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
         assert (
-            'Error executing action "ProofPointPS - Search Quarantined Emails"\nReason: Failed to search quarantined email(s) (Error: "Max Results To Return" must be greater than 0.)'
+            'Error executing action "ProofPointPS - Search Quarantined Emails"\n'
+            'Reason: Failed to search quarantined email(s) '
+            '(Error: "Max Results To Return" must be greater than 0.)'
             in action_output.results.output_message
         )
         assert action_output.results.json_output is None

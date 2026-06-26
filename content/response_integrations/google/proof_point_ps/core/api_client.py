@@ -115,7 +115,7 @@ class ProofPointPSApiClient:
             response_json = response.json()
         except ValueError as error:
             msg = (
-                f"Unable to search emails: The server returned an invalid or "
+                "Unable to search emails: The server returned an invalid or "
                 f"empty JSON response. Status Code: {response.status_code}. "
                 f"Content Preview: {response.text[:200]}"
             )

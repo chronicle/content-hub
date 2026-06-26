@@ -51,7 +51,8 @@ def parse_quarantine_records(data: dict | list) -> list[QuarantineRecord]:
     """Parse a list of raw records.
 
     Args:
-        data: The raw JSON payload (either a list of records or a dictionary containing 'records' key).
+        data: The raw JSON payload (either a list of records or a dictionary
+            containing 'records' key).
 
     Returns:
         A list of QuarantineRecord objects.

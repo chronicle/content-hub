@@ -17,7 +17,6 @@ from __future__ import annotations
 import email
 import pathlib
 import re
-import tempfile
 from email.header import decode_header
 from typing import TYPE_CHECKING
 
@@ -51,6 +50,25 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
         )
         if not self.params.folder or self.params.folder == "None":
             self.params.folder = "Quarantine"
+        self.params.download_folder_path = extract_action_param(
+            self.soar_action,
+            param_name="Download Folder Path",
+            is_mandatory=True,
+            print_value=True,
+        )
+        overwrite_raw = self.soar_action.parameters.get("Overwrite")
+        if overwrite_raw is None:
+            self.params.overwrite = True
+        else:
+            self.params.overwrite = str(overwrite_raw).lower() == "true"
+        self.soar_action.LOGGER.info(f"Overwrite: {self.params.overwrite}")
+        self.params.save_to_case_wall = extract_action_param(
+            self.soar_action,
+            param_name="Save To Case Wall",
+            is_mandatory=False,
+            print_value=True,
+            input_type=bool,
+        )
 
     def _get_safe_subject(self, raw_content: bytes) -> str:
         """Extract and sanitize the Subject header from raw email bytes."""
@@ -90,41 +108,86 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
             self._validate_folder(folder_name, "Folder")
             self._pre_validate_guids(guids, folder_name)
         except ProofPointPSError as e:
-            raise ProofPointPSError(f"Failed to download quarantined email(s). Error:\n{e}")
+            raise ProofPointPSError(f"Failed to download quarantined email(s). Error: {e}")
+
+        dest_dir = pathlib.Path(self.params.download_folder_path)
+        if not dest_dir.exists() or not dest_dir.is_dir():
+            raise ProofPointPSError(
+                "Failed to download quarantined email(s). Error: "
+                f"Download folder path '{self.params.download_folder_path}' "
+                "does not exist or is not a directory."
+            )
 
         successful_records = []
         successful_guids = []
+        failed_guids_errors = []
+        existing_file_guids = []
+        downloaded_files = []
 
         for guid in guids:
             try:
                 raw_content = self.api_client.download_message(guid)
                 record = self.api_client.get_record_by_guid(guid, folder=folder_name)
                 
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    safe_subject = self._get_safe_subject(raw_content)
-                    file_name = f"{guid}-{safe_subject}.eml"
-                    temp_file_path = pathlib.Path(temp_dir) / file_name
+                safe_subject = self._get_safe_subject(raw_content)
+                file_name = f"{guid}-{safe_subject}.eml"
+                target_file_path = dest_dir / file_name
 
-                    temp_file_path.write_bytes(raw_content)
+                if not self.params.overwrite and target_file_path.exists():
+                    existing_file_guids.append((guid, str(target_file_path)))
+                    continue
 
-                    self.soar_action.add_attachment(
-                        file_path=str(temp_file_path),
-                        description=(
-                            f"Quarantined email raw content for Message GUID {guid}."
-                        ),
-                    )
+                target_file_path.write_bytes(raw_content)
+                downloaded_files.append((guid, target_file_path))
+
                 if record:
-                    successful_records.append(record.to_json())
+                    record_json = record.to_json()
+                    record_json["downloaded_file_path"] = str(target_file_path)
+                    successful_records.append(record_json)
                 successful_guids.append(guid)
-            except ProofPointPSHTTPError as e:
-                raise ProofPointPSError(f"Failed to download quarantined email(s): GUID {guid} failed during execution. Error: {e}")
+            except (ProofPointPSHTTPError, ProofPointPSError) as e:
+                failed_guids_errors.append((guid, str(e)))
+
+        if existing_file_guids or failed_guids_errors:
+            error_messages = []
+            if existing_file_guids:
+                guids_str = ", ".join([g[0] for g in existing_file_guids])
+                if len(existing_file_guids) == 1:
+                    error_messages.append(
+                        f"GUID {existing_file_guids[0][0]} failed during execution. "
+                        f"Error: File '{existing_file_guids[0][1]}' already exists. "
+                        "Please change the path or set parameter 'Overwrite' to True."
+                    )
+                else:
+                    error_messages.append(
+                        f"GUIDs {guids_str} failed during execution. "
+                        "Error: File already exists. "
+                        "Please change the path or set parameter 'Overwrite' to True."
+                    )
+            for guid, err in failed_guids_errors:
+                error_messages.append(
+                    f"GUID {guid} failed during execution. Error: {err}"
+                )
+
+            raise ProofPointPSError(
+                f"Failed to download quarantined email(s): {' '.join(error_messages)}"
+            )
+
+        if self.params.save_to_case_wall:
+            for guid, target_file_path in downloaded_files:
+                self.soar_action.add_attachment(
+                    file_path=str(target_file_path),
+                    description=(
+                        f"Quarantined email raw content for Message GUID {guid}."
+                    ),
+                )
 
         self.json_results = {
             "success": successful_records
         }
         self.result_value = True
         self.output_message = (
-            f"Successfully downloaded and attached quarantined email raw content "
+            "Successfully downloaded quarantined email raw content "
             f"for Message GUID(s): {', '.join(successful_guids)}."
         )
 

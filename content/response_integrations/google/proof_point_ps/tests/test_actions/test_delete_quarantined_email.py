@@ -187,7 +187,10 @@ class TestDeleteQuarantinedEmail:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
-        assert "The following message guids were not found in Proofpoint: guid-444." in action_output.results.output_message
+        assert (
+            "The following message guids were not found in Proofpoint: guid-444."
+            in action_output.results.output_message
+        )
         assert action_output.results.json_output is None
 
     @set_metadata(
@@ -204,7 +207,8 @@ class TestDeleteQuarantinedEmail:
         action_output: MockActionOutput,
         proofpoint: ProofPointPSProduct,
     ) -> None:
-        """Test deletion where the message exists but belongs to a different folder than specified."""
+        """Test deletion where the message exists but belongs to a different
+        folder than specified."""
         proofpoint.add_record(
             "Quarantine", {"guid": "guid-555", "folder": "Quarantine"}
         )
@@ -214,7 +218,10 @@ class TestDeleteQuarantinedEmail:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
-        assert "The following message guids were not found in Proofpoint: guid-555." in action_output.results.output_message
+        assert (
+            "The following message guids were not found in Proofpoint: guid-555."
+            in action_output.results.output_message
+        )
         assert action_output.results.json_output is None
 
     @set_metadata(
@@ -232,13 +239,114 @@ class TestDeleteQuarantinedEmail:
         action_output: MockActionOutput,
         proofpoint: ProofPointPSProduct,
     ) -> None:
-        """Test deletion where the guid is invalid and deleted folder is invalid."""
+        """Test deletion fails fast when deleted folder is invalid."""
         delete_quarantined_email.main()
 
         assert len(script_session.request_history) == 1
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
-        assert "The following message guids were not found in Proofpoint: guid-666." in action_output.results.output_message
-        assert "Deleted folder 'TrashInvalid' is invalid or does not exist." not in action_output.results.output_message
+        assert (
+            "The following message guids were not found in Proofpoint: guid-666."
+            in action_output.results.output_message
+        )
+        assert (
+            "Deleted folder 'TrashInvalid' does not exist."
+            not in action_output.results.output_message
+        )
+        assert action_output.results.json_output is None
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={
+            "Message GUIDs": "guid-777",
+            "Folder Name": "Quarantine",
+            "Deleted Folder Name": "Quarantine",
+        },
+    )
+    def test_delete_same_folder_warning(
+        self,
+        script_session: ProofPointPSSession,
+        action_output: MockActionOutput,
+        proofpoint: ProofPointPSProduct,
+    ) -> None:
+        """Test delete does not fail but returns warning when folder and deleted folder are the same."""
+        delete_quarantined_email.main()
+
+        assert action_output.results is not None
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is False
+        assert action_output.results.output_message == "Folder and deleted folder cannot be the same."
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={
+            "Message GUIDs": "guid-111,guid-666",
+            "Folder Name": "Quarantine",
+            "Deleted Folder Name": "TrashInvalid",
+            "Time Frame": "Last Hour",
+        },
+    )
+    def test_delete_mix_guids_and_invalid_deleted_folder(
+        self,
+        script_session: ProofPointPSSession,
+        action_output: MockActionOutput,
+        proofpoint: ProofPointPSProduct,
+    ) -> None:
+        """Test deletion with mix of valid and invalid guids, and invalid deleted folder."""
+        proofpoint.add_record(
+            "Quarantine",
+            {
+                "guid": "guid-111",
+                "localguid": "local-111",
+                "folder": "Quarantine",
+            },
+        )
+        delete_quarantined_email.main()
+
+        assert len(script_session.request_history) == 4
+        assert action_output.results is not None
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is False
+        assert (
+            "The following message guids were not found in Proofpoint: guid-666. "
+            "Deleted folder 'TrashInvalid' does not exist."
+            in action_output.results.output_message
+        )
+        assert action_output.results.json_output is None
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={
+            "Message GUIDs": "guid-111",
+            "Folder Name": "Quarantine",
+            "Deleted Folder Name": "TrashInvalid",
+            "Time Frame": "Last Hour",
+        },
+    )
+    def test_delete_valid_guid_and_invalid_deleted_folder(
+        self,
+        script_session: ProofPointPSSession,
+        action_output: MockActionOutput,
+        proofpoint: ProofPointPSProduct,
+    ) -> None:
+        """Test deletion with valid guid, but invalid deleted folder."""
+        proofpoint.add_record(
+            "Quarantine",
+            {
+                "guid": "guid-111",
+                "localguid": "local-111",
+                "folder": "Quarantine",
+            },
+        )
+        delete_quarantined_email.main()
+
+        assert len(script_session.request_history) == 3
+        assert action_output.results is not None
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is False
+        assert (
+            "Deleted folder 'TrashInvalid' does not exist."
+            in action_output.results.output_message
+        )
         assert action_output.results.json_output is None

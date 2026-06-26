@@ -123,4 +123,10 @@ class ProofPointPSProduct:
                     folder = f
                     break
 
-        return f"From: sender@test.com\nTo: recipient@test.com\nSubject: Mock Email\nX-Proofpoint-Folder: {folder}\n\nDefault Mock Email Content".encode("utf-8")
+        return (
+            f"From: sender@test.com\n"
+            f"To: recipient@test.com\n"
+            f"Subject: Mock Email\n"
+            f"X-Proofpoint-Folder: {folder}\n\n"
+            f"Default Mock Email Content"
+        ).encode("utf-8")

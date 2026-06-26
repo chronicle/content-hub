@@ -66,7 +66,7 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
             self._validate_folder(folder_name, "Folder")
             records = self._pre_validate_guids(guids, folder_name)
         except ProofPointPSError as e:
-            raise ProofPointPSError(f"Failed to resubmit quarantined email(s). Error:\n{e}")
+            raise ProofPointPSError(f"Failed to resubmit quarantined email(s). Error: {e}")
 
         successful_records = []
         successful_guids = []
@@ -86,7 +86,10 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
                     successful_records.append(record.to_json())
                 successful_guids.append(guid)
             except ProofPointPSHTTPError as e:
-                raise ProofPointPSError(f"Failed to resubmit quarantined email(s): GUID {guid} failed during execution. Error: {e}")
+                raise ProofPointPSError(
+                    "Failed to resubmit quarantined email(s):"
+                    f" GUID {guid} failed during execution. Error: {e}"
+                )
 
         self.json_results = {
             "success": successful_records

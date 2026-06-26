@@ -100,7 +100,8 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
         if self.params.limit is not None and self.params.limit <= 0:
             guid_str = f": {self.params.guid}" if self.params.guid else ""
             raise ProofPointPSError(
-                f"Failed to search quarantined email(s){guid_str} (Error: \"Max Results To Return\" must be greater than 0.)"
+                f"Failed to search quarantined email(s){guid_str} "
+                f"(Error: \"Max Results To Return\" must be greater than 0.)"
             )
         start_dt, end_dt = calculate_time_range(
             time_frame=self.params.time_frame,

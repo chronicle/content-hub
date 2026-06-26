@@ -137,7 +137,8 @@ class BaseProofPointPSAction(Action, ABC):
         all_missing = global_missing + folder_missing
         if all_missing:
             raise ProofPointPSError(
-                f"The following message guids were not found in Proofpoint: {', '.join(all_missing)}."
+                f"The following message guids were not found in Proofpoint: "
+                f"{', '.join(all_missing)}."
             )
 
         return records

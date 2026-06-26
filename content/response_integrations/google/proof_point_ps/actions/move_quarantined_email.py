@@ -69,12 +69,18 @@ class MoveQuarantinedEmail(BaseProofPointPSAction):
         folder_name = self.params.folder
         target_folder = self.params.target_folder
 
+        if folder_name.lower() == target_folder.lower():
+            raise ProofPointPSError(
+                "Failed to move quarantined email(s). Error: "
+                "Folder and target folder cannot be the same."
+            )
+
         try:
             self._validate_folder(folder_name, "Folder")
             records = self._pre_validate_guids(guids, folder_name)
             self._validate_folder(target_folder, "Target folder")
         except ProofPointPSError as e:
-            raise ProofPointPSError(f"Failed to move quarantined email(s). Error:\n{e}")
+            raise ProofPointPSError(f"Failed to move quarantined email(s). Error: {e}")
 
         successful_records = []
         successful_guids = []
@@ -95,7 +101,10 @@ class MoveQuarantinedEmail(BaseProofPointPSAction):
                     successful_records.append(record.to_json())
                 successful_guids.append(guid)
             except ProofPointPSHTTPError as e:
-                raise ProofPointPSError(f"Failed to move quarantined email(s): GUID {guid} failed during execution. Error: {e}")
+                raise ProofPointPSError(
+                    f"Failed to move quarantined email(s): GUID {guid} failed during execution. "
+                    f"Error: {e}"
+                )
 
         self.json_results = {
             "success": successful_records
