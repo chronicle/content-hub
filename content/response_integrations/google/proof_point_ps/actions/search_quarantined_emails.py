@@ -101,7 +101,7 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
             guid_str = f": {self.params.guid}" if self.params.guid else ""
             raise ProofPointPSError(
                 f"Failed to search quarantined email(s){guid_str} "
-                f"(Error: \"Max Results To Return\" must be greater than 0.)"
+                f"(Error: \"Max Results To Return\" must be greater than 0)."
             )
         start_dt, end_dt = calculate_time_range(
             time_frame=self.params.time_frame,
@@ -170,7 +170,7 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
             self.output_message = (
                 "No quarantined emails were found matching the criteria."
             )
-            self.result_value = False
+            self.result_value = True
 
 
 def main() -> None:

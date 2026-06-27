@@ -111,6 +111,7 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
         records_map = {r.guid: r for r in records if r.guid}
         records_map.update({r.localguid: r for r in records if r.localguid})
 
+        failed_deletions = []
         for guid in guids:
             if guid in failed_guids:
                 continue
@@ -130,7 +131,8 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
                     deleted_folder_error = (
                         f"Deleted folder '{deleted_folder}' does not exist."
                     )
-
+                else:
+                    failed_deletions.append(f"GUID {guid} failed: {e}")
 
         error_msgs = []
         if failed_guids:
@@ -140,6 +142,8 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
             )
         if deleted_folder_error:
             error_msgs.append(deleted_folder_error)
+        if failed_deletions:
+            error_msgs.extend(failed_deletions)
 
         combined_error = " ".join(error_msgs) if error_msgs else None
 

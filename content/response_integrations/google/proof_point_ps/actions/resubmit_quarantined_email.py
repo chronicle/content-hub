@@ -85,7 +85,7 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
             except ProofPointPSHTTPError as e:
                 raise ProofPointPSError(
                     "Failed to resubmit quarantined email(s):"
-                    f" GUID {guid} failed during execution. Error: {e}"
+                    f" GUID {guid} failed during execution. Error: {e}."
                 )
 
         self.json_results = {

@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from .api_utils import validate_response
 from .constants import QUARANTINE_ENDPOINT, TIME_FORMAT
@@ -28,13 +28,7 @@ if TYPE_CHECKING:
     from .data_models import QuarantineRecord
 
 
-class SearchResults(list):
-    """Custom list subclass that holds search results and metadata such as query_id."""
-    query_id: str | None
 
-    def __init__(self, records: list[Any], query_id: str | None = None) -> None:
-        super().__init__(records)
-        self.query_id = query_id
 
 
 class ProofPointPSApiClient:
@@ -121,12 +115,7 @@ class ProofPointPSApiClient:
             )
             raise ProofPointPSHTTPError(msg) from error
 
-        records_list = parse_quarantine_records(response_json)
-
-        meta = response_json.get("meta", {})
-        query_id_meta = meta.get("queryid") or meta.get("query_id")
-
-        return SearchResults(records_list, query_id=query_id_meta)
+        return parse_quarantine_records(response_json)
 
     def execute_quarantine_action(
         self,

@@ -336,7 +336,36 @@ class TestSearchQuarantinedEmails:
         assert (
             'Error executing action "ProofPointPS - Search Quarantined Emails"\n'
             'Reason: Failed to search quarantined email(s) '
-            '(Error: "Max Results To Return" must be greater than 0.)'
+            '(Error: "Max Results To Return" must be greater than 0).'
+            in action_output.results.output_message
+        )
+        assert action_output.results.json_output is None
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        entities=[],
+        input_context=get_deadline_context(),
+        parameters={
+            "Time Frame": "Last 24 Hours",
+            "Folder Name": "Quarantine",
+            "Fetch DLP Violation": "No",
+            "Fetch Message Status": False,
+        }
+    )
+    def test_search_no_results(
+        self,
+        script_session: ProofPointPSSession,
+        action_output: MockActionOutput,
+        proofpoint: ProofPointPSProduct,
+    ) -> None:
+        """Test search when no matching quarantined emails are found."""
+        search_quarantined_emails.main()
+
+        assert action_output.results is not None
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is True
+        assert (
+            "No quarantined emails were found matching the criteria."
             in action_output.results.output_message
         )
         assert action_output.results.json_output is None

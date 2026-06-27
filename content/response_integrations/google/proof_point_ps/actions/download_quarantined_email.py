@@ -150,6 +150,9 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
 
                 try:
                     raw_content = self.api_client.download_message(guid)
+                except ProofPointPSHTTPError as e:
+                    failed_guids_errors.append((guid, str(e)))
+                    continue
                 except ProofPointPSError:
                     missing_guids.append(guid)
                     continue

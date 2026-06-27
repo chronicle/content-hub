@@ -116,7 +116,7 @@ class ReleaseQuarantinedEmail(BaseProofPointPSAction):
                 
                 raise ProofPointPSError(
                     f"Failed to release quarantined email(s): GUID {guid} failed during execution. "
-                    f"Error: {e}"
+                    f"Error: {e}."
                 )
 
         self.json_results = {

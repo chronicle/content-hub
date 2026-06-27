@@ -17,8 +17,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from SiemplifyDataModel import EntityTypes
-from SiemplifyUtils import (
+from soar_sdk.SiemplifyDataModel import EntityTypes
+from soar_sdk.SiemplifyUtils import (
     add_prefix_to_dict,
     dict_to_flat,
     get_domain_from_entity,
@@ -173,7 +173,7 @@ class EnrichEntities(BaseProofPointPSAction):
             
             
         else:
-            self.json_results = []
+            self.json_results = {}
             self.output_message = "None of the provided entities were enriched."
             self.result_value = False
 

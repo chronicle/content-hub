@@ -104,7 +104,7 @@ class MoveQuarantinedEmail(BaseProofPointPSAction):
                     )
                 raise ProofPointPSError(
                     f"Failed to move quarantined email(s): GUID {guid} failed during execution. "
-                    f"Error: {e}"
+                    f"Error: {e}."
                 )
 
         self.json_results = {
