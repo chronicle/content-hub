@@ -46,7 +46,7 @@ class Ping(BaseProofPointPSAction):
                 "Successfully connected to the Proofpoint Email Protection "
                 "server with the provided connection parameters!"
             )
-        except Exception as e:
+        except ProofPointPSError as e:
             error_msg = str(e)
             prefix = "Unable to search emails: "
             if error_msg.startswith(prefix):
