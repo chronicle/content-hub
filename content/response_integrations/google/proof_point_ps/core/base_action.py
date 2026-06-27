@@ -23,7 +23,8 @@ from typing import TYPE_CHECKING
 
 from .api_client import ProofPointPSApiClient
 from .auth import AuthenticatedSession, SessionAuthenticationParameters
-from .constants import PROVIDER
+import datetime
+from .constants import PROVIDER, TIME_FORMAT
 from .exceptions import ProofPointPSError
 
 if TYPE_CHECKING:
@@ -105,34 +106,41 @@ class BaseProofPointPSAction(Action, ABC):
 
         sender = getattr(self.params, "from_address", "*") or "*"
 
-        for guid in guids:
-            try:
-                record = self.api_client.get_record_by_guid(guid, folder=folder_name, sender=sender)
-                if not record:
-                    folder_missing.append(guid)
-                else:
-                    records.append(record)
-            except ProofPointPSError:
-                folder_missing.append(guid)
-                raise ProofPointPSError(
-                    f"Folder '{folder_name}' does not exist."
-                )
+        start_date = (
+            datetime.datetime.utcnow() - datetime.timedelta(days=30)
+        ).strftime(TIME_FORMAT)
+        end_date = datetime.datetime.utcnow().strftime(TIME_FORMAT)
 
-            try:
-                self.api_client.download_message(guid)
-            except ProofPointPSError:
-                global_missing.append(guid)
-                continue
-            
+        try:
+            folder_records = self.api_client.search(
+                sender=sender,
+                folder=folder_name,
+                start_date=start_date,
+                end_date=end_date,
+            )
+        except ProofPointPSError:
+            raise ProofPointPSError(
+                f"Folder '{folder_name}' does not exist."
+            )
+
+        folder_records_map = {r.guid: r for r in folder_records if r.guid}
+        folder_records_map.update({r.localguid: r for r in folder_records if r.localguid})
+
+        for guid in guids:
+            record = folder_records_map.get(guid)
+            if record:
+                records.append(record)
+            else:
+                folder_missing.append(guid)
+                try:
+                    self.api_client.download_message(guid)
+                except ProofPointPSError:
+                    global_missing.append(guid)
 
         all_missing = list(set(global_missing + folder_missing))
         if all_missing:
-
             raise ProofPointPSError(
-
                 "The following message guids were not found in Proofpoint: "
-
                 f"{', '.join(all_missing)}."
-
             )
         return records

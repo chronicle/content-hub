@@ -59,7 +59,7 @@ class TestForwardQuarantinedEmail:
 
         forward_quarantined_email.main()
 
-        assert len(script_session.request_history) == 3
+        assert len(script_session.request_history) == 2
         assert proofpoint.actions_executed[0]["action"] == "forward"
         assert proofpoint.actions_executed[0]["localguid"] == "guid-111"
 

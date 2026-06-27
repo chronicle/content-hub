@@ -61,7 +61,7 @@ class TestReleaseQuarantinedEmail:
 
         release_quarantined_email.main()
 
-        assert len(script_session.request_history) == 3
+        assert len(script_session.request_history) == 2
         assert proofpoint.actions_executed[0]["action"] == "release"
         assert proofpoint.actions_executed[0]["localguid"] == "guid-111"
         assert proofpoint.actions_executed[0]["deletedfolder"] == "Trash"
@@ -99,7 +99,7 @@ class TestReleaseQuarantinedEmail:
 
         release_quarantined_email.main()
 
-        assert len(script_session.request_history) == 3
+        assert len(script_session.request_history) == 2
         assert proofpoint.actions_executed[0]["action"] == "release"
         assert proofpoint.actions_executed[0]["localguid"] == "guid-111"
         assert "deletedfolder" not in proofpoint.actions_executed[0]
@@ -143,7 +143,7 @@ class TestReleaseQuarantinedEmail:
         release_quarantined_email.main()
 
         # 3 requests: 1 get_records_by_guids, 2 execute_quarantine_action
-        assert len(script_session.request_history) == 6
+        assert len(script_session.request_history) == 3
         assert proofpoint.actions_executed[0]["localguid"] == "guid-111"
         assert proofpoint.actions_executed[1]["localguid"] == "guid-222"
 
