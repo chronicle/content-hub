@@ -49,8 +49,6 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
             is_mandatory=True,
             print_value=True,
         )
-        if not self.params.folder or self.params.folder == "None":
-            self.params.folder = "Quarantine"
 
     def _perform_action(self, _: Never) -> None:
         """Execute the resubmit operation.
@@ -63,8 +61,7 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
         folder_name = self.params.folder
 
         try:
-            self._validate_folder(folder_name, "Folder")
-            records = self._pre_validate_guids(guids, folder_name)
+            records = self._validate_folder_and_guids(guids, folder_name)
         except ProofPointPSError as e:
             raise ProofPointPSError(f"Failed to resubmit quarantined email(s). Error: {e}")
 
@@ -76,12 +73,12 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
 
         for guid in guids:
             try:
+                record = records_map.get(guid)
                 self.api_client.execute_quarantine_action(
                     action="resubmit",
-                    folder=self.params.folder,
+                    folder=folder_name,
                     localguid=guid,
                 )
-                record = records_map.get(guid)
                 if record:
                     successful_records.append(record.to_json())
                 successful_guids.append(guid)
@@ -96,7 +93,7 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
         }
         self.result_value = True
         self.output_message = (
-            f"Successfully resubmitted quarantined email(s): {', '.join(successful_guids)}"
+            f"Successfully resubmitted quarantined email(s): {', '.join(successful_guids)}."
         )
 
 

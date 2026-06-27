@@ -49,8 +49,6 @@ class MoveQuarantinedEmail(BaseProofPointPSAction):
             is_mandatory=True,
             print_value=True,
         )
-        if not self.params.folder or self.params.folder == "None":
-            self.params.folder = "Quarantine"
         self.params.target_folder = extract_action_param(
             self.soar_action,
             param_name="Target Folder Name",
@@ -76,9 +74,8 @@ class MoveQuarantinedEmail(BaseProofPointPSAction):
             )
 
         try:
-            self._validate_folder(folder_name, "Folder")
-            records = self._pre_validate_guids(guids, folder_name)
-            self._validate_folder(target_folder, "Target folder")
+            records = self._validate_folder_and_guids(guids, folder_name)
+
         except ProofPointPSError as e:
             raise ProofPointPSError(f"Failed to move quarantined email(s). Error: {e}")
 
@@ -92,15 +89,19 @@ class MoveQuarantinedEmail(BaseProofPointPSAction):
             try:
                 self.api_client.execute_quarantine_action(
                     action="move",
-                    folder=self.params.folder,
+                    folder=folder_name,
                     localguid=guid,
-                    targetfolder=self.params.target_folder,
+                    targetfolder=target_folder,
                 )
                 record = records_map.get(guid)
                 if record:
                     successful_records.append(record.to_json())
                 successful_guids.append(guid)
             except ProofPointPSHTTPError as e:
+                if "targetfolder" in str(e):
+                    raise ProofPointPSError(
+                        f"Target folder '{target_folder}' does not exist."
+                    )
                 raise ProofPointPSError(
                     f"Failed to move quarantined email(s): GUID {guid} failed during execution. "
                     f"Error: {e}"

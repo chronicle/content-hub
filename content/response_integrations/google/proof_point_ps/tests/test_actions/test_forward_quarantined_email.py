@@ -59,11 +59,11 @@ class TestForwardQuarantinedEmail:
 
         forward_quarantined_email.main()
 
-        assert len(script_session.request_history) == 5
+        assert len(script_session.request_history) == 3
         assert proofpoint.actions_executed[0]["action"] == "forward"
         assert proofpoint.actions_executed[0]["localguid"] == "guid-111"
 
-        success_msg = "Successfully forwarded quarantined email(s): guid-111"
+        success_msg = "Successfully forwarded quarantined email(s): guid-111."
         assert action_output.results is not None
         assert action_output.results.output_message == success_msg
         assert action_output.results.execution_state == ExecutionState.COMPLETED

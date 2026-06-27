@@ -18,6 +18,9 @@ from typing import TYPE_CHECKING
 
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import PING_ACTION_NAME
+from ..core.exceptions import ProofPointPSError
+
+from TIPCommon.base.action import ExecutionState
 
 if TYPE_CHECKING:
     from typing import Never
@@ -44,11 +47,17 @@ class Ping(BaseProofPointPSAction):
                 "server with the provided connection parameters!"
             )
         except Exception as e:
+            error_msg = str(e)
+            prefix = "Unable to search emails: "
+            if error_msg.startswith(prefix):
+                error_msg = error_msg[len(prefix):]
+
+            self.result_value = False
+            self.execution_state = ExecutionState.FAILED
             self.output_message = (
                 "Failed to connect to the Proofpoint Email Protection server! "
-                f"Error is {e}"
+                f"Error is {error_msg}"
             )
-            raise
 
 
 def main() -> None:

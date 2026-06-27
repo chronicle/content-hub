@@ -68,7 +68,7 @@ class TestDownloadQuarantinedEmail:
         try:
             download_quarantined_email.main()
 
-            assert len(script_session.request_history) == 6
+            assert len(script_session.request_history) == 3
             assert script_session.request_history[1].request.method.value == "GET"
             assert (
                 script_session.request_history[1].request.url.path == "/rest/v1/quarantine"
@@ -219,13 +219,12 @@ class TestDownloadQuarantinedEmail:
 
             # pre-validation of guid-222 fails, so it requests folder check,
             # guid-111 check, guid-222 check and stops.
-            assert len(script_session.request_history) == 4
+            assert len(script_session.request_history) == 3
 
             assert action_output.results is not None
             assert (
                 'Error executing action "ProofPointPS - Download Quarantined Email"\n'
-                'Reason: Failed to download quarantined email(s). Error: '
-                'The following message guids were not found in Proofpoint: guid-222.'
+                'Reason: The following message guids were not found in Proofpoint: guid-222.'
                 in action_output.results.output_message
             )
             assert action_output.results.execution_state == ExecutionState.FAILED

@@ -70,7 +70,7 @@ class TestDeleteQuarantinedEmail:
 
         delete_quarantined_email.main()
 
-        assert len(script_session.request_history) == 7
+        assert len(script_session.request_history) == 6
         assert proofpoint.actions_executed[0]["action"] == "delete"
         assert proofpoint.actions_executed[0]["localguid"] == "guid-111"
         assert proofpoint.actions_executed[1]["localguid"] == "guid-222"
@@ -134,7 +134,7 @@ class TestDeleteQuarantinedEmail:
 
         delete_quarantined_email.main()
 
-        assert len(script_session.request_history) == 4
+        assert len(script_session.request_history) == 5
         assert len(proofpoint.actions_executed) == 1
         assert proofpoint.actions_executed[0]["localguid"] == "guid-111"
 
@@ -183,7 +183,7 @@ class TestDeleteQuarantinedEmail:
         """Test complete failure when no messages are found to delete."""
         delete_quarantined_email.main()
 
-        assert len(script_session.request_history) == 1
+        assert len(script_session.request_history) == 2
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
@@ -242,7 +242,7 @@ class TestDeleteQuarantinedEmail:
         """Test deletion fails fast when deleted folder is invalid."""
         delete_quarantined_email.main()
 
-        assert len(script_session.request_history) == 1
+        assert len(script_session.request_history) == 2
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
@@ -304,7 +304,7 @@ class TestDeleteQuarantinedEmail:
         )
         delete_quarantined_email.main()
 
-        assert len(script_session.request_history) == 4
+        assert len(script_session.request_history) == 5
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False

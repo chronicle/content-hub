@@ -247,3 +247,4 @@ class ProofPointPSApiClient:
 
         validate_response(response, "Unable to download email")
         return response.content
+

@@ -48,8 +48,6 @@ class ReleaseQuarantinedEmail(BaseProofPointPSAction):
             is_mandatory=True,
             print_value=True,
         )
-        if not self.params.folder or self.params.folder == "None":
-            self.params.folder = "Quarantine"
         self.params.deleted_folder = extract_action_param(
             self.soar_action, param_name="Deleted Folder Name", print_value=True
         )
@@ -85,10 +83,7 @@ class ReleaseQuarantinedEmail(BaseProofPointPSAction):
             )
 
         try:
-            self._validate_folder(folder_name, "Folder")
-            records = self._pre_validate_guids(guids, folder_name)
-            if deleted_folder:
-                self._validate_folder(deleted_folder, "Deleted folder")
+            records = self._validate_folder_and_guids(guids, folder_name)
         except ProofPointPSError as e:
             raise ProofPointPSError(f"Failed to release quarantined email(s). Error: {e}")
 
@@ -102,9 +97,9 @@ class ReleaseQuarantinedEmail(BaseProofPointPSAction):
             try:
                 self.api_client.execute_quarantine_action(
                     action="release",
-                    folder=self.params.folder,
+                    folder=folder_name,
                     localguid=guid,
-                    deletedfolder=self.params.deleted_folder,
+                    deletedfolder=deleted_folder,
                     scan=self.params.scan,
                     brandtemplate=self.params.brand_template,
                     securitypolicy=self.params.security_policy,
@@ -114,6 +109,11 @@ class ReleaseQuarantinedEmail(BaseProofPointPSAction):
                     successful_records.append(record.to_json())
                 successful_guids.append(guid)
             except ProofPointPSHTTPError as e:
+                if "deletedfolder" in str(e):
+                    raise ProofPointPSError(
+                        f"Deleted folder '{deleted_folder}' does not exist."
+                    )
+                
                 raise ProofPointPSError(
                     f"Failed to release quarantined email(s): GUID {guid} failed during execution. "
                     f"Error: {e}"
@@ -124,7 +124,7 @@ class ReleaseQuarantinedEmail(BaseProofPointPSAction):
         }
         self.result_value = True
         self.output_message = (
-            f"Successfully released quarantined email(s): {', '.join(successful_guids)}"
+            f"Successfully released quarantined email(s): {', '.join(successful_guids)}."
         )
 
 

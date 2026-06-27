@@ -62,7 +62,6 @@ class ProofPointPSSession(MockSession[MockRequest, MockResponse, ProofPointPSPro
         """Route GET requests to search or download."""
         params = get_request_payload(request)
 
-        # If it's a download (has guid, no sender/recipient/subject filters)
         if "guid" in params and "from" not in params and "rcpt" not in params:
             guid = params["guid"]
             records = self._product.search_records(guid=guid)
@@ -82,7 +81,6 @@ class ProofPointPSSession(MockSession[MockRequest, MockResponse, ProofPointPSPro
                 status_code=200,
             )
 
-        # Otherwise it's a search
         folder = params.get("folder")
         if folder and folder not in self._product.records:
             return MockResponse(
@@ -107,6 +105,18 @@ class ProofPointPSSession(MockSession[MockRequest, MockResponse, ProofPointPSPro
     def handle_post_quarantine(self, request: MockRequest) -> MockResponse:
         """Route POST requests to execute action."""
         payload = get_request_payload(request)
+        deleted_folder = payload.get("deletedfolder")
+        if deleted_folder and deleted_folder not in self._product.records:
+            return MockResponse(
+                content={"error": f"deletedfolder '{deleted_folder}' not found"},
+                status_code=400,
+            )
+        target_folder = payload.get("targetfolder")
+        if target_folder and target_folder not in self._product.records:
+            return MockResponse(
+                content={"error": f"targetfolder '{target_folder}' not found"},
+                status_code=400,
+            )
         self._product.execute_action(payload)
         return MockResponse(content={}, status_code=200)
 

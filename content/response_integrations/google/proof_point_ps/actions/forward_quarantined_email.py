@@ -19,7 +19,6 @@ from typing import TYPE_CHECKING
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 
-
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import FORWARD_ACTION_NAME
 from ..core.exceptions import ProofPointPSError, ProofPointPSHTTPError
@@ -49,8 +48,6 @@ class ForwardQuarantinedEmail(BaseProofPointPSAction):
             is_mandatory=True,
             print_value=True,
         )
-        if not self.params.folder or self.params.folder == "None":
-            self.params.folder = "Quarantine"
         self.params.deleted_folder = extract_action_param(
             self.soar_action, param_name="Deleted Folder Name", print_value=True
         )
@@ -98,10 +95,7 @@ class ForwardQuarantinedEmail(BaseProofPointPSAction):
             )
 
         try:
-            self._validate_folder(folder_name, "Folder")
-            records = self._pre_validate_guids(guids, folder_name)
-            if deleted_folder:
-                self._validate_folder(deleted_folder, "Deleted folder")
+            records = self._validate_folder_and_guids(guids, folder_name)
         except ProofPointPSError as e:
             raise ProofPointPSError(f"Failed to forward quarantined email(s). Error: {e}")
 
@@ -115,9 +109,9 @@ class ForwardQuarantinedEmail(BaseProofPointPSAction):
             try:
                 self.api_client.execute_quarantine_action(
                     action="forward",
-                    folder=self.params.folder,
+                    folder=folder_name,
                     localguid=guid,
-                    deletedfolder=self.params.deleted_folder,
+                    deletedfolder=deleted_folder,
                     subject=self.params.new_subject,
                     appendoldsubject=self.params.append_old_subject,
                     from_address=self.params.from_address,
@@ -130,6 +124,10 @@ class ForwardQuarantinedEmail(BaseProofPointPSAction):
                     successful_records.append(record.to_json())
                 successful_guids.append(guid)
             except ProofPointPSHTTPError as e:
+                if "deletedfolder" in str(e):
+                    raise ProofPointPSError(
+                        f"Deleted folder '{deleted_folder}' does not exist."
+                    )
                 raise ProofPointPSError(
                     f"Failed to forward quarantined email(s): GUID {guid} failed during execution. "
                     f"Error: {e}"
@@ -140,7 +138,7 @@ class ForwardQuarantinedEmail(BaseProofPointPSAction):
         }
         self.result_value = True
         self.output_message = (
-            f"Successfully forwarded quarantined email(s): {', '.join(successful_guids)}"
+            f"Successfully forwarded quarantined email(s): {', '.join(successful_guids)}."
         )
 
 

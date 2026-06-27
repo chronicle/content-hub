@@ -48,7 +48,7 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
         self.params.folder = extract_action_param(
             self.soar_action, param_name="Folder Name", print_value=True
         )
-        if not self.params.folder or self.params.folder == "None":
+        if not self.params.folder:
             self.params.folder = "Quarantine"
         self.params.download_folder_path = extract_action_param(
             self.soar_action,
@@ -104,11 +104,6 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
         guids = string_to_multi_value(self.params.guid_input)
         folder_name = self.params.folder
 
-        try:
-            self._validate_folder(folder_name, "Folder")
-            self._pre_validate_guids(guids, folder_name)
-        except ProofPointPSError as e:
-            raise ProofPointPSError(f"Failed to download quarantined email(s). Error: {e}")
 
         dest_dir = pathlib.Path(self.params.download_folder_path)
         if not dest_dir.exists() or not dest_dir.is_dir():
@@ -123,11 +118,25 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
         failed_guids_errors = []
         existing_file_guids = []
         downloaded_files = []
+        missing_guids = []
 
         for guid in guids:
             try:
-                raw_content = self.api_client.download_message(guid)
-                record = self.api_client.get_record_by_guid(guid, folder=folder_name)
+                try:
+                    record = self.api_client.get_record_by_guid(guid, folder=folder_name)
+                    if not record:
+                        missing_guids.append(guid)
+                        continue
+                except ProofPointPSError:
+                    raise ProofPointPSError(
+                        f"Folder '{folder_name}' does not exist."
+                    ) 
+                
+                try:
+                    raw_content = self.api_client.download_message(guid)
+                except ProofPointPSError:
+                    missing_guids.append(guid)
+                    continue
                 
                 safe_subject = self._get_safe_subject(raw_content)
                 file_name = f"{guid}-{safe_subject}.eml"
@@ -145,8 +154,15 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
                     record_json["downloaded_file_path"] = str(target_file_path)
                     successful_records.append(record_json)
                 successful_guids.append(guid)
-            except (ProofPointPSHTTPError, ProofPointPSError) as e:
+            except (ProofPointPSHTTPError) as e:
                 failed_guids_errors.append((guid, str(e)))
+                
+        if missing_guids:
+            raise ProofPointPSError(
+                "The following message guids were not found in Proofpoint: "
+                f"{', '.join(list(set(missing_guids)))}."
+            )
+                
 
         if existing_file_guids or failed_guids_errors:
             error_messages = []

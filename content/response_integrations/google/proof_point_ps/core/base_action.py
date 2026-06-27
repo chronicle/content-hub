@@ -90,20 +90,7 @@ class BaseProofPointPSAction(Action, ABC):
     def result_value(self, value: bool) -> None:
         self._result_value = value
 
-
-    def _validate_folder(self, folder_name: str, folder_type: str = "Folder") -> None:
-        """Validate if a folder exists on Proofpoint Protection Server.
-
-        Raises ProofPointPSError if the folder does not exist or cannot be accessed.
-        """
-        try:
-            self.api_client.search(sender="*", folder=folder_name, limit=1)
-        except ProofPointPSError:
-            raise ProofPointPSError(
-                f"{folder_type} '{folder_name}' does not exist."
-            )
-
-    def _pre_validate_guids(self, guids: list[str], folder_name: str) -> list[QuarantineRecord]:
+    def _validate_folder_and_guids(self, guids: list[str], folder_name: str) -> list[QuarantineRecord] | None:
         """Pre-validate GUIDs before executing any action.
 
         Distinguishes between GUIDs that do not exist globally vs. GUIDs that exist but
@@ -120,12 +107,6 @@ class BaseProofPointPSAction(Action, ABC):
 
         for guid in guids:
             try:
-                self.api_client.download_message(guid)
-            except ProofPointPSError:
-                global_missing.append(guid)
-                continue
-
-            try:
                 record = self.api_client.get_record_by_guid(guid, folder=folder_name, sender=sender)
                 if not record:
                     folder_missing.append(guid)
@@ -133,14 +114,25 @@ class BaseProofPointPSAction(Action, ABC):
                     records.append(record)
             except ProofPointPSError:
                 folder_missing.append(guid)
+                raise ProofPointPSError(
+                    f"Folder '{folder_name}' does not exist."
+                )
 
-        all_missing = global_missing + folder_missing
+            try:
+                self.api_client.download_message(guid)
+            except ProofPointPSError:
+                global_missing.append(guid)
+                continue
+            
+
+        all_missing = list(set(global_missing + folder_missing))
         if all_missing:
+
             raise ProofPointPSError(
-                f"The following message guids were not found in Proofpoint: "
+
+                "The following message guids were not found in Proofpoint: "
+
                 f"{', '.join(all_missing)}."
+
             )
-
         return records
-
-

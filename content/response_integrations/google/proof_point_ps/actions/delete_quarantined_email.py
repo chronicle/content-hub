@@ -48,8 +48,11 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
             is_mandatory=True,
             print_value=True,
         )
+
         self.params.deleted_folder = extract_action_param(
-            self.soar_action, param_name="Deleted Folder Name", print_value=True
+            self.soar_action,
+            param_name="Deleted Folder Name",
+            print_value=True
         )
 
     def _perform_action(self, _: Never) -> None:
@@ -62,7 +65,6 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
         guids = string_to_multi_value(self.params.guid_input)
         successful_records = []
         successful_guids = []
-        failed_guids = []
 
         folder_name = self.params.folder
         deleted_folder = self.params.deleted_folder
@@ -72,64 +74,79 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
             self.result_value = False
             return
 
-        folder_checked = False
         folder_error = None
-
+        deleted_folder_error = None
+        global_missing = []
+        folder_missing = []
+        records = []
+        
         for guid in guids:
             try:
-                self.api_client.download_message(guid)
                 record = self.api_client.get_record_by_guid(guid, folder=folder_name)
                 if not record:
-                    failed_guids.append(guid)
-                    continue
+                    folder_missing.append(guid)
+                else:
+                    records.append(record)
             except ProofPointPSError:
-                failed_guids.append(guid)
+                folder_missing.append(guid)
+                folder_error = f"Folder '{folder_name}' does not exist."
+
+            try:
+                self.api_client.download_message(guid)
+            except ProofPointPSError:
+                global_missing.append(guid)
                 continue
 
-            if deleted_folder and not folder_checked:
-                try:
-                    self._validate_folder(deleted_folder, "Deleted folder")
-                except ProofPointPSError:
-                    folder_error = f"Deleted folder '{deleted_folder}' does not exist."
-                folder_checked = True
+        failed_guids = list(set(global_missing + folder_missing))
+        records_map = {r.guid: r for r in records if r.guid}
+        records_map.update({r.localguid: r for r in records if r.localguid})
 
-            if folder_error:
+        for guid in guids:
+            if guid in failed_guids:
                 continue
-
             try:
                 self.api_client.execute_quarantine_action(
                     action="delete",
-                    folder=self.params.folder,
+                    folder=folder_name,
                     localguid=guid,
-                    deletedfolder=self.params.deleted_folder,
+                    deletedfolder=deleted_folder,
                 )
-                successful_records.append(record.to_json())
+                record = records_map.get(guid)
+                if record:
+                    successful_records.append(record.to_json())
                 successful_guids.append(guid)
-            except ProofPointPSError:
-                pass
+            except ProofPointPSError as e:
+                if "deletedfolder" in str(e):
+                    deleted_folder_error = (
+                        f"Deleted folder '{deleted_folder}' does not exist."
+                    )
 
         if folder_error:
             self.json_results = {}
             self.result_value = False
-            if failed_guids:
-                self.output_message = (
-                    "The following message guids were not found in Proofpoint: "
-                    f"{', '.join(failed_guids)}. {folder_error}"
-                )
-            else:
-                self.output_message = folder_error
+            self.output_message = folder_error
             return
+
+        error_msgs = []
+        if failed_guids:
+            error_msgs.append(
+                "The following message guids were not found in Proofpoint: "
+                f"{', '.join(failed_guids)}."
+            )
+        if deleted_folder_error:
+            error_msgs.append(deleted_folder_error)
+
+        combined_error = " ".join(error_msgs) if error_msgs else None
 
         if successful_guids:
             self.json_results = {
                 "success": successful_records
             }
             self.result_value = True
-            if failed_guids:
+            if combined_error:
                 self.output_message = (
                     f"Successfully deleted quarantined email(s): {', '.join(successful_guids)}. "
-                    "The following message guids were not found in Proofpoint: "
-                    f"{', '.join(failed_guids)}."
+                    f"{combined_error}"
                 )
             else:
                 self.output_message = (
@@ -138,11 +155,7 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
         else:
             self.json_results = {}
             self.result_value = False
-            if failed_guids:
-                self.output_message = (
-                    "The following message guids were not found in Proofpoint: "
-                    f"{', '.join(failed_guids)}."
-                )
+            self.output_message = combined_error
 
 
 def main() -> None:
