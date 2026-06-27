@@ -219,7 +219,7 @@ class TestDownloadQuarantinedEmail:
 
             # pre-validation of guid-222 fails, so it requests folder check,
             # guid-111 check, guid-222 check and stops.
-            assert len(script_session.request_history) == 3
+            assert len(script_session.request_history) == 2
 
             assert action_output.results is not None
             assert (

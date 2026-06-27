@@ -20,7 +20,8 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
-from ..core.constants import DELETE_ACTION_NAME
+import datetime
+from ..core.constants import DELETE_ACTION_NAME, TIME_FORMAT
 from ..core.exceptions import ProofPointPSError
 
 if TYPE_CHECKING:
@@ -74,30 +75,39 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
             self.result_value = False
             return
 
-        folder_error = None
         deleted_folder_error = None
-        global_missing = []
         folder_missing = []
         records = []
         
+        start_date = (
+            datetime.datetime.utcnow() - datetime.timedelta(days=30)
+        ).strftime(TIME_FORMAT)
+        end_date = datetime.datetime.utcnow().strftime(TIME_FORMAT)
+
+        try:
+            folder_records = self.api_client.search(
+                sender="*",
+                folder=folder_name,
+                start_date=start_date,
+                end_date=end_date,
+            )
+        except ProofPointPSError:
+            self.json_results = {}
+            self.result_value = False
+            self.output_message = f"Folder '{folder_name}' does not exist."
+            return
+
+        folder_records_map = {r.guid: r for r in folder_records if r.guid}
+        folder_records_map.update({r.localguid: r for r in folder_records if r.localguid})
+
         for guid in guids:
-            try:
-                record = self.api_client.get_record_by_guid(guid, folder=folder_name)
-                if not record:
-                    folder_missing.append(guid)
-                else:
-                    records.append(record)
-            except ProofPointPSError:
+            record = folder_records_map.get(guid)
+            if record:
+                records.append(record)
+            else:
                 folder_missing.append(guid)
-                folder_error = f"Folder '{folder_name}' does not exist."
 
-            try:
-                self.api_client.download_message(guid)
-            except ProofPointPSError:
-                global_missing.append(guid)
-                continue
-
-        failed_guids = list(set(global_missing + folder_missing))
+        failed_guids = folder_missing
         records_map = {r.guid: r for r in records if r.guid}
         records_map.update({r.localguid: r for r in records if r.localguid})
 
@@ -121,11 +131,6 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
                         f"Deleted folder '{deleted_folder}' does not exist."
                     )
 
-        if folder_error:
-            self.json_results = {}
-            self.result_value = False
-            self.output_message = folder_error
-            return
 
         error_msgs = []
         if failed_guids:

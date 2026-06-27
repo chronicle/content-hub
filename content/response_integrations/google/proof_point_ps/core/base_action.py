@@ -101,7 +101,6 @@ class BaseProofPointPSAction(Action, ABC):
         Otherwise raises ProofPointPSError.
         """
         records = []
-        global_missing = []
         folder_missing = []
 
         sender = getattr(self.params, "from_address", "*") or "*"
@@ -132,15 +131,10 @@ class BaseProofPointPSAction(Action, ABC):
                 records.append(record)
             else:
                 folder_missing.append(guid)
-                try:
-                    self.api_client.download_message(guid)
-                except ProofPointPSError:
-                    global_missing.append(guid)
 
-        all_missing = list(set(global_missing + folder_missing))
-        if all_missing:
+        if folder_missing:
             raise ProofPointPSError(
                 "The following message guids were not found in Proofpoint: "
-                f"{', '.join(all_missing)}."
+                f"{', '.join(folder_missing)}."
             )
         return records
