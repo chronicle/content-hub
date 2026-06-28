@@ -1,0 +1,607 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Add Comment To Ticket:
+  ai_description: "### General Description\nAdds a comment to a specific ticket in\
+    \ Zoho Desk. This action allows for communication within a ticket by posting either\
+    \ public or private comments in plain text or HTML format. It also supports an\
+    \ asynchronous mode where the action can wait for a reply to be posted on the\
+    \ ticket before completing.\n\n### Parameters Description\n| Parameter | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Ticket ID | String\
+    \ | Yes | The unique identifier of the Zoho Desk ticket to which the comment will\
+    \ be added. |\n| Visibility | String | No | Determines if the comment is 'Public'\
+    \ or 'Private'. Default is 'Public'. |\n| Type | String | No | The format of the\
+    \ comment content. Can be 'Plain Text' or 'HTML'. Default is 'Plain Text'. |\n\
+    | Text | String | Yes | The actual content of the comment to be posted. |\n| Wait\
+    \ For Reply | Boolean | No | If enabled, the action will enter an 'In Progress'\
+    \ state and periodically check for new comments (replies) on the ticket until\
+    \ one is found. |\n\n### Additional Notes\n- If **Wait For Reply** is enabled,\
+    \ the action will continue to run until a new comment is detected on the ticket\
+    \ that was posted after the action's initial comment. The first detected reply\
+    \ will be returned in the JSON results.\n- Ensure the script timeout in the Siemplify\
+    \ IDE is adjusted if **Wait For Reply** is used, as the action may run for an\
+    \ extended period.\n\n### Flow Description\n1. **Initialization**: The action\
+    \ extracts the provided parameters and initializes the Zoho Desk API client using\
+    \ the integration's configuration.\n2. **Add Comment (First Run)**: The action\
+    \ sends a POST request to the Zoho Desk API to create a new comment on the specified\
+    \ ticket with the provided text, visibility, and content type.\n3. **Execution\
+    \ State Check**: \n    - If **Wait For Reply** is disabled, the action completes\
+    \ successfully.\n    - If **Wait For Reply** is enabled, the action sets its state\
+    \ to 'In Progress'.\n4. **Polling for Reply (Subsequent Runs)**: If in an 'In\
+    \ Progress' state, the action fetches the list of comments for the ticket. It\
+    \ identifies the original comment posted by the action and checks for any subsequent\
+    \ comments. \n5. **Completion**: Once a reply is found, the reply data is added\
+    \ to the JSON results, and the action transitions to a 'Completed' state."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a new comment to a ticket in the Zoho Desk platform via a POST request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Ticket:
+  ai_description: >-
+    ### General Description
+
+    Creates a new ticket in Zoho Desk with specified details such as title, description,
+    department, and contact. This action allows for detailed ticket configuration,
+    including setting priorities, classifications, assignees (agents or teams), and
+    custom fields.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Title | String | Yes | The title/subject of the ticket. |
+
+    | Description | String | Yes | The detailed description of the ticket content.
+    |
+
+    | Department Name | String | Yes | The name of the department where the ticket
+    will be created. |
+
+    | Contact | String | Yes | The email address of the contact associated with the
+    ticket. |
+
+    | Assignee Type | Dropdown | No | Specifies if the ticket should be assigned to
+    an 'Agent' or a 'Team'. |
+
+    | Assignee Name | String | No | The name or email of the agent/team. Required
+    if 'Assignee Type' is selected. |
+
+    | Priority | Dropdown | No | The priority level (Low, Medium, High). |
+
+    | Classification | Dropdown | No | The classification type (Question, Problem,
+    Feature, etc.). |
+
+    | Channel | Dropdown | No | The communication channel (Email, Phone, Web, etc.).
+    |
+
+    | Category | String | No | The category for the ticket. |
+
+    | Sub Category | String | No | The sub-category for the ticket. |
+
+    | Due Date | String | No | The due date in ISO 8601 format (e.g., 2022-07-06T07:05:43Z).
+    |
+
+    | Custom Fields | String | No | A JSON object containing API names and values
+    for custom fields. |
+
+
+    ### Additional Notes
+
+    - If **Assignee Type** is set to 'Agent' or 'Team', the **Assignee Name** parameter
+    becomes effectively mandatory for the action to successfully assign the ticket.
+
+    - The **Custom Fields** parameter must be a valid JSON string.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves all input parameters and validates the
+    'Custom Fields' JSON if provided.
+
+    2. **Entity Resolution**: The action performs several lookups to resolve names/emails
+    into Zoho Desk IDs:
+        - Searches for the **Department ID** based on the provided name.
+        - Searches for the **Contact ID** based on the provided email.
+        - If an assignee is specified, searches for the **Agent ID** or **Team ID**.
+    3. **Ticket Creation**: Sends a POST request to the Zoho Desk API with the resolved
+    IDs and ticket metadata.
+
+    4. **Result Handling**: Returns the full JSON representation of the created ticket
+    and marks the action as successful.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new ticket record in the Zoho Desk platform via a POST request to
+      the /api/v1/tickets endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Refresh Token:
+  ai_description: >-
+    ### General Description
+
+    This action is a utility designed to facilitate the OAuth2 authentication process
+    for the Zoho Desk integration. Its primary purpose is to exchange a temporary
+    authorization code for a long-lived refresh token. This refresh token is then
+    used by other actions in the integration to maintain a valid session without manual
+    intervention. This action is typically run once during the initial setup of the
+    integration.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Authorization Link | String | Yes | The specific Zoho OAuth2 token endpoint
+    URL. This varies based on the Zoho region (e.g., .com, .eu, .in). Default is `https://accounts.zoho.{region}/oauth/v2/token`.
+    |
+
+    | Authorization Code | String | Yes | The temporary authorization code generated
+    via the Zoho Developer Console after authorizing the application. |
+
+
+    ### Additional Notes
+
+    *   **Prerequisite:** Before running this action, the user must have registered
+    a 'Self-Client' or 'Server-based Application' in the Zoho Developer Console to
+    obtain the Client ID, Client Secret, and the Authorization Code.
+
+    *   **Outcome:** The resulting refresh token must be manually copied and pasted
+    into the 'Refresh Token' field of the Zoho Desk Integration Configuration in Google
+    SecOps.
+
+
+    ### Flow Description
+
+    1.  **Parameter Extraction:** The action retrieves the Client ID and Client Secret
+    from the integration's global configuration and the Authorization Link and Code
+    from the action's input parameters.
+
+    2.  **Token Request:** It performs a POST request to the provided Authorization
+    Link, sending the Client ID, Client Secret, and Authorization Code with the `grant_type`
+    set to `authorization_code`.
+
+    3.  **Response Handling:** The action parses the JSON response from Zoho. If successful,
+    it extracts the `refresh_token`.
+
+    4.  **Result Reporting:** The refresh token is added to the action's result JSON
+    and displayed in the output message for the user to copy.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Ticket Details:
+  ai_description: >-
+    ### General Description
+
+    This action retrieves detailed information for specific tickets from Zoho Desk
+    using their unique identifiers. It allows for deep data retrieval, including additional
+    related fields and ticket comments, providing a comprehensive view of the ticket's
+    status, history, and associated metadata within Google SecOps.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Ticket IDs | String | Yes | A comma-separated list of Zoho Desk ticket IDs for
+    which you want to retrieve details. |
+
+    | Create Insight | Boolean | No | If enabled, the action will generate a case
+    insight for each successfully retrieved ticket, displaying its title and description.
+    |
+
+    | Additional Fields To Return | String | No | A comma-separated list of extra
+    fields to include in the response. Supported values include: `contacts`, `products`,
+    `assignee`, `departments`, `contract`, `isRead`, `team`, and `skills`. |
+
+    | Fetch Comments | Boolean | No | If enabled, the action will also retrieve comments
+    associated with each ticket. |
+
+    | Max Comments To Return | Integer | No | Specifies the maximum number of comments
+    to fetch per ticket. Must be between 1 and 100. Default is 50. |
+
+
+    ### Additional Notes
+
+    - The action validates the `Max Comments To Return` parameter to ensure it falls
+    within the allowed range (1-100).
+
+    - If invalid fields are provided in the `Additional Fields To Return` parameter,
+    the action will log an error for the invalid ones but continue processing with
+    the valid fields.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action parses the input parameters, including the list
+    of Ticket IDs and configuration for insights and comments.
+
+    2. **Validation**: It checks if the comment fetch limit is within the valid range
+    and filters the requested additional fields against a list of supported values.
+
+    3. **API Connection**: Establishes a connection to Zoho Desk using the configured
+    API root and OAuth credentials.
+
+    4. **Data Retrieval**: For each provided Ticket ID, the action performs a GET
+    request to fetch ticket details. If `Fetch Comments` is enabled, it performs a
+    secondary request to retrieve the ticket's comments.
+
+    5. **Result Processing**: The retrieved data is formatted into JSON results and
+    a structured data table named 'Ticket Details'.
+
+    6. **Insight Generation**: If `Create Insight` is true, the action creates a general
+    insight for each ticket in the SecOps case.
+
+    7. **Completion**: The action concludes by providing a summary message of successful
+    and failed ticket lookups.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action creates case insights within Google SecOps to display ticket details
+      if the 'Create Insight' parameter is enabled.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Mark Ticket As Spam:
+  ai_description: >-
+    ### General Description
+
+    Marks a specific ticket as spam within the Zoho Desk platform. This action allows
+    users to flag unwanted tickets and optionally mark the associated contact as a
+    spammer to prevent future noise.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Ticket ID | String | Yes | The unique identifier of the Zoho Desk ticket to
+    be marked as spam. |
+
+    | Mark Contact | Boolean | No | If set to true, the contact who created the ticket
+    will also be marked as a spammer in Zoho Desk. Defaults to true. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the Ticket ID and the 'Mark
+    Contact' preference from the input.
+
+    2. **Ticket Verification**: It fetches the ticket details from Zoho Desk to ensure
+    the ticket exists before attempting to modify it.
+
+    3. **Spam Marking**: It executes a POST request to the Zoho Desk API to mark the
+    specified ticket ID as spam. If 'Mark Contact' is enabled, the API call includes
+    instructions to flag the contact as well.
+
+    4. **Completion**: Returns a success message upon successful execution.
+
+
+    ### Additional Notes
+
+    This action does not operate on SecOps entities and requires a direct Ticket ID
+    input.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Marks a ticket as spam and optionally flags the associated contact as a spammer
+      in Zoho Desk via a POST request.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is designed to verify the connectivity between Google SecOps
+    and the Zoho Desk instance. It ensures that the integration parameters provided
+    in the configuration (such as API Root, Client ID, Client Secret, and Refresh
+    Token) are correct and that the environment can successfully communicate with
+    the Zoho Desk API.
+
+
+    ### Parameters Description
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    This action is primarily used for troubleshooting and initial setup validation.
+    It utilizes the OAuth2 flow to ensure that access tokens can be retrieved or refreshed
+    before attempting to call the Zoho Desk 'agents' endpoint to confirm a valid session.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Zoho Desk API client using the
+    integration's global configuration parameters.
+
+    2. **Authentication**: It checks for a valid cached OAuth access token. If the
+    token is missing or expired, it uses the Refresh Token to obtain a new access
+    token from Zoho's OAuth server.
+
+    3. **Connectivity Test**: The action performs a GET request to the `/api/v1/agents`
+    endpoint.
+
+    4. **Validation**: It validates the API response. If the response is successful
+    (HTTP 200), it confirms the connection; otherwise, it raises an exception with
+    details about the failure.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Ticket:
+  ai_description: >-
+    ### General Description
+
+    Updates an existing ticket in Zoho Desk with new information. This action allows
+    for comprehensive modification of ticket attributes, including its title, description,
+    status, priority, and custom fields. It also supports changing the ticket's read/unread
+    state and reassigning it to different agents or teams.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Ticket ID | String | Yes | The unique identifier of the ticket to be updated.
+    |
+
+    | Title | String | No | The new title/subject for the ticket. |
+
+    | Description | String | No | The new description for the ticket. |
+
+    | Department Name | String | No | The name of the department to associate with
+    the ticket. The action will resolve this name to an ID. |
+
+    | Contact | String | No | The email address of the contact for the ticket. The
+    action will resolve this email to a Contact ID. |
+
+    | Assignee Type | Enum | No | Specifies if the ticket should be assigned to an
+    'Agent' or a 'Team'. |
+
+    | Assignee Name | String | No | The name or email of the assignee. Required if
+    'Assignee Type' is selected. |
+
+    | Resolution | String | No | The resolution text for the ticket. |
+
+    | Priority | Enum | No | The priority level (No Priority, Low, Medium, High).
+    |
+
+    | Status | Enum | No | The ticket status (Open, On Hold, Escalated, Closed). |
+
+    | Mark State | Enum | No | Sets the ticket state to 'Read' or 'Unread'. |
+
+    | Classification | Enum | No | The classification type (Question, Problem, Feature,
+    Others). |
+
+    | Channel | Enum | No | The communication channel (Email, Phone, Web, Twitter,
+    Facebook, Chat, Forums). |
+
+    | Category | String | No | The ticket category. |
+
+    | Sub Category | String | No | The ticket sub-category. |
+
+    | Due Date | String | No | The due date in ISO 8601 format (e.g., 2022-07-06T07:05:43Z).
+    |
+
+    | Custom Fields | String | No | A JSON object string containing the API names
+    and values for custom fields. |
+
+
+    ### Additional Notes
+
+    - If **Assignee Type** is configured, **Assignee Name** must also be provided.
+
+    - The **Custom Fields** parameter must be a valid JSON string; otherwise, the
+    action will fail during validation.
+
+    - If a provided Department, Contact, Agent, or Team name cannot be found in Zoho
+    Desk, the action will raise an error.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction & Validation**: The action retrieves all input parameters
+    and validates that 'Assignee Name' is present if an 'Assignee Type' is chosen.
+    It also attempts to parse the 'Custom Fields' JSON string.
+
+    2. **Context Retrieval**: The action performs lookup requests to the Zoho Desk
+    API to resolve names (Department, Contact, Agent, or Team) into their respective
+    internal IDs.
+
+    3. **State Update**: If the 'Mark State' parameter is provided, the action sends
+    a specific request to mark the ticket as either 'Read' or 'Unread'.
+
+    4. **Ticket Update**: The action constructs a payload containing all the modified
+    fields and sends a PATCH request to the Zoho Desk API to update the ticket identified
+    by the 'Ticket ID'.
+
+    5. **Result Processing**: The updated ticket data is retrieved from the API response
+    and added to the action's JSON results for use in subsequent playbook steps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates ticket attributes (such as status, priority, and assignee) and modifies
+      the read/unread state of tickets within the Zoho Desk platform.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
