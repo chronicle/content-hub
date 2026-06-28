@@ -1,0 +1,642 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Advanced Archive Search:
+  ai_description: >-
+    ### General Description\nSearches for archived emails in Mimecast using a custom
+    XML query. This action allows for advanced investigations by enabling users to
+    define complex search criteria through Mimecast's XML query language, retrieving
+    detailed metadata and content for matching archived messages.\n\n### Parameters
+    Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- | :---
+    | :--- |\n| XML Query | String | Yes | The XML-formatted query string used to
+    define the search criteria in Mimecast. |\n\n### Additional Notes\n- Users should
+    ensure that the timezones of the Google SecOps instance and the Mimecast instance
+    are synchronized for accurate time-based filtering within the XML query.\n- This
+    action does not process specific entities from the case; it performs a broad search
+    based solely on the provided XML input.\n\n### Flow Description\n1. **Setup**:
+    Initializes the Mimecast API manager using the integration's configuration parameters
+    (API Root, App ID/Key, or Client ID/Secret).\n2. **Input Retrieval**: Extracts
+    the mandatory XML Query provided by the user.\n3. **Search Execution**: Calls
+    the Mimecast /api/archive/search endpoint with the XML query to retrieve matching
+    archived emails.\n4. **Data Transformation**: Converts the retrieved email objects
+    into JSON format and flattens them for a data table display.\n5. **Completion**:
+    Populates the action results with the JSON data and the Results data table, then
+    ends the action with a success message.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Block Sender:
+  ai_description: >-
+    ### General Description
+
+    The **Block Sender** action is designed to block a specific sender's email address
+    for a designated recipient within the Mimecast platform. This is a containment
+    action used to prevent further unwanted or malicious communication from reaching
+    a specific user by adding the sender to Mimecast's managed sender list with a
+    'block' status.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Sender** | String | Yes | The email address of the sender that you want to
+    block. |
+
+    | **Recipient** | String | Yes | The email address of the internal recipient for
+    whom the sender should be blocked. |
+
+
+    ### Flow Description
+
+    1.  **Parameter Initialization**: The action retrieves the `Sender` and `Recipient`
+    email addresses from the action parameters.
+
+    2.  **Manager Setup**: It initializes the `MimecastManager` using the integration's
+    configuration (API keys, secrets, etc.).
+
+    3.  **API Interaction**: The action calls the `manage_sender` method in the manager,
+    which sends a POST request to Mimecast's `/api/managedsender/permit-or-block-sender`
+    endpoint with the action set to `block`.
+
+    4.  **Execution Result**: If the API call is successful, the action completes
+    with a success message. If an error occurs (e.g., authentication failure or API
+    error), it logs the error and marks the execution as failed.
+
+
+    ### Additional Notes
+
+    This action does not automatically process entities from the Google SecOps case;
+    it requires the sender and recipient to be explicitly provided as parameters.
+    It performs a state-changing operation in the external Mimecast environment.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action adds a sender to the Mimecast managed sender list with a 'block'
+      status for a specific recipient, effectively changing the mail flow policy for
+      those addresses in the external Mimecast system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Create Block Sender Policy:
+  ai_description: >-
+    Creates a Block Sender policy in Mimecast to manage and restrict email traffic
+    between specific senders and recipients. This action allows security administrators
+    to define granular blocking rules based on email addresses, domains, or header
+    display names.
+
+
+    ### Flow Description:
+
+    1. **Parameter Extraction:** The action retrieves configuration parameters including
+    the policy description, sender/recipient details, and enforcement settings.
+
+    2. **Validation:** It validates the input parameters, ensuring that mandatory
+    fields like 'Description' are present and that 'Sender' or 'Recipient' values
+    are provided and correctly formatted (e.g., email validation) when specific types
+    are selected.
+
+    3. **Payload Construction:** It constructs a JSON payload for the Mimecast API,
+    mapping the SOAR parameters to the Mimecast policy structure, including time-range
+    settings (Start/End Time) and bidirectional flags.
+
+    4. **API Execution:** The action sends a POST request to the Mimecast endpoint
+    `/api/policy/blockedsenders/create-policy` using the configured authentication
+    (OAuth or legacy HMAC).
+
+    5. **Result Processing:** Upon success, the action returns the details of the
+    newly created policy as JSON results.
+
+
+    ### Parameters Description:
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Response | String (DDL) | No | The response type for the policy: 'Block Sender'
+    or 'No Action'. Default is 'Block Sender'. |
+
+    | Description | String | Yes | A descriptive name or summary for the policy. |
+
+    | Extracted Data | String (DDL) | No | Source for sender/recipient info: 'Both',
+    'From Envelope', or 'From Headers'. |
+
+    | Sender | String | No | The sender identifier (email, domain, etc.). Required
+    if 'Sender Type' is not 'Everyone', 'Internal Addresses', or 'External Addresses'.
+    |
+
+    | Sender Type | String (DDL) | No | The category of the sender (e.g., 'Email Domain',
+    'Email Address'). |
+
+    | Recipient | String | No | The recipient identifier. Required if 'Recipient Type'
+    is not 'Everyone', 'Internal Addresses', or 'External Addresses'. |
+
+    | Recipient Type | String (DDL) | No | The category of the recipient (e.g., 'Email
+    Domain', 'Email Address'). |
+
+    | Comment | String | No | An optional internal comment for the policy. |
+
+    | Bidirectional | Boolean | No | If true, the policy applies to traffic in both
+    directions. |
+
+    | Enforced | Boolean | No | If true, the policy is actively enforced by Mimecast.
+    |
+
+    | Start Time | String | No | ISO 8601 start time. If empty, the policy is set
+    to 'eternal'. |
+
+    | End Time | String | No | ISO 8601 end time. If empty, the policy is set to 'eternal'.
+    |
+
+
+    ### Additional Notes:
+
+    - Either a specific 'Sender' or 'Recipient' must be provided depending on the
+    selected 'Sender Type' or 'Recipient Type'. If the type is 'Email Address', 'Email
+    Domain', or 'Header Display Name', the corresponding identifier parameter becomes
+    effectively mandatory.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new Block Sender policy in the Mimecast platform, which changes the
+      mail flow filtering configuration of the external system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Permit Sender:
+  ai_description: "Permits a specific sender for a specific recipient within the Mimecast\
+    \ platform. This action modifies the 'Managed Senders' list in Mimecast to ensure\
+    \ that emails from the specified sender are allowed through to the designated\
+    \ recipient, bypassing certain security filters. \n\n### Parameters\n| Parameter\
+    \ | Type | Mandatory | Description |\n|-----------|------|-----------|-------------|\n\
+    | Sender | String | Yes | The email address of the sender you wish to permit.\
+    \ |\n| Recipient | String | Yes | The email address of the recipient for whom\
+    \ the sender should be permitted. |\n\n### Flow Description\n1. **Parameter Extraction**:\
+    \ The action retrieves the 'Sender' and 'Recipient' email addresses from the input\
+    \ parameters.\n2. **Manager Initialization**: It initializes the Mimecast Manager\
+    \ using the integration's configuration (API keys, secrets, and root URL).\n3.\
+    \ **API Interaction**: The action calls the Mimecast API endpoint `/api/managedsender/permit-or-block-sender`\
+    \ with the 'permit' action, targeting the specific sender-recipient pair.\n4.\
+    \ **Execution Result**: The action returns a success message if the Mimecast platform\
+    \ confirms the sender has been permitted, or an error message if the API request\
+    \ fails."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action adds a sender to the permitted senders list for a specific recipient
+      in Mimecast, which changes the security policy state in the external Mimecast
+      system.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the Mimecast server using the credentials and configuration
+    provided in the integration settings. This action ensures that the SOAR platform
+    can successfully communicate with the Mimecast API.
+
+
+    ### Parameters Description
+
+    | Parameter | Description | Type | Mandatory |
+
+    | --------- | ----------- | ---- | --------- |
+
+    | N/A | This action does not require any input parameters. | N/A | N/A |
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: Retrieves the integration configuration parameters
+    including API Root, Application ID/Key, Access/Secret Keys, or Client ID/Secret
+    for OAuth2, and SSL verification settings.
+
+    2. **Manager Setup**: Initializes the `MimecastManager` which validates the authentication
+    method (Legacy HMAC or OAuth2) and prepares the request session.
+
+    3. **Connectivity Test**: Executes a POST request to the `/api/account/get-account`
+    endpoint to verify that the provided credentials are valid and the server is reachable.
+
+    4. **Result Reporting**: Returns a success message if the API responds with a
+    valid account status, or a failure message with specific error details if the
+    connection or authentication fails.
+
+
+    ### Additional Notes
+
+    This action does not process any entities and is primarily used for troubleshooting
+    and initial setup verification. As a 'Ping' action, it is excluded from enrichment
+    categorization.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Reject Message:
+  ai_description: >-
+    Rejects a held email message in Mimecast. This action is specifically designed
+    to process messages that are currently in a 'Held' status within the Mimecast
+    gateway. By rejecting a message, it is removed from the hold queue, and depending
+    on the configuration, the sender can be notified of the rejection.
+
+
+    ### Parameters Description
+
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Message ID | String | Yes | The unique identifier of the message that needs
+    to be rejected. |
+
+    | Note | String | No | An additional explanation or note regarding why the message
+    was rejected. |
+
+    | Reason | String (Dropdown) | No | The specific reason for rejection. Options
+    include: 'Inappropriate Communication', 'Confidential Information', 'Restricted
+    Content', or 'Against Email Policy'. |
+
+    | Notify Sender | Boolean | No | If set to true, the action will trigger a notification
+    to the sender informing them of the rejection. Default is false. |
+
+
+    ### Flow Description
+
+
+    1. **Parameter Initialization**: The action retrieves the mandatory 'Message ID'
+    and optional parameters ('Note', 'Reason', 'Notify Sender') from the input.
+
+    2. **Manager Setup**: It initializes the Mimecast Manager using the integration's
+    configuration (API Root, Credentials, etc.).
+
+    3. **API Selection**: The action determines the correct API endpoint based on
+    the authentication method used (Legacy API vs. OAuth).
+
+    4. **Rejection Execution**: It sends a POST request to Mimecast to reject the
+    specified message, including the provided notes and reason.
+
+    5. **Result Handling**: The action validates the API response to ensure the message
+    was successfully rejected and returns a success or failure message to the Google
+    SecOps environment.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Rejects a held email message in Mimecast, changing its status and removing it
+      from the hold queue.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Release Message:
+  ai_description: >-
+    ### General Description
+
+    Releases a held email message in the Mimecast environment. This action is specifically
+    designed to handle messages that have been placed in a 'Held' status by Mimecast
+    security policies, allowing an analyst to deliver them to the intended recipient
+    or move them to a sandbox for inspection.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Message ID | String | Yes | The unique identifier of the Mimecast message to
+    be released. |
+
+    | Release To Sandbox | Boolean | No | If set to `True`, the message will be released
+    to the Mimecast sandbox environment instead of the recipient's inbox. Defaults
+    to `False`. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts the `Message ID` and `Release To Sandbox`
+    parameters from the input.
+
+    2. **Authentication**: It initializes the Mimecast API manager, supporting both
+    legacy HMAC-SHA1 and modern OAuth2 authentication methods.
+
+    3. **Execution**: Based on the `Release To Sandbox` toggle, the action calls the
+    appropriate Mimecast API endpoint (`/api/gateway/hold-release` or legacy equivalents)
+    to release the message.
+
+    4. **Verification**: The action validates the API response to ensure the message
+    was successfully released. For modern authentication, it explicitly checks the
+    `release` status in the response data.
+
+    5. **Finalization**: The action concludes with a success message confirming the
+    release or fails with an error if the operation was unsuccessful.
+
+
+    ### Additional Notes
+
+    - Only messages with the status 'Held' can be released using this action.
+
+    - This action does not process or iterate over Google SecOps entities; it operates
+    directly on the provided Message ID.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Changes the status of an email message in Mimecast from 'Held' to 'Released',
+      effectively delivering the message to the recipient or a sandbox.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Report Message:
+  ai_description: >-
+    Reports a specific email message to Mimecast for security analysis. This action
+    is primarily used to flag messages that have already been processed (e.g., Held,
+    Archived, or Bounced) as potentially malicious or unwanted. By reporting a message,
+    users can help improve Mimecast's filtering accuracy by categorizing the threat
+    as Spam, Malware, or Phishing.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Message ID | String | Yes | The unique identifier of the message in Mimecast
+    that needs to be reported. |
+
+    | Comment | String | No | An optional text comment to provide additional context
+    for the report. |
+
+    | Report As | String | No | The classification for the report. Valid values are
+    'Spam', 'Malware', or 'Phishing'. Defaults to 'Spam'. |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves the 'Message ID', 'Comment',
+    and 'Report As' classification from the input parameters.
+
+    2. **Manager Initialization:** It initializes the Mimecast Manager using the integration's
+    API credentials (API Root, App ID, App Key, etc.).
+
+    3. **API Interaction:** The action calls the Mimecast API endpoint `/api/message-finder/report-message`.
+    It maps the 'Report As' parameter to the internal Mimecast types (spam, malware,
+    or phishing) and sends the request with the provided Message ID and optional comment.
+
+    4. **Outcome Reporting:** The action validates the API response. If successful,
+    it returns a completion message; otherwise, it logs the error and fails the action.
+
+
+    ### Additional Notes
+
+    * This action is marked as **Deprecated** in the integration metadata.
+
+    * It does not operate on SOAR entities (like IP or FileHash) but instead requires
+    a specific Mimecast Message ID as input.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Reports a message to Mimecast's security systems, which classifies the message
+      as Spam, Malware, or Phishing. This action influences the external system's
+      threat intelligence and filtering logic.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Simple Archive Search:
+  ai_description: >-
+    ### General Description: Search archive emails using defined parameters in Mimecast.
+    This action allows users to query the Mimecast archive for specific emails based
+    on sender, recipient, subject, and time range. ### Parameters: 1. Fields To Return
+    (Mandatory): Comma-separated list of fields to be returned in the results. 2.
+    Mailboxes (Optional): Comma-separated list of mailboxes to be searched. 3. From
+    (Optional): Comma-separated list of sender email addresses. 4. To (Optional):
+    Comma-separated list of recipient email addresses. 5. Subject (Optional): Subject
+    string to search for. 6. Time Frame (Mandatory): Time frame for the search (e.g.,
+    Last Hour, Custom). 7. Start Time (Optional): Start time for the search (ISO 8601).
+    Mandatory if Time Frame is 'Custom'. 8. End Time (Optional): End time for the
+    search (ISO 8601). 9. Max Emails To Return (Optional): Maximum number of emails
+    to return (Default: 50). ### Additional Notes: When providing time, ensure timezones
+    are accounted for. Ideally, the Siemplify and Mimecast instances should be in
+    the same timezone. If 'Custom' is selected for 'Time Frame', 'Start Time' must
+    be provided. ### Flow Description: 1. Parameter Extraction: The action retrieves
+    all input parameters and validates the 'Max Emails To Return' value. 2. Time Range
+    Calculation: It determines the start and end timestamps based on the 'Time Frame'
+    and optional 'Start/End Time' parameters. 3. Query Construction: An XML query
+    is built using the provided fields, mailboxes, addresses, and subject. 4. Execution:
+    The action calls the Mimecast Archive Search API with pagination to retrieve the
+    emails. 5. Output Generation: Found emails are formatted into a JSON result and
+    a CSV data table named 'Results'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
