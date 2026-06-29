@@ -19,7 +19,6 @@ import io
 import os
 import shutil
 import subprocess
-import sys
 from typing import TYPE_CHECKING
 
 import py7zr
@@ -182,7 +181,8 @@ def test_extract_7z_cli_fallback(mock_siemplify, monkeypatch, mock_7z_cli) -> No
 
     archive_bytes = archive_data.getvalue()
 
-    monkeypatch.setitem(sys.modules, "py7zr", None)
+    import file_utilities.core.AttachmentsManager
+    monkeypatch.setattr(file_utilities.core.AttachmentsManager, "HAS_PY7ZR", False)
 
     mgr = AttachmentsManager(mock_siemplify)
     results = mgr.extract_7z(
