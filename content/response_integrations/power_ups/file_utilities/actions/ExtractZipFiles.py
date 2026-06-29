@@ -87,7 +87,26 @@ def main():
                     entity.additional_properties["attachment_id"],
                 )
                 zip_file_content = io.BytesIO(_attachment.getvalue())
-                if zipfile.is_zipfile(zip_file_content):
+                is_7z: bool = False
+                try:
+                    zip_file_content.seek(0)
+                    header: bytes = zip_file_content.read(6)
+                    if header == b'7z\xbc\xaf\x27\x1c':
+                        is_7z = True
+                except Exception:
+                    pass
+                finally:
+                    zip_file_content.seek(0)
+
+                if is_7z:
+                    extracted_files[entity.identifier] = attach_mgr.extract_7z(
+                        entity.identifier,
+                        zip_file_content,
+                        bruteforce=bruteforce_password,
+                        pwds=zip_passwords,
+                    )
+                    result_value: str = "true"
+                elif zipfile.is_zipfile(zip_file_content):
                     extracted_files[entity.identifier] = attach_mgr.extract_zip(
                         entity.identifier,
                         zip_file_content,
