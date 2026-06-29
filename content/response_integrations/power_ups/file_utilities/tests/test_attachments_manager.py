@@ -21,6 +21,7 @@ import shutil
 import subprocess
 from typing import TYPE_CHECKING
 
+import magic
 import py7zr
 import pytest
 
@@ -119,6 +120,16 @@ def test_attachments_manager_blobs_population(
     assert len(populated) == 1
     assert "base64_blob" in populated[0]
     assert len(populated[0]["base64_blob"]) == EXPECTED_BASE64_BLOB_LENGTH
+
+
+@pytest.fixture(autouse=True)
+def mock_magic(monkeypatch) -> None:
+    """Mock magic.detect_from_content to return a dummy result to prevent Windows libmagic errors."""
+    class MockMagicResult:
+        name = "text/plain"
+        mime_type = "text/plain"
+
+    monkeypatch.setattr(magic, "detect_from_content", lambda x: MockMagicResult())
 
 
 @pytest.fixture
