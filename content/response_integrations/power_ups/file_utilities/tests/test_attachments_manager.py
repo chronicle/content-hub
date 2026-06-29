@@ -16,10 +16,14 @@ from __future__ import annotations
 
 import base64
 import io
+import os
+import shutil
+import subprocess
 import sys
 from typing import TYPE_CHECKING
 
 import py7zr
+import pytest
 
 from file_utilities.core.AttachmentsManager import (
     AttachmentsManager,
@@ -118,7 +122,30 @@ def test_attachments_manager_blobs_population(
     assert len(populated[0]["base64_blob"]) == EXPECTED_BASE64_BLOB_LENGTH
 
 
-def test_extract_7z_with_password(mock_siemplify) -> None:
+@pytest.fixture
+def mock_7z_cli(monkeypatch) -> None:
+    """
+    Mock shutil.which and subprocess.run to simulate 7z binary availability and
+    extraction.
+    """
+    monkeypatch.setattr(shutil, "which", lambda x: "/usr/bin/7z")
+
+    def mock_run(cmd, *args, **kwargs):
+        out_dir = None
+        for arg in cmd:
+            if arg.startswith("-o"):
+                out_dir = arg[2:]
+                break
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+            with open(os.path.join(out_dir, "test_file.txt"), "wb") as f:
+                f.write(b"This is a test 7z content.")
+        return subprocess.CompletedProcess(cmd, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", mock_run)
+
+
+def test_extract_7z_with_password(mock_siemplify, mock_7z_cli) -> None:
     """
     Verify that extract_7z successfully extracts password protected archive in-memory
     using py7zr.
@@ -143,7 +170,7 @@ def test_extract_7z_with_password(mock_siemplify) -> None:
     assert base64.b64decode(results[0]["raw"]) == b"This is a test 7z content."
 
 
-def test_extract_7z_cli_fallback(mock_siemplify, monkeypatch) -> None:
+def test_extract_7z_cli_fallback(mock_siemplify, monkeypatch, mock_7z_cli) -> None:
     """
     Verify that extract_7z falls back to CLI 7z execution when py7zr is unavailable.
     """
