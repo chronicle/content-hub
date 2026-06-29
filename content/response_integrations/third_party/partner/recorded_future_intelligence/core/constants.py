@@ -89,6 +89,9 @@ ENTITY_HASH = "entity_hashes"
 ENTITY_URL = "entity_urls"
 ENTITY_VULN = "entity_vulns"
 
+# Identity
+DOMAIN_TYPES = ["Authorization", "Email"]
+
 CLASSIC_ALERT_ENTITY_MAPPING = {
     "entity_ips": "IpAddress",
     "entity_domains": "InternetDomainName",
