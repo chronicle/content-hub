@@ -129,7 +129,7 @@ def mock_magic(monkeypatch) -> None:
         name = "text/plain"
         mime_type = "text/plain"
 
-    monkeypatch.setattr(magic, "detect_from_content", lambda x: MockMagicResult())
+    monkeypatch.setattr(magic, "detect_from_content", lambda x: MockMagicResult(), raising=False)
 
 
 @pytest.fixture
