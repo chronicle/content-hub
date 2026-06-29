@@ -48,8 +48,15 @@ class MsGraphSession(
             self.get_attachments_from_email,
             self.get_attachment_content,
             self.search_query,
+            self.list_users,
+            self.handle_batch,
             get_oauth_token,
         ]
+
+    @router.get("/v1.0/[a-zA-Z0-9]+/users")
+    def list_users(self, request: MockRequest) -> MockResponse:
+        """Handle list users request."""
+        return MockResponse(content={"value": [self._product.get_user()]}, status_code=200)
 
     @router.get("/v1.0/[a-zA-Z0-9]+/users/[a-zA-Z0-9@.]+")
     def get_user(self, request: MockRequest) -> MockResponse:
@@ -262,6 +269,21 @@ class MsGraphSession(
     @router.post("/v1.0/search/query")
     def search_query(self, _: MockRequest) -> MockResponse:
         return MockResponse(content=SEARCH_QUERY_DATA, status_code=200)
+    @router.post("/v1.0/\\$batch")
+    def handle_batch(self, request: MockRequest) -> MockResponse:
+        import json
+        try:
+            req_data = json.loads(request.kwargs.get("data", "{}"))
+            responses = []
+            for req in req_data.get("requests", []):
+                responses.append({
+                    "id": req.get("id"),
+                    "status": 200,
+                    "body": {"value": []}
+                })
+            return MockResponse(content={"responses": responses}, status_code=200)
+        except Exception:
+            return MockResponse(content={"responses": []}, status_code=200)
 
 
 @router.post("/[a-zA-Z0-9-]+/oauth2/v2.0/token")

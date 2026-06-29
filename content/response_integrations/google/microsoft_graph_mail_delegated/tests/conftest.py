@@ -1,48 +1,36 @@
-
 from __future__ import annotations
-import os
 import sys
-import pkgutil
-import pathlib
-
-
+import os
 import soar_sdk
-
-# Provide integration_testing fixtures
-pytest_plugins = ("integration_testing.conftest",)
-
-# Alias all top-level soar_sdk modules to themselves to unify the namespace for mocks
-changed = True
-while changed:
-    changed = False
-    for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-        if name not in sys.modules:
-            try:
-                sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-                changed = True
-            except Exception:
-                pass
-
-# Add SDK internal modules to sys.path to support flat imports within the SDK and TIPCommon
-sdk_dir = os.path.dirname(soar_sdk.__file__)
-if sdk_dir not in sys.path:
-    sys.path.insert(0, sdk_dir)
-
-# Add parent directory and integration directory to sys.path to support internal module resolution
-parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
-int_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if int_dir not in sys.path:
-    sys.path.insert(0, int_dir)
+sys.path.insert(0, os.path.dirname(soar_sdk.__file__))
 
 
 
 from collections import namedtuple
 import json
+import os
+import sys
 
 # Insert current directory (integration root) into sys.path to resolve flat imports
+int_dir = os.path.dirname(os.path.dirname(__file__))
+if int_dir in sys.path:
+    sys.path.remove(int_dir)
+sys.path.insert(0, int_dir)
 
+import soar_sdk
+sdk_dir = os.path.dirname(soar_sdk.__file__)
+if sdk_dir not in sys.path:
+    sys.path.insert(0, sdk_dir)
+
+
+import html2text
+# Patch html2text.HTML2Text for Siemplify specific attributes
+original_init = html2text.HTML2Text.__init__
+def patched_init(self, *args, **kwargs):
+    original_init(self, *args, **kwargs)
+    self.html_links = []
+    self.html_links_original_src = []
+html2text.HTML2Text.__init__ = patched_init
 
 import pytest
 from pytest_mock import MockerFixture
@@ -206,17 +194,6 @@ def ms_graph_manager(script_session: MsGraphSession) -> ApiManager:
     yield ApiManager(script_session, api_params, logger)
 
 
-import pytest
-from TIPCommon.base.connector import Connector
-Connector.is_overflow_alert = lambda self, alert_info: False
-import integration_testing.common
-integration_testing.common.prepare_connector_params = lambda *args: {}
-import integration_testing.common
-import html2text
-class MockHTML2Text(html2text.HTML2Text):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.html_links = []
-        self.html_links_original_src = []
+# Provide integration_testing fixtures
+pytest_plugins = ("integration_testing.conftest",)
 
-html2text.HTML2Text = MockHTML2Text

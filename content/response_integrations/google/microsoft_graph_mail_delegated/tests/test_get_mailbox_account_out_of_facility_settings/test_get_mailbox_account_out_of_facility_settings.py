@@ -26,7 +26,7 @@ from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 
 
-SUCCESS_OUTPUT_MESSAGE: str = "Successfully returned OOF settings for the:\nABCD@X.COM"
+SUCCESS_OUTPUT_MESSAGE: str = "Successfully returned OOF settings for the:\nabcd@x.com"
 FAILED_OUTPUT_MESSAGE: str = (
     'Error executing action "MicrosoftGraphMailDelegated - Get Mailbox Account '
     + 'Out Of Facility Settings".\nReason: Failed to execute action because '
@@ -39,7 +39,7 @@ FAIL_ENTITY_1: Entity = create_entity(FAIL_ENTITY_ID, EntityTypesEnum.HOST_NAME)
 SCRIPT_DEADLINE_TIME = datetime.datetime.now() + datetime.timedelta(minutes=10)
 ACTION_SUCCESS_JSON = [
     {
-        "Entity": "ABCD@X.COM",
+        "Entity": "abcd@x.com",
         "EntityResult": {
             "@odata.context": "msdata",
             "id": "user-id",
@@ -65,7 +65,12 @@ ACTION_FAILED_OUTPUT = ActionOutput(
 
 
 @set_metadata(
-    parameters={},
+    parameters={
+        "Base64 Encoded Private Key": "",
+        "Base64 Encoded Certificate": "",
+        "Base64 Encoded CA certificate": "",
+        "Email Exclude Pattern": "",
+    },
     integration_config_file_path=CONFIG_PATH,
     entities=[USERNAME_ENTITY_1],
     input_context={
@@ -89,7 +94,12 @@ def test_get_mailbox_account_out_of_facility_settings_success(
 
 
 @set_metadata(
-    parameters={},
+    parameters={
+        "Base64 Encoded Private Key": "",
+        "Base64 Encoded Certificate": "",
+        "Base64 Encoded CA certificate": "",
+        "Email Exclude Pattern": "",
+    },
     integration_config_file_path=CONFIG_PATH,
     entities=[FAIL_ENTITY_1],
     input_context={

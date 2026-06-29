@@ -20,8 +20,27 @@ def set_is_test_run_to(value: bool):
     import TIPCommon.utils
     TIPCommon.utils.is_test_run = lambda: value
 
-from integration_testing.common import create_entity
-from TIPCommon.types import Entity
+class Entity:
+    def __init__(self, identifier: str, entity_type):
+        self.identifier = identifier
+        # Store the enum value if it is an enum, else the raw value
+        self.entity_type = getattr(entity_type, 'value', entity_type)
+        self.additional_properties = {}
+        self.is_enriched = False
+    
+    def _update_internal_properties(self):
+        pass
+        
+    def to_dict(self):
+        return {
+            "identifier": self.identifier,
+            "entity_type": self.entity_type,
+            "additional_properties": self.additional_properties,
+            "is_enriched": self.is_enriched
+        }
+
+def create_entity(identifier: str, entity_type) -> object:
+    return Entity(identifier=identifier, entity_type=entity_type)
 
 
 VALID_JSON_SUFFIXES: Collection[str] = (
