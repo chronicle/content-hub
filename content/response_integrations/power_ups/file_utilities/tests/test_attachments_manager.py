@@ -14,7 +14,12 @@
 
 from __future__ import annotations
 
+import base64
+import io
+import sys
 from typing import TYPE_CHECKING
+
+import py7zr
 
 from file_utilities.core.AttachmentsManager import (
     AttachmentsManager,
@@ -111,3 +116,54 @@ def test_attachments_manager_blobs_population(
     assert len(populated) == 1
     assert "base64_blob" in populated[0]
     assert len(populated[0]["base64_blob"]) == EXPECTED_BASE64_BLOB_LENGTH
+
+
+def test_extract_7z_with_password(mock_siemplify) -> None:
+    """
+    Verify that extract_7z successfully extracts password protected archive in-memory
+    using py7zr.
+    """
+    archive_data = io.BytesIO()
+    with py7zr.SevenZipFile(
+        archive_data, mode="w", password="test_password"
+    ) as archive:
+        archive.writestr("This is a test 7z content.", "test_file.txt")
+
+    archive_bytes = archive_data.getvalue()
+
+    mgr = AttachmentsManager(mock_siemplify)
+    results = mgr.extract_7z(
+        zip_filename="test.7z",
+        content=io.BytesIO(archive_bytes),
+        pwds=["test_password"],
+    )
+
+    assert len(results) == 1
+    assert results[0]["filename"] == "test_file.txt"
+    assert base64.b64decode(results[0]["raw"]) == b"This is a test 7z content."
+
+
+def test_extract_7z_cli_fallback(mock_siemplify, monkeypatch) -> None:
+    """
+    Verify that extract_7z falls back to CLI 7z execution when py7zr is unavailable.
+    """
+    archive_data = io.BytesIO()
+    with py7zr.SevenZipFile(
+        archive_data, mode="w", password="test_password"
+    ) as archive:
+        archive.writestr("This is a test 7z content.", "test_file.txt")
+
+    archive_bytes = archive_data.getvalue()
+
+    monkeypatch.setitem(sys.modules, "py7zr", None)
+
+    mgr = AttachmentsManager(mock_siemplify)
+    results = mgr.extract_7z(
+        zip_filename="test.7z",
+        content=io.BytesIO(archive_bytes),
+        pwds=["test_password"],
+    )
+
+    assert len(results) == 1
+    assert results[0]["filename"] == "test_file.txt"
+    assert base64.b64decode(results[0]["raw"]) == b"This is a test 7z content."
