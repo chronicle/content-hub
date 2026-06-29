@@ -25,6 +25,7 @@ import tempfile
 import time
 import zipfile
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 import magic
@@ -674,14 +675,14 @@ class AttachmentsManager:
             List of extracted files' metadata, or None if extraction failed.
         """
         with tempfile.TemporaryDirectory() as temp_dir:
-            temp_archive: str = os.path.join(temp_dir, "archive.7z")
+            temp_dir_path = Path(temp_dir)
+            temp_archive = temp_dir_path / "archive.7z"
             content.seek(0)
-            with open(temp_archive, "wb") as f:
-                f.write(content.getvalue())
+            temp_archive.write_bytes(content.getvalue())
 
-            extracted_dir: str = os.path.join(temp_dir, "extracted")
+            extracted_dir = temp_dir_path / "extracted"
             cmd: list[str] = self._build_7z_cmd(
-                cli_binary, temp_archive, extracted_dir, passwd
+                cli_binary, str(temp_archive), str(extracted_dir), passwd
             )
 
             res: subprocess.CompletedProcess[str] = subprocess.run(
@@ -693,7 +694,7 @@ class AttachmentsManager:
             if passwd:
                 self.logger.info(f"Password found {passwd}")
 
-            return self._read_cli_extracted_files(extracted_dir, zip_filename)
+            return self._read_cli_extracted_files(str(extracted_dir), zip_filename)
 
     def _build_7z_cmd(
         self,
@@ -717,11 +718,11 @@ class AttachmentsManager:
             cli_binary,
             "x",
             temp_archive,
-            "-o" + extracted_dir,
+            f"-o{extracted_dir}",
             "-y",
         ]
         if passwd:
-            cmd.append("-p" + passwd)
+            cmd.append(f"-p{passwd}")
         else:
             cmd.append("-p-")
         return cmd
@@ -741,39 +742,16 @@ class AttachmentsManager:
             List of extracted files' metadata.
         """
         extracted_files: list[SingleJson] = []
-        for root, dirs, files in os.walk(extracted_dir):
-            self._process_cli_dir_files(
-                extracted_files, root, files, extracted_dir, zip_filename
-            )
+        extracted_path = Path(extracted_dir)
+        for file_path in extracted_path.rglob("*"):
+            if file_path.is_file():
+                rel_path = file_path.relative_to(extracted_path)
+                extracted_file = self.attachment(
+                    str(rel_path), file_path.read_bytes()
+                )
+                extracted_file["parent_file"] = zip_filename
+                extracted_files.append(extracted_file)
         return extracted_files
-
-    def _process_cli_dir_files(
-        self,
-        extracted_files: list[SingleJson],
-        root: str,
-        files: list[str],
-        extracted_dir: str,
-        zip_filename: str,
-    ) -> None:
-        """Process list of files in a directory walked by CLI extraction.
-
-        Args:
-            extracted_files: List to append metadata to.
-            root: Root path of the directory.
-            files: List of file names in the directory.
-            extracted_dir: Directory where files were extracted.
-            zip_filename: Name of the archive.
-        """
-        for file in files:
-            full_path: str = os.path.join(root, file)
-            rel_path: str = os.path.relpath(full_path, extracted_dir)
-            with open(full_path, "rb") as f:
-                file_bytes: bytes = f.read()
-            extracted_file: SingleJson = self.attachment(
-                rel_path, file_bytes
-            )
-            extracted_file["parent_file"] = zip_filename
-            extracted_files.append(extracted_file)
 
     @staticmethod
     def get_file_hash(data: bytes) -> dict[str, str]:

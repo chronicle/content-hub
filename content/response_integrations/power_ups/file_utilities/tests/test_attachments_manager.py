@@ -192,8 +192,9 @@ def test_extract_7z_cli_fallback(mock_siemplify, monkeypatch, mock_7z_cli) -> No
 
     archive_bytes = archive_data.getvalue()
 
-    import file_utilities.core.AttachmentsManager
-    monkeypatch.setattr(file_utilities.core.AttachmentsManager, "HAS_PY7ZR", False)
+    monkeypatch.setattr(
+        "file_utilities.core.AttachmentsManager.HAS_PY7ZR", False
+    )
 
     mgr = AttachmentsManager(mock_siemplify)
     results = mgr.extract_7z(
