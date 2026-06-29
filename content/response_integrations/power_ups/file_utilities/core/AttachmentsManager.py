@@ -39,7 +39,6 @@ except Exception:
 
 from soar_sdk.SiemplifyDataModel import Attachment
 from soar_sdk.SiemplifyUtils import dict_to_flat
-
 from TIPCommon.data_models import CreateEntity
 from TIPCommon.rest.soar_api import (
     add_attachment_to_case_wall,
@@ -546,7 +545,8 @@ class AttachmentsManager:
                 return self._parse_py7zr_extracted(
                     archive, factory, zip_filename
                 )
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"py7zr extraction failed: {e}")
             return None
 
     def _parse_py7zr_extracted(
