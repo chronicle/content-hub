@@ -180,7 +180,7 @@ def test_extract_7z_with_password(mock_siemplify, mock_7z_cli) -> None:
     assert base64.b64decode(results[0]["raw"]) == b"This is a test 7z content."
 
 
-def test_extract_7z_cli_fallback(mock_siemplify, monkeypatch, mock_7z_cli) -> None:
+def test_extract_7z_cli_fallback(mock_siemplify, monkeypatch) -> None:
     """
     Verify that extract_7z falls back to CLI 7z execution when py7zr is unavailable.
     """
