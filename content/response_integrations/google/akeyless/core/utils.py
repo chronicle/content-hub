@@ -16,13 +16,23 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+from .constants import MIN_MASK_LENGTH
+
+if TYPE_CHECKING:
+    import logging
+    from collections.abc import Callable
 
 
 def mask_id(value: str) -> str:
-    """Mask a secret ID for safe logging."""
-    if len(value) <= 6:
+    """Mask a secret ID for safe logging.
+
+    Returns:
+        str: The masked secret ID.
+
+    """
+    if len(value) <= MIN_MASK_LENGTH:
         return "***"
 
     return f"{value[:3]}***{value[-3:]}"
@@ -33,9 +43,9 @@ def build_lookup_with_warnings(
     get_key: Callable[[Any], str],
     get_value: Callable[[Any], Any],
     entity_type: str,
-    logger: Any,
+    logger: logging.Logger,
 ) -> dict[str, Any]:
-    """Generic helper to build a lookup dict and warn on duplicates.
+    """Build a lookup dict and warn on duplicates.
 
     Args:
         items: The list of items to process.

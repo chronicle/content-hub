@@ -18,7 +18,7 @@ from abc import ABC
 
 from TIPCommon.base.action import Action
 
-from .auth import IntegrationParameters, build_auth_params
+from .authentication import IntegrationParameters, build_auth_params
 from .manager import AkeylessClient
 
 
@@ -44,6 +44,7 @@ class AkeylessAction(Action, ABC):
             access_key=auth_params.access_key,
             access_type=auth_params.access_type,
             api_gateway_url=auth_params.api_gateway_url,
+            verify_ssl=auth_params.verify_ssl,
         )
 
         return self.akeyless_client

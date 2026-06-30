@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+# ruff: noqa: S105
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -36,6 +37,18 @@ class TestAkeylessClient:
         client = AkeylessClient(access_id="test-access-id", access_key="test-access-key")
         assert client.access_id == "test-access-id"
         assert client.access_key == "test-access-key"
+        assert client.verify_ssl is True
+        assert client.configuration.verify_ssl is True
+
+    def test_init_explicit_verify_ssl_false(self, mock_akeyless_api: MagicMock) -> None:
+        """Client initializes successfully with verify_ssl set to False."""
+        client = AkeylessClient(
+            access_id="test-access-id",
+            access_key="test-access-key",
+            verify_ssl=False,
+        )
+        assert client.verify_ssl is False
+        assert client.configuration.verify_ssl is False
 
     def test_init_missing_access_id_raises(self, mock_akeyless_api: MagicMock) -> None:
         """Raises InvalidConfigurationError when access_id is missing."""
