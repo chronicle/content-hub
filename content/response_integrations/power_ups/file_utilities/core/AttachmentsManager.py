@@ -574,7 +574,7 @@ class AttachmentsManager:
             zip_filename: Name of the archive file.
 
         Returns:
-            List of extracted files' metadata.
+            List of extracted files metadata.
         """
         extracted_files: list[SingleJson] = []
         for f_info in archive.list():
