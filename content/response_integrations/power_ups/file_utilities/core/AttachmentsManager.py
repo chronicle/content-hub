@@ -30,12 +30,13 @@ from typing import Any
 
 import magic
 import requests
+from py7zz.core import find_7z_binary
 
 try:
     import py7zr
     import py7zr.io
     HAS_PY7ZR = True
-except Exception:
+except Exception as e:
     HAS_PY7ZR = False
 
 from soar_sdk.SiemplifyDataModel import Attachment
@@ -57,6 +58,15 @@ class ExecutionScope(Enum):
 
 CASE_EVIDENCE_ID = "evidenceId"
 ORIG_EMAIL_DESCRIPTION = "This is the original message as EML"
+BINARY_NAMES: list[str] = ["7z", "7za", "7zr"]
+COMMON_PATHS: list[str] = [
+    "/usr/bin",
+    "/bin",
+    "/usr/local/bin",
+    "/usr/sbin",
+    "/sbin",
+    "/opt/bin",
+]
 
 
 class AttachmentsManager:
@@ -457,7 +467,7 @@ class AttachmentsManager:
                 pass
 
         for line in lines:
-            password_candidates.append(line.strip("\n"))
+            password_candidates.append(line.rstrip("\r\n"))
 
         if pwds:
             password_candidates.extend(pwds)
@@ -515,7 +525,7 @@ class AttachmentsManager:
             content.seek(0)
             with py7zr.SevenZipFile(content, mode="r") as archive:
                 return archive.needs_password()
-        except Exception:
+        except Exception as e:
             return True
 
     def _try_py7zr_extract(
@@ -547,7 +557,7 @@ class AttachmentsManager:
                     archive, factory, zip_filename
                 )
         except Exception as e:
-            self.logger.error(f"py7zr extraction failed: {e}")
+            self.logger.debug(f"py7zr extraction failed: {e}")
             return None
 
     def _parse_py7zr_extracted(
@@ -639,20 +649,33 @@ class AttachmentsManager:
         )
 
     def _get_7z_cli_binary(self) -> str:
-        """Find the path to the 7z or 7za CLI binary.
+        """Find the path to the 7z, 7za or 7zr CLI binary.
 
         Returns:
-            The name of the available binary ('7z' or '7za').
+            The path/name of the available binary.
 
         Raises:
-            RuntimeError: If neither binary is found.
+            RuntimeError: If no binary is found.
         """
-        for bin_name in ["7z", "7za"]:
-            if shutil.which(bin_name):
-                return bin_name
+        try:
+            py7zz_bin: str | None = find_7z_binary()
+            if py7zz_bin and os.path.isfile(py7zz_bin) and os.access(py7zz_bin, os.X_OK):
+                return py7zz_bin
+        except Exception:
+            pass
+
+        for bin_name in BINARY_NAMES:
+            path: str | None = shutil.which(bin_name)
+            if path:
+                return path
+
+            for folder in COMMON_PATHS:
+                full_path: str = os.path.join(folder, bin_name)
+                if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                    return full_path
 
         raise RuntimeError(
-            "No 7z or 7za binary found, and py7zr could not extract "
+            "No 7z, 7za or 7zr binary found, and py7zr could not extract "
             "the archive."
         )
 
@@ -692,7 +715,7 @@ class AttachmentsManager:
                 return None
 
             if passwd:
-                self.logger.info(f"Password found {passwd}")
+                self.logger.info("Password found")
 
             return self._read_cli_extracted_files(str(extracted_dir), zip_filename)
 
