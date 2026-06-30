@@ -30,7 +30,6 @@ from typing import Any
 
 import magic
 import requests
-from py7zz.core import find_7z_binary
 
 try:
     import py7zr
@@ -658,6 +657,7 @@ class AttachmentsManager:
             RuntimeError: If no binary is found.
         """
         try:
+            from py7zz.core import find_7z_binary
             py7zz_bin: str | None = find_7z_binary()
             if py7zz_bin and os.path.isfile(py7zz_bin) and os.access(py7zz_bin, os.X_OK):
                 return py7zz_bin
