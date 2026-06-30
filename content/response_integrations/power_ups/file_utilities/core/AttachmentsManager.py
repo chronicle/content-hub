@@ -36,7 +36,7 @@ try:
     import py7zr
     import py7zr.io
     HAS_PY7ZR = True
-except Exception as e:
+except Exception:
     HAS_PY7ZR = False
 
 from soar_sdk.SiemplifyDataModel import Attachment
@@ -525,7 +525,7 @@ class AttachmentsManager:
             content.seek(0)
             with py7zr.SevenZipFile(content, mode="r") as archive:
                 return archive.needs_password()
-        except Exception as e:
+        except Exception:
             return True
 
     def _try_py7zr_extract(
