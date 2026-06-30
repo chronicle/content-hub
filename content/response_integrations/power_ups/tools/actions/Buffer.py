@@ -16,28 +16,28 @@ from __future__ import annotations
 
 import json
 
+from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 
 
-def main():
+def main() -> None:
+    """Main execution logic for the Buffer action."""
     siemplify = SiemplifyAction()
+    status = EXECUTION_STATE_COMPLETED
 
-    json_failure_message = ""
+    result_value = siemplify.parameters.get("ResultValue")
+    output_message = "Input values 'transferred' to the output."
+    
     if siemplify.parameters.get("JSON"):
         try:
             data = json.loads(siemplify.parameters.get("JSON"))
             siemplify.result.add_result_json(data)
-            siemplify.result.add_json("Json", data)
         except Exception as e:
-            json_failure_message = f"Failed to load JSON with error: {e}"
+            output_message = f"Failed to load JSON with error: {e}"
+            status = EXECUTION_STATE_FAILED
+            result_value = "failed"
 
-    output_message = "Input values 'transferred' to the output."
-    if json_failure_message:
-        output_message += "\n" + json_failure_message
-
-    result_value = siemplify.parameters.get("ResultValue")
-
-    siemplify.end(output_message, result_value)
+    siemplify.end(output_message, result_value, status)
 
 
 if __name__ == "__main__":

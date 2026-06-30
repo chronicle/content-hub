@@ -45,12 +45,6 @@ from .exceptions import RecordedFutureDataModelTransformationLayerError
 if TYPE_CHECKING:
     from psengine.classic_alerts import ClassicAlert, ClassicAlertHit
     from psengine.classic_alerts.classic_alert import EnrichedEntity, TriggeredBy
-    from psengine.enrich import (
-        EnrichedDomain,
-        EnrichedHash,
-        EnrichedIP,
-        EnrichedVulnerability,
-    )
 
 ENTITY_DATAMODEL_MAP = {
     "ip": IP,
