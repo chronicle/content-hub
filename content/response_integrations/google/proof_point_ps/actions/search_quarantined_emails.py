@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from typing import Never
 
 
-
 DLP_VIOLATION_MAPPING = {
     "No": None,
     "Basic": "t",
@@ -131,8 +130,10 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
         if self.params.guid:
             guid_lower = self.params.guid.lower()
             records = [
-                r for r in records
-                if guid_lower in {
+                r
+                for r in records
+                if guid_lower
+                in {
                     r.guid.lower() if r.guid else "",
                     r.localguid.lower() if r.localguid else "",
                 }
@@ -141,18 +142,15 @@ class SearchQuarantinedEmails(BaseProofPointPSAction):
         if self.params.msgid:
             msgid_lower = self.params.msgid.lower()
             records = [
-                r for r in records
-                if r.messageid and msgid_lower in r.messageid.lower()
+                r for r in records if r.messageid and msgid_lower in r.messageid.lower()
             ]
 
         if self.params.dlp_violation_raw == "Basic":
-            records = [
-                r for r in records
-                if r.dlpviolation and r.dlpviolation == "t"
-            ]
+            records = [r for r in records if r.dlpviolation and r.dlpviolation == "t"]
         elif self.params.dlp_violation_raw == "Detailed":
             records = [
-                r for r in records
+                r
+                for r in records
                 if r.dlpviolation and isinstance(r.dlpviolation, dict)
             ]
 

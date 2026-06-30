@@ -170,8 +170,7 @@ class EnrichEntities(BaseProofPointPSAction):
                     f"\nAction wasn't able to enrich the following entities "
                     f"using Proofpoint Email Protection: {failed_names}"
                 )
-            
-            
+
         else:
             self.json_results = {}
             self.output_message = "None of the provided entities were enriched."

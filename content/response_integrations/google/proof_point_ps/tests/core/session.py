@@ -76,7 +76,7 @@ class ProofPointPSSession(MockSession[MockRequest, MockResponse, ProofPointPSPro
                 encoding="latin1",
                 headers={
                     "Content-Type": "application/octet-stream",
-                    "x-pps-folder": folder
+                    "x-pps-folder": folder,
                 },
                 status_code=200,
             )

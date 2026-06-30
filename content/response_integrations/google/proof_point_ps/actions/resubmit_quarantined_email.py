@@ -88,9 +88,7 @@ class ResubmitQuarantinedEmail(BaseProofPointPSAction):
                     f" GUID {guid} failed during execution. Error: {e}."
                 )
 
-        self.json_results = {
-            "success": successful_records
-        }
+        self.json_results = {"success": successful_records}
         self.result_value = True
         self.output_message = (
             f"Successfully resubmitted quarantined email(s): {', '.join(successful_guids)}."

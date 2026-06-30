@@ -107,15 +107,12 @@ class MoveQuarantinedEmail(BaseProofPointPSAction):
                     f"Error: {e}."
                 )
 
-        self.json_results = {
-            "success": successful_records
-        }
+        self.json_results = {"success": successful_records}
         self.result_value = True
         self.output_message = (
             f"Successfully moved quarantined email(s): "
             f"{', '.join(successful_guids)} to {self.params.target_folder}."
         )
-
 
 
 def main() -> None:

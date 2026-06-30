@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
-from proof_point_ps.actions import forward_quarantined_email
+from proof_point_ps.actions import resubmit_quarantined_email
 from proof_point_ps.tests.common import CONFIG_PATH
 
 if TYPE_CHECKING:
@@ -29,25 +29,23 @@ if TYPE_CHECKING:
     from proof_point_ps.tests.core.session import ProofPointPSSession
 
 
-class TestForwardQuarantinedEmail:
-    """Unit tests for ForwardQuarantinedEmail action."""
+class TestResubmitQuarantinedEmail:
+    """Unit tests for ResubmitQuarantinedEmail action."""
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
         parameters={
             "Message GUIDs": "guid-111",
             "Folder Name": "Quarantine",
-            "Deleted Folder Name": "Trash",
-            "To Address": "recipient@example.com",
         },
     )
-    def test_forward_success(
+    def test_resubmit_success(
         self,
         script_session: ProofPointPSSession,
         action_output: MockActionOutput,
         proofpoint: ProofPointPSProduct,
     ) -> None:
-        """Test successful forward of a quarantined email."""
+        """Test successful resubmit of a quarantined email."""
         proofpoint.add_record(
             "Quarantine",
             {
@@ -55,15 +53,14 @@ class TestForwardQuarantinedEmail:
                 "folder": "Quarantine",
             },
         )
-        proofpoint.records["Trash"] = []
 
-        forward_quarantined_email.main()
+        resubmit_quarantined_email.main()
 
         assert len(script_session.request_history) == 2
-        assert proofpoint.actions_executed[0]["action"] == "forward"
+        assert proofpoint.actions_executed[0]["action"] == "resubmit"
         assert proofpoint.actions_executed[0]["localguid"] == "guid-111"
 
-        success_msg = "Successfully forwarded quarantined email(s): guid-111."
+        success_msg = "Successfully resubmitted quarantined email(s): guid-111."
         assert action_output.results is not None
         assert action_output.results.output_message == success_msg
         assert action_output.results.execution_state == ExecutionState.COMPLETED
@@ -74,23 +71,21 @@ class TestForwardQuarantinedEmail:
         parameters={
             "Message GUIDs": "guid-111",
             "Folder Name": "Quarantine",
-            "Deleted Folder Name": "Quarantine",
-            "To Address": "recipient@example.com",
         },
     )
-    def test_forward_same_folder_error(
+    def test_resubmit_validation_failure(
         self,
         script_session: ProofPointPSSession,
         action_output: MockActionOutput,
         proofpoint: ProofPointPSProduct,
     ) -> None:
-        """Test forward fails when deleted folder is the same as source folder."""
-        forward_quarantined_email.main()
+        """Test resubmit fails when the GUID does not exist in Proofpoint."""
+        resubmit_quarantined_email.main()
 
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
         assert (
-            "Folder and deleted folder cannot be the same"
+            "The following message guids were not found in Proofpoint: guid-111"
             in action_output.results.output_message
         )

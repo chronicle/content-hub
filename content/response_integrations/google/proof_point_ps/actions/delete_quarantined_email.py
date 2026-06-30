@@ -20,8 +20,7 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
-import datetime
-from ..core.constants import DELETE_ACTION_NAME, TIME_FORMAT
+from ..core.constants import DELETE_ACTION_NAME
 from ..core.exceptions import ProofPointPSError
 
 if TYPE_CHECKING:
@@ -76,40 +75,22 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
             return
 
         deleted_folder_error = None
-        folder_missing = []
-        records = []
-        
-        start_date = (
-            datetime.datetime.utcnow() - datetime.timedelta(days=30)
-        ).strftime(TIME_FORMAT)
-        end_date = datetime.datetime.utcnow().strftime(TIME_FORMAT)
-
         try:
-            folder_records = self.api_client.search(
-                sender="*",
-                folder=folder_name,
-                start_date=start_date,
-                end_date=end_date,
+            records = self._validate_folder_and_guids(
+                guids,
+                folder_name,
+                fail_on_missing_guid=False
             )
-        except ProofPointPSError:
+        except ProofPointPSError as e:
             self.json_results = {}
             self.result_value = False
-            self.output_message = f"Folder '{folder_name}' does not exist."
+            self.output_message = str(e)
             return
 
-        folder_records_map = {r.guid: r for r in folder_records if r.guid}
-        folder_records_map.update({r.localguid: r for r in folder_records if r.localguid})
-
-        for guid in guids:
-            record = folder_records_map.get(guid)
-            if record:
-                records.append(record)
-            else:
-                folder_missing.append(guid)
-
-        failed_guids = folder_missing
         records_map = {r.guid: r for r in records if r.guid}
         records_map.update({r.localguid: r for r in records if r.localguid})
+
+        failed_guids = [g for g in guids if g not in records_map]
 
         failed_deletions = []
         for guid in guids:
@@ -148,9 +129,7 @@ class DeleteQuarantinedEmail(BaseProofPointPSAction):
         combined_error = " ".join(error_msgs) if error_msgs else None
 
         if successful_guids:
-            self.json_results = {
-                "success": successful_records
-            }
+            self.json_results = {"success": successful_records}
             self.result_value = True
             if combined_error:
                 self.output_message = (

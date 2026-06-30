@@ -91,7 +91,12 @@ class BaseProofPointPSAction(Action, ABC):
     def result_value(self, value: bool) -> None:
         self._result_value = value
 
-    def _validate_folder_and_guids(self, guids: list[str], folder_name: str) -> list[QuarantineRecord] | None:
+    def _validate_folder_and_guids(
+        self,
+        guids: list[str],
+        folder_name: str,
+        fail_on_missing_guid: bool = True,
+    ) -> list[QuarantineRecord] | None:
         """Pre-validate GUIDs before executing any action.
 
         Distinguishes between GUIDs that do not exist globally vs. GUIDs that exist but
@@ -103,8 +108,6 @@ class BaseProofPointPSAction(Action, ABC):
         records = []
         folder_missing = []
 
-        sender = getattr(self.params, "from_address", "*") or "*"
-
         start_date = (
             datetime.datetime.utcnow() - datetime.timedelta(days=30)
         ).strftime(TIME_FORMAT)
@@ -112,18 +115,18 @@ class BaseProofPointPSAction(Action, ABC):
 
         try:
             folder_records = self.api_client.search(
-                sender=sender,
+                sender="*",
                 folder=folder_name,
                 start_date=start_date,
                 end_date=end_date,
             )
         except ProofPointPSError:
-            raise ProofPointPSError(
-                f"Folder '{folder_name}' does not exist."
-            )
+            raise ProofPointPSError(f"Folder '{folder_name}' does not exist.")
 
         folder_records_map = {r.guid: r for r in folder_records if r.guid}
-        folder_records_map.update({r.localguid: r for r in folder_records if r.localguid})
+        folder_records_map.update(
+            {r.localguid: r for r in folder_records if r.localguid}
+        )
 
         for guid in guids:
             record = folder_records_map.get(guid)
@@ -132,7 +135,7 @@ class BaseProofPointPSAction(Action, ABC):
             else:
                 folder_missing.append(guid)
 
-        if folder_missing:
+        if fail_on_missing_guid and folder_missing:
             raise ProofPointPSError(
                 "The following message guids were not found in Proofpoint: "
                 f"{', '.join(folder_missing)}."

@@ -58,7 +58,7 @@ class TestSearchQuarantinedEmails:
             "Fetch Message Status": False,
             "Max Results To Return": "100",
             "Subject": "Lottery",
-        }
+        },
     )
     def test_search_by_subject_exact_match(
         self,
@@ -123,7 +123,7 @@ class TestSearchQuarantinedEmails:
             "Fetch DLP Violation": "No",
             "Fetch Message Status": False,
             "Max Results To Return": "100",
-        }
+        },
     )
     def test_search_by_message_id_success(
         self,
@@ -186,7 +186,7 @@ class TestSearchQuarantinedEmails:
             "Fetch DLP Violation": "Basic",
             "Fetch Message Status": False,
             "Max Results To Return": "100",
-        }
+        },
     )
     def test_search_dlp_violation_filter_basic(
         self,
@@ -251,7 +251,7 @@ class TestSearchQuarantinedEmails:
             "Fetch DLP Violation": "Detailed",
             "Fetch Message Status": False,
             "Max Results To Return": "100",
-        }
+        },
     )
     def test_search_dlp_violation_filter_detailed(
         self,
@@ -319,7 +319,7 @@ class TestSearchQuarantinedEmails:
             "Fetch DLP Violation": "No",
             "Fetch Message Status": False,
             "Max Results To Return": "-5",
-        }
+        },
     )
     def test_search_invalid_limit(
         self,
@@ -335,7 +335,7 @@ class TestSearchQuarantinedEmails:
         assert action_output.results.result_value is False
         assert (
             'Error executing action "ProofPointPS - Search Quarantined Emails"\n'
-            'Reason: Failed to search quarantined email(s) '
+            "Reason: Failed to search quarantined email(s) "
             '(Error: "Max Results To Return" must be greater than 0).'
             in action_output.results.output_message
         )
@@ -350,7 +350,7 @@ class TestSearchQuarantinedEmails:
             "Folder Name": "Quarantine",
             "Fetch DLP Violation": "No",
             "Fetch Message Status": False,
-        }
+        },
     )
     def test_search_no_results(
         self,

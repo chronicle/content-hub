@@ -28,9 +28,6 @@ if TYPE_CHECKING:
     from .data_models import QuarantineRecord
 
 
-
-
-
 class ProofPointPSApiClient:
     """API client for ProofPointPS."""
 
@@ -236,4 +233,3 @@ class ProofPointPSApiClient:
 
         validate_response(response, "Unable to download email")
         return response.content
-

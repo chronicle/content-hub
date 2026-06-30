@@ -276,7 +276,10 @@ class TestDeleteQuarantinedEmail:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
-        assert action_output.results.output_message == "Folder and deleted folder cannot be the same."
+        assert (
+            action_output.results.output_message
+            == "Folder and deleted folder cannot be the same."
+        )
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,

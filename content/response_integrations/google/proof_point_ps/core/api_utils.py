@@ -152,4 +152,3 @@ def calculate_time_range(
     start = start.replace(tzinfo=None)
     end = end.replace(tzinfo=None)
     return start, end
-
