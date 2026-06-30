@@ -93,7 +93,7 @@ def main():
                     header: bytes = zip_file_content.read(6)
                     if header == b'7z\xbc\xaf\x27\x1c':
                         is_7z = True
-                except Exception:
+                except Exception as e:
                     pass
                 finally:
                     zip_file_content.seek(0)
@@ -105,7 +105,7 @@ def main():
                         bruteforce=bruteforce_password,
                         pwds=zip_passwords,
                     )
-                    result_value: str = "true"
+                    result_value = "true"
                 elif zipfile.is_zipfile(zip_file_content):
                     extracted_files[entity.identifier] = attach_mgr.extract_zip(
                         entity.identifier,
