@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from akeyless.core.auth import (
+from akeyless.core.authentication import (
     IntegrationParameters,
     build_auth_params,
 )
@@ -30,6 +30,7 @@ from akeyless.core.constants import (
     ACCESS_TYPE_PARAM,
     API_GATEWAY_URL_PARAM,
     INTEGRATION_IDENTIFIER,
+    VERIFY_SSL_PARAM,
 )
 from akeyless.core.exceptions import (
     AkeylessError,
@@ -48,6 +49,7 @@ class TestBuildAuthParams:
             ACCESS_KEY_PARAM: "test-access-key",
             ACCESS_TYPE_PARAM: "access_key",
             API_GATEWAY_URL_PARAM: "https://api.akeyless.io",
+            VERIFY_SSL_PARAM: "False",
         }
 
         result: IntegrationParameters = build_auth_params(mock_action)
@@ -59,9 +61,30 @@ class TestBuildAuthParams:
         assert result.access_key == "test-access-key"
         assert result.access_type == "access_key"
         assert result.api_gateway_url == "https://api.akeyless.io"
+        assert result.verify_ssl is False
 
     def test_job_extracts_from_parameters(self) -> None:
         """For SiemplifyJob, reads from .parameters dict."""
+        mock_job: MagicMock = MagicMock()
+        mock_job.__class__.__name__ = "SiemplifyJob"
+        mock_job.parameters = {
+            ACCESS_ID_PARAM: "test-access-id",
+            ACCESS_KEY_PARAM: "test-access-key",
+            ACCESS_TYPE_PARAM: "access_key",
+            API_GATEWAY_URL_PARAM: "https://api.akeyless.io",
+            VERIFY_SSL_PARAM: "True",
+        }
+
+        result: IntegrationParameters = build_auth_params(mock_job)
+
+        assert result.access_id == "test-access-id"
+        assert result.access_key == "test-access-key"
+        assert result.access_type == "access_key"
+        assert result.api_gateway_url == "https://api.akeyless.io"
+        assert result.verify_ssl is True
+
+    def test_default_verify_ssl_is_true(self) -> None:
+        """Verify SSL defaults to True when not explicitly specified."""
         mock_job: MagicMock = MagicMock()
         mock_job.__class__.__name__ = "SiemplifyJob"
         mock_job.parameters = {
@@ -73,10 +96,7 @@ class TestBuildAuthParams:
 
         result: IntegrationParameters = build_auth_params(mock_job)
 
-        assert result.access_id == "test-access-id"
-        assert result.access_key == "test-access-key"
-        assert result.access_type == "access_key"
-        assert result.api_gateway_url == "https://api.akeyless.io"
+        assert result.verify_ssl is True
 
     def test_unsupported_type_raises(self) -> None:
         """Raises AkeylessError for unknown SDK types."""

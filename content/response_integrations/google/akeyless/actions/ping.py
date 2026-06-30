@@ -14,8 +14,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from ..core.base_action import AkeylessAction
 from ..core.constants import PING_SCRIPT_NAME
 
@@ -27,13 +25,8 @@ class PingAction(AkeylessAction):
         super().__init__(PING_SCRIPT_NAME)
         self.error_output_message: str = "Failed to connect to the Akeyless server!"
 
-    def _perform_action(self, _: Any = None) -> None:
-        """Test connectivity to Akeyless.
-
-        Raises:
-            ConnectivityError: If the connectivity tests fail.
-
-        """
+    def _perform_action(self, _: object = None) -> None:
+        """Test connectivity to Akeyless."""
         is_connected: bool = self.akeyless_client.test_connectivity()
 
         self.output_message = "Successfully connected to the Akeyless server with the provided connection parameters!"
@@ -41,6 +34,7 @@ class PingAction(AkeylessAction):
 
 
 def main() -> None:
+    """Run the Ping action."""
     PingAction().run()
 
 

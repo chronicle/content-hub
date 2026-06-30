@@ -16,12 +16,15 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, PropertyMock
+# ruff: noqa: S105, S106
+import time
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 
 from akeyless.core.constants import DEFAULT_SECRET_VERSION
 from akeyless.core.exceptions import (
+    IntegrationCredentialSyncError,
     InvalidConfigurationError,
 )
 from akeyless.jobs.sync_integration_credential_job import (
@@ -41,6 +44,8 @@ def _make_job() -> SyncIntegrationCredentialJob:
     job.name_id = "SyncIntegrationCredentialJob"
     job.state_context = {}
     job._secret_cache = {}
+    job._sync_errors = []
+    job._job_start_time = int(time.time() * 1000)
     type(job).logger = PropertyMock(return_value=MagicMock())
 
     # Mock self.params with attribute-style access.
@@ -93,6 +98,50 @@ class TestValidateParams:
         with pytest.raises(
             InvalidConfigurationError,
             match="Invalid Credential Mapping",
+        ):
+            job._validate_params()
+
+    def test_invalid_root_key_raises(self) -> None:
+        """Raises InvalidConfigurationError on invalid root keys."""
+        job = _make_job()
+        job.params.credential_mapping = '{"invalid_key": {}}'
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Invalid root keys in Credential Mapping",
+        ):
+            job._validate_params()
+
+    def test_invalid_category_type_raises(self) -> None:
+        """Raises InvalidConfigurationError when category is not a dictionary."""
+        job = _make_job()
+        job.params.credential_mapping = '{"integration_instances": []}'
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Category 'integration_instances' must be a dictionary",
+        ):
+            job._validate_params()
+
+    def test_invalid_param_mapping_type_raises(self) -> None:
+        """Raises InvalidConfigurationError when param mapping is not a dictionary."""
+        job = _make_job()
+        job.params.credential_mapping = '{"integration_instances": {"inst1": []}}'
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Parameters for 'inst1' in category 'integration_instances' must be a dictionary",
+        ):
+            job._validate_params()
+
+    def test_invalid_mapped_value_format_raises(self) -> None:
+        """Raises InvalidConfigurationError on empty/invalid secret formats."""
+        job = _make_job()
+        job.params.credential_mapping = '{"integration_instances": {"inst1": {"p1": ""}}}'
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Invalid format for parameter 'p1'",
         ):
             job._validate_params()
 
@@ -355,3 +404,36 @@ class TestSecretFetchCaching:
         )
 
         assert job._secret_cache["secret-a", "3"] == "secret-payload"
+
+
+class TestErrorAggregation:
+    """Tests for error aggregation in the sync job."""
+
+    @pytest.mark.anyio
+    async def test_async_main_raises_on_errors(self) -> None:
+        """Raises IntegrationCredentialSyncError if self._sync_errors is not empty."""
+        job = _make_job()
+        job._sync_errors = ["Some error occurred"]
+
+        with (
+            patch.object(job, "_init_akeyless_client"),
+            patch.object(job, "_load_context"),
+            patch.object(job, "_save_context"),
+            patch("akeyless.jobs.sync_integration_credential_job.AsyncChronicleSOAR") as mock_soar_cls,
+            patch("akeyless.jobs.sync_integration_credential_job.AsyncMarketplaceApi") as mock_market_cls,
+        ):
+            mock_soar = AsyncMock()
+            mock_soar_cls.return_value = mock_soar
+            mock_market = AsyncMock()
+            mock_market_cls.return_value = mock_market
+
+            # Mock sync functions to do nothing
+            job._sync_integration_instances = AsyncMock()
+            job._sync_connectors = AsyncMock()
+            job._sync_jobs = AsyncMock()
+
+            with pytest.raises(
+                IntegrationCredentialSyncError,
+                match="Credential synchronization completed with one or more errors",
+            ):
+                await job._async_main()
