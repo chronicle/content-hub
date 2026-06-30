@@ -25,7 +25,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.rest.soar_api import get_workflow_instance_card
 
-from ..core.ToolsCommon import ExecutionScope
+from ..core.ToolsCommon import ExecutionScope, get_case_alerts
 
 WF_STATUS_NONE = 0
 WF_STATUS_INPROGRESS = 1
@@ -71,7 +71,7 @@ def main():
     if execution_scope.value == ExecutionScope.Alert.value:
         case: Any = siemplify.case
         current_alert_index: int | None = None
-        case_alerts = getattr(case, "open_alerts", case.alerts)
+        case_alerts = case.alerts
         alerts: list = list(sorted(
             case_alerts,
             key=lambda x: x.creation_time,
@@ -119,7 +119,7 @@ def main():
     else:
         all_complete: bool = True
         waiting_for: list = []
-        case_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+        case_alerts = get_case_alerts(siemplify)
         for alert in case_alerts:
             if not are_playbooks_complete(siemplify, alert.alert_group_identifier):
                 all_complete = False

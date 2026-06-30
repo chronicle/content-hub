@@ -1,0 +1,497 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Tests for SyncIntegrationCredentialJob internal methods."""
+
+from __future__ import annotations
+
+import asyncio
+import time
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
+
+import pytest
+
+from secret_manager.core.constants import DEFAULT_SECRET_VERSION
+from secret_manager.core.exceptions import (
+    IntegrationCredentialSyncError,
+    InvalidConfigurationError,
+)
+from secret_manager.jobs.sync_integration_credential_job import (
+    SyncIntegrationCredentialJob,
+)
+
+
+def _make_job() -> SyncIntegrationCredentialJob:
+    """Create a job instance with mocked SOAR internals."""
+    job = SyncIntegrationCredentialJob.__new__(
+        SyncIntegrationCredentialJob,
+    )
+    job.secret_manager_client = None
+    job.credential_mapping = {}
+    job.instance_name_to_identifier = {}
+    job.connector_name_to_identifier = {}
+    job.name_id = "SyncIntegrationCredentialJob"
+    job.state_context = {}
+    job._secret_cache = {}
+    job._job_start_time = int(time.time() * 1000)
+    type(job).logger = PropertyMock(return_value=MagicMock())
+
+    # Mock self.params with attribute-style access.
+    mock_params: MagicMock = MagicMock()
+    mock_params.environment_name = "Default Environment"
+    mock_params.credential_mapping = "{}"
+    type(job).params = PropertyMock(return_value=mock_params)
+
+    return job
+
+
+# -------------------------------------------------------------------
+# Credential Mapping Parsing
+# -------------------------------------------------------------------
+
+
+class TestValidateParams:
+    """Tests for _validate_params."""
+
+    def test_valid_json(self) -> None:
+        """Parses valid JSON credential mapping with valid resource names."""
+        job = _make_job()
+        job.params.credential_mapping = '{"integration_instances": {"inst1": {"p1": "projects/123/secrets/foo"}}}'
+
+        job._validate_params()
+
+        assert "integration_instances" in job.credential_mapping
+        assert job.credential_mapping["integration_instances"] == {
+            "inst1": {"p1": "projects/123/secrets/foo"},
+        }
+
+    def test_valid_yaml(self) -> None:
+        """Parses valid YAML credential mapping with valid resource names."""
+        job = _make_job()
+        job.params.credential_mapping = (
+            "integration_instances:\n  inst1:\n    p1: projects/123/secrets/foo/versions/3\n"
+        )
+
+        job._validate_params()
+
+        assert "integration_instances" in job.credential_mapping
+
+    def test_empty_mapping(self) -> None:
+        """Empty string results in empty dict."""
+        job = _make_job()
+        job.params.credential_mapping = ""
+
+        job._validate_params()
+
+        assert job.credential_mapping == {}
+
+    def test_invalid_yaml_raises(self) -> None:
+        """Raises InvalidConfigurationError on bad YAML."""
+        job = _make_job()
+        job.params.credential_mapping = "{{invalid: yaml: ["
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Invalid Credential Mapping",
+        ):
+            job._validate_params()
+
+    def test_invalid_root_key_raises(self) -> None:
+        """Raises InvalidConfigurationError on invalid root key."""
+        job = _make_job()
+        job.params.credential_mapping = '{"invalid_root": {"inst1": {}}}'
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Invalid root keys",
+        ):
+            job._validate_params()
+
+    def test_invalid_value_format_raises(self) -> None:
+        """Raises InvalidConfigurationError on invalid parameter value format."""
+        job = _make_job()
+        job.params.credential_mapping = '{"integration_instances": {"inst1": {"p1": "short-secret-name"}}}'
+
+        with pytest.raises(
+            InvalidConfigurationError,
+            match="Invalid format for parameter",
+        ):
+            job._validate_params()
+
+
+# -------------------------------------------------------------------
+# Secret + Version Resolution
+# -------------------------------------------------------------------
+
+
+class TestResolveSecretAndVersion:
+    """Tests for _resolve_secret_and_version."""
+
+    @pytest.mark.anyio
+    async def test_explicit_version(self) -> None:
+        """'projects/123/secrets/foo/versions/3' returns ('projects/123/secrets/foo', '3')."""
+        job = _make_job()
+
+        secret_id, version_id = await job._resolve_secret_and_version(
+            "projects/123/secrets/foo/versions/3",
+        )
+
+        assert secret_id == "projects/123/secrets/foo"  # noqa: S105
+        assert version_id == "3"
+
+    @pytest.mark.anyio
+    async def test_invalid_format_raises(self) -> None:
+        """Raises InvalidConfigurationError for invalid format."""
+        job = _make_job()
+
+        with pytest.raises(InvalidConfigurationError, match="Invalid credential mapping format"):
+            await job._resolve_secret_and_version("my-secret:5")
+
+    @pytest.mark.anyio
+    async def test_auto_version_with_client(self) -> None:
+        """Calls resolve_latest_enabled_version when no versions/ part in resource path."""
+        job = _make_job()
+        mock_client: MagicMock = MagicMock()
+        mock_client.resolve_latest_enabled_version.return_value = "7"
+        job.secret_manager_client = mock_client
+
+        secret_id, version_id = await job._resolve_secret_and_version(
+            "projects/123/secrets/foo",
+        )
+
+        assert secret_id == "projects/123/secrets/foo"  # noqa: S105
+        assert version_id == "7"
+        mock_client.resolve_latest_enabled_version.assert_called_once_with(
+            "projects/123/secrets/foo",
+        )
+
+    @pytest.mark.anyio
+    async def test_auto_version_no_client_fallback(self) -> None:
+        """Falls back to DEFAULT_SECRET_VERSION when client is None."""
+        job = _make_job()
+        job.secret_manager_client = None
+
+        secret_id, version_id = await job._resolve_secret_and_version(
+            "projects/123/secrets/foo",
+        )
+
+        assert secret_id == "projects/123/secrets/foo"  # noqa: S105
+        assert version_id == DEFAULT_SECRET_VERSION
+
+
+# -------------------------------------------------------------------
+# Job Lookup Helpers
+# -------------------------------------------------------------------
+
+
+class TestBuildJobNameLookup:
+    """Tests for _build_job_name_lookup."""
+
+    def test_uses_display_name(self) -> None:
+        """Prefers 'displayName' key (1P format)."""
+        job = _make_job()
+        instances = [
+            {"displayName": "Job A", "id": "1"},
+            {"displayName": "Job B", "id": "2"},
+        ]
+
+        lookup = job._build_job_name_lookup(instances)
+
+        assert lookup["Job A"]["id"] == "1"
+        assert lookup["Job B"]["id"] == "2"
+
+    def test_falls_back_to_name(self) -> None:
+        """Uses 'name' key when 'displayName' is missing (Legacy)."""
+        job = _make_job()
+        instances = [{"name": "Legacy Job", "id": "3"}]
+
+        lookup = job._build_job_name_lookup(instances)
+
+        assert "Legacy Job" in lookup
+
+    def test_empty_list(self) -> None:
+        """Returns empty dict for empty input."""
+        job = _make_job()
+        lookup = job._build_job_name_lookup([])
+
+        assert lookup == {}
+
+
+class TestBuildParamIndex:
+    """Tests for _build_param_index."""
+
+    def test_builds_index(self) -> None:
+        """Maps param display names to their list indices."""
+        job = _make_job()
+        params = [
+            {"displayName": "API Key", "value": "x"},
+            {"displayName": "Password", "value": "y"},
+        ]
+
+        index = job._build_param_index(params)
+
+        assert index == {"API Key": 0, "Password": 1}
+
+    def test_prefers_display_name_over_name(self) -> None:
+        """Uses 'displayName' when both keys exist."""
+        job = _make_job()
+        params = [
+            {"displayName": "Display", "name": "legacy", "value": "v"},
+        ]
+
+        index = job._build_param_index(params)
+
+        assert "Display" in index
+        assert "legacy" not in index
+
+
+# -------------------------------------------------------------------
+# State Context Registry & Skipping Logic
+# -------------------------------------------------------------------
+
+
+class TestStateContextRegistry:
+    """Tests for persistent state context registry and skipping logic."""
+
+    def test_load_context_success(self) -> None:
+        """Loads valid JSON context state from soar_job."""
+        job = _make_job()
+        mock_soar_job = MagicMock()
+        mock_soar_job.get_job_context_property.return_value = '{"instance:id1:p1": "secret:1::10"}'
+        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
+
+        job._load_context()
+
+        assert job.state_context == {"instance:id1:p1": "secret:1::10"}
+
+    def test_load_context_empty(self) -> None:
+        """Handles empty context state string gracefully."""
+        job = _make_job()
+        mock_soar_job = MagicMock()
+        mock_soar_job.get_job_context_property.return_value = ""
+        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
+
+        job._load_context()
+
+        assert job.state_context == {}
+
+    def test_load_context_invalid_json(self) -> None:
+        """Handles invalid JSON string gracefully."""
+        job = _make_job()
+        mock_soar_job = MagicMock()
+        mock_soar_job.get_job_context_property.return_value = "invalid-json-{"
+        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
+
+        job._load_context()
+
+        assert job.state_context == {}
+
+    def test_save_context_success(self) -> None:
+        """Saves state_context as JSON string successfully."""
+        job = _make_job()
+        mock_soar_job = MagicMock()
+        type(job).soar_job = PropertyMock(return_value=mock_soar_job)
+        job.state_context = {"instance:id1:p1": "secret:1::10"}
+
+        job._save_context()
+
+        mock_soar_job.set_job_context_property.assert_called_once_with(
+            identifier=job.name_id,
+            property_key="sync_credentials_state",
+            property_value='{"instance:id1:p1": "secret:1::10"}',
+        )
+
+    @pytest.mark.anyio
+    async def test_set_integration_params_skips_when_up_to_date(self) -> None:
+        """Skips fetching and setting configuration when parameter is up-to-date."""
+        job = _make_job()
+        job.state_context = {"instance:inst_id:param_x": "projects/123/secrets/my-secret::5"}
+
+        mock_client = MagicMock()
+        mock_client.resolve_latest_enabled_version.return_value = "5"
+        job.secret_manager_client = mock_client
+
+        # Mock pre_resolved fetcher as AsyncMock to verify it is NOT called
+        job._fetch_secret_value_pre_resolved = AsyncMock()
+
+        mock_api = AsyncMock()
+
+        await job._set_integration_params(
+            api=mock_api,
+            name="Instance A",
+            identifier="inst_id",
+            param_mapping={"param_x": "projects/123/secrets/my-secret"},
+        )
+
+        job._fetch_secret_value_pre_resolved.assert_not_called()
+        mock_api.set_configuration_property.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_set_integration_params_updates_when_outdated(self) -> None:
+        """Updates and saves to context when parameter is outdated (rotated secret)."""
+        job = _make_job()
+        # Old version was 5
+        job.state_context = {"instance:inst_id:param_x": "projects/123/secrets/my-secret::5"}
+
+        mock_client = MagicMock()
+        # New resolved version is 6
+        mock_client.resolve_latest_enabled_version.return_value = "6"
+        job.secret_manager_client = mock_client
+
+        # Mock fetching as AsyncMock and API
+        job._fetch_secret_value_pre_resolved = AsyncMock(return_value="new-secret-value")
+
+        mock_api = AsyncMock()
+
+        await job._set_integration_params(
+            api=mock_api,
+            name="Instance A",
+            identifier="inst_id",
+            param_mapping={"param_x": "projects/123/secrets/my-secret"},
+        )
+
+        job._fetch_secret_value_pre_resolved.assert_called_once_with(
+            "projects/123/secrets/my-secret",
+            "6",
+            context_label="param 'param_x' on instance 'Instance A' (id: inst_id)",
+        )
+        mock_api.set_configuration_property.assert_called_once_with(
+            integration_instance_identifier="inst_id",
+            property_name="param_x",
+            property_value="new-secret-value",
+        )
+        # Context must be updated
+        assert job.state_context["instance:inst_id:param_x"] == "projects/123/secrets/my-secret::6"
+
+
+# -------------------------------------------------------------------
+# Secret Fetch Caching
+# -------------------------------------------------------------------
+
+
+class TestSecretFetchCaching:
+    """Tests for dictionary-based caching of secret fetches."""
+
+    @pytest.mark.anyio
+    async def test_caches_subsequent_fetches(self) -> None:
+        """Only fetches once and uses cached payload for subsequent requests."""
+        job = _make_job()
+
+        mock_client = MagicMock()
+        mock_client.get_secret_value.return_value = "secret-payload"
+        job.secret_manager_client = mock_client
+
+        # First call
+        val1 = await job._fetch_secret_value_pre_resolved(
+            secret_id="secret-a",  # noqa: S106
+            version_id="3",
+            context_label="first call",
+        )
+
+        # Second call (same secret and version)
+        val2 = await job._fetch_secret_value_pre_resolved(
+            secret_id="secret-a",  # noqa: S106
+            version_id="3",
+            context_label="second call",
+        )
+
+        assert val1 == "secret-payload"
+        assert val2 == "secret-payload"
+
+        # The client's get_secret_value should have been called exactly once
+        mock_client.get_secret_value.assert_called_once_with(
+            secret_id="secret-a",  # noqa: S106
+            version_id="3",
+        )
+
+        # The cache dictionary should have populated
+        assert job._secret_cache["secret-a", "3"] == "secret-payload"
+
+
+class TestAggregatedErrors:
+    """Tests for aggregated error collection and failure at the end of the sync job."""
+
+    @pytest.mark.anyio
+    async def test_sync_errors_collected_and_fails_job(self) -> None:
+        """Collects errors from various failing components and raises IntegrationCredentialSyncError."""
+        job = _make_job()
+        job._soar_job = MagicMock()
+        job.params.credential_mapping = (
+            '{"integration_instances": {"inst1": {}}, "connectors": {"conn1": {}}, "jobs": {"job1": {}}}'
+        )
+        job._validate_params()
+        job._sync_errors = []
+
+        # Mock APIs to simulate components not found
+        job.instance_name_to_identifier = {}
+        job.connector_name_to_identifier = {}
+
+        mock_api = AsyncMock()
+        mock_api.get_installed_integrations_of_environment.return_value = {
+            "instances": [{"displayName": "other-inst", "identifier": "other-inst-id"}]
+        }
+        mock_api.get_connector_cards.return_value = {
+            "connectorInstances": [{"displayName": "other-conn", "identifier": "other-conn-id"}]
+        }
+        mock_api.get_installed_jobs.return_value = [
+            {"displayName": "other-job", "id": "other-job-id", "parameters": []}
+        ]
+
+        # We call the individual sync functions
+        await job._sync_integration_instances(mock_api, asyncio.Semaphore(1))
+        await job._sync_connectors(mock_api, asyncio.Semaphore(1))
+        await job._sync_jobs(mock_api, asyncio.Semaphore(1))
+
+        # Verify errors are collected
+        assert len(job._sync_errors) == 3
+        assert any("Integration instance 'inst1' not found" in err for err in job._sync_errors)
+        assert any("Connector 'conn1' not found" in err for err in job._sync_errors)
+        assert any("Job 'job1' not found" in err for err in job._sync_errors)
+
+        # Mock the entire _async_main calling flow with these sync errors
+        with (
+            patch.object(job, "_init_secret_manager_client"),
+            patch.object(job, "_load_context"),
+            patch.object(job, "_save_context"),
+            patch(
+                "secret_manager.jobs.sync_integration_credential_job.AsyncChronicleSOAR"
+            ) as mock_soar_cls,
+            patch(
+                "secret_manager.jobs.sync_integration_credential_job.AsyncMarketplaceApi"
+            ) as mock_market_cls,
+        ):
+            mock_soar = AsyncMock()
+            mock_soar_cls.return_value = mock_soar
+
+            # Mock the marketplace API methods
+            mock_market = AsyncMock()
+            mock_market.get_installed_integrations_of_environment.return_value = {
+                "instances": [{"displayName": "other-inst", "identifier": "other-inst-id"}]
+            }
+            mock_market.get_connector_cards.return_value = {
+                "connectorInstances": [{"displayName": "other-conn", "identifier": "other-conn-id"}]
+            }
+            mock_market.get_installed_jobs.return_value = [
+                {"displayName": "other-job", "id": "other-job-id", "parameters": []}
+            ]
+            mock_market_cls.return_value = mock_market
+
+            # Run _async_main and assert it raises IntegrationCredentialSyncError
+            with pytest.raises(IntegrationCredentialSyncError) as exc_info:
+                await job._async_main()
+
+            assert "Credential synchronization completed with one or more errors" in str(exc_info.value)
+            assert "Integration instance 'inst1' not found" in str(exc_info.value)
+            assert "Connector 'conn1' not found" in str(exc_info.value)
+            assert "Job 'job1' not found" in str(exc_info.value)
