@@ -11,3 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import annotations
+
+
+class ProofPointPSError(Exception):
+    """General exception for ProofPointPS integration."""
+
+
+class ProofPointPSHTTPError(ProofPointPSError):
+    """HTTP-specific exception for ProofPointPS integration."""
+
+
+class InvalidParameterError(ProofPointPSError):
+    """Invalid parameter exception for ProofPointPS integration."""
