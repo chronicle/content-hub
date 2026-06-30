@@ -11,3 +11,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# ruff: noqa: RUF067
+
+import importlib
+import sys
+
+# Re-route third-party package attributes to prevent shadowing.
+# When python loads the local 'akeyless' package, we temporarily clean sys.path of local
+# paths, load the real third-party 'akeyless' SDK package, and inject its contents here.
+_original_path = sys.path.copy()
+try:
+    sys.path = [
+        p
+        for p in sys.path
+        if not p.endswith("response_integrations/google/akeyless") and not p.endswith("response_integrations/google")
+    ]
+    # Remove from sys.modules to force loading the third-party library
+    _old_module = sys.modules.pop("akeyless", None)
+    _real_akeyless = importlib.import_module("akeyless")
+
+    # Expose the third-party library attributes
+    for _attr in dir(_real_akeyless):
+        if not _attr.startswith("__"):
+            globals()[_attr] = getattr(_real_akeyless, _attr)
+finally:
+    sys.path = _original_path
+    if "_old_module" in locals() and _old_module is not None:
+        sys.modules["akeyless"] = _old_module

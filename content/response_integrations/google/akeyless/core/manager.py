@@ -16,11 +16,18 @@ from __future__ import annotations
 
 import logging
 import time
+import urllib.request
 
 import akeyless
 
 from .constants import (
+    ACCESS_KEY_TYPE,
     DEFAULT_SECRET_VERSION,
+    GCP_ACCESS_TYPE,
+    GCP_METADATA_HEADER_NAME,
+    GCP_METADATA_HEADER_VALUE,
+    GCP_METADATA_TIMEOUT_SECONDS,
+    GCP_METADATA_URL_TEMPLATE,
     TOKEN_TTL_SECONDS,
 )
 from .exceptions import (
@@ -37,35 +44,38 @@ class AkeylessClient:
         self,
         access_id: str,
         access_key: str | None = None,
-        access_type: str = "gcp",
+        access_type: str = GCP_ACCESS_TYPE,
         api_gateway_url: str = "https://api.akeyless.io",
+        *,
+        verify_ssl: bool = True,
     ) -> None:
         """Initialize the Akeyless Client.
 
-        Args:
-            access_id (str): The Akeyless Access ID.
-            access_key (str | None): The Akeyless Access Key.
-            access_type (str): The Access Type. Defaults to "gcp".
-            api_gateway_url (str): The Akeyless API Gateway URL. Defaults to "https://api.akeyless.io".
+        Raises:
+            InvalidConfigurationError: If Access ID is not provided.
 
         """
         if not access_id:
-            raise InvalidConfigurationError("Access ID must be provided.")
+            msg = "Access ID must be provided."
+            raise InvalidConfigurationError(msg)
 
         self.access_id = access_id
         self.access_key = access_key
         self.access_type = access_type
         self.api_gateway_url = api_gateway_url
+        self.verify_ssl = verify_ssl
 
         self.configuration = akeyless.Configuration()
         self.configuration.host = self.api_gateway_url
+        self.configuration.verify_ssl = self.verify_ssl
         self.api_client = akeyless.ApiClient(self.configuration)
         self.api = akeyless.V2Api(self.api_client)
         self._token: str | None = None
         self._token_issued_at: float = 0.0
         self._logger = logging.getLogger(__name__)
 
-    def _fetch_gcp_id_token(self, audience: str) -> str:
+    @staticmethod
+    def _fetch_gcp_id_token(audience: str) -> str:
         """Fetch Google ID token from the GCP Metadata Server.
 
         Args:
@@ -74,20 +84,27 @@ class AkeylessClient:
         Returns:
             str: The Google ID token.
 
-        """
-        import urllib.request
+        Raises:
+            RuntimeError: If GCP metadata server is not reachable or token request fails.
 
-        url = f"http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience={audience}"
-        req = urllib.request.Request(url)
-        req.add_header("Metadata-Flavor", "Google")
+        """
+        url = GCP_METADATA_URL_TEMPLATE.format(audience=audience)
+        req = urllib.request.Request(url)  # noqa: S310
+        req.add_header(GCP_METADATA_HEADER_NAME, GCP_METADATA_HEADER_VALUE)
         try:
-            with urllib.request.urlopen(req, timeout=3) as response:
+            with urllib.request.urlopen(req, timeout=GCP_METADATA_TIMEOUT_SECONDS) as response:  # noqa: S310
                 return response.read().decode("utf-8")
         except Exception as e:
-            raise RuntimeError(f"GCP Metadata server not reachable or token request failed: {e}")
+            msg = f"GCP Metadata server not reachable or token request failed: {e}"
+            raise RuntimeError(msg) from e
 
     def _is_token_expired(self) -> bool:
-        """Check whether the cached token has exceeded its TTL."""
+        """Check whether the cached token has exceeded its TTL.
+
+        Returns:
+            bool: True if expired or not set, False otherwise.
+
+        """
         if not self._token:
             return True
         return (time.monotonic() - self._token_issued_at) >= TOKEN_TTL_SECONDS
@@ -108,6 +125,13 @@ class AkeylessClient:
         If a valid (non-expired) token is already cached, returns it.
         Otherwise, authenticates and caches a new token.
         Supports GCP IAM Authentication (primary) and API Key Authentication (fallback).
+
+        Returns:
+            str: The active authentication token.
+
+        Raises:
+            ConnectivityError: If authentication fails.
+
         """
         if self._token and not self._is_token_expired():
             return self._token
@@ -115,51 +139,67 @@ class AkeylessClient:
         # Clear stale token before re-authenticating
         self._clear_token()
 
-        if self.access_type == "gcp":
+        if self.access_type == GCP_ACCESS_TYPE:
             try:
                 gcp_token = self._fetch_gcp_id_token(self.access_id)
                 auth_body = akeyless.Auth(
                     access_id=self.access_id,
-                    access_type="gcp",
-                    gcp_token=gcp_token,
+                    access_type=GCP_ACCESS_TYPE,
+                    cloud_id=gcp_token,
                 )
                 auth_res = self.api.auth(auth_body)
                 self._set_token(auth_res.token)
-                return self._token
+                return self._token  # noqa: TRY300
             except Exception as gcp_err:
                 # Fall back to API Key auth if an Access Key is provided
                 if self.access_key:
                     pass
                 else:
+                    msg = f"Failed to authenticate with Akeyless using GCP IAM: {gcp_err}"
                     raise ConnectivityError(
-                        f"Failed to authenticate with Akeyless using GCP IAM: {gcp_err}"
+                        msg
                     ) from gcp_err
 
         try:
             auth_body = akeyless.Auth(
                 access_id=self.access_id,
                 access_key=self.access_key,
-                access_type="access_key",
+                access_type=ACCESS_KEY_TYPE,
             )
             auth_res = self.api.auth(auth_body)
             self._set_token(auth_res.token)
-            return self._token
+            return self._token  # noqa: TRY300
         except Exception as e:
-            raise ConnectivityError(f"Failed to authenticate with Akeyless: {e}") from e
+            msg = f"Failed to authenticate with Akeyless: {e}"
+            raise ConnectivityError(msg) from e
 
     def test_connectivity(self) -> bool:
-        """Test connectivity to Akeyless by authenticating."""
+        """Test connectivity to Akeyless by authenticating.
+
+        Returns:
+            bool: True if connection is successful.
+
+        Raises:
+            ConnectivityError: If connectivity test fails.
+
+        """
         try:
             self.get_token()
-            return True
+            return True  # noqa: TRY300
         except Exception as e:
-            raise ConnectivityError(f"Failed to connect to Akeyless: {e}") from e
+            msg = f"Failed to connect to Akeyless: {e}"
+            raise ConnectivityError(msg) from e
 
-    def resolve_latest_enabled_version(self, secret_id: str) -> str:
+    @staticmethod
+    def resolve_latest_enabled_version(_secret_id: str) -> str:
         """Resolve the latest enabled version for a given secret.
 
         Akeyless natively handles version resolution to the latest version when no version
         is specified or when "latest" is used.
+
+        Returns:
+            str: The latest version string.
+
         """
         return DEFAULT_SECRET_VERSION
 
@@ -173,10 +213,13 @@ class AkeylessClient:
         Returns:
             str: The secret payload data.
 
+        Raises:
+            SecretAccessError: If access to the secret fails.
+
         """
         token = self.get_token()
 
-        try:
+        try:  # noqa: PLW0717
             kwargs: dict[str, object] = {
                 "names": [secret_id],
                 "token": token,
@@ -193,16 +236,15 @@ class AkeylessClient:
             secret_body = akeyless.GetSecretValue(**kwargs)
             response = self.api.get_secret_value(secret_body)
 
-            if isinstance(response, dict):
-                secret_val = response.get(secret_id)
-            else:
-                secret_val = getattr(response, secret_id, None)
+            secret_val = response.get(secret_id) if isinstance(response, dict) else getattr(response, secret_id, None)
 
             if secret_val is None:
-                raise SecretAccessError(f"Secret '{secret_id}' not found in Akeyless response.")
+                msg = f"Secret '{secret_id}' not found in Akeyless response."
+                raise SecretAccessError(msg)  # noqa: TRY301
 
             return str(secret_val)
         except SecretAccessError:
             raise
         except Exception as e:
-            raise SecretAccessError(f"Failed to access secret version '{version_id}': {e}") from e
+            msg = f"Failed to access secret version '{version_id}': {e}"
+            raise SecretAccessError(msg) from e

@@ -14,6 +14,18 @@
 
 from __future__ import annotations
 
+# ruff: noqa: E402
+import sys
+
+# Re-order sys.path to prioritize site-packages over the local integration folder.
+# This ensures that 'import akeyless' successfully resolves to the third-party akeyless SDK library
+# instead of shadowing to our local 'akeyless' integration module during unit tests execution.
+site_packages_paths = [p for p in sys.path if "site-packages" in p]
+for path in site_packages_paths:
+    if path in sys.path:
+        sys.path.remove(path)
+        sys.path.insert(0, path)
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,7 +33,7 @@ import pytest
 pytest_plugins = ("integration_testing.conftest",)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_akeyless_api() -> MagicMock:
     """Patch akeyless V2Api class.
 

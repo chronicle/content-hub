@@ -43,3 +43,7 @@ class JobFetchError(AkeylessError):
 
 class JobSaveError(AkeylessError):
     """Raised when persisting an updated job back to the SOAR platform fails."""
+
+
+class IntegrationCredentialSyncError(AkeylessError):
+    """Raised when one or more errors occur during credential synchronization."""

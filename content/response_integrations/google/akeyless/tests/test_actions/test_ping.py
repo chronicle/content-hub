@@ -16,14 +16,18 @@
 
 from __future__ import annotations
 
+# ruff: noqa: S105
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
-from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
 from akeyless.actions import ping
 from akeyless.tests.common import CONFIG_PATH
+
+if TYPE_CHECKING:
+    from integration_testing.platform.script_output import MockActionOutput
 
 
 class TestPing:

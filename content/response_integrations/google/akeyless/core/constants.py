@@ -31,10 +31,29 @@ ACCESS_ID_PARAM: str = "Access ID"
 ACCESS_KEY_PARAM: str = "Access Key"
 ACCESS_TYPE_PARAM: str = "Access Type"
 API_GATEWAY_URL_PARAM: str = "API Gateway URL"
+VERIFY_SSL_PARAM: str = "Verify SSL"
 
 # Akeyless API defaults
-DEFAULT_SECRET_VERSION: str = "latest"
+DEFAULT_SECRET_VERSION: str = "latest"  # noqa: S105
 TOKEN_TTL_SECONDS: int = 50 * 60  # 50 minutes (conservative buffer under 60-min default)
+
+# Authentication mechanisms
+GCP_ACCESS_TYPE: str = "gcp"
+ACCESS_KEY_TYPE: str = "access_key"
+
+# GCP Metadata Service configuration
+GCP_METADATA_URL_TEMPLATE: str = (
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience={audience}"
+)
+GCP_METADATA_HEADER_NAME: str = "Metadata-Flavor"
+GCP_METADATA_HEADER_VALUE: str = "Google"
+GCP_METADATA_TIMEOUT_SECONDS: int = 3
+
+# Masking configurations
+MIN_MASK_LENGTH: int = 6
+
+# Job state context keys
+SYNC_CREDENTIALS_STATE_KEY: str = "sync_credentials_state"
 
 # Job parameter names
 ENVIRONMENT_NAME_PARAM: str = "Environment Name"

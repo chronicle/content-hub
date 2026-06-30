@@ -14,13 +14,12 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from TIPCommon.extraction import extract_script_param
-from TIPCommon.types import ChronicleSOAR
 
 from .constants import (
     ACCESS_ID_PARAM,
@@ -28,8 +27,12 @@ from .constants import (
     ACCESS_TYPE_PARAM,
     API_GATEWAY_URL_PARAM,
     INTEGRATION_IDENTIFIER,
+    VERIFY_SSL_PARAM,
 )
 from .exceptions import AkeylessError
+
+if TYPE_CHECKING:
+    from TIPCommon.types import ChronicleSOAR
 
 
 class IntegrationParameters(NamedTuple):
@@ -37,6 +40,7 @@ class IntegrationParameters(NamedTuple):
     access_key: str | None
     access_type: str
     api_gateway_url: str
+    verify_ssl: bool
 
 
 def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
@@ -61,14 +65,15 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
     sdk_class: str = type(soar_sdk_object).__name__
     if sdk_class == SiemplifyAction.__name__:
         input_dictionary: dict = soar_sdk_object.get_configuration(INTEGRATION_IDENTIFIER)
-    elif sdk_class in (
+    elif sdk_class in {
         SiemplifyConnectorExecution.__name__,
         SiemplifyJob.__name__,
-    ):
+    }:
         input_dictionary = soar_sdk_object.parameters
     else:
+        msg = f"Provided SOAR instance is not supported! type: {sdk_class}."
         raise AkeylessError(
-            f"Provided SOAR instance is not supported! type: {sdk_class}.",
+            msg,
         )
 
     access_id: str = extract_script_param(
@@ -101,10 +106,20 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
         default_value="https://api.akeyless.io",
         print_value=True,
     )
+    verify_ssl: bool = extract_script_param(
+        soar_sdk_object,
+        input_dictionary=input_dictionary,
+        param_name=VERIFY_SSL_PARAM,
+        is_mandatory=False,
+        input_type=bool,
+        default_value=True,
+        print_value=True,
+    )
 
     return IntegrationParameters(
         access_id=access_id,
         access_key=access_key,
         access_type=access_type,
         api_gateway_url=api_gateway_url,
+        verify_ssl=verify_ssl,
     )
