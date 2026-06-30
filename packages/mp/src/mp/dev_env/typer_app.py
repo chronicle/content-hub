@@ -46,6 +46,6 @@ def deploy(
     *,
     is_staging: bool = False,
 ) -> None:
-    """Deprecated."""  # noqa: D401
+    """Run the deprecated deploy command."""
     logger.warning("Note: 'deploy' is deprecated. Use 'mp push integration' instead.")
     push_integration(integration, is_staging=is_staging)

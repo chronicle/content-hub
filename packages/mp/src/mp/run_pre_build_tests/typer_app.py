@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 
 WINDOWS_SCRIPT_NAME: str = "run_pre_build_tests.bat"
 UNIX_SCRIPT_NAME: str = "run_pre_build_tests.sh"
-SUCCESS_STATUS_CODES: set[int] = {0, 2}
+SUCCESS_STATUS_CODES: set[int] = {0, 2, 5}
 
 __all__: list[str] = ["TestIssue", "TestWarning", "run_pre_build_tests", "test_app"]
 test_app: typer.Typer = typer.Typer()
@@ -223,10 +223,7 @@ def _run_script_on_paths(script_path: Path, paths: Iterable[Path]) -> list[Integ
     tasks_arguments = [(script_path, p) for p in paths]
     with ThreadPoolExecutor(max_workers=processes) as pool:
         results_iterator = pool.map(lambda args: _run_tests_for_single_integration(*args), tasks_arguments)
-
-        for result in results_iterator:
-            if result is not None:
-                all_integration_results.append(result)  # noqa: PERF401
+        all_integration_results.extend(result for result in results_iterator if result is not None)
 
     return all_integration_results
 
@@ -244,11 +241,15 @@ def _run_tests_for_single_integration(
     json_report_path = integration_path / ".report.json"
     _print_report_summary(json_report_path, integration_path.name)
 
+    results = process_pytest_json_report(integration_path.name, json_report_path)
+
+    if results and results.failed_tests > 0:
+        return results
+
     if status_code in SUCCESS_STATUS_CODES:
-        json_report_path.unlink(missing_ok=True)
         return None
 
-    return process_pytest_json_report(integration_path.name, json_report_path)
+    return results
 
 
 def _print_report_summary(pytest_json_report_path: Path, integration_name: str) -> None:

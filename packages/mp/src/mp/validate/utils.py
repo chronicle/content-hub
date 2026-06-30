@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from mp.core import constants, exclusions, file_utils
 from mp.core.data_models.common.release_notes.metadata import ReleaseNote
@@ -55,6 +55,11 @@ def get_marketplace_paths_from_names(
         for n in names:
             if (p := path / n).exists():
                 results.add(p)
+
+            # Check if the name matches a suffixed integration (e.g. 'http' -> 'http_integration')
+            suffixed_name: str = f"{n}_integration"
+            if suffixed_name in constants.INTEGRATIONS_WITH_INTEGRATION_SUFFIX and (p := path / suffixed_name).exists():
+                results.add(p)
     return results
 
 
@@ -84,7 +89,7 @@ def load_integration_def(integration_path: Path) -> YamlFileContent:
     """
     try:
         integration_def = integration_path / constants.DEFINITION_FILE
-        return file_utils.load_yaml_file(integration_def)
+        return cast("YamlFileContent", file_utils.load_yaml_file(integration_def))
     except Exception as e:
         msg: str = f"Failed to load integration def file: {e}"
         raise FatalValidationError(msg) from e
@@ -113,7 +118,8 @@ def load_components_defs(integration_path: Path, *components: str) -> dict[str, 
             component_dir: Path = integration_path / component_dir_name
             if component_dir.is_dir():
                 component_defs[component_dir_name] = [
-                    file_utils.load_yaml_file(p) for p in component_dir.glob(f"*{constants.YAML_SUFFIX}")
+                    cast("YamlFileContent", file_utils.load_yaml_file(p))
+                    for p in component_dir.glob(f"*{constants.YAML_SUFFIX}")
                 ]
     except Exception as e:
         msg: str = f"Failed to load components def files: {e}"

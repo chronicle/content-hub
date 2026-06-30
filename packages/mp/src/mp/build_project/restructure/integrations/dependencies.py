@@ -55,19 +55,22 @@ class Dependencies(Restructurable):
         ):
             requirements: Path = pathlib.Path(f.name)
         try:
-            mp.core.unix.compile_core_integration_dependencies(
+            self._compile_and_download(requirements)
+        finally:
+            requirements.unlink(missing_ok=True)
+
+    def _compile_and_download(self, requirements: Path) -> None:
+        mp.core.unix.compile_core_integration_dependencies(
+            project_path=self.path,
+            requirements_path=requirements,
+        )
+
+        with tempfile.TemporaryDirectory(prefix="dependencies_") as d:
+            deps: Path = pathlib.Path(d)
+            mp.core.unix.download_wheels_from_requirements(
                 project_path=self.path,
                 requirements_path=requirements,
+                dst_path=deps,
             )
-
-            with tempfile.TemporaryDirectory(prefix="dependencies_") as d:
-                deps: Path = pathlib.Path(d)
-                mp.core.unix.download_wheels_from_requirements(
-                    project_path=self.path,
-                    requirements_path=requirements,
-                    dst_path=deps,
-                )
-                out_deps: Path = self.out_path / mp.core.constants.OUT_DEPENDENCIES_DIR
-                shutil.copytree(deps, out_deps)
-        finally:
-            requirements.unlink()
+            out_deps: Path = self.out_path / mp.core.constants.OUT_DEPENDENCIES_DIR
+            shutil.copytree(deps, out_deps)

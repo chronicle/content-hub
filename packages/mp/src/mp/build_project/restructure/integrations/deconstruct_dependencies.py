@@ -101,16 +101,17 @@ class DependencyDeconstructor:
         for path in self.integration_path.rglob("*.py"):
             try:
                 tree = ast.parse(path.read_text(encoding="utf-8"))
-                for node in ast.walk(tree):
-                    match node:
-                        case ast.Import(names=names):
-                            imported_modules.update(alias.name.split(".")[0] for alias in names)
-
-                        case ast.ImportFrom(module=module) if module:
-                            imported_modules.add(module.split(".")[0])
-
             except SyntaxError:
                 logger.warning("Warning: Could not parse %s, skipping for dependency analysis.", path)
+                continue
+
+            for node in ast.walk(tree):
+                match node:
+                    case ast.Import(names=names):
+                        imported_modules.update(alias.name.split(".")[0] for alias in names)
+
+                    case ast.ImportFrom(module=module) if module:
+                        imported_modules.add(module.split(".")[0])
 
         return {
             m

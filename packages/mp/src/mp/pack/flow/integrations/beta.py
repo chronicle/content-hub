@@ -90,22 +90,25 @@ def update_component_def(file_path: pathlib.Path, new_id: str, *, is_connector: 
 
     """
     try:
-        with file_path.open("r+", encoding="utf-8") as f:
+        with file_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
-
-            if "Integration" in data:
-                data["Integration"] = new_id
-            if "IntegrationIdentifier" in data:
-                data["IntegrationIdentifier"] = new_id
-
-            if is_connector and "Name" in data and not data["Name"].startswith(f"{new_id}-"):
-                data["Name"] = f"{new_id}-{data['Name']}"
-
-            f.seek(0)
-            json.dump(data, f, indent=4)
-            f.truncate()
     except (OSError, json.JSONDecodeError):
-        logger.exception("Failed to update component def %s", file_path)
+        logger.exception("Failed to read component def %s", file_path)
+        return
+
+    if "Integration" in data:
+        data["Integration"] = new_id
+    if "IntegrationIdentifier" in data:
+        data["IntegrationIdentifier"] = new_id
+
+    if is_connector and "Name" in data and not data["Name"].startswith(f"{new_id}-"):
+        data["Name"] = f"{new_id}-{data['Name']}"
+
+    try:
+        with file_path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+    except OSError:
+        logger.exception("Failed to write component def %s", file_path)
 
 
 def split_camel_case(text: str) -> str:

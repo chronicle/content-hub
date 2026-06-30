@@ -24,7 +24,8 @@ import contextlib
 import dataclasses
 import json
 import pathlib
-from typing import TYPE_CHECKING, Any
+import tomllib
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import yaml
 
@@ -37,6 +38,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.custom_types import JsonString, ManagerName, RepositoryType
+
+
+Json: TypeAlias = dict[str, Any] | list[dict[str, Any]]
 
 
 def get_integrations_repo_base_path(integrations_classification: RepositoryType) -> Path:
@@ -162,6 +166,15 @@ def get_marketplace_integration_path(name: str) -> Path | None:
 
     for base_path in get_marketplace_integration_base_paths():
         if (p := base_path / name).exists() and is_integration(p):
+            return p
+
+        # Check if the name matches a suffixed integration (e.g. 'http' -> 'http_integration')
+        suffixed_name: str = f"{name}_integration"
+        if (
+            suffixed_name in constants.INTEGRATIONS_WITH_INTEGRATION_SUFFIX
+            and (p := base_path / suffixed_name).exists()
+            and is_integration(p)
+        ):
             return p
 
     return None
@@ -509,7 +522,7 @@ def write_str_to_json_file(json_path: Path, json_content: JsonString) -> None:
         json.dump(json_content, f_json, indent=4)
 
 
-def load_yaml_file(path: Path) -> Any:  # noqa: ANN401
+def load_yaml_file(path: Path) -> Json:
     """Read a file and loads its content as YAML.
 
     Returns:
@@ -530,7 +543,7 @@ def load_yaml_file(path: Path) -> Any:  # noqa: ANN401
         raise ValueError(msg) from e
 
 
-def load_json_file(path: Path) -> Any:  # noqa: ANN401
+def load_json_file(path: Path) -> Json:
     """Read a file and loads its content as JSON.
 
     Returns:
@@ -545,6 +558,27 @@ def load_json_file(path: Path) -> Any:  # noqa: ANN401
         return json.loads(content)
     except json.JSONDecodeError as e:
         msg = f"Failed to load or parse JSON from file: {path}"
+        raise ValueError(msg) from e
+    except FileNotFoundError as e:
+        msg = f"File {path} does not exist"
+        raise ValueError(msg) from e
+
+
+def load_toml_file(path: Path) -> Json:
+    """Read a file and loads its content as TOML.
+
+    Returns:
+        The decoded JSON content of the TOML file if it exists.
+
+    Raises:
+        ValueError: If the file doesn't exist or is an invalid TOML.
+
+    """
+    try:
+        content: str = path.read_text(encoding="utf-8")
+        return tomllib.loads(content)
+    except tomllib.TOMLDecodeError as e:
+        msg = f"Failed to load or parse TOML from file: {path}"
         raise ValueError(msg) from e
     except FileNotFoundError as e:
         msg = f"File {path} does not exist"

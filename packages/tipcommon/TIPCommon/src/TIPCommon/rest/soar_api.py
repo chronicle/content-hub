@@ -159,6 +159,34 @@ def get_installed_jobs(
     return response.json()
 
 
+def save_or_update_job(
+    chronicle_soar: ChronicleSOAR,
+    job_data: SingleJson,
+) -> SingleJson:
+    """Save or update a job.
+
+    Args:
+        chronicle_soar: A Chronicle SOAR SDK object.
+        job_data: Job data.
+
+    Returns:
+        The response JSON from the platform.
+
+    Raises:
+        requests.HTTPError: If the platform returns a
+            non-success HTTP status code.
+        EmptyMandatoryValues: If job_data is missing required fields.
+        ParameterValidationError: If the resource path cannot be parsed.
+
+    """
+    api_client = get_soar_client(chronicle_soar)
+    api_client.params.job_data = job_data
+    response = api_client.save_or_update_job()
+    validate_response(response)
+
+    return safe_json_for_204(response, default_for_204={})
+
+
 def get_connector_cards(
     chronicle_soar: ChronicleSOAR,
     integration_name: str | None = None,
@@ -412,9 +440,13 @@ def get_user_profile_cards(
     api_client.params.filter_support_users = filter_support_users
     api_client.params.fetch_only_support_users = fetch_only_support_users
     api_client.params.filter_permission_types = filter_permission_types
-    response = api_client.get_users_profile_cards()
-    validate_response(response)
-    return response.json()
+    result = api_client.get_users_profile_cards()
+
+    if isinstance(api_client, LegacySoarApi):
+        validate_response(result)
+        return result.json()
+
+    return {"objectsList": result}
 
 
 def get_alert_events(
@@ -626,10 +658,15 @@ def get_installed_integrations_of_environment(
     api_client.params.environment = environment
     api_client.params.integration_identifier = integration_identifier
 
-    response = api_client.get_installed_integrations_of_environment()
-    validate_response(response)
-    instances = safe_json_for_204(response, default_for_204={"integrationInstances": []})
-    instances = instances.get("instances", []) or instances.get("integrationInstances", [])
+    result = api_client.get_installed_integrations_of_environment()
+
+    if isinstance(api_client, LegacySoarApi):
+        validate_response(result)
+        instances_dict = safe_json_for_204(result, default_for_204={"integrationInstances": []})
+        instances = instances_dict.get("instances", []) or instances_dict.get("integrationInstances", [])
+    else:
+        instances = result
+
     return [InstalledIntegrationInstance.from_json(instance) for instance in instances]
 
 
@@ -662,6 +699,37 @@ def set_alert_priority(
 
     response = api_client.set_alert_priority()
     validate_response(response, validate_json=False)
+
+
+def set_case_alerts_priority(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    alert_identifiers: list[str],
+    alert_names: list[str],
+    priority: int,
+) -> tuple[list[str], list[str]]:
+    """Set alert priority for multiple alerts in a case.
+
+    Args:
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_identifiers: List of Chronicle SOAR Alert Identifiers.
+        alert_names: List of Chronicle SOAR Alert Names aligned with identifiers.
+        priority: Chronicle SOAR priority enum value.
+    Returns:
+        Success and failed alert identifiers.
+    """
+    success_alerts = []
+    failed_alerts = []
+    for alert_identifier, alert_name in zip(alert_identifiers, alert_names, strict=True):
+        try:
+            set_alert_priority(chronicle_soar, case_id, alert_identifier, alert_name, priority)
+            success_alerts.append(alert_identifier)
+        except Exception as e:
+            chronicle_soar.LOGGER.error(f"Failed to set priority for alert {alert_identifier}: {e}")
+            failed_alerts.append(alert_identifier)
+
+    return success_alerts, failed_alerts
 
 
 def remove_case_tag(
@@ -833,7 +901,7 @@ def get_full_case_details(
 def get_case_insights(
     chronicle_soar: ChronicleSOAR,
     case_id: int,
-) -> SingleJson:
+) -> list[SingleJson]:
     """Get case attachments.
 
     Args:
@@ -844,10 +912,14 @@ def get_case_insights(
     api_client = get_soar_client(chronicle_soar)
 
     api_client.params.case_id = case_id
-    response = api_client.get_case_insights()
-    validate_response(response)
-    insights = safe_json_for_204(response, default_for_204={"activities": []})
-    insights = insights.get("activities", insights.get("insights", []))
+    result = api_client.get_case_insights()
+
+    if isinstance(api_client, LegacySoarApi):
+        validate_response(result)
+        insights_dict = safe_json_for_204(result, default_for_204={"activities": []})
+        insights = insights_dict.get("activities", insights_dict.get("insights", []))
+    else:
+        insights = result
 
     return [Insight.from_json(insight).to_json() for insight in insights]
 
@@ -896,6 +968,32 @@ def get_workflow_instance_card(
     response = api_client.get_workflow_instance_card()
     validate_response(response, validate_json=False)
     return response.json()
+
+
+def get_workflow_instance_cards(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    alert_identifiers: list[str],
+) -> dict[str, list[dict]]:
+    """Get workflow instance cards for multiple alerts.
+
+    Args:
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_identifiers: List of Chronicle SOAR Alert Identifiers.
+
+    Returns:
+        A dictionary mapping alert identifiers to workflow cards.
+    """
+    results = {}
+    for alert_identifier in alert_identifiers:
+        try:
+            results[alert_identifier] = get_workflow_instance_card(chronicle_soar, case_id, alert_identifier)
+        except Exception as e:
+            chronicle_soar.LOGGER.error(f"Failed to get workflow cards for alert {alert_identifier}: {e}")
+            results[alert_identifier] = []
+
+    return results
 
 
 # TODO: Divide this to some classes like Alert or Case related classes
@@ -969,6 +1067,172 @@ def resume_alert_sla(
     api_client.params.message = message
     response = api_client.resume_alert_sla()
     validate_response(response, validate_json=False)
+
+
+def resume_case_alerts_sla(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    alert_identifiers: list[str],
+    message: str,
+) -> tuple[list[str], list[str]]:
+    """Resume alert SLA for multiple alerts in a case.
+
+    Args:
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_identifiers: List of Chronicle SOAR Alert Identifiers.
+        message: Chronicle SOAR message.
+    Returns:
+        Success and failed alert identifiers.
+    """
+    success_alerts = []
+    failed_alerts = []
+    for alert_identifier in alert_identifiers:
+        try:
+            resume_alert_sla(chronicle_soar, case_id, alert_identifier, message)
+            success_alerts.append(alert_identifier)
+        except Exception as e:
+            chronicle_soar.LOGGER.error(f"Failed to resume SLA for alert {alert_identifier}: {e}")
+            failed_alerts.append(alert_identifier)
+
+    return success_alerts, failed_alerts
+
+
+def pause_case_alerts_sla(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    alert_identifiers: list[str],
+    message: str,
+) -> tuple[list[str], list[str]]:
+    """Pause alert SLA for multiple alerts in a case.
+
+    Args:
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_identifiers: List of Chronicle SOAR Alert Identifiers.
+        message: Chronicle SOAR message.
+    Returns:
+        Success and failed alert identifiers.
+    """
+    success_alerts = []
+    failed_alerts = []
+    for alert_identifier in alert_identifiers:
+        try:
+            pause_alert_sla(chronicle_soar, case_id, alert_identifier, message)
+            success_alerts.append(alert_identifier)
+        except Exception as e:
+            chronicle_soar.LOGGER.error(f"Failed to pause SLA for alert {alert_identifier}: {e}")
+            failed_alerts.append(alert_identifier)
+
+    return success_alerts, failed_alerts
+
+
+def set_custom_fields_for_alerts(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    alert_ids: list[int],
+    custom_fields_to_values: dict[CustomField, list[str]],
+    append_values: bool,
+    free_text_type_id: int,
+) -> tuple[list[dict[str, list[str]]], list[int]]:
+    """Set custom fields for multiple alerts in a case.
+
+    Args:
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_ids: List of Chronicle SOAR Alert IDs (integers).
+        custom_fields_to_values: Dict of CustomField to list of values.
+        append_values: Whether to append values or overwrite.
+        free_text_type_id: The type ID for free text fields.
+
+    Returns:
+        Success results and failed alert IDs.
+    """
+    success_results: list[dict[str, list[str]]] = []
+    failed_alerts: list[int] = []
+
+    for alert_id in alert_ids:
+        try:
+            result_dict: SingleJson = _set_custom_fields_for_single_alert(
+                chronicle_soar=chronicle_soar,
+                case_id=case_id,
+                alert_id=alert_id,
+                custom_fields_to_values=custom_fields_to_values,
+                append_values=append_values,
+                free_text_type_id=free_text_type_id,
+            )
+            success_results.append(result_dict)
+        except Exception as e:
+            chronicle_soar.LOGGER.error(
+                f"Failed to set custom fields for alert {alert_id}: {e}"
+            )
+            failed_alerts.append(alert_id)
+
+    return success_results, failed_alerts
+
+
+def _set_custom_fields_for_single_alert(
+    chronicle_soar: ChronicleSOAR,
+    case_id: int,
+    alert_id: int,
+    custom_fields_to_values: dict[CustomField, list[str]],
+    append_values: bool,
+    free_text_type_id: int,
+) -> SingleJson:
+    """Set custom fields for a single alert.
+
+    Args:
+        chronicle_soar: A chronicle soar SDK object.
+        case_id: Chronicle SOAR case ID.
+        alert_id: Chronicle SOAR Alert ID.
+        custom_fields_to_values: Dict of CustomField to list of values.
+        append_values: Whether to append values or overwrite.
+        free_text_type_id: The type ID for free text fields.
+
+    Returns:
+        Result dictionary for the alert.
+    """
+    try:
+        custom_field_values = list_custom_field_values(
+            chronicle_soar,
+            f"cases/{case_id}/alerts/{alert_id}",
+        )
+    except Exception:
+        custom_field_values = []
+
+    custom_field_values_map: SingleJson = {
+        field.custom_field_id: field.values for field in custom_field_values
+    }
+
+    custom_fields_values_mapping: SingleJson = {}
+    for custom_field, field_value in custom_fields_to_values.items():
+        existing_values = (
+            custom_field_values_map.get(custom_field.id, []) if append_values else []
+        )
+
+        if custom_field.type == free_text_type_id:
+            current_value = ["".join(existing_values + field_value)]
+        else:
+            current_value = existing_values + field_value
+
+        custom_fields_values_mapping[custom_field.id] = [
+            val for val in current_value if val
+        ]
+
+    batch_set_custom_field_values(
+        chronicle_soar,
+        identifier=alert_id,
+        parent=f"cases/{case_id}/alerts",
+        custom_fields_values_mapping=custom_fields_values_mapping,
+    )
+
+    return {
+        "alert_id": alert_id,
+        **{
+            custom_field.display_name: custom_fields_values_mapping[custom_field.id]
+            for custom_field in custom_fields_to_values
+        },
+    }
 
 
 def change_case_description(
@@ -1374,7 +1638,7 @@ def get_siemplify_user_details(
     requested_page: int,
     page_size: int,
     should_hide_disabled_users: str,
-) -> UserDetails:
+) -> list[UserDetails]:
     """Get siemplify user details.
 
     Args:
@@ -1396,12 +1660,15 @@ def get_siemplify_user_details(
     api_client.params.page_size = page_size
     api_client.params.should_hide_disabled_users = should_hide_disabled_users
 
-    response = api_client.get_siemplify_user_details()
-    validate_response(response, validate_json=True)
-    return [
-        UserDetails.from_json(res)
-        for res in response.json().get("objectsList", response.json().get("legacySoarUsers", []))
-    ]
+    result = api_client.get_siemplify_user_details()
+
+    if isinstance(api_client, LegacySoarApi):
+        validate_response(result, validate_json=True)
+        users_data = result.json().get("objectsList", [])
+    else:
+        users_data = result
+
+    return [UserDetails.from_json(user_detail) for user_detail in users_data]
 
 
 def get_domain_alias(chronicle_soar: ChronicleSOAR, page_count: int = 0) -> SingleJson:
@@ -1649,10 +1916,13 @@ def search_cases_by_everything(
     api_client = get_soar_client(chronicle_soar)
     api_client.params.search_payload = search_payload
 
-    response = api_client.search_cases_by_everything()
-    validate_response(response, validate_json=True)
+    result = api_client.search_cases_by_everything()
 
-    return response.json()
+    if isinstance(api_client, LegacySoarApi):
+        validate_response(result, validate_json=True)
+        return result.json()
+
+    return {"results": result}
 
 
 def get_case_activities(
