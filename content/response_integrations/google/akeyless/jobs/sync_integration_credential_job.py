@@ -458,12 +458,6 @@ class SyncIntegrationCredentialJob(Job):
 
             state_key: str = f"instance:{identifier}:{param_name}"
             state_val: str = f"{mapped_value}::{version_id}"
-            if self.state_context.get(state_key) == state_val:
-                self.logger.info(
-                    f"Skipping '{param_name}' on instance '{name}' — "
-                    f"already up-to-date with secret '{mask_id(secret_id)}' (version '{version_id}')."
-                )
-                continue
 
             secret_value: str = await self._fetch_secret_value_pre_resolved(
                 secret_id,
@@ -620,12 +614,6 @@ class SyncIntegrationCredentialJob(Job):
 
             state_key: str = f"connector:{identifier}:{param_name}"
             state_val: str = f"{mapped_value}::{version_id}"
-            if self.state_context.get(state_key) == state_val:
-                self.logger.info(
-                    f"Skipping '{param_name}' on connector '{name}' — "
-                    f"already up-to-date with secret '{mask_id(secret_id)}' (version '{version_id}')."
-                )
-                continue
 
             secret_value: str = await self._fetch_secret_value_pre_resolved(
                 secret_id,
@@ -945,12 +933,6 @@ class SyncIntegrationCredentialJob(Job):
 
             state_key: str = f"job:{job_name}:{param_name}"
             state_val: str = f"{mapped_value}::{version_id}"
-            if self.state_context.get(state_key) == state_val:
-                self.logger.info(
-                    f"Skipping '{param_name}' on job '{job_name}' — "
-                    f"already up-to-date with secret '{mask_id(secret_id)}' (version '{version_id}')."
-                )
-                continue
 
             secret_value: str = await self._fetch_secret_value_pre_resolved(
                 secret_id,
