@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import pytest
-import requests
 pytest_plugins = ("integration_testing.conftest",)
 
 @pytest.fixture(autouse=True)

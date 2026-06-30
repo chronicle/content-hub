@@ -25,6 +25,8 @@
 
 # ============================= IMPORTS ===================================== #
 from __future__ import annotations
+import logging
+from typing import Any
 import boto3
 import botocore
 
@@ -34,6 +36,7 @@ from .exceptions import (
     AWSGuardDutyNotFoundException,
 )
 from .AWSGuardDutyParser import AWSGuardDutyParser
+from .AWSGuardDutyIdentityFederation import AWSGuardDutyIdentityFederation
 from . import consts
 from . import utils
 
@@ -46,22 +49,91 @@ class AWSGuardDutyManager:
     VALID_STATUS_CODES = (200,)
 
     def __init__(
-        self, aws_access_key, aws_secret_key, aws_default_region, verify_ssl=False
+        self,
+        aws_access_key: str | None = None,
+        aws_secret_key: str | None = None,
+        aws_default_region: str | None = None,
+        verify_ssl: bool = False,
+        role_arn: str | None = None,
+        service_account_json: dict[str, Any] | None = None,
+        workload_identity_email: str | None = None,
+        siemplify_logger: logging.Logger | None = None,
     ):
         self.aws_access_key = aws_access_key
         self.aws_secret_key = aws_secret_key
         self.aws_default_region = aws_default_region
+        self.logger = siemplify_logger or logging.getLogger("AWSFederatedAuth")
 
-        session = boto3.session.Session()
+        if role_arn:
+            if service_account_json or workload_identity_email:
+                federation = AWSGuardDutyIdentityFederation(
+                    role_arn=role_arn,
+                    service_account_json=service_account_json,
+                    workload_identity_email=workload_identity_email,
+                    region_name=aws_default_region,
+                    siemplify_logger=self.logger,
+                )
+                session = federation.get_web_identity_session()
+            else:
+                if not aws_access_key or not aws_secret_key:
+                    raise ValueError(
+                        "AWS Access Key ID and AWS Secret Key are required "
+                        "for standard AWS role assumption when GCP OIDC credentials are not provided."
+                    )
+                session = self._get_standard_assumed_role_session(
+                    role_arn=role_arn,
+                    aws_access_key=aws_access_key,
+                    aws_secret_key=aws_secret_key,
+                    aws_default_region=aws_default_region,
+                    verify_ssl=verify_ssl,
+                )
+        else:
+            if not aws_access_key or not aws_secret_key:
+                raise ValueError(
+                    "AWS Access Key ID and AWS Secret Key are required "
+                    "when Role ARN is not provided."
+                )
+            session = boto3.Session(
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key,
+                region_name=aws_default_region,
+            )
 
         self.client = session.client(
             "guardduty",
-            aws_access_key_id=aws_access_key,
-            aws_secret_access_key=aws_secret_key,
             region_name=aws_default_region,
             verify=verify_ssl,
         )
         self.parser = AWSGuardDutyParser()
+
+    def _get_standard_assumed_role_session(
+        self,
+        role_arn: str,
+        aws_access_key: str,
+        aws_secret_key: str,
+        aws_default_region: str | None,
+        verify_ssl: bool,
+    ) -> boto3.Session:
+        """Standard AWS STS AssumeRole session creation using static keys."""
+        sts_session = boto3.Session(
+            aws_access_key_id=aws_access_key,
+            aws_secret_access_key=aws_secret_key,
+            region_name=aws_default_region,
+        )
+        sts_client = sts_session.client(
+            "sts", region_name=aws_default_region, verify=verify_ssl
+        )
+        response = sts_client.assume_role(
+            RoleArn=role_arn,
+            RoleSessionName=consts.DEFAULT_ROLE_SESSION_NAME,
+        )
+        credentials = response["Credentials"]
+        return boto3.Session(
+            aws_access_key_id=credentials["AccessKeyId"],
+            aws_secret_access_key=credentials["SecretAccessKey"],
+            aws_session_token=credentials["SessionToken"],
+            region_name=aws_default_region,
+        )
 
     @staticmethod
     def validate_response(response, error_msg="An error occurred"):
@@ -634,3 +706,38 @@ class AWSGuardDutyManager:
         )
         self.validate_response(response, error_msg="Unable to update findings feedback")
         return True
+
+
+def get_gcp_oidc_token(
+    service_account_json: dict[str, Any] | None = None,
+    workload_identity_email: str | None = None,
+    audience: str = consts.STS_AUDIENCE,
+    siemplify_logger: logging.Logger | None = None,
+) -> str:
+    """Wrapper function to generate Google OIDC token."""
+    federation = AWSGuardDutyIdentityFederation(
+        service_account_json=service_account_json,
+        workload_identity_email=workload_identity_email,
+        siemplify_logger=siemplify_logger,
+    )
+    return federation.get_gcp_oidc_token(audience=audience)
+
+
+def get_web_identity_session(
+    role_arn: str,
+    service_account_json: dict[str, Any] | None = None,
+    workload_identity_email: str | None = None,
+    region_name: str | None = None,
+    role_session_name: str = consts.DEFAULT_ROLE_SESSION_NAME,
+    siemplify_logger: logging.Logger | None = None,
+) -> boto3.Session:
+    """Wrapper function to get AWS session using OIDC."""
+    federation = AWSGuardDutyIdentityFederation(
+        role_arn=role_arn,
+        service_account_json=service_account_json,
+        workload_identity_email=workload_identity_email,
+        region_name=region_name,
+        role_session_name=role_session_name,
+        siemplify_logger=siemplify_logger,
+    )
+    return federation.get_web_identity_session()

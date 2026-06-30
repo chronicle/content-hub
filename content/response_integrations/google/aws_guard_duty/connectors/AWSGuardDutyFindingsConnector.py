@@ -16,6 +16,7 @@ from __future__ import annotations
 import sys
 
 from TIPCommon.extraction import extract_connector_param
+from TIPCommon.validation import ParameterValidator
 from TIPCommon.smp_io import read_ids_by_timestamp, write_ids_with_timestamp
 from TIPCommon.smp_time import (
     get_last_success_time,
@@ -53,16 +54,43 @@ def main(is_test_run):
     siemplify.LOGGER.info("------------------- Main - Param Init -------------------")
 
     aws_access_key = extract_connector_param(
-        siemplify, param_name="AWS Access Key ID", is_mandatory=True
+        siemplify, param_name="AWS Access Key ID", is_mandatory=False
     )
 
     aws_secret_key = extract_connector_param(
-        siemplify, param_name="AWS Secret Key", is_mandatory=True
+        siemplify, param_name="AWS Secret Key", is_mandatory=False
     )
 
     aws_default_region = extract_connector_param(
         siemplify, param_name="AWS Default Region", is_mandatory=True
     )
+
+    role_arn = extract_connector_param(
+        siemplify, param_name="Role ARN", is_mandatory=False
+    )
+
+    service_account_json_str = extract_connector_param(
+        siemplify, param_name="Service Account JSON", is_mandatory=False
+    )
+    validator = ParameterValidator(siemplify)
+    service_account_json = (
+        validator.validate_json(
+            param_name="Service Account JSON",
+            json_string=service_account_json_str,
+            print_value=False,
+        )
+        if service_account_json_str
+        else None
+    )
+
+    workload_identity_email = extract_connector_param(
+        siemplify, param_name="Workload Identity Email", is_mandatory=False
+    )
+
+    if not role_arn and (not aws_access_key or not aws_secret_key):
+        raise ValueError(
+            "AWS Access Key ID and AWS Secret Key are required when Role ARN is not provided."
+        )
 
     verify_ssl = extract_connector_param(
         siemplify,
@@ -149,6 +177,10 @@ def main(is_test_run):
             aws_secret_key=aws_secret_key,
             aws_default_region=aws_default_region,
             verify_ssl=verify_ssl,
+            role_arn=role_arn,
+            service_account_json=service_account_json,
+            workload_identity_email=workload_identity_email,
+            siemplify_logger=siemplify.LOGGER,
         )
         manager.test_connectivity()  # this validates the credentials
         siemplify.LOGGER.info("Successfully connected to AWS GuardDuty service")

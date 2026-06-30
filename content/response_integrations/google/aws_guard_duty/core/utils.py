@@ -14,8 +14,16 @@
 
 from __future__ import annotations
 import json
+from typing import Any, TYPE_CHECKING
 
+from TIPCommon.extraction import extract_configuration_param
+from TIPCommon.validation import ParameterValidator
+
+from .consts import INTEGRATION_NAME
 from .exceptions import AWSGuardDutyValidationException
+
+if TYPE_CHECKING:
+    from SiemplifyAction import SiemplifyAction
 
 
 def remove_empty_kwargs(kwargs):
@@ -92,3 +100,85 @@ def load_kv_csv_to_dict(kv_csv, param_name):
         }
     except Exception:
         raise AWSGuardDutyValidationException(f"Failed to parse parameter {param_name}")
+
+
+def extract_integration_params(
+    siemplify: SiemplifyAction,
+) -> tuple[
+    str | None,
+    str | None,
+    str,
+    str | None,
+    dict[str, Any] | None,
+    str | None,
+]:
+    """Extracts AWS GuardDuty integration configuration parameters.
+
+    Args:
+        siemplify: The Siemplify action object.
+
+    Returns:
+        The extracted and validated integration parameters.
+    """
+    aws_access_key = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="AWS Access Key ID",
+    )
+
+    aws_secret_key = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="AWS Secret Key",
+    )
+
+    aws_default_region = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="AWS Default Region",
+        is_mandatory=True,
+    )
+
+    role_arn = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Role ARN",
+    )
+
+    service_account_json_str = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Service Account JSON",
+    )
+
+    validator = ParameterValidator(siemplify)
+    service_account_json = (
+        validator.validate_json(
+            param_name="Service Account JSON",
+            json_string=service_account_json_str,
+            print_value=False,
+        )
+        if service_account_json_str
+        else None
+    )
+
+    workload_identity_email = extract_configuration_param(
+        siemplify,
+        provider_name=INTEGRATION_NAME,
+        param_name="Workload Identity Email",
+    )
+
+    if not role_arn and (not aws_access_key or not aws_secret_key):
+        raise ValueError(
+            "AWS Access Key ID and AWS Secret Key are required when Role ARN is not provided."
+        )
+
+
+    return (
+        aws_access_key,
+        aws_secret_key,
+        aws_default_region,
+        role_arn,
+        service_account_json,
+        workload_identity_email,
+    )
