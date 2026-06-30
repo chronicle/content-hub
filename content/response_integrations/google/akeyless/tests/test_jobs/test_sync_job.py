@@ -314,8 +314,8 @@ class TestStateContextRegistry:
         )
 
     @pytest.mark.anyio
-    async def test_set_integration_params_skips_when_up_to_date(self) -> None:
-        """Skips fetching and setting configuration when parameter is up-to-date."""
+    async def test_set_integration_params_does_not_skip_when_up_to_date(self) -> None:
+        """Verify that we do not skip fetching and setting configuration when parameter is up-to-date."""
         job = _make_job()
         job.state_context = {"instance:inst_id:param_x": "my-secret::5"}
 
@@ -323,7 +323,7 @@ class TestStateContextRegistry:
         mock_client.resolve_latest_enabled_version.return_value = "5"
         job.akeyless_client = mock_client
 
-        job._fetch_secret_value_pre_resolved = AsyncMock()
+        job._fetch_secret_value_pre_resolved = AsyncMock(return_value="cached-secret-val")
 
         mock_api = AsyncMock()
 
@@ -334,8 +334,14 @@ class TestStateContextRegistry:
             param_mapping={"param_x": "my-secret"},
         )
 
-        job._fetch_secret_value_pre_resolved.assert_not_called()
-        mock_api.set_configuration_property.assert_not_called()
+        job._fetch_secret_value_pre_resolved.assert_called_once_with(
+            "my-secret", "5", context_label="param 'param_x' on instance 'Instance A' (id: inst_id)"
+        )
+        mock_api.set_configuration_property.assert_called_once_with(
+            integration_instance_identifier="inst_id",
+            property_name="param_x",
+            property_value="cached-secret-val",
+        )
 
     @pytest.mark.anyio
     async def test_set_integration_params_updates_when_outdated(self) -> None:
