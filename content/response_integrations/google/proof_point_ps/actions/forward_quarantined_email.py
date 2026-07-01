@@ -83,6 +83,10 @@ class ForwardQuarantinedEmail(BaseProofPointPSAction):
         Args:
             _: Never input.
 
+        Raises:
+            ProofPointPSError: If the folder and deleted folder are the same,
+                if validation fails, or if the API request fails.
+
         """
         guids = string_to_multi_value(self.params.guid_input)
         folder_name = self.params.folder

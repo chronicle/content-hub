@@ -102,8 +102,17 @@ class BaseProofPointPSAction(Action, ABC):
         Distinguishes between GUIDs that do not exist globally vs. GUIDs that exist but
         are not present in the specified folder.
 
-        Returns a list of QuarantineRecord objects if all exist.
-        Otherwise raises ProofPointPSError.
+        Args:
+            guids: List of message GUIDs to validate.
+            folder_name: Name of the folder to search within.
+            fail_on_missing_guid: Whether to fail if any of the GUIDs are missing.
+
+        Returns:
+            A list of QuarantineRecord objects if all exist.
+
+        Raises:
+            ProofPointPSError: If the folder does not exist or any of the GUIDs are missing.
+
         """
         records = []
         folder_missing = []

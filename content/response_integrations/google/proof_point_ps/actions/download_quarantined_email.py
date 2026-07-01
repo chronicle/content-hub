@@ -92,7 +92,8 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
             subject = "".join(subject_parts)
             safe_subject = re.sub(r'[\\/*?:"<>|\s]+', "_", subject).strip("_")
             return safe_subject[:100] if safe_subject else "NoSubject"
-        except Exception:
+        except Exception as e:
+            self.soar_action.LOGGER.warn(f"Failed to parse email subject: {e}")
             return "Email"
 
     def _perform_action(self, _: Never) -> None:
@@ -100,6 +101,11 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
 
         Args:
             _: Never input.
+
+        Raises:
+            ProofPointPSError: If the destination directory does not exist or is not a
+                directory, if the source folder doesn't exist, if some GUIDs are missing,
+                or if the download fails (e.g., file already exists, API errors).
 
         """
         guids = string_to_multi_value(self.params.guid_input)
