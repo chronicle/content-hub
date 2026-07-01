@@ -31,7 +31,10 @@ from typing import Any
 import magic
 import requests
 from py7zz.core import find_7z_binary
-from wordlist import wordlist
+try:
+    from wordlist import wordlist
+except ImportError:
+    wordlist = None
 
 try:
     import py7zr
@@ -460,7 +463,7 @@ class AttachmentsManager:
         """
         password_candidates: list[str | None] = [None]
         lines: list[str] = []
-        if bruteforce:
+        if bruteforce and wordlist:
             lines = io.StringIO(wordlist.WORDLIST).readlines()
 
         for line in lines:
