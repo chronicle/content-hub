@@ -30,6 +30,8 @@ from typing import Any
 
 import magic
 import requests
+from py7zz.core import find_7z_binary
+from wordlist import wordlist
 
 try:
     import py7zr
@@ -459,11 +461,7 @@ class AttachmentsManager:
         password_candidates: list[str | None] = [None]
         lines: list[str] = []
         if bruteforce:
-            try:
-                from wordlist import wordlist
-                lines = io.StringIO(wordlist.WORDLIST).readlines()
-            except ImportError:
-                pass
+            lines = io.StringIO(wordlist.WORDLIST).readlines()
 
         for line in lines:
             password_candidates.append(line.rstrip("\r\n"))
@@ -657,7 +655,6 @@ class AttachmentsManager:
             RuntimeError: If no binary is found.
         """
         try:
-            from py7zz.core import find_7z_binary
             py7zz_bin: str | None = find_7z_binary()
             if py7zz_bin and os.path.isfile(py7zz_bin) and os.access(py7zz_bin, os.X_OK):
                 return py7zz_bin
