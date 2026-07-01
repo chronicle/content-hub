@@ -31,6 +31,7 @@ from typing import Any
 import magic
 import requests
 from py7zz.core import find_7z_binary
+
 try:
     from wordlist import wordlist
 except ImportError:
