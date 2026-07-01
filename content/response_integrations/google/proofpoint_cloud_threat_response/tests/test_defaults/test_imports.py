@@ -17,7 +17,7 @@ from __future__ import annotations
 import importlib
 import pathlib
 
-from proofpoint_cloud_threat_response.tests import common
+from ...tests import common
 
 
 VALID_SUFFIXES = (".py",)

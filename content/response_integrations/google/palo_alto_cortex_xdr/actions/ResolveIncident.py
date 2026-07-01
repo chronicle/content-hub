@@ -16,8 +16,8 @@ from __future__ import annotations
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 
-from palo_alto_cortex_xdr.core.action_init import create_api_client
-from palo_alto_cortex_xdr.core.constants import RESOLVE_INCIDENT_ACTION_SCRIPT_NAME
+from ..core.action_init import create_api_client
+from ..core.constants import RESOLVE_INCIDENT_ACTION_SCRIPT_NAME
 
 
 def main():

@@ -24,11 +24,11 @@ from TIPCommon.data_models import DatabaseContextType
 from TIPCommon.types import SingleJson
 from TIPCommon.consts import IDS_DB_KEY
 
-from gmail.connectors.GmailConnector import main
-from gmail.tests.common import INTEGRATION_PATH, MOCK_DATA
-from gmail.tests.core.async_session import GoogleGmailAsyncSession
-from gmail.tests.core.google_gmail import GoogleGmail
-from gmail.tests.utils import (
+from ..connectors.GmailConnector import main
+from ..tests.common import INTEGRATION_PATH, MOCK_DATA
+from ..tests.core.async_session import GoogleGmailAsyncSession
+from ..tests.core.google_gmail import GoogleGmail
+from ..tests.utils import (
     assert_all_list_messages,
     assert_all_get_message,
     assert_all_get_attachment,

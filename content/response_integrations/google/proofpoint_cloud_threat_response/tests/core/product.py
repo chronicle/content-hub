@@ -17,7 +17,7 @@ import abc
 from typing import MutableMapping
 import json
 
-from proofpoint_cloud_threat_response.core.data_models import (
+from ...core.data_models import (
     ProofpointIncident,
     ProofpointMessage,
 )

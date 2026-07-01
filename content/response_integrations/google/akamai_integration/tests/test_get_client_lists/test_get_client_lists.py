@@ -18,11 +18,11 @@ import copy
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from akamai_integration.actions.get_client_lists import GetClientLists
-from akamai_integration.core.datamodels import ClientList
-from akamai_integration.tests import common
-from akamai_integration.tests.core.session import AkamaiSession
-from akamai_integration.tests.core.product import Akamai
+from ...actions.get_client_lists import GetClientLists
+from ...core.datamodels import ClientList
+from ...tests import common
+from ...tests.core.session import AkamaiSession
+from ...tests.core.product import Akamai
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

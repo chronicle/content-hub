@@ -18,10 +18,10 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from splunk.actions import Ping
-from splunk.core.constants import INTEGRATION_NAME
-from splunk.tests.const import CONFIG_PATH
-from splunk.tests.core.session import SplunkSession
+from ...actions import Ping
+from ...core.constants import INTEGRATION_NAME
+from ...tests.const import CONFIG_PATH
+from ...tests.core.session import SplunkSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

@@ -25,16 +25,16 @@ from soar_sdk.SiemplifyJob import SiemplifyJob
 from TIPCommon.base.interfaces import Authable
 from TIPCommon.base.utils import CreateSession
 from TIPCommon.extraction import extract_script_param
-from azure_monitor.core import api_utils
-from azure_monitor.core.constants import (
+from ..core import api_utils
+from ..core.constants import (
     DEFAULT_API_ROOT,
     DEFAULT_LOGIN_API_ROOT,
     DEFAULT_VERIFY_SSL,
     INTEGRATION_IDENTIFIER,
     TOKEN_PAYLOAD_FROM_SECRET,
 )
-from azure_monitor.core.data_models import IntegrationParameters
-from azure_monitor.core.exceptions import AzureMonitorError
+from ..core.data_models import IntegrationParameters
+from ..core.exceptions import AzureMonitorError
 
 if TYPE_CHECKING:
     from requests import Session

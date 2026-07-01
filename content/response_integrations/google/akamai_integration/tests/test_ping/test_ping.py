@@ -16,15 +16,15 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from akamai_integration.actions import ping
-from akamai_integration.tests.common import (
+from ...actions import ping
+from ...tests.common import (
     CONFIG,
     CONFIG_PATH,
     NETWORK_ITEM_LIST,
     NETWORK_LIST,
 )
-from akamai_integration.tests.core.session import AkamaiSession
-from akamai_integration.tests.core.product import Akamai
+from ...tests.core.session import AkamaiSession
+from ...tests.core.product import Akamai
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

@@ -18,15 +18,15 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from gmail.actions.Ping import (
+from ..actions.Ping import (
     Ping,
     SUCCESS_MESSAGE,
     ERROR_MESSAGE,
 )
 import gmail.core.GoogleGmailConsts as Constants
 
-from gmail.tests.common import CONFIG
-from gmail.tests.core.session import GoogleGmailSession
+from ..tests.common import CONFIG
+from ..tests.core.session import GoogleGmailSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

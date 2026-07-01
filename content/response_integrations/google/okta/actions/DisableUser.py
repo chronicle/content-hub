@@ -15,7 +15,7 @@
 from __future__ import annotations
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyDataModel import EntityTypes
-from okta.core.OktaManager import OktaManager
+from ..core.OktaManager import OktaManager
 import json
 
 PROVIDER = "Okta"

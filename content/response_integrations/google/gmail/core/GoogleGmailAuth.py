@@ -25,9 +25,9 @@ from TIPCommon.extraction import extract_script_param
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailConsts import INTEGRATION_IDENTIFIER, OAUTH_SCOPES
-from gmail.core.GoogleGmailExceptions import GoogleGmailManagerError
-from gmail.core.GoogleGmailUtils import build_workspace_credentials, parse_string_to_dict
+from ..core.GoogleGmailConsts import INTEGRATION_IDENTIFIER, OAUTH_SCOPES
+from ..core.GoogleGmailExceptions import GoogleGmailManagerError
+from ..core.GoogleGmailUtils import build_workspace_credentials, parse_string_to_dict
 
 
 def build_auth_manager(

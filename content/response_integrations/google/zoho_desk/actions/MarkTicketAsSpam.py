@@ -18,9 +18,9 @@ from typing import NoReturn
 
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
-from zoho_desk.core import action_init
-from zoho_desk.core.ZohoDeskApiManager import ZohoDeskApiClient
-from zoho_desk.core.constants import INTEGRATION_DISPLAY_NAME, MARK_TICKET_AS_SPAM_SCRIPT_NAME
+from ..core import action_init
+from ..core.ZohoDeskApiManager import ZohoDeskApiClient
+from ..core.constants import INTEGRATION_DISPLAY_NAME, MARK_TICKET_AS_SPAM_SCRIPT_NAME
 
 
 class MarkTicketAsSpam(Action[ZohoDeskApiClient]):

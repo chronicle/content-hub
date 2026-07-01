@@ -19,7 +19,7 @@ import abc
 import dataclasses
 from collections.abc import Iterable
 
-from akamai_integration.core.datamodels import (
+from ...core.datamodels import (
     AddItemsToNetworkList,
     ClientActivation,
     ClientList,

@@ -20,7 +20,7 @@ from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 from TIPCommon.types import SingleJson
 
-from gmail.actions.SaveEmailToTheCase import (
+from ...actions.SaveEmailToTheCase import (
     SaveEmailToTheCase,
     SUCCESS_MESSAGE,
     SUCCESS_ATTACHMENTS,
@@ -29,11 +29,11 @@ from gmail.actions.SaveEmailToTheCase import (
 )
 import gmail.core.GoogleGmailConsts as Constants
 
-from gmail.tests.common import CONFIG, MOCK_DATA
-from gmail.tests.core.async_session import GoogleGmailAsyncSession
-from gmail.tests.core.google_gmail import GoogleGmail
-from gmail.tests.core.session import GoogleGmailSession
-from gmail.tests.utils import (
+from ...tests.common import CONFIG, MOCK_DATA
+from ...tests.core.async_session import GoogleGmailAsyncSession
+from ...tests.core.google_gmail import GoogleGmail
+from ...tests.core.session import GoogleGmailSession
+from ...tests.utils import (
     assert_all_get_message,
     assert_all_get_attachment,
     assert_all_list_messages,

@@ -18,7 +18,7 @@ import json
 from collections import defaultdict
 
 from TIPCommon.types import SingleJson
-from vertex_ai.core.VertexAIExceptions import VertexAIInvalidJsonException
+from ..core.VertexAIExceptions import VertexAIInvalidJsonException
 
 EXCLUDE_ENTITY_FIELDS = [
     # Entity fields

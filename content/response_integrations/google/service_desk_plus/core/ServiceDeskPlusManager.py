@@ -33,8 +33,8 @@ import xmltodict
 from xml.etree.ElementTree import Element, SubElement
 import defusedxml.ElementTree as ET
 import urllib.parse
-from service_desk_plus.core import data_parser
-from service_desk_plus.core.datamodels import WorkOrder
+from ..core import data_parser
+from ..core.datamodels import WorkOrder
 
 # =====================================
 #             CONSTANTS               #

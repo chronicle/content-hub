@@ -15,16 +15,16 @@
 import pathlib
 import pytest
 
-from zoho_desk.actions.UpdateTicket import UpdateTicket
-from zoho_desk.core.datamodels import Ticket
-from zoho_desk.tests.common import (
+from ...actions.UpdateTicket import UpdateTicket
+from ...core.datamodels import Ticket
+from ...tests.common import (
     ACCESS_TOKEN_DB_ROW,
     CONFIG_PATH,
     DEFAULT_TICKET,
 )
-from zoho_desk.tests.core.session import ZohoDeskSession
-from zoho_desk.tests.core.zoho_desk import ZohoDesk
-from zoho_desk.tests.test_update_ticket.cases import (
+from ...tests.core.session import ZohoDeskSession
+from ...tests.core.zoho_desk import ZohoDesk
+from ...tests.test_update_ticket.cases import (
     DEFAULT_TEST_CASE_PARAMS,
     DEFAULT_TEST_CASE_RESULTS,
 )

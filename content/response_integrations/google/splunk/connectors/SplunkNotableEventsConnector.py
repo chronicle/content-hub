@@ -25,19 +25,19 @@ from soar_sdk.SiemplifyUtils import (
     unix_now,
     utc_now,
 )
-from splunk.core.SplunkManager import SplunkManager
+from ..core.SplunkManager import SplunkManager
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
 from TIPCommon.extraction import extract_connector_param
 from TIPCommon.smp_io import read_ids, write_ids
 from TIPCommon.smp_time import get_last_success_time, save_timestamp
 from TIPCommon.utils import is_overflowed
 
-from splunk.core.UtilsManager import (
+from ..core.UtilsManager import (
     is_approaching_timeout,
     pass_whitelist_filter,
     string_to_multi_value,
 )
-from splunk.core.constants import (
+from ..core.constants import (
     ALERT_NAME_SOURCE_MAPPER,
     CONNECTOR_NAME,
     DEFAULT_ALERTS_PROCESS_LIMIT,
@@ -46,7 +46,7 @@ from splunk.core.constants import (
     SEARCH_NAME_SOURCE,
     STORED_IDS_LIMIT,
 )
-from splunk.core.exceptions import SplunkConnectorException
+from ..core.exceptions import SplunkConnectorException
 
 
 connector_starting_time = unix_now()

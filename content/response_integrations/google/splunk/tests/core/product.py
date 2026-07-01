@@ -18,9 +18,9 @@ import abc
 
 from collections.abc import Collection, Iterable, MutableMapping
 
-from splunk.core.SplunkParser import SplunkParser
-from splunk.core.datamodels import NotableEvent
-from splunk.tests.common import EventIdNotFoundError
+from ...core.SplunkParser import SplunkParser
+from ...core.datamodels import NotableEvent
+from ...tests.common import EventIdNotFoundError
 
 
 class Splunk(abc.ABC):

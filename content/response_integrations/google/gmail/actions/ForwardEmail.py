@@ -17,14 +17,14 @@ from __future__ import annotations
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailBaseAction import GoogleGmailBaseAction
-from gmail.core.GoogleGmailConsts import (
+from ..core.GoogleGmailBaseAction import GoogleGmailBaseAction
+from ..core.GoogleGmailConsts import (
     INTEGRATION_IDENTIFIER,
     FORWARD_EMAIL_SCRIPT_NAME,
     DEFAULT_MAILBOX,
 )
-from gmail.core.GoogleGmailExceptions import GoogleGmailNotFoundError
-from gmail.core.GoogleGmailServices import MessagesService
+from ..core.GoogleGmailExceptions import GoogleGmailNotFoundError
+from ..core.GoogleGmailServices import MessagesService
 
 MESSAGE_NOT_FOUND = (
     "The message with the provided internet message ID {} was not found. "

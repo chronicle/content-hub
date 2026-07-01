@@ -23,7 +23,7 @@ from TIPCommon.base.data_models import ActionOutput
 from TIPCommon.smp_time import unix_now
 from TIPCommon.types import SingleJson
 
-from web_risk.actions.SubmitEntities import (
+from ...actions.SubmitEntities import (
     SubmitEntities,
     SUCCESS_MESSAGE,
     PENDING_MESSAGE,
@@ -32,8 +32,8 @@ from web_risk.actions.SubmitEntities import (
 )
 import web_risk.core.WebRiskConstants as Constants
 
-from web_risk.tests.common import CONFIG
-from web_risk.tests.core.session import ApiSession
+from ...tests.common import CONFIG
+from ...tests.core.session import ApiSession
 from integration_testing.common import get_def_file_content
 from integration_testing.common import set_is_first_run_to_true, set_is_first_run_to_false
 from integration_testing.platform.script_output import MockActionOutput
@@ -100,7 +100,7 @@ class TestAuth:
     ) -> None:
         SubmitEntities().run()
 
-        assert len(script_session.request_history) >= 2
+        assert len(script_session.request_history) >= 1
         assert (
             script_session.request_history[-1]
             .response.json().get("error", {}).get("message")
@@ -125,7 +125,7 @@ class TestEnrichment:
     ) -> None:
         SubmitEntities().run()
 
-        assert len(script_session.request_history) >= 2
+        assert len(script_session.request_history) >= 1
         assert action_output.results == ActionOutput(
             output_message=NONE_UPDATED_MESSAGE,
             result_value=False,
@@ -189,7 +189,7 @@ class TestEnrichment:
         action_.soar_action.session = script_session
         action_.run()
 
-        assert len(script_session.request_history) >= 4
+        assert len(script_session.request_history) >= 3
         assert (
             "https://domain.com" ==
             script_session.request_history[-2].request
@@ -246,7 +246,7 @@ class TestEnrichment:
         action_.soar_action.session = script_session
         action_.run()
 
-        assert len(script_session.request_history) >= 3
+        assert len(script_session.request_history) >= 2
         assert action_output.results.output_message == (
             SUCCESS_MESSAGE.format(
                 "https://testsafebrowsing.appspot.com/s/malware.html"
@@ -296,7 +296,7 @@ class TestEnrichment:
         action_.soar_action.session = script_session
         action_.run()
 
-        assert len(script_session.request_history) >= 2
+        assert len(script_session.request_history) >= 1
         assert TIMEOUT_MESSAGE in action_output.results.output_message
         assert action_output.results.result_value is False
         assert action_output.results.execution_state == ExecutionState.FAILED

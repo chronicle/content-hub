@@ -16,8 +16,8 @@ from __future__ import annotations
 import pathlib
 import abc
 
-from google_forms.core.datamodels import AlertResponse, FormResponse
-from google_forms.tests.common import MOCK_DATA
+from ...core.datamodels import AlertResponse, FormResponse
+from ...tests.common import MOCK_DATA
 
 
 class GoogleForms(abc.ABC):

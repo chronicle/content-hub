@@ -16,8 +16,8 @@ from __future__ import annotations
 import ipaddress
 
 from TIPCommon.transformation import convert_list_to_comma_string
-from nmap.core import constants
-from nmap.core import exceptions
+from ..core import constants
+from ..core import exceptions
 
 
 def validate_ip_address(ips: list[str]) -> None:

@@ -19,17 +19,17 @@ from typing import NamedTuple, TYPE_CHECKING
 
 from TIPCommon.base.interfaces import Apiable
 
-from proofpoint_cloud_threat_response.core.api_utils import get_full_url, validate_response
-from proofpoint_cloud_threat_response.core.data_parser import ProofpointCTRParser
+from ..core.api_utils import get_full_url, validate_response
+from ..core.data_parser import ProofpointCTRParser
 from requests import Response
 
-from proofpoint_cloud_threat_response.core.auth import AuthenticatedSession
+from ..core.auth import AuthenticatedSession
 
 if TYPE_CHECKING:
     from TIPCommon.base.interfaces.logger import ScriptLogger
     from TIPCommon.types import SingleJson
 
-    from proofpoint_cloud_threat_response.core.data_models import ProofpointIncident, ProofpointMessage
+    from ..core.data_models import ProofpointIncident, ProofpointMessage
 
 
 class ApiParameters(NamedTuple):

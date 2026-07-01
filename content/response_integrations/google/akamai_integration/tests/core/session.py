@@ -19,7 +19,7 @@ from collections.abc import Iterable
 
 from TIPCommon.types import SingleJson
 
-from akamai_integration.tests.core.product import Akamai
+from ...tests.core.product import Akamai
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse

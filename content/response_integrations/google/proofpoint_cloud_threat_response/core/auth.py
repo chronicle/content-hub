@@ -26,14 +26,14 @@ from TIPCommon.base.interfaces import Authable
 from TIPCommon.base.utils import CreateSession
 from TIPCommon.extraction import extract_script_param
 
-from proofpoint_cloud_threat_response.core.api_utils import validate_response
-from proofpoint_cloud_threat_response.core.constants import (
+from ..core.api_utils import validate_response
+from ..core.constants import (
     DEFAULT_API_ROOT,
     DEFAULT_VERIFY_SSL,
     INTEGRATION_IDENTIFIER,
 )
-from proofpoint_cloud_threat_response.core.data_models import IntegrationParameters
-from proofpoint_cloud_threat_response.core.exceptions import ProofpointCTRError
+from ..core.data_models import IntegrationParameters
+from ..core.exceptions import ProofpointCTRError
 
 if TYPE_CHECKING:
     from requests import Session

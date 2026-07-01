@@ -20,14 +20,14 @@ from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.validation import ParameterValidator
-from akamai_integration.core import action_init
-from akamai_integration.core import constants
-from akamai_integration.core import exceptions
-from akamai_integration.core import utils
+from ..core import action_init
+from ..core import constants
+from ..core import exceptions
+from ..core import utils
 
 if TYPE_CHECKING:
     from typing import Any, Never, NoReturn
-    from akamai_integration.core import datamodels
+    from ..core import datamodels
 
 
 class ActivateClientList(Action):

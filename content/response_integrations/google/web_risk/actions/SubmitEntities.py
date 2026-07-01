@@ -23,14 +23,14 @@ from TIPCommon.smp_time import is_approaching_action_timeout
 from TIPCommon.types import Entity
 from TIPCommon.validation import ParameterValidator
 
-from web_risk.core.WebRiskBaseAction import BaseAction
-from web_risk.core.WebRiskConstants import (
+from ..core.WebRiskBaseAction import BaseAction
+from ..core.WebRiskConstants import (
     CONFIDENCE_LEVELS,
     GLOBAL_TIMEOUT_THRESHOLD_IN_MIN,
     PLATFORMS,
     SUBMIT_ENTITIES_SCRIPT_NAME,
 )
-from web_risk.core.WebRiskDatamodels import (
+from ..core.WebRiskDatamodels import (
     AbuseType,
     Submission,
     ThreatJustification,

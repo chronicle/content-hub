@@ -20,15 +20,15 @@ from TIPCommon.data_models import DatabaseContextType
 from TIPCommon.types import SingleJson
 from TIPCommon.utils import is_test_run
 
-from mimecast.connectors import MessageTrackingConnector
-from mimecast.core.datamodels import (
+from ...connectors import MessageTrackingConnector
+from ...core.datamodels import (
     Attachment,
     HoldMessage,
     Message,
     MessageDetails,
 )
-from mimecast.tests.core.session import MimecastSession
-from mimecast.tests.common import (
+from ...tests.core.session import MimecastSession
+from ...tests.common import (
     ATTACHMENT,
     CONFIG,
     HOLD_MESSAGE,
@@ -36,7 +36,7 @@ from mimecast.tests.common import (
     MESSAGE,
     MESSAGE_DETAILS,
 )
-from mimecast.tests.core.product import Mimecast
+from ...tests.core.product import Mimecast
 from integration_testing.common import set_is_test_run_to_true, set_is_test_run_to_false
 from integration_testing.platform.script_output import MockConnectorOutput
 from integration_testing.set_meta import set_metadata

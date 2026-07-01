@@ -39,8 +39,8 @@ pytest_plugins = ("integration_testing.conftest",)
 import pytest
 from TIPCommon.base.utils import CreateSession
 from integration_testing.common import use_live_api
-from zoho_desk.tests.core.session import ZohoDeskSession
-from zoho_desk.tests.core.zoho_desk import ZohoDesk
+from ..tests.core.session import ZohoDeskSession
+from ..tests.core.zoho_desk import ZohoDesk
 
 
 @pytest.fixture(name="zoho_desk")
@@ -69,8 +69,8 @@ def zoho_desk_script_session(
 
 @pytest.fixture(name="zoho_desk_manager")
 def zoho_desk_manager_fixture(script_session: ZohoDeskSession):
-    from zoho_desk.core.ZohoDeskApiManager import ZohoDeskApiClient
-    from zoho_desk.core.datamodels import IntegrationParameters
+    from ..core.ZohoDeskApiManager import ZohoDeskApiClient
+    from ..core.datamodels import IntegrationParameters
     from integration_testing.logger import Logger
     
     api_root = "https://desk.zoho.com/api/v1/"

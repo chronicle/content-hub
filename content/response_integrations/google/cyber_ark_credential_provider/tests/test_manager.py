@@ -19,10 +19,10 @@ from paramiko.ssh_exception import SSHException
 import pytest
 from pytest_mock import MockerFixture
 
-from cyber_ark_credential_provider.core.credential_provider_manager import (
+from ..core.credential_provider_manager import (
     CommandResult,
 )
-from cyber_ark_credential_provider.core.constants import TEST_COMMAND
+from ..core.constants import TEST_COMMAND
 
 
 class TestCredentialProviderManager:

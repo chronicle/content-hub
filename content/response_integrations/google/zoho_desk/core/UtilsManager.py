@@ -17,12 +17,12 @@ from urllib.parse import urlparse
 
 import requests
 
-from zoho_desk.core.AccessToken import AccessTokenComponents, get_access_token
+from ..core.AccessToken import AccessTokenComponents, get_access_token
 from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.types import ChronicleSOAR
-from zoho_desk.core.ZohoDeskExceptions import ZohoDeskException
-from zoho_desk.core.constants import INTEGRATION_NAME
-from zoho_desk.core.datamodels import IntegrationParameters
+from ..core.ZohoDeskExceptions import ZohoDeskException
+from ..core.constants import INTEGRATION_NAME
+from ..core.datamodels import IntegrationParameters
 
 
 def get_integration_parameters(siemplify: ChronicleSOAR) -> IntegrationParameters:

@@ -28,16 +28,12 @@ import soar_sdk
 pytest_plugins = ("integration_testing.conftest",)
 
 # Alias all top-level soar_sdk modules to themselves to unify the namespace for mocks
-changed = True
-while changed:
-    changed = False
-    for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-        if name not in sys.modules:
-            try:
-                sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-                changed = True
-            except Exception:
-                pass
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    if name not in sys.modules:
+        try:
+            sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
+        except Exception:
+            pass
 
 import sysdig_secure
 import sysdig_secure.core
@@ -62,12 +58,12 @@ from requests import Session
 
 from TIPCommon.types import SingleJson
 
-from sysdig_secure.core.SysdigSecureAuthManager import (
+from ..core.SysdigSecureAuthManager import (
     AuthManager,
     AuthManagerParams,
 )
-from sysdig_secure.core.SysdigSecureManager import ApiManager
-from sysdig_secure.tests.core.session import ApiSession
+from ..core.SysdigSecureManager import ApiManager
+from ..tests.core.session import ApiSession
 from integration_testing.common import get_def_file_content, use_live_api
 from integration_testing.logger import Logger
 

@@ -20,14 +20,14 @@ import datetime
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
 
-from palo_alto_cortex_xdr.actions import ExecuteXQLSearch
-from palo_alto_cortex_xdr.core.constants import (
+from ...actions import ExecuteXQLSearch
+from ...core.constants import (
     EXECUTE_XQL_SEARCH_ACTION_SCRIPT_NAME,
     PRODUCT,
     VENDOR,
 )
-from palo_alto_cortex_xdr.tests import common
-from palo_alto_cortex_xdr.tests.core.session import PaloAltoCortexXDRSession
+from ...tests import common
+from ...tests.core.session import PaloAltoCortexXDRSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

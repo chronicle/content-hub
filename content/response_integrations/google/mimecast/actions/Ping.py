@@ -17,9 +17,9 @@ from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAI
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from mimecast.core.constants import INTEGRATION_DISPLAY_NAME, PING_SCRIPT_NAME
-from mimecast.core.MimecastManager import MimecastManager
-from mimecast.core import UtilsManager
+from ..core.constants import INTEGRATION_DISPLAY_NAME, PING_SCRIPT_NAME
+from ..core.MimecastManager import MimecastManager
+from ..core import UtilsManager
 
 
 @output_handler

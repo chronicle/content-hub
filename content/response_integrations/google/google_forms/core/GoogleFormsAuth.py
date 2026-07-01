@@ -30,12 +30,12 @@ from TIPCommon.types import ChronicleSOAR, SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
 
-from google_forms.core.constants import INTEGRATION_NAME, OAUTH_SCOPES
-from google_forms.core.exceptions import (
+from ..core.constants import INTEGRATION_NAME, OAUTH_SCOPES
+from ..core.exceptions import (
     GoogleFormsAuthenticationError,
     InvalidParameterException,
 )
-from google_forms.core.utils import parse_string_to_dict
+from ..core.utils import parse_string_to_dict
 
 
 def build_auth_manager_params(chronicle_soar: ChronicleSOAR) -> AuthManagerParams:

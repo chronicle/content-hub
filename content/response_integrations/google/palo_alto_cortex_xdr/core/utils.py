@@ -22,8 +22,8 @@ from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from TIPCommon.extraction import extract_script_param
 from TIPCommon.types import ChronicleSOAR
-from palo_alto_cortex_xdr.core import constants
-from palo_alto_cortex_xdr.core.datamodels import IntegrationParameters
+from ..core import constants
+from ..core.datamodels import IntegrationParameters
 
 
 if TYPE_CHECKING:

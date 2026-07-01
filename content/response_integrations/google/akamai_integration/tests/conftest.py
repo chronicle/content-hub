@@ -21,13 +21,13 @@ import requests
 
 from soar_sdk.SiemplifyBase import SiemplifyBase
 
-from akamai_integration.core.api_manager import (
+from ..core.api_manager import (
     ApiManager,
     ApiParameters,
 )
-from akamai_integration.tests.common import CONFIG
-from akamai_integration.tests.core.session import AkamaiSession
-from akamai_integration.tests.core.product import Akamai as AkamaiProduct
+from ..tests.common import CONFIG
+from ..tests.core.session import AkamaiSession
+from ..tests.core.product import Akamai as AkamaiProduct
 from integration_testing.common import use_live_api
 from integration_testing.logger import Logger
 

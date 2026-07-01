@@ -19,9 +19,9 @@ from soar_sdk.SiemplifyUtils import output_handler
 
 from TIPCommon.extraction import extract_action_param
 
-from mimecast.core.constants import INTEGRATION_NAME, REPORT_MESSAGE_ACTION
-from mimecast.core.MimecastManager import MimecastManager
-from mimecast.core import UtilsManager
+from ..core.constants import INTEGRATION_NAME, REPORT_MESSAGE_ACTION
+from ..core.MimecastManager import MimecastManager
+from ..core import UtilsManager
 
 
 @output_handler

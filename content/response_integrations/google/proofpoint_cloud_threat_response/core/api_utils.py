@@ -18,8 +18,8 @@ from urllib.parse import urljoin
 from json import JSONDecodeError
 import requests
 
-from proofpoint_cloud_threat_response.core.constants import ENDPOINTS
-from proofpoint_cloud_threat_response.core.exceptions import ProofpointCTRError, ProofpointCTRRateLimitError
+from ..core.constants import ENDPOINTS
+from ..core.exceptions import ProofpointCTRError, ProofpointCTRRateLimitError
 
 
 def get_full_url(

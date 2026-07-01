@@ -20,8 +20,8 @@ import string
 
 import pytest
 
-from zoho_desk.core import ZohoDeskExceptions
-from zoho_desk.core.datamodels import Agent, Comment, Ticket
+from ..core import ZohoDeskExceptions
+from ..core.datamodels import Agent, Comment, Ticket
 
 
 # Constants

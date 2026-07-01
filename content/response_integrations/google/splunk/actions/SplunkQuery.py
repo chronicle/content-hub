@@ -29,15 +29,15 @@ from soar_sdk.ScriptResult import (
 )
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 from TIPCommon.transformation import construct_csv
-from splunk.core import constants
-from splunk.core.datamodels import JobDetail
-from splunk.core.exceptions import (
+from ..core import constants
+from ..core.datamodels import JobDetail
+from ..core.exceptions import (
     AdhocSearchLevelException,
     SplunkBadRequestException,
     SplunkHTTPException,
 )
-from splunk.core import UtilsManager
-from splunk.core.SplunkManager import SplunkManager
+from ..core import UtilsManager
+from ..core.SplunkManager import SplunkManager
 
 
 SingleJson = Dict[str, Any]

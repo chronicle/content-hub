@@ -17,8 +17,8 @@ import pathlib
 
 from collections.abc import Iterable
 
-from service_desk_plus.tests.common import ADD_REQUEST_MOCK, REQUEST
-from service_desk_plus.tests.core.product import ServiceDeskPlus
+from ...tests.common import ADD_REQUEST_MOCK, REQUEST
+from ...tests.core.product import ServiceDeskPlus
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
@@ -40,19 +40,28 @@ class ServiceDeskPlusSession(MockSession[MockRequest, MockResponse, ServiceDeskP
                 params.get("INPUT_DATA", "")
             ):
                 return MockResponse(
-                    content='<operation><result><status>Failed</status><message>Failed</message></result></operation>'
+                    content={
+                        "operation": {
+                            "result": {"status": "Failed", "message": "Failed"}
+                        }
+                    }
                 )
-            return MockResponse(
-                content='<operation><result><status>Success</status><message>Request Added</message></result><Details><parameter><name>workorderid</name><value>12345</value></parameter></Details></operation>'
-            )
+            return MockResponse(content=ADD_REQUEST_MOCK.to_json())
 
         if operation_name == "GET_REQUESTS":
-            # get_requests expects bypass=True, meaning it parses with xmltodict
             return MockResponse(
-                content='<API><response><operation><Details><record><parameter><name>workorderid</name><value>12345</value></parameter><parameter><name>subject</name><value>Test Subject</value></parameter><parameter><name>description</name><value>Test Description</value></parameter></record></Details></operation></response></API>'
+                content=requests[0].to_json() if requests else REQUEST.to_json()
             )
 
         return MockResponse(
-            content=f'<operation><result><status>Failed</status><message>Unknown operation {operation_name}</message></result></operation>',
+            content={
+                "operation": {
+                    "result": {
+                        "status": "Failed",
+                        "message": f"Unknown operation {operation_name}",
+                    }
+                }
+            },
             status_code=400,
         )
+

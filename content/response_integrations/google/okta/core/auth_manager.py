@@ -25,8 +25,8 @@ from TIPCommon.extraction import extract_script_param
 from TIPCommon.types import ChronicleSOAR
 
 
-from okta.core.OktaManager import OktaException
-from okta.core.constants import INTEGRATION_IDENTIFIER
+from ..core.OktaManager import OktaException
+from ..core.constants import INTEGRATION_IDENTIFIER
 
 
 def build_auth_manager_params(

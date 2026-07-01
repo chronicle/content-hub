@@ -21,11 +21,11 @@ import jwt
 
 import requests
 
-from okta.core.constants import (
+from ..core.constants import (
     ENDPOINTS,
 )
 
-from okta.core.exceptions import (
+from ..core.exceptions import (
     HTTPException,
 )
 

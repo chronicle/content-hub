@@ -45,16 +45,16 @@ from soar_sdk.SiemplifyUtils import (
     convert_unixtime_to_datetime,
     unix_now,
 )
-from palo_alto_cortex_xdr.core import constants
-from palo_alto_cortex_xdr.core import utils
-from palo_alto_cortex_xdr.core.auth import AuthenticatedSession
-from palo_alto_cortex_xdr.core.exceptions import XDRException, TimeoutIsApproachingError
-from palo_alto_cortex_xdr.core.XDRManager import ApiParameters, XDRManager
+from ..core import constants
+from ..core import utils
+from ..core.auth import AuthenticatedSession
+from ..core.exceptions import XDRException, TimeoutIsApproachingError
+from ..core.XDRManager import ApiParameters, XDRManager
 
 if TYPE_CHECKING:
     from typing import NoReturn
     from TIPCommon.types import SingleJson
-    from palo_alto_cortex_xdr.core.datamodels import IncidentInfo, IncidentExtraData
+    from ..core.datamodels import IncidentInfo, IncidentExtraData
 
 SyncItem = list[str]
 SyncData = dict[str, SyncItem]

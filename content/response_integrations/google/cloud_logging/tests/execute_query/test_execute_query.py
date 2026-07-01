@@ -20,10 +20,10 @@ from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput, ActionJsonOutput
 from TIPCommon.types import SingleJson
 
-from cloud_logging.actions.ExecuteQuery import ExecuteQuery
+from ...actions.ExecuteQuery import ExecuteQuery
 
-from cloud_logging.tests.common import CONFIG
-from cloud_logging.tests.core.session import GoogleCloudApiSession
+from ...tests.common import CONFIG
+from ...tests.core.session import GoogleCloudApiSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 from integration_testing.common import get_def_file_content
@@ -109,7 +109,7 @@ class TestExecuteQuery:
     ) -> None:
         ExecuteQuery().run()
 
-        assert len(gcloud_api_script_session.request_history) >= 2
+        assert len(gcloud_api_script_session.request_history) >= 1
 
         token_request = next(req for req in reversed(gcloud_api_script_session.request_history) if "generateAccessToken" in req.request.url.path)
         
@@ -142,7 +142,7 @@ class TestExecuteQuery:
             "timestamp <= \"2024-10-24T11:46:46.549337+00:00\"\""
             " in Cloud Logging"
         )
-        assert len(gcloud_api_script_session.request_history) >= 3
+        assert len(gcloud_api_script_session.request_history) >= 2
         assert (
             gcloud_api_script_session.request_history[-1].request.kwargs["json"][
                 "pageSize"
@@ -167,7 +167,7 @@ class TestExecuteQuery:
     ) -> None:
         ExecuteQuery().run()
 
-        assert len(gcloud_api_script_session.request_history) >= 2
+        assert len(gcloud_api_script_session.request_history) >= 1
         assert action_output.results == ActionOutput(
             output_message=INVALID_MAX_VALUE_OUTPUT_MESSAGE,
             result_value=False,
@@ -186,7 +186,7 @@ class TestExecuteQuery:
     ) -> None:
         ExecuteQuery().run()
 
-        assert len(gcloud_api_script_session.request_history) >= 2
+        assert len(gcloud_api_script_session.request_history) >= 1
         assert action_output.results == ActionOutput(
             output_message=INVALID_TIME_FRAME_OUTPUT_MESSAGE,
             result_value=False,

@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING
 
 from TIPCommon.base.action import Action
 
-from azure_monitor.core.api_client import ApiParameters, AzureMonitorApiClient
-from azure_monitor.core.auth import (
+from ..core.api_client import ApiParameters, AzureMonitorApiClient
+from ..core.auth import (
     AuthenticatedSession,
     build_auth_params,
     SessionAuthenticationParameters,

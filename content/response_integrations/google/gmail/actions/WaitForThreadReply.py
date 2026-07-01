@@ -30,23 +30,23 @@ from TIPCommon.smp_time import unix_now
 from TIPCommon.transformation import convert_dict_to_json_result_dict
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailApiManager import GoogleGmailApiManager
-from gmail.core.GoogleGmailBaseAction import GoogleGmailBaseAction
-from gmail.core.GoogleGmailConsts import (
+from ..core.GoogleGmailApiManager import GoogleGmailApiManager
+from ..core.GoogleGmailBaseAction import GoogleGmailBaseAction
+from ..core.GoogleGmailConsts import (
     DEFAULT_MAILBOX,
     WAIT_FOR_THREAD_REPLY_SCRIPT_NAME,
 )
-from gmail.core.GoogleGmailDatamodel import (
+from ..core.GoogleGmailDatamodel import (
     MailboxProcessingInfo,
     MailboxProcessingStatus,
     GmailMessage,
 )
 
-from gmail.core.GoogleGmailExceptions import (
+from ..core.GoogleGmailExceptions import (
     GoogleGmailNotFoundError,
 )
-from gmail.core.GoogleGmailServices import MessagesService
-from gmail.core.GoogleGmailUtils import TaskTimeoutGuard
+from ..core.GoogleGmailServices import MessagesService
+from ..core.GoogleGmailUtils import TaskTimeoutGuard
 
 
 MESSAGE_NOT_FOUND = (

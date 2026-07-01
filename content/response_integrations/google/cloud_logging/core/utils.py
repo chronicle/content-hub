@@ -21,8 +21,8 @@ from TIPCommon.types import SingleJson, ChronicleSOAR
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
 
-from cloud_logging.core.consts import API_URL, INTEGRATION_IDENTIFIER
-from cloud_logging.core.exceptions import InvalidJSONFormatException
+from ..core.consts import API_URL, INTEGRATION_IDENTIFIER
+from ..core.exceptions import InvalidJSONFormatException
 
 
 IntegrationParams = namedtuple(

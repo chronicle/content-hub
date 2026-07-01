@@ -17,9 +17,9 @@ from __future__ import annotations
 from typing import NoReturn
 
 from TIPCommon.base.action import Action
-from google_forms.core import constants
-from google_forms.core.action_init import create_api_client
-from google_forms.core.GoogleFormsManager import GoogleFormsManager
+from ..core import constants
+from ..core.action_init import create_api_client
+from ..core.GoogleFormsManager import GoogleFormsManager
 
 
 SUCCESS_MESSAGE: str = (

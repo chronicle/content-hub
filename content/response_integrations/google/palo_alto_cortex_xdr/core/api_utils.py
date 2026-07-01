@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 import requests
-from palo_alto_cortex_xdr.core.constants import ALREADY_EXISTS_ERR_CODE, ALREADY_EXISTS_ERR_MSG
-from palo_alto_cortex_xdr.core.exceptions import XDRException, XDRAlreadyExistsException
+from ..core.constants import ALREADY_EXISTS_ERR_CODE, ALREADY_EXISTS_ERR_MSG
+from ..core.exceptions import XDRException, XDRAlreadyExistsException
 
 
 def validate_response(

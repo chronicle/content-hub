@@ -25,7 +25,7 @@ import requests
 
 from TIPCommon.base.interfaces import Authable
 from TIPCommon.base.utils import CreateSession
-from palo_alto_cortex_xdr.core.datamodels import IntegrationParameters
+from ..core.datamodels import IntegrationParameters
 
 
 @dataclasses.dataclass(slots=True)

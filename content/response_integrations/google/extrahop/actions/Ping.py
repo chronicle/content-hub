@@ -16,9 +16,9 @@ from __future__ import annotations
 from typing import NoReturn
 
 from TIPCommon.base.action import Action
-from extrahop.core import action_init
-from extrahop.core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
-from extrahop.core.ExtrahopManager import ExtrahopManager
+from ..core import action_init
+from ..core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
+from ..core.ExtrahopManager import ExtrahopManager
 
 
 SUCCESS_MESSAGE: str = (

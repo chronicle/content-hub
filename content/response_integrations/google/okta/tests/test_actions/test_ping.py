@@ -16,9 +16,9 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from okta.actions import ping
-from okta.tests.common import CONFIG_PATH
-from okta.tests.core.session import (
+from ...actions import ping
+from ...tests.common import CONFIG_PATH
+from ...tests.core.session import (
     Session,
 )
 from integration_testing.platform.script_output import MockActionOutput

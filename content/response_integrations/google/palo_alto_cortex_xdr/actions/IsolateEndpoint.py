@@ -30,13 +30,13 @@ from TIPCommon.smp_time import is_approaching_action_timeout
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.types import SingleJson
 
-from palo_alto_cortex_xdr.core.action_init import create_api_client
-from palo_alto_cortex_xdr.core.constants import (
+from ..core.action_init import create_api_client
+from ..core.constants import (
     ISOLATE_ENDPOINT_ACTION_SCRIPT_NAME,
     AGENT_ID_VALIDATION_REGEX,
 )
-from palo_alto_cortex_xdr.core.exceptions import XDRException, XDRNotFoundException
-from palo_alto_cortex_xdr.core.XDRManager import XDRManager
+from ..core.exceptions import XDRException, XDRNotFoundException
+from ..core.XDRManager import XDRManager
 
 
 SUPPORTED_ENTITIES: list[EntityTypes] = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]

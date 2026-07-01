@@ -28,9 +28,9 @@ from TIPCommon.base.utils import CreateSession
 from TIPCommon.types import SingleJson
 from soar_sdk.SiemplifyLogger import SiemplifyLogger
 
-from okta.core.exceptions import HTTPException
-from okta.core.utils import get_full_url, validate_response, get_access_token
-from okta.core.constants import (
+from ..core.exceptions import HTTPException
+from ..core.utils import get_full_url, validate_response, get_access_token
+from ..core.constants import (
     API_TOKEN_AUTH_METHOD,
     BEGIN_MARKER,
     BEGIN_PRIVATE_KEY,

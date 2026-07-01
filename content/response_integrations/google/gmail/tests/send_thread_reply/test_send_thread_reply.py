@@ -20,17 +20,17 @@ from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 from TIPCommon.types import SingleJson
 
-from gmail.actions.SendThreadReply import (
+from ...actions.SendThreadReply import (
     SendThreadReply,
     SUCCESS_MESSAGE,
     MESSAGE_NOT_FOUND,
 )
 import gmail.core.GoogleGmailConsts as Constants
 
-from gmail.tests.common import CONFIG, MOCK_DATA
-from gmail.tests.core.async_session import GoogleGmailAsyncSession
-from gmail.tests.core.google_gmail import GoogleGmail
-from gmail.tests.utils import (
+from ...tests.common import CONFIG, MOCK_DATA
+from ...tests.core.async_session import GoogleGmailAsyncSession
+from ...tests.core.google_gmail import GoogleGmail
+from ...tests.utils import (
     assert_all_get_message,
     assert_all_get_attachment,
     assert_all_list_messages,

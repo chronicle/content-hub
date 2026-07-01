@@ -18,10 +18,10 @@ from datetime import datetime
 from TIPCommon.base.action import Action
 from TIPCommon import validation
 from TIPCommon.extraction import extract_action_param
-from cloud_logging.core import consts
-from cloud_logging.core.exceptions import CloudLoggingManagerError
-from cloud_logging.core.CloudLoggingApiManager import CloudLoggingApiManager
-from cloud_logging.core.CloudLoggingAuthManager import build_api_manager_params, build_auth_manager
+from ..core import consts
+from ..core.exceptions import CloudLoggingManagerError
+from ..core.CloudLoggingApiManager import CloudLoggingApiManager
+from ..core.CloudLoggingAuthManager import build_api_manager_params, build_auth_manager
 
 
 class ExecuteQuery(Action):

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from google_forms.core import datamodels
+from ..core import datamodels
 
 from TIPCommon.types import SingleJson
 

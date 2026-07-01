@@ -18,13 +18,13 @@ from TIPCommon.base.utils import validate_manager
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailBaseAction import GoogleGmailBaseAction
-from gmail.core.GoogleGmailConsts import (
+from ..core.GoogleGmailBaseAction import GoogleGmailBaseAction
+from ..core.GoogleGmailConsts import (
     INTEGRATION_IDENTIFIER,
     SEND_EMAIL_SCRIPT_NAME,
     DEFAULT_MAILBOX,
 )
-from gmail.core.GoogleGmailServices import MessagesService
+from ..core.GoogleGmailServices import MessagesService
 
 
 SUCCESS_MESSAGE = "Email was sent successfully."

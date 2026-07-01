@@ -18,11 +18,11 @@ from http import HTTPStatus
 
 from TIPCommon.base.action import ExecutionState
 
-from okta.actions import send_itp_signal_to_okta
-from okta.core.utils import get_full_url
-from okta.tests.common import CONFIG_PATH
-from okta.tests.core.session import Session
-from okta.tests.core.product import Product
+from ...actions import send_itp_signal_to_okta
+from ...core.utils import get_full_url
+from ...tests.common import CONFIG_PATH
+from ...tests.core.session import Session
+from ...tests.core.product import Product
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

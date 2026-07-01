@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 
-from pub_sub.core.PubSubBaseAction import BaseAction
-from pub_sub.core.PubSubConstants import (
+from ..core.PubSubBaseAction import BaseAction
+from ..core.PubSubConstants import (
     PING_SCRIPT_NAME,
 )
 

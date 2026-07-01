@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from TIPCommon.transformation import convert_list_to_comma_string
 
-from sysdig_secure.core.SysdigSecureConstants import SEVERITY_PARAMETER_MAPPING
+from ..core.SysdigSecureConstants import SEVERITY_PARAMETER_MAPPING
 
 
 def build_events_filter(

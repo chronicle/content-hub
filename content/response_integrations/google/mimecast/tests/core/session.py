@@ -17,17 +17,17 @@ from collections.abc import Iterable
 
 from TIPCommon.types import SingleJson
 
-from mimecast.core.datamodels import (
+from ...core.datamodels import (
     Attachment,
     HoldMessage,
     MessageDetails,
 )
-from mimecast.tests.common import (
+from ...tests.common import (
     BLOCK_SENDER_POLICY_ERROR_JSON,
     DOWNLOAD_ATTACHMENT_URL,
     MOCK_INVALID_CLIENT_CREDENTIALS_JSON,
 )
-from mimecast.tests.core.product import Mimecast
+from ...tests.core.product import Mimecast
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse

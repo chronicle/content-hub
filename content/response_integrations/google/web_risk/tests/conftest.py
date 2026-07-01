@@ -28,16 +28,12 @@ import soar_sdk
 pytest_plugins = ("integration_testing.conftest",)
 
 # Alias all top-level soar_sdk modules to themselves to unify the namespace for mocks
-changed = True
-while changed:
-    changed = False
-    for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-        if name not in sys.modules:
-            try:
-                sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-                changed = True
-            except Exception:
-                pass
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    if name not in sys.modules:
+        try:
+            sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
+        except Exception:
+            pass
 
 # Add SDK internal modules to sys.path to support flat imports within the SDK and TIPCommon
 sdk_dir = os.path.dirname(soar_sdk.__file__)
@@ -59,15 +55,15 @@ import google.auth.transport.requests
 from TIPCommon.types import SingleJson
 
 import web_risk.core.WebRiskAuthManager
-from web_risk.core.WebRiskAuthManager import (
+from ..core.WebRiskAuthManager import (
     AuthManager,
     AuthManagerParams,
 )
-from web_risk.core.WebRiskApiManager import (
+from ..core.WebRiskApiManager import (
     ApiManager,
 )
-from web_risk.tests.core.session import ApiSession
-from web_risk.tests.core.product import Product
+from ..tests.core.session import ApiSession
+from ..tests.core.product import Product
 from integration_testing.common import get_def_file_content, use_live_api
 from integration_testing.logger import Logger
 
@@ -139,4 +135,37 @@ def gcloud_api_manager() -> ApiManager:
 def sdk_session_fixture(script_session):
     return script_session
 
+
+
+    mocker.patch("TIPCommon.rest.auth.get_adc", return_value=(mock_creds, "test-project"))
+    # Also patch where it's directly imported
+    try:
+        mocker.patch("gmail.core.GoogleGmailUtils.get_adc", return_value=(mock_creds, "test-project"))
+    except:
+        pass
+    try:
+        mocker.patch("cloud_logging.core.utils.get_adc", return_value=(mock_creds, "test-project"))
+    except:
+        pass
+    try:
+        mocker.patch("vertex_ai.core.utils.get_adc", return_value=(mock_creds, "test-project"))
+    except:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def mock_google_adc(mocker):
+    """Mock the ADC to prevent DefaultCredentialsError in CI environments."""
+    mock_creds = mocker.Mock()
+    mock_creds.universe_domain = "googleapis.com"
+    mocker.patch("google.auth.default", return_value=(mock_creds, "test-project"))
+    mocker.patch("TIPCommon.rest.auth.get_adc", return_value=(mock_creds, "test-project"))
+    try:
+        mocker.patch("core.utils.get_adc", return_value=(mock_creds, "test-project"))
+    except Exception:
+        pass
+    try:
+        mocker.patch("core.GoogleGmailUtils.get_adc", return_value=(mock_creds, "test-project"))
+    except Exception:
+        pass
 

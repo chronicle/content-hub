@@ -17,8 +17,8 @@ from __future__ import annotations
 from urllib.parse import urljoin
 import requests
 
-from akamai_integration.core.constants import ENDPOINTS, FAILED_TO_TAKE_REQUEST_DOWN_ERR
-from akamai_integration.core.exceptions import AkamaiManagerError, AuthenticationError, RequestTakeDownError
+from ..core.constants import ENDPOINTS, FAILED_TO_TAKE_REQUEST_DOWN_ERR
+from ..core.exceptions import AkamaiManagerError, AuthenticationError, RequestTakeDownError
 
 
 def get_full_url(api_root: str, url_id: str, **kwargs) -> str:

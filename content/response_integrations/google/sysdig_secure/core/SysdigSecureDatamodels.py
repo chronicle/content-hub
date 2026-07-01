@@ -20,7 +20,7 @@ from typing import Any
 from TIPCommon.transformation import dict_to_flat
 from TIPCommon.types import SingleJson
 
-from sysdig_secure.core.SysdigSecureUtils import convert_nanoseconds_to_milliseconds
+from ..core.SysdigSecureUtils import convert_nanoseconds_to_milliseconds
 
 
 @dataclasses.dataclass(frozen=True)

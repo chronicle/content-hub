@@ -18,7 +18,7 @@ import pathlib
 
 from TIPCommon.types import SingleJson
 
-from akamai_integration.core.datamodels import (
+from ..core.datamodels import (
     AddItemsToNetworkList,
     ClientActivation,
     ClientList,
@@ -29,7 +29,7 @@ from akamai_integration.core.datamodels import (
     NetworkListActivation,
     RemoveItemsFromNetworkList,
 )
-from akamai_integration.core import data_parser
+from ..core import data_parser
 from integration_testing.common import get_def_file_content
 
 

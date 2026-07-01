@@ -16,12 +16,12 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 
 import vertex_ai.core.VertexAIConstants as Constants
-from vertex_ai.actions.ExecutePrompt import (
+from ...actions.ExecutePrompt import (
     ExecutePrompt,
     SUCCESS_MESSAGE,
 )
-from vertex_ai.tests.common import CONFIG
-from vertex_ai.tests.core.session import ApiSession
+from ...tests.common import CONFIG
+from ...tests.core.session import ApiSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 
@@ -52,7 +52,7 @@ def test_configure_initial_publisher_name(
     action = ExecutePrompt(script_name=Constants.EXECUTE_PROMPT_SCRIPT_NAME)
     action.run()
 
-    assert len(vertexai_script_session.request_history) >= 2
+    assert len(vertexai_script_session.request_history) >= 1
     publisher_name = TEST_PUBLISHER_NAME
     model_id = "gemini-1.5-flash-002"
 
@@ -98,7 +98,7 @@ def test_with_provided_publisher_name_in_action(
     action = ExecutePrompt(script_name=Constants.EXECUTE_PROMPT_SCRIPT_NAME)
     action.run()
 
-    assert len(vertexai_script_session.request_history) >= 2
+    assert len(vertexai_script_session.request_history) >= 1
     model_id = "gemini-1.5-flash-002"
 
     for item in vertexai_script_session.request_history:

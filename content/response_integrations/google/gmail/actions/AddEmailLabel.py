@@ -22,18 +22,18 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.smp_time import unix_now
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailApiManager import GoogleGmailApiManager
-from gmail.core.GoogleGmailBaseAction import GoogleGmailBaseAction
-from gmail.core.GoogleGmailConsts import (
+from ..core.GoogleGmailApiManager import GoogleGmailApiManager
+from ..core.GoogleGmailBaseAction import GoogleGmailBaseAction
+from ..core.GoogleGmailConsts import (
     ADD_EMAIL_LABEL_SCRIPT_NAME,
     DEFAULT_MAILBOX,
 )
-from gmail.core.GoogleGmailDatamodel import MailboxReadEnum
-from gmail.core.GoogleGmailExceptions import (
+from ..core.GoogleGmailDatamodel import MailboxReadEnum
+from ..core.GoogleGmailExceptions import (
     GoogleGmailNotFoundError,
     GoogleGmailValidationError,
 )
-from gmail.core.GoogleGmailServices import MessagesService, LabelsService
+from ..core.GoogleGmailServices import MessagesService, LabelsService
 
 SUCCESS_MESSAGE = (
     "Successfully updated labels for {} emails in the {} mailbox."

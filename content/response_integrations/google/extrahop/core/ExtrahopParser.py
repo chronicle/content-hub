@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from extrahop.core.datamodels import *
+from ..core.datamodels import *
 
 
 class ExtrahopParser:

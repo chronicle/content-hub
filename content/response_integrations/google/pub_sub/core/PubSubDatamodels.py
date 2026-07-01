@@ -27,8 +27,8 @@ from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
 from TIPCommon.transformation import dict_to_flat
 from TIPCommon.types import SingleJson
 
-from pub_sub.core.PubSubExceptions import PubSubInvalidJsonException
-from pub_sub.core.PubSubUtils import (
+from ..core.PubSubExceptions import PubSubInvalidJsonException
+from ..core.PubSubUtils import (
     get_default_severity,
     build_severity_transformation,
     transform_template_string,

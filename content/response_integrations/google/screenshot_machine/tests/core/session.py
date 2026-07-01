@@ -17,7 +17,7 @@ import pathlib
 
 from typing import Iterable
 
-from screenshot_machine.tests.core.product import ScreenshotMachine
+from ...tests.core.product import ScreenshotMachine
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse

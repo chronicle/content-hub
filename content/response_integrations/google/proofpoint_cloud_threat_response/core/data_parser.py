@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from proofpoint_cloud_threat_response.core.data_models import ProofpointIncident, ProofpointMessage
+from ..core.data_models import ProofpointIncident, ProofpointMessage
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson

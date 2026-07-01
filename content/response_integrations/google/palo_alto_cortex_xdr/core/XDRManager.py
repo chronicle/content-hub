@@ -20,11 +20,11 @@ import dataclasses
 
 from TIPCommon.base.interfaces import Apiable
 
-from palo_alto_cortex_xdr.core.api_utils import validate_response
-from palo_alto_cortex_xdr.core.constants import ALERTS_DEFAULT_LIMIT, BATCH_SIZE
-from palo_alto_cortex_xdr.core.datamodels import IncidentExtraData, IncidentInfo
-from palo_alto_cortex_xdr.core.exceptions import XDRNotFoundException, XDRException
-from palo_alto_cortex_xdr.core.PaloAltoCortexXDRTransformationLayer import PaloAltoCortexXDRTransformationLayer
+from ..core.api_utils import validate_response
+from ..core.constants import ALERTS_DEFAULT_LIMIT, BATCH_SIZE
+from ..core.datamodels import IncidentExtraData, IncidentInfo
+from ..core.exceptions import XDRNotFoundException, XDRException
+from ..core.PaloAltoCortexXDRTransformationLayer import PaloAltoCortexXDRTransformationLayer
 
 if TYPE_CHECKING:
     import requests
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from TIPCommon.base.interfaces import ScriptLogger
     from TIPCommon.types import SingleJson
 
-    from palo_alto_cortex_xdr.core.datamodels import (
+    from ..core.datamodels import (
         Endpoint,
         Incident,
         XQLSearch,

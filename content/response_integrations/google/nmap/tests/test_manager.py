@@ -16,9 +16,9 @@ import pathlib
 import subprocess
 import pytest
 
-from nmap.core.NmapManager import NmapManager, NmapScanResult
-from nmap.core import constants
-from nmap.core.NmapParser import NmapParser
+from ..core.NmapManager import NmapManager, NmapScanResult
+from ..core import constants
+from ..core.NmapParser import NmapParser
 
 
 def test_connectivity_success(manager, mocker):

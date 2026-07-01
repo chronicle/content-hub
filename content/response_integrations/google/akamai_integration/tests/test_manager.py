@@ -16,8 +16,8 @@ import pathlib
 import copy
 
 import pytest
-from akamai_integration.core.api_manager import ApiManager
-from akamai_integration.core.datamodels import (
+from ..core.api_manager import ApiManager
+from ..core.datamodels import (
     ClientActivation,
     ClientList,
     ClientListItem,
@@ -27,8 +27,8 @@ from akamai_integration.core.datamodels import (
     NetworkListActivation,
     RemoveItemsFromNetworkList,
 )
-from akamai_integration.tests import common
-from akamai_integration.tests.core.session import Akamai, AkamaiSession
+from ..tests import common
+from ..tests.core.session import Akamai, AkamaiSession
 
 
 class TestAkamaiManager:

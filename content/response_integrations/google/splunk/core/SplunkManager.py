@@ -23,10 +23,10 @@ import requests
 
 from TIPCommon.base.utils import CreateSession
 
-from splunk.core.SplunkParser import SplunkParser
-from splunk.core.UtilsManager import filter_old_alerts
-from splunk.core.UtilsManager import wait_and_check_if_job_id_done, get_less_possible_combinations
-from splunk.core.constants import (
+from ..core.SplunkParser import SplunkParser
+from ..core.UtilsManager import filter_old_alerts
+from ..core.UtilsManager import wait_and_check_if_job_id_done, get_less_possible_combinations
+from ..core.constants import (
     DEFAULT_ALERTS_FETCH_LIMIT,
     MAX_EVENTS_COUNT,
     SEVERITY_MAPPER,
@@ -34,7 +34,7 @@ from splunk.core.constants import (
     API_SERVER_ERROR,
     AUTO_FINALIZE_EC_LIMIT,
 )
-from splunk.core.exceptions import (
+from ..core.exceptions import (
     SplunkManagerException,
     UnableToUpdateNotableEvents,
     SplunkHTTPException,

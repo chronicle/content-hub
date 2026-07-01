@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 import json
-from splunk.core.datamodels import *
-from splunk.core.constants import MAX_EVENTS_COUNT
+from ..core.datamodels import *
+from ..core.constants import MAX_EVENTS_COUNT
 
 
 class SplunkParser:

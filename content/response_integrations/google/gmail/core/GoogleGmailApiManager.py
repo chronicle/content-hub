@@ -30,7 +30,7 @@ from TIPCommon.base.interfaces import Apiable
 from TIPCommon.rest.gcp import get_workload_sa_email
 from TIPCommon.types import SingleJson
 
-from gmail.core.GoogleGmailConsts import (
+from ..core.GoogleGmailConsts import (
     INVALID_ARGUMENT,
     INTERNAL_SERVER_ERROR,
     MAX_LIST_RESULTS,
@@ -39,7 +39,7 @@ from gmail.core.GoogleGmailConsts import (
     PROJECT_LOOKUP_ERROR_MESSAGE,
     THROTTLING_OVERLOAD_MESSAGE,
 )
-from gmail.core.GoogleGmailExceptions import (
+from ..core.GoogleGmailExceptions import (
     GoogleCloudAuthenticationError,
     GoogleGmailInvalidRequestArgumentError,
     GoogleGmailNotFoundError,
@@ -48,7 +48,7 @@ from gmail.core.GoogleGmailExceptions import (
     GoogleGmailProjectLookupError,
     GoogleGmailThrottlingOverloaded,
 )
-from gmail.core.GoogleGmailUtils import get_auth_request_async, extract_body
+from ..core.GoogleGmailUtils import get_auth_request_async, extract_body
 
 
 # ============================= CONSTS ===================================== #

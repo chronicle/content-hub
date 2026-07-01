@@ -25,15 +25,15 @@ from TIPCommon.smp_io import read_ids, write_ids
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.utils import is_overflowed, is_test_run
 from TIPCommon.validation import ParameterValidator
-from proofpoint_cloud_threat_response.core import constants
-from proofpoint_cloud_threat_response.core.api_client import ApiParameters, ProofpointCloudThreatResponseApiClient
-from proofpoint_cloud_threat_response.core.auth import (
+from ..core import constants
+from ..core.api_client import ApiParameters, ProofpointCloudThreatResponseApiClient
+from ..core.auth import (
     AuthenticatedSession,
     SessionAuthenticationParameters,
     build_auth_params,
 )
-from proofpoint_cloud_threat_response.core.exceptions import ProofpointCTRError, ProofpointCTRRateLimitError
-from proofpoint_cloud_threat_response.core.data_models import ProofpointIncident, ProofpointIncidentAlertInfo
+from ..core.exceptions import ProofpointCTRError, ProofpointCTRRateLimitError
+from ..core.data_models import ProofpointIncident, ProofpointIncidentAlertInfo
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson

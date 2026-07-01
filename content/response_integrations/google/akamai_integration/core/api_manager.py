@@ -19,10 +19,10 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from TIPCommon.base.interfaces import ScriptLogger
-from akamai_integration.core import data_parser
-from akamai_integration.core import api_utils
-from akamai_integration.core import constants
-from akamai_integration.core import datamodels
+from ..core import data_parser
+from ..core import api_utils
+from ..core import constants
+from ..core import datamodels
 import requests
 
 if TYPE_CHECKING:

@@ -27,13 +27,13 @@ from soar_sdk.SiemplifyUtils import convert_string_to_datetime
 from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.types import ChronicleSOAR
 
-from mimecast.core.constants import (
+from ..core.constants import (
     TIMEFRAME_MAPPING,
     SEVERITIES,
     INTEGRATION_NAME,
 )
-from mimecast.core.datamodels import IntegrationParameters
-from mimecast.core.MimecastExceptions import MimecastException
+from ..core.datamodels import IntegrationParameters
+from ..core.MimecastExceptions import MimecastException
 
 
 def lazy_chunk_iterable(

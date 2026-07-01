@@ -19,8 +19,8 @@ import json
 import pytest
 import requests
 
-from google_forms.core import GoogleFormsManager
-from google_forms.tests.common import MOCK_DATA
+from ..core import GoogleFormsManager
+from ..tests.common import MOCK_DATA
 
 
 exceptions = GoogleFormsManager.exceptions

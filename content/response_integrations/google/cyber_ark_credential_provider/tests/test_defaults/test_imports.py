@@ -17,7 +17,7 @@ from __future__ import annotations
 import importlib
 import pathlib
 
-from cyber_ark_credential_provider.tests import common
+from ...tests import common
 
 
 VALID_SUFFIXES = (".py",)

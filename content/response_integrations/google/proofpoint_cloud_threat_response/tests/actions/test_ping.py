@@ -17,13 +17,13 @@ import pathlib
 
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
-from proofpoint_cloud_threat_response.actions import ping
+from ...actions import ping
 
-from proofpoint_cloud_threat_response.tests import common
-from proofpoint_cloud_threat_response.tests.core.product import (
+from ...tests import common
+from ...tests.core.product import (
     ProofpointCloudThreatResponse,
 )
-from proofpoint_cloud_threat_response.tests.core.session import (
+from ...tests.core.session import (
     ProofpointCloudThreatResponseSession,
 )
 from integration_testing.platform.script_output import MockActionOutput

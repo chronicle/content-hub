@@ -17,7 +17,7 @@ import pathlib
 
 from integration_testing.default_tests.import_test import import_all_integration_modules
 
-from web_risk.tests import common
+from ...tests import common
 
 
 def test_imports() -> None:

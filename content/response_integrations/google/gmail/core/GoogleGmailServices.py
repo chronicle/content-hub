@@ -28,16 +28,16 @@ from email.parser import BytesParser
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
 from TIPCommon.smp_time import unix_now
 
-from gmail.core.GoogleGmailApiManager import GoogleGmailApiManager
-from gmail.core.GoogleGmailConsts import FORWARD_EMAIL_TEMPLATE
-from gmail.core.GoogleGmailDatamodel import (
+from ..core.GoogleGmailApiManager import GoogleGmailApiManager
+from ..core.GoogleGmailConsts import FORWARD_EMAIL_TEMPLATE
+from ..core.GoogleGmailDatamodel import (
     GmailMessage,
     GmailMessagePart,
     GmailLabel,
     GmailThread,
     MailboxReadEnum,
 )
-from gmail.core.GoogleGmailUtils import (
+from ..core.GoogleGmailUtils import (
     get_payload_decoded,
     set_attachments,
     set_body,

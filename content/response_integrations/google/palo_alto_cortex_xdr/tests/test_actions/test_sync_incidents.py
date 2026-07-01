@@ -23,10 +23,10 @@ import pytz
 from TIPCommon.data_models import CaseDetails
 from TIPCommon.types import SingleJson
 
-from palo_alto_cortex_xdr.jobs.SyncIncidents import SyncIncidents
-from palo_alto_cortex_xdr.core.datamodels import IncidentInfo
-from palo_alto_cortex_xdr.tests import common
-from palo_alto_cortex_xdr.tests.common import (
+from ...jobs.SyncIncidents import SyncIncidents
+from ...core.datamodels import IncidentInfo
+from ...tests import common
+from ...tests.common import (
     CASE_ID,
     CONNECTOR_INCIDENT_ID,
     MOCK_CASE_IDENTIFIER,
@@ -34,8 +34,8 @@ from palo_alto_cortex_xdr.tests.common import (
     get_mock_incident,
     get_mock_incident_extra_data,
 )
-from palo_alto_cortex_xdr.tests.core.product import PaloAltoCortexXDR
-from palo_alto_cortex_xdr.tests.core.session import (
+from ...tests.core.product import PaloAltoCortexXDR
+from ...tests.core.session import (
     PaloAltoCortexXDRSOARSession,
 )
 

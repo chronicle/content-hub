@@ -24,7 +24,7 @@ from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 from TIPCommon.transformation import dict_to_flat, add_prefix_to_dict
 from TIPCommon.types import SingleJson
 
-from mimecast.core.constants import (
+from ..core.constants import (
     DEVICE_VENDOR,
     DEVICE_PRODUCT,
     SEVERITY_MAP,

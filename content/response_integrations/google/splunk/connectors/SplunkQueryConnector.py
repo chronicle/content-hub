@@ -21,18 +21,18 @@ from EnvironmentCommon import GetEnvironmentCommonFactory
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import output_handler, unix_now
-from splunk.core.SplunkManager import SplunkManager
+from ..core.SplunkManager import SplunkManager
 from TIPCommon.extraction import extract_connector_param
 from TIPCommon.smp_io import read_ids, write_ids
 from TIPCommon.utils import is_overflowed
-from splunk.core.UtilsManager import (
+from ..core.UtilsManager import (
     clean_duplicated_keys,
     get_last_success_time_for_queries,
     get_query_identifier,
     is_approaching_timeout,
     save_query_timestamp,
 )
-from splunk.core.constants import DEFAULT_DEVICE_VENDOR, QUERY_CONNECTOR_SCRIPT_NAME
+from ..core.constants import DEFAULT_DEVICE_VENDOR, QUERY_CONNECTOR_SCRIPT_NAME
 
 
 connector_starting_time = unix_now()

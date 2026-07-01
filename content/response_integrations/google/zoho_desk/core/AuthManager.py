@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 from TIPCommon.base.interfaces import Authable
-from zoho_desk.core.datamodels import IntegrationParameters
+from ..core.datamodels import IntegrationParameters
 
 
 class AuthenticateSession(Authable[IntegrationParameters]):

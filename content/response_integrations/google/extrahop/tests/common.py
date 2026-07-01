@@ -17,8 +17,8 @@ import json
 import pathlib
 
 from TIPCommon.types import SingleJson
-from extrahop.core.datamodels import Detection
-from extrahop.core.ExtrahopParser import ExtrahopParser
+from ..core.datamodels import Detection
+from ..core.ExtrahopParser import ExtrahopParser
 from integration_testing.common import get_def_file_content
 
 

@@ -19,9 +19,9 @@ from typing import TYPE_CHECKING, NamedTuple
 
 from TIPCommon.base.interfaces import Apiable
 
-from azure_monitor.core.api_utils import get_full_url, validate_response
-from azure_monitor.core.constants import DEFAULT_MIN_ROWS, DEFAULT_PING_LOGS_QUERY
-from azure_monitor.core.data_parser import parse_azure_monitor_response
+from ..core.api_utils import get_full_url, validate_response
+from ..core.constants import DEFAULT_MIN_ROWS, DEFAULT_PING_LOGS_QUERY
+from ..core.data_parser import parse_azure_monitor_response
 
 if TYPE_CHECKING:
     from requests import Response
@@ -29,8 +29,8 @@ if TYPE_CHECKING:
     from TIPCommon.base.interfaces.logger import ScriptLogger
     from TIPCommon.types import SingleJson
 
-    from azure_monitor.core.auth import AuthenticatedSession
-    from azure_monitor.core.data_models import AzureLogEntry
+    from ..core.auth import AuthenticatedSession
+    from ..core.data_models import AzureLogEntry
 
 
 class ApiParameters(NamedTuple):

@@ -20,12 +20,12 @@ import pytest
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from screenshot_machine.actions import Ping
-from screenshot_machine.core.ScreenshotMachineManager import (
+from ..actions import Ping
+from ..core.ScreenshotMachineManager import (
     SCREENSHOT_MACHINE_URL,
 )
-from screenshot_machine.tests.common import CONFIG_FILE
-from screenshot_machine.tests.core.session import (
+from ..tests.common import CONFIG_FILE
+from ..tests.core.session import (
     MOCK_ERROR_MSG,
     ScreenshotMachineSession,
 )

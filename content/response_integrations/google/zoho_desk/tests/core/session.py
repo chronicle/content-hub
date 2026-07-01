@@ -17,8 +17,8 @@ import pathlib
 
 from TIPCommon.types import SingleJson
 
-from zoho_desk.core.datamodels import Ticket
-from zoho_desk.tests.core.zoho_desk import ZohoDesk
+from ...core.datamodels import Ticket
+from ...tests.core.zoho_desk import ZohoDesk
 from integration_testing import router
 
 from integration_testing.request import MockRequest

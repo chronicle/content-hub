@@ -18,14 +18,14 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from sysdig_secure.actions.Ping import (
+from ..actions.Ping import (
     Ping,
     SUCCESS_MESSAGE,
 )
 import sysdig_secure.core.SysdigSecureConstants as Constants
 
-from sysdig_secure.tests.common import CONFIG
-from sysdig_secure.tests.core.session import ApiSession
+from ..tests.common import CONFIG
+from ..tests.core.session import ApiSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

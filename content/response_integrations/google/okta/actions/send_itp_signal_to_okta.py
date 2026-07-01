@@ -15,8 +15,8 @@
 from __future__ import annotations
 from http import HTTPStatus
 
-from okta.core.base_action import BaseAction
-from okta.core.constants import (
+from ..core.base_action import BaseAction
+from ..core.constants import (
     SEND_ITP_SIGNAL_ERROR_MESSAGE,
     SEND_ITP_SIGNAL_SCRIPT_NAME,
     SEVERITY_TYPE

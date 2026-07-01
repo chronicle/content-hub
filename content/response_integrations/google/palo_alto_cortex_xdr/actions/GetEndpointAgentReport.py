@@ -27,9 +27,9 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_FAILED,
     EXECUTION_STATE_TIMEDOUT,
 )
-from palo_alto_cortex_xdr.core.action_init import create_api_client
-from palo_alto_cortex_xdr.core.constants import INTEGRATION_NAME, GET_ENDPOINT_AGENT_REPORT_ACTION_SCRIPT_NAME
-from palo_alto_cortex_xdr.core.exceptions import XDRNotFoundException
+from ..core.action_init import create_api_client
+from ..core.constants import INTEGRATION_NAME, GET_ENDPOINT_AGENT_REPORT_ACTION_SCRIPT_NAME
+from ..core.exceptions import XDRNotFoundException
 
 
 SUPPORTED_ENTITIES = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]

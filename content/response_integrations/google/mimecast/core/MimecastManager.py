@@ -24,8 +24,8 @@ import datetime
 
 from TIPCommon.filters import filter_old_alerts
 
-from mimecast.core.constants import *
-from mimecast.core.datamodels import (
+from ..core.constants import *
+from ..core.datamodels import (
     Attachment,
     BlockSenderPolicy,
     BlockSenderPolicyActionParams,
@@ -33,9 +33,9 @@ from mimecast.core.datamodels import (
     Message,
     MessageDetails,
 )
-from mimecast.core.MimecastExceptions import MimecastException
-from mimecast.core.MimecastParser import MimecastParser
-from mimecast.core.UtilsManager import validate_response, lazy_chunk_iterable, filter_message
+from ..core.MimecastExceptions import MimecastException
+from ..core.MimecastParser import MimecastParser
+from ..core.UtilsManager import validate_response, lazy_chunk_iterable, filter_message
 
 
 @dataclasses.dataclass

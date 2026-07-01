@@ -18,10 +18,10 @@ from typing import NoReturn
 
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
-from zoho_desk.core import action_init
-from zoho_desk.core.ZohoDeskApiManager import ZohoDeskApiClient
-from zoho_desk.core.ZohoDeskExceptions import ZohoDeskNotFound
-from zoho_desk.core.constants import (
+from ..core import action_init
+from ..core.ZohoDeskApiManager import ZohoDeskApiClient
+from ..core.ZohoDeskExceptions import ZohoDeskNotFound
+from ..core.constants import (
     AGENT_TYPE_ASSIGNEE,
     ASSIGNEE_TYPE_MAPPING,
     MARK_STATE_MAPPING,

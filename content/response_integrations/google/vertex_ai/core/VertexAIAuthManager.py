@@ -30,9 +30,9 @@ from TIPCommon.rest.gcp import (
 from TIPCommon.types import ChronicleSOAR, SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
-from vertex_ai.core.VertexAIConstants import INTEGRATION_IDENTIFIER, OAUTH_SCOPES
-from vertex_ai.core.VertexAIExceptions import VertexAIAuthException
-from vertex_ai.core.VertexAIUtils import parse_string_to_dict
+from ..core.VertexAIConstants import INTEGRATION_IDENTIFIER, OAUTH_SCOPES
+from ..core.VertexAIExceptions import VertexAIAuthException
+from ..core.VertexAIUtils import parse_string_to_dict
 
 
 def build_auth_manager_params(chronicle_soar: ChronicleSOAR) -> AuthManagerParams:

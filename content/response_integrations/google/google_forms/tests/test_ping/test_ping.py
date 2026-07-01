@@ -16,9 +16,9 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from google_forms.actions.Ping import Ping
-from google_forms.tests.common import CONFIG, CONFIG_PATH
-from google_forms.tests.core.session import GoogleFormsSession
+from ...actions.Ping import Ping
+from ...tests.common import CONFIG, CONFIG_PATH
+from ...tests.core.session import GoogleFormsSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

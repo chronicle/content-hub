@@ -15,8 +15,8 @@
 import pathlib
 from collections.abc import Iterable
 
-from extrahop.tests import common
-from extrahop.tests.core.product import Extrahop
+from ...tests import common
+from ...tests.core.product import Extrahop
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse

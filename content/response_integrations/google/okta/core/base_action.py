@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from abc import ABC
 
-from okta.core.OktaManager import OktaManager
-from okta.core.auth_manager import AuthManager, build_auth_manager_params
+from ..core.OktaManager import OktaManager
+from ..core.auth_manager import AuthManager, build_auth_manager_params
 from TIPCommon.base.action import Action
 
 

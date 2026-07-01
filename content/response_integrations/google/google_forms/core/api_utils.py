@@ -19,8 +19,8 @@ from urllib.parse import urljoin
 import requests
 
 from TIPCommon.types import SingleJson
-from google_forms.core import exceptions
-from google_forms.core import constants
+from ..core import exceptions
+from ..core import constants
 
 
 def validate_response(

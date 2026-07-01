@@ -21,13 +21,13 @@ from TIPCommon.data_models import DatabaseContextType
 from TIPCommon.types import SingleJson
 from TIPCommon.consts import IDS_DB_KEY
 
-from pub_sub.connectors.PubSubMessagesConnector import (
+from ..connectors.PubSubMessagesConnector import (
     PubSubMessagesConnector,
 )
-from pub_sub.tests.common import INTEGRATION_PATH, MOCK_DATA, CONFIG
-from pub_sub.tests.core.session import ApiSession
-from pub_sub.tests.core.product import Product
-from pub_sub.tests.utils import (
+from ..tests.common import INTEGRATION_PATH, MOCK_DATA, CONFIG
+from ..tests.core.session import ApiSession
+from ..tests.core.product import Product
+from ..tests.utils import (
     assert_get_subscription,
     assert_pull_messages,
     assert_ack_messages,
@@ -83,9 +83,9 @@ class TestTestRun:
         connector.start()
 
         assert connector_output.results.json_output.alerts == []
-        assert len(gcloud_pubsub_script_session.request_history) == 4
-        assert_get_subscription(gcloud_pubsub_script_session.request_history, 2)
-        assert_pull_messages(gcloud_pubsub_script_session.request_history, 3)
+        assert len(gcloud_pubsub_script_session.request_history) == 3
+        assert_get_subscription(gcloud_pubsub_script_session.request_history, 1)
+        assert_pull_messages(gcloud_pubsub_script_session.request_history, 2)
 
 
 class TestConnectorExternalContext:
@@ -111,10 +111,10 @@ class TestConnectorExternalContext:
         )
         connector.start()
 
-        assert len(gcloud_pubsub_script_session.request_history) == 5
-        assert_get_subscription(gcloud_pubsub_script_session.request_history, 2)
-        assert_pull_messages(gcloud_pubsub_script_session.request_history, 3)
-        assert_ack_messages(gcloud_pubsub_script_session.request_history, 4)
+        assert len(gcloud_pubsub_script_session.request_history) == 4
+        assert_get_subscription(gcloud_pubsub_script_session.request_history, 1)
+        assert_pull_messages(gcloud_pubsub_script_session.request_history, 2)
+        assert_ack_messages(gcloud_pubsub_script_session.request_history, 3)
 
         assert len(connector_output.results.json_output.alerts) == 1
         row_key: ExternalContextRowKey = ExternalContextRowKey(
@@ -146,11 +146,11 @@ class TestConnectorExternalContext:
         )
         connector.start()
 
-        assert len(gcloud_pubsub_script_session.request_history) == 6
-        assert_get_subscription(gcloud_pubsub_script_session.request_history, 2)
-        assert_pull_messages(gcloud_pubsub_script_session.request_history, 3)
+        assert len(gcloud_pubsub_script_session.request_history) == 5
+        assert_get_subscription(gcloud_pubsub_script_session.request_history, 1)
+        assert_pull_messages(gcloud_pubsub_script_session.request_history, 2)
+        assert_ack_messages(gcloud_pubsub_script_session.request_history, 3)
         assert_ack_messages(gcloud_pubsub_script_session.request_history, 4)
-        assert_ack_messages(gcloud_pubsub_script_session.request_history, 5)
 
         assert len(connector_output.results.json_output.alerts) == 1
         assert all(
@@ -194,10 +194,10 @@ class TestConnectorExternalContext:
         )
         connector.start()
 
-        assert len(gcloud_pubsub_script_session.request_history) == 5
-        assert_get_subscription(gcloud_pubsub_script_session.request_history, 2)
-        assert_pull_messages(gcloud_pubsub_script_session.request_history, 3)
-        assert_ack_messages(gcloud_pubsub_script_session.request_history, 4)
+        assert len(gcloud_pubsub_script_session.request_history) == 4
+        assert_get_subscription(gcloud_pubsub_script_session.request_history, 1)
+        assert_pull_messages(gcloud_pubsub_script_session.request_history, 2)
+        assert_ack_messages(gcloud_pubsub_script_session.request_history, 3)
 
         assert len(connector_output.results.json_output.alerts) == 3
         ids_json = external_context.get_row_value(

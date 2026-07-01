@@ -21,8 +21,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
-from zoho_desk.core.ZohoDeskApiManager import ZohoDeskApiClient
-from zoho_desk.core.constants import GET_REFRESH_TOKEN_SCRIPT_NAME, INTEGRATION_NAME
+from ..core.ZohoDeskApiManager import ZohoDeskApiClient
+from ..core.constants import GET_REFRESH_TOKEN_SCRIPT_NAME, INTEGRATION_NAME
 
 
 @output_handler

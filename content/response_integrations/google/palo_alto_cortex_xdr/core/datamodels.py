@@ -22,7 +22,7 @@ from soar_sdk.SiemplifyUtils import add_prefix_to_dict, dict_to_flat
 
 from TIPCommon.types import SingleJson
 
-from palo_alto_cortex_xdr.core.constants import EMPTY_RESULT, INTEGRATION_NAME
+from ..core.constants import EMPTY_RESULT, INTEGRATION_NAME
 
 
 @dataclasses.dataclass(slots=True)

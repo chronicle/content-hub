@@ -18,8 +18,8 @@ import requests
 
 from TIPCommon.base.interfaces import Authable
 from TIPCommon.base.utils import CreateSession
-from extrahop.core import api_utils
-from extrahop.core.datamodels import IntegrationParameters
+from ..core import api_utils
+from ..core.datamodels import IntegrationParameters
 
 
 @dataclasses.dataclass(slots=True)

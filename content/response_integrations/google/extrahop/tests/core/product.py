@@ -15,8 +15,8 @@
 import pathlib
 import abc
 from typing import MutableMapping, MutableSequence
-from extrahop.core.datamodels import Detection, Device
-from extrahop.tests import common
+from ...core.datamodels import Detection, Device
+from ...tests import common
 
 
 class Extrahop(abc.ABC):

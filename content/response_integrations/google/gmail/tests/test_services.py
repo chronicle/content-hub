@@ -17,20 +17,20 @@ import pathlib
 
 import pytest
 
-from gmail.core.GoogleGmailApiManager import (
+from ..core.GoogleGmailApiManager import (
     ENDPOINTS,
     GoogleGmailApiManager
 )
-from gmail.core.GoogleGmailDatamodel import (
+from ..core.GoogleGmailDatamodel import (
     MailboxReadEnum
 )
-from gmail.core.GoogleGmailServices import (
+from ..core.GoogleGmailServices import (
     MessagesService
 )
 
-from gmail.tests.core.async_session import GoogleGmailAsyncSession
-from gmail.tests.core.google_gmail import GoogleGmail
-from gmail.tests.utils import (
+from ..tests.core.async_session import GoogleGmailAsyncSession
+from ..tests.core.google_gmail import GoogleGmail
+from ..tests.utils import (
     assert_all_list_messages,
     assert_all_get_message,
     assert_all_get_attachment,

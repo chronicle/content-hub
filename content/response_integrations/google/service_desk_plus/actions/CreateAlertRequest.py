@@ -24,7 +24,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 
-from service_desk_plus.core.ServiceDeskPlusManager import ServiceDeskPlusManager, DUE_DATE_FORMAT
+from ..core.ServiceDeskPlusManager import ServiceDeskPlusManager, DUE_DATE_FORMAT
 
 
 if TYPE_CHECKING:

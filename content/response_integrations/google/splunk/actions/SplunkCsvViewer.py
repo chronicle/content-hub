@@ -16,10 +16,10 @@ from __future__ import annotations
 import json
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from splunk.core.SplunkManager import SplunkManager
+from ..core.SplunkManager import SplunkManager
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 from TIPCommon.transformation import construct_csv
-from splunk.core.constants import INTEGRATION_NAME
+from ..core.constants import INTEGRATION_NAME
 
 
 @output_handler

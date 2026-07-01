@@ -19,17 +19,17 @@ from typing import TYPE_CHECKING
 
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.validation import ParameterValidator
-from palo_alto_cortex_xdr.core import action_init
-from palo_alto_cortex_xdr.core.base_action import BaseAction
-from palo_alto_cortex_xdr.core import constants
-from palo_alto_cortex_xdr.core import datamodels
+from ..core import action_init
+from ..core.base_action import BaseAction
+from ..core import constants
+from ..core import datamodels
 
 if TYPE_CHECKING:
     from typing import NoReturn
 
     from TIPCommon.types import SingleJson
 
-    from palo_alto_cortex_xdr.core.XDRManager import XDRManager
+    from ..core.XDRManager import XDRManager
 
 
 SUCCESS_MESSAGE: str = (

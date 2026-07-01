@@ -27,11 +27,11 @@ from TIPCommon.exceptions import (
     UnavailableError,
 )
 from TIPCommon.smp_io import read_ids, write_ids
-from pub_sub.core import PubSubConstants as Constants
-from pub_sub.core import PubSubDatamodels as Datamodels
-from pub_sub.core.PubSubExceptions import PubSubException
-from pub_sub.core.PubSubAuthManager import AuthManager, build_auth_manager_params
-from pub_sub.core.PubSubManager import ApiManager
+from ..core import PubSubConstants as Constants
+from ..core import PubSubDatamodels as Datamodels
+from ..core.PubSubExceptions import PubSubException
+from ..core.PubSubAuthManager import AuthManager, build_auth_manager_params
+from ..core.PubSubManager import ApiManager
 
 
 class PubSubMessagesConnector(Connector):

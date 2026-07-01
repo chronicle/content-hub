@@ -23,7 +23,7 @@ from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, RouteFunction
 from integration_testing.common import get_def_file_content
 
-from pub_sub.tests.core.product import Product
+from ...tests.core.product import Product
 
 MOCK_DATA_PATH = pathlib.Path(__file__).parent / "mock_data.json"
 MOCK_DATA = get_def_file_content(MOCK_DATA_PATH)
@@ -43,7 +43,6 @@ class ApiSession(
             self.get_access_token_invalid,
             self.get_access_token,
             self.get_default_service_account,
-            self.get_default_service_account_email,
             self.get_service_account_token,
             self.get_oauth_token,
         ]
@@ -114,15 +113,6 @@ class ApiSession(
             },
             headers={
                 "content-type": "application/json"
-            }
-        )
-
-    @router.get(r"/computeMetadata/v1/instance/service-accounts/default/email")
-    def get_default_service_account_email(self, _: MockRequest) -> MockResponse:
-        return MockResponse(
-            content="default@domain.com",
-            headers={
-                "content-type": "text/plain"
             }
         )
 

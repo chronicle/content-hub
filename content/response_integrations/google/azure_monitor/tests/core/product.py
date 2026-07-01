@@ -16,7 +16,7 @@ import pathlib
 import abc
 from typing import MutableMapping
 
-from azure_monitor.core.data_models import AzureLogEntry
+from ...core.data_models import AzureLogEntry
 
 
 class AzureMonitor(abc.ABC):

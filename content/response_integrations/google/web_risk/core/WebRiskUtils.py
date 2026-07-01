@@ -15,7 +15,7 @@
 from __future__ import annotations
 import json
 
-from web_risk.core.WebRiskExceptions import WebRiskValidationException
+from ..core.WebRiskExceptions import WebRiskValidationException
 
 
 def parse_string_to_dict(string):

@@ -38,21 +38,21 @@ from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.types import SingleJson
 from TIPCommon.utils import is_test_run
 from TIPCommon.validation import ParameterValidator
-from palo_alto_cortex_xdr.core import constants
-from palo_alto_cortex_xdr.core.auth import AuthenticatedSession
-from palo_alto_cortex_xdr.core.datamodels import (
+from ..core import constants
+from ..core.auth import AuthenticatedSession
+from ..core.datamodels import (
     Alert,
     FileArtifact,
     IncidentExtraData,
     IncidentInfo,
     NetworkArtifact,
 )
-from palo_alto_cortex_xdr.core.exceptions import PaloAltoXdrValidationError, XDRException
-from palo_alto_cortex_xdr.core.utils import get_integration_parameters
-from palo_alto_cortex_xdr.core.XDRManager import ApiParameters, XDRManager
+from ..core.exceptions import PaloAltoXdrValidationError, XDRException
+from ..core.utils import get_integration_parameters
+from ..core.XDRManager import ApiParameters, XDRManager
 
 if TYPE_CHECKING:
-    from palo_alto_cortex_xdr.core.datamodels import IntegrationParameters
+    from ..core.datamodels import IntegrationParameters
 
 SEVERITY_RANK: dict[str, int] = {
     sev: i for i, sev in enumerate(constants.SEVERITY_ORDER)

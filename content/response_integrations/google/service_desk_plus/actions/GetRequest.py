@@ -16,7 +16,7 @@ from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import dict_to_flat, flat_dict_to_csv
-from service_desk_plus.core.ServiceDeskPlusManager import ServiceDeskPlusManager
+from ..core.ServiceDeskPlusManager import ServiceDeskPlusManager
 
 
 @output_handler

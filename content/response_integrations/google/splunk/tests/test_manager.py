@@ -17,8 +17,8 @@ import json
 import unittest
 from unittest.mock import patch, Mock
 
-from splunk.core.SplunkManager import SplunkManager
-from splunk.tests import const
+from ..core.SplunkManager import SplunkManager
+from ..tests import const
 from integration_testing.logger import Logger
 
 

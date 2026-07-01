@@ -19,7 +19,7 @@ from integration_testing.common import get_def_file_content
 import pathlib
 
 from TIPCommon.types import SingleJson
-from azure_monitor.core.data_models import AzureLogEntry
+from ..core.data_models import AzureLogEntry
 from integration_testing.common import get_def_file_content
 
 

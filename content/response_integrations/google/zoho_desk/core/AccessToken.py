@@ -27,8 +27,8 @@ from TIPCommon.base.interfaces import Session
 from TIPCommon.base.utils import CreateSession
 from TIPCommon.types import ChronicleSOAR
 from TIPCommon.consts import GLOBAL_CONTEXT_SCOPE, NUM_OF_SEC_IN_MIN
-from zoho_desk.core import ZohoDeskExceptions
-from zoho_desk.core import constants
+from ..core import ZohoDeskExceptions
+from ..core import constants
 
 
 ACTION_BUFFER_TIME = NUM_OF_SEC_IN_MIN * 15

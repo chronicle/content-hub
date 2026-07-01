@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from proofpoint_cloud_threat_response.core.base_action import ProofpointCloudThreatResponseAction
-from proofpoint_cloud_threat_response.core.constants import PING_SCRIPT_NAME
+from ..core.base_action import ProofpointCloudThreatResponseAction
+from ..core.constants import PING_SCRIPT_NAME
 
 if TYPE_CHECKING:
     from typing import Never, NoReturn

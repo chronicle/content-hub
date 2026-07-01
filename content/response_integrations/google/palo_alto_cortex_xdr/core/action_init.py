@@ -16,9 +16,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from palo_alto_cortex_xdr.core.auth import AuthenticatedSession
-from palo_alto_cortex_xdr.core.utils import get_integration_parameters
-from palo_alto_cortex_xdr.core.XDRManager import ApiParameters, XDRManager
+from ..core.auth import AuthenticatedSession
+from ..core.utils import get_integration_parameters
+from ..core.XDRManager import ApiParameters, XDRManager
 
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from TIPCommon.types import ChronicleSOAR
 
-    from palo_alto_cortex_xdr.core.datamodels import IntegrationParameters
+    from ..core.datamodels import IntegrationParameters
 
 
 def create_api_client(soar_action: ChronicleSOAR) -> XDRManager:

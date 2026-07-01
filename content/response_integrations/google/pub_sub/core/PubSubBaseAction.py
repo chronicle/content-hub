@@ -18,8 +18,8 @@ from abc import ABC
 
 from TIPCommon.base.action import Action
 
-from pub_sub.core.PubSubAuthManager import AuthManager, build_auth_manager_params
-from pub_sub.core.PubSubManager import ApiManager
+from ..core.PubSubAuthManager import AuthManager, build_auth_manager_params
+from ..core.PubSubManager import ApiManager
 
 
 class BaseAction(Action, ABC):

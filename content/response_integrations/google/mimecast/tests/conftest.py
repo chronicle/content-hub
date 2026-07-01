@@ -1,35 +1,3 @@
-
-from __future__ import annotations
-
-# Unify the soar_sdk namespace with the flat namespace for mocks
-import sys
-import pkgutil
-import soar_sdk
-changed = True
-while changed:
-    changed = False
-    for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-        if name not in sys.modules:
-            try:
-                sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-                changed = True
-            except Exception:
-                pass
-
-import os
-import sys
-import pkgutil
-import pathlib
-
-
-import pytest
-import requests
-
-import soar_sdk
-
-# Provide integration_testing fixtures
-pytest_plugins = ("integration_testing.conftest",)
-
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,20 +12,50 @@ pytest_plugins = ("integration_testing.conftest",)
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Add SDK internal modules to sys.path to support flat imports within the SDK and TIPCommon
-
-# Add parent directory and integration directory to sys.path to support internal module resolution
+from __future__ import annotations
 
 import base64
 import json
+import os
+import pathlib
+import pkgutil
+import sys
 from typing import NamedTuple
 
+import pytest
+import requests
+import soar_sdk
+
+# Provide integration_testing fixtures
+pytest_plugins = ("integration_testing.conftest",)
+
+# Unify the soar_sdk namespace with the flat namespace for mocks
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    if name not in sys.modules:
+        try:
+            sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
+        except Exception:
+            pass
+
+# Add SDK internal modules to sys.path to support flat imports within the SDK and TIPCommon
+sdk_dir = os.path.dirname(soar_sdk.__file__)
+if sdk_dir not in sys.path:
+    sys.path.insert(0, sdk_dir)
+
+# Add parent directory and integration directory to sys.path to support internal module resolution
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+int_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if int_dir not in sys.path:
+    sys.path.insert(0, int_dir)
 
 from TIPCommon.types import SingleJson
 
-from mimecast.core.MimecastManager import MimecastManager
-from mimecast.tests.core.product import Mimecast
-from mimecast.tests.core.session import MimecastSession
+from ..core.MimecastManager import MimecastManager
+from ..tests.core.product import Mimecast
+from ..tests.core.session import MimecastSession
 from integration_testing.common import use_live_api
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
@@ -153,5 +151,3 @@ def mimecast_manager() -> MimecastManager:
 @pytest.fixture(name='sdk_session', autouse=True)
 def sdk_session_fixture(script_session):
     return script_session
-
-

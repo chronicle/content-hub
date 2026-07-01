@@ -24,7 +24,7 @@ from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
 from TIPCommon.types import SingleJson
 from integration_testing.common import get_def_file_content
 
-from gmail.tests.utils import extract_metadata_from_message
+from ...tests.utils import extract_metadata_from_message
 
 
 MOCK_DATA_PATH = pathlib.Path(__file__).parent / "mock_data.json"

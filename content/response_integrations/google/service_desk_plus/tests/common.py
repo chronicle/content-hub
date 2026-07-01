@@ -20,8 +20,8 @@ import pathlib
 
 from TIPCommon.types import SingleJson
 
-from service_desk_plus.core import data_parser
-from service_desk_plus.core.datamodels import WorkOrder
+from ..core import data_parser
+from ..core.datamodels import WorkOrder
 from integration_testing.common import get_def_file_content
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"

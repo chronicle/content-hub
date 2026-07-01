@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING
 
 from TIPCommon.base.action import Action
 
-from palo_alto_cortex_xdr.core.action_init import create_api_client
-from palo_alto_cortex_xdr.core.XDRManager import XDRManager
+from ..core.action_init import create_api_client
+from ..core.XDRManager import XDRManager
 
 if TYPE_CHECKING:
     import requests

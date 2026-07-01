@@ -20,11 +20,11 @@ from soar_sdk.ScriptResult import (
     EXECUTION_STATE_INPROGRESS,
     EXECUTION_STATE_FAILED,
 )
-from splunk.core.SplunkManager import SplunkManager
+from ..core.SplunkManager import SplunkManager
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 from TIPCommon.transformation import construct_csv
-from splunk.core.constants import (
+from ..core.constants import (
     DEFAULT_QUERY_LIMIT,
     EMAIL_PATTERN,
     EXECUTE_ENTITY_QUERY_SCRIPT_NAME,
@@ -36,8 +36,8 @@ from splunk.core.constants import (
 import sys
 import re
 import time
-from splunk.core.UtilsManager import get_entity_original_identifier
-from splunk.core.exceptions import MissingEntityKeysException, AdhocSearchLevelException
+from ..core.UtilsManager import get_entity_original_identifier
+from ..core.exceptions import MissingEntityKeysException, AdhocSearchLevelException
 
 SUITABLE_ENTITY_TYPES = [
     EntityTypes.HOSTNAME,

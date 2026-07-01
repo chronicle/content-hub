@@ -18,15 +18,15 @@ from copy import deepcopy
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from extrahop.actions import UpdateDetection
-from extrahop.core.constants import (
+from ...actions import UpdateDetection
+from ...core.constants import (
     INTEGRATION_NAME,
     UPDATE_DETECTION_SCRIPT_NAME,
 )
-from extrahop.core.datamodels import Detection
-from extrahop.tests import common
-from extrahop.tests.core.product import Extrahop
-from extrahop.tests.core.session import ExtrahopSession
+from ...core.datamodels import Detection
+from ...tests import common
+from ...tests.core.product import Extrahop
+from ...tests.core.session import ExtrahopSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

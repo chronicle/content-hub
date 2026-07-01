@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from TIPCommon.base.utils import validate_manager
 
-from gmail.core.GoogleGmailBaseAction import GoogleGmailBaseAction
-from gmail.core.GoogleGmailConsts import (
+from ..core.GoogleGmailBaseAction import GoogleGmailBaseAction
+from ..core.GoogleGmailConsts import (
     INTEGRATION_DISPLAY_NAME,
     PING_SCRIPT_NAME
 )

@@ -43,7 +43,7 @@ pytest_plugins = ("integration_testing.conftest",)
 
 import pytest
 
-from nmap.core.NmapManager import NmapManager
+from ..core.NmapManager import NmapManager
 
 
 @pytest.fixture
