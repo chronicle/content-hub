@@ -19,13 +19,31 @@ import hashlib
 import io
 import os
 import re
+import shutil
+import subprocess
+import tempfile
 import time
 import zipfile
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 import magic
 import requests
+from py7zz.core import find_7z_binary
+
+try:
+    from wordlist import wordlist
+except ImportError:
+    wordlist = None
+
+try:
+    import py7zr
+    import py7zr.io
+    HAS_PY7ZR = True
+except Exception:
+    HAS_PY7ZR = False
+
 from soar_sdk.SiemplifyDataModel import Attachment
 from soar_sdk.SiemplifyUtils import dict_to_flat
 from TIPCommon.data_models import CreateEntity
@@ -45,6 +63,15 @@ class ExecutionScope(Enum):
 
 CASE_EVIDENCE_ID = "evidenceId"
 ORIG_EMAIL_DESCRIPTION = "This is the original message as EML"
+BINARY_NAMES: list[str] = ["7z", "7za", "7zr"]
+COMMON_PATHS: list[str] = [
+    "/usr/bin",
+    "/bin",
+    "/usr/local/bin",
+    "/usr/sbin",
+    "/sbin",
+    "/opt/bin",
+]
 
 
 class AttachmentsManager:
@@ -386,6 +413,369 @@ class AttachmentsManager:
                 return extracted_files
             except RuntimeError:
                 raise
+
+    def extract_7z(
+        self,
+        zip_filename: str,
+        content: io.BytesIO,
+        bruteforce: bool = False,
+        pwds: list[str] | None = None,
+    ) -> list[SingleJson]:
+        """Extract a 7z archive using py7zr or CLI fallback.
+
+        Args:
+            zip_filename: Name of the archive file.
+            content: BytesIO buffer of the archive.
+            bruteforce: Whether to use wordlist passwords.
+            pwds: List of extra passwords to check.
+
+        Returns:
+            List of extracted files' metadata.
+        """
+        unique_passwords: list[str | None] = (
+            self._get_password_candidates(bruteforce, pwds)
+        )
+
+        extracted: list[SingleJson] | None = (
+            self._extract_7z_with_py7zr(
+                zip_filename, content, unique_passwords
+            )
+        )
+        if extracted is not None:
+            return extracted
+
+        return self._extract_7z_with_cli(
+            zip_filename, content, unique_passwords
+        )
+
+    def _get_password_candidates(
+        self,
+        bruteforce: bool,
+        pwds: list[str] | None,
+    ) -> list[str | None]:
+        """Collect and return a unique list of password candidates.
+
+        Args:
+            bruteforce: Whether to include wordlist passwords.
+            pwds: List of extra passwords to check.
+
+        Returns:
+            A unique list of password candidates, starting with None.
+        """
+        password_candidates: list[str | None] = [None]
+        lines: list[str] = []
+        if bruteforce and wordlist:
+            lines = io.StringIO(wordlist.WORDLIST).readlines()
+
+        for line in lines:
+            password_candidates.append(line.rstrip("\r\n"))
+
+        if pwds:
+            password_candidates.extend(pwds)
+
+        unique_passwords: list[str | None] = list(
+            dict.fromkeys(password_candidates)
+        )
+        return unique_passwords
+
+    def _extract_7z_with_py7zr(
+        self,
+        zip_filename: str,
+        content: io.BytesIO,
+        unique_passwords: list[str | None],
+    ) -> list[SingleJson] | None:
+        """Attempt to extract 7z archive in-memory using py7zr.
+
+        Args:
+            zip_filename: Name of the archive file.
+            content: BytesIO buffer of the archive.
+            unique_passwords: List of password candidates.
+
+        Returns:
+            List of extracted files' metadata, or None if extraction failed
+            or py7zr is not available.
+        """
+        if not HAS_PY7ZR:
+            return None
+
+        needs_pwd: bool = self._check_7z_needs_password(content)
+
+        for passwd in unique_passwords:
+            if needs_pwd and passwd is None:
+                continue
+
+            extracted: list[SingleJson] | None = (
+                self._try_py7zr_extract(content, passwd, zip_filename)
+            )
+            if extracted is not None:
+                return extracted
+
+        self.logger.error("Failed to extract 7z archive using py7zr.")
+        return None
+
+    def _check_7z_needs_password(self, content: io.BytesIO) -> bool:
+        """Check if 7z archive needs a password.
+
+        Args:
+            content: BytesIO buffer of the archive.
+
+        Returns:
+            True if archive is password-protected, False otherwise.
+        """
+        try:
+            content.seek(0)
+            with py7zr.SevenZipFile(content, mode="r") as archive:
+                return archive.needs_password()
+        except Exception:
+            return True
+
+    def _try_py7zr_extract(
+        self,
+        content: io.BytesIO,
+        passwd: str | None,
+        zip_filename: str,
+    ) -> list[SingleJson] | None:
+        """Try to extract 7z using py7zr with a specific password.
+
+        Args:
+            content: BytesIO buffer of the archive.
+            passwd: Password candidate.
+            zip_filename: Name of the archive file.
+
+        Returns:
+            List of extracted files' metadata, or None if extraction failed.
+        """
+        try:
+            content.seek(0)
+            with py7zr.SevenZipFile(
+                content, mode="r", password=passwd
+            ) as archive:
+                factory: py7zr.io.BytesIOFactory = (
+                    py7zr.io.BytesIOFactory(limit=100 * 1024 * 1024)
+                )
+                archive.extractall(factory=factory)
+                return self._parse_py7zr_extracted(
+                    archive, factory, zip_filename
+                )
+        except Exception as e:
+            self.logger.debug(f"py7zr extraction failed: {e}")
+            return None
+
+    def _parse_py7zr_extracted(
+        self,
+        archive: Any,
+        factory: Any,
+        zip_filename: str,
+    ) -> list[SingleJson]:
+        """Parse extracted files from py7zr factory.
+
+        Args:
+            archive: py7zr SevenZipFile instance.
+            factory: py7zr BytesIOFactory instance.
+            zip_filename: Name of the archive file.
+
+        Returns:
+            List of extracted files' metadata.
+        """
+        extracted_files: list[SingleJson] = []
+        for f_info in archive.list():
+            self._add_py7zr_file_to_list(
+                extracted_files, f_info, factory, zip_filename
+            )
+        return extracted_files
+
+    def _add_py7zr_file_to_list(
+        self,
+        extracted_files: list[SingleJson],
+        f_info: Any,
+        factory: Any,
+        zip_filename: str,
+    ) -> None:
+        """Extract and format a single file info if it is a file.
+
+        Args:
+            extracted_files: List to append metadata to.
+            f_info: py7zr FileInfo instance.
+            factory: py7zr BytesIOFactory instance.
+            zip_filename: Name of the archive file.
+        """
+        if not f_info.is_file:
+            return
+
+        obj: Any = factory.get(f_info.filename)
+        if not obj:
+            return
+
+        obj.seek(0)
+        file_content: bytes = obj.read()
+        extracted_file: SingleJson = self.attachment(
+            f_info.filename, file_content
+        )
+        extracted_file["parent_file"] = zip_filename
+        extracted_files.append(extracted_file)
+
+    def _extract_7z_with_cli(
+        self,
+        zip_filename: str,
+        content: io.BytesIO,
+        unique_passwords: list[str | None],
+    ) -> list[SingleJson]:
+        """Attempt to extract 7z archive using system CLI binaries.
+
+        Args:
+            zip_filename: Name of the archive file.
+            content: BytesIO buffer of the archive.
+            unique_passwords: List of password candidates.
+
+        Returns:
+            List of extracted files' metadata.
+
+        Raises:
+            RuntimeError: If no CLI binary is found or extraction fails.
+        """
+        cli_binary: str = self._get_7z_cli_binary()
+
+        for passwd in unique_passwords:
+            extracted: list[SingleJson] | None = (
+                self._try_cli_extract(
+                    cli_binary, content, passwd, zip_filename
+                )
+            )
+            if extracted is not None:
+                return extracted
+
+        raise RuntimeError(
+            "Failed to extract 7z archive. Wrong password or corrupted "
+            "archive."
+        )
+
+    def _get_7z_cli_binary(self) -> str:
+        """Find the path to the 7z, 7za or 7zr CLI binary.
+
+        Returns:
+            The path/name of the available binary.
+
+        Raises:
+            RuntimeError: If no binary is found.
+        """
+        try:
+            py7zz_bin: str | None = find_7z_binary()
+            if py7zz_bin and os.path.isfile(py7zz_bin) and os.access(py7zz_bin, os.X_OK):
+                return py7zz_bin
+        except Exception:
+            pass
+
+        for bin_name in BINARY_NAMES:
+            path: str | None = shutil.which(bin_name)
+            if path:
+                return path
+
+            for folder in COMMON_PATHS:
+                full_path: str = os.path.join(folder, bin_name)
+                if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                    return full_path
+
+        raise RuntimeError(
+            "No 7z, 7za or 7zr binary found, and py7zr could not extract "
+            "the archive."
+        )
+
+    def _try_cli_extract(
+        self,
+        cli_binary: str,
+        content: io.BytesIO,
+        passwd: str | None,
+        zip_filename: str,
+    ) -> list[SingleJson] | None:
+        """Attempt extraction using 7z CLI for a single password.
+
+        Args:
+            cli_binary: The name of the binary.
+            content: BytesIO buffer of the archive.
+            passwd: Password candidate.
+            zip_filename: Name of the archive file.
+
+        Returns:
+            List of extracted files' metadata, or None if extraction failed.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dir_path = Path(temp_dir)
+            temp_archive = temp_dir_path / "archive.7z"
+            content.seek(0)
+            temp_archive.write_bytes(content.getvalue())
+
+            extracted_dir = temp_dir_path / "extracted"
+            cmd: list[str] = self._build_7z_cmd(
+                cli_binary, str(temp_archive), str(extracted_dir), passwd
+            )
+
+            res: subprocess.CompletedProcess[str] = subprocess.run(
+                cmd, capture_output=True, text=True
+            )
+            if res.returncode != 0:
+                return None
+
+            if passwd:
+                self.logger.info("Password found")
+
+            return self._read_cli_extracted_files(str(extracted_dir), zip_filename)
+
+    def _build_7z_cmd(
+        self,
+        cli_binary: str,
+        temp_archive: str,
+        extracted_dir: str,
+        passwd: str | None,
+    ) -> list[str]:
+        """Construct the 7z CLI extraction command.
+
+        Args:
+            cli_binary: The name of the binary.
+            temp_archive: Path to temporary archive file.
+            extracted_dir: Path to directory to extract to.
+            passwd: Password candidate.
+
+        Returns:
+            Constructed command list.
+        """
+        cmd: list[str] = [
+            cli_binary,
+            "x",
+            temp_archive,
+            f"-o{extracted_dir}",
+            "-y",
+        ]
+        if passwd:
+            cmd.append(f"-p{passwd}")
+        else:
+            cmd.append("-p-")
+        return cmd
+
+    def _read_cli_extracted_files(
+        self,
+        extracted_dir: str,
+        zip_filename: str,
+    ) -> list[SingleJson]:
+        """Read all extracted files recursively from extraction directory.
+
+        Args:
+            extracted_dir: Directory where files were extracted.
+            zip_filename: Name of the archive file.
+
+        Returns:
+            List of extracted files' metadata.
+        """
+        extracted_files: list[SingleJson] = []
+        extracted_path = Path(extracted_dir)
+        for file_path in extracted_path.rglob("*"):
+            if file_path.is_file():
+                rel_path = file_path.relative_to(extracted_path)
+                extracted_file = self.attachment(
+                    str(rel_path), file_path.read_bytes()
+                )
+                extracted_file["parent_file"] = zip_filename
+                extracted_files.append(extracted_file)
+        return extracted_files
 
     @staticmethod
     def get_file_hash(data: bytes) -> dict[str, str]:
