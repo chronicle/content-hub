@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Protocol
 
 from core.datamodels.attack_pattern import AttackPattern
 from core.datamodels.campaign import Campaign
@@ -17,6 +17,9 @@ from core.datamodels.sighting import Sighting
 from core.datamodels.threat_actor_group import ThreatActorGroup
 from core.datamodels.tool import Tool
 from core.datamodels.vulnerability import Vulnerability
+from core.opencti_client.enrich_results import (
+    IndicatorEnrichmentResult,
+)
 from core.opencti_client.json_results import (
     AddObjectToContainerJSONResult,
     AttackPatternJSONResult,
@@ -40,12 +43,18 @@ from core.opencti_client.json_results import (
 from pycti import OpenCTIApiClient
 from pydantic import ValidationError
 
+class SOAREntity(Protocol):
+    entity_type: str
+    original_identifier: str
+
 
 class OpenCTIClientError(Exception):
+
     pass
 
 
 class OpenCTIClient:
+
     def __init__(self, base_url: str, api_token: str, ssl_verify: bool = True) -> None:
         try:
             # Note: a health check is performed during OpenCTIApiClient initialization
@@ -613,4 +622,66 @@ class OpenCTIClient:
             container_entity_type=container_type,
             container_id=container_id,
             object_id=object_id,
+        )
+
+    def _fetch_relationships(self, entity_id: str) -> list[dict]:
+        try:
+            raw_relations = self._api_client.stix_core_relationship.list(
+                fromOrToId=entity_id,
+                getAll=True,
+            )
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to fetch relations from OpenCTI: {str(e)}"
+            ) from e
+
+        relationships: list[dict] = []
+        for rel in raw_relations or []:
+            relationship_type = rel.get("relationship_type", "")
+            # Determine the "other" side of the relationship
+            from_node = rel.get("from") or {}
+            to_node = rel.get("to") or {}
+            if from_node.get("id") == entity_id:
+                other = to_node
+            else:
+                other = from_node
+            relationships.append(
+                {
+                    "relationship_type": relationship_type,
+                    "related_entity_type": other.get("entity_type"),
+                    "related_entity_name": other.get("name")
+                    or other.get("value")
+                    or other.get("observable_value"),
+                }
+            )
+        return relationships
+
+    def enrich_indicator(
+        self, soar_entity: SOAREntity
+    ) -> IndicatorEnrichmentResult | None:
+        try:
+            data = self._api_client.indicator.read(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {"key": "name", "values": [soar_entity.original_identifier]}
+                    ],
+                    "filterGroups": [],
+                }
+            )
+            if not data:
+                return None
+        except Exception as e:
+            raise OpenCTIClientError(
+                f"Failed to enrich Indicator in OpenCTI: {str(e)}"
+            ) from e
+
+        entity_id = data["id"]
+        link = f"{self._api_client.api_url}/dashboard/id/{entity_id}"
+        relationships = self._fetch_relationships(entity_id)
+
+        return IndicatorEnrichmentResult(
+            **data,
+            link=link,
+            relationships=relationships,
         )
