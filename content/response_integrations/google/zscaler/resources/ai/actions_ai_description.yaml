@@ -1,0 +1,668 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Add To Blacklist:
+  ai_description: >-
+    ### General Description
+
+    Adds URLs, Domains, Hostnames, and external IP addresses to the Zscaler Advanced
+    Threat Protection blacklist. This action is used to block malicious traffic at
+    the perimeter by updating Zscaler's security policy and activating the changes
+    immediately.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+    | :--- | :--- | :--- | :--- |
+    | **IOCs** | String | No | A comma-separated list of IOCs (IP Addresses, URLs, or Domains) to add to the blacklist. |
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action authenticates with the Zscaler API using the
+    provided credentials (API Key, Login ID, and Password).
+
+    2. **Entity Filtering**: It uses the provided **IOCs** parameter to identify
+    URLs, Hostnames, Domains, and IP addresses. If the parameter is not provided,
+    it iterates through the target entities in the case.
+
+    3. **Normalization**: For URL, Hostname, and Domain entities, it extracts the
+    network location (domain) using a normalization utility. For IP addresses, it
+    verifies that the entity is not marked as internal.
+
+    4. **Blacklist Update**: It sends a POST request to the Zscaler API to add the
+    identified entities to the Advanced Threat Protection blacklist.
+
+    5. **Activation**: It calls the Zscaler activation endpoint to ensure the configuration
+    changes take effect in the environment.
+
+    6. **Reporting**: The action returns a success message listing the entities added
+    or an error message if the operation failed for specific entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds identifiers to the Zscaler Advanced Threat Protection blacklist and triggers
+      a configuration activation to apply the changes.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DestinationURL
+    - ADDRESS
+    - DOMAIN
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Add To Whitelist:
+  ai_description: "### General Description\nThe **Add To Whitelist** action allows\
+    \ security analysts to programmatically add specific network indicators to the\
+    \ Zscaler global whitelist. This action is primarily used to ensure that known-safe\
+    \ traffic (URLs, Hostnames, Domains, or external IP addresses) is not blocked\
+    \ by Zscaler's security policies, effectively preventing false positives during\
+    \ incident response.\n\n### Parameters\n| Parameter | Type | Mandatory | Description |\n\
+    | :--- | :--- | :--- | :--- |\n| **IOCs** | String | No | A comma-separated list of IOCs (IP Addresses, URLs, or Domains) to add to the whitelist. |\n\n### Flow Description\n\
+    1. **Authentication**: The action initializes the Zscaler manager and establishes\
+    \ an authenticated session using the integration's credentials.\n2. **Entity Processing**:\
+    \ The action iterates through all entities provided in the current scope.\n3.\
+    \ **Validation and Extraction**: \n    * For **URL**, **Hostname**, and **Domain**\
+    \ entities, the action extracts the network location (e.g., stripping 'www.' and\
+    \ protocol prefixes).\n    * For **IP Address** entities, the action verifies\
+    \ that the entity is not marked as internal.\n4. **Whitelist Retrieval**: For\
+    \ each valid entity, the action fetches the current whitelist from Zscaler to\
+    \ ensure the update doesn't overwrite existing data.\n5. **Update and Activation**:\
+    \ The action appends the new entity to the whitelist, performs a PUT request to\
+    \ update the list in Zscaler, and then calls the activation endpoint to apply\
+    \ the changes globally.\n6. **Result Summary**: The action concludes by providing\
+    \ a detailed message indicating which entities were successfully added, which\
+    \ were already present in the whitelist, and any errors that occurred during the\
+    \ process.\n\n### Additional Notes\n- This action performs a state change in Zscaler\
+    \ and requires the 'activate' permission in the Zscaler API.\n- IP addresses are\
+    \ ignored if they are flagged as internal to the organization."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action updates the global whitelist configuration in Zscaler by adding
+      new entries and then triggers a configuration activation to apply the changes.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DOMAIN
+    - HOSTNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Blacklist:
+  ai_description: "### General Description\nRetrieves the current list of blacklisted\
+    \ URLs from the Zscaler Advanced Threat Protection policy. This action allows\
+    \ security analysts to audit the global blocklist configured in Zscaler and use\
+    \ the data for cross-referencing or reporting within Google SecOps.\n\n### Parameters\
+    \ Description\nThere are no parameters for this action.\n\n### Flow Description\n\
+    1. **Authentication**: The action initializes the Zscaler manager and authenticates\
+    \ using the API Key, Login ID, and Password provided in the integration configuration.\n\
+    2. **Data Retrieval**: It calls the Zscaler API to fetch the advanced security\
+    \ configuration, specifically targeting the blacklisted URLs.\n3. **Processing**:\
+    \ The script extracts the list of URLs from the `blacklistUrls` field of the response.\n\
+    4. **Output Generation**: \n    * If URLs are found, it constructs a CSV data\
+    \ table titled 'Blacklist Urls' containing the list.\n    * It attaches the raw\
+    \ JSON response to the action results.\n    * It returns a comma-separated string\
+    \ of the blacklisted URLs as the primary result value."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Sandbox Report:
+  ai_description: >-
+    ### General Description
+
+    The **Get Sandbox Report** action retrieves a detailed analysis report from Zscaler
+    for file hash entities that have been processed by the Zscaler Cloud Sandbox.
+    This action provides deep visibility into file behavior, including system summaries,
+    classification scores, and persistence mechanisms, helping analysts understand
+    the risk associated with a specific file.
+
+
+    ### Parameters Description
+
+    | Parameter Name | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | None | N/A | N/A | This action does not require any input parameters beyond
+    the target entities. |
+
+
+    ### Additional Notes
+
+    - This action specifically targets **FILEHASH** entities.
+
+    - The Zscaler API requires the hash to be in **MD5** format for sandbox report
+    retrieval.
+
+    - If a report is not yet completed or the hash is unknown to Zscaler, the action
+    will log this information and continue processing other entities.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes a session with the Zscaler API using
+    the provided credentials and an obfuscated API key.
+
+    2. **Entity Filtering**: It iterates through the target entities and filters for
+    those of type `FILEHASH`.
+
+    3. **Data Retrieval**: For each identified hash, it performs a GET request to
+    the Zscaler Sandbox API to fetch the full detail report.
+
+    4. **Data Processing**:
+        - If a report is found, the action flattens the data and adds it as an entity-specific
+    data table named "[Hash] Sandbox Report".
+        - The raw JSON report is added to the action's result object for further downstream
+    use.
+    5. **Completion**: The action concludes by providing a summary message indicating
+    which hashes were found in Zscaler, which were missing, and if any errors occurred
+    during the process.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - FILEHASH
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Url Categories:
+  ai_description: >-
+    ### General Description
+
+    The **Get URL Categories** action retrieves a comprehensive list of all URL categories
+    from the Zscaler service. This includes both system-defined and custom-defined
+    categories. The action provides high-level metadata for each category and can
+    optionally provide the specific URLs associated with them.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Display URL** | Boolean | Yes | Determines whether to include the specific
+    URLs for each category in the output. If set to `True`, individual data tables
+    will be created for each category listing its URLs. |
+
+
+    ### Additional Notes
+
+    This action does not require any input entities and performs a global lookup of
+    categories within the Zscaler tenant.
+
+
+    ### Flow Description
+
+    1. **Initialize Manager**: Connects to the Zscaler API using the configured credentials.
+
+    2. **Fetch Categories**: Executes a GET request to retrieve all URL category definitions.
+
+    3. **Process Results**: Iterates through the retrieved categories to extract IDs,
+    custom status, and URL counts.
+
+    4. **Generate Summary Table**: Creates a 'Zscaler Categories' data table in the
+    SOAR interface.
+
+    5. **Generate Detailed Tables**: If `Display URL` is enabled, creates separate
+    data tables for each category containing its specific URL list.
+
+    6. **Output JSON**: Attaches the raw JSON response to the action results for use
+    in downstream playbooks.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Whitelist:
+  ai_description: "### General Description\nThis action retrieves a list of whitelisted\
+    \ (unblocked) URLs from the Zscaler security configuration. It is used to audit\
+    \ or verify which URLs are currently permitted within the Zscaler environment,\
+    \ providing visibility into the organization's web security policy.\n\n### Parameters\n\
+    There are no parameters for this action.\n\n### Flow Description\n1. **Authentication**:\
+    \ The action authenticates with the Zscaler API using the provided credentials\
+    \ (API Key, Login ID, and Password).\n2. **Data Retrieval**: It calls the Zscaler\
+    \ security endpoint to fetch the current configuration, specifically looking for\
+    \ the `whitelistUrls` key.\n3. **Processing**: If whitelisted URLs are found,\
+    \ the action calculates the count and prepares the list for output.\n4. **Output\
+    \ Generation**: \n    *   A CSV table named \"Whitelist Urls\" is created containing\
+    \ each unblocked URL.\n    *   The full JSON response from Zscaler is attached\
+    \ to the action results.\n    *   A summary message indicating the number of URLs\
+    \ found is returned to the SOAR case wall."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Lookup Entity:
+  ai_description: >-
+    ### General Description
+
+    The **Lookup Entity** action retrieves categorization and security classification
+    data for URL, Domain, and Hostname entities from the Zscaler cloud platform. This
+    action allows security analysts to determine the reputation and category (e.g.,
+    'Malware Site', 'Social Networking') of web-based entities to assess potential
+    risks within a case.
+
+
+    ### Parameters Description
+
+    There are no action-specific parameters for this action. It utilizes the global
+    integration configuration parameters:
+
+    * **Api Root**: The Zscaler cloud instance URL.
+
+    * **Login ID**: The API administrator email.
+
+    * **Api Key**: The organization's API key.
+
+    * **Password**: The API administrator password.
+
+    * **Verify SSL**: Boolean flag to enable/disable SSL certificate validation.
+
+
+    ### Additional Notes
+
+    * The action automatically normalizes entity identifiers by converting them to
+    lowercase and stripping 'www.' prefixes to ensure compatibility with Zscaler's
+    lookup engine.
+
+    * Requests are processed in batches of 100 to adhere to Zscaler API limitations.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts integration-level configuration parameters
+    and initializes the Zscaler API manager.
+
+    2. **Entity Filtering**: It iterates through the target entities and filters for
+    those of type URL, Hostname, or Domain.
+
+    3. **Normalization**: The identifiers of the filtered entities are cleaned and
+    prepared for the API request.
+
+    4. **Zscaler Lookup**: The action performs a batch POST request to the Zscaler
+    `urlLookup` endpoint.
+
+    5. **Result Processing**: For every entity found in Zscaler, the action:
+        *   Generates a JSON result containing the full classification data.
+        *   Adds an entity-specific data table to the case wall showing the categorization
+    and security alerts.
+    6. **Finalization**: The action concludes by providing a summary message of found
+    entities and any errors encountered during the execution.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    - DestinationURL
+    - DOMAIN
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
+    \ designed to verify the connectivity between Google SecOps and the Zscaler API.\
+    \ It validates the integration configuration, including the API Root, Login ID,\
+    \ API Key, and Password, by attempting to establish an authenticated session.\n\
+    \n### Parameters Description\nThere are no input parameters for this action. It\
+    \ relies entirely on the integration's global configuration settings.\n\n### Flow\
+    \ Description\n1. **Configuration Extraction**: The action retrieves the Zscaler\
+    \ API credentials and connection settings (API Root, Login ID, API Key, Password,\
+    \ and SSL verification preference) from the integration configuration.\n2. **Manager\
+    \ Initialization**: It instantiates the `ZscalerManager`, which performs two internal\
+    \ steps: \n    *   **API Key Obfuscation**: Generates a time-based obfuscated\
+    \ key required by Zscaler's security protocol.\n    *   **Authentication**: Sends\
+    \ a POST request to the `/authenticatedSession` endpoint to establish a valid\
+    \ session.\n3. **Connectivity Verification**: The action executes the `test_connectivity`\
+    \ method, which performs a GET request to the `/authenticatedSession` endpoint\
+    \ to confirm the session is active and the service is responsive.\n4. **Result\
+    \ Reporting**: If the connection is successful, the action returns a success status\
+    \ and a 'Connection Established' message."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove From Blacklist:
+  ai_description: >-
+    ### General Description
+
+    Removes specified entities from the Zscaler Advanced Threat Protection blacklist.
+    This action allows security administrators to programmatically unblock Hostnames,
+    URLs, Domains, and external IP addresses that were previously restricted. It ensures
+    that the removal is finalized by triggering a configuration activation in the
+    Zscaler cloud environment.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+    | :--- | :--- | :--- | :--- |
+    | **IOCs** | String | No | A comma-separated list of IOCs (IP Addresses, URLs, or Domains) to remove from the blacklist. |
+
+
+    ### Additional Notes
+
+    * The action automatically filters out internal IP addresses to prevent accidental
+    modification of internal infrastructure settings.
+
+    * If an entity is already missing from the blacklist, the action will log the
+    information and proceed without error.
+
+    * Configuration changes are activated immediately after the removal request is
+    sent to ensure the policy takes effect.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the Zscaler manager using the provided
+    API credentials and authenticates with the Zscaler cloud.
+
+    2. **Entity Filtering**: It iterates through the target entities in the SOAR case,
+    identifying supported types: Hostnames, URLs, Domains, and IP Addresses.
+
+    3. **Data Normalization**: For URL, Hostname, and Domain entities, it extracts
+    the core network location (netloc) and strips 'www.' prefixes. For IP addresses,
+    it verifies the entity is not marked as internal.
+
+    4. **Blacklist Removal**: For each valid entity, it calls the Zscaler API to remove
+    the identifier from the Advanced Threat Protection blacklist.
+
+    5. **Change Activation**: After processing the removals, it sends an activation
+    request to the Zscaler service to apply the pending configuration changes.
+
+    6. **Reporting**: The action concludes by providing a summary of entities successfully
+    removed, entities already absent from the list, and any errors encountered during
+    the process.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Removes entries from the Zscaler Advanced Threat Protection blacklist and activates
+      the configuration changes in the Zscaler cloud.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DOMAIN
+    - HOSTNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Remove From Whitelist:
+  ai_description: >-
+    ### General Description
+
+    The **Remove From Whitelist** action is designed to remove specific entities (URLs,
+    Hostnames, Domains, or external IP addresses) from the Zscaler security whitelist.
+    This action is critical for security teams who need to revoke previously granted
+    access or correct misconfigurations in their Zscaler environment. It ensures that
+    the specified entities are no longer bypassed by Zscaler's security inspection
+    policies.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+    | :--- | :--- | :--- | :--- |
+    | **IOCs** | String | No | A comma-separated list of IOCs (IP Addresses, URLs, or Domains) to remove from the whitelist. |
+
+
+    ### Flow Description
+
+    1.  **Authentication**: The action initializes a session with the Zscaler API
+    using the provided credentials (API Root, Login ID, API Key, and Password).
+
+    2.  **Entity Filtering**: It iterates through the target entities, specifically
+    looking for Hostnames, Domains, URLs, and external (non-internal) IP addresses.
+
+    3.  **URL Normalization**: For URL, Hostname, and Domain entities, the action
+    cleans and extracts the network location (e.g., removing 'www.' and protocols)
+    to match Zscaler's expected format.
+
+    4.  **Whitelist Modification**: For each valid entity, the action retrieves the
+    current whitelist from Zscaler, removes the target entity from the list, and uploads
+    the updated list back to the Zscaler service.
+
+    5.  **Activation**: After the list is updated, the action calls the Zscaler activation
+    endpoint to ensure the changes take effect immediately.
+
+    6.  **Reporting**: The action provides a summary of which entities were successfully
+    removed, which were already absent from the whitelist, and any errors encountered
+    during the process.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      This action modifies the Zscaler whitelist by performing a PUT request to update
+      the security configuration and a POST request to activate those changes in the
+      Zscaler cloud.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - DestinationURL
+    - DOMAIN
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

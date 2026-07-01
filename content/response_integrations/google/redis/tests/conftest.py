@@ -1,3 +1,15 @@
+
+# Unify the soar_sdk namespace with the flat namespace for mocks
+import sys
+import pkgutil
+import soar_sdk
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    if name not in sys.modules:
+        try:
+            sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
+        except Exception:
+            pass
+
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

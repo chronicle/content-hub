@@ -1,0 +1,443 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Analyze EML:
+  ai_description: "### General Description\nThe **Analyze EML** action leverages Google\
+    \ Vertex AI to perform deep security analysis on EML (Email) files. It is designed\
+    \ to identify potential threats such as phishing links, malicious attachments,\
+    \ and social engineering tactics by processing the raw email content through a\
+    \ generative AI model. The action returns a structured analysis including threat\
+    \ levels, specific findings, and recommended verification steps.\n\n### Parameters\n\
+    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
+    | **Model ID** | String | No | The specific Vertex AI model to use (e.g., `gemini-1.5-flash-002`).\
+    \ If not provided, the default model from the integration configuration is used.\
+    \ |\n| **Publisher Name** | String | No | The name of the model publisher. Defaults\
+    \ to the integration's configured publisher. |\n| **Temperature** | Float | No\
+    \ | Controls the randomness of the AI's output. Higher values increase creativity,\
+    \ while lower values make the output more deterministic. |\n| **Files To Analyze**\
+    \ | String | Yes | A comma-separated list of full file paths to the EML files\
+    \ that need analysis. |\n| **Max Output Tokens** | Integer | No | The maximum\
+    \ length of the generated response per file. |\n\n### Flow Description\n1. **Parameter\
+    \ Extraction**: The action retrieves the model configuration and the list of files\
+    \ to be analyzed from the action parameters.\n2. **Validation**: It validates\
+    \ the file list format and ensures numerical parameters (Temperature, Max Tokens)\
+    \ are within valid ranges.\n3. **File Processing**: The action iterates through\
+    \ each provided file path, reads the file from the local system, and Base64 encodes\
+    \ the content.\n4. **AI Analysis**: For each file, a specialized security analyst\
+    \ prompt is constructed and sent to the Vertex AI API along with the encoded EML\
+    \ data. The prompt instructs the AI to identify phishing, malware, and social\
+    \ engineering risks.\n5. **Result Aggregation**: The AI's response\u2014containing\
+    \ a threat level (Critical to None), identified threats, and protection measures\u2014\
+    is parsed and aggregated into a structured JSON result for the SOAR platform.\n\
+    \n### Additional Notes\nThis action does not automatically process entities from\
+    \ the case; it requires explicit file paths provided in the 'Files To Analyze'\
+    \ parameter. If a file is not found at the specified path, the action logs an\
+    \ error for that specific file but continues processing others."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Describe Entity:
+  ai_description: >-
+    ### General Description
+
+    The **Describe Entity** action utilizes Google Vertex AI to generate concise,
+    human-readable summaries of security entities. It processes metadata associated
+    with any entity type (e.g., IP addresses, hostnames, file hashes) and uses generative
+    AI to provide a high-level overview of the entity's context and attributes within
+    the environment.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Model ID** | String | No | The ID of the Vertex AI model to use (e.g., `gemini-1.5-flash-002`).
+    If not provided, the integration's default model is used. |
+
+    | **Publisher Name** | String | No | The name of the model publisher (e.g., `google`).
+    |
+
+    | **Temperature** | Float | No | Controls the degree of randomness in token selection.
+    Higher values result in more creative output. |
+
+    | **Exclude Fields** | String (CSV) | No | A comma-separated list of entity metadata
+    fields to exclude from the summary generation process. |
+
+    | **Force Refresh** | Boolean | No | If enabled, the action ignores the cache
+    and regenerates the summary for every run. |
+
+    | **Refresh After (Days)** | Integer | Yes | The number of days to wait before
+    refreshing a cached entity summary. |
+
+    | **Max Output Tokens** | Integer | No | The maximum number of tokens to generate
+    in the AI response for each entity. |
+
+
+    ### Additional Notes
+
+    - This action implements an internal caching mechanism using the SOAR context
+    to minimize API usage and improve performance.
+
+    - The cache is validated using a hash of the entity's metadata; if the metadata
+    changes (excluding ignored fields), the summary will be regenerated regardless
+    of the 'Refresh After' setting.
+
+
+    ### Flow Description
+
+    1. **Metadata Extraction**: The action retrieves the full metadata for the target
+    entity from Google SecOps.
+
+    2. **Data Cleaning**: It flattens the metadata and removes fields specified in
+    the 'Exclude Fields' parameter or the internal default exclusion list.
+
+    3. **Cache Lookup**: It calculates a unique hash for the entity data and checks
+    the internal SOAR context for a valid, non-expired summary.
+
+    4. **AI Processing**: If no valid cache exists, the cleaned metadata is base64-encoded
+    and sent to Vertex AI with a prompt to generate a concise summary.
+
+    5. **Result Storage**: The generated summary is saved to the internal cache and
+    returned as the action's output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action updates the internal SOAR context cache to store generated entity
+      summaries, optimizing performance and reducing redundant API calls to Vertex
+      AI.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - ALERT
+    - APPLICATION
+    - CHILDHASH
+    - CHILDPROCESS
+    - CLUSTER
+    - CONTAINER
+    - CREDITCARD
+    - CVE
+    - CVEID
+    - DATABASE
+    - DEPLOYMENT
+    - DESTINATIONDOMAIN
+    - DOMAIN
+    - EMAILSUBJECT
+    - EVENT
+    - FILEHASH
+    - FILENAME
+    - GENERICENTITY
+    - HOSTNAME
+    - IPSET
+    - MacAddress
+    - PARENTHASH
+    - PARENTPROCESS
+    - PHONENUMBER
+    - POD
+    - PROCESS
+    - SERVICE
+    - SOURCEDOMAIN
+    - THREATACTOR
+    - THREATCAMPAIGN
+    - THREATSIGNATURE
+    - DestinationURL
+    - USB
+    - USERUNIQNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Execute Prompt:
+  ai_description: >-
+    ### General Description
+
+    Executes a text prompt using Google Vertex AI models (e.g., Gemini). This action
+    allows users to interact with Large Language Models (LLMs) to perform tasks such
+    as summarization, analysis, or data extraction based on a provided text instruction.
+    It supports various model parameters to control the output's creativity, format,
+    and length.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Text Prompt** | String | Yes | The instruction or query to be processed by
+    the AI model. |
+
+    | **Model ID** | String | No | The specific identifier of the model to use (e.g.,
+    `gemini-1.5-flash-002`). If not provided, the default model from the integration
+    configuration is used. |
+
+    | **Publisher Name** | String | No | The name of the model publisher (e.g., `google`,
+    `anthropic`). |
+
+    | **Temperature** | Float | No | Controls the degree of randomness in token selection.
+    Higher values increase creativity, while lower values make the output more deterministic.
+    |
+
+    | **Candidate Count** | Integer | No | The number of response variations to return
+    for the prompt. |
+
+    | **Response MIME type** | Enum | No | The media type of the output response (e.g.,
+    `text/plain`, `application/json`). |
+
+    | **Response Schema** | JSON | No | A JSON schema that the generated text should
+    follow. Requires the Response MIME type to be configured. |
+
+    | **Max Input Tokens** | Integer | No | The maximum number of input tokens allowed.
+    The action will fail if the prompt exceeds this threshold. |
+
+    | **Max Output Tokens** | Integer | No | The maximum number of tokens to generate
+    in the response. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Extracts and validates all input parameters, ensuring types
+    like floats and JSON strings are correctly formatted.
+
+    2. **Token Validation**: If a `Max Input Tokens` limit is set, the action calls
+    the Vertex AI API to count the tokens in the prompt. If the count exceeds the
+    limit, the action terminates with an error.
+
+    3. **API Interaction**: Constructs a request with the prompt and generation configuration
+    (temperature, candidate count, etc.) and sends it to the Vertex AI service.
+
+    4. **Response Handling**: Receives the generated content from the model, parses
+    the text and metadata, and populates the action's JSON results for use in subsequent
+    playbook steps.
+
+
+    ### Additional Notes
+
+    This action is a utility and does not process or enrich specific SecOps entities
+    (like IPs or Hostnames) automatically; it operates solely on the provided text
+    prompt.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a diagnostic utility\
+    \ designed to verify the connectivity between Google SecOps and the Vertex AI\
+    \ service. It validates that the integration's configuration parameters\u2014\
+    such as the API Root, Project ID, and authentication credentials\u2014are correctly\
+    \ set up and that the Vertex AI API is reachable.\n\n### Parameters\nThis action\
+    \ does not have any action-specific parameters. It utilizes the following integration\
+    \ configuration parameters to perform the connectivity test:\n\n| Parameter |\
+    \ Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| API Root\
+    \ | String | Yes | The base URL for the Vertex AI API (e.g., https://us-central1-aiplatform.googleapis.com).\
+    \ |\n| Location ID | String | No | The GCP region. If not provided, it is extracted\
+    \ from the API Root. |\n| Default Model | String | Yes | The ID of the model used\
+    \ to test the connection. |\n| Publisher Name | String | Yes | The name of the\
+    \ model publisher (e.g., 'google' or 'anthropic'). |\n\n### Additional Notes\n\
+    * This action is strictly for connectivity testing and does not process any alert\
+    \ or entity data.\n* It requires valid Google Cloud credentials (Service Account\
+    \ JSON or Workload Identity) configured at the integration level.\n\n### Flow\
+    \ Description\n1. **Authentication**: The action initializes the `AuthManager`\
+    \ to prepare an authorized session using the provided GCP credentials.\n2. **Parameter\
+    \ Extraction**: It retrieves the `Default Model` and `Publisher Name` from the\
+    \ integration's configuration.\n3. **Connectivity Test**: The action calls the\
+    \ `test_connectivity` method in the `ApiManager`, which executes a `GET` request\
+    \ to the Vertex AI `publishers.models.get` endpoint.\n4. **Result Handling**:\
+    \ If the API call is successful, the action returns a success message. If the\
+    \ request fails (e.g., due to authentication errors or network issues), it raises\
+    \ a `VertexAIManagerException` with the relevant error details."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Transform Data:
+  ai_description: >-
+    ### General Description
+
+    The **Transform Data** action leverages Google Vertex AI's generative models to
+    perform structured data transformations. It takes a raw JSON object and a set
+    of natural language instructions (Text Prompt) to produce a new, transformed JSON
+    output. This action is designed for utility tasks such as reformatting data, extracting
+    specific fields, or normalizing values between different system formats within
+    a playbook flow.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Model ID** | String | No | The ID of the Vertex AI model to use (e.g., `gemini-1.5-flash-002`).
+    If not provided, the default model from the integration configuration is used.
+    |
+
+    | **Publisher Name** | String | No | The name of the model publisher. Defaults
+    to the integration's configured publisher. |
+
+    | **Text Prompt** | String | Yes | The instructions describing how the data should
+    be transformed. |
+
+    | **JSON Object** | String (JSON) | Yes | The input JSON data that needs to be
+    processed. |
+
+    | **Temperature** | Float | No | Controls the randomness of the output. Higher
+    values increase creativity/randomness. |
+
+    | **Max Output Tokens** | Integer | Yes | The maximum length of the generated
+    response (default is 100). |
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the model configuration, the
+    text prompt, and the input JSON object from the action parameters.
+
+    2. **Validation**: It validates that the input JSON is well-formed and that numerical
+    parameters like Temperature and Max Output Tokens are valid.
+
+    3. **Data Preparation**: The input JSON object is serialized and base64-encoded
+    to be sent as inline data within the prompt structure.
+
+    4. **API Interaction**: The action sends a request to the Vertex AI API (using
+    either `generateContent` or `rawPredict` depending on the publisher) containing
+    the instructions and the encoded data.
+
+    5. **Result Processing**: The model's response is parsed as JSON and stored in
+    the action's results for use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    - This action does not operate on SecOps entities; it processes the specific JSON
+    object provided in the parameters.
+
+    - The output is explicitly requested in `application/json` format via the generation
+    configuration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

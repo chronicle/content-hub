@@ -1,0 +1,611 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Execute Entity Query:
+  ai_description: >-
+    ### General Description
+
+    This action executes a dynamic Splunk search query that is automatically filtered
+    based on the entities present in the current Google SecOps context. It allows
+    analysts to perform targeted threat hunting or data retrieval by mapping SecOps
+    entities (IPs, Hostnames, File Hashes, Users, URLs) to specific Splunk fields.
+    The action constructs a Splunk `WHERE` clause using the provided entity keys and
+    logical operators, executes the search as an asynchronous job, and returns the
+    results as both a data table and raw JSON.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Query** | String | Yes | The base Splunk query to execute (e.g., `index="network"`).
+    Do not include the `WHERE` clause here as it is generated automatically from entities.
+    |
+
+    | **Search Mode** | String | No | Specifies the Splunk search mode: `Fast`, `Smart`
+    (default), or `Verbose`. |
+
+    | **Results count limit** | Integer | No | The maximum number of results to return.
+    Appends the `head` command to the query. Default is 100. |
+
+    | **Results from** | String | No | The relative or absolute start time for the
+    search (e.g., `-24h`). Default is `-24h`. |
+
+    | **Results To** | String | No | The relative or absolute end time for the search
+    (e.g., `now`). Default is `now`. |
+
+    | **Result fields** | String | No | A comma-separated list of specific Splunk
+    fields to return in the results. |
+
+    | **IP Entity Key** | String | No | The Splunk field name to map to IP Address
+    entities (e.g., `src_ip`). |
+
+    | **Hostname Entity Key** | String | No | The Splunk field name to map to Hostname
+    entities (e.g., `dest_host`). |
+
+    | **File Hash Entity Key** | String | No | The Splunk field name to map to File
+    Hash entities (e.g., `file_hash`). |
+
+    | **User Entity Key** | String | No | The Splunk field name to map to User entities
+    (e.g., `user_name`). |
+
+    | **URL Entity Key** | String | No | The Splunk field name to map to URL entities
+    (e.g., `url`). |
+
+    | **Email Address Entity Key** | String | No | The Splunk field name to map to
+    Email Address entities. |
+
+    | **Stop If Not Enough Entities** | Boolean | No | If enabled (default), the action
+    fails if any specified Entity Key has no corresponding entities in the current
+    scope. |
+
+    | **Cross Entity Operator** | String | Yes | The logical operator (`OR` or `AND`)
+    used to join conditions between different entity types in the generated `WHERE`
+    clause. |
+
+
+    ### Additional Notes
+
+    - The action requires at least one "Entity Key" parameter to be configured to
+    effectively filter the search by entities.
+
+    - If "Stop If Not Enough Entities" is True, the action will abort if a configured
+    key (e.g., IP Entity Key) finds no matching entities in the alert scope.
+
+
+    ### Flow Description
+
+    1. **Entity Identification:** The action scans the alert for entities of types
+    ADDRESS, HOSTNAME, FILEHASH, USER, and URL.
+
+    2. **Query Construction:** It maps these entities to the user-defined Splunk field
+    keys and builds a `WHERE` clause using the specified `Cross Entity Operator`.
+
+    3. **Job Creation:** A search job is initiated in Splunk using the base query,
+    the generated filters, time range, and result limits.
+
+    4. **Polling:** The action polls Splunk until the search job reaches a completed
+    state.
+
+    5. **Data Retrieval:** Once finished, the action fetches the results and formats
+    them into a data table and a JSON object.
+
+    6. **Cleanup:** The temporary search job is deleted from the Splunk server.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - FILEHASH
+    - USERUNIQNAME
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Host Events:
+  ai_description: >-
+    ### General Description
+
+    Retrieves events from Splunk associated with specific Hostname entities. This
+    action allows analysts to gather historical or contextual log data directly from
+    Splunk for investigation within Google SecOps. It constructs a search query for
+    each host, retrieves matching events within a specified time range, and presents
+    the data as entity tables and raw JSON.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Event Per Host Limit | Integer | Yes | Specifies the maximum number of events
+    to retrieve for each host entity. Default is 100. |
+
+    | Results From | String | Yes | The start time for the event search (e.g., '-24h',
+    'now', or a specific timestamp). |
+
+    | Results To | String | Yes | The end time for the event search (e.g., 'now').
+    |
+
+    | Result fields | String | No | A comma-separated list of specific Splunk fields
+    to include in the results. If empty, all fields are returned. |
+
+    | Index | String | No | The Splunk index to search within. If omitted, the search
+    is performed across all accessible indexes. |
+
+    | Host Key | String | No | The field name in Splunk used to identify the host.
+    Default is 'host'. |
+
+
+    ### Additional Notes
+
+    - This action specifically targets `HOSTNAME` entities. Other entity types in
+    the case will be ignored.
+
+    - The action uses the Splunk Export API to efficiently retrieve event data.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action extracts Splunk connection details (API Root,
+    credentials, SSL settings) and user-defined search parameters.
+
+    2. **Entity Filtering**: It identifies all `HOSTNAME` entities within the current
+    Google SecOps case context.
+
+    3. **Query Construction**: For each host, it builds a Splunk search query using
+    the `Host Key` and the entity's identifier (or original identifier), optionally
+    restricted by the specified `Index` and time range.
+
+    4. **Data Retrieval**: It executes the search via the Splunk Manager and fetches
+    the resulting events up to the specified `Event Per Host Limit`.
+
+    5. **Data Processing**: Retrieved events are parsed and converted into both JSON
+    and CSV formats for display and downstream use.
+
+    6. **Output Generation**: The action attaches a data table to each host entity
+    in the case and provides a comprehensive JSON result containing all retrieved
+    events.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - HOSTNAME
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is a utility designed\
+    \ to verify the connectivity between Google SecOps and a Splunk instance. It ensures\
+    \ that the provided configuration parameters\u2014such as the API Root, authentication\
+    \ credentials, and SSL settings\u2014are correct and that the Splunk server is\
+    \ reachable over the network.\n\n### Parameters Description\n| Parameter | Type\
+    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Api Root | String\
+    \ | Yes | The base URL of the Splunk server (e.g., `https://splunk-server:8089`).\
+    \ |\n| Username | String | No* | The username used for basic authentication. Required\
+    \ if an API Token is not provided. |\n| Password | String | No* | The password\
+    \ associated with the username. Required if an API Token is not provided. |\n\
+    | API Token | String | No* | A Bearer token used for authentication. Required\
+    \ if Username and Password are not provided. |\n| Verify SSL | Boolean | No |\
+    \ If set to `True`, the action validates the SSL certificate of the Splunk server.\
+    \ Defaults to `False`. |\n| CA Certificate File | String | No | A base64-encoded\
+    \ CA certificate file used for SSL verification when `Verify SSL` is enabled.\
+    \ |\n\n### Additional Notes\n*   **Authentication**: The action requires either\
+    \ a valid `Username` and `Password` combination or a valid `API Token`. If neither\
+    \ is provided, the action will fail during initialization.\n*   **Connectivity\
+    \ Test**: The action performs a lightweight search query (`search index=main |\
+    \ head 1`) to confirm that the API is functional and the credentials have sufficient\
+    \ permissions to execute searches.\n\n### Flow Description\n1.  **Initialization**:\
+    \ The action starts by initializing the Siemplify context and logger.\n2.  **Parameter\
+    \ Extraction**: It retrieves the integration configuration parameters, including\
+    \ the API endpoint, credentials, and security settings (SSL/CA Certificate).\n\
+    3.  **Manager Setup**: It instantiates the `SplunkManager`. During instantiation,\
+    \ the manager handles authentication (Basic or Bearer) and configures the request\
+    \ session with the appropriate SSL settings.\n4.  **Connectivity Check**: The\
+    \ manager executes a `test_connectivity` method, which sends a POST request to\
+    \ the Splunk search export endpoint with a minimal query designed to return quickly.\n\
+    5.  **Result Handling**: \n    *   If the request is successful, the action returns\
+    \ a success message and completes with a `True` result.\n    *   If an exception\
+    \ occurs (e.g., authentication failure, network timeout, or SSL error), the action\
+    \ logs the error, returns a failure message, and completes with a `False` result."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+SplunkCsvViewer:
+  ai_description: >-
+    ### General Description
+
+    The **SplunkCsvViewer** action is a utility designed to transform raw JSON data
+    into a structured CSV format and display it as a data table within a Google SecOps
+    case. This action is primarily used to visualize results obtained from previous
+    Splunk search actions. Note: This action is marked as **Deprecated**.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Results | String | Yes | The raw JSON string representing the data to be converted
+    into a CSV table. |
+
+
+    ### Flow Description
+
+    1. **Configuration Extraction:** The action retrieves Splunk connection details
+    (API Root, Credentials, SSL settings) from the integration configuration.
+
+    2. **Input Retrieval:** It extracts the `Results` parameter provided by the user
+    or a previous playbook step.
+
+    3. **Data Transformation:** The action parses the `Results` string as JSON and
+    utilizes a transformation utility to convert the dictionary/list structure into
+    a CSV-formatted string.
+
+    4. **Internal Update:** It attaches the resulting CSV data to the SOAR case as
+    a new data table titled "Splunk Query Results".
+
+    5. **Completion:** The action concludes by reporting whether results were successfully
+    processed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Creates and attaches a data table named 'Splunk Query Results' to the current
+      Google SecOps case based on the provided input.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+SplunkQuery:
+  ai_description: >-
+    Executes one or more search queries in Splunk and retrieves the resulting event
+    data. This action supports asynchronous execution, meaning it initiates search
+    jobs and polls for their completion. It allows for fine-grained control over the
+    search timeframe, result limits, and specific fields to be returned. The results
+    are presented both as a raw JSON object and a formatted data table within the
+    Google SecOps case.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Query | String | Yes | The Splunk search query (SPL) to execute. Can be a single
+    string or a JSON-formatted list of strings (e.g., `["query1", "query2"]`) to run
+    multiple searches. |
+
+    | Search Mode | Enum | No | Specifies the Splunk search mode: `Smart` (default),
+    `Verbose`, or `Fast`. |
+
+    | Results count limit | Integer | No | The maximum number of results to return
+    per query. Defaults to 100. |
+
+    | Results From | String | No | The relative or absolute start time for the search
+    (e.g., `-24h`, `-1h`). Defaults to `-24h`. |
+
+    | Results To | String | No | The relative or absolute end time for the search.
+    Defaults to `now`. |
+
+    | Result fields | String | No | A comma-separated list of specific fields to include
+    in the output. If omitted, all fields are returned. |
+
+
+    ### Additional Notes
+
+    - This action does not operate on specific entities; it executes generic queries
+    against the Splunk index.
+
+    - The action automatically appends `head` and `fields` commands to the SPL query
+    based on the provided parameters.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Parses the input query parameter to identify if one or
+    multiple queries need to be executed.
+
+    2. **Job Creation:** For each query, the action sends a request to Splunk to create
+    an asynchronous search job.
+
+    3. **Polling:** The action enters a polling state, checking the status of the
+    search jobs at regular intervals until they are marked as 'Done'.
+
+    4. **Data Retrieval:** Once a job is complete, the action fetches the results
+    from Splunk, respecting the defined count limit and field filters.
+
+    5. **Cleanup:** Deletes the search jobs from the Splunk server to free up resources.
+
+    6. **Output:** Aggregates results from all queries and populates the action's
+    JSON result and a data table named 'Splunk Query Results'.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action populates the action's result JSON and creates a data table named
+      'Splunk Query Results' within the case context.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Submit Event:
+  ai_description: >-
+    Submits a raw event string to a designated Splunk index. This action allows for
+    the manual or automated injection of log data into Splunk for indexing and subsequent
+    searching. It is useful for logging custom events or forwarding specific data
+    points from a SOAR workflow into a centralized logging system.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Index | String | Yes | The destination index in Splunk where the event will
+    be stored (e.g., 'main'). |
+
+    | Event | String | Yes | The raw log or event data to be submitted. |
+
+    | Host | String | No | The host value to be assigned to the event metadata. |
+
+    | Source | String | No | The source value to be assigned to the event (e.g., a
+    filename or service name). |
+
+    | Sourcetype | String | No | The Splunk sourcetype to be assigned to the event
+    (e.g., 'access_combined'). |
+
+
+    ### Flow Description
+
+    1. **Authentication**: Establishes a connection with the Splunk API using the
+    configured credentials (Username/Password or API Token) and validates the SSL
+    settings.
+
+    2. **Parameter Extraction**: Retrieves the target index, raw event content, and
+    optional metadata (host, source, sourcetype) from the action inputs.
+
+    3. **Event Submission**: Executes an HTTP POST request to the Splunk `receivers/simple`
+    endpoint, transmitting the raw event data to the specified index.
+
+    4. **Result Processing**: Captures the response from Splunk, which includes metadata
+    about the created event (such as bytes written and host), and returns it as a
+    JSON result for use in subsequent playbook steps.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new event record in the specified Splunk index by submitting raw data
+      to the Splunk API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Update Notable Events:
+  ai_description: >-
+    Updates notable events in Splunk Enterprise Security (ES). This action allows
+    analysts to programmatically modify the metadata of specific notable events by
+    providing their unique identifiers. It is specifically designed for Splunk ES
+    environments.
+
+
+    ### Parameters Description
+
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Notable Event IDs | String | Yes | A comma-separated list of Splunk notable
+    event IDs to be updated. Example: `1A082D7B...@@notable@@...` |
+
+    | Status | Dropdown | No | The new status to assign to the notable events (e.g.,
+    New, In Progress, Resolved, Closed). |
+
+    | Urgency | Dropdown | No | The new urgency level for the notable events (e.g.,
+    Critical, High, Medium, Low, Informational). |
+
+    | New Owner | String | No | The username of the new owner to assign to the notable
+    events. |
+
+    | Comment | String | No | A comment to be added to the notable events' history.
+    |
+
+    | Disposition | Dropdown | No | The classification for the notable event (e.g.,
+    True Positive, False Positive). |
+
+
+    ### Additional Notes
+
+    - **Requirement:** At least one update parameter (Status, Urgency, New Owner,
+    Comment, or Disposition) must be configured for the action to run successfully.
+
+    - This action is only compatible with Splunk Enterprise Security.
+
+
+    ### Flow Description
+
+    1. **Initialization:** Extracts Splunk configuration (API Root, Credentials) and
+    action parameters.
+
+    2. **Validation:** Checks if the `Notable Event IDs` are provided and ensures
+    at least one update field (Status, Urgency, etc.) is populated.
+
+    3. **Mapping:** Converts human-readable dropdown selections (like 'Closed' or
+    'True Positive') into the numerical or formatted values required by the Splunk
+    ES API.
+
+    4. **Execution:** Sends a POST request to the Splunk `/services/notable_update`
+    endpoint with the specified IDs and the requested changes.
+
+    5. **Completion:** Reports the number of successfully updated events or handles
+    errors if the update fails.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status, urgency, owner, comment, or disposition of notable events
+      within the Splunk Enterprise Security platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

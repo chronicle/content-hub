@@ -1,0 +1,227 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    The **Enrich Entities** action leverages the Google Web Risk API to identify URL
+    entities that are known to be malicious or associated with social engineering
+    and unwanted software. It provides security analysts with immediate context regarding
+    the safety of URL entities within a case by retrieving threat types and marking
+    the entities accordingly.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | API Root | String | Yes | The base URL for the Web Risk API service, configured
+    at the integration level. |
+
+
+    ### Flow Description
+
+    1. **Entity Identification**: The action identifies all URL entities (DestinationURL)
+    present in the current alert context.
+
+    2. **API Query**: For each URL, the action sends a GET request to the Web Risk
+    `uris:search` endpoint to check against known threat lists (e.g., Malware, Social
+    Engineering, Unwanted Software).
+
+    3. **Data Extraction**: If the URL is found in a threat list, the action extracts
+    the specific threat types (e.g., MALWARE) and the expiration time of the threat
+    data.
+
+    4. **Internal Enrichment**: The action updates the entity's additional properties
+    with the key `WebRisk_threatTypes` containing a comma-separated list of found
+    threats. It also marks the entity as 'Enriched' within Google SecOps.
+
+    5. **Result Reporting**: The action generates a JSON result for each processed
+    entity containing the full API response and updates the action output message
+    with the list of successfully enriched entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with threat types and marks the entity
+      as enriched.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic tool designed to verify the connectivity between
+    Google SecOps and the Google Cloud Web Risk API. It ensures that the integration
+    configuration, including authentication credentials (Service Account) and network
+    settings (API Root, SSL verification), is correctly established.
+
+
+    ### Parameters
+
+    This action does not require any input parameters.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the connection using the provided
+    Service Account JSON or Workload Identity credentials.
+
+    2. **Connectivity Test**: It performs a sample URI search request using a standard
+    test URI (`http://testsafebrowsing.appspot.com/s/malware.html`) against the Web
+    Risk `uris:search` endpoint.
+
+    3. **Validation**: The action validates the API response. If the request is successful,
+    it confirms connectivity; otherwise, it raises an error with details from the
+    API response.
+
+
+    ### Additional Notes
+
+    * This action does not process any entities from the case.
+
+    * It is strictly used for configuration validation.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Submit Entities:
+  ai_description: >-
+    Submits URL entities to Google Cloud Web Risk for analysis. This action allows
+    security analysts to report suspicious or malicious URIs to Google's threat intelligence
+    service. It is an asynchronous action that can either wait for the submission
+    process to complete or return immediately after initialization.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction:** The action retrieves submission details including
+    abuse type, confidence level, justification, and platform information.
+
+    2. **Initial Submission:** For each URL entity, the action sends a POST request
+    to the Web Risk API to create a submission operation.
+
+    3. **Asynchronous Monitoring:** If 'Skip Waiting' is disabled, the action enters
+    an asynchronous state, periodically polling the Web Risk API via GET requests
+    to check the status of the submission operations.
+
+    4. **Finalization:** Once the operations are finished (or if 'Skip Waiting' was
+    enabled), the action compiles the results and provides a summary of successful
+    and failed submissions.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Abuse Type | Dropdown | No | The type of abuse associated with the URL (e.g.,
+    Malware, Social Engineering). |
+
+    | Confidence Level | Dropdown | No | The level of confidence in the report (Low,
+    Medium, High). |
+
+    | Justification | Dropdown | No | The reason for the submission (e.g., Manual
+    Verification, User Report). |
+
+    | Comment | String | No | Additional context or explanation for the submission.
+    |
+
+    | Region Code | String | No | Comma-separated CLDR codes for associated countries/regions.
+    |
+
+    | Platform | Dropdown | No | The platform where the threat was detected (e.g.,
+    Android, Windows). |
+
+    | Skip Waiting | Boolean | No | If true, the action finishes immediately after
+    the submission is initialized without waiting for the analysis result. |
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new URI submission record in the Google Cloud Web Risk service via
+      a POST request to the 'projects.uris:submit' endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

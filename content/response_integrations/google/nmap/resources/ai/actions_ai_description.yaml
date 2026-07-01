@@ -1,0 +1,171 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Ping:
+  ai_description: >-
+    ### General Description
+
+    The **Ping** action is a diagnostic utility designed to verify the connectivity
+    and operational status of the Nmap integration. Its primary purpose is to ensure
+    that the Nmap binary is correctly installed, accessible via the system path, and
+    that the integration is properly configured to run on a Remote Agent.
+
+
+    ### Parameters
+
+    There are no parameters for this action.
+
+
+    ### Additional Notes
+
+    - **Remote Agent Requirement**: This action is strictly designed to run on a Google
+    SecOps Remote Agent. It will explicitly fail with an error if executed in a cloud-only
+    environment because it relies on local system execution of the Nmap binary.
+
+    - **Connectivity Test**: The 'connectivity' in this context refers to the SOAR's
+    ability to invoke the Nmap process on the host machine, rather than network connectivity
+    to a remote server.
+
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Nmap Manager and performs a
+    mandatory check to ensure the execution environment is a Remote Agent.
+
+    2. **Command Execution**: It executes the system command `nmap --version` using
+    a subprocess call.
+
+    3. **Response Validation**: The action captures the return code and standard error
+    from the command execution.
+
+    4. **Outcome**: If the return code is 0 (success), the action completes with a
+    success message. If the return code is non-zero, it raises an exception containing
+    the error details from Nmap.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Scan Entities:
+  ai_description: >-
+    The **Scan Entities** action utilizes the Nmap security scanner to perform network
+    discovery and security auditing on specific entities within a Google SecOps environment.
+    It is designed to identify active hosts, open ports, running services, and operating
+    system details.
+
+
+    ### Parameters
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **IP Address** | String | No | A comma-separated list of manual IP addresses
+    to include in the scan alongside case entities. |
+
+    | **Hostname** | String | No | A comma-separated list of manual hostnames to include
+    in the scan alongside case entities. |
+
+    | **Options** | String | Yes | Command-line arguments passed to the Nmap binary
+    (e.g., `-sT -sV -p-`). Note: Options requiring root privileges (like `-sS` or
+    `-O`) are restricted for security. |
+
+
+    ### Additional Notes
+
+    * **Remote Agent Required:** This action must be executed on a Google SecOps Remote
+    Agent where the Nmap binary is installed and accessible.
+
+    * **Root Restriction:** The action includes a validation step that prevents the
+    use of Nmap flags requiring root/sudo privileges to ensure stable execution within
+    the agent environment.
+
+    * **Targeting:** The action processes both the entities present in the SOAR case
+    (filtered by type) and any manually provided targets in the parameters.
+
+
+    ### Flow Description
+
+    1. **Target Identification:** The action identifies relevant entities from the
+    current case (IP Addresses, Hostnames, and Domains) and merges them with any manually
+    provided IP addresses or hostnames from the input parameters.
+
+    2. **Validation:** It validates the format of provided IP addresses and checks
+    the `Options` string to ensure no restricted root-level Nmap flags are used.
+
+    3. **Execution:** For each target, the action executes the Nmap command via the
+    system shell on the remote agent, capturing the output in XML format.
+
+    4. **Parsing:** The `NmapParser` processes the XML output, extracting structured
+    data such as port states, service versions, OS matches, and hardware vendors.
+
+    5. **Enrichment:** The action updates the `additional_properties` of the original
+    SecOps entities with the discovered network metadata and marks them as enriched.
+
+    6. **Result Reporting:** It generates a JSON result containing the full scan details
+    for each target and provides a summary message to the action output.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates entity additional properties with Nmap scan results (ports, services,
+      OS info) and sets the 'is_enriched' flag to true.
+  categories:
+    enrichment: true
+  entity_usage:
+    entity_types:
+    - ADDRESS
+    - HOSTNAME
+    - DOMAIN
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
