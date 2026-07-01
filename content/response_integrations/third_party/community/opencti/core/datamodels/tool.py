@@ -3,16 +3,25 @@ from core.datamodels.base_octi_object import BaseOCTIObject
 
 
 class Tool(BaseOCTIObject):
+    """Represent the Tool model."""
     name: str
     description: str | None = None
     tool_types: list[str] | None = None
     labels: list[str] | None = None
     markings: list[str] | None = None
-
+    
     def _compute_stix_id(self) -> str:
+        """Build a deterministic STIX ID for this object.
+        Returns:
+            The generated STIX identifier.
+        """
         return pycti.Tool.generate_id(name=self.name)
-
+    
     def to_input_variables(self) -> dict:
+        """Serialize the model into OpenCTI GraphQL payload.
+        Returns:
+            A dictionary matching OpenCTI input variable names.
+        """
         input_variables = {
             "stix_id": self._compute_stix_id(),
             "name": self.name,

@@ -32,6 +32,14 @@ class CreateGroupingParameters(BaseActionParameters):
     @field_validator("labels", mode="before")
     @classmethod
     def _parse_labels(cls, value: str | None) -> list[str] | None:
+        """Convert a comma-separated labels string into a cleaned labels list.
+
+        Args:
+            value: Raw labels parameter from the action form.
+
+        Returns:
+            A list of trimmed labels, or None when no labels were provided.
+        """
         return parse_csv_list(value) if value else None
 
 
@@ -74,6 +82,7 @@ class CreateGrouping(BaseAction):
 
 
 def main() -> None:
+    """Action entry point."""
     CreateGrouping(SCRIPT_NAME).run()
 
 

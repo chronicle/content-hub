@@ -67,19 +67,29 @@ HASH_FILTER_KEYS: dict[str, str] = {
 
 
 class SOAREntity(Protocol):
+    """Represent the SOAREntity model."""
 
     entity_type: str
     original_identifier: str
 
 
 class OpenCTIClientError(Exception):
+    """Represent the OpenCTIClientError model."""
 
     pass
 
 
 class OpenCTIClient:
+    """Represent the OpenCTIClient model."""
 
     def __init__(self, base_url: str, api_token: str, ssl_verify: bool = True) -> None:
+        """Initialize the instance.
+
+        Args:
+            base_url: str value.
+            api_token: str value.
+            ssl_verify: bool value.
+        """
         try:
             # Note: a health check is performed during OpenCTIApiClient initialization
             self._api_client = OpenCTIApiClient(
@@ -93,6 +103,12 @@ class OpenCTIClient:
             ) from e
 
     def _upsert_vocabulary_entries(self, category: str, *values: str | None) -> None:
+        """Ensure vocabulary entries exist in OpenCTI for the provided category values.
+
+        Args:
+            category: OpenCTI vocabulary category name.
+            *values: Candidate values to create when missing.
+        """
         if not category or not values:
             return
 
@@ -106,6 +122,11 @@ class OpenCTIClient:
             ) from e
 
     def _upsert_labels(self, labels: list[str] | None) -> None:
+        """Ensure all provided labels exist in OpenCTI before object creation.
+
+        Args:
+            labels: Labels to upsert, or None when no labels are provided.
+        """
         if not labels:
             return
 
@@ -118,6 +139,14 @@ class OpenCTIClient:
             ) from e
 
     def create_incident(self, incident: Incident) -> IncidentJSONResult:
+        """Create incident in OpenCTI and return the normalized API response.
+
+        Args:
+            incident: Incident to create in OpenCTI.
+
+        Returns:
+            IncidentJSONResult: Parsed response model for the created incident.
+        """
         try:
             incident_args = incident.to_input_variables()
 
@@ -152,6 +181,14 @@ class OpenCTIClient:
     def create_incident_response(
         self, incident_response: IncidentResponse
     ) -> IncidentResponseJSONResult:
+        """Create incident response in OpenCTI and return the normalized API response.
+
+        Args:
+            incident_response: IncidentResponse to create in OpenCTI.
+
+        Returns:
+            IncidentResponseJSONResult: Parsed response model for the created incident response.
+        """
         try:
             incident_response_args = incident_response.to_input_variables()
 
@@ -189,6 +226,14 @@ class OpenCTIClient:
     def create_request_for_information(
         self, request_for_information: RequestForInformation
     ) -> RequestForInformationJSONResult:
+        """Create request for information in OpenCTI and return the normalized API response.
+
+        Args:
+            request_for_information: RequestForInformation to create in OpenCTI.
+
+        Returns:
+            RequestForInformationJSONResult: Parsed response model for the created request for information.
+        """
         try:
             rfi_args = request_for_information.to_input_variables()
 
@@ -225,6 +270,14 @@ class OpenCTIClient:
     def create_request_for_takedown(
         self, request_for_takedown: RequestForTakedown
     ) -> RequestForTakedownJSONResult:
+        """Create request for takedown in OpenCTI and return the normalized API response.
+
+        Args:
+            request_for_takedown: RequestForTakedown to create in OpenCTI.
+
+        Returns:
+            RequestForTakedownJSONResult: Parsed response model for the created request for takedown.
+        """
         try:
             rft_args = request_for_takedown.to_input_variables()
 
@@ -259,6 +312,14 @@ class OpenCTIClient:
             ) from e
 
     def create_observable(self, observable: Observable) -> ObservableJSONResult:
+        """Create observable in OpenCTI and return the normalized API response.
+
+        Args:
+            observable: Observable to create in OpenCTI.
+
+        Returns:
+            ObservableJSONResult: Parsed response model for the created observable.
+        """
         try:
             observable_args = observable.to_input_variables()
 
@@ -282,6 +343,14 @@ class OpenCTIClient:
             ) from e
 
     def create_report(self, report: Report) -> ReportJSONResult:
+        """Create report in OpenCTI and return the normalized API response.
+
+        Args:
+            report: Report to create in OpenCTI.
+
+        Returns:
+            ReportJSONResult: Parsed response model for the created report.
+        """
         try:
             report_args = report.to_input_variables()
 
@@ -311,6 +380,14 @@ class OpenCTIClient:
             ) from e
 
     def create_grouping(self, grouping: Grouping) -> GroupingJSONResult:
+        """Create grouping in OpenCTI and return the normalized API response.
+
+        Args:
+            grouping: Grouping to create in OpenCTI.
+
+        Returns:
+            GroupingJSONResult: Parsed response model for the created grouping.
+        """
         try:
             grouping_args = grouping.to_input_variables()
 
@@ -339,6 +416,14 @@ class OpenCTIClient:
             ) from e
 
     def create_relationship(self, relationship: Relationship) -> RelationshipJSONResult:
+        """Create relationship in OpenCTI and return the normalized API response.
+
+        Args:
+            relationship: Relationship to create in OpenCTI.
+
+        Returns:
+            RelationshipJSONResult: Parsed response model for the created relationship.
+        """
         try:
             relationship_args = relationship.to_input_variables()
             data = self._api_client.stix_core_relationship.create(**relationship_args)
@@ -362,6 +447,14 @@ class OpenCTIClient:
     def create_vulnerability(
         self, vulnerability: Vulnerability
     ) -> VulnerabilityJSONResult:
+        """Create vulnerability in OpenCTI and return the normalized API response.
+
+        Args:
+            vulnerability: Vulnerability to create in OpenCTI.
+
+        Returns:
+            VulnerabilityJSONResult: Parsed response model for the created vulnerability.
+        """
         try:
             vulnerability_args = vulnerability.to_input_variables()
 
@@ -387,6 +480,14 @@ class OpenCTIClient:
             ) from e
 
     def create_malware(self, malware: Malware) -> MalwareJSONResult:
+        """Create malware in OpenCTI and return the normalized API response.
+
+        Args:
+            malware: Malware to create in OpenCTI.
+
+        Returns:
+            MalwareJSONResult: Parsed response model for the created malware.
+        """
         try:
             malware_args = malware.to_input_variables()
 
@@ -417,6 +518,14 @@ class OpenCTIClient:
     def create_threat_actor_group(
         self, threat_actor_group: ThreatActorGroup
     ) -> ThreatActorGroupJSONResult:
+        """Create threat actor group in OpenCTI and return the normalized API response.
+
+        Args:
+            threat_actor_group: ThreatActorGroup to create in OpenCTI.
+
+        Returns:
+            ThreatActorGroupJSONResult: Parsed response model for the created threat actor group.
+        """
         try:
             threat_actor_group_args = threat_actor_group.to_input_variables()
 
@@ -451,6 +560,14 @@ class OpenCTIClient:
     def create_intrusion_set(
         self, intrusion_set: IntrusionSet
     ) -> IntrusionSetJSONResult:
+        """Create intrusion set in OpenCTI and return the normalized API response.
+
+        Args:
+            intrusion_set: IntrusionSet to create in OpenCTI.
+
+        Returns:
+            IntrusionSetJSONResult: Parsed response model for the created intrusion set.
+        """
         try:
             intrusion_set_args = intrusion_set.to_input_variables()
 
@@ -475,6 +592,14 @@ class OpenCTIClient:
             ) from e
 
     def create_campaign(self, campaign: Campaign) -> CampaignJSONResult:
+        """Create campaign in OpenCTI and return the normalized API response.
+
+        Args:
+            campaign: Campaign to create in OpenCTI.
+
+        Returns:
+            CampaignJSONResult: Parsed response model for the created campaign.
+        """
         try:
             campaign_args = campaign.to_input_variables()
 
@@ -499,6 +624,14 @@ class OpenCTIClient:
             ) from e
 
     def create_tool(self, tool: Tool) -> ToolJSONResult:
+        """Create tool in OpenCTI and return the normalized API response.
+
+        Args:
+            tool: Tool to create in OpenCTI.
+
+        Returns:
+            ToolJSONResult: Parsed response model for the created tool.
+        """
         try:
             tool_args = tool.to_input_variables()
 
@@ -529,6 +662,14 @@ class OpenCTIClient:
     def create_attack_pattern(
         self, attack_pattern: AttackPattern
     ) -> AttackPatternJSONResult:
+        """Create attack pattern in OpenCTI and return the normalized API response.
+
+        Args:
+            attack_pattern: AttackPattern to create in OpenCTI.
+
+        Returns:
+            AttackPatternJSONResult: Parsed response model for the created attack pattern.
+        """
         try:
             attack_pattern_args = attack_pattern.to_input_variables()
 
@@ -553,6 +694,14 @@ class OpenCTIClient:
             ) from e
 
     def create_indicator(self, indicator: Indicator) -> IndicatorJSONResult:
+        """Create indicator in OpenCTI and return the normalized API response.
+
+        Args:
+            indicator: Indicator to create in OpenCTI.
+
+        Returns:
+            IndicatorJSONResult: Parsed response model for the created indicator.
+        """
         try:
             indicator_args = indicator.to_input_variables()
 
@@ -581,6 +730,14 @@ class OpenCTIClient:
             ) from e
 
     def create_sighting(self, sighting: Sighting) -> SightingJSONResult:
+        """Create sighting in OpenCTI and return the normalized API response.
+
+        Args:
+            sighting: Sighting to create in OpenCTI.
+
+        Returns:
+            SightingJSONResult: Parsed response model for the created sighting.
+        """
         try:
             sighting_args = sighting.to_input_variables()
 
@@ -612,6 +769,16 @@ class OpenCTIClient:
         container_id: str,
         object_id: str,
     ) -> AddObjectToContainerJSONResult:
+        """Attach an existing STIX object or relationship to a supported container.
+
+        Args:
+            container_type: Target OpenCTI container type.
+            container_id: Identifier of the destination container.
+            object_id: Identifier of the object or relationship to attach.
+
+        Returns:
+            AddObjectToContainerJSONResult: Summary of the container-object linkage.
+        """
         add_methods = {
             "Report": self._api_client.report.add_stix_object_or_stix_relationship,
             "Case-Incident": self._api_client.case_incident.add_stix_object_or_stix_relationship,
@@ -649,6 +816,20 @@ class OpenCTIClient:
         )
 
     def _fetch_relationships(self, entity_id: str) -> list[dict]:
+        """Fetch and normalize OpenCTI relationships for a given entity.
+
+        Args:
+            entity_id: OpenCTI identifier of the source entity.
+
+        Returns:
+            A list of relationship dictionaries. Each dictionary includes:
+                - relationship_type
+                - related_entity_type
+                - related_entity_name
+
+        Raises:
+            OpenCTIClientError: If the relationship query fails.
+        """
         try:
             raw_relations = self._api_client.stix_core_relationship.list(
                 fromOrToId=entity_id,
@@ -683,6 +864,18 @@ class OpenCTIClient:
     def enrich_observable(
         self, soar_entity: SOAREntity
     ) -> ObservableEnrichmentResult | None:
+        """Enrich a SOAR observable with OpenCTI metadata and relationships.
+
+        Args:
+            soar_entity: SOAR entity containing the type and identifier to enrich.
+
+        Returns:
+            ObservableEnrichmentResult when a matching observable is found.
+            None when the entity type is unsupported or no observable matches.
+
+        Raises:
+            OpenCTIClientError: If the OpenCTI lookup fails.
+        """
         entity_type = soar_entity.entity_type
         identifier = soar_entity.original_identifier
 
@@ -727,6 +920,18 @@ class OpenCTIClient:
     def enrich_indicator(
         self, soar_entity: SOAREntity
     ) -> IndicatorEnrichmentResult | None:
+        """Enrich a SOAR indicator with OpenCTI metadata and relationships.
+
+        Args:
+            soar_entity: SOAR entity whose identifier is used as indicator name.
+
+        Returns:
+            IndicatorEnrichmentResult when a matching indicator is found.
+            None when no indicator matches the provided identifier.
+
+        Raises:
+            OpenCTIClientError: If the OpenCTI lookup fails.
+        """
         try:
             data = self._api_client.indicator.read(
                 filters={

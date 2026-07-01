@@ -55,11 +55,27 @@ class CreateIncidentResponseParameters(BaseActionParameters):
     @field_validator("labels", mode="before")
     @classmethod
     def _parse_labels(cls, value: str | None) -> list[str] | None:
+        """Convert a comma-separated labels string into a cleaned labels list.
+
+        Args:
+            value: Raw labels parameter from the action form.
+
+        Returns:
+            A list of trimmed labels, or None when no labels were provided.
+        """
         return parse_csv_list(value) if value else None
 
     @field_validator("created", mode="before")
     @classmethod
     def _parse_datetimes(cls, value: str | None) -> str | None:
+        """Normalize supported datetime input into ISO 8601 UTC format.
+
+        Args:
+            value: Raw datetime string from the action form.
+
+        Returns:
+            The normalized datetime string, or the original value if empty/non-string.
+        """
         if not isinstance(value, str) or not value:
             return value
 

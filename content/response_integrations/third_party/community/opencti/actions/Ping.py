@@ -11,12 +11,19 @@ class Ping(BaseAction):
     """
 
     def __init__(self, script_name: str) -> None:
+        """Initialize the instance.
+
+        Args:
+            script_name: str value.
+        """
         super().__init__(script_name)
         self.output_message = (
             f"Successfully connected to the {self.INTEGRATION_IDENTIFIER} server with the "
             "provided connection parameters"
         )
-        self.error_output_message = f"Failed to connect to the {self.INTEGRATION_IDENTIFIER} server"
+        self.error_output_message = (
+            f"Failed to connect to the {self.INTEGRATION_IDENTIFIER} server"
+        )
         self.json_results = {}
 
     def _perform_action(self, _=None) -> None:
@@ -28,6 +35,7 @@ class Ping(BaseAction):
 
 
 def main() -> None:
+    """Action entry point."""
     Ping(SCRIPT_NAME).run()
 
 

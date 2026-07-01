@@ -4,17 +4,26 @@ from pydantic import AwareDatetime
 
 
 class Report(BaseOCTIObject):
+    """Represent the Report model."""
     name: str
     published: AwareDatetime
     description: str | None = None
     report_types: list[str] | None = None
     labels: list[str] | None = None
     markings: list[str] | None = None
-
+    
     def _compute_stix_id(self) -> str:
+        """Build a deterministic STIX ID for this object.
+        Returns:
+            The generated STIX identifier.
+        """
         return pycti.Report.generate_id(name=self.name, published=self.published)
-
+    
     def to_input_variables(self) -> dict:
+        """Serialize the model into OpenCTI GraphQL payload.
+        Returns:
+            A dictionary matching OpenCTI input variable names.
+        """
         input_variables = {
             "stix_id": self._compute_stix_id(),
             "name": self.name,

@@ -40,11 +40,27 @@ class CreateReportParameters(BaseActionParameters):
     @field_validator("report_types", "labels", mode="before")
     @classmethod
     def _parse_csv(cls, value: str | None) -> list[str] | None:
+        """Convert a comma-separated string into a cleaned list of values.
+
+        Args:
+            value: Raw comma-separated parameter from the action form.
+
+        Returns:
+            A list of trimmed items, or None when no value was provided.
+        """
         return parse_csv_list(value) if value else None
 
     @field_validator("publication_date", mode="before")
     @classmethod
     def _parse_datetimes(cls, value: str | None) -> str | None:
+        """Normalize supported datetime input into ISO 8601 UTC format.
+
+        Args:
+            value: Raw datetime string from the action form.
+
+        Returns:
+            The normalized datetime string, or the original value if empty/non-string.
+        """
         if not isinstance(value, str) or not value:
             return value
 
@@ -94,6 +110,7 @@ class CreateReport(BaseAction):
 
 
 def main() -> None:
+    """Action entry point."""
     CreateReport(SCRIPT_NAME).run()
 
 

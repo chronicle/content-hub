@@ -14,10 +14,16 @@ except Exception:
 
 
 class _OpenCTIMixin:
+    """Mixin providing OpenCTI integration identity, script naming, and API client setup."""
 
     INTEGRATION_IDENTIFIER: str = "OpenCTI"
 
     def __init__(self, script_name: str) -> None:
+        """Initialize the instance.
+
+        Args:
+            script_name: str value.
+        """
         script_name = self.build_script_name(script_name)
         super().__init__(script_name)  # type: ignore[call-arg]
 
@@ -26,13 +32,16 @@ class _OpenCTIMixin:
 
     @property
     def soar_action(self) -> SiemplifyAction:
+        """Return the underlying SiemplifyAction SDK object."""
         return super().soar_action  # type: ignore[return-value]
 
     @classmethod
     def build_script_name(cls, action_name: str) -> str:
+        """Build a platform-compatible script name for an action."""
         return f"{cls.INTEGRATION_IDENTIFIER} - {action_name}"
 
     def _init_api_clients(self) -> OpenCTIClient:
+        """Initialize and return the OpenCTI API client."""
         octi_url: str = extract_configuration_param(
             self.soar_action,
             provider_name=self.INTEGRATION_IDENTIFIER,
@@ -67,18 +76,27 @@ class _OpenCTIMixin:
 
     @property
     def api_client(self) -> OpenCTIClient:
+        """Override api_client typing."""
         return super().api_client  # type: ignore[return-value]
 
 
 class BaseAction(_OpenCTIMixin, Action):
+    """Base class for OpenCTI actions."""
 
 
 class EntityNotFoundError(EnrichActionError):
+    """Raised when an entity is not found in OpenCTI."""
 
 
 class BaseEnrichAction(_OpenCTIMixin, EnrichAction):
+    """Base class for OpenCTI enrichment actions."""
 
     def __init__(self, script_name: str) -> None:
+        """Initialize the instance.
+
+        Args:
+            script_name: str value.
+        """
         super().__init__(script_name)
 
         # Track identifiers for later use in output_message
@@ -86,6 +104,12 @@ class BaseEnrichAction(_OpenCTIMixin, EnrichAction):
         self._failed_identifiers: list[str] = []
 
     def _on_entity_failure(self, current_entity: Entity, error: Exception) -> None:
+        """Record per-entity enrichment failures and classify not-found cases separately.
+
+        Args:
+            current_entity: Entity that failed enrichment.
+            error: Raised exception wrapped by the enrichment framework.
+        """
         identifier = current_entity.original_identifier
 
         # Every exceptions raised in _perform_action is wrapped in `EnrichActionError`
@@ -98,6 +122,7 @@ class BaseEnrichAction(_OpenCTIMixin, EnrichAction):
         self.json_results[identifier] = {"execution_status": str(cause)}
 
     def _finalize_action_on_success(self) -> None:
+        """Build the final action status message from success, not-found, and failure buckets."""
         enriched_identifiers = [e.original_identifier for e in self.entities_to_update]
 
         if (

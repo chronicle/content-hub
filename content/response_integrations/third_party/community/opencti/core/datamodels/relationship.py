@@ -4,6 +4,7 @@ from pydantic import AwareDatetime
 
 
 class Relationship(BaseOCTIObject):
+    """Represent the Relationship model."""
     relationship_type: str
     source_ref: str
     target_ref: str
@@ -11,8 +12,12 @@ class Relationship(BaseOCTIObject):
     first_seen: AwareDatetime | None = None
     last_seen: AwareDatetime | None = None
     markings: list[str] | None = None
-
+    
     def _compute_stix_id(self) -> str:
+        """Build a deterministic STIX ID for this object.
+        Returns:
+            The generated STIX identifier.
+        """
         return pycti.StixCoreRelationship.generate_id(
             relationship_type=self.relationship_type,
             source_ref=self.source_ref,
@@ -20,8 +25,12 @@ class Relationship(BaseOCTIObject):
             start_time=self.first_seen.isoformat() if self.first_seen else None,
             stop_time=self.last_seen.isoformat() if self.last_seen else None,
         )
-
+    
     def to_input_variables(self) -> dict:
+        """Serialize the model into OpenCTI GraphQL payload.
+        Returns:
+            A dictionary matching OpenCTI input variable names.
+        """
         input_variables = {
             "stix_id": self._compute_stix_id(),
             "fromId": self.source_ref,

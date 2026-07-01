@@ -44,6 +44,14 @@ class CreateRelationshipParameters(BaseActionParameters):
     @field_validator("first_seen", "last_seen", mode="before")
     @classmethod
     def _parse_datetimes(cls, value: str | None) -> str | None:
+        """Normalize supported datetime input into ISO 8601 UTC format.
+
+        Args:
+            value: Raw datetime string from the action form.
+
+        Returns:
+            The normalized datetime string, or the original value if empty/non-string.
+        """
         if not isinstance(value, str) or not value:
             return value
 
@@ -95,6 +103,7 @@ class CreateRelationship(BaseAction):
 
 
 def main() -> None:
+    """Action entry point."""
     CreateRelationship(SCRIPT_NAME).run()
 
 

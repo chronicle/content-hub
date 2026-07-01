@@ -37,6 +37,14 @@ class CreateToolParameters(BaseActionParameters):
     @field_validator("tool_types", "labels", mode="before")
     @classmethod
     def _parse_csv(cls, value: str | None) -> list[str] | None:
+        """Convert a comma-separated string into a cleaned list of values.
+
+        Args:
+            value: Raw comma-separated parameter from the action form.
+
+        Returns:
+            A list of trimmed items, or None when no value was provided.
+        """
         return parse_csv_list(value) if value else None
 
 
@@ -81,6 +89,7 @@ class CreateTool(BaseAction):
 
 
 def main() -> None:
+    """Action entry point."""
     CreateTool(SCRIPT_NAME).run()
 
 

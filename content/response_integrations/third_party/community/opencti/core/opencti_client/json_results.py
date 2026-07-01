@@ -5,6 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class BaseJSONResult(BaseModel, ABC):
+    """Base class for action JSON result models."""
+
     model_config = ConfigDict(
         # Ignore extra fields that are not defined in the model without raising a validation error
         extra="ignore",
@@ -20,6 +22,8 @@ class BaseJSONResult(BaseModel, ABC):
 
 
 class BaseObjectJSONResult(BaseJSONResult):
+    """Shared JSON result fields for OpenCTI object creation actions."""
+
     id: str = Field(
         description="The unique identifier of the object on OpenCTI",
         examples=["20f7568f-e6f4-4bcc-8cc8-d6d5ba366622"],
@@ -50,6 +54,8 @@ class BaseObjectJSONResult(BaseJSONResult):
 
 
 class IncidentJSONResult(BaseObjectJSONResult):
+    """Result of `CreateIncident` action."""
+
     entity_type: Literal["Incident"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Incident"],
@@ -57,6 +63,8 @@ class IncidentJSONResult(BaseObjectJSONResult):
 
 
 class IncidentResponseJSONResult(BaseObjectJSONResult):
+    """Result of `CreateIncidentResponse` action."""
+
     entity_type: Literal["Case-Incident"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Case-Incident"],
@@ -64,6 +72,8 @@ class IncidentResponseJSONResult(BaseObjectJSONResult):
 
 
 class RequestForInformationJSONResult(BaseObjectJSONResult):
+    """Result of `CreateRequestForInformation` action."""
+
     entity_type: Literal["Case-Rfi"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Case-Rfi"],
@@ -71,6 +81,8 @@ class RequestForInformationJSONResult(BaseObjectJSONResult):
 
 
 class RequestForTakedownJSONResult(BaseObjectJSONResult):
+    """Result of `CreateRequestForTakedown` action."""
+
     entity_type: Literal["Case-Rft"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Case-Rft"],
@@ -79,6 +91,7 @@ class RequestForTakedownJSONResult(BaseObjectJSONResult):
 
 class ObservableJSONResult(BaseObjectJSONResult):
     # Entity type can vary for observables depending on API projection.
+    """Result of `CreateObservable` action."""
     entity_type: str = Field(
         description="The type of the observable object on OpenCTI",
         examples=["Stix-Cyber-Observable"],
@@ -86,6 +99,8 @@ class ObservableJSONResult(BaseObjectJSONResult):
 
 
 class ReportJSONResult(BaseObjectJSONResult):
+    """Result of `CreateReport` action."""
+
     entity_type: Literal["Report"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Report"],
@@ -93,6 +108,8 @@ class ReportJSONResult(BaseObjectJSONResult):
 
 
 class GroupingJSONResult(BaseObjectJSONResult):
+    """Result of `CreateGrouping` action."""
+
     entity_type: Literal["Grouping"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Grouping"],
@@ -100,6 +117,8 @@ class GroupingJSONResult(BaseObjectJSONResult):
 
 
 class RelationshipJSONResult(BaseObjectJSONResult):
+    """Result of `CreateRelationship` action."""
+
     entity_type: str = Field(
         description="The type of the object on OpenCTI",
         examples=["related-to", "stix-core-relationship"],
@@ -107,6 +126,8 @@ class RelationshipJSONResult(BaseObjectJSONResult):
 
 
 class VulnerabilityJSONResult(BaseObjectJSONResult):
+    """Result of `CreateVulnerability` action."""
+
     entity_type: Literal["Vulnerability"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Vulnerability"],
@@ -114,6 +135,8 @@ class VulnerabilityJSONResult(BaseObjectJSONResult):
 
 
 class MalwareJSONResult(BaseObjectJSONResult):
+    """Result of `CreateMalware` action."""
+
     entity_type: Literal["Malware"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Malware"],
@@ -121,6 +144,8 @@ class MalwareJSONResult(BaseObjectJSONResult):
 
 
 class ThreatActorGroupJSONResult(BaseObjectJSONResult):
+    """Result of `CreateThreatActorGroup` action."""
+
     entity_type: Literal["Threat-Actor-Group"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Threat-Actor-Group"],
@@ -128,6 +153,8 @@ class ThreatActorGroupJSONResult(BaseObjectJSONResult):
 
 
 class IntrusionSetJSONResult(BaseObjectJSONResult):
+    """Result of `CreateIntrusionSet` action."""
+
     entity_type: Literal["Intrusion-Set"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Intrusion-Set"],
@@ -135,6 +162,8 @@ class IntrusionSetJSONResult(BaseObjectJSONResult):
 
 
 class CampaignJSONResult(BaseObjectJSONResult):
+    """Result of `CreateCampaign` action."""
+
     entity_type: Literal["Campaign"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Campaign"],
@@ -142,6 +171,8 @@ class CampaignJSONResult(BaseObjectJSONResult):
 
 
 class ToolJSONResult(BaseObjectJSONResult):
+    """Result of `CreateTool` action."""
+
     entity_type: Literal["Tool"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Tool"],
@@ -149,6 +180,8 @@ class ToolJSONResult(BaseObjectJSONResult):
 
 
 class AttackPatternJSONResult(BaseObjectJSONResult):
+    """Result of `CreateAttackPattern` action."""
+
     entity_type: Literal["Attack-Pattern"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Attack-Pattern"],
@@ -156,6 +189,8 @@ class AttackPatternJSONResult(BaseObjectJSONResult):
 
 
 class IndicatorJSONResult(BaseObjectJSONResult):
+    """Result of `CreateIndicator` action."""
+
     entity_type: Literal["Indicator"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Indicator"],
@@ -163,6 +198,8 @@ class IndicatorJSONResult(BaseObjectJSONResult):
 
 
 class SightingJSONResult(BaseObjectJSONResult):
+    """Result of `CreateSighting` action."""
+
     entity_type: Literal["Sighting", "stix-sighting-relationship"] = Field(
         description="The type of the object on OpenCTI",
         examples=["Sighting", "stix-sighting-relationship"],
@@ -170,7 +207,7 @@ class SightingJSONResult(BaseObjectJSONResult):
 
 
 class AddObjectToContainerJSONResult(BaseJSONResult):
-    """Result for `AddObjectToContainer` action.
+    """Result of `AddObjectToContainer` action.
 
     pycti's `add_stix_object_or_stix_relationship` methods return `True` on success and
     `False` on failure — it never returns the container payload.
