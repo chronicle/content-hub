@@ -6,6 +6,12 @@ from datetime import datetime, timezone
 
 from dateutil import parser as dtparser
 
+SCORE_COLORS = {
+    "green": "#99d7ca",
+    "yellow": "#fff371",
+    "red": "#fa903e",
+}
+
 regex_sha512 = r"[0-9a-fA-F]{128}"
 regex_sha256 = r"[0-9a-fA-F]{64}"
 regex_sha1 = r"[0-9a-fA-F]{40}"
@@ -23,7 +29,7 @@ def convert_date_format(date_str: str) -> str:
         A date string in ISO format as UTC.
     """
     if not isinstance(date_str, str):
-        return TypeError(f"Expected a string, got {type(date_str)}")
+        raise TypeError(f"Expected a string, got {type(date_str)}")
 
     try:
         # Preferred path: accept valid ISO datetime strings as-is.
@@ -50,13 +56,13 @@ def get_hash_type(value):
         The hash algorithm name ("sha512", "sha256", "sha1", or "md5") if the
         input matches a known digest length; otherwise, None.
     """
-    if re.match(regex_sha512, value):
+    if re.fullmatch(regex_sha512, value):
         return "sha512"
-    elif re.match(regex_sha256, value):
+    elif re.fullmatch(regex_sha256, value):
         return "sha256"
-    elif re.match(regex_sha1, value):
+    elif re.fullmatch(regex_sha1, value):
         return "sha1"
-    elif re.match(regex_md5, value):
+    elif re.fullmatch(regex_md5, value):
         return "md5"
     else:
         return None
@@ -90,3 +96,12 @@ def parse_csv_list(value: str | None, separator: str = ",") -> list[str]:
     if not value:
         return []
     return [item.strip() for item in value.split(separator) if item and item.strip()]
+
+
+def score_to_color(score: int) -> str:
+    """Map a numeric score to an hexadecimal color code."""
+    if score >= 50:
+        return SCORE_COLORS["red"]
+    if score >= 10:
+        return SCORE_COLORS["yellow"]
+    return SCORE_COLORS["green"]
