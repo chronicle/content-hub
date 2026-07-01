@@ -93,7 +93,7 @@ def main():
                     header: bytes = zip_file_content.read(6)
                     if header == b'7z\xbc\xaf\x27\x1c':
                         is_7z = True
-                except Exception:
+                except OSError:
                     pass
                 finally:
                     zip_file_content.seek(0)
