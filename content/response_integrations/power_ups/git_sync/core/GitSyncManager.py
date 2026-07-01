@@ -669,7 +669,7 @@ class GitSyncManager:
             del self._cache[item_name]
 
     def install_marketplace_integration(
-        self, integration_name: str, fallback_version: str = None
+        self, integration_name: str, fallback_version: str | None = None
     ) -> bool:
         """Installs or update an integration from the marketplace.
 
@@ -734,13 +734,13 @@ class GitSyncManager:
         """
         version = next(
             (
-                x.get("installedVersion")
+                x.get("installedVersion", x.get("installed_version"))
                 for x in self._marketplace_integrations
                 if x["identifier"] == integration_name
             ),
             "0.0",
         )
-        return version or "0.0"
+        return str(version) if version else "0.0"
 
 
 class WorkflowInstaller:
@@ -1215,7 +1215,7 @@ class WorkflowInstaller:
         ]
 
         configured_instances = [
-            x for x in filtered_instances if x.instance.get("isConfigured")
+            x for x in filtered_instances if x.is_configured
         ]
         if configured_instances:
             return sorted(configured_instances, key=lambda x: x.instance_name or "")

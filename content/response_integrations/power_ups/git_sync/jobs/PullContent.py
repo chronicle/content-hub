@@ -340,7 +340,12 @@ def main():
                             valid_record_id,
                         )
                         try:
-                            created_vf = json.loads(response_content.decode("utf-8"))
+                            if isinstance(response_content, bytes):
+                                created_vf = json.loads(response_content.decode("utf-8"))
+                            elif isinstance(response_content, str):
+                                created_vf = json.loads(response_content)
+                            else:
+                                created_vf = response_content
                             created_id = created_vf.get("id")
                             if created_id:
                                 siemplify.LOGGER.info(
@@ -581,7 +586,8 @@ def main():
                 if "items" in logo_data:
 
                     for item in logo_data.get("items", []):
-                        if "value" not in item or item.get("value").strip() == "":
+                        val = item.get("value")
+                        if val is None or (isinstance(val, str) and not val.strip()):
                             item["value"] = "False"
                         elif item.get("displayName") == "CompanyLogo":
                             val = item["value"]

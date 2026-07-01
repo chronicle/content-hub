@@ -23,6 +23,28 @@ from ..core.GitSyncManager import GitSyncManager
 SCRIPT_NAME = "Push Connector"
 
 
+def get_fields(rule):
+    """Extract iterable fields from either response format."""
+    if isinstance(rule, list):
+        return rule
+    if isinstance(rule, dict):
+        if "familyFields" in rule or "systemFields" in rule:
+            return rule.get("familyFields", []) + rule.get("systemFields", [])
+        elif "mapping_rules" in rule:
+            return rule.get("mapping_rules", [])
+        elif "mappingRules" in rule:
+            return rule.get("mappingRules", [])
+    return []
+
+
+def get_mapping_rule(r, rule):
+    """Get the mappingRule dict from either format."""
+    if isinstance(r, dict) and "mappingRule" in r:
+        return r["mappingRule"]
+    return r
+
+
+
 @output_handler
 def main():
     siemplify = SiemplifyJob()
@@ -82,27 +104,6 @@ def main():
                                 product=record["product"],
                                 event_name=record["eventName"],
                             )
-
-                            def get_fields(rule):
-                                """Extract iterable fields from either response format."""
-                                if isinstance(rule, list):
-                                    return rule
-                                if isinstance(rule, dict):
-                                    if "familyFields" in rule or "systemFields" in rule:
-                                        return rule.get("familyFields", []) + rule.get(
-                                            "systemFields", []
-                                        )
-                                    elif "mapping_rules" in rule:
-                                        return rule.get("mapping_rules", [])
-                                    elif "mappingRules" in rule:
-                                        return rule.get("mappingRules", [])
-                                return []
-
-                            def get_mapping_rule(r, rule):
-                                """Get the mappingRule dict from either format."""
-                                if "mappingRule" in r:
-                                    return r["mappingRule"]
-                                return r
 
                             for r in get_fields(rule):
                                 mapping_rule = get_mapping_rule(r, rule)

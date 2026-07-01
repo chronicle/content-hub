@@ -302,8 +302,12 @@ class SiemplifyApiClient:
             integration_identifier=integration_identifier,
         )
 
-    def get_ide_cards(self, include_staging=False):
-        return get_ide_cards(self.siemplify_soar, include_staging)
+    def get_ide_cards(
+        self,
+        identifier: str | None = None,
+        include_staging: bool = False,
+    ) -> list[SingleJson]:
+        return get_ide_cards(self.siemplify_soar, identifier, include_staging) #Qa fixes
 
     def get_ide_item(self, item_id, item_type):
         return get_ide_item(self.siemplify_soar, item_id, item_type)

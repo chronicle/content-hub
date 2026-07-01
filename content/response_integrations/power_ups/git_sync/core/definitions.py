@@ -208,7 +208,7 @@ class Mapping(Content):
         for rule in self.rules:
             if isinstance(rule, dict) and ("familyFields" in rule or "systemFields" in rule):
                 for fam_fields in rule.get("familyFields", []) + rule.get("systemFields", []):
-                    if isinstance(fam_fields, dict) and "mappingRule" in fam_fields:
+                    if isinstance(fam_fields, dict) and isinstance(fam_fields.get("mappingRule"), dict):
                         fam_fields["mappingRule"]["id"] = 0
                         fam_fields["mappingRule"]["creationTimeUnixTimeInMs"] = 0
                         fam_fields["mappingRule"]["modificationTimeUnixTimeInMs"] = 0
@@ -274,9 +274,7 @@ class Integration(Content):
         self.has_resources = False
         for file in [x for x in self.zipfile.namelist() if not x.endswith("/")]:
             try:
-                if file.startswith("ActionsDefinitions") or (
-                    file.startswith("Actions") and not file.startswith("ActionsScripts")
-                ):
+                if file.startswith("Actions") and not file.startswith("ActionsScripts"):
                     self.actions.append(json.loads(self.zipfile.read(file)))
                 elif file.startswith("Jobs") and not file.startswith("JobsScrips"):
                     self.jobs.append(json.loads(self.zipfile.read(file)))

@@ -356,7 +356,7 @@ class GitContentManager:
             f"{PLAYBOOKS_PATH}/{playbook.category}/{playbook.name}",
         )
 
-    def push_block(self, block: Workflow, category: str = None) -> None:
+    def push_block(self, block: Workflow, category: str | None = None) -> None:
         """Writes a block to the repo
 
         Args:
