@@ -11,11 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-name: Enrich Entities
-description: Enrich entities with ProofPoint Email Protection.
-integration_identifier: ProofPointPS
-parameters: []
-dynamic_results_metadata: []
-creator: Admin
-simulation_data_json: '{"Entities": ["HOSTNAME", "USERUNIQNAME"]}'
