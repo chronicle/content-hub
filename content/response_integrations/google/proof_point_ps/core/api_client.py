@@ -14,11 +14,10 @@
 
 from __future__ import annotations
 
-import datetime
 from typing import TYPE_CHECKING
 
 from .api_utils import validate_response
-from .constants import QUARANTINE_ENDPOINT, TIME_FORMAT
+from .constants import QUARANTINE_ENDPOINT
 from .data_parser import parse_quarantine_records
 from .exceptions import ProofPointPSHTTPError
 
