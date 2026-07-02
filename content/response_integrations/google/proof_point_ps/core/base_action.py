@@ -96,7 +96,7 @@ class BaseProofPointPSAction(Action, ABC):
         guids: list[str],
         folder_name: str,
         fail_on_missing_guid: bool = True,
-    ) -> list[QuarantineRecord] | None:
+    ) -> list[QuarantineRecord]:
         """Pre-validate GUIDs before executing any action.
 
         Distinguishes between GUIDs that do not exist globally vs. GUIDs that exist but

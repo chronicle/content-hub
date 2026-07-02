@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import datetime
 import email
 import pathlib
 import re
@@ -24,7 +25,6 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
-import datetime
 from ..core.constants import DOWNLOAD_ACTION_NAME, TIME_FORMAT
 from ..core.exceptions import ProofPointPSError, ProofPointPSHTTPError
 
@@ -57,12 +57,14 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
             is_mandatory=True,
             print_value=True,
         )
-        overwrite_raw = self.soar_action.parameters.get("Overwrite")
-        if overwrite_raw is None:
-            self.params.overwrite = True
-        else:
-            self.params.overwrite = str(overwrite_raw).lower() == "true"
-        self.soar_action.LOGGER.info(f"Overwrite: {self.params.overwrite}")
+        self.params.overwrite = extract_action_param(
+            self.soar_action,
+            param_name="Overwrite",
+            is_mandatory=True,
+            print_value=True,
+            input_type=bool,
+            default_value=True,
+        )
         self.params.save_to_case_wall = extract_action_param(
             self.soar_action,
             param_name="Save To Case Wall",
