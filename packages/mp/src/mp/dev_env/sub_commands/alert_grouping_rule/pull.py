@@ -1,0 +1,156 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+import logging
+from pathlib import Path  # noqa: TC003
+from typing import Annotated
+
+import typer
+
+import mp.core.file_utils
+from mp.dev_env.sub_commands.pull import pull_app
+from mp.dev_env.utils import find_entity_identifier, get_backend_api, load_dev_env_config
+from mp.telemetry import track_command
+
+logger: logging.Logger = logging.getLogger(__name__)
+
+
+@pull_app.command(name="alert-grouping-rule")
+@track_command
+def pull_alert_grouping_rule(
+    rule_name_or_id: Annotated[
+        str | None, typer.Argument(help="The alert grouping rule name or identifier to pull.")
+    ] = None,
+    dst: Annotated[
+        Path | None,
+        typer.Option(
+            "--custom",
+            help="Destination file. Defaults to 'content/alert_grouping_rules/<name>.yaml'.",
+        ),
+    ] = None,
+    *,
+    pull_all: Annotated[
+        bool,
+        typer.Option(
+            "--all",
+            help="Pull all alert grouping rules from the environment.",
+        ),
+    ] = False,
+    list_only: Annotated[
+        bool,
+        typer.Option(
+            "--list",
+            help="List all alert grouping rules available in the environment without pulling.",
+        ),
+    ] = False,
+) -> None:
+    """Pull alert grouping rules from the SOAR environment.
+
+    Raises:
+        typer.Exit: If the pull fails or invalid arguments are provided.
+
+    """
+    if rule_name_or_id is None and not pull_all and not list_only:
+        logger.error("You must specify either a rule name/identifier, or use the --all or --list flags.")
+        raise typer.Exit(1)
+
+    config = load_dev_env_config()
+    backend_api = get_backend_api(config)
+
+    logger.info("Fetching installed alert grouping rules...")
+    try:
+        installed_rules = backend_api.list_alert_grouping_rules()
+    except Exception as e:
+        logger.exception("Failed to fetch installed alert grouping rules")
+        raise typer.Exit(1) from e
+
+    if list_only:
+        _list_alert_grouping_rules(installed_rules)
+        return
+
+    if pull_all:
+        _pull_all_alert_grouping_rules(installed_rules, dst)
+        return
+
+    # Standard single pull
+    if rule_name_or_id is None:
+        logger.error("rule_name_or_id is required if not pulling or listing all")
+        raise typer.Exit(1)
+    rule_id = find_entity_identifier(rule_name_or_id, installed_rules, "Alert Grouping Rule")
+
+    # In the Alert Grouping Rule API, list usually returns all fields, but we will use the matched dict directly,
+    # or download it if there was a separate download method. We don't have download_alert_grouping_rule,
+    # so we'll just extract it from installed_rules.
+    rule_data = next(
+        (
+            r
+            for r in installed_rules
+            if any(r.get(k) == rule_id for k in ("Identifier", "identifier", "Id", "id"))
+        ),
+        None,
+    )
+
+    if not rule_data:
+        logger.error("Could not find rule data for ID %s", rule_id)
+        raise typer.Exit(1)
+
+    _save_alert_grouping_rule(rule_data, dst)
+
+
+def _list_alert_grouping_rules(installed_rules: list[dict]) -> None:
+    logger.info("Available Alert Grouping Rules:")
+    for rule in installed_rules:
+        logger.info("  - Name: '%s' (ID: %s)", rule.get("name", "Unknown"), rule.get("id", "Unknown"))
+
+
+def _pull_all_alert_grouping_rules(installed_rules: list[dict], dst: Path | None) -> None:
+    logger.info("Pulling all %d alert grouping rules...", len(installed_rules))
+    for rule in installed_rules:
+        rule_id = rule.get("id")
+        rule_name = rule.get("name") or rule_id
+        if not rule_id:
+            continue
+
+        try:
+            _save_alert_grouping_rule(rule, dst)
+        except Exception:
+            logger.exception("Skipping alert grouping rule '%s' due to an error.", rule_name)
+
+    logger.info("Successfully finished pulling all alert grouping rules.")
+
+
+def _save_alert_grouping_rule(rule_data: dict, dst: Path | None) -> None:
+    # Determine destination path
+    rule_id = rule_data.get("id", "Unknown")
+    raw_name = str(rule_data.get("displayName") or rule_data.get("name") or rule_id)
+    safe_name = raw_name.replace("/", "_").replace(" ", "_")
+    file_name = f"{safe_name}.yaml"
+
+    if dst is None:
+        rules_root = mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir()
+        actual_dst = rules_root / file_name
+    elif dst.is_dir() or dst.suffix not in {".yaml", ".yml"}:
+        dst.mkdir(parents=True, exist_ok=True)
+        actual_dst = dst / file_name
+    else:
+        actual_dst = dst
+
+    logger.info("Saving alert grouping rule to %s...", actual_dst)
+    try:
+        mp.core.file_utils.save_yaml(rule_data, actual_dst)
+    except Exception as e:
+        logger.exception("Failed to save alert grouping rule to '%s'", actual_dst)
+        raise typer.Exit(1) from e

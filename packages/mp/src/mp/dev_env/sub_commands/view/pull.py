@@ -25,7 +25,7 @@ import mp.core.file_utils
 from mp.build_project.restructure.views.deconstruct import ViewDeconstructor
 from mp.core.data_models.common.overview.metadata import Overview
 from mp.dev_env.sub_commands.pull import pull_app
-from mp.dev_env.utils import get_backend_api, load_dev_env_config
+from mp.dev_env.utils import find_entity_identifier, get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -63,7 +63,10 @@ def pull_view(
         logger.exception("Failed to fetch installed views")
         raise typer.Exit(1) from e
 
-    view_identifier = _find_view_identifier(view_name_or_id, installed_views)
+    view_identifier_raw = find_entity_identifier(view_name_or_id, installed_views, "View")
+    if view_identifier_raw is None:
+        raise typer.Exit(1)
+    view_identifier = str(view_identifier_raw)
 
     # Determine destination path
     if dst is None:
@@ -103,31 +106,6 @@ def download_and_deconstruct_view(backend_api: BackendAPI, view_identifier: str,
     except Exception as e:
         logger.exception("Deconstruction failed for view '%s'", view_identifier)
         raise typer.Exit(1) from e
-
-
-def _find_view_identifier(view_name_or_id: str, installed_views: list[dict[str, Any]] | None) -> str:
-    """Find the view identifier matching the given name or identifier.
-
-    Args:
-        view_name_or_id: The view name or identifier to search for.
-        installed_views: The list of installed views fetched from SOAR.
-
-    Returns:
-        The matching view identifier.
-
-    Raises:
-        typer.Exit: If the view is not found in the installed views.
-
-    """
-    for view in installed_views or []:
-        identifier = view.get("Identifier") or view.get("identifier")
-        name = view.get("Name") or view.get("name")
-
-        if identifier and (view_name_or_id.lower() == identifier.lower() or view_name_or_id == name):
-            return cast("str", identifier)
-
-    logger.error("View '%s' not found in installed views in SOAR platform.", view_name_or_id)
-    raise typer.Exit(1)
 
 
 def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
