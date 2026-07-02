@@ -186,9 +186,7 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
                     widget.widget_size = WidgetSize.from_string(w_d["size"])
                 widgets.append(widget)
             elif title:
-                err_msg = f"Widget '{title}' declared in widgets_details but not found in widgets directory."
-                logger.error(err_msg)
-                raise ValueError(err_msg)
+                logger.warning(f"Widget '{title}' declared in widgets_details but not found in widgets directory.")
 
         ov: Self = cls._from_non_built(non_built_view)
         ov.widgets = widgets
