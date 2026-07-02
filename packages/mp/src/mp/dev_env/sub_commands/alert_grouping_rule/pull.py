@@ -138,7 +138,7 @@ def _save_alert_grouping_rule(rule_data: dict, dst: Path | None) -> None:
 
     logger.info("Saving alert grouping rule to %s...", actual_dst)
     try:
-        mp.core.file_utils.write_yaml_to_file(rule_data, actual_dst)
+        mp.core.file_utils.save_yaml(rule_data, actual_dst)
     except Exception as e:
         logger.exception("Failed to save alert grouping rule to '%s'", actual_dst)
         raise typer.Exit(1) from e

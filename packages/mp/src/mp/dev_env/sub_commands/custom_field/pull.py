@@ -131,7 +131,7 @@ def _download_and_save_custom_field(
 
     logger.info("Saving custom field to %s...", actual_dst)
     try:
-        mp.core.file_utils.write_yaml_to_file(field_data, actual_dst)
+        mp.core.file_utils.save_yaml(field_data, actual_dst)
     except Exception as e:
         logger.exception("Failed to save custom field to '%s'", actual_dst)
         raise typer.Exit(1) from e
