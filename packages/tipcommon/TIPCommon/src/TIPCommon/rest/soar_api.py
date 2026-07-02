@@ -2535,7 +2535,7 @@ def save_playbook(
 
 def get_playbooks_workflow_menu_cards(
     chronicle_soar: ChronicleSOAR,
-    api_payload: list[int, int],
+    api_payload: list[int],
 ) -> list[SingleJson]:
     """Gets playbooks workflow menu cards.
 
@@ -2555,7 +2555,7 @@ def get_playbooks_workflow_menu_cards(
 
 def get_playbooks_workflow_menu_cards_with_env(
     chronicle_soar: ChronicleSOAR,
-    api_payload: list[int, int],
+    api_payload: list[int],
 ) -> list[SingleJson]:
     """Get playbooks workflow menu cards with environment filter.
     Args:
@@ -2651,8 +2651,8 @@ def get_visual_families(
         data = response.json()
 
     families: list[VisualFamily] = []
-    if isinstance(data, dict) and "visual_families" in data:
-        families = [VisualFamily.from_json(vf) for vf in data["visualFamilies"]]
+    if isinstance(data, dict) and "visualFamilies" in data:
+        families = [VisualFamily.from_json(vf) for vf in data["visualFamilies"]] #Qa fixes
     elif isinstance(data, list):
         families = [VisualFamily.from_json(vf) for vf in data]
     elif isinstance(data, dict):
@@ -2783,6 +2783,8 @@ def get_block_lists_details(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_block_lists_details()
+    if isinstance(response, list):
+        return response
     validate_response(response, validate_json=True)
 
     raw_data = response.json()
@@ -2829,6 +2831,9 @@ def get_all_model_block_records(chronicle_soar: ChronicleSOAR) -> list[SingleJso
     """Get all model block records."""
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_all_model_block_records()
+    if isinstance(response, list):
+        return response
+
     try:
         validate_response(response, validate_json=True)
         return response.json()

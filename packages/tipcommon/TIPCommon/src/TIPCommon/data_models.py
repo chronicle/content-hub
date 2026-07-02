@@ -2400,7 +2400,7 @@ class CustomList:
     modification_time_unix_time_in_ms: int
 
     @classmethod
-    def from_legacy_or_1p(cls, data):
+    def from_legacy_or_1p(cls, data: SingleJson) -> "CustomList":
         envs = data.get("environments")
         if envs is None:
             envs_json = data.get("environmentsJson")
@@ -2422,7 +2422,7 @@ class CustomList:
             modification_time_unix_time_in_ms=data.get("modificationTimeUnixTimeInMs"),
         )
 
-    def to_legacy(self):
+    def to_legacy(self) -> SingleJson:
         return {
             "entityIdentifier": self.entity_identifier,
             "category": self.category,
@@ -2433,7 +2433,7 @@ class CustomList:
             "modificationTimeUnixTimeInMs": self.modification_time_unix_time_in_ms,
         }
 
-    def to_1p(self):
+    def to_1p(self)-> SingleJson:
         return {
             "category": self.category,
             "entityIdentifier": self.entity_identifier,
@@ -2825,7 +2825,7 @@ class BlockRecord:
     environments: list[str]
 
     @classmethod
-    def from_legacy_or_1p(cls, data: SingleJson) -> "Entity":
+    def from_legacy_or_1p(cls, data: SingleJson) -> "BlockRecord":
         """
         Factory method to create an Entity instance from a dictionary.
         Handles cases where environments might be a JSON string or a list.

@@ -1150,7 +1150,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                 data["params"] = data["parameters"]
                 detailed_data_list.append(data)
             else:
-                print(f"Failed to fetch details for {name}")
+                self.chronicle_soar.LOGGER.error(f"Failed to fetch details for {name}") #QA fixes
 
         return detailed_data_list
 
