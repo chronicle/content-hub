@@ -72,6 +72,13 @@ from .playbooks import (
     is_built_playbook,
     is_non_built_playbook,
 )
+from .views import (
+    create_or_get_views_root_dir,
+    get_view_out_base_dir,
+    get_view_out_dir,
+    is_built_view,
+    is_non_built_view,
+)
 
 __all__: list[str] = [
     "VALID_REPEATED_FILES",
@@ -87,6 +94,7 @@ __all__: list[str] = [
     "create_or_get_out_dir",
     "create_or_get_out_integrations_dir",
     "create_or_get_playbooks_root_dir",
+    "create_or_get_views_root_dir",
     "discover_core_modules",
     "flatten_dir",
     "get_all_marketplace_integrations_paths",
@@ -99,13 +107,17 @@ __all__: list[str] = [
     "get_playbook_base_folders_paths",
     "get_playbook_out_base_dir",
     "get_playbook_out_dir",
+    "get_view_out_base_dir",
+    "get_view_out_dir",
     "is_built",
     "is_built_playbook",
+    "is_built_view",
     "is_certified_integration",
     "is_half_built",
     "is_integration",
     "is_non_built_integration",
     "is_non_built_playbook",
+    "is_non_built_view",
     "is_python_file",
     "is_valid_source_path",
     "load_json_file",

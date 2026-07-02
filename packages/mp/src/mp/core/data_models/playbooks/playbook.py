@@ -22,6 +22,7 @@ import pydantic
 import mp.core.constants
 import mp.core.file_utils
 from mp.core import exclusions
+from mp.core.data_models.common.overview.metadata import Overview
 from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote, ReleaseNote
 from mp.core.data_models.playbooks.meta.display_info import PlaybookDisplayInfo
 from mp.core.data_models.playbooks.meta.metadata import (
@@ -29,7 +30,6 @@ from mp.core.data_models.playbooks.meta.metadata import (
     NonBuiltPlaybookMetadata,
     PlaybookMetadata,
 )
-from mp.core.data_models.playbooks.overview.metadata import Overview
 from mp.core.data_models.playbooks.step.metadata import Step
 from mp.core.data_models.playbooks.trigger.metadata import Trigger
 from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
@@ -37,6 +37,7 @@ from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from mp.core.data_models.common.overview.metadata import BuiltOverview, BuiltOverviewDetails, NonBuiltOverview
     from mp.core.data_models.playbooks.meta.access_permissions import BuiltAccessPermission
     from mp.core.data_models.playbooks.trigger.metadata import BuiltTrigger, NonBuiltTrigger
     from mp.core.data_models.playbooks.widget.metadata import (
@@ -45,7 +46,6 @@ if TYPE_CHECKING:
     )
 
     from .meta.display_info import NonBuiltPlaybookDisplayInfo
-    from .overview.metadata import BuiltOverview, BuiltOverviewDetails, NonBuiltOverview
     from .step.metadata import BuiltStep, NonBuiltStep
 
 

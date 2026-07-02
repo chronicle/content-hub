@@ -226,3 +226,45 @@ class BackendAPI:
         resp = self.session.post(url, json=payload)
         resp.raise_for_status()
         return resp.json()
+
+    def list_views(self) -> list[dict[str, Any]]:
+        """Get all installed view templates (cards) from the SOAR platform.
+
+        Returns:
+            list: Contains all view templates.
+
+        """
+        url: str = f"{self.api_root}/api/external/v1/case-overview/GetOverviewTemplateCards"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        return resp.json()
+
+    def download_view(self, template_identifier: str) -> dict[str, Any]:
+        """Download the full details of a view template by its identifier.
+
+        Args:
+            template_identifier: The identifier of the view template to download.
+
+        Returns:
+            dict: The response JSON containing the view template data.
+
+        """
+        url: str = f"{self.api_root}/api/external/v1/case-overview/GetFullOverviewTemplateDetails/{template_identifier}"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        return resp.json()
+
+    def upload_view(self, view_data: dict[str, Any]) -> dict[str, Any]:
+        """Upload/Save a view template to the SOAR platform.
+
+        Args:
+            view_data: The built view template data (OverviewTemplate and Roles).
+
+        Returns:
+            dict: The backend response after saving the view template.
+
+        """
+        url: str = f"{self.api_root}/api/external/v1/case-overview/SaveOverviewTemplate"
+        resp = self.session.post(url, json=view_data)
+        resp.raise_for_status()
+        return resp.json()
