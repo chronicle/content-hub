@@ -268,3 +268,104 @@ class BackendAPI:
         resp = self.session.post(url, json=view_data)
         resp.raise_for_status()
         return resp.json()
+
+    def list_custom_fields(self) -> list[dict[str, Any]]:
+        """List all custom fields from the SOAR platform.
+
+        Returns:
+            list[dict[str, Any]]: The list of custom fields.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        return resp.json().get("items", [])
+
+    def download_custom_field(self, field_id: int) -> dict[str, Any]:
+        """Download a custom field by ID from the SOAR platform.
+
+        Args:
+            field_id: The ID of the custom field.
+
+        Returns:
+            dict: The custom field details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields/{field_id}"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        return resp.json()
+
+    def create_custom_field(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Create a new custom field on the SOAR platform.
+
+        Args:
+            data: The custom field data.
+
+        Returns:
+            dict: The created custom field details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields"
+        resp = self.session.post(url, json=data)
+        resp.raise_for_status()
+        return resp.json()
+
+    def update_custom_field(self, field_id: int, data: dict[str, Any]) -> dict[str, Any]:
+        """Update an existing custom field on the SOAR platform.
+
+        Args:
+            field_id: The ID of the custom field.
+            data: The custom field data.
+
+        Returns:
+            dict: The updated custom field details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields/{field_id}"
+        resp = self.session.patch(url, json=data)
+        resp.raise_for_status()
+        return resp.json()
+
+    def list_alert_grouping_rules(self) -> list[dict[str, Any]]:
+        """List all alert grouping rules from the SOAR platform.
+
+        Returns:
+            list[dict[str, Any]]: The list of alert grouping rules.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        return resp.json().get("items", [])
+
+    def create_alert_grouping_rule(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Create a new alert grouping rule on the SOAR platform.
+
+        Args:
+            data: The alert grouping rule data.
+
+        Returns:
+            dict: The created alert grouping rule details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
+        resp = self.session.post(url, json=data)
+        resp.raise_for_status()
+        return resp.json()
+
+    def update_alert_grouping_rule(self, rule_id: int, data: dict[str, Any]) -> dict[str, Any]:
+        """Update an existing alert grouping rule on the SOAR platform.
+
+        Args:
+            rule_id: The ID of the alert grouping rule.
+            data: The alert grouping rule data.
+
+        Returns:
+            dict: The updated alert grouping rule details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules/{rule_id}"
+        resp = self.session.put(url, json=data)
+        resp.raise_for_status()
+        return resp.json()
