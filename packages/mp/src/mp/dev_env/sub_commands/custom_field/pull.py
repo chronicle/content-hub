@@ -68,6 +68,10 @@ def pull_custom_field(  # noqa: C901
         logger.error("You must specify either a custom field name/identifier, or use the --all or --list flags.")
         raise typer.Exit(1)
 
+    if pull_all and dst is not None:
+        logger.error("The --custom option cannot be used when pulling all custom fields.")
+        raise typer.Exit(1)
+
     config = load_dev_env_config()
     backend_api = get_backend_api(config)
 
@@ -115,7 +119,11 @@ def _download_and_save_custom_field(
 ) -> None:
     logger.info("Downloading custom field (ID: %s)...", field_id)
     try:
-        field_data = backend_api.download_custom_field(int(field_id))
+        numeric_id = int(field_id)
+        field_data = backend_api.download_custom_field(numeric_id)
+    except (ValueError, TypeError) as e:
+        logger.error("Invalid field ID '%s': Must be a numeric value.", field_id)  # noqa: TRY400
+        raise typer.Exit(1) from e
     except Exception as e:
         logger.exception("Failed to download custom field '%s'", field_id)
         raise typer.Exit(1) from e

@@ -288,7 +288,7 @@ class BackendAPI:
             field_id: The ID of the custom field.
 
         Returns:
-            dict: The custom field details.
+            The custom field details.
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/customFields/{field_id}"
@@ -303,7 +303,7 @@ class BackendAPI:
             data: The custom field data.
 
         Returns:
-            dict: The created custom field details.
+            The created custom field details.
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/customFields"
@@ -319,7 +319,7 @@ class BackendAPI:
             data: The custom field data.
 
         Returns:
-            dict: The updated custom field details.
+            The updated custom field details.
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/customFields/{field_id}"
@@ -331,7 +331,7 @@ class BackendAPI:
         """List all alert grouping rules from the SOAR platform.
 
         Returns:
-            list[dict[str, Any]]: The list of alert grouping rules.
+            The list of alert grouping rules.
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
@@ -346,7 +346,7 @@ class BackendAPI:
             data: The alert grouping rule data.
 
         Returns:
-            dict: The created alert grouping rule details.
+            The created alert grouping rule details.
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
@@ -362,7 +362,7 @@ class BackendAPI:
             data: The alert grouping rule data.
 
         Returns:
-            dict: The updated alert grouping rule details.
+            The updated alert grouping rule details.
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules/{rule_id}"

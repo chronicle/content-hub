@@ -31,7 +31,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @push_app.command(name="custom-field")
 @track_command
-def push_custom_field(
+def push_custom_field(  # noqa: C901, PLR0915
     field_file_or_name: Annotated[str, typer.Argument(help="The custom field YAML file path or name to push.")],
 ) -> None:
     """Push a custom field to the SOAR environment.
@@ -87,7 +87,11 @@ def push_custom_field(
         # Avoid trying to mutate id in the patch payload unless strictly required,
         # but passing it doesn't usually hurt.
         try:
-            backend_api.update_custom_field(int(existing_id), field_data)
+            numeric_id = int(existing_id)
+            backend_api.update_custom_field(numeric_id, field_data)
+        except (ValueError, TypeError) as e:
+            logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
+            raise typer.Exit(1) from e
         except Exception as e:
             logger.exception("Failed to update custom field '%s'", field_name)
             raise typer.Exit(1) from e

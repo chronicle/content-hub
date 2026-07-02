@@ -67,6 +67,10 @@ def pull_alert_grouping_rule(
         logger.error("You must specify either a rule name/identifier, or use the --all or --list flags.")
         raise typer.Exit(1)
 
+    if pull_all and dst is not None:
+        logger.error("The --custom option cannot be used when pulling all alert grouping rules.")
+        raise typer.Exit(1)
+
     config = load_dev_env_config()
     backend_api = get_backend_api(config)
 
@@ -94,7 +98,14 @@ def pull_alert_grouping_rule(
     # In the Alert Grouping Rule API, list usually returns all fields, but we will use the matched dict directly,
     # or download it if there was a separate download method. We don't have download_alert_grouping_rule,
     # so we'll just extract it from installed_rules.
-    rule_data = next((r for r in installed_rules if r.get("id") == rule_id or r.get("Id") == rule_id), None)
+    rule_data = next(
+        (
+            r
+            for r in installed_rules
+            if any(r.get(k) == rule_id for k in ("Identifier", "identifier", "Id", "id"))
+        ),
+        None,
+    )
 
     if not rule_data:
         logger.error("Could not find rule data for ID %s", rule_id)

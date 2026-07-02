@@ -111,12 +111,17 @@ def find_entity_identifier(
                 identifier = entity[key]
                 break
 
-        name_values = [str(entity[key]) for key in name_keys if key in entity and entity[key] is not None]
+        name_values_lower = [
+            str(entity[key]).lower()
+            for key in name_keys
+            if key in entity and entity[key] is not None
+        ]
 
         str_identifier = str(identifier) if identifier is not None else None
 
         if str_identifier and (
-            str_entity_name_or_id.lower() == str_identifier.lower() or str_entity_name_or_id in name_values
+            str_entity_name_or_id.lower() == str_identifier.lower()
+            or str_entity_name_or_id.lower() in name_values_lower
         ):
             return identifier
 

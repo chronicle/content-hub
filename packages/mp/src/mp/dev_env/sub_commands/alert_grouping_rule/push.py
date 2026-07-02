@@ -31,7 +31,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @push_app.command(name="alert-grouping-rule")
 @track_command
-def push_alert_grouping_rule(
+def push_alert_grouping_rule(  # noqa: C901, PLR0915
     rule_file_or_name: Annotated[str, typer.Argument(help="The alert grouping rule YAML file path or name to push.")],
 ) -> None:
     """Push an alert grouping rule to the SOAR environment.
@@ -85,7 +85,11 @@ def push_alert_grouping_rule(
     if existing_id is not None:
         logger.info("Updating existing alert grouping rule (ID: %s)...", existing_id)
         try:
-            backend_api.update_alert_grouping_rule(int(existing_id), rule_data)
+            numeric_id = int(existing_id)
+            backend_api.update_alert_grouping_rule(numeric_id, rule_data)
+        except (ValueError, TypeError) as e:
+            logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
+            raise typer.Exit(1) from e
         except Exception as e:
             logger.exception("Failed to update alert grouping rule '%s'", rule_name)
             raise typer.Exit(1) from e
