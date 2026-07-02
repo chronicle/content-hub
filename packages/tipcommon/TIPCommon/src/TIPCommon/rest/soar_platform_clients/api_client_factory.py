@@ -59,6 +59,12 @@ class SoarApiClient(Protocol):
     def get_connector_cards(self) -> requests.Response:
         """Get connector cards."""
 
+    def execute_manual_action(self) -> requests.Response:
+        """Execute a manual action on a case."""
+
+    def get_action_result_by_id(self, result_id: str) -> requests.Response:
+        """Get the result of an action execution by its ID."""
+
     def get_federation_cases(self) -> requests.Response:
         """Get federation cases."""
 
