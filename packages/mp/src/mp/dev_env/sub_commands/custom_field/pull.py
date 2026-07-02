@@ -68,10 +68,6 @@ def pull_custom_field(  # noqa: C901
         logger.error("You must specify either a custom field name/identifier, or use the --all or --list flags.")
         raise typer.Exit(1)
 
-    if pull_all and dst is not None:
-        logger.error("The --custom option cannot be used when pulling all custom fields.")
-        raise typer.Exit(1)
-
     config = load_dev_env_config()
     backend_api = get_backend_api(config)
 
@@ -129,13 +125,18 @@ def _download_and_save_custom_field(
         raise typer.Exit(1) from e
 
     # Determine destination path
-    actual_dst = dst
-    if actual_dst is None:
+    raw_name = str(field_data.get("displayName") or field_data.get("name") or field_id)
+    safe_name = raw_name.replace("/", "_").replace(" ", "_")
+    file_name = f"{safe_name}.yaml"
+
+    if dst is None:
         custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
-        raw_name = str(field_data.get("displayName") or field_data.get("name") or field_id)
-        safe_name = raw_name.replace("/", "_").replace(" ", "_")
-        file_name = f"{safe_name}.yaml"
         actual_dst = custom_fields_root / file_name
+    elif dst.is_dir() or dst.suffix not in {".yaml", ".yml"}:
+        dst.mkdir(parents=True, exist_ok=True)
+        actual_dst = dst / file_name
+    else:
+        actual_dst = dst
 
     logger.info("Saving custom field to %s...", actual_dst)
     try:

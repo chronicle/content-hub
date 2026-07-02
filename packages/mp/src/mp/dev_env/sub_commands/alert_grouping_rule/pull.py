@@ -67,10 +67,6 @@ def pull_alert_grouping_rule(
         logger.error("You must specify either a rule name/identifier, or use the --all or --list flags.")
         raise typer.Exit(1)
 
-    if pull_all and dst is not None:
-        logger.error("The --custom option cannot be used when pulling all alert grouping rules.")
-        raise typer.Exit(1)
-
     config = load_dev_env_config()
     backend_api = get_backend_api(config)
 
@@ -138,14 +134,19 @@ def _pull_all_alert_grouping_rules(installed_rules: list[dict], dst: Path | None
 
 def _save_alert_grouping_rule(rule_data: dict, dst: Path | None) -> None:
     # Determine destination path
-    actual_dst = dst
     rule_id = rule_data.get("id", "Unknown")
-    if actual_dst is None:
+    raw_name = str(rule_data.get("displayName") or rule_data.get("name") or rule_id)
+    safe_name = raw_name.replace("/", "_").replace(" ", "_")
+    file_name = f"{safe_name}.yaml"
+
+    if dst is None:
         rules_root = mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir()
-        raw_name = str(rule_data.get("displayName") or rule_data.get("name") or rule_id)
-        safe_name = raw_name.replace("/", "_").replace(" ", "_")
-        file_name = f"{safe_name}.yaml"
         actual_dst = rules_root / file_name
+    elif dst.is_dir() or dst.suffix not in {".yaml", ".yml"}:
+        dst.mkdir(parents=True, exist_ok=True)
+        actual_dst = dst / file_name
+    else:
+        actual_dst = dst
 
     logger.info("Saving alert grouping rule to %s...", actual_dst)
     try:
