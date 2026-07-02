@@ -14,11 +14,10 @@
 
 from __future__ import annotations
 
-import datetime
 from typing import TYPE_CHECKING
 
 from .api_utils import validate_response
-from .constants import QUARANTINE_ENDPOINT, TIME_FORMAT
+from .constants import QUARANTINE_ENDPOINT
 from .data_parser import parse_quarantine_records
 from .exceptions import ProofPointPSHTTPError
 
@@ -80,6 +79,9 @@ class ProofPointPSApiClient:
 
         Returns:
             A list of found records.
+
+        Raises:
+            ProofPointPSHTTPError: If the API request fails or returns invalid JSON.
 
         """
         url = f"{self.server_address.rstrip('/')}{QUARANTINE_ENDPOINT}"
@@ -154,6 +156,9 @@ class ProofPointPSApiClient:
         Returns:
             True if successful, exception otherwise.
 
+        Raises:
+            ProofPointPSHTTPError: If the API request fails.
+
         """
         url = f"{self.server_address.rstrip('/')}{QUARANTINE_ENDPOINT}"
 
@@ -183,40 +188,6 @@ class ProofPointPSApiClient:
         validate_response(response, f"Unable to {action} email(s)")
         return True
 
-    def get_record_by_guid(
-        self,
-        guid: str,
-        folder: str | None = None,
-        sender: str | None = "*",
-    ) -> QuarantineRecord | None:
-        """Retrieve a quarantined message record by GUID and optional folder constraint.
-
-        Args:
-            guid: The Message GUID to search for.
-            folder: Optional folder name to search in.
-            sender: Optional sender email address to search by.
-
-        Returns:
-            The QuarantineRecord if found, None otherwise.
-
-        """
-        start_date = (
-            datetime.datetime.utcnow() - datetime.timedelta(days=30)
-        ).strftime(TIME_FORMAT)
-        end_date = datetime.datetime.utcnow().strftime(TIME_FORMAT)
-
-        records = self.search(
-            sender=sender or "*",
-            folder=folder,
-            start_date=start_date,
-            end_date=end_date,
-        )
-        for r in records:
-            if r.guid == guid or r.localguid == guid:
-                return r
-
-        return None
-
     def download_message(self, guid: str) -> bytes:
         """Retrieve raw quarantined message bytes by GUID.
 
@@ -225,6 +196,9 @@ class ProofPointPSApiClient:
 
         Returns:
             Raw email bytes.
+
+        Raises:
+            ProofPointPSHTTPError: If the API request fails.
 
         """
         url = f"{self.server_address.rstrip('/')}{QUARANTINE_ENDPOINT}"
