@@ -109,15 +109,19 @@ def _build_stub_soar_action(
     stub_soar_action = MagicMock()
     stub_soar_action.get_configuration.return_value = configuration
 
-    if payload.get("target_entities"):  # "Enrich" actions
+    if payload.get("target_entities"):  # entity-based actions (enrich / bulk create)
         stub_soar_action.target_entities = [
             MagicMock(**entity) for entity in payload["target_entities"]
         ]
 
+        # Entity-based actions may still expose action parameters. They are
+        # provided under a dedicated "parameters" key so both can coexist.
+        stub_soar_action.parameters = payload.get("parameters", {})
+
         # TIPCommon entity loop checks execution_deadline_unix_time_ms and
         # expects a numeric value. Test doubles often leave this as MagicMock.
         stub_soar_action.execution_deadline_unix_time_ms = 2**63 - 1
-    else:  # "Create" actions
+    else:  # parameter-only actions (single "Create" actions)
         stub_soar_action.parameters = payload
 
     return stub_soar_action

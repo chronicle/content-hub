@@ -17,6 +17,7 @@ def mock_soar_action(monkeypatch) -> MagicMock:
         "Verify SSL": True,
     }
     mock_soar.parameters = {}
+    mock_soar.target_entities = []
 
     monkeypatch.setattr(
         "TIPCommon.base.action.base_action.create_soar_action",

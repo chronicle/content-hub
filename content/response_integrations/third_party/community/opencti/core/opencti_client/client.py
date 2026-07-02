@@ -45,26 +45,6 @@ from core.utils import get_hash_type
 from pycti import OpenCTIApiClient
 from pydantic import ValidationError
 
-# Maps SOAR entity type strings to their OpenCTI STIX type.
-# ADDRESS is mapped to IPv4-Addr by default; the client overrides to IPv6-Addr
-# when the identifier contains a colon.
-SOAR_TO_OPENCTI_SCO_TYPE: dict[str, str] = {
-    "ADDRESS": "IPv4-Addr",
-    "HOSTNAME": "Domain-Name",
-    "DOMAIN": "Domain-Name",
-    "DestinationURL": "Url",
-    "FILEHASH": "StixFile",
-}
-
-
-# Maps hash algorithm names (from get_hash_type) to the pycti filter key.
-HASH_FILTER_KEYS: dict[str, str] = {
-    "md5": "hashes.MD5",
-    "sha1": "hashes.SHA-1",
-    "sha256": "hashes.SHA-256",
-    "sha512": "hashes.SHA-512",
-}
-
 
 class SOAREntity(Protocol):
     """Represent the SOAREntity model."""
@@ -879,18 +859,18 @@ class OpenCTIClient:
         entity_type = soar_entity.entity_type
         identifier = soar_entity.original_identifier
 
-        filter_key = None
         if entity_type == "FILEHASH":
             hash_type = get_hash_type(identifier)
-            filter_key = HASH_FILTER_KEYS.get(hash_type or "")
-        elif entity_type == "ADDRESS" and ":" in identifier:
-            # IPv6 address — still searched by value but type override applies
+            # Maps hash algorithm names (from get_hash_type) to the pycti filter key.
+            filter_key_by_hash_type = {
+                "md5": "hashes.MD5",
+                "sha1": "hashes.SHA-1",
+                "sha256": "hashes.SHA-256",
+                "sha512": "hashes.SHA-512",
+            }
+            filter_key = filter_key_by_hash_type.get(hash_type or "")
+        else:
             filter_key = "value"
-        elif entity_type in SOAR_TO_OPENCTI_SCO_TYPE:
-            filter_key = "value"
-
-        if not filter_key:
-            return None
 
         try:
             data = self._api_client.stix_cyber_observable.read(

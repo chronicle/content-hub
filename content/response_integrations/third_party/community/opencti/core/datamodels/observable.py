@@ -8,6 +8,7 @@ from core.utils import get_hash_type
 
 class Observable(BaseOCTIObject):
     """Represent the Observable model."""
+
     type: Literal[
         "Domain-Name",
         "Url",
@@ -17,6 +18,7 @@ class Observable(BaseOCTIObject):
         "IPv4-Addr",
         "IPv6-Addr",
         "StixFile",
+        "File-Name",
     ]
     value: str
     description: str | None = None
@@ -24,7 +26,7 @@ class Observable(BaseOCTIObject):
     markings: list[str] | None = None
     score: int | None = None
     create_indicator: bool = False
-    
+
     def _compute_stix_id(self) -> None:
         # OpenCTI computes deterministic IDs for observables from observableData.
         # We do not build a deterministic ID client-side for this entity.
@@ -52,12 +54,14 @@ class Observable(BaseOCTIObject):
                 case _:
                     raise ValueError("Observable Value is not a supported hash type")
             observable_data = {"type": "file", "hashes": hashes}
+        elif self.type == "File-Name":
+            observable_data = {"type": "file", "name": self.value}
         else:
             observable_data = {"type": self.type, "value": self.value}
         if self.description:
             observable_data["x_opencti_description"] = self.description
         return observable_data
-    
+
     def to_input_variables(self) -> dict:
         """Serialize the model into OpenCTI GraphQL payload.
         Returns:
