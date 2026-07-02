@@ -32,7 +32,7 @@ DEFAULT_VERIFY_SSL: bool = True
 
 # API Constants
 ENDPOINTS: Mapping[str, str] = {
-    "graphql": "/web/api/v2.1/unifiedalerts/graphql",
+    "graphql_unified_alerts": "/web/api/v2.1/unifiedalerts/graphql",
     "users": "/web/api/v2.1/users",
 }
 
@@ -66,6 +66,7 @@ SEVERITIES: list[str] = [
 
 # Event Type Fields and Values
 EVENT_TYPE_FIELD: str = "event_type"
+LAST_SEEN_AT_FIELD: str = "lastSeenAt"
 
 
 class EventType(StrEnum):
