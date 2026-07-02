@@ -487,17 +487,111 @@ def test_push_view_fallback_to_name_and_type_matching(
 
     assert result.exit_code == 0
 
-    # Verify upload_view was called with the server ID, but kept the local UUID
+    # Verify upload_view was called with the server ID, and UUID was aligned to the server UUID
     mock_api.upload_view.assert_called_once()
     called_args = mock_api.upload_view.call_args[0][0]
 
-    assert called_args["identifier"] == "local_uuid"  # Local UUID is preserved
+    assert called_args["identifier"] == "server_uuid"  # UUID aligned to server UUID
     assert called_args["id"] == 100                 # Server ID is injected
     assert called_args["type"] == 3
 
-    # Verify download_view was called twice:
-    # 1. With server_uuid for widget verification
-    # 2. With local_uuid for the auto-pull sync post-upload
+    # Verify download_view was called twice with "server_uuid"
     assert mock_api.download_view.call_count == 2
     assert mock_api.download_view.call_args_list[0][0][0] == "server_uuid"
-    assert mock_api.download_view.call_args_list[1][0][0] == "local_uuid"
+    assert mock_api.download_view.call_args_list[1][0][0] == "server_uuid"
+
+    # Verify local folder was renamed to match server UUID
+    assert not (src_dir / "local_uuid").exists()
+    assert (src_dir / "server_uuid").exists()
+
+
+@mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.push.get_backend_api")
+def test_push_view_validate_only(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    # Setup mock backend API
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    # Setup source directory structure to build from
+    src_dir = tmp_path / "views"
+    view_folder = src_dir / "test_uuid"
+    view_folder.mkdir(parents=True)
+
+    # Create view.yaml
+    view_yaml_data = {
+        "identifier": "test_uuid",
+        "name": "Test View",
+        "creator": "system",
+        "playbook_id": "playbook_1",
+        "type": "system_case",
+        "alert_rule_type": None,
+        "roles": [1, 2],
+        "role_names": ["Tier 1", "Tier 2"],
+        "widgets_details": [],
+    }
+    with (view_folder / "view.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(view_yaml_data, f)
+
+    # Invoke mp push view command with --validate
+    with mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"):
+        result = runner.invoke(
+            push_app,
+            ["view", "test_uuid", "--custom", str(src_dir), "--validate"],
+        )
+
+    assert result.exit_code == 0
+    # Verify that upload_view was NOT called
+    mock_api.upload_view.assert_not_called()
+
+
+@mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.push.get_backend_api")
+def test_push_view_missing_widget_fails(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    # Setup mock backend API
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    # Setup source directory structure to build from
+    src_dir = tmp_path / "views"
+    view_folder = src_dir / "test_uuid"
+    view_folder.mkdir(parents=True)
+
+    # Create view.yaml declaring a widget that doesn't exist
+    view_yaml_data = {
+        "identifier": "test_uuid",
+        "name": "Test View",
+        "creator": "system",
+        "playbook_id": "playbook_1",
+        "type": "system_case",
+        "alert_rule_type": None,
+        "roles": [1, 2],
+        "role_names": ["Tier 1", "Tier 2"],
+        "widgets_details": [
+            {
+                "title": "Missing Widget",
+                "order": 1,
+                "size": "MEDIUM",
+            }
+        ],
+    }
+    with (view_folder / "view.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(view_yaml_data, f)
+
+    # Invoke mp push view command
+    with mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"):
+        result = runner.invoke(
+            push_app,
+            ["view", "test_uuid", "--custom", str(src_dir)],
+        )
+
+    # Should fail due to missing widget validation error
+    assert result.exit_code != 0
+    mock_api.upload_view.assert_not_called()

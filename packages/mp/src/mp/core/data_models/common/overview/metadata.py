@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import TYPE_CHECKING, NotRequired, Self, TypedDict, cast
 
 import mp.core.constants
@@ -23,6 +24,8 @@ from mp.core.data_models.abc import RepresentableEnum, SequentialMetadata
 from mp.core.data_models.common.widget.data import WidgetSize
 from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 from mp.core.file_utils import load_yaml_file
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -150,6 +153,7 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
 
         Raises:
             FileNotFoundError: If the view.yaml file doesn't exist.
+            ValueError: If a widget declared in widgets_details cannot be found in the widgets directory.
 
         """
         view_yaml_path: Path = path / mp.core.constants.VIEW_FILE_NAME
@@ -181,6 +185,10 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
                 if "size" in w_d:
                     widget.widget_size = WidgetSize.from_string(w_d["size"])
                 widgets.append(widget)
+            elif title:
+                err_msg = f"Widget '{title}' declared in widgets_details but not found in widgets directory."
+                logger.error(err_msg)
+                raise ValueError(err_msg)
 
         ov: Self = cls._from_non_built(non_built_view)
         ov.widgets = widgets

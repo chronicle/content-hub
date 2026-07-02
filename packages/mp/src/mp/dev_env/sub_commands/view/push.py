@@ -21,7 +21,6 @@ from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any, cast
 
 import typer
-import yaml
 
 import mp.core.constants
 import mp.core.file_utils
@@ -58,6 +57,13 @@ def push_view(
             help="Allow creating a new view if it does not already exist on the platform.",
         ),
     ] = False,
+    validate: Annotated[
+        bool,
+        typer.Option(
+            "--validate",
+            help="Validate the view locally without uploading it to the server.",
+        ),
+    ] = False,
 ) -> None:
     """Build and push a view template to the SOAR environment.
 
@@ -72,7 +78,11 @@ def push_view(
     # 2. Build the view to a temp or output directory
     out_dir = mp.core.file_utils.get_view_out_dir()
     builder = ViewBuilder(view_src_path, out_dir)
-    builder.build()
+    try:
+        builder.build()
+    except Exception as e:
+        logger.exception("Failed to build/validate view")
+        raise typer.Exit(1) from e
 
     # The built JSON name is to_snake_case(view_src_path.stem).json
     built_json_name = f"{to_snake_case(view_src_path.stem)}{mp.core.constants.JSON_SUFFIX}"
@@ -93,20 +103,46 @@ def push_view(
         logger.exception("Failed to parse built view JSON")
         raise typer.Exit(1) from e
 
+    if validate:
+        logger.info("✅ View '%s' is valid.", view_name_or_id)
+        return
+
     # 4. Upload to SOAR
-    _upload_built_view_data(view_data, view_name_or_id, allow_create=allow_create)
+    final_identifier = _upload_built_view_data(view_data, view_name_or_id, allow_create=allow_create)
 
     # 5. Automatically pull back the view from the server to sync local changes (e.g. order, system predefined details)
-    view_identifier = view_data.get("OverviewTemplate", {}).get("Identifier")
-    if view_identifier:
+    if final_identifier:
+        local_identifier = view_data.get("OverviewTemplate", {}).get("Identifier")
+        target_path = view_src_path
+        if local_identifier and local_identifier.lower() != final_identifier.lower():
+            new_folder_name = final_identifier.lower()
+            new_view_src_path = view_src_path.parent / new_folder_name
+            logger.info(
+                "Local UUID '%s' differs from server UUID '%s'. Renaming folder '%s' to '%s' to align with server.",
+                local_identifier,
+                final_identifier,
+                view_src_path.name,
+                new_folder_name,
+            )
+            try:
+                view_src_path.rename(new_view_src_path)
+                target_path = new_view_src_path
+            except Exception as ex:
+                logger.exception(
+                    "Failed to rename local view folder from '%s' to '%s'",
+                    view_src_path,
+                    new_view_src_path,
+                )
+                raise typer.Exit(1) from ex
+
         logger.info(
             "Automatically pulling back view '%s' (ID: %s) to sync local folder...",
             view_name_or_id,
-            view_identifier,
+            final_identifier,
         )
         config = load_dev_env_config()
         backend_api = get_backend_api(config)
-        download_and_deconstruct_view(backend_api, view_identifier, view_src_path)
+        download_and_deconstruct_view(backend_api, final_identifier, target_path)
 
 
 def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
@@ -205,45 +241,44 @@ def _resolve_existing_view(
         return None, None
     try:
         installed_views = backend_api.list_views()
-
-        # 1. Match by UUID (case-insensitive)
-        for v in installed_views or []:
-            v_uuid = v.get("identifier") or v.get("Identifier")
-            if isinstance(v_uuid, str) and v_uuid.lower() == local_identifier.lower():
-                v_id = v.get("id") if v.get("id") is not None else v.get("Id")
-                return v_id, v_uuid
-
-        # 2. Fallback: Match by Name and Type (case-insensitive name)
-        if local_name and local_type is not None:
-            for v in installed_views or []:
-                v_name = v.get("name") or v.get("Name")
-                v_type_raw = v.get("type") if v.get("type") is not None else v.get("Type")
-
-                v_type = None
-                if v_type_raw is not None:
-                    try:
-                        v_type = int(v_type_raw)
-                    except (ValueError, TypeError):
-                        pass
-
-                if (
-                    isinstance(v_name, str)
-                    and v_name.lower() == local_name.lower()
-                    and v_type == local_type
-                ):
-                    v_id = v.get("id") if v.get("id") is not None else v.get("Id")
-                    v_uuid = v.get("identifier") or v.get("Identifier")
-                    logger.info(
-                        "View matched by Name '%s' and Type %s. Target server UUID is '%s'. "
-                        "UUID will be aligned to local '%s' during push.",
-                        v_name,
-                        local_type,
-                        v_uuid,
-                        local_identifier,
-                    )
-                    return v_id, v_uuid
     except Exception as ex:  # noqa: BLE001
         logger.warning("Failed to resolve existing view on server: %s. Proceeding as new view.", ex)
+        return None, None
+
+    # 1. Match by UUID (case-insensitive)
+    for v in installed_views or []:
+        v_uuid = v.get("identifier") or v.get("Identifier")
+        if isinstance(v_uuid, str) and v_uuid.lower() == local_identifier.lower():
+            v_id = v.get("id") if v.get("id") is not None else v.get("Id")
+            return v_id, v_uuid
+
+    # 2. Fallback: Match by Name and Type (case-insensitive name)
+    if local_name and local_type is not None:
+        for v in installed_views or []:
+            v_name = v.get("name") or v.get("Name")
+            v_type_raw = v.get("type") if v.get("type") is not None else v.get("Type")
+
+            v_type = None
+            if v_type_raw is not None:
+                with contextlib.suppress(ValueError, TypeError):
+                    v_type = int(v_type_raw)
+
+            if (
+                isinstance(v_name, str)
+                and v_name.lower() == local_name.lower()
+                and v_type == local_type
+            ):
+                v_id = v.get("id") if v.get("id") is not None else v.get("Id")
+                v_uuid = v.get("identifier") or v.get("Identifier")
+                logger.info(
+                    "View matched by Name '%s' and Type %s. Target server UUID is '%s'. "
+                    "Local UUID will be aligned to server UUID during push.",
+                    v_name,
+                    local_type,
+                    v_uuid,
+                )
+                return v_id, v_uuid
+
     return None, None
 
 
@@ -316,6 +351,16 @@ def _validate_push_preconditions(
     if existing_id is not None and server_uuid:
         logger.info("Resolved existing view ID %s on server.", existing_id)
         flat_view_data["id"] = existing_id
+        if local_identifier and local_identifier.lower() != server_uuid.lower():
+            logger.info(
+                "Local UUID '%s' differs from server UUID '%s'. "
+                "Aligning push payload UUID to server UUID to preserve links "
+                "and avoid database corruption.",
+                local_identifier,
+                server_uuid,
+            )
+            flat_view_data["identifier"] = server_uuid
+
         _verify_widgets(
             backend_api,
             view_name_or_id,
@@ -337,13 +382,21 @@ def _validate_push_preconditions(
         raise typer.Exit(1)
 
 
-def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, *, allow_create: bool = False) -> None:
+def _upload_built_view_data(
+    view_data: dict[str, Any],
+    view_name_or_id: str,
+    *,
+    allow_create: bool = False,
+) -> str | None:
     """Upload built view template data to the SOAR environment.
 
     Args:
         view_data: The built view template dictionary structure.
         view_name_or_id: The view name or identifier.
         allow_create: Allow creating a new view if it doesn't exist.
+
+    Returns:
+        The final identifier of the view template used for upload if successful, otherwise None.
 
     Raises:
         typer.Exit: If the upload fails.
@@ -370,6 +423,7 @@ def _upload_built_view_data(view_data: dict[str, Any], view_name_or_id: str, *, 
         raise typer.Exit(1) from e
 
     logger.info("View '%s' pushed successfully.", view_name_or_id)
+    return flat_view_data.get("identifier")
 
 
 def _find_view_dir_in_root(views_root: Path, view_name_or_id: str) -> Path | None:
@@ -394,7 +448,7 @@ def _find_view_dir_in_root(views_root: Path, view_name_or_id: str) -> Path | Non
             continue
 
         try:
-            view_meta = yaml.safe_load(view_yaml_path.read_text(encoding="utf-8"))
+            view_meta = mp.core.file_utils.load_yaml_file(view_yaml_path)
             if isinstance(view_meta, dict) and view_meta.get("name") == view_name_or_id:
                 return folder
         except Exception as ex:  # noqa: BLE001
