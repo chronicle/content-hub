@@ -87,7 +87,7 @@ def push_custom_field(
         # Avoid trying to mutate id in the patch payload unless strictly required,
         # but passing it doesn't usually hurt.
         try:
-            backend_api.update_custom_field(existing_id, field_data)
+            backend_api.update_custom_field(int(existing_id), field_data)
         except Exception as e:
             logger.exception("Failed to update custom field '%s'", field_name)
             raise typer.Exit(1) from e

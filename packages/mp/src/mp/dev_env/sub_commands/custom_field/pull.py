@@ -21,6 +21,7 @@ from typing import Annotated
 import typer
 
 import mp.core.file_utils
+import mp.dev_env.api
 from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.utils import find_entity_identifier, get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
@@ -30,7 +31,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @pull_app.command(name="custom-field")
 @track_command
-def pull_custom_field(
+def pull_custom_field(  # noqa: C901
     field_name_or_id: Annotated[
         str | None, typer.Argument(help="The custom field name or identifier to pull.")
     ] = None,
@@ -104,15 +105,17 @@ def pull_custom_field(
         logger.error("field_name_or_id is required if not pulling or listing all")
         raise typer.Exit(1)
     field_id = find_entity_identifier(field_name_or_id, installed_fields, "Custom Field")
+    if field_id is None:
+        raise typer.Exit(1)
     _download_and_save_custom_field(backend_api, field_id, dst)
 
 
 def _download_and_save_custom_field(
-    backend_api: mp.dev_env.api.BackendAPI, field_id: str, dst: Path | None
+    backend_api: mp.dev_env.api.BackendAPI, field_id: int | str, dst: Path | None
 ) -> None:
     logger.info("Downloading custom field (ID: %s)...", field_id)
     try:
-        field_data = backend_api.download_custom_field(field_id)
+        field_data = backend_api.download_custom_field(int(field_id))
     except Exception as e:
         logger.exception("Failed to download custom field '%s'", field_id)
         raise typer.Exit(1) from e

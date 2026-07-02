@@ -63,7 +63,10 @@ def pull_view(
         logger.exception("Failed to fetch installed views")
         raise typer.Exit(1) from e
 
-    view_identifier = find_entity_identifier(view_name_or_id, installed_views, "View")
+    view_identifier_raw = find_entity_identifier(view_name_or_id, installed_views, "View")
+    if view_identifier_raw is None:
+        raise typer.Exit(1)
+    view_identifier = str(view_identifier_raw)
 
     # Determine destination path
     if dst is None:

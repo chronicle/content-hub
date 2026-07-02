@@ -85,7 +85,7 @@ def push_alert_grouping_rule(
     if existing_id is not None:
         logger.info("Updating existing alert grouping rule (ID: %s)...", existing_id)
         try:
-            backend_api.update_alert_grouping_rule(existing_id, rule_data)
+            backend_api.update_alert_grouping_rule(int(existing_id), rule_data)
         except Exception as e:
             logger.exception("Failed to update alert grouping rule '%s'", rule_name)
             raise typer.Exit(1) from e
