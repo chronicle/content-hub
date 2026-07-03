@@ -26,8 +26,8 @@ from TIPCommon.transformation import (
     convert_comma_separated_to_list,
     convert_list_to_comma_string,
 )
-from zoho_desk.core import action_init
-from zoho_desk.core.constants import (
+from ..core import action_init
+from ..core.constants import (
     DEFAULT_LIMIT,
     GET_TICKET_DETAILS_SCRIPT_NAME,
     INTEGRATION_DISPLAY_NAME,

@@ -15,8 +15,8 @@
 import pathlib
 from collections.abc import Iterable
 
-from azure_monitor.tests import common
-from azure_monitor.tests.core.product import AzureMonitor
+from ...tests import common
+from ...tests.core.product import AzureMonitor
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse

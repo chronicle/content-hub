@@ -24,8 +24,8 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 from TIPCommon.extraction import extract_action_param
-from zoho_desk.core import action_init
-from zoho_desk.core.constants import (
+from ..core import action_init
+from ..core.constants import (
     ADD_COMMENT_TO_TICKET_SCRIPT_NAME,
     CONTENT_TYPE_MAPPING,
     INTEGRATION_DISPLAY_NAME,

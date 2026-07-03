@@ -18,9 +18,9 @@ import base64
 import binascii
 from collections import namedtuple
 from pathlib import Path
-from cyber_ark_credential_provider.core import constants
-from cyber_ark_credential_provider.core.datamodels import IntegrationParameters
-from cyber_ark_credential_provider.core import exceptions
+from ..core import constants
+from ..core.datamodels import IntegrationParameters
+from ..core import exceptions
 
 import paramiko
 from paramiko.ssh_exception import NoValidConnectionsError, SSHException

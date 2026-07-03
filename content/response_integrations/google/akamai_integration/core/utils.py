@@ -18,9 +18,9 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from TIPCommon.extraction import extract_configuration_param
-from akamai_integration.core import constants
-from akamai_integration.core import exceptions
-from akamai_integration.core.datamodels import IntegrationParameters
+from ..core import constants
+from ..core import exceptions
+from ..core.datamodels import IntegrationParameters
 
 if TYPE_CHECKING:
     from TIPCommon.types import ChronicleSOAR

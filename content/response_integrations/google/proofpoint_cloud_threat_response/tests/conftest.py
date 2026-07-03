@@ -25,16 +25,12 @@ import soar_sdk
 pytest_plugins = ("integration_testing.conftest",)
 
 # Alias all top-level soar_sdk modules to themselves to unify the namespace for mocks
-changed = True
-while changed:
-    changed = False
-    for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-        if name not in sys.modules:
-            try:
-                sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-                changed = True
-            except Exception:
-                pass
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    if name not in sys.modules:
+        try:
+            sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
+        except Exception:
+            pass
 
 # Add SDK internal modules to sys.path to support flat imports within the SDK and TIPCommon
 sdk_dir = os.path.dirname(soar_sdk.__file__)
@@ -58,26 +54,26 @@ import pytest
 from TIPCommon.base.utils import CreateSession
 from SiemplifyBase import SiemplifyBase
 
-from proofpoint_cloud_threat_response.core.api_client import (
+from ..core.api_client import (
     ProofpointCloudThreatResponseApiClient,
     ApiParameters,
 )
-from proofpoint_cloud_threat_response.core.auth import (
+from ..core.auth import (
     AuthenticatedSession,
     SessionAuthenticationParameters,
 )
-from proofpoint_cloud_threat_response.core.data_models import (
+from ..core.data_models import (
     IntegrationParameters,
 )
-from proofpoint_cloud_threat_response.core.constants import AUTH_URL
+from ..core.constants import AUTH_URL
 
 from integration_testing.common import use_live_api
 from integration_testing.logger import Logger
-from proofpoint_cloud_threat_response.tests.common import CONFIG
-from proofpoint_cloud_threat_response.tests.core.product import (
+from ..tests.common import CONFIG
+from ..tests.core.product import (
     ProofpointCloudThreatResponse,
 )
-from proofpoint_cloud_threat_response.tests.core.session import (
+from ..tests.core.session import (
     ProofpointCloudThreatResponseSession,
 )
 

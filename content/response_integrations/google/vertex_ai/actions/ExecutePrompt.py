@@ -17,14 +17,14 @@ from __future__ import annotations
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
-from vertex_ai.core.VertexAIApiManager import ApiManager
-from vertex_ai.core.VertexAIBaseAction import BaseAction
-from vertex_ai.core.VertexAIConstants import (
+from ..core.VertexAIApiManager import ApiManager
+from ..core.VertexAIBaseAction import BaseAction
+from ..core.VertexAIConstants import (
     EXECUTE_PROMPT_SCRIPT_NAME,
 )
-from vertex_ai.core.VertexAIDatamodels import GenerationConfig, Prompt
-from vertex_ai.core.VertexAIExceptions import VertexAIValidationException
-from vertex_ai.core.VertexAIUtils import get_publisher_name
+from ..core.VertexAIDatamodels import GenerationConfig, Prompt
+from ..core.VertexAIExceptions import VertexAIValidationException
+from ..core.VertexAIUtils import get_publisher_name
 
 SUCCESS_MESSAGE = "Successfully executed a prompt."
 PROMPT_COUNT_EXCEEDED = (

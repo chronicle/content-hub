@@ -18,16 +18,12 @@ from __future__ import annotations
 import sys
 import pkgutil
 import soar_sdk
-changed = True
-while changed:
-    changed = False
-    for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-        if name not in sys.modules:
-            try:
-                sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-                changed = True
-            except Exception:
-                pass
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    if name not in sys.modules:
+        try:
+            sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
+        except Exception:
+            pass
 
 import os
 import sys
@@ -43,8 +39,8 @@ pytest_plugins = ("integration_testing.conftest",)
 import pytest
 import requests
 from SiemplifyBase import SiemplifyBase
-from palo_alto_cortex_xdr.tests.core.product import PaloAltoCortexXDR
-from palo_alto_cortex_xdr.tests.core.session import PaloAltoCortexXDRSession, PaloAltoCortexXDRSOARSession
+from ..tests.core.product import PaloAltoCortexXDR
+from ..tests.core.session import PaloAltoCortexXDRSession, PaloAltoCortexXDRSOARSession
 
 @pytest.fixture(name="palo_alto_cortex_xdr")
 def palo_alto_cortex_xdr_fixture() -> PaloAltoCortexXDR:
@@ -67,7 +63,7 @@ def soar_sdk_session_fixture(
     monkeypatch.setattr(SiemplifyBase, "_create_remote_session", lambda *_: session)
     return session
 
-from palo_alto_cortex_xdr.core.XDRManager import XDRManager, ApiParameters
+from ..core.XDRManager import XDRManager, ApiParameters
 from unittest.mock import MagicMock
 
 @pytest.fixture(name="manager")

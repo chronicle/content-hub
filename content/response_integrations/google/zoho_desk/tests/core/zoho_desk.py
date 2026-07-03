@@ -20,7 +20,7 @@ import dataclasses
 
 from TIPCommon.types import SingleJson
 
-from zoho_desk.core.datamodels import Ticket
+from ...core.datamodels import Ticket
 
 
 @dataclasses.dataclass

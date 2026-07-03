@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
-from service_desk_plus.core.ServiceDeskPlusManager import ServiceDeskPlusManager
+from ..core.ServiceDeskPlusManager import ServiceDeskPlusManager
 from soar_sdk.SiemplifyAction import SiemplifyAction
 
 

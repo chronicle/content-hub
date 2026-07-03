@@ -17,7 +17,7 @@ from typing import NoReturn
 
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from screenshot_machine.core.ScreenshotMachineManager import ScreenshotMachineManager
+from ..core.ScreenshotMachineManager import ScreenshotMachineManager
 
 
 @output_handler

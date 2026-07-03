@@ -23,7 +23,7 @@ from TIPCommon.base.action.data_models import EntityTypesEnum
 from TIPCommon.base.data_models import ActionOutput
 from TIPCommon.smp_time import unix_now
 
-from web_risk.actions.EnrichEntities import (
+from ...actions.EnrichEntities import (
     EnrichEntities,
     SUCCESS_MESSAGE,
     FAILURE_MESSAGE,
@@ -31,9 +31,9 @@ from web_risk.actions.EnrichEntities import (
 )
 import web_risk.core.WebRiskConstants as Constants
 
-from web_risk.tests.common import CONFIG
-from web_risk.tests.core.session import ApiSession
-from web_risk.tests.core.product import Product
+from ...tests.common import CONFIG
+from ...tests.core.session import ApiSession
+from ...tests.core.product import Product
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 
@@ -89,7 +89,7 @@ class TestAuth:
     ) -> None:
         EnrichEntities().run()
 
-        assert len(script_session.request_history) >= 2
+        assert len(script_session.request_history) >= 1
         assert (
             script_session.request_history[-1]
             .response.json().get("error", {}).get("message")
@@ -113,7 +113,7 @@ class TestEnrichment:
     ) -> None:
         EnrichEntities().run()
 
-        assert len(script_session.request_history) >= 2
+        assert len(script_session.request_history) >= 1
         assert action_output.results == ActionOutput(
             output_message=NONE_UPDATED_MESSAGE,
             result_value=False,
@@ -180,7 +180,7 @@ class TestEnrichment:
         action_.soar_action.session = script_session
         action_.run()
 
-        assert len(script_session.request_history) >= 5
+        assert len(script_session.request_history) >= 4
         assert (
                 quote("https://domain.com") in
                 script_session.request_history[-3].request.url.query

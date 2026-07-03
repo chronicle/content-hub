@@ -29,7 +29,7 @@ from soar_sdk.SiemplifyUtils import (
 
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
-from screenshot_machine.core.ScreenshotMachineManager import (
+from ..core.ScreenshotMachineManager import (
     ScreenshotMachineInvalidAPIKeyManagerError,
     ScreenshotMachineLimitManagerError,
     ScreenshotMachineManager,

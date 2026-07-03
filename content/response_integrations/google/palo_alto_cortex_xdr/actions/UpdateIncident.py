@@ -13,12 +13,12 @@
 # limitations under the License.
 
 from __future__ import annotations
-from palo_alto_cortex_xdr.core.exceptions import XDRMissingParametersException
+from ..core.exceptions import XDRMissingParametersException
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.ScriptResult import EXECUTION_STATE_FAILED, EXECUTION_STATE_COMPLETED
 
-from palo_alto_cortex_xdr.core.action_init import create_api_client
-from palo_alto_cortex_xdr.core.constants import INTEGRATION_NAME, UPDATE_INCIDENT_ACTION_SCRIPT_NAME
+from ..core.action_init import create_api_client
+from ..core.constants import INTEGRATION_NAME, UPDATE_INCIDENT_ACTION_SCRIPT_NAME
 
 
 ID_NOT_FOUND = "incident not found"

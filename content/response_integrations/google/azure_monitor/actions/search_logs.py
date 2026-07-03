@@ -22,8 +22,8 @@ from dateutil.parser import parse as isoparse
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.validation import ParameterValidator
 
-from azure_monitor.core.base_action import BaseAction
-from azure_monitor.core.constants import (
+from ..core.base_action import BaseAction
+from ..core.constants import (
     DEFAULT_MIN_ROWS,
     DEFAULT_RESULTS_TO_RETURN,
     DEFAULT_TIME_FRAME,
@@ -31,14 +31,14 @@ from azure_monitor.core.constants import (
     SEARCH_LOGS_SCRIPT_NAME,
     TimeFrameDDLEnum,
 )
-from azure_monitor.core.exceptions import AzureMonitorErrorInvalidParameterError
+from ..core.exceptions import AzureMonitorErrorInvalidParameterError
 
 if TYPE_CHECKING:
     from typing import NoReturn
 
     from TIPCommon.types import SingleJson
 
-    from azure_monitor.core.data_models import AzureLogEntry
+    from ..core.data_models import AzureLogEntry
 
 
 SUCCESS_MESSAGE: str = (

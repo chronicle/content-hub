@@ -19,13 +19,13 @@ from typing import TYPE_CHECKING
 
 from TIPCommon.base.action import Action
 
-from proofpoint_cloud_threat_response.core.api_client import ApiParameters, ProofpointCloudThreatResponseApiClient
-from proofpoint_cloud_threat_response.core.auth import (
+from ..core.api_client import ApiParameters, ProofpointCloudThreatResponseApiClient
+from ..core.auth import (
     AuthenticatedSession,
     build_auth_params,
     SessionAuthenticationParameters,
 )
-from proofpoint_cloud_threat_response.core.constants import AUTH_URL
+from ..core.constants import AUTH_URL
 
 if TYPE_CHECKING:
     import requests

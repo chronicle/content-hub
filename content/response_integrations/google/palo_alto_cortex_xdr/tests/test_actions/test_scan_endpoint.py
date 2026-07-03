@@ -21,10 +21,10 @@ import datetime
 from TIPCommon.base.action import ExecutionState, EntityTypesEnum
 
 from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
-from palo_alto_cortex_xdr.actions import ScanEndpoint
-from palo_alto_cortex_xdr.tests import common
-from palo_alto_cortex_xdr.tests.core.product import PaloAltoCortexXDR
-from palo_alto_cortex_xdr.tests.core.session import PaloAltoCortexXDRSession
+from ...actions import ScanEndpoint
+from ...tests import common
+from ...tests.core.product import PaloAltoCortexXDR
+from ...tests.core.session import PaloAltoCortexXDRSession
 from integration_testing.common import create_entity
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata

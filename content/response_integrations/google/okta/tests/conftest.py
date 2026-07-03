@@ -47,10 +47,10 @@ import pytest
 from TIPCommon.base.utils import CreateSession
 from SiemplifyBase import SiemplifyBase
 
-from okta.tests.core.product import (
+from ..tests.core.product import (
     Product,
 )
-from okta.tests.core.session import (
+from ..tests.core.session import (
     Session,
 )
 from integration_testing.common import use_live_api

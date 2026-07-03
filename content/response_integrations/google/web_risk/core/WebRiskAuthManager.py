@@ -32,9 +32,9 @@ from TIPCommon.types import ChronicleSOAR, SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
 
-from web_risk.core.WebRiskConstants import INTEGRATION_IDENTIFIER, OAUTH_SCOPES
-from web_risk.core.WebRiskExceptions import WebRiskAuthException
-from web_risk.core.WebRiskUtils import parse_string_to_dict
+from ..core.WebRiskConstants import INTEGRATION_IDENTIFIER, OAUTH_SCOPES
+from ..core.WebRiskExceptions import WebRiskAuthException
+from ..core.WebRiskUtils import parse_string_to_dict
 
 
 def build_auth_manager_params(

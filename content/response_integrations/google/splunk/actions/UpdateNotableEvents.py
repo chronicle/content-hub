@@ -16,15 +16,15 @@ from __future__ import annotations
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from splunk.core.SplunkManager import SplunkManager
+from ..core.SplunkManager import SplunkManager
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 from TIPCommon.transformation import convert_comma_separated_to_list
-from splunk.core.constants import (
+from ..core.constants import (
     INTEGRATION_NAME,
     DISPOSITION_MAPPER,
     UPDATE_NOTABLE_EVENTS_SCRIPT_NAME,
 )
-from splunk.core.exceptions import UnableToUpdateNotableEvents
+from ..core.exceptions import UnableToUpdateNotableEvents
 
 EMPTY_DROPDOWN_VALUE = "Select One"
 STATUS_MAPPER = {

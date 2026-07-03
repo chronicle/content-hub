@@ -18,8 +18,8 @@ from TIPCommon.adapters import PubSubAdapter
 from TIPCommon.adapters.pubsub.data_models import Subscription
 from TIPCommon.base.utils import NewLineLogger
 from TIPCommon.rest.auth import get_auth_request
-from pub_sub.core import PubSubConstants as Constants
-from pub_sub.core import PubSubDatamodels as DataModels
+from ..core import PubSubConstants as Constants
+from ..core import PubSubDatamodels as DataModels
 
 
 class ApiManager:

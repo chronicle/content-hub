@@ -16,8 +16,8 @@ from __future__ import annotations
 from urllib.parse import urljoin
 import requests
 
-from extrahop.core.constants import ENDPOINTS, INVALID_CREDS
-from extrahop.core.ExtrahopExceptions import (
+from ..core.constants import ENDPOINTS, INVALID_CREDS
+from ..core.ExtrahopExceptions import (
     ExtrahopException,
     InvalidCredentialsError,
     InvalidDetectionIDError,

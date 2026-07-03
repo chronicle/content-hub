@@ -19,16 +19,16 @@ import dataclasses
 import requests
 
 from TIPCommon.filters import filter_old_alerts
-from extrahop.core import api_utils
-from extrahop.core.constants import (
+from ..core import api_utils
+from ..core.constants import (
     ALERT_ID_KEY,
     DEFAULT_LIMIT,
     DEFAULT_PARAM_VALUE,
     RESOLUTION_MAPPING,
     STATUS_MAPPING,
 )
-from extrahop.core.datamodels import Detection, Device
-from extrahop.core.ExtrahopParser import ExtrahopParser
+from ..core.datamodels import Detection, Device
+from ..core.ExtrahopParser import ExtrahopParser
 
 
 @dataclasses.dataclass(slots=True)

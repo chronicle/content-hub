@@ -16,8 +16,8 @@ from __future__ import annotations
 from TIPCommon.base.action.data_models import EntityTypesEnum
 from TIPCommon.types import Entity
 
-from web_risk.core.WebRiskBaseAction import BaseAction
-from web_risk.core.WebRiskConstants import ENRICH_ENTITIES_SCRIPT_NAME
+from ..core.WebRiskBaseAction import BaseAction
+from ..core.WebRiskConstants import ENRICH_ENTITIES_SCRIPT_NAME
 
 SUCCESS_MESSAGE = "Successfully enriched the following entities in Web Risk: {}\n"
 FAILURE_MESSAGE = (

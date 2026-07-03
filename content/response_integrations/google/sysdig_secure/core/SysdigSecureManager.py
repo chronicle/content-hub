@@ -23,11 +23,11 @@ from requests import Session
 from TIPCommon.base.utils import NewLineLogger
 from TIPCommon.filters import filter_old_alerts
 
-from sysdig_secure.core.SysdigSecureApiUtils import get_full_url, validate_response
-from sysdig_secure.core.SysdigSecureConstants import DEFAULT_LIMIT, ONE_HOUR_NS
-from sysdig_secure.core.SysdigSecureDatamodels import Event
-from sysdig_secure.core.SysdigSecureUtils import build_events_filter
-from sysdig_secure.core import SysdigSecureParser as parser
+from ..core.SysdigSecureApiUtils import get_full_url, validate_response
+from ..core.SysdigSecureConstants import DEFAULT_LIMIT, ONE_HOUR_NS
+from ..core.SysdigSecureDatamodels import Event
+from ..core.SysdigSecureUtils import build_events_filter
+from ..core import SysdigSecureParser as parser
 
 
 class ApiManager:

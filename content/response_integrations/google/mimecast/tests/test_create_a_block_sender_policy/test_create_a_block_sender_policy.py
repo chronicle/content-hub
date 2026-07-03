@@ -16,11 +16,11 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.types import SingleJson
 
-from mimecast.actions import CreateBlockSenderPolicy
+from ...actions import CreateBlockSenderPolicy
 
-from mimecast.tests.common import CONFIG_PATH, MOCK_DATA
-from mimecast.tests.core.session import MimecastSession
-from mimecast.tests.core.product import Mimecast
+from ...tests.common import CONFIG_PATH, MOCK_DATA
+from ...tests.core.session import MimecastSession
+from ...tests.core.product import Mimecast
 COMMENT = "test comment"
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata

@@ -17,8 +17,8 @@ from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 
 from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.types import ChronicleSOAR
-from extrahop.core import constants
-from extrahop.core.datamodels import IntegrationParameters
+from ..core import constants
+from ..core.datamodels import IntegrationParameters
 
 
 def get_integration_parameters(chronicle_soar: ChronicleSOAR) -> IntegrationParameters:

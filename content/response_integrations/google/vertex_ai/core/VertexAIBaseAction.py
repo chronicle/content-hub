@@ -20,10 +20,10 @@ from TIPCommon.base.action import Action
 from TIPCommon.base.interfaces import ApiClient
 from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.types import Contains
-from vertex_ai.core.VertexAIApiManager import ApiManager
-from vertex_ai.core.VertexAIAuthManager import AuthManager, build_auth_manager_params
-from vertex_ai.core.VertexAIConstants import API_ROOT_REGEX, INTEGRATION_IDENTIFIER
-from vertex_ai.core.VertexAIExceptions import VertexAIValidationException
+from ..core.VertexAIApiManager import ApiManager
+from ..core.VertexAIAuthManager import AuthManager, build_auth_manager_params
+from ..core.VertexAIConstants import API_ROOT_REGEX, INTEGRATION_IDENTIFIER
+from ..core.VertexAIExceptions import VertexAIValidationException
 
 
 class BaseAction(Action, ABC):

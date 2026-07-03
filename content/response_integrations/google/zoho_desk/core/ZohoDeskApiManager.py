@@ -22,11 +22,11 @@ import requests
 from TIPCommon.base.interfaces import Apiable, AuthenticatedSession, ScriptLogger
 from TIPCommon.types import SingleJson
 
-from zoho_desk.core.UtilsManager import validate_response
-from zoho_desk.core.ZohoDeskExceptions import ZohoDeskException
-from zoho_desk.core.ZohoDeskParser import ZohoDeskParser
-from zoho_desk.core.constants import ENDPOINTS, ERROR_KEY, FIND_CONTACT_CHAR_LIMIT
-from zoho_desk.core.datamodels import IntegrationParameters, Contact
+from ..core.UtilsManager import validate_response
+from ..core.ZohoDeskExceptions import ZohoDeskException
+from ..core.ZohoDeskParser import ZohoDeskParser
+from ..core.constants import ENDPOINTS, ERROR_KEY, FIND_CONTACT_CHAR_LIMIT
+from ..core.datamodels import IntegrationParameters, Contact
 
 
 class ZohoDeskApiClient(Apiable):

@@ -20,7 +20,7 @@ from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 from TIPCommon.types import SingleJson
 
-from gmail.actions.RemoveEmailLabel import (
+from ...actions.RemoveEmailLabel import (
     RemoveEmailLabel,
     EMPTY_PARAMS_MESSAGE,
     NO_MESSAGES_UPDATED_MESSAGE,
@@ -30,10 +30,10 @@ from gmail.actions.RemoveEmailLabel import (
 )
 import gmail.core.GoogleGmailConsts as Constants
 
-from gmail.tests.common import CONFIG, MOCK_DATA
-from gmail.tests.core.async_session import GoogleGmailAsyncSession
-from gmail.tests.core.google_gmail import GoogleGmail
-from gmail.tests.utils import (
+from ...tests.common import CONFIG, MOCK_DATA
+from ...tests.core.async_session import GoogleGmailAsyncSession
+from ...tests.core.google_gmail import GoogleGmail
+from ...tests.utils import (
     assert_batch_modify,
     assert_all_list_messages,
     assert_list_labels,

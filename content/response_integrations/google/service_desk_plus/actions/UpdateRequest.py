@@ -16,7 +16,7 @@ from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyUtils import convert_unixtime_to_datetime
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from service_desk_plus.core.ServiceDeskPlusManager import ServiceDeskPlusManager, DUE_DATE_FORMAT
+from ..core.ServiceDeskPlusManager import ServiceDeskPlusManager, DUE_DATE_FORMAT
 
 
 @output_handler

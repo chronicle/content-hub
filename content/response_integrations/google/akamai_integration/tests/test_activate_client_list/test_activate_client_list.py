@@ -16,15 +16,15 @@ import pathlib
 import copy
 from TIPCommon.base.action import ExecutionState
 
-from akamai_integration.actions.activate_client_list import ActivateClientList
-from akamai_integration.core.datamodels import ClientList, ClientActivation
-from akamai_integration.tests.common import (
+from ...actions.activate_client_list import ActivateClientList
+from ...core.datamodels import ClientList, ClientActivation
+from ...tests.common import (
     ACTIVATE_CLIENT_LIST,
     CLIENT_LIST,
     CONFIG_PATH,
 )
-from akamai_integration.tests.core.product import Akamai
-from akamai_integration.tests.core.session import AkamaiSession
+from ...tests.core.product import Akamai
+from ...tests.core.session import AkamaiSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

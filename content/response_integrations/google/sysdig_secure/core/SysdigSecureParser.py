@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Any
 
 from TIPCommon.types import SingleJson
-from sysdig_secure.core import SysdigSecureDatamodels as datamodels
+from ..core import SysdigSecureDatamodels as datamodels
 
 
 def build_base_object(raw_data: SingleJson) -> datamodels.BaseObject:

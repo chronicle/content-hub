@@ -18,26 +18,48 @@ from __future__ import annotations
 import sys
 import pkgutil
 import soar_sdk
-changed = True
-while changed:
-    changed = False
-    for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-        if name not in sys.modules:
-            try:
-                sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-                changed = True
-            except Exception:
-                pass
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    if name not in sys.modules:
+        try:
+            sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
+        except Exception:
+            pass
 
 import pytest
-from service_desk_plus.tests.core.product import ServiceDeskPlus
-from service_desk_plus.tests.core.session import ServiceDeskPlusSession
-from service_desk_plus.core.ServiceDeskPlusManager import ServiceDeskPlusManager
+from ..tests.core.product import ServiceDeskPlus
+from ..tests.core.session import ServiceDeskPlusSession
+from ..core.ServiceDeskPlusManager import ServiceDeskPlusManager
 import requests
 
 @pytest.fixture(name="product")
 def service_desk_plus_fixture() -> ServiceDeskPlus:
     return ServiceDeskPlus()
+
+import xmltodict
+import json
+
+class XmlMockResponse:
+    def __init__(self, original_resp):
+        self.original_resp = original_resp
+        self.status_code = original_resp.status_code
+        self.headers = original_resp.headers
+
+    @property
+    def text(self):
+        try:
+            # MockResponse converts dict to JSON string in .text
+            data = json.loads(self.original_resp.text)
+            if isinstance(data, dict):
+                xml_str = xmltodict.unparse(data)
+                return xml_str
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        return self.original_resp.text
+
+    def json(self):
+        return self.original_resp.json()
+
 
 @pytest.fixture(name="script_session", autouse=True)
 def script_session_fixture(
@@ -49,12 +71,12 @@ def script_session_fixture(
     
     def mock_get(url, *args, **kwargs):
         if "sdpapi" in url:
-            return session.get(url, *args, **kwargs)
+            return XmlMockResponse(session.get(url, *args, **kwargs))
         return original_get(url, *args, **kwargs)
         
     def mock_post(url, *args, **kwargs):
         if "sdpapi" in url:
-            return session.post(url, *args, **kwargs)
+            return XmlMockResponse(session.post(url, *args, **kwargs))
         return original_post(url, *args, **kwargs)
         
     monkeypatch.setattr(requests, "get", mock_get)

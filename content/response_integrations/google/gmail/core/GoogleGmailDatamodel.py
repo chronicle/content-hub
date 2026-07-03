@@ -34,8 +34,8 @@ from TIPCommon.consts import NUM_OF_MILLI_IN_SEC
 from TIPCommon.transformation import dict_to_flat
 from TIPCommon.types import SingleJson
 
-from gmail.core.GoogleGmailConsts import DATETIME_FORMAT, DEFAULT_MAILBOX, REGEX_DATETIME_STR
-from gmail.core.GoogleGmailUtils import extract_email
+from ..core.GoogleGmailConsts import DATETIME_FORMAT, DEFAULT_MAILBOX, REGEX_DATETIME_STR
+from ..core.GoogleGmailUtils import extract_email
 
 
 class MailboxReadEnum(enum.Enum):

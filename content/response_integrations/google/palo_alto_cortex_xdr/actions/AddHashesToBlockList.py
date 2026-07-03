@@ -24,9 +24,9 @@ from soar_sdk.ScriptResult import (
 )
 from TIPCommon.extraction import extract_action_param
 
-from palo_alto_cortex_xdr.core.action_init import create_api_client
-from palo_alto_cortex_xdr.core.constants import ADD_HASHES_TO_BLOCK_LIST_ACTION_SCRIPT_NAME, INTEGRATION_NAME
-from palo_alto_cortex_xdr.core.exceptions import XDRAlreadyExistsException
+from ..core.action_init import create_api_client
+from ..core.constants import ADD_HASHES_TO_BLOCK_LIST_ACTION_SCRIPT_NAME, INTEGRATION_NAME
+from ..core.exceptions import XDRAlreadyExistsException
 
 
 SUPPORTED_ENTITIES = [EntityTypes.FILEHASH]

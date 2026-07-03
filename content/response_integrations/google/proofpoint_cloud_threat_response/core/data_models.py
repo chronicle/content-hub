@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from TIPCommon.transformation import dict_to_flat
-from proofpoint_cloud_threat_response.core import constants
+from ..core import constants
 
 if TYPE_CHECKING:
     from typing import Self

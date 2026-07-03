@@ -18,7 +18,7 @@ import pathlib
 
 from TIPCommon.data_models import AlertCard, CaseDetails
 from TIPCommon.types import SingleJson
-from palo_alto_cortex_xdr.core.datamodels import (
+from ..core.datamodels import (
     Alert,
     Incident,
     IncidentExtraData,

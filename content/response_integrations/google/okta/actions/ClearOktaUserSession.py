@@ -24,9 +24,9 @@ from TIPCommon.extraction import (
 )
 from TIPCommon.transformation import string_to_multi_value
 
-from okta.core.OktaManager import OktaManager
-from okta.core.exceptions import HTTPException
-from okta.core.constants import (
+from ..core.OktaManager import OktaManager
+from ..core.exceptions import HTTPException
+from ..core.constants import (
     CLEAR_OKTA_USER_SESSION_SCRIPT_NAME,
     INTEGRATION_IDENTIFIER,
     NOT_FOUND_STATUS_CODE,

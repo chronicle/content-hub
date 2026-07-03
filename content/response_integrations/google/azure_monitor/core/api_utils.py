@@ -19,8 +19,8 @@ from urllib.parse import urljoin
 
 import requests
 
-from azure_monitor.core.constants import ENDPOINTS
-from azure_monitor.core.exceptions import (
+from ..core.constants import ENDPOINTS
+from ..core.exceptions import (
     AzureMonitorHTTPError,
     InvalidCredsError,
     InvalidRequestParametersError,

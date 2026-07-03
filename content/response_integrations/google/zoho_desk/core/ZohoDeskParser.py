@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from zoho_desk.core.datamodels import *
+from ..core.datamodels import *
 
 
 class ZohoDeskParser:

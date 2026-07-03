@@ -20,7 +20,7 @@ from typing import Callable
 
 from TIPCommon.types import SingleJson
 
-from pub_sub.core.PubSubExceptions import PubSubInvalidJsonException
+from ..core.PubSubExceptions import PubSubInvalidJsonException
 
 
 PLACEHOLDER_START = "["

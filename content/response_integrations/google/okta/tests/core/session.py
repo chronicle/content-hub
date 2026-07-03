@@ -17,14 +17,14 @@ from typing import Iterable
 from http import HTTPStatus
 import re
 
-from okta.tests.core.product import (
+from ...tests.core.product import (
     Product,
 )
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, RouteFunction
-from okta.tests.responses.api.common import USER_RESPONSE
+from ...tests.responses.api.common import USER_RESPONSE
 
 
 class Session(MockSession[MockRequest, MockResponse, Product]):

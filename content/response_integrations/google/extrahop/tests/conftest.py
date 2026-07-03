@@ -49,10 +49,10 @@ from integration_testing.common import use_live_api
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.logger import Logger
-from extrahop.tests.common import CONFIG
-from extrahop.tests.core.product import Extrahop
-from extrahop.tests.core.session import ExtrahopSession
-from extrahop.core.ExtrahopManager import (
+from ..tests.common import CONFIG
+from ..tests.core.product import Extrahop
+from ..tests.core.session import ExtrahopSession
+from ..core.ExtrahopManager import (
     ExtrahopManager,
     ApiParameters,
 )

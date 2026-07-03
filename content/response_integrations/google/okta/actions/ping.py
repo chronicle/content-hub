@@ -17,7 +17,7 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 
-from okta.core.OktaManager import OktaManager, OktaException
+from ..core.OktaManager import OktaManager, OktaException
 
 
 PROVIDER = "Okta"

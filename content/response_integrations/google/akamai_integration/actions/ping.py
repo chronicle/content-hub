@@ -17,9 +17,9 @@ from __future__ import annotations
 from typing import Any, NoReturn
 
 from TIPCommon.base.action import Action
-from akamai_integration.core import action_init
-from akamai_integration.core import api_manager
-from akamai_integration.core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
+from ..core import action_init
+from ..core import api_manager
+from ..core.constants import INTEGRATION_NAME, PING_SCRIPT_NAME
 
 
 SUCCESS_MESSAGE: str = (

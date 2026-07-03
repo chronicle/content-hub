@@ -23,15 +23,15 @@ from TIPCommon.rest.soar_api import get_entity_data
 from TIPCommon.types import Entity, SingleJson
 from TIPCommon.utils import get_entity_original_identifier, is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
-from vertex_ai.core.VertexAIApiManager import ApiManager
-from vertex_ai.core.VertexAIBaseAction import BaseAction
-from vertex_ai.core.VertexAIConstants import DESCRIBE_ENTITY_SCRIPT_NAME
-from vertex_ai.core.VertexAIDatamodels import (
+from ..core.VertexAIApiManager import ApiManager
+from ..core.VertexAIBaseAction import BaseAction
+from ..core.VertexAIConstants import DESCRIBE_ENTITY_SCRIPT_NAME
+from ..core.VertexAIDatamodels import (
     GenerationCache,
     GenerationConfig,
     Prompt,
 )
-from vertex_ai.core.VertexAIUtils import (
+from ..core.VertexAIUtils import (
     exclude_fields_from_entity,
     flatten_entity_data_for_generation,
     get_publisher_name,

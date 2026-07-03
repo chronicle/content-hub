@@ -22,10 +22,10 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.types import SingleJson
 from TIPCommon.validation import ParameterValidator
-from akamai_integration.core import action_init
-from akamai_integration.core import constants
-from akamai_integration.core import datamodels
-from akamai_integration.core import exceptions
+from ..core import action_init
+from ..core import constants
+from ..core import datamodels
+from ..core import exceptions
 
 
 class GetNetworkLists(Action):

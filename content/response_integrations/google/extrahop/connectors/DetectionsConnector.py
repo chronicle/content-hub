@@ -30,15 +30,15 @@ from TIPCommon.smp_time import (
     save_timestamp,
 )
 from TIPCommon.utils import is_overflowed
-from extrahop.core import AuthenticationManager as auth_manager
-from extrahop.core.constants import (
+from ..core import AuthenticationManager as auth_manager
+from ..core.constants import (
     CONNECTOR_NAME,
     DEFAULT_LIMIT,
     DEFAULT_TIME_FRAME,
     DEVICE_OBJECT_TYPE,
 )
-from extrahop.core.ExtrahopManager import ApiParameters, ExtrahopManager
-from extrahop.core.UtilsManager import pass_severity_filter
+from ..core.ExtrahopManager import ApiParameters, ExtrahopManager
+from ..core.UtilsManager import pass_severity_filter
 
 
 connector_starting_time = unix_now()

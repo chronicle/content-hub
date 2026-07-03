@@ -29,8 +29,8 @@ from TIPCommon.smp_time import get_last_success_time, save_timestamp
 from TIPCommon.transformation import dict_to_flat
 from TIPCommon.utils import is_overflowed
 
-from splunk.core.SplunkManager import SplunkManager
-from splunk.core.UtilsManager import UNIX_FORMAT, is_approaching_timeout
+from ..core.SplunkManager import SplunkManager
+from ..core.UtilsManager import UNIX_FORMAT, is_approaching_timeout
 
 
 # CONSTANTS

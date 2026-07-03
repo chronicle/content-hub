@@ -16,8 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from azure_monitor.core.base_action import BaseAction
-from azure_monitor.core.constants import PING_SCRIPT_NAME
+from ..core.base_action import BaseAction
+from ..core.constants import PING_SCRIPT_NAME
 
 if TYPE_CHECKING:
     from typing import NoReturn

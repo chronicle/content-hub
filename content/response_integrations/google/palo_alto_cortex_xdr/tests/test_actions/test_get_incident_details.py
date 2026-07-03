@@ -19,16 +19,16 @@ import copy
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from palo_alto_cortex_xdr.actions import GetIncidentDetails
-from palo_alto_cortex_xdr.core.constants import (
+from ...actions import GetIncidentDetails
+from ...core.constants import (
     GET_INCIDENT_DETAILS_ACTION_SCRIPT_NAME,
     PRODUCT,
     VENDOR,
 )
-from palo_alto_cortex_xdr.core.datamodels import Incident
-from palo_alto_cortex_xdr.tests import common
-from palo_alto_cortex_xdr.tests.core.product import PaloAltoCortexXDR
-from palo_alto_cortex_xdr.tests.core.session import PaloAltoCortexXDRSession
+from ...core.datamodels import Incident
+from ...tests import common
+from ...tests.core.product import PaloAltoCortexXDR
+from ...tests.core.session import PaloAltoCortexXDRSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

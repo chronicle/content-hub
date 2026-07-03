@@ -22,7 +22,7 @@ from akamai.edgegrid import EdgeGridAuth
 from TIPCommon.base.interfaces import Authable
 from TIPCommon.base.utils import CreateSession
 
-from akamai_integration.core.datamodels import IntegrationParameters
+from ..core.datamodels import IntegrationParameters
 
 
 @dataclasses.dataclass(slots=True)

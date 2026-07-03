@@ -19,10 +19,10 @@ import pathlib
 import time
 
 from TIPCommon.types import SingleJson
-from splunk.actions.UpdateNotableEvents import EMPTY_DROPDOWN_VALUE
-from splunk.core.SplunkParser import SplunkParser
-from splunk.core.constants import MAX_EVENTS_COUNT
-from splunk.core.datamodels import NotableEvent
+from ..actions.UpdateNotableEvents import EMPTY_DROPDOWN_VALUE
+from ..core.SplunkParser import SplunkParser
+from ..core.constants import MAX_EVENTS_COUNT
+from ..core.datamodels import NotableEvent
 from integration_testing.common import get_def_file_content
 
 

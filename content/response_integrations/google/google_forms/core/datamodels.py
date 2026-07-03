@@ -25,7 +25,7 @@ from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 from TIPCommon.transformation import dict_to_flat
 from TIPCommon.types import SingleJson
-from google_forms.core import constants
+from ..core import constants
 
 
 IntegrationParameters = collections.namedtuple(

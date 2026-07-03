@@ -18,13 +18,13 @@ import pathlib
 
 from TIPCommon.types import SingleJson
 
-from mimecast.core.datamodels import (
+from ..core.datamodels import (
     Attachment,
     HoldMessage,
     Message,
     MessageDetails,
 )
-from mimecast.core.MimecastParser import MimecastParser
+from ..core.MimecastParser import MimecastParser
 from integration_testing.common import get_def_file_content
 
 

@@ -20,9 +20,9 @@ from TIPCommon.base.interfaces import ApiClient
 from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.types import Contains
 
-from web_risk.core.WebRiskAuthManager import build_auth_manager_params, AuthManager
-from web_risk.core.WebRiskApiManager import ApiManager
-from web_risk.core.WebRiskConstants import INTEGRATION_IDENTIFIER
+from ..core.WebRiskAuthManager import build_auth_manager_params, AuthManager
+from ..core.WebRiskApiManager import ApiManager
+from ..core.WebRiskConstants import INTEGRATION_IDENTIFIER
 
 
 class BaseAction(Action, ABC):

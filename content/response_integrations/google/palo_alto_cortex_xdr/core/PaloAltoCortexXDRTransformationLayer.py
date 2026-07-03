@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from palo_alto_cortex_xdr.core.datamodels import (
+from ..core.datamodels import (
     AgentReport,
     Alert,
     DeviceViolation,

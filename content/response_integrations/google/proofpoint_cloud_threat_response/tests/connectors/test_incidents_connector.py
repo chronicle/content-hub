@@ -20,24 +20,24 @@ import sys
 from TIPCommon.data_models import DatabaseContextType
 from TIPCommon.types import SingleJson
 from TIPCommon.utils import is_test_run
-from proofpoint_cloud_threat_response.connectors import (
+from ...connectors import (
     incidents_connector,
 )
-from proofpoint_cloud_threat_response.core.data_models import (
+from ...core.data_models import (
     ProofpointIncident,
 )
 
-from proofpoint_cloud_threat_response.tests.common import (
+from ...tests.common import (
     ALERT_NAME,
     DEFAULT_INCIDENT,
     DEFAULT_QUERY,
     INTEGRATION_PATH,
     MESSAGES_JSON,
 )
-from proofpoint_cloud_threat_response.tests.core.product import (
+from ...tests.core.product import (
     ProofpointCloudThreatResponse,
 )
-from proofpoint_cloud_threat_response.tests.core.session import (
+from ...tests.core.session import (
     ProofpointCloudThreatResponseSession,
 )
 from integration_testing.common import set_is_test_run_to_true, set_is_test_run_to_false

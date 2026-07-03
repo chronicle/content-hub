@@ -13,8 +13,8 @@
 # limitations under the License.
 
 from __future__ import annotations
-from web_risk.core.WebRiskBaseAction import BaseAction
-from web_risk.core.WebRiskConstants import PING_SCRIPT_NAME
+from ..core.WebRiskBaseAction import BaseAction
+from ..core.WebRiskConstants import PING_SCRIPT_NAME
 
 SUCCESS_MESSAGE = (
     "Successfully connected to the Web Risk server with the provided connection "

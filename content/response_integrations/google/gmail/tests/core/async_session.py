@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import pathlib
-from gmail.tests.core.google_gmail import (
+from ...tests.core.google_gmail import (
     GoogleGmail
 )
 from integration_testing import router

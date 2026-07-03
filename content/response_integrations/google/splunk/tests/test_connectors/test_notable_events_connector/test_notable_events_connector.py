@@ -19,12 +19,12 @@ from TIPCommon.consts import IDS_DB_KEY
 from TIPCommon.data_models import DatabaseContextType
 from TIPCommon.utils import is_test_run
 
-from splunk.connectors import SplunkNotableEventsConnector
-from splunk.core.datamodels import NotableEvent
-from splunk.tests.common import create_notable_event
-from splunk.tests.core.product import Splunk
-from splunk.tests.core.session import SplunkSession
-from splunk.tests.test_connectors.common import CONNECTORS_DEF_PATH
+from ....connectors import SplunkNotableEventsConnector
+from ....core.datamodels import NotableEvent
+from ....tests.common import create_notable_event
+from ....tests.core.product import Splunk
+from ....tests.core.session import SplunkSession
+from ....tests.test_connectors.common import CONNECTORS_DEF_PATH
 from integration_testing.common import set_is_test_run_to_true, set_is_test_run_to_false
 from integration_testing.platform.external_context import MockExternalContext
 from integration_testing.platform.script_output import MockConnectorOutput

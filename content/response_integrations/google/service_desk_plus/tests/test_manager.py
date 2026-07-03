@@ -17,8 +17,8 @@ import pathlib
 
 import pytest
 
-from service_desk_plus.core.ServiceDeskPlusManager import ServiceDeskPlusManager, ServiceDeskPlusManagerError
-from service_desk_plus.core.datamodels import WorkOrder
+from ..core.ServiceDeskPlusManager import ServiceDeskPlusManager, ServiceDeskPlusManagerError
+from ..core.datamodels import WorkOrder
 
 class TestServiceDeskPlusManager:
 

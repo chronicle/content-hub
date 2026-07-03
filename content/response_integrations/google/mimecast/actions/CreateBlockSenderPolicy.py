@@ -18,11 +18,11 @@ from typing import NoReturn
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.validation import ParameterValidator
-from mimecast.core import constants
-from mimecast.core.datamodels import BlockSenderPolicyActionParams
-from mimecast.core.MimecastExceptions import MimecastException
-from mimecast.core.MimecastManager import MimecastManager
-from mimecast.core import UtilsManager as utils
+from ..core import constants
+from ..core.datamodels import BlockSenderPolicyActionParams
+from ..core.MimecastExceptions import MimecastException
+from ..core.MimecastManager import MimecastManager
+from ..core import UtilsManager as utils
 
 
 class CreateBlockSenderPolicy(Action):

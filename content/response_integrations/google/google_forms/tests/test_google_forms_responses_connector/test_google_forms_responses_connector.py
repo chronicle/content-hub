@@ -21,15 +21,15 @@ from TIPCommon.data_models import DatabaseContextType
 from TIPCommon.types import SingleJson
 from TIPCommon.consts import IDS_DB_KEY
 
-from google_forms.connectors import (
+from ...connectors import (
     GoogleFormsResponsesConnector,
 )
 
-from google_forms.tests.common import (
+from ...tests.common import (
     DEFAULT_SA,
     INTEGRATION_PATH,
 )
-from google_forms.tests.core.session import GoogleFormsSession
+from ...tests.core.session import GoogleFormsSession
 from integration_testing.common import set_is_test_run_to_true, set_is_test_run_to_false
 from integration_testing.platform.external_context import (
     ExternalContextRowKey,

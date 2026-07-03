@@ -34,18 +34,18 @@ from TIPCommon.transformation import  (
 )
 from TIPCommon.utils import is_overflowed
 
-from mimecast.core.constants import (
+from ..core.constants import (
     CONNECTOR_NAME,
     DEFAULT_TIME_FRAME,
     DEFAULT_MAX_LIMIT,
     POSSIBLE_STATUSES,
     POSSIBLE_ROUTES,
 )
-from mimecast.core.UtilsManager import (
+from ..core.UtilsManager import (
     create_siemplify_case_wall_attachment_object,
     pass_severity_filter
 )
-from mimecast.core.MimecastManager import EmailSearchCriteria, MimecastManager
+from ..core.MimecastManager import EmailSearchCriteria, MimecastManager
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
 import sys
 

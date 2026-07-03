@@ -17,7 +17,7 @@ from __future__ import annotations
 import importlib
 import pathlib
 
-from mimecast.tests import common
+from ...tests import common
 
 
 VALID_SUFFIXES = (".py",)

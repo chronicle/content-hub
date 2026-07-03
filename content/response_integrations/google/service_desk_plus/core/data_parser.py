@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from service_desk_plus.core.datamodels import WorkOrder
+from ..core.datamodels import WorkOrder
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson

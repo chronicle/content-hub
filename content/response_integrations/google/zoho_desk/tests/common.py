@@ -21,11 +21,11 @@ import TIPCommon.encryption
 from TIPCommon.data_models import DatabaseContextType
 from TIPCommon.types import SingleJson
 
-from zoho_desk.core.constants import (
+from ..core.constants import (
     ACCESS_TOKEN_DB_KEY,
     ACTION_IDENTIFIER,
 )
-from zoho_desk.core.datamodels import Ticket
+from ..core.datamodels import Ticket
 from integration_testing.common import get_def_file_content
 from integration_testing.platform.external_context import ExternalContextRow
 

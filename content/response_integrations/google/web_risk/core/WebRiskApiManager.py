@@ -24,9 +24,9 @@ import requests
 
 from TIPCommon.base.interfaces import Apiable
 from TIPCommon.base.utils import NewLineLogger
-from web_risk.core import WebRiskConstants
-from web_risk.core import WebRiskDatamodels
-from web_risk.core.WebRiskExceptions import WebRiskManagerException
+from ..core import WebRiskConstants
+from ..core import WebRiskDatamodels
+from ..core.WebRiskExceptions import WebRiskManagerException
 
 
 ENDPOINTS = {

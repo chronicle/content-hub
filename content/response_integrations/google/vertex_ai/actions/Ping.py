@@ -13,8 +13,8 @@
 # limitations under the License.
 
 from __future__ import annotations
-from vertex_ai.core.VertexAIBaseAction import BaseAction
-from vertex_ai.core.VertexAIConstants import PING_SCRIPT_NAME
+from ..core.VertexAIBaseAction import BaseAction
+from ..core.VertexAIConstants import PING_SCRIPT_NAME
 
 SUCCESS_MESSAGE = (
     "Successfully connected to Vertex AI with the provided connection parameters!"

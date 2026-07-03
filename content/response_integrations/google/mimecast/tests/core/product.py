@@ -18,16 +18,16 @@ from typing import MutableMapping
 
 from TIPCommon.types import SingleJson
 
-from mimecast.tests.common import AlreadyExistsError, IdNotFoundError
+from ...tests.common import AlreadyExistsError, IdNotFoundError
 
-from mimecast.core.datamodels import (
+from ...core.datamodels import (
     Attachment,
     BlockSenderPolicy,
     HoldMessage,
     Message,
     MessageDetails
 )
-from mimecast.core.MimecastParser import MimecastParser
+from ...core.MimecastParser import MimecastParser
 
 
 class Mimecast(abc.ABC):

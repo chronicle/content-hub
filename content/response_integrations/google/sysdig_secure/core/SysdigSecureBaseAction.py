@@ -18,8 +18,8 @@ from abc import ABC
 
 from TIPCommon.base.action import Action
 
-from sysdig_secure.core.SysdigSecureAuthManager import AuthManager, build_auth_manager_params
-from sysdig_secure.core.SysdigSecureManager import ApiManager
+from ..core.SysdigSecureAuthManager import AuthManager, build_auth_manager_params
+from ..core.SysdigSecureManager import ApiManager
 
 
 class BaseAction(Action, ABC):

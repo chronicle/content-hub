@@ -22,16 +22,16 @@ from TIPCommon.extraction import extract_action_param
 from TIPCommon.rest.soar_api import save_attachment_to_case_wall
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailApiManager import GoogleGmailApiManager
-from gmail.core.GoogleGmailBaseAction import GoogleGmailBaseAction
-from gmail.core.GoogleGmailConsts import (
+from ..core.GoogleGmailApiManager import GoogleGmailApiManager
+from ..core.GoogleGmailBaseAction import GoogleGmailBaseAction
+from ..core.GoogleGmailConsts import (
     INTEGRATION_IDENTIFIER,
     SAVE_EMAIL_TO_THE_CASE,
     DEFAULT_MAILBOX,
 )
-from gmail.core.GoogleGmailDatamodel import GmailMessage
-from gmail.core.GoogleGmailExceptions import GoogleGmailNotFoundError
-from gmail.core.GoogleGmailServices import MessagesService
+from ..core.GoogleGmailDatamodel import GmailMessage
+from ..core.GoogleGmailExceptions import GoogleGmailNotFoundError
+from ..core.GoogleGmailServices import MessagesService
 
 
 MESSAGE_NOT_FOUND = (

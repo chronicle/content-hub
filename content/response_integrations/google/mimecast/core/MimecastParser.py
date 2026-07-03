@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 import codecs
-from mimecast.core.datamodels import *
+from ..core.datamodels import *
 from typing import Iterable, Any
 import re
 

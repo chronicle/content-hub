@@ -19,12 +19,12 @@ from TIPCommon.base.action import EntityTypesEnum, ExecutionState
 from TIPCommon.base.data_models import ActionJsonOutput, ActionOutput
 from TIPCommon.types import Entity
 
-from screenshot_machine.actions import TakeScreenshot
-from screenshot_machine.core.ScreenshotMachineManager import (
+from ..actions import TakeScreenshot
+from ..core.ScreenshotMachineManager import (
     SCREENSHOT_MACHINE_URL,
 )
-from screenshot_machine.tests.common import CONFIG_FILE
-from screenshot_machine.tests.core.session import (
+from ..tests.common import CONFIG_FILE
+from ..tests.core.session import (
     ScreenshotMachineSession,
 )
 from integration_testing.common import create_entity

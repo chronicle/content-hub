@@ -28,10 +28,10 @@ from TIPCommon.rest.gcp import (
 from TIPCommon.types import ChronicleSOAR, SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 
-from cloud_logging.core.consts import SCOPES
-from cloud_logging.core.datamodels import ApiManagerParams
-from cloud_logging.core.exceptions import CloudAuthenticationError
-from cloud_logging.core.utils import parse_string_to_dict, get_integration_params, IntegrationParams
+from ..core.consts import SCOPES
+from ..core.datamodels import ApiManagerParams
+from ..core.exceptions import CloudAuthenticationError
+from ..core.utils import parse_string_to_dict, get_integration_params, IntegrationParams
 
 
 def build_auth_manager(chronicle_soar: ChronicleSOAR) -> CloudLoggingAuthManager:

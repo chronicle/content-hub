@@ -21,13 +21,13 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 
 from TIPCommon.base.action import ExecutionState
 
-from service_desk_plus.core.ServiceDeskPlusManager import ServiceDeskPlusManagerError
-from service_desk_plus.actions.CreateAlertRequest import (
+from ...core.ServiceDeskPlusManager import ServiceDeskPlusManagerError
+from ...actions.CreateAlertRequest import (
     main as create_alert_request_main,
     ExecutionScope,
 )
-from service_desk_plus.tests.common import CONFIG_PATH, REQUEST
-from service_desk_plus.tests.core.product import ServiceDeskPlus
+from ...tests.common import CONFIG_PATH, REQUEST
+from ...tests.core.product import ServiceDeskPlus
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

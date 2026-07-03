@@ -14,11 +14,11 @@
 
 from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
-from splunk.core.SplunkManager import SplunkManager
+from ..core.SplunkManager import SplunkManager
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import convert_unixtime_to_datetime, utc_now
 from TIPCommon.extraction import extract_action_param
-from splunk.core.constants import (
+from ..core.constants import (
     OPEN_CASE_STATUS_ENUM,
     SIEMPLIFY_COMMENT_PREFIX,
     SPLUNK_COMMENT_PREFIX,

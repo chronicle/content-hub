@@ -19,11 +19,11 @@ from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.types import SingleJson
 from TIPCommon.validation import ParameterValidator
-from extrahop.core import action_init
-from extrahop.core import constants
+from ..core import action_init
+from ..core import constants
 
-from extrahop.core.ExtrahopExceptions import InvalidDetectionIDError, InvalidParameterError
-from extrahop.core.ExtrahopManager import ExtrahopManager
+from ..core.ExtrahopExceptions import InvalidDetectionIDError, InvalidParameterError
+from ..core.ExtrahopManager import ExtrahopManager
 
 
 class UpdateDetection(Action):

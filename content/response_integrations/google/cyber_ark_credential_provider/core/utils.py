@@ -19,9 +19,9 @@ from pathlib import Path
 
 from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.types import ChronicleSOAR
-from cyber_ark_credential_provider.core import constants
-from cyber_ark_credential_provider.core.datamodels import IntegrationParameters
-from cyber_ark_credential_provider.core import exceptions
+from ..core import constants
+from ..core.datamodels import IntegrationParameters
+from ..core import exceptions
 
 
 def get_integration_parameters(soar_action: ChronicleSOAR) -> IntegrationParameters:

@@ -25,9 +25,9 @@ from TIPCommon.smp_time import is_approaching_action_timeout
 from TIPCommon.utils import get_entity_original_identifier
 from TIPCommon.transformation import string_to_multi_value
 
-from palo_alto_cortex_xdr.core.base_action import BaseAction
-from palo_alto_cortex_xdr.core import constants
-from palo_alto_cortex_xdr.core.exceptions import XDRNotFoundException, XDRException
+from ..core.base_action import BaseAction
+from ..core import constants
+from ..core.exceptions import XDRNotFoundException, XDRException
 
 if TYPE_CHECKING:
     from typing import NoReturn
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from TIPCommon.types import SingleJson
 
-    from palo_alto_cortex_xdr.core.datamodels import Endpoint
+    from ..core.datamodels import Endpoint
 
 
 SUPPORTED_ENTITY_TYPES = [EntityTypes.ADDRESS, EntityTypes.HOSTNAME]

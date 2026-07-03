@@ -1,0 +1,479 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+DecodeURL:
+  ai_description: >-
+    ### General Description
+
+    Decodes URLs that have been rewritten by Proofpoint Targeted Attack Protection
+    (TAP). This action allows security analysts to reveal the original destination
+    of URLs protected by Proofpoint's URL Defense, facilitating further investigation
+    and threat analysis.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | Encoded URLs | String | No | A comma-separated list of specific URLs to decode.
+    These are processed alongside any URL entities found in the alert scope. |
+
+    | Create URL Entities | Boolean | No | If enabled (default: true), the action
+    will automatically create new URL entities in the Google SecOps case for every
+    URL that is successfully decoded. |
+
+
+    ### Flow Description
+
+    1. **Initialization**: Retrieves configuration parameters and establishes an authenticated
+    session with the Proofpoint TAP API.
+
+    2. **Entity Collection**: Identifies all URL entities within the current alert
+    scope.
+
+    3. **Input Merging**: Combines the identified URL entities with any URLs provided
+    manually via the "Encoded URLs" parameter.
+
+    4. **API Interaction**: Sends the combined list of URLs to the Proofpoint TAP
+    `/v2/url/decode` endpoint.
+
+    5. **Result Processing**: Parses the API response to extract decoded URLs and
+    success statuses.
+
+    6. **Internal Mutation**: If "Create URL Entities" is enabled, it adds the decoded
+    URLs as new entities to the case.
+
+    7. **Output**: Returns a JSON result containing the mapping of encoded to decoded
+    URLs and updates the action output message.
+
+
+    ### Additional Notes
+
+    - This action does not modify the original URL entities; it only retrieves their
+    decoded counterparts and optionally creates new entities.
+
+    - Either URL entities must be present in the scope, or URLs must be provided in
+    the "Encoded URLs" parameter for the action to have data to process.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Creates new URL entities in the Google SecOps case if the 'Create URL Entities'
+      parameter is enabled and URLs are successfully decoded.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types:
+    - DestinationURL
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Get Threat Forensics:
+  ai_description: >-
+    ### General Description
+
+    The **Get Threat Forensics** action retrieves detailed forensic information associated
+    with specific threat IDs from the Proofpoint Targeted Attack Protection (TAP)
+    platform. It allows security analysts to gather deep technical context about threats,
+    such as associated malicious URLs, file hashes, IP addresses, and platform-specific
+    analysis. This action is primarily used for investigation and incident response
+    to understand the nature and scope of a detected threat.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Threat ID** | String | Yes | A comma-separated list of unique threat identifiers
+    for which forensics data will be retrieved. |
+
+    | **Include Campaign Forensics** | Boolean | No | If set to `True`, the action
+    will also retrieve forensic data related to the broader campaign associated with
+    the threat. Default is `False`. |
+
+    | **Max Results To Return** | Integer | Yes | Specifies the maximum number of
+    forensic records to return per threat ID. Must be between 1 and 1000. Default
+    is 50. |
+
+
+    ### Additional Notes
+
+    - This action does not run on entities; it relies entirely on the provided **Threat
+    ID** parameter.
+
+    - If multiple Threat IDs are provided, the action iterates through them and aggregates
+    the results. If some IDs are not found, the action will report the successful
+    ones and list the failed/invalid ones in the output message.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action parses the input parameters, converting
+    the comma-separated string of Threat IDs into a unique list.
+
+    2. **Validation**: It validates that the `Max Results To Return` value is within
+    the supported range (1 to 1000).
+
+    3. **API Interaction**: For each Threat ID, the action performs a GET request
+    to the Proofpoint TAP `/v2/forensics` endpoint, optionally including campaign
+    forensics.
+
+    4. **Data Processing**: The raw JSON response is parsed into structured data models.
+    The number of forensic items returned is capped based on the `Max Results To Return`
+    parameter.
+
+    5. **Result Aggregation**: The action compiles the forensic reports into a JSON
+    result and generates a summary message indicating which threats were successfully
+    processed.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+GetCampaign:
+  ai_description: "### General Description\nRetrieves comprehensive information about\
+    \ specific campaigns from Proofpoint TAP based on provided Campaign IDs. This\
+    \ action is designed to provide security analysts with deep context regarding\
+    \ threat campaigns, including descriptions, start dates, and associated threat\
+    \ actors or malware families. It can also retrieve forensic evidence and automatically\
+    \ populate the Google SecOps case with new entities and insights.\n\n### Parameters\
+    \ Description\n| Parameter | Type | Mandatory | Description |\n| :--- | :--- |\
+    \ :--- | :--- |\n| **Campaign ID** | String | Yes | A comma-separated list of\
+    \ Proofpoint Campaign IDs to retrieve information for. |\n| **Create Insight**\
+    \ | Boolean | No | If enabled (default), the action creates a detailed case insight\
+    \ containing the campaign's summary, related malware, and techniques. |\n| **Create\
+    \ Threat Campaign Entity** | Boolean | No | If enabled (default), the action adds\
+    \ a new 'Threat Actor' entity to the current case representing the campaign. |\n\
+    | **Fetch Forensics Info** | Boolean | No | If enabled (default), the action retrieves\
+    \ forensic evidence (e.g., URLs, IPs, file hashes) associated with the campaign.\
+    \ |\n| **Forensic Evidence Type Filter** | String | No | A comma-separated list\
+    \ of evidence types to filter the forensics results (e.g., 'url, file, network').\
+    \ |\n| **Max Forensics Evidence To Return** | Integer | No | The maximum number\
+    \ of forensic evidence items to return per campaign (Default: 50, Max: 1000).\
+    \ |\n\n### Additional Notes\n- This action does not run on existing entities in\
+    \ the case; it uses the provided 'Campaign ID' list as the primary input.\n- If\
+    \ 'Create Threat Campaign Entity' is selected, the campaign name is used to create\
+    \ a 'THREATACTOR' entity type within the case.\n\n### Flow Description\n1. **Initialization**:\
+    \ Validates the 'Max Forensics Evidence To Return' parameter and establishes a\
+    \ connection to the Proofpoint TAP API.\n2. **Data Retrieval**: Iterates through\
+    \ each provided Campaign ID to fetch core campaign metadata.\n3. **Forensics (Optional)**:\
+    \ If requested, fetches forensic data for each campaign, applying the specified\
+    \ type filters and limits.\n4. **Internal Enrichment**: \n    - Generates a data\
+    \ table for campaign details.\n    - If 'Fetch Forensics' is active, generates\
+    \ a specific evidence data table for each campaign.\n    - If 'Create Insight'\
+    \ is active, generates a formatted HTML insight in the case.\n    - If 'Create\
+    \ Threat Campaign Entity' is active, adds the campaign as a new entity to the\
+    \ case.\n5. **Finalization**: Returns the aggregated JSON results and updates\
+    \ the action status based on the success of the ID lookups."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: true
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      The action can create new 'Threat Actor' entities within the Google SecOps case
+      and generate case insights based on the retrieved campaign data.
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+List Campaigns:
+  ai_description: >-
+    ### General Description
+
+    The **List Campaigns** action retrieves a list of active campaigns from Proofpoint
+    TAP within a specified time window. This action is useful for identifying ongoing
+    threat campaigns and gathering high-level metadata about them.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Time Frame** | String | No | The time window for the search (e.g., 'Last Hour',
+    'Last Week', 'Custom'). Default is 'Last Hour'. |
+
+    | **Start Time** | String | No | The start time in ISO 8601 format. This is **mandatory**
+    if 'Time Frame' is set to 'Custom'. |
+
+    | **End Time** | String | No | The end time in ISO 8601 format. If omitted and
+    'Time Frame' is 'Custom', the current time is used. |
+
+    | **Max Results To Return** | Integer | Yes | The maximum number of campaign records
+    to return. Must be between 1 and 1000. Default is 50. |
+
+
+    ### Additional Notes
+
+    - If 'Custom' is selected for the 'Time Frame', the 'Start Time' parameter must
+    be provided.
+
+    - If a 'Time Frame' other than 'Custom' is selected, the 'Start Time' parameter
+    must be left empty.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the user-provided time frame,
+    start/end times, and result limits.
+
+    2. **Validation**: It ensures that the 'Start Time' is provided only when 'Custom'
+    is selected and that the result limit is within the allowed range (1-1000).
+
+    3. **Time Range Calculation**: Based on the 'Time Frame', it calculates the specific
+    UTC start and end timestamps.
+
+    4. **API Interaction**: The action queries the Proofpoint TAP API (`/v2/campaign/ids`)
+    in 24-hour intervals to gather campaign IDs and metadata.
+
+    5. **Result Processing**: The retrieved campaigns are formatted into a JSON structure
+    and returned to the SOAR platform.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Ping:
+  ai_description: "### General Description\nThe **Ping** action is designed to verify\
+    \ the connectivity between Google SecOps and the Proofpoint Targeted Attack Protection\
+    \ (TAP) server. It ensures that the integration configuration parameters\u2014\
+    such as the API Root, Username, and Password\u2014are correct and that the service\
+    \ is reachable.\n\n### Parameters Description\nThere are no parameters for this\
+    \ action. It relies solely on the global integration configuration settings.\n\
+    \n### Additional Notes\nThis action is typically used during the initial setup\
+    \ or for troubleshooting purposes to confirm that the API credentials have the\
+    \ necessary permissions to communicate with the Proofpoint TAP environment.\n\n\
+    ### Flow Description\n1. **Initialize API Client:** The action retrieves the integration's\
+    \ configuration (API Root, Username, Password, and SSL verification settings)\
+    \ to initialize the Proofpoint TAP manager.\n2. **Test Connectivity:** It executes\
+    \ a GET request to the Proofpoint TAP `/v2/campaign/{campaign_id}` endpoint using\
+    \ a hardcoded campaign ID to verify that the credentials are valid and the server\
+    \ responds correctly.\n3. **Validate Response:** The action checks the HTTP response\
+    \ status. If the request is successful, it confirms the connection; otherwise,\
+    \ it raises an error based on the response code (e.g., 401 for unauthorized, 429\
+    \ for throttling).\n4. **Report Result:** Returns a success message if the connection\
+    \ is established or an error message if the test fails."
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+Search Events:
+  ai_description: >-
+    ### General Description
+
+    The **Search Events** action allows users to query and retrieve security events
+    from Proofpoint TAP (Targeted Attack Protection). It is designed for threat hunting
+    and historical analysis, enabling security analysts to find specific types of
+    events (like blocked messages or permitted clicks) within a defined timeframe.
+    The action returns a list of events in JSON format, including details such as
+    spam scores, threat information, and message metadata.
+
+
+    ### Parameters Description
+
+    | Parameter | Type | Mandatory | Description |
+
+    | :--- | :--- | :--- | :--- |
+
+    | **Event Type** | Dropdown | No | Specifies the category of events to return.
+    Options include: `All`, `Clicks Blocked`, `Clicks Permitted`, `Messages Delivered`,
+    `Messages Blocked`, and `Issues`. Default is `All`. |
+
+    | **Threat Status** | Dropdown | No | Filters events by the status of the associated
+    threat. Options include: `Select One`, `Active`, `Cleared`, and `False Positive`.
+    If `Select One` is chosen, the action returns both `Active` and `Cleared` threats.
+    |
+
+    | **Time Frame** | Dropdown | No | Defines the lookback period for the search.
+    Options include: `Last Hour`, `Last 6 Hours`, `Last 24 Hours`, `Last Week`, and
+    `Custom`. Default is `Last Hour`. |
+
+    | **Start Time** | String | No | The start time for the search in ISO 8601 format
+    (e.g., `2023-10-01T12:00:00Z`). This parameter is **mandatory** if `Time Frame`
+    is set to `Custom`. |
+
+    | **End Time** | String | No | The end time for the search in ISO 8601 format.
+    If left empty while `Time Frame` is `Custom`, the current time is used. |
+
+    | **Max Results To Return** | Integer | Yes | Limits the number of events returned
+    by the action. Must be between 1 and 1000. Default is 50. |
+
+
+    ### Additional Notes
+
+    - If `Time Frame` is set to `Custom`, the `Start Time` must be provided, and it
+    must be a valid ISO 8601 timestamp.
+
+    - The action performs multiple API calls if the requested timeframe is large,
+    as it breaks the search into 1-hour intervals to ensure comprehensive data retrieval.
+
+    - This action does not run on specific entities; it is a global search action.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction & Validation**: The action retrieves all input parameters
+    and validates that the `Max Results To Return` is within the allowed range (1-1000).
+    It also ensures that `Start Time` is provided if a `Custom` timeframe is selected.
+
+    2. **Time Range Calculation**: Based on the `Time Frame` selection, the action
+    calculates the start and end UTC timestamps. If `Custom` is used, it parses the
+    provided strings.
+
+    3. **API Client Initialization**: The action authenticates with Proofpoint TAP
+    using the provided API credentials (Service Principal and Secret).
+
+    4. **Event Querying**: The action generates 1-hour time intervals and iterates
+    through the requested threat statuses, making GET requests to the Proofpoint TAP
+    SIEM API endpoint for each interval.
+
+    5. **Data Aggregation**: Results from the API are parsed into structured event
+    objects and aggregated until the `Max Results To Return` limit is reached or all
+    data is fetched.
+
+    6. **Result Output**: The collected events are returned as a JSON array under
+    the `events` key.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+  categories:
+    enrichment: false
+  entity_usage:
+    entity_types: []
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false

@@ -17,13 +17,13 @@ from collections.abc import Iterable
 
 from TIPCommon.data_models import CaseDataStatus, CasePriority, SLA
 from TIPCommon.types import SingleJson
-from palo_alto_cortex_xdr.core.datamodels import (
+from ...core.datamodels import (
     IncidentInfo,
     IncidentExtraData,
 )
 
-from palo_alto_cortex_xdr.tests import common
-from palo_alto_cortex_xdr.tests.core.product import PaloAltoCortexXDR
+from ...tests import common
+from ...tests.core.product import PaloAltoCortexXDR
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse

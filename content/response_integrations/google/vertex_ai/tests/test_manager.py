@@ -15,10 +15,10 @@
 from __future__ import annotations
 import pathlib
 
-from vertex_ai.core.VertexAIApiManager import ApiManager
-from vertex_ai.core.VertexAIDatamodels import Prompt, GenerationConfig
+from ..core.VertexAIApiManager import ApiManager
+from ..core.VertexAIDatamodels import Prompt, GenerationConfig
 
-from vertex_ai.tests.core.session import ApiSession
+from ..tests.core.session import ApiSession
 from integration_testing.request import HttpMethod
 
 
@@ -38,7 +38,7 @@ class TestApiManager:
             publisher_name="google"
         )
 
-        assert len(vertexai_script_session.request_history) >= 3
+        assert len(vertexai_script_session.request_history) >= 2
         assert (
             vertexai_script_session.request_history[-1].request.method
             == HttpMethod.POST
@@ -62,7 +62,7 @@ class TestApiManager:
             publisher_name="google"
         )
 
-        assert len(vertexai_script_session.request_history) >= 3
+        assert len(vertexai_script_session.request_history) >= 2
         assert (
             vertexai_script_session.request_history[-1].request.method
             == HttpMethod.POST

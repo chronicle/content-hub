@@ -20,7 +20,7 @@ from pytz import UTC
 from soar_sdk.SiemplifyUtils import convert_datetime_to_unix_time, unix_now
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from splunk.core.constants import (
+from ..core.constants import (
     DEFAULT_ALERT_NAME,
     TIME_UNIT_MAPPER,
     SEVERITY_MAPPER,
@@ -29,7 +29,7 @@ from splunk.core.constants import (
     SPLUNK_EVENT_TYPE,
 )
 from TIPCommon.transformation import flat_dict_to_csv, dict_to_flat
-from splunk.core.UtilsManager import convert_to_single_value_combinations
+from ..core.UtilsManager import convert_to_single_value_combinations
 
 DETECT_VAR_PATTERN = r"\$(\S[^\$]*?)\|s\$"
 DETECT_RAW_VAR_PATTERN = r"\$(\S[^\$]*?)(?<!\|s)\$"

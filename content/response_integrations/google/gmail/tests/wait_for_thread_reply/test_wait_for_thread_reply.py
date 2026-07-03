@@ -20,7 +20,7 @@ from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 from TIPCommon.types import SingleJson
 
-from gmail.actions.WaitForThreadReply import (
+from ...actions.WaitForThreadReply import (
     WaitForThreadReply,
     ASYNC_TIMEOUT_MESSAGE,
     ASYNC_TIMOUT_WITH_SOME_FETCHED,
@@ -30,10 +30,10 @@ from gmail.actions.WaitForThreadReply import (
 )
 import gmail.core.GoogleGmailConsts as Constants
 
-from gmail.tests.common import CONFIG, MOCK_DATA
-from gmail.tests.core.async_session import GoogleGmailAsyncSession
-from gmail.tests.core.google_gmail import GoogleGmail
-from gmail.tests.utils import (
+from ...tests.common import CONFIG, MOCK_DATA
+from ...tests.core.async_session import GoogleGmailAsyncSession
+from ...tests.core.google_gmail import GoogleGmail
+from ...tests.utils import (
     assert_all_get_message,
     assert_all_list_messages,
     assert_get_thread,

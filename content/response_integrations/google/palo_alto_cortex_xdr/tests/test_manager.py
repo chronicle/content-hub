@@ -18,19 +18,19 @@ import pathlib
 import copy
 import pytest
 from TIPCommon.types import SingleJson
-from palo_alto_cortex_xdr.core.constants import MAX_LIMIT
-from palo_alto_cortex_xdr.core.datamodels import (
+from ..core.constants import MAX_LIMIT
+from ..core.datamodels import (
     Incident,
     XQLSearch,
     XQLSearchResult,
 )
-from palo_alto_cortex_xdr.core.XDRManager import (
+from ..core.XDRManager import (
     SearchXQLParameters,
     XDRManager,
 )
-from palo_alto_cortex_xdr.tests import common
-from palo_alto_cortex_xdr.tests.core.product import PaloAltoCortexXDR
-from palo_alto_cortex_xdr.tests.core.session import PaloAltoCortexXDRSession
+from ..tests import common
+from ..tests.core.product import PaloAltoCortexXDR
+from ..tests.core.session import PaloAltoCortexXDRSession
 
 
 INCIDENT: Incident = common.INCIDENT

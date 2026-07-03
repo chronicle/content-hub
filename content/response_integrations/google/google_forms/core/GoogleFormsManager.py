@@ -22,11 +22,11 @@ import requests
 from google.auth.transport.requests import AuthorizedSession
 
 from TIPCommon.base.interfaces import Apiable
-from google_forms.core import api_utils
-from google_forms.core import constants
-from google_forms.core import datamodels
-from google_forms.core import exceptions
-from google_forms.core.GoogleFormsParser import GoogleFormsParser
+from ..core import api_utils
+from ..core import constants
+from ..core import datamodels
+from ..core import exceptions
+from ..core.GoogleFormsParser import GoogleFormsParser
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson

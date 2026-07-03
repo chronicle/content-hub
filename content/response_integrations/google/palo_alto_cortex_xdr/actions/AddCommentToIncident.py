@@ -17,19 +17,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from TIPCommon.extraction import extract_action_param
-from palo_alto_cortex_xdr.core import action_init
-from palo_alto_cortex_xdr.core.base_action import BaseAction
-from palo_alto_cortex_xdr.core.constants import (
+from ..core import action_init
+from ..core.base_action import BaseAction
+from ..core.constants import (
     ADD_COMMENT_TO_INCIDENT_ACTION_SCRIPT_NAME,
     ID_NOT_FOUND,
     INTEGRATION_NAME,
 )
-from palo_alto_cortex_xdr.core import exceptions
+from ..core import exceptions
 
 if TYPE_CHECKING:
     from typing import NoReturn
 
-    from palo_alto_cortex_xdr.core.XDRManager import XDRManager
+    from ..core.XDRManager import XDRManager
 
 
 class AddCommentToIncidentAction(BaseAction):

@@ -29,7 +29,6 @@ for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
     if name not in sys.modules:
         try:
             sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-            changed = True
         except Exception:
             pass
 
@@ -56,9 +55,9 @@ import pytest
 from pytest_mock import MockerFixture
 from google.oauth2 import service_account
 
-from google_forms.core import GoogleFormsAuth, GoogleFormsManager
-from google_forms.tests.core.product import GoogleForms
-from google_forms.tests.core.session import GoogleFormsSession
+from ..core import GoogleFormsAuth, GoogleFormsManager
+from ..tests.core.product import GoogleForms
+from ..tests.core.session import GoogleFormsSession
 from integration_testing.common import use_live_api
 from integration_testing.logger import Logger
 

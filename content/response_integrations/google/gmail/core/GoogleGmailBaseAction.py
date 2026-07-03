@@ -28,9 +28,9 @@ from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.smp_time import unix_now
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailAuth import build_auth_manager
-from gmail.core.GoogleGmailApiManager import GoogleGmailApiManager
-from gmail.core.GoogleGmailConsts import (
+from ..core.GoogleGmailAuth import build_auth_manager
+from ..core.GoogleGmailApiManager import GoogleGmailApiManager
+from ..core.GoogleGmailConsts import (
     DEFAULT_MAILBOX,
     GLOBAL_TIMEOUT_THRESHOLD_IN_MIN,
     INTEGRATION_IDENTIFIER,

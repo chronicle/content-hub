@@ -19,12 +19,12 @@ import io
 import json
 from collections.abc import Iterable
 
-from splunk.tests.common import (
+from ...tests.common import (
     EventIdNotFoundError,
     create_error_content,
     MOCK_DATA,
 )
-from splunk.tests.core.product import Splunk
+from ...tests.core.product import Splunk
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse

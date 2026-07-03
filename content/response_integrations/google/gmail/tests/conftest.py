@@ -20,19 +20,15 @@ import pkgutil
 import soar_sdk
 import importlib
 
-changed = True
-while changed:
-    changed = False
-    for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-        if name not in sys.modules:
-            try:
-                # If there is an existing failed import of the flat name, remove it first
-                if name in sys.modules and sys.modules[name] is None:
-                    del sys.modules[name]
-                sys.modules[name] = importlib.import_module(f"soar_sdk.{name}")
-                changed = True
-            except (ImportError, ModuleNotFoundError):
-                pass
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    if name not in sys.modules:
+        try:
+            # If there is an existing failed import of the flat name, remove it first
+            if name in sys.modules and sys.modules[name] is None:
+                del sys.modules[name]
+            sys.modules[name] = importlib.import_module(f"soar_sdk.{name}")
+        except (ImportError, ModuleNotFoundError):
+            pass
             
 # Mock is_overflow_alert for integration tests to prevent Container crash
 import TIPCommon.base.connector
@@ -56,11 +52,11 @@ import aiohttp
 import google.auth.transport._aiohttp_requests
 from TIPCommon.types import SingleJson
 
-from gmail.core.GoogleGmailAuth import GoogleGmailAuthManager
-from gmail.core.GoogleGmailApiManager import GoogleGmailApiManager
-from gmail.tests.core.async_session import GoogleGmailAsyncSession
-from gmail.tests.core.google_gmail import GoogleGmail
-from gmail.tests.core.session import GoogleGmailSession
+from ..core.GoogleGmailAuth import GoogleGmailAuthManager
+from ..core.GoogleGmailApiManager import GoogleGmailApiManager
+from ..tests.core.async_session import GoogleGmailAsyncSession
+from ..tests.core.google_gmail import GoogleGmail
+from ..tests.core.session import GoogleGmailSession
 from integration_testing.common import get_def_file_content, use_live_api
 
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
@@ -266,7 +262,31 @@ def sdk_session_fixture(script_session):
 
 # Prevent GoogleGmailBaseAction from bypassing the test framework's stdout capture
 try:
-    from gmail.core.GoogleGmailBaseAction import GoogleGmailBaseAction
+    from ..core.GoogleGmailBaseAction import GoogleGmailBaseAction
     GoogleGmailBaseAction._fix_sdk_stdout = lambda self: None
 except ImportError:
     pass
+
+    mocker.patch("TIPCommon.rest.auth.get_adc", return_value=(mock_creds, "test-project"))
+    try:
+        mocker.patch("core.GoogleGmailUtils.get_adc", return_value=(mock_creds, "test-project"))
+    except Exception:
+        pass
+
+
+@pytest.fixture(autouse=True)
+def mock_google_adc(mocker):
+    """Mock the ADC to prevent DefaultCredentialsError in CI environments."""
+    mock_creds = mocker.Mock()
+    mock_creds.universe_domain = "googleapis.com"
+    mocker.patch("google.auth.default", return_value=(mock_creds, "test-project"))
+    mocker.patch("TIPCommon.rest.auth.get_adc", return_value=(mock_creds, "test-project"))
+    try:
+        mocker.patch("core.utils.get_adc", return_value=(mock_creds, "test-project"))
+    except Exception:
+        pass
+    try:
+        mocker.patch("core.GoogleGmailUtils.get_adc", return_value=(mock_creds, "test-project"))
+    except Exception:
+        pass
+

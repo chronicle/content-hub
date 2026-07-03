@@ -7,18 +7,19 @@ import pathlib
 import soar_sdk
 
 # Unify the soar_sdk namespace with the flat namespace for mocks
+import sys
+import os
+import pkgutil
+import soar_sdk
+
 sys.path.insert(0, os.path.dirname(soar_sdk.__file__))
 
-changed = True
-while changed:
-    changed = False
-    for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-        if name not in sys.modules:
-            try:
-                sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-                changed = True
-            except Exception:
-                pass
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    if name not in sys.modules:
+        try:
+            sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
+        except Exception:
+            pass
 import pathlib
 
 

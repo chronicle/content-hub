@@ -46,7 +46,7 @@ import pytest
 from TIPCommon.base.utils import CreateSession
 from SiemplifyBase import SiemplifyBase
 
-from azure_monitor.core.api_client import (
+from ..core.api_client import (
     AzureMonitorApiClient,
     ApiParameters,
 )
@@ -54,9 +54,9 @@ from integration_testing.common import use_live_api
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.logger import Logger
-from azure_monitor.tests.common import CONFIG
-from azure_monitor.tests.core.product import AzureMonitor
-from azure_monitor.tests.core.session import AzureMonitorSession
+from ..tests.common import CONFIG
+from ..tests.core.product import AzureMonitor
+from ..tests.core.session import AzureMonitorSession
 
 
 @pytest.fixture(name="azure_monitor")

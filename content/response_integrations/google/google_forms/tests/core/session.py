@@ -15,14 +15,14 @@
 from __future__ import annotations
 import pathlib
 
-from google_forms.core.datamodels import AlertResponse, FormResponse
+from ...core.datamodels import AlertResponse, FormResponse
 
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, RouteFunction
 
-from google_forms.tests.core.product import GoogleForms
+from ...tests.core.product import GoogleForms
 
 
 class GoogleFormsSession(MockSession[MockRequest, MockResponse, GoogleForms]):

@@ -42,11 +42,11 @@ if int_dir not in sys.path:
 import pytest
 from pytest_mock import MockerFixture
 
-from cyber_ark_credential_provider.tests.utils import read_config
-from cyber_ark_credential_provider.core.credential_provider_manager import (
+from ..tests.utils import read_config
+from ..core.credential_provider_manager import (
     CredentialProviderManager,
 )
-from cyber_ark_credential_provider.core.datamodels import (
+from ..core.datamodels import (
     IntegrationParameters
 )
 

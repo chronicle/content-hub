@@ -21,8 +21,8 @@ from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
 from TIPCommon.extraction import extract_action_param
-from zoho_desk.core import action_init
-from zoho_desk.core.constants import (
+from ..core import action_init
+from ..core.constants import (
     AGENT_TYPE_ASSIGNEE,
     ASSIGNEE_TYPE_MAPPING,
     CLASSIFICATION_MAPPING,

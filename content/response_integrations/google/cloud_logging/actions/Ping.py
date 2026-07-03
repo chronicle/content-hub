@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 from TIPCommon.base.action import Action
-from cloud_logging.core import consts
-from cloud_logging.core.CloudLoggingApiManager import CloudLoggingApiManager
-from cloud_logging.core.CloudLoggingAuthManager import build_api_manager_params, build_auth_manager
+from ..core import consts
+from ..core.CloudLoggingApiManager import CloudLoggingApiManager
+from ..core.CloudLoggingAuthManager import build_api_manager_params, build_auth_manager
 
 
 class Ping(Action):

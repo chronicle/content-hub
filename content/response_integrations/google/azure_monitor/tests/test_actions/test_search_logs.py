@@ -17,10 +17,10 @@ import pathlib
 
 from TIPCommon.base.action import ExecutionState
 
-from azure_monitor.actions import search_logs
-from azure_monitor.tests import common
-from azure_monitor.tests.core.product import AzureMonitor
-from azure_monitor.tests.core.session import AzureMonitorSession
+from ...actions import search_logs
+from ...tests import common
+from ...tests.core.product import AzureMonitor
+from ...tests.core.session import AzureMonitorSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

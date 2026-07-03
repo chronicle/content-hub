@@ -20,7 +20,7 @@ from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput, ActionJsonOutput
 from TIPCommon.types import SingleJson
 
-from gmail.actions.DeleteEmail import (
+from ...actions.DeleteEmail import (
     DeleteEmail,
     EMPTY_PARAMS_MESSAGE,
     NO_MAILBOXES_FOUND_MESSAGE,
@@ -31,10 +31,10 @@ from gmail.actions.DeleteEmail import (
 )
 import gmail.core.GoogleGmailConsts as Constants
 
-from gmail.tests.common import CONFIG, MOCK_DATA
-from gmail.tests.core.async_session import GoogleGmailAsyncSession
-from gmail.tests.core.google_gmail import GoogleGmail
-from gmail.tests.utils import (
+from ...tests.common import CONFIG, MOCK_DATA
+from ...tests.core.async_session import GoogleGmailAsyncSession
+from ...tests.core.google_gmail import GoogleGmail
+from ...tests.utils import (
     assert_all_list_messages,
     assert_all_delete_messages,
     assert_all_trash_messages,

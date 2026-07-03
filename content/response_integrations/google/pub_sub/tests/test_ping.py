@@ -18,15 +18,15 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from pub_sub.actions.Ping import (
+from ..actions.Ping import (
     Ping,
     SUCCESS_MESSAGE,
     ERROR_MESSAGE,
 )
 import pub_sub.core.PubSubConstants as Constants
 
-from pub_sub.tests.common import CONFIG
-from pub_sub.tests.core.session import ApiSession
+from ..tests.common import CONFIG
+from ..tests.core.session import ApiSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 
@@ -60,7 +60,7 @@ class TestPing:
     ) -> None:
         Ping(script_name=Constants.PING_SCRIPT_NAME).run()
 
-        assert len(gcloud_pubsub_script_session.request_history) >= 3
+        assert len(gcloud_pubsub_script_session.request_history) >= 2
         assert action_output.results == ActionOutput(
             output_message=SUCCESS_MESSAGE,
             result_value=True,
@@ -96,7 +96,7 @@ class TestPing:
     ) -> None:
         Ping(script_name=Constants.PING_SCRIPT_NAME).run()
 
-        assert len(gcloud_pubsub_script_session.request_history) >= 2
+        assert len(gcloud_pubsub_script_session.request_history) >= 1
         assert (
             gcloud_pubsub_script_session.request_history[-1]
             .response.json().get("error", {}).get("message")

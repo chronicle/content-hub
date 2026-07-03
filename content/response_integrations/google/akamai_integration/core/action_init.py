@@ -15,11 +15,11 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from akamai_integration.core import api_manager
-from akamai_integration.core.authentication_manager import AuthenticateSession
-from akamai_integration.core.datamodels import IntegrationParameters
+from ..core import api_manager
+from ..core.authentication_manager import AuthenticateSession
+from ..core.datamodels import IntegrationParameters
 from requests import Session
-from akamai_integration.core.utils import get_integration_parameters
+from ..core.utils import get_integration_parameters
 
 if TYPE_CHECKING:
     from TIPCommon.types import ChronicleSOAR

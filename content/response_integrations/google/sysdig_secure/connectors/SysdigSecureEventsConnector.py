@@ -29,8 +29,8 @@ from TIPCommon.transformation import (
 from TIPCommon.utils import is_empty_string_or_none, is_test_run
 from TIPCommon.base.connector import Connector
 
-from sysdig_secure.core.SysdigSecureAuthManager import AuthManagerParams, AuthManager
-from sysdig_secure.core.SysdigSecureConstants import (
+from ..core.SysdigSecureAuthManager import AuthManagerParams, AuthManager
+from ..core.SysdigSecureConstants import (
     DEFAULT_LIMIT,
     EVENTS_CONNECTOR,
     MAX_LIMIT,
@@ -42,9 +42,9 @@ from sysdig_secure.core.SysdigSecureConstants import (
     STORED_IDS_LIMIT,
     TIME_DELTA_MS,
 )
-from sysdig_secure.core.SysdigSecureDatamodels import Event
-from sysdig_secure.core.SysdigSecureManager import ApiManager
-from sysdig_secure.core.SysdigSecureUtils import convert_milliseconds_to_nanoseconds
+from ..core.SysdigSecureDatamodels import Event
+from ..core.SysdigSecureManager import ApiManager
+from ..core.SysdigSecureUtils import convert_milliseconds_to_nanoseconds
 
 
 class EventsConnector(Connector):

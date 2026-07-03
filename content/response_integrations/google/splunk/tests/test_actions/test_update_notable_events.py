@@ -18,14 +18,14 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from splunk.actions import UpdateNotableEvents
-from splunk.actions.UpdateNotableEvents import STATUS_MAPPER
-from splunk.core.constants import DISPOSITION_MAPPER
-from splunk.core.datamodels import NotableEvent
-from splunk.tests.common import create_notable_event
-from splunk.tests.const import CONFIG_PATH
-from splunk.tests.core.product import Splunk
-from splunk.tests.core.session import SplunkSession
+from ...actions import UpdateNotableEvents
+from ...actions.UpdateNotableEvents import STATUS_MAPPER
+from ...core.constants import DISPOSITION_MAPPER
+from ...core.datamodels import NotableEvent
+from ...tests.common import create_notable_event
+from ...tests.const import CONFIG_PATH
+from ...tests.core.product import Splunk
+from ...tests.core.session import SplunkSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

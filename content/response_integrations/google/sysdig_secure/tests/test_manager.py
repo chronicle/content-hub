@@ -15,9 +15,9 @@
 from __future__ import annotations
 import pathlib
 
-from sysdig_secure.core.SysdigSecureManager import ApiManager
+from ..core.SysdigSecureManager import ApiManager
 
-from sysdig_secure.tests.core.session import ApiSession
+from ..tests.core.session import ApiSession
 from integration_testing.request import HttpMethod
 
 

@@ -15,10 +15,10 @@
 from __future__ import annotations
 from TIPCommon.types import ChronicleSOAR
 
-from extrahop.core.AuthenticationManager import AuthenticateSession
-from extrahop.core.UtilsManager import get_integration_parameters
-from extrahop.core import ExtrahopManager as api_manager
-from extrahop.core.datamodels import IntegrationParameters
+from ..core.AuthenticationManager import AuthenticateSession
+from ..core.UtilsManager import get_integration_parameters
+from ..core import ExtrahopManager as api_manager
+from ..core.datamodels import IntegrationParameters
 
 
 def create_api_client(soar_action: ChronicleSOAR) -> api_manager.ExtrahopManager:

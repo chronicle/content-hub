@@ -21,16 +21,16 @@ from TIPCommon.transformation import convert_dict_to_json_result_dict
 from TIPCommon.types import Entity
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
-from vertex_ai.core.VertexAIApiManager import ApiManager
-from vertex_ai.core.VertexAIBaseAction import BaseAction
-from vertex_ai.core.VertexAIConstants import ANALYZE_EML_SCRIPT_NAME
-from vertex_ai.core.VertexAIDatamodels import (
+from ..core.VertexAIApiManager import ApiManager
+from ..core.VertexAIBaseAction import BaseAction
+from ..core.VertexAIConstants import ANALYZE_EML_SCRIPT_NAME
+from ..core.VertexAIDatamodels import (
     GenerationConfig,
     GenerationResult,
     Prompt,
 )
-from vertex_ai.core.VertexAIExceptions import VertexAIValidationException
-from vertex_ai.core.VertexAIUtils import get_publisher_name
+from ..core.VertexAIExceptions import VertexAIValidationException
+from ..core.VertexAIUtils import get_publisher_name
 
 SUCCESS_MESSAGE = "Successfully analysed the following EML files using Vertex AI: {}.\n"
 NOT_FOUND_FILES = "The following files were not found: {}."

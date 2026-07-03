@@ -18,7 +18,7 @@ import json
 
 from TIPCommon.types import SingleJson
 
-from google_forms.core.exceptions import InvalidJSONFormatException
+from ..core.exceptions import InvalidJSONFormatException
 
 
 def parse_string_to_dict(json_string: str) -> SingleJson:

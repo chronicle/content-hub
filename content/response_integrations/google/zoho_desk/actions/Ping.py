@@ -17,9 +17,9 @@ from __future__ import annotations
 from typing import NoReturn
 
 from TIPCommon.base.action import Action
-from zoho_desk.core import action_init
-from zoho_desk.core.ZohoDeskApiManager import ZohoDeskApiClient
-from zoho_desk.core.constants import INTEGRATION_DISPLAY_NAME, PING_SCRIPT_NAME
+from ..core import action_init
+from ..core.ZohoDeskApiManager import ZohoDeskApiClient
+from ..core.constants import INTEGRATION_DISPLAY_NAME, PING_SCRIPT_NAME
 
 
 class Ping(Action[ZohoDeskApiClient]):

@@ -18,13 +18,13 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from zoho_desk.actions.Ping import Ping
-from zoho_desk.tests.common import (
+from ..actions.Ping import Ping
+from ..tests.common import (
     ACCESS_TOKEN_DB_ROW,
     CONFIG_PATH,
     EXPIRED_ACCESS_TOKEN_DB_ROW,
 )
-from zoho_desk.tests.core.session import ZohoDeskSession
+from ..tests.core.session import ZohoDeskSession
 from integration_testing.platform.external_context import MockExternalContext
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata

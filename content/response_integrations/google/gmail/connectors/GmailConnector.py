@@ -32,17 +32,17 @@ from TIPCommon.smp_time import unix_now
 from TIPCommon.utils import is_test_run
 from TIPCommon.validation import ParameterValidator
 
-from gmail.core.GoogleGmailApiManager import GoogleGmailApiManager
-from gmail.core.GoogleGmailAuth import build_auth_manager
-from gmail.core import GoogleGmailConsts
-from gmail.core.GoogleGmailDatamodel import GmailMessage
-from gmail.core.GoogleGmailDatamodel import GmailMessagePart
-from gmail.core.GoogleGmailDatamodel import MailboxReadEnum
-from gmail.core.GoogleGmailServices import MessagesService, LabelsService
-from gmail.core.GoogleGmailUtils import build_regex_map
-from gmail.core.GoogleGmailUtils import extract_regex_from_content
-from gmail.core.GoogleGmailUtils import get_html_urls
-from gmail.core.GoogleGmailUtils import transform_dict_keys, transform_template_string
+from ..core.GoogleGmailApiManager import GoogleGmailApiManager
+from ..core.GoogleGmailAuth import build_auth_manager
+from ..core import GoogleGmailConsts
+from ..core.GoogleGmailDatamodel import GmailMessage
+from ..core.GoogleGmailDatamodel import GmailMessagePart
+from ..core.GoogleGmailDatamodel import MailboxReadEnum
+from ..core.GoogleGmailServices import MessagesService, LabelsService
+from ..core.GoogleGmailUtils import build_regex_map
+from ..core.GoogleGmailUtils import extract_regex_from_content
+from ..core.GoogleGmailUtils import get_html_urls
+from ..core.GoogleGmailUtils import transform_dict_keys, transform_template_string
 
 
 class GoogleGmailConnector(AsyncConnector):

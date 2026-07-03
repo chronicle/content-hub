@@ -37,12 +37,12 @@ from TIPCommon.types import ChronicleSOAR, SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 from TIPCommon.validation import ParameterValidator
 
-from pub_sub.core.PubSubConstants import INTEGRATION_IDENTIFIER, DEFAULT_OAUTH_SCOPES
-from pub_sub.core.PubSubExceptions import (
+from ..core.PubSubConstants import INTEGRATION_IDENTIFIER, DEFAULT_OAUTH_SCOPES
+from ..core.PubSubExceptions import (
     PubSubAuthException,
     PubSubException,
 )
-from pub_sub.core.PubSubUtils import parse_string_to_dict
+from ..core.PubSubUtils import parse_string_to_dict
 
 
 def build_auth_manager_params(

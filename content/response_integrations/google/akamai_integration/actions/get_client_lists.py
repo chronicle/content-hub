@@ -21,16 +21,16 @@ from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.validation import ParameterValidator
-from akamai_integration.core import action_init
-from akamai_integration.core import api_manager
-from akamai_integration.core.constants import (
+from ..core import action_init
+from ..core import api_manager
+from ..core.constants import (
     CLIENT_LIST_TYPE_MAPPING,
     DEFAULT_RESULTS_TO_RETURN,
     GET_CLIENT_LISTS_SCRIPT_NAME,
     LIST_ITEMS,
     MINIMUM_POSITIVE_INTEGER,
 )
-from akamai_integration.core.datamodels import ClientList
+from ..core.datamodels import ClientList
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson

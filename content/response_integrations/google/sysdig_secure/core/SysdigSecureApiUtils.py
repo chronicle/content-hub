@@ -17,8 +17,8 @@ from __future__ import annotations
 import urllib.parse
 import requests
 
-from sysdig_secure.core.SysdigSecureConstants import ENDPOINTS
-from sysdig_secure.core.SysdigSecureExceptions import SysdigSecureHTTPException
+from ..core.SysdigSecureConstants import ENDPOINTS
+from ..core.SysdigSecureExceptions import SysdigSecureHTTPException
 
 
 def get_full_url(

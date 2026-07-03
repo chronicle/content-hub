@@ -18,7 +18,7 @@ import abc
 
 import dataclasses
 
-from service_desk_plus.core.datamodels import WorkOrder
+from ...core.datamodels import WorkOrder
 
 @dataclasses.dataclass
 class ServiceDeskPlus(abc.ABC):

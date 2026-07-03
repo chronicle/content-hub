@@ -17,13 +17,13 @@ from __future__ import annotations
 from typing import NoReturn
 
 from TIPCommon.base.action import Action
-from cyber_ark_credential_provider.core import constants
-from cyber_ark_credential_provider.core.credential_provider_manager import (
+from ..core import constants
+from ..core.credential_provider_manager import (
     CredentialProviderManager,
     CommandResult,
 )
-from cyber_ark_credential_provider.core import exceptions
-from cyber_ark_credential_provider.core import utils
+from ..core import exceptions
+from ..core import utils
 
 
 class Ping(Action):

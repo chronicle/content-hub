@@ -16,7 +16,7 @@ from __future__ import annotations
 import pathlib
 
 from pathlib import Path
-from cyber_ark_credential_provider.core.datamodels import (
+from ..core.datamodels import (
     IntegrationParameters
 )
 

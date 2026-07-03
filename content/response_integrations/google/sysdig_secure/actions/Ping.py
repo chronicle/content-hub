@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 
-from sysdig_secure.core.SysdigSecureBaseAction import BaseAction
-from sysdig_secure.core.SysdigSecureConstants import INTEGRATION_DISPLAY_NAME, PING_SCRIPT_NAME
+from ..core.SysdigSecureBaseAction import BaseAction
+from ..core.SysdigSecureConstants import INTEGRATION_DISPLAY_NAME, PING_SCRIPT_NAME
 
 
 SUCCESS_MESSAGE = (

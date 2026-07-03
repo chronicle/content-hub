@@ -43,13 +43,13 @@ import soar_sdk
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent))
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
-from pub_sub.tests.core.product import Product
-from pub_sub.tests.core.session import ApiSession
+from ..tests.core.product import Product
+from ..tests.core.session import ApiSession
 from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
 import requests
 
 def mock_extract_configuration_param(self, provider_name, param_name, default_value=None, input_type=str, is_mandatory=False, print_value=False):
-    from pub_sub.tests.common import CONFIG
+    from ..tests.common import CONFIG
     return CONFIG.get(param_name, default_value)
 
 SiemplifyConnectorExecution.extract_configuration_param = mock_extract_configuration_param
@@ -61,7 +61,7 @@ from TIPCommon.base.connector import Connector
 Connector.is_overflow_alert = lambda self, alert_info: False
 Connector.is_overflowed = lambda self, alert_info, env: False
 
-from pub_sub.connectors.PubSubMessagesConnector import PubSubMessagesConnector
+from ..connectors.PubSubMessagesConnector import PubSubMessagesConnector
 PubSubMessagesConnector.is_overflow_alert = lambda self, alert_info: False
 
 import google.oauth2.credentials
@@ -87,3 +87,21 @@ def script_session_fixture(
 
 # Provide integration_testing fixtures
 pytest_plugins = ("integration_testing.conftest",)
+
+
+@pytest.fixture(autouse=True)
+def mock_google_adc(mocker):
+    """Mock the ADC to prevent DefaultCredentialsError in CI environments."""
+    mock_creds = mocker.Mock()
+    mock_creds.universe_domain = "googleapis.com"
+    mocker.patch("google.auth.default", return_value=(mock_creds, "test-project"))
+    mocker.patch("TIPCommon.rest.auth.get_adc", return_value=(mock_creds, "test-project"))
+    try:
+        mocker.patch("core.utils.get_adc", return_value=(mock_creds, "test-project"))
+    except Exception:
+        pass
+    try:
+        mocker.patch("core.GoogleGmailUtils.get_adc", return_value=(mock_creds, "test-project"))
+    except Exception:
+        pass
+

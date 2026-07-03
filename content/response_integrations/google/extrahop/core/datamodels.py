@@ -19,7 +19,7 @@ import copy
 
 from TIPCommon.transformation import dict_to_flat, add_prefix_to_dict
 
-from extrahop.core.constants import DEVICE_VENDOR, DEVICE_PRODUCT, DEVICE_OBJECT_TYPE
+from ..core.constants import DEVICE_VENDOR, DEVICE_PRODUCT, DEVICE_OBJECT_TYPE
 
 
 @dataclasses.dataclass(slots=True)

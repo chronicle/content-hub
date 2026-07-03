@@ -5,16 +5,12 @@ from __future__ import annotations
 import sys
 import pkgutil
 import soar_sdk
-changed = True
-while changed:
-    changed = False
-    for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-        if name not in sys.modules:
-            try:
-                sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-                changed = True
-            except Exception:
-                pass
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    if name not in sys.modules:
+        try:
+            sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
+        except Exception:
+            pass
 
 import os
 import sys
@@ -50,8 +46,8 @@ import pytest
 from TIPCommon.base.utils import CreateSession
 from SiemplifyBase import SiemplifyBase
 
-from screenshot_machine.tests.core.product import ScreenshotMachine
-from screenshot_machine.tests.core.session import ScreenshotMachineSession
+from ..tests.core.product import ScreenshotMachine
+from ..tests.core.session import ScreenshotMachineSession
 from integration_testing.common import use_live_api
 
 

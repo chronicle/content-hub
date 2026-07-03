@@ -26,11 +26,11 @@ from TIPCommon.data_models import BaseAlert
 from TIPCommon.smp_io import read_ids, write_ids
 from TIPCommon.transformation import convert_list_to_comma_string, string_to_multi_value
 from TIPCommon.types import SingleJson
-from google_forms.core import constants
-from google_forms.core import datamodels
-from google_forms.core import exceptions
-from google_forms.core.GoogleFormsAuth import build_auth_manager_params, GoogleFormsAuthManager
-from google_forms.core.GoogleFormsManager import GoogleFormsManager
+from ..core import constants
+from ..core import datamodels
+from ..core import exceptions
+from ..core.GoogleFormsAuth import build_auth_manager_params, GoogleFormsAuthManager
+from ..core.GoogleFormsManager import GoogleFormsManager
 
 
 class ResponseConnector(Connector):

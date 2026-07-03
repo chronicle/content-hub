@@ -20,9 +20,9 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import construct_csv, convert_comma_separated_to_list
 
-from mimecast.core.constants import INTEGRATION_NAME, SIMPLE_ARCHIVE_SEARCH_ACTION, DEFAULT_LIMIT
-from mimecast.core.MimecastManager import MimecastManager
-from mimecast.core.UtilsManager import get_timestamps, get_integration_parameters
+from ..core.constants import INTEGRATION_NAME, SIMPLE_ARCHIVE_SEARCH_ACTION, DEFAULT_LIMIT
+from ..core.MimecastManager import MimecastManager
+from ..core.UtilsManager import get_timestamps, get_integration_parameters
 
 
 @output_handler

@@ -17,10 +17,10 @@ from http import HTTPStatus
 
 from TIPCommon.base.action import ExecutionState
 
-from okta.actions import ClearOktaUserSession
-from okta.tests.common import CONFIG_PATH
-from okta.tests.core.product import Product
-from okta.tests.core.session import Session
+from ...actions import ClearOktaUserSession
+from ...tests.common import CONFIG_PATH
+from ...tests.core.product import Product
+from ...tests.core.session import Session
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 

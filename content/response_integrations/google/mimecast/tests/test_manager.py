@@ -18,20 +18,20 @@ from datetime import datetime, timezone
 
 import pytest
 
-from mimecast.core.MimecastManager import (
+from ..core.MimecastManager import (
     EmailSearchCriteria,
     MimecastManager,
 )
-from mimecast.core.datamodels import (
+from ..core.datamodels import (
     Attachment,
     BlockSenderPolicyActionParams,
     HoldMessage,
     Message,
     MessageDetails,
 )
-from mimecast.tests.core.product import Mimecast
-from mimecast.tests.core.session import MimecastSession
-from mimecast.tests.common import (
+from ..tests.core.product import Mimecast
+from ..tests.core.session import MimecastSession
+from ..tests.common import (
     ATTACHMENT,
     HOLD_MESSAGE,
     MESSAGE,

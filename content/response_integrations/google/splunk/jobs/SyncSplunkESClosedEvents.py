@@ -16,10 +16,10 @@ from __future__ import annotations
 from soar_sdk.SiemplifyJob import SiemplifyJob
 from soar_sdk.SiemplifyUtils import convert_datetime_to_unix_time
 from soar_sdk.SiemplifyUtils import output_handler
-from splunk.core.SplunkManager import SplunkManager
+from ..core.SplunkManager import SplunkManager
 from TIPCommon.extraction import extract_action_param
-from splunk.core.UtilsManager import validate_timestamp
-from splunk.core.constants import (
+from ..core.UtilsManager import validate_timestamp
+from ..core.constants import (
     SYNC_CLOSURE_SCRIPT_NAME,
     DEFAULT_DEVICE_PRODUCT,
     CASE_STATUS_CLOSED,

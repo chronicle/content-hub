@@ -18,12 +18,12 @@ from typing import MutableMapping, Any
 from TIPCommon.types import SingleJson
 from TIPCommon.data_models import CaseDetails
 
-from palo_alto_cortex_xdr.core.datamodels import (
+from ...core.datamodels import (
     Incident,
     IncidentInfo,
     IncidentExtraData,
 )
-from palo_alto_cortex_xdr.tests.common import IncidentIdNotFoundError
+from ...tests.common import IncidentIdNotFoundError
 
 
 class PaloAltoCortexXDR(abc.ABC):

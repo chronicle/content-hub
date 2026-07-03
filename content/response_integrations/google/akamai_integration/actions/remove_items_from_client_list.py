@@ -20,13 +20,13 @@ from typing import TYPE_CHECKING, Any, NoReturn
 from TIPCommon.base.action import Action
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
-from akamai_integration.core import action_init
-from akamai_integration.core import api_manager
-from akamai_integration.core import exceptions
-from akamai_integration.core.constants import (
+from ..core import action_init
+from ..core import api_manager
+from ..core import exceptions
+from ..core.constants import (
     REMOVE_ITEMS_FROM_CLIENT_LISTS_SCRIPT_NAME,
 )
-from akamai_integration.core.datamodels import ClientList
+from ..core.datamodels import ClientList
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson

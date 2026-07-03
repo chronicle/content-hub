@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from azure_monitor.core.data_models import AzureLogEntry
+from ..core.data_models import AzureLogEntry
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson

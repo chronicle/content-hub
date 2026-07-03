@@ -15,11 +15,11 @@
 import pathlib
 from copy import deepcopy
 import pytest
-from extrahop.core.datamodels import Detection, Device
-from extrahop.core.ExtrahopManager import ExtrahopManager
-from extrahop.tests import common
-from extrahop.tests.core.product import Extrahop
-from extrahop.tests.core.session import ExtrahopSession
+from ..core.datamodels import Detection, Device
+from ..core.ExtrahopManager import ExtrahopManager
+from ..tests import common
+from ..tests.core.product import Extrahop
+from ..tests.core.session import ExtrahopSession
 
 
 class TestApiManager:

@@ -22,16 +22,16 @@ import pytest
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from zoho_desk.actions.MarkTicketAsSpam import MarkTicketAsSpam
-from zoho_desk.core.constants import INTEGRATION_DISPLAY_NAME
-from zoho_desk.core.datamodels import Ticket
-from zoho_desk.tests.common import (
+from ..actions.MarkTicketAsSpam import MarkTicketAsSpam
+from ..core.constants import INTEGRATION_DISPLAY_NAME
+from ..core.datamodels import Ticket
+from ..tests.common import (
     ACCESS_TOKEN_DB_ROW,
     CONFIG_PATH,
     DEFAULT_TICKET,
 )
-from zoho_desk.tests.core.session import ZohoDeskSession
-from zoho_desk.tests.core.zoho_desk import ZohoDesk
+from ..tests.core.session import ZohoDeskSession
+from ..tests.core.zoho_desk import ZohoDesk
 from integration_testing.platform.external_context import MockExternalContext
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.requests.session import HistoryRecord

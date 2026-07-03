@@ -15,10 +15,10 @@
 from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from splunk.core.SplunkManager import SplunkManager
+from ..core.SplunkManager import SplunkManager
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
-from splunk.core.constants import INTEGRATION_NAME, SUBMIT_EVENT_SCRIPT_NAME
+from ..core.constants import INTEGRATION_NAME, SUBMIT_EVENT_SCRIPT_NAME
 
 
 @output_handler

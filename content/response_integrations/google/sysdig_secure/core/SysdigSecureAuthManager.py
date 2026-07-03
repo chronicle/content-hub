@@ -25,8 +25,8 @@ from TIPCommon.base.interfaces import Logger
 from TIPCommon.extraction import extract_script_param
 from TIPCommon.types import ChronicleSOAR
 
-from sysdig_secure.core.SysdigSecureConstants import INTEGRATION_IDENTIFIER
-from sysdig_secure.core.SysdigSecureExceptions import SysdigSecureExceptions
+from ..core.SysdigSecureConstants import INTEGRATION_IDENTIFIER
+from ..core.SysdigSecureExceptions import SysdigSecureExceptions
 
 
 def build_auth_manager_params(

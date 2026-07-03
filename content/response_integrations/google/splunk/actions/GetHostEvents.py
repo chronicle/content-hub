@@ -16,13 +16,13 @@ from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
 from soar_sdk.SiemplifyDataModel import EntityTypes
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from splunk.core.SplunkManager import SplunkManager
+from ..core.SplunkManager import SplunkManager
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 from TIPCommon.transformation import construct_csv
-from splunk.core.UtilsManager import get_entity_original_identifier
-from splunk.core.exceptions import SplunkBadRequestException
-from splunk.core.constants import (
+from ..core.UtilsManager import get_entity_original_identifier
+from ..core.exceptions import SplunkBadRequestException
+from ..core.constants import (
     INTEGRATION_NAME,
     GET_HOST_EVENTS_SCRIPT_NAME,
     DEFAULT_QUERY_LIMIT,

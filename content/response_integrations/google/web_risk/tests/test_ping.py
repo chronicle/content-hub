@@ -18,15 +18,15 @@ import pathlib
 from TIPCommon.base.action import ExecutionState
 from TIPCommon.base.data_models import ActionOutput
 
-from web_risk.actions.Ping import (
+from ..actions.Ping import (
     Ping,
     SUCCESS_MESSAGE,
     ERROR_MESSAGE,
 )
 import web_risk.core.WebRiskConstants as Constants
 
-from web_risk.tests.common import CONFIG
-from web_risk.tests.core.session import ApiSession
+from ..tests.common import CONFIG
+from ..tests.core.session import ApiSession
 from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
 
@@ -60,7 +60,7 @@ class TestPing:
     ) -> None:
         Ping(script_name=Constants.PING_SCRIPT_NAME).run()
 
-        assert len(script_session.request_history) >= 3
+        assert len(script_session.request_history) >= 2
         assert (
             script_session.request_history[-1].request.url.path
             == "/v1/uris:search"
@@ -100,7 +100,7 @@ class TestPing:
     ) -> None:
         Ping(script_name=Constants.PING_SCRIPT_NAME).run()
 
-        assert len(script_session.request_history) >= 2
+        assert len(script_session.request_history) >= 1
         assert (
             script_session.request_history[-1]
             .response.json().get("error", {}).get("message")

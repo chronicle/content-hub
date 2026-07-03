@@ -19,11 +19,11 @@ from collections.abc import Iterable
 
 import json
 
-from proofpoint_cloud_threat_response.tests.common import (
+from ...tests.common import (
     MESSAGES_JSON,
     OAUTH_TOKEN_JSON,
 )
-from proofpoint_cloud_threat_response.tests.core.product import (
+from ...tests.core.product import (
     ProofpointCloudThreatResponse,
 )
 from integration_testing import router

@@ -43,8 +43,8 @@ from TIPCommon.rest.auth import get_auth_request
 from TIPCommon.types import SingleJson
 from TIPCommon.utils import is_empty_string_or_none
 
-from gmail.core.GoogleGmailExceptions import GoogleCloudAuthenticationError
-from gmail.core.GoogleGmailExceptions import InvalidJSONFormatException
+from ..core.GoogleGmailExceptions import GoogleCloudAuthenticationError
+from ..core.GoogleGmailExceptions import InvalidJSONFormatException
 
 DEFAULT_DIVIDER = ";"
 URL_ENCLOSING_PREFIX = "["

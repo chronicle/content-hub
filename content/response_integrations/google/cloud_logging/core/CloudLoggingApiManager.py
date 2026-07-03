@@ -25,15 +25,15 @@ from TIPCommon.base.interfaces import Apiable
 from TIPCommon.types import SingleJson
 from TIPCommon.rest.gcp import validate_impersonation
 
-from cloud_logging.core.consts import (
+from ..core.consts import (
     ENDPOINTS,
     API_URL,
     INTEGRATION_DISPLAY_NAME,
     TIME_INTERVALS,
     CUSTOM_TIME,
 )
-from cloud_logging.core.datamodels import ApiManagerParams
-from cloud_logging.core.exceptions import CloudLoggingManagerError, CloudAuthenticationError
+from ..core.datamodels import ApiManagerParams
+from ..core.exceptions import CloudLoggingManagerError, CloudAuthenticationError
 
 
 class CloudLoggingApiManager(Apiable):

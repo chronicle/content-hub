@@ -22,13 +22,13 @@ from google.auth.transport.requests import AuthorizedSession
 from TIPCommon.base.interfaces import Apiable
 from TIPCommon.base.utils import NewLineLogger
 from TIPCommon.types import SingleJson
-from vertex_ai.core.VertexAIConstants import (
+from ..core.VertexAIConstants import (
     ANTHROPIC_VERSION,
     DEFAULT_MAX_OUTPUT_TOKENS,
     VERTEX_SDK_PUBLISHERS,
 )
-from vertex_ai.core.VertexAIDatamodels import GenerationConfig, GenerationResult, Prompt
-from vertex_ai.core.VertexAIExceptions import VertexAIManagerException
+from ..core.VertexAIDatamodels import GenerationConfig, GenerationResult, Prompt
+from ..core.VertexAIExceptions import VertexAIManagerException
 
 ENDPOINTS = {
     "publishers.models.get": "v1/publishers/{publisher_name}/models/{model_id}",
