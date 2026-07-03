@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from core.base_action import BaseAction
 from core.base_action_parameters import BaseActionParameters
 from core.datamodels.observable import Observable
 from core.utils import is_ipv4, parse_csv_list
 from pydantic import Field, field_validator
 from TIPCommon.base.action import EntityTypesEnum
-from TIPCommon.types import Entity
+
+if TYPE_CHECKING:
+    from TIPCommon.types import Entity
 
 SCRIPT_NAME = "Create Observables"
 

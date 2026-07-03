@@ -1,16 +1,19 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from core.opencti_client.client import OpenCTIClient
 from TIPCommon.base.action import Action
-from TIPCommon.base.action.base_enrich_action import (
-    EnrichAction,
-    EnrichActionError,
-    Entity,
-)
+from TIPCommon.base.action.base_enrich_action import EnrichAction, EnrichActionError
 from TIPCommon.extraction import extract_configuration_param
 
-try:
-    from SiemplifyAction import SiemplifyAction  # type: ignore[import]
-except Exception:
-    from soar_sdk.SiemplifyAction import SiemplifyAction
+if TYPE_CHECKING:
+    from TIPCommon.types import Entity
+
+    try:
+        from SiemplifyAction import SiemplifyAction  # type: ignore[import]
+    except Exception:
+        from soar_sdk.SiemplifyAction import SiemplifyAction
 
 
 class _OpenCTIMixin:

@@ -11,11 +11,12 @@ from core.opencti_client.client import OpenCTIClientError
 from core.utils import score_to_color
 from pydantic import Field
 from TIPCommon.base.action import EntityTypesEnum
-from TIPCommon.base.action.base_enrich_action import EnrichActionError, Entity
+from TIPCommon.base.action.base_enrich_action import EnrichActionError
 from TIPCommon.transformation import construct_csv
 
 if TYPE_CHECKING:
     from core.opencti_client.enrich_results import ObservableEnrichmentResult
+    from TIPCommon.types import Entity
 
 SCRIPT_NAME = "Enrich Observable"
 
