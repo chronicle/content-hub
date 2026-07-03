@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from .file_utils import create_or_get_custom_fields_root_dir
 
 __all__: list[str] = [
