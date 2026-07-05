@@ -40,7 +40,9 @@ os.makedirs(os.environ['SIEMPLIFY_LOGS_FOLDER'], exist_ok=True)
 import dataclasses
 import json
 import pathlib
-import auth
+from zscaler.core import auth
+import sys
+sys.modules['auth'] = auth
 from typing import Any, Generator
 from unittest.mock import MagicMock
 from TIPCommon.base.utils import CreateSession
@@ -48,9 +50,10 @@ from SiemplifyBase import SiemplifyBase
 
 import pytest
 
-import zscalerManager
-
-import base_action
+from zscaler.core import zscaler_manager as zscalerManager
+sys.modules['zscalerManager'] = zscalerManager
+from zscaler.core import base_action
+sys.modules['base_action'] = base_action
 from zscaler.core.data_models import IntegrationParameters
 from zscaler.tests.core.session import ZscalerSession
 from zscaler.tests.core.zscaler import Zscaler

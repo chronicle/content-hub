@@ -62,6 +62,8 @@ def test_xdr_connector(
 ) -> None:
     extra_data = copy.deepcopy(common.INCIDENT_EXTRA_DATA_INFO)
     alert_template = extra_data.alerts[0]
+    alert_template.raw_data["host_name"] = "test-host-extracted"
+
     alert_endpoint = copy.deepcopy(alert_template)
     alert_endpoint.alert_id = 'test_alert_endpoint'
     alert_endpoint.raw_data = copy.deepcopy(alert_template.raw_data)

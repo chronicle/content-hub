@@ -24,7 +24,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 
 from ..core.constants import INTEGRATION_NAME, CREATE_REQUEST_ALERT_ACTION, CREATE_REQUEST_TYPE
-from ..core.service_desk_plus_manager_v3 import service_desk_plus_manager_v3
+from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
@@ -182,7 +182,7 @@ def main() -> None:
     result_value: bool = True
 
     try:
-        servicedesk_manager: service_desk_plus_manager_v3 = service_desk_plus_manager_v3(
+        servicedesk_manager: ServiceDeskPlusManagerV3 = ServiceDeskPlusManagerV3(
             api_root=api_root,
             api_key=api_key,
             verify_ssl=verify_ssl,
@@ -242,7 +242,7 @@ def main() -> None:
 
 
 def _create_request(
-    manager: service_desk_plus_manager_v3, alert_id: str, params: SingleJson
+    manager: ServiceDeskPlusManagerV3, alert_id: str, params: SingleJson
 ) -> Any:
     return manager.request(
         action_type=CREATE_REQUEST_TYPE,

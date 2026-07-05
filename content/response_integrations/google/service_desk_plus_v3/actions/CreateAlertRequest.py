@@ -24,7 +24,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 
 from ..core.constants import INTEGRATION_NAME, CREATE_REQUEST_ALERT_ACTION, CREATE_REQUEST_TYPE
-from ..core.ServiceDeskPlusManagerV3 import ServiceDeskPlusManagerV3
+from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson

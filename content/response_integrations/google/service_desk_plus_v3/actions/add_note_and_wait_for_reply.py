@@ -28,7 +28,7 @@ from TIPCommon.extraction import extract_configuration_param, extract_action_par
 
 from ..core.constants import INTEGRATION_NAME, ADD_NOTE_AND_WAIT_ACTION
 from ..core.service_desk_plus_v3_exceptions import NoteNotFoundException
-from ..core.service_desk_plus_manager_v3 import service_desk_plus_manager_v3
+from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
 
 
 def start_operation(
@@ -191,7 +191,7 @@ def main(is_first_run):
     result_value = True
 
     try:
-        servicedesk_manager = service_desk_plus_manager_v3(
+        servicedesk_manager = ServiceDeskPlusManagerV3(
             api_root=api_root, api_key=api_key, verify_ssl=verify_ssl
         )
 

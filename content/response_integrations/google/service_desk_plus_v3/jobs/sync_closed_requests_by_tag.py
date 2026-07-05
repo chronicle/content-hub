@@ -37,7 +37,7 @@ from ..core.constants import (
     DEFAULT_HOURS_BACKWARDS,
     MIN_HOURS_BACKWARDS,
 )
-from ..core.service_desk_plus_manager_v3 import service_desk_plus_manager_v3
+from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
 from ..core.service_desk_plus_v3_exceptions import (
     NoteNotFoundException,
     ServiceDeskPlusV3Exception,
@@ -88,7 +88,7 @@ def main():
                 f"{MIN_HOURS_BACKWARDS}"
             )
 
-        servicedesk_manager = service_desk_plus_manager_v3(
+        servicedesk_manager = ServiceDeskPlusManagerV3(
             api_root=api_root, api_key=api_key, verify_ssl=verify_ssl
         )
 

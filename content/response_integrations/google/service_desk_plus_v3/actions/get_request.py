@@ -20,7 +20,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 
 from ..core.constants import INTEGRATION_NAME, GET_REQUEST_ACTION
-from ..core.service_desk_plus_manager_v3 import service_desk_plus_manager_v3
+from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
 
 
 @output_handler
@@ -61,7 +61,7 @@ def main():
     result_value = True
 
     try:
-        servicedesk_manager = service_desk_plus_manager_v3(
+        servicedesk_manager = ServiceDeskPlusManagerV3(
             api_root=api_root, api_key=api_key, verify_ssl=verify_ssl
         )
         result = servicedesk_manager.get_request(request_id=request_id)

@@ -24,7 +24,7 @@ from ..core.constants import (
     CREATE_REQUEST_DROPDOWN_ACTION,
     CREATE_REQUEST_TYPE,
 )
-from ..core.service_desk_plus_manager_v3 import service_desk_plus_manager_v3
+from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
 
 
 @output_handler
@@ -110,7 +110,7 @@ def main():
 
     try:
 
-        servicedesk_manager = service_desk_plus_manager_v3(
+        servicedesk_manager = ServiceDeskPlusManagerV3(
             api_root=api_root, api_key=api_key, verify_ssl=verify_ssl
         )
         result = servicedesk_manager.request(

@@ -28,7 +28,7 @@ from TIPCommon.extraction import extract_configuration_param, extract_action_par
 
 from ..core.constants import INTEGRATION_NAME, ADD_NOTE_AND_WAIT_ACTION
 from ..core.ServiceDeskPlusV3Exceptions import NoteNotFoundException
-from ..core.ServiceDeskPlusManagerV3 import ServiceDeskPlusManagerV3
+from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
 
 
 def start_operation(

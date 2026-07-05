@@ -24,7 +24,7 @@ from ..core import action_init
 from ..core import constants
 from ..core import datamodels
 from ..core.exceptions import ThreatIdNotFoundError
-from ..core.proof_point_tap_manager import proof_point_tap_manager
+from ..core.proof_point_tap_manager import ProofPointTapManager
 
 
 class GetThreatForensics(Action):
@@ -73,7 +73,7 @@ class GetThreatForensics(Action):
             max_limit=constants.MAX_LIMIT,
         )
 
-    def _init_api_clients(self) -> proof_point_tap_manager:
+    def _init_api_clients(self) -> ProofPointTapManager:
         return action_init.create_api_client(self.soar_action)
 
     def _perform_action(self, _) -> None:

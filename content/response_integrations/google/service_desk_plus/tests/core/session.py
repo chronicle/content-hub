@@ -29,30 +29,30 @@ class ServiceDeskPlusSession(MockSession[MockRequest, MockResponse, ServiceDeskP
     def get_routed_functions(self) -> Iterable[RouteFunction]:
         return [self.handle_request]
 
-    @router.get('/sdpapi/request/')
+    @router.get(r"/sdpapi/request/")
     def handle_request(self, request: MockRequest) -> MockResponse:
-        operation_name = request.kwargs.get('params', {}).get('OPERATION_NAME')
+        params = request.kwargs.get("params") or (request.args[0] if len(request.args) > 0 else {})
+        operation_name = params.get("OPERATION_NAME")
         requests = self._product.get_requests()
 
-        if operation_name == 'ADD_REQUEST':
-            if 'FailSubject' in str(request.kwargs.get('params', {}).get('INPUT_DATA', '')):
-                return MockResponse(content={'operation': {'result': {'status': 'Failed', 'message': 'Failed'}}})
-            return MockResponse(content=ADD_REQUEST_MOCK.to_json())
+        if operation_name == "ADD_REQUEST":
+            if "FailSubject" in str(
+                params.get("INPUT_DATA", "")
+            ):
+                return MockResponse(
+                    content='<operation><result><status>Failed</status><message>Failed</message></result></operation>'
+                )
+            return MockResponse(
+                content='<operation><result><status>Success</status><message>Request Added</message></result><Details><parameter><name>workorderid</name><value>12345</value></parameter></Details></operation>'
+            )
 
         if operation_name == "GET_REQUESTS":
+            # get_requests expects bypass=True, meaning it parses with xmltodict
             return MockResponse(
-                content=requests[0].to_json() if requests else REQUEST.to_json()
+                content='<API><response><operation><Details><record><parameter><name>workorderid</name><value>12345</value></parameter><parameter><name>subject</name><value>Test Subject</value></parameter><parameter><name>description</name><value>Test Description</value></parameter></record></Details></operation></response></API>'
             )
 
         return MockResponse(
-            content={
-                "operation": {
-                    "result": {
-                        "status": "Failed",
-                        "message": f"Unknown operation {operation_name}",
-                    }
-                }
-            },
+            content=f'<operation><result><status>Failed</status><message>Unknown operation {operation_name}</message></result></operation>',
             status_code=400,
         )
-

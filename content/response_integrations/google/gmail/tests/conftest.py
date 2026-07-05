@@ -39,6 +39,24 @@ import pathlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent.parent))
 
+import unittest.mock
+_mock_creds = unittest.mock.Mock()
+_mock_creds.universe_domain = "googleapis.com"
+_patcher1 = unittest.mock.patch("google.auth.default", return_value=(_mock_creds, "test-project"))
+_patcher2 = unittest.mock.patch("TIPCommon.rest.auth.get_adc", return_value=(_mock_creds, "test-project"))
+_patcher1.start()
+_patcher2.start()
+
+
+from integration_testing.aiohttp.session import HistoryRecordsList
+_original_hrl_init = HistoryRecordsList.__init__
+def _patched_hrl_init(self, *args):
+    if len(args) == 1 and isinstance(args[0], list):
+        args = tuple(args[0])
+    _original_hrl_init(self, *args)
+HistoryRecordsList.__init__ = _patched_hrl_init
+
+
 
 import pytest
 import requests
@@ -267,26 +285,5 @@ try:
 except ImportError:
     pass
 
-    mocker.patch("TIPCommon.rest.auth.get_adc", return_value=(mock_creds, "test-project"))
-    try:
-        mocker.patch("core.GoogleGmailUtils.get_adc", return_value=(mock_creds, "test-project"))
-    except Exception:
-        pass
 
-
-@pytest.fixture(autouse=True)
-def mock_google_adc(mocker):
-    """Mock the ADC to prevent DefaultCredentialsError in CI environments."""
-    mock_creds = mocker.Mock()
-    mock_creds.universe_domain = "googleapis.com"
-    mocker.patch("google.auth.default", return_value=(mock_creds, "test-project"))
-    mocker.patch("TIPCommon.rest.auth.get_adc", return_value=(mock_creds, "test-project"))
-    try:
-        mocker.patch("core.utils.get_adc", return_value=(mock_creds, "test-project"))
-    except Exception:
-        pass
-    try:
-        mocker.patch("core.GoogleGmailUtils.get_adc", return_value=(mock_creds, "test-project"))
-    except Exception:
-        pass
 

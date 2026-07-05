@@ -24,7 +24,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 
 from ..core.constants import INTEGRATION_NAME, WAIT_FOR_STATUS_UPDATE_ACTION
-from ..core.service_desk_plus_manager_v3 import service_desk_plus_manager_v3
+from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
 
 
 def compare_request_statuses(siemplify, servicedesk_manager, request_id, values):
@@ -114,7 +114,7 @@ def main():
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
     try:
-        servicedesk_manager = service_desk_plus_manager_v3(
+        servicedesk_manager = ServiceDeskPlusManagerV3(
             api_root=api_root, api_key=api_key, verify_ssl=verify_ssl
         )
         output_message, result_value, status = compare_request_statuses(

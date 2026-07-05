@@ -22,7 +22,7 @@ from TIPCommon.extraction import extract_action_param, extract_configuration_par
 from TIPCommon.transformation import string_to_multi_value
 from ..core import authentication_manager as auth_manager
 from ..core.constants import DECODE_URL_SCRIPT_NAME, INTEGRATION_DISPLAY_NAME, INTEGRATION_NAME
-from ..core.proof_point_tap_manager import ApiParameters,proof_point_tap_manager
+from ..core.proof_point_tap_manager import ApiParameters, ProofPointTapManager
 from ..core.utils import get_entity_original_identifier
 
 
@@ -81,7 +81,7 @@ def main():
         )
         api_params = ApiParameters(api_root=api_root)
         session = auth_manager.get_authenticated_session(auth_params)
-        manager = proof_point_tap_manager(
+        manager = ProofPointTapManager(
             session=session,
             api_parameters=api_params,
             force_check_connectivity=True,

@@ -19,8 +19,7 @@ from extract_msg.exceptions import ExMsgBaseException
 from olefile.olefile import OleFileError
 import html2text
 
-from emaildata.metadata import MetaData
-from emaildata.metadata import text_to_utf8
+
 from icalendar import Calendar
 from pyth.plugins.rtf15.reader import Rtf15Reader
 from pyth.plugins.xhtml.writer import XHTMLWriter
@@ -721,7 +720,9 @@ class EmailUtils:
                 return text
 
             except Exception:
-                return text_to_utf8(text)
+                if isinstance(text, bytes):
+                    return text.decode('utf-8', errors='replace')
+                return str(text)
 
         header_value = message[header_name]
 
@@ -763,8 +764,15 @@ class EmailUtils:
             SingleJson: A dictionary representing the Siemplify-compatible EML object.
         """
 
-        extractor = MetaData(msg)
-        mail_dict = extractor.to_dict()
+        mail_dict = {
+            SIEMPLIFY_MAIL_DICT_TO_KEY: self.extract_email_addresses_from_msg(msg, "To"),
+            SIEMPLIFY_MAIL_DICT_CC_KEY: self.extract_email_addresses_from_msg(msg, "Cc"),
+            SIEMPLIFY_MAIL_DICT_BCC_KEY: self.extract_email_addresses_from_msg(msg, "Bcc"),
+            SIEMPLIFY_MAIL_DICT_MESSAGE_ID_KEY: decode_header_value(msg.get("Message-ID", "")),
+            SIEMPLIFY_MAIL_DICT_IN_REPLY_TO_KEY: decode_header_value(msg.get("In-Reply-To", "")),
+        }
+        sender = self.extract_email_addresses_from_msg(msg, "From")
+        mail_dict[SIEMPLIFY_MAIL_DICT_SENDER_KEY] = sender[0] if sender else ""
 
         mail_dict[SIEMPLIFY_MAIL_DICT_UNIXTIME_DATE_KEY] = (
             self.extract_unixtime_date_from_msg(msg.get("date"))

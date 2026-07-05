@@ -22,7 +22,15 @@ from soar_sdk.SiemplifyUtils import add_prefix_to_dict, dict_to_flat
 
 from TIPCommon.types import SingleJson
 
-from ..core.constants import EMPTY_RESULT, INTEGRATION_NAME
+from ..core.constants import (
+    API_AGENT_FQDN_KEY,
+    API_ENDPOINT_DATA_KEY,
+    API_ENDPOINT_KEY,
+    API_ENDPOINT_NAME_KEY,
+    API_HOST_NAME_KEY,
+    EMPTY_RESULT,
+    INTEGRATION_NAME,
+)
 
 
 @dataclasses.dataclass(slots=True)
@@ -408,6 +416,23 @@ class Alert(BaseModel):
         self.raw_data["description"] = convert_string_to_base64(
             self.raw_data.get("description", "")
         )
+
+        if not self.raw_data.get(API_HOST_NAME_KEY):
+            endpoint_data = (
+                self.raw_data.get(API_ENDPOINT_DATA_KEY)
+                or self.raw_data.get(API_ENDPOINT_KEY)
+            )
+            if isinstance(endpoint_data, dict):
+                host_name = endpoint_data.get(API_HOST_NAME_KEY) or endpoint_data.get(
+                    API_ENDPOINT_NAME_KEY
+                )
+                if host_name:
+                    self.raw_data[API_HOST_NAME_KEY] = host_name
+
+            if not self.raw_data.get(API_HOST_NAME_KEY):
+                host_name = self.raw_data.get(API_AGENT_FQDN_KEY)
+                if host_name:
+                    self.raw_data[API_HOST_NAME_KEY] = host_name
 
         return self.raw_data
 
