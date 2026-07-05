@@ -19,7 +19,7 @@ from ..core.service_desk_plus_v3_exceptions import (
     ServiceDeskPlusV3Exception,
     NoteNotFoundException,
 )
-from ..core.service_desk_plus_v3_parser import service_desk_plus_v3_parser
+from ..core.service_desk_plus_v3_parser import ServiceDeskPlusV3Parser
 from ..core.constants import (
     ADD_NOTE_URL,
     CLOSE_REQUEST_URL,
@@ -45,7 +45,7 @@ class ServiceDeskPlusManagerV3:
         self.api_key = api_key
         self.session = requests.session()
         self.session.verify = verify_ssl
-        self.parser = service_desk_plus_v3_parser()
+        self.parser = ServiceDeskPlusV3Parser()
         self.session.headers = {"TECHNICIAN_KEY": self.api_key}
 
     def test_connectivity(self):

@@ -29,7 +29,7 @@ from ..core.constants import (
     INTEGRATION_NAME,
     MAX_LIMIT,
 )
-from ..core.proof_point_tap_manager import ApiParameters, proof_point_tap_manager
+from ..core.proof_point_tap_manager import ApiParameters, ProofPointTapManager
 from ..core.utils import validate_positive_integer
 
 
@@ -123,7 +123,7 @@ def main():
         )
         api_params = ApiParameters(api_root=api_root)
         session = auth_manager.get_authenticated_session(auth_params)
-        manager = proof_point_tap_manager(
+        manager = ProofPointTapManager(
             session=session,
             api_parameters=api_params,
             force_check_connectivity=True,

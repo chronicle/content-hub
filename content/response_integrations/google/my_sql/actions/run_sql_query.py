@@ -15,7 +15,7 @@
 from __future__ import annotations
 from soar_sdk.SiemplifyUtils import output_handler
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from ..core.my_sql_manager import my_sql_manager
+from ..core.my_sql_manager import MySQLManager
 import json
 import datetime
 
@@ -37,7 +37,7 @@ def main():
     database = siemplify.parameters["Database Name"]
     query = siemplify.parameters["Query"]
 
-    mysql_manager = my_sql_manager(
+    mysql_manager = MySQLManager(
         username=username,
         password=password,
         server=server_addr,

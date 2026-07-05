@@ -240,8 +240,8 @@ def script_session(  # pylint: disable=redefined-outer-name
     )
 
     monkeypatch.setattr(CreateSession, "create_session", lambda *_, **__: session)
-        monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)
-        monkeypatch.setattr(SiemplifyBase, "_create_remote_session", lambda *_: session)
+    monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)
+    monkeypatch.setattr(SiemplifyBase, "_create_remote_session", lambda *_: session)
     monkeypatch.setattr(
         auth.AuthenticatedSession,
         "_obfuscate_api_key",
