@@ -29,23 +29,14 @@ class ServiceDeskPlusSession(MockSession[MockRequest, MockResponse, ServiceDeskP
     def get_routed_functions(self) -> Iterable[RouteFunction]:
         return [self.handle_request]
 
-    @router.get(r"/sdpapi/request/")
+    @router.get('/sdpapi/request/')
     def handle_request(self, request: MockRequest) -> MockResponse:
-        params = request.kwargs.get("params") or (request.args[0] if len(request.args) > 0 else {})
-        operation_name = params.get("OPERATION_NAME")
+        operation_name = request.kwargs.get('params', {}).get('OPERATION_NAME')
         requests = self._product.get_requests()
 
-        if operation_name == "ADD_REQUEST":
-            if "FailSubject" in str(
-                params.get("INPUT_DATA", "")
-            ):
-                return MockResponse(
-                    content={
-                        "operation": {
-                            "result": {"status": "Failed", "message": "Failed"}
-                        }
-                    }
-                )
+        if operation_name == 'ADD_REQUEST':
+            if 'FailSubject' in str(request.kwargs.get('params', {}).get('INPUT_DATA', '')):
+                return MockResponse(content={'operation': {'result': {'status': 'Failed', 'message': 'Failed'}}})
             return MockResponse(content=ADD_REQUEST_MOCK.to_json())
 
         if operation_name == "GET_REQUESTS":

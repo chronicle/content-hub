@@ -43,42 +43,24 @@ class AlertMock:
 
 
 @set_metadata(
-    parameters={
-        "Subject": "Test Subject",
-        "Requester": "Test Requester",
-    },
+    parameters={"Subject": "Test Subject", "Requester": "Test Requester"},
     integration_config_file_path=CONFIG_PATH,
 )
 def test_create_alert_request_success(
-    action_output: MockActionOutput,
-    product: ServiceDeskPlus,
-    monkeypatch,
+    action_output: MockActionOutput, product: ServiceDeskPlus
 ) -> None:
-    monkeypatch.setattr(
-        SiemplifyAction, "current_alert", property(lambda self: AlertMock("ext_id_1", "ident_1")), raising=False
-    )
     product.add_request(REQUEST)
     create_alert_request_main()
-
     assert action_output.results.output_message == OUTPUT_MESSAGE
-    assert action_output.results.result_value == "12345"
+    assert action_output.results.result_value is True
     assert action_output.results.execution_state == ExecutionState.COMPLETED
 
 
 @set_metadata(
-    parameters={
-        "Subject": "FailSubject",
-        "Requester": "Test Requester",
-    },
+    parameters={"Subject": "FailSubject", "Requester": "Test Requester"},
     integration_config_file_path=CONFIG_PATH,
 )
-def test_create_alert_request_failed(
-    action_output: MockActionOutput,
-    monkeypatch,
-) -> None:
-    monkeypatch.setattr(
-        SiemplifyAction, "current_alert", property(lambda self: AlertMock("ext_id_1", "ident_1")), raising=False
-    )
+def test_create_alert_request_failed(action_output: MockActionOutput) -> None:
     create_alert_request_main()
     assert action_output.results.result_value is False
     assert action_output.results.output_message == FAILED_OUTPUT_MESSAGE
