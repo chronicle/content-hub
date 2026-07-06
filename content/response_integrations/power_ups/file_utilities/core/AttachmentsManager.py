@@ -32,16 +32,11 @@ import magic
 import requests
 from py7zz.core import find_7z_binary
 
-# The wordlist module is platform-specific and only available on the live Google SecOps server.
-# We wrap it in a try-except block to prevent compilation and unit test failures in local development/CI environments.
 try:
     from wordlist import wordlist
 except ImportError:
     wordlist = None
 
-# Even though py7zr is declared in dependencies, it requires the Python C-extension '_lzma'.
-# On runner environments where Python is compiled without _lzma support, importing py7zr raises ImportError.
-# We wrap it in try-except to set HAS_PY7ZR and fall back to CLI binary extraction.
 try:
     import py7zr
     import py7zr.io
