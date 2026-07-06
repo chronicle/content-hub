@@ -132,7 +132,7 @@ def main():
         "output message :"  # human readable message, showed in UI as the action result
     )
     result_value = (
-        "false" # Set a simple result value, used for playbook if\else and placeholders.
+        "false"  # Set a simple result value, used for playbook if\else and placeholders.
     )
     attach_mgr = AttachmentsManager(siemplify=siemplify)
 
