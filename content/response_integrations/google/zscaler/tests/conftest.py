@@ -50,7 +50,7 @@ from SiemplifyBase import SiemplifyBase
 
 import pytest
 
-from zscaler.core import zscaler_manager as zscalerManager
+from zscaler.core import ZscalerManager as zscalerManager
 sys.modules['zscalerManager'] = zscalerManager
 from zscaler.core import base_action
 sys.modules['base_action'] = base_action

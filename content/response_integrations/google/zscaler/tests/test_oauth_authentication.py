@@ -17,7 +17,7 @@ import pathlib
 
 from unittest.mock import MagicMock
 import pytest
-from ..core import zscaler_manager as ZscalerManager
+from ..core import ZscalerManager as ZscalerManager
 from ..core.auth import AuthenticatedSession, SessionAuthenticationParameters
 from ..core.data_models import IntegrationParameters
 from ..core.exceptions import ZscalerManagerError
