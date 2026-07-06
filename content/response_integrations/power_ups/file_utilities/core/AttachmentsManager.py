@@ -32,11 +32,16 @@ import magic
 import requests
 from py7zz.core import find_7z_binary
 
+# The wordlist module is platform-specific and only available on the live Google SecOps server.
+# We wrap it in a try-except block to prevent compilation and unit test failures in local development/CI environments.
 try:
     from wordlist import wordlist
 except ImportError:
     wordlist = None
 
+# Even though py7zr is declared in dependencies, it requires the Python C-extension '_lzma'.
+# On runner environments where Python is compiled without _lzma support, importing py7zr raises ImportError.
+# We wrap it in try-except to set HAS_PY7ZR and fall back to CLI binary extraction.
 try:
     import py7zr
     import py7zr.io
@@ -359,6 +364,16 @@ class AttachmentsManager:
         create_entity(self.siemplify, entity_to_create)
 
     def extract_zip(self, zip_filename, content, bruteforce=False, pwds=None):
+        try:
+            return self._extract_zip_native(zip_filename, content, bruteforce, pwds)
+        except Exception as e:
+            self.logger.info(
+                f"Native zipfile extraction failed: {e}. Falling back to 7z/CLI extraction."
+            )
+            content.seek(0)
+            return self.extract_7z(zip_filename, content, bruteforce, pwds)
+
+    def _extract_zip_native(self, zip_filename, content, bruteforce=False, pwds=None):
         with zipfile.ZipFile(content) as attach_zip:
             extracted_files = []
             try:
@@ -370,9 +385,7 @@ class AttachmentsManager:
             except Exception:
                 pass
             pwd = None
-            if bruteforce:
-                from wordlist import wordlist
-
+            if bruteforce and wordlist:
                 for line in io.StringIO(wordlist.WORDLIST).readlines():
                     password = line.strip("\n")
                     try:
