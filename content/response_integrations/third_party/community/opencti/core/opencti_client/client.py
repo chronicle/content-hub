@@ -92,14 +92,12 @@ class OpenCTIClient:
         if not category or not values:
             return
 
-        try:
-            for value in values:
-                if value:
+        for value in values:
+            if value:
+                try:
                     self._api_client.vocabulary.create(category=category, name=value)
-        except Exception as e:
-            raise OpenCTIClientError(
-                f"Failed to upsert entries in {category} in OpenCTI: {str(e)}"
-            ) from e
+                except Exception:
+                    pass  # skip silently if creation fails
 
     def _upsert_labels(self, labels: list[str] | None) -> None:
         """Ensure all provided labels exist in OpenCTI before object creation.
@@ -110,13 +108,11 @@ class OpenCTIClient:
         if not labels:
             return
 
-        try:
-            for label in labels:
+        for label in labels:
+            try:
                 self._api_client.label.create(value=label)
-        except Exception as e:
-            raise OpenCTIClientError(
-                f"Failed to upsert labels in OpenCTI: {str(e)}"
-            ) from e
+            except Exception:
+                pass  # skip silently if creation fails
 
     def create_incident(self, incident: Incident) -> IncidentJSONResult:
         """Create incident in OpenCTI and return the normalized API response.
