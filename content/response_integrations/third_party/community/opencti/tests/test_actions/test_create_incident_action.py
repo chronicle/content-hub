@@ -3,7 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from actions.CreateIncident import SCRIPT_NAME, CreateIncident, CreateIncidentParameters
+from ...actions.CreateIncident import (
+    SCRIPT_NAME,
+    CreateIncident,
+    CreateIncidentParameters,
+)
 
 
 class TestCreateIncidentParameters:

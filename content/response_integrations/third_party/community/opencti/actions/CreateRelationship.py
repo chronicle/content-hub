@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from core.base_action import BaseAction
-from core.base_action_parameters import BaseActionParameters
-from core.datamodels.relationship import Relationship
-from core.utils import convert_date_format
 from pydantic import AwareDatetime, Field, field_validator
+
+from ..core.base_action import BaseAction
+from ..core.base_action_parameters import BaseActionParameters
+from ..core.datamodels.relationship import Relationship
+from ..core.utils import convert_date_format
 
 SCRIPT_NAME = "Create Relationship"
 

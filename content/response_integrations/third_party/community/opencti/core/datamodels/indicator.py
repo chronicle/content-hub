@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 import re
 
 import pycti
-from core.datamodels.base_octi_object import BaseOCTIObject
 from pydantic import AwareDatetime
+
+from ..datamodels.base_octi_object import BaseOCTIObject
 
 
 class Indicator(BaseOCTIObject):
     """Represent the Indicator model."""
+
     name: str
     pattern: str
     description: str | None = None
@@ -15,7 +19,7 @@ class Indicator(BaseOCTIObject):
     score: int | None = None
     labels: list[str] | None = None
     markings: list[str] | None = None
-    
+
     def _compute_stix_id(self) -> str:
         """Build a deterministic STIX ID for this object.
         Returns:
@@ -30,7 +34,9 @@ class Indicator(BaseOCTIObject):
         """
         match = re.search(r"\[\s*([a-z0-9-]+)\s*:", self.pattern.lower())
         if not match:
-            raise ValueError("Unable to determine main observable type from Indicator pattern")
+            raise ValueError(
+                "Unable to determine main observable type from Indicator pattern"
+            )
         stix_observable_type = match.group(1)
         mapping = {
             "artifact": "Artifact",
@@ -54,9 +60,11 @@ class Indicator(BaseOCTIObject):
             "x509-certificate": "X509-Certificate",
         }
         if stix_observable_type not in mapping:
-            raise ValueError(f"Unsupported observable type in Indicator pattern: {stix_observable_type}")
+            raise ValueError(
+                f"Unsupported observable type in Indicator pattern: {stix_observable_type}"
+            )
         return mapping[stix_observable_type]
-    
+
     def to_input_variables(self) -> dict:
         """Serialize the model into OpenCTI GraphQL payload.
         Returns:

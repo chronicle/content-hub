@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from actions.CreateRelationship import (
+from ...actions.CreateRelationship import (
     SCRIPT_NAME,
     CreateRelationship,
     CreateRelationshipParameters,
@@ -12,7 +12,9 @@ from actions.CreateRelationship import (
 
 class TestCreateRelationshipParameters:
     def test_default_relationship_type(self):
-        params = CreateRelationshipParameters(source_entity_id="a", target_entity_id="b")
+        params = CreateRelationshipParameters(
+            source_entity_id="a", target_entity_id="b"
+        )
         assert params.relationship_type == "related-to"
 
     def test_parse_first_seen_last_seen_google_soar_format(self):
@@ -45,7 +47,9 @@ class TestCreateRelationshipAction:
         assert action.params.source_entity_id == "src-id"
         assert isinstance(action.params.first_seen, datetime)
 
-    def test_perform_action_sets_output_message(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_output_message(
+        self, mock_soar_action, mock_api_client
+    ):
         first_seen_iso = "2026-06-16T08:00:00+00:00"
         last_seen_iso = "2026-06-16T09:00:00+00:00"
         mock_soar_action.parameters = {

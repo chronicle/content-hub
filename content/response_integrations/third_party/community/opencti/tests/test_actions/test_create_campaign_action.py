@@ -3,7 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from actions.CreateCampaign import SCRIPT_NAME, CreateCampaign, CreateCampaignParameters
+from ...actions.CreateCampaign import (
+    SCRIPT_NAME,
+    CreateCampaign,
+    CreateCampaignParameters,
+)
 
 
 class TestCreateCampaignParameters:
@@ -39,7 +43,9 @@ class TestCreateCampaignAction:
         assert action.params.name == "camp-1"
         assert action.params.first_seen is not None
 
-    def test_perform_action_sets_output_message(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_output_message(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {"Name": "camp-1"}
         result_mock = MagicMock()
         result_mock.id = "camp-id-1"

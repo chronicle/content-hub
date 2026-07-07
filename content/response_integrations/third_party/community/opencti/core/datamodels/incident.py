@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import pycti
-from core.datamodels.base_octi_object import BaseOCTIObject
 from pydantic import AwareDatetime
+
+from ..datamodels.base_octi_object import BaseOCTIObject
 
 
 class Incident(BaseOCTIObject):
     """Represent the Incident model."""
+
     name: str
     description: str | None = None
     incident_type: str | None = None
@@ -14,14 +18,14 @@ class Incident(BaseOCTIObject):
     markings: list[str] | None = None
     created_by: str | None = None
     created: AwareDatetime | None = None
-    
+
     def _compute_stix_id(self) -> str:
         """Build a deterministic STIX ID for this object.
         Returns:
             The generated STIX identifier.
         """
         return pycti.Incident.generate_id(name=self.name, created=self.created)
-    
+
     def to_input_variables(self) -> dict:
         """Serialize the model into OpenCTI GraphQL payload.
         Returns:

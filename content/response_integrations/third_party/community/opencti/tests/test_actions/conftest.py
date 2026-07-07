@@ -12,7 +12,7 @@ FAKE_OPENCTI_TOKEN = "secret-token"
 def mock_soar_action(monkeypatch) -> MagicMock:
     mock_soar = MagicMock()
     mock_soar.get_configuration.return_value = {
-        "URL": FAKE_OPENCTI_URL,
+        "API Root": FAKE_OPENCTI_URL,
         "API Token": FAKE_OPENCTI_TOKEN,
         "Verify SSL": True,
     }
@@ -32,7 +32,7 @@ def mock_soar_enrich_action(monkeypatch) -> MagicMock:
     """Mock SiemplifyAction for enrich actions based on local_action_runner setup."""
     mock_soar = MagicMock()
     mock_soar.get_configuration.return_value = {
-        "URL": FAKE_OPENCTI_URL,
+        "API Root": FAKE_OPENCTI_URL,
         "API Token": FAKE_OPENCTI_TOKEN,
         "Verify SSL": True,
     }
@@ -58,5 +58,5 @@ def mock_api_client(monkeypatch) -> MagicMock:
     """
     mock_client = MagicMock()
     mock_class = MagicMock(return_value=mock_client)
-    monkeypatch.setattr("core.base_action.OpenCTIClient", mock_class)
+    monkeypatch.setattr("opencti.core.base_action.OpenCTIClient", mock_class)
     return mock_client

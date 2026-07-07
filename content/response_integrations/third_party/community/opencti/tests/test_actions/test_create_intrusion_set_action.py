@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from actions.CreateIntrusionSet import (
+from ...actions.CreateIntrusionSet import (
     SCRIPT_NAME,
     CreateIntrusionSet,
     CreateIntrusionSetParameters,
@@ -30,7 +30,9 @@ class TestCreateIntrusionSetAction:
         assert action.params.name == "is-1"
         assert action.params.labels == ["local", "test"]
 
-    def test_perform_action_sets_output_message(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_output_message(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {"Name": "is-1"}
         result_mock = MagicMock()
         result_mock.id = "is-id-1"

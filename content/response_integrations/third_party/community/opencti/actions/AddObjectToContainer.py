@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Literal
 
-from core.base_action import BaseAction
-from core.base_action_parameters import BaseActionParameters
 from pydantic import Field
+
+from ..core.base_action import BaseAction
+from ..core.base_action_parameters import BaseActionParameters
 
 SCRIPT_NAME = "Add Object to Container"
 

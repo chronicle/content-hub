@@ -3,7 +3,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from actions.AddObjectToContainer import (
+
+from ...actions.AddObjectToContainer import (
     SCRIPT_NAME,
     AddObjectToContainer,
     AddObjectToContainerParameters,
@@ -58,7 +59,9 @@ class TestAddObjectToContainerAction:
         assert action.params.container_id == "container-1"
         assert action.params.object_id == "object-1"
 
-    def test_perform_action_calls_client_with_normalized_type(self, mock_soar_action, mock_api_client):
+    def test_perform_action_calls_client_with_normalized_type(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {
             "Container Type": "Request for Takedown",
             "Container Id": "container-1",

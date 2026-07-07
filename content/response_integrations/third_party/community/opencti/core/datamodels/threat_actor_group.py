@@ -1,22 +1,26 @@
+from __future__ import annotations
+
 import pycti
-from core.datamodels.base_octi_object import BaseOCTIObject
+
+from ..datamodels.base_octi_object import BaseOCTIObject
 
 
 class ThreatActorGroup(BaseOCTIObject):
     """Represent the ThreatActorGroup model."""
+
     name: str
     description: str | None = None
     threat_actor_types: list[str] | None = None
     labels: list[str] | None = None
     markings: list[str] | None = None
-    
+
     def _compute_stix_id(self) -> str:
         """Build a deterministic STIX ID for this object.
         Returns:
             The generated STIX identifier.
         """
         return pycti.ThreatActorGroup.generate_id(name=self.name)
-    
+
     def to_input_variables(self) -> dict:
         """Serialize the model into OpenCTI GraphQL payload.
         Returns:

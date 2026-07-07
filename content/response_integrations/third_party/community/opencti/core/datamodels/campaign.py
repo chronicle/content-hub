@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import pycti
-from core.datamodels.base_octi_object import BaseOCTIObject
 from pydantic import AwareDatetime
+
+from ..datamodels.base_octi_object import BaseOCTIObject
 
 
 class Campaign(BaseOCTIObject):

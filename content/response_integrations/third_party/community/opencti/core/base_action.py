@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from core.opencti_client.client import OpenCTIClient
 from TIPCommon.base.action import Action
 from TIPCommon.base.action.base_enrich_action import EnrichAction, EnrichActionError
 from TIPCommon.extraction import extract_configuration_param
+
+from .opencti_client.client import OpenCTIClient
 
 if TYPE_CHECKING:
     from TIPCommon.types import Entity
@@ -133,14 +134,13 @@ class BaseAction(_OpenCTIMixin, Action):
         output_parts: list[str] = []
         if self._created_identifiers:
             output_parts.append(
-                "Successfully created the following entities using "
-                f"{self.name}:\n {', '.join(self._created_identifiers)}\n"
+                f"Successfully created on the following entities using {self.INTEGRATION_IDENTIFIER}: "
+                f"{', '.join(self._created_identifiers)}"
             )
-
         if self._failed_identifiers:
             output_parts.append(
-                f"The action wasn't able to create the following entities using "
-                f"{self.name}:\n {', '.join(self._failed_identifiers)}\n"
+                f"Action wasn't able to create on the following entities using {self.INTEGRATION_IDENTIFIER}: "
+                f"{', '.join(self._failed_identifiers)}"
             )
 
         self.result_value = bool(self._created_identifiers)
@@ -203,21 +203,20 @@ class BaseEnrichAction(_OpenCTIMixin, EnrichAction):
         output_parts: list[str] = []
         if enriched_identifiers:
             output_parts.append(
-                "Successfully enriched the following entities using "
-                f"{self.name}:\n {', '.join(enriched_identifiers)}\n"
+                f"Successfully enriched on the following entities using {self.INTEGRATION_IDENTIFIER}: "
+                f"{', '.join(enriched_identifiers)}"
             )
 
         if self._not_found_identifiers:
             output_parts.append(
-                f"The following entities were not found in "
-                f"{self.name}:\n "
-                f"{', '.join(self._not_found_identifiers)}\n"
+                f"The following entities were not found in {self.INTEGRATION_IDENTIFIER}: "
+                f"{', '.join(self._not_found_identifiers)}"
             )
 
         if self._failed_identifiers:
             output_parts.append(
-                f"The action wasn't able to enrich the following entities using "
-                f"{self.name}:\n {', '.join(self._failed_identifiers)}\n"
+                f"Action wasn't able to enrich on the following entities using {self.INTEGRATION_IDENTIFIER}: "
+                f"{', '.join(self._failed_identifiers)}"
             )
 
         self.result_value = bool(enriched_identifiers)

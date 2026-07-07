@@ -3,13 +3,14 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from actions.CreateObservables import (
+from SiemplifyDataModel import EntityTypes
+
+from ...actions.CreateObservables import (
     SCRIPT_NAME,
     CreateObservables,
     CreateObservablesParameters,
 )
-from core.opencti_client.client import OpenCTIClientError
-from SiemplifyDataModel import EntityTypes
+from ...core.opencti_client.client import OpenCTIClientError
 
 
 def _make_entity(identifier: str, entity_type: str) -> MagicMock:
@@ -90,7 +91,7 @@ class TestCreateObservablesAction:
         action.run()
 
         assert action.result_value is True
-        assert "Successfully created the following entities" in action.output_message
+        assert "Successfully created on the following entities" in action.output_message
         assert "1.2.3.4" in action.output_message
 
         observable_obj = mock_api_client.create_observable.call_args.args[0]
@@ -185,8 +186,10 @@ class TestCreateObservablesAction:
         action.run()
 
         assert action.result_value is True
-        assert "Successfully created the following entities" in action.output_message
-        assert "wasn't able to create the following entities" in action.output_message
+        assert "Successfully created on the following entities" in action.output_message
+        assert (
+            "wasn't able to create on the following entities" in action.output_message
+        )
         assert "1.2.3.4" in action.output_message
 
     def test_all_failures_set_false_result(
@@ -201,6 +204,8 @@ class TestCreateObservablesAction:
         action.run()
 
         assert action.result_value is False
-        assert "wasn't able to create the following entities" in action.output_message
+        assert (
+            "wasn't able to create on the following entities" in action.output_message
+        )
         entity_result = next(r for r in action.json_results if r["Entity"] == "1.2.3.4")
         assert "API down" in entity_result["EntityResult"]["execution_status"]

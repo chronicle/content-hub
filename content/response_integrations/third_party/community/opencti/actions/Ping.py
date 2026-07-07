@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from core.base_action import BaseAction
+from ..core.base_action import BaseAction
 
 SCRIPT_NAME = "Ping"
 
@@ -19,11 +19,9 @@ class Ping(BaseAction):
         super().__init__(script_name)
         self.output_message = (
             f"Successfully connected to the {self.INTEGRATION_IDENTIFIER} server with the "
-            "provided connection parameters"
+            "provided connection parameters!"
         )
-        self.error_output_message = (
-            f"Failed to connect to the {self.INTEGRATION_IDENTIFIER} server"
-        )
+        self.error_output_message = f"Failed to connect to the {self.INTEGRATION_IDENTIFIER} server! Error is {{error}}"
         self.json_results = {}
 
     def _perform_action(self, _=None) -> None:

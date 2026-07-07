@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from actions.CreateReport import SCRIPT_NAME, CreateReport, CreateReportParameters
+from ...actions.CreateReport import SCRIPT_NAME, CreateReport, CreateReportParameters
 
 
 class TestCreateReportParameters:
@@ -22,7 +22,7 @@ class TestCreateReportAction:
         mock_soar_action.parameters = {
             "Name": "rep-1",
             "Publication Date": "2026-06-16T10:00:00Z",
-            "Report types": "threat-report",
+            "Report Types": "threat-report",
         }
 
         action = CreateReport(SCRIPT_NAME)
@@ -31,7 +31,9 @@ class TestCreateReportAction:
         assert action.params.name == "rep-1"
         assert action.params.report_types == ["threat-report"]
 
-    def test_perform_action_sets_output_message(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_output_message(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {
             "Name": "rep-1",
             "Publication Date": "2026-06-16T10:00:00Z",

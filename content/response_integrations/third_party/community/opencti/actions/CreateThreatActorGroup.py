@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from core.base_action import BaseAction
-from core.base_action_parameters import BaseActionParameters
-from core.datamodels.threat_actor_group import ThreatActorGroup
-from core.utils import parse_csv_list
 from pydantic import Field, field_validator
+
+from ..core.base_action import BaseAction
+from ..core.base_action_parameters import BaseActionParameters
+from ..core.datamodels.threat_actor_group import ThreatActorGroup
+from ..core.utils import parse_csv_list
 
 SCRIPT_NAME = "Create Threat Actor Group"
 

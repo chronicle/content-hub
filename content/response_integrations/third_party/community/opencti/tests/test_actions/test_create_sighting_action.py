@@ -3,12 +3,18 @@ from __future__ import annotations
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from actions.CreateSighting import SCRIPT_NAME, CreateSighting, CreateSightingParameters
+from ...actions.CreateSighting import (
+    SCRIPT_NAME,
+    CreateSighting,
+    CreateSightingParameters,
+)
 
 
 class TestCreateSightingParameters:
     def test_parse_labels_from_csv(self):
-        params = CreateSightingParameters(from_object_id="from-id", to_object_id="to-id", labels="l1, l2")
+        params = CreateSightingParameters(
+            from_object_id="from-id", to_object_id="to-id", labels="l1, l2"
+        )
         assert params.labels == ["l1", "l2"]
 
     def test_parse_optional_dates(self):
@@ -42,7 +48,9 @@ class TestCreateSightingAction:
         assert action.params.to_object_id == "to-id"
         assert action.params.first_seen is not None
 
-    def test_perform_action_sets_output_message(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_output_message(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {
             "From Object Id": "from-id",
             "To Object Id": "to-id",

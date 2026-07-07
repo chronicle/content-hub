@@ -4,7 +4,8 @@ from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
-from actions.CreateIndicator import (
+
+from ...actions.CreateIndicator import (
     SCRIPT_NAME,
     CreateIndicator,
     CreateIndicatorParameters,
@@ -13,7 +14,9 @@ from actions.CreateIndicator import (
 
 class TestCreateIndicatorParameters:
     def test_parse_labels_from_csv(self):
-        params = CreateIndicatorParameters(name="ind-1", pattern="[domain-name:value = 'example.org']", labels="l1, l2")
+        params = CreateIndicatorParameters(
+            name="ind-1", pattern="[domain-name:value = 'example.org']", labels="l1, l2"
+        )
         assert params.labels == ["l1", "l2"]
 
     def test_parse_optional_dates(self):
@@ -76,7 +79,9 @@ class TestCreateIndicatorAction:
         assert action.params.score == 50
         assert action.params.valid_from is not None
 
-    def test_perform_action_sets_output_message(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_output_message(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {
             "Name": "ind-1",
             "Pattern": "[domain-name:value = 'example.org']",

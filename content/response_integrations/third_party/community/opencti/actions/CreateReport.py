@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from core.base_action import BaseAction
-from core.base_action_parameters import BaseActionParameters
-from core.datamodels.report import Report
-from core.utils import convert_date_format, parse_csv_list
 from pydantic import AwareDatetime, Field, field_validator
+
+from ..core.base_action import BaseAction
+from ..core.base_action_parameters import BaseActionParameters
+from ..core.datamodels.report import Report
+from ..core.utils import convert_date_format, parse_csv_list
 
 SCRIPT_NAME = "Create Report"
 
@@ -84,7 +85,7 @@ class CreateReport(BaseAction):
             name=raw_params.get("Name"),
             publication_date=raw_params.get("Publication Date"),
             description=raw_params.get("Description"),
-            report_types=raw_params.get("Report types"),
+            report_types=raw_params.get("Report Types"),
             labels=raw_params.get("Labels"),
             marking=raw_params.get("Marking"),
         )

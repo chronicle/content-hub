@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from core.base_action import BaseAction
-from core.base_action_parameters import BaseActionParameters
-from core.datamodels.request_for_takedown import RequestForTakedown
-from core.utils import convert_date_format, parse_csv_list
 from pydantic import AwareDatetime, Field, field_validator
+
+from ..core.base_action import BaseAction
+from ..core.base_action_parameters import BaseActionParameters
+from ..core.datamodels.request_for_takedown import RequestForTakedown
+from ..core.utils import convert_date_format, parse_csv_list
 
 SCRIPT_NAME = "Create Request for Takedown"
 

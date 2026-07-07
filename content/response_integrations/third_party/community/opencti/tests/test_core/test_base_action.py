@@ -3,8 +3,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from core.base_action import BaseAction
-from core.opencti_client.client import OpenCTIClient
+
+from ...core.base_action import BaseAction
+from ...core.opencti_client.client import OpenCTIClient
 
 FAKE_OPENCTI_URL = "https://opencti.example.com"
 FAKE_OPENCTI_TOKEN = "secret-token"
@@ -22,7 +23,7 @@ class ConcreteAction(BaseAction):
 def mock_soar_action(monkeypatch) -> MagicMock:
     mock_soar = MagicMock()
     mock_soar.get_configuration.return_value = {
-        "URL": FAKE_OPENCTI_URL,
+        "API Root": FAKE_OPENCTI_URL,
         "API Token": FAKE_OPENCTI_TOKEN,
         "Verify SSL": True,
     }
@@ -39,7 +40,9 @@ def mock_soar_action(monkeypatch) -> MagicMock:
 def mock_pycti_client(monkeypatch) -> MagicMock:
     mock_pycti_client = MagicMock(return_value=MagicMock())
 
-    monkeypatch.setattr("core.opencti_client.client.OpenCTIApiClient", mock_pycti_client)
+    monkeypatch.setattr(
+        "opencti.core.opencti_client.client.OpenCTIApiClient", mock_pycti_client
+    )
 
     return mock_pycti_client
 

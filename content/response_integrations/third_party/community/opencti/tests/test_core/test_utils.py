@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from core.utils import convert_date_format, parse_csv_list
+from ...core.utils import convert_date_format, parse_csv_list
 
 
 class TestConvertDateFormat:

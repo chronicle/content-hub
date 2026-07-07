@@ -1,13 +1,14 @@
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from core.datamodels.incident import Incident
-from core.datamodels.incident_response import IncidentResponse
-from core.datamodels.observable import Observable
-from core.datamodels.request_for_information import RequestForInformation
-from core.datamodels.request_for_takedown import RequestForTakedown
-from core.opencti_client.client import OpenCTIClient, OpenCTIClientError
-from core.opencti_client.json_results import (
+
+from ....core.datamodels.incident import Incident
+from ....core.datamodels.incident_response import IncidentResponse
+from ....core.datamodels.observable import Observable
+from ....core.datamodels.request_for_information import RequestForInformation
+from ....core.datamodels.request_for_takedown import RequestForTakedown
+from ....core.opencti_client.client import OpenCTIClient, OpenCTIClientError
+from ....core.opencti_client.json_results import (
     AddObjectToContainerJSONResult,
     IncidentJSONResult,
     IncidentResponseJSONResult,
@@ -75,7 +76,7 @@ def fake_observable_api_response():
 @pytest.fixture
 def mock_pycti_client():
     """Return a MagicMock replacing pycti.OpenCTIApiClient."""
-    with patch("core.opencti_client.client.OpenCTIApiClient") as mock_cls:
+    with patch("opencti.core.opencti_client.client.OpenCTIApiClient") as mock_cls:
         instance = MagicMock()
         mock_cls.return_value = instance
         yield instance
@@ -495,8 +496,12 @@ class TestUpsertLabels:
 
         mock_pycti_client.label.create.assert_not_called()
 
-    def test_raises_opencti_client_error_on_failure(self, client, mock_pycti_client):
+    def test_skips_silently_on_failure(self, client, mock_pycti_client):
         mock_pycti_client.label.create.side_effect = RuntimeError("network error")
 
-        with pytest.raises(OpenCTIClientError, match="Failed to upsert labels"):
-            client._upsert_labels(["local"])
+        result = client._upsert_labels(["local"])
+
+        assert mock_pycti_client.label.create.call_args_list == [
+            ((), {"value": "local"})
+        ]
+        assert result is None  # method is silent on failure

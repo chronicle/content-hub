@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from actions.EnrichObservable import (
+from ...actions.EnrichObservable import (
     SCRIPT_NAME,
     EnrichObservable,
     EnrichObservableParameters,
 )
-from core.opencti_client.client import OpenCTIClientError
-from core.opencti_client.enrich_results import ObservableEnrichmentResult
+from ...core.opencti_client.client import OpenCTIClientError
+from ...core.opencti_client.enrich_results import ObservableEnrichmentResult
 
 
 def _make_entity(identifier: str, entity_type: str = "ADDRESS") -> MagicMock:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from actions.CreateRequestForTakedown import (
+from ...actions.CreateRequestForTakedown import (
     SCRIPT_NAME,
     CreateRequestForTakedown,
     CreateRequestForTakedownParameters,
@@ -12,7 +12,9 @@ from actions.CreateRequestForTakedown import (
 
 class TestCreateRequestForTakedownParameters:
     def test_parse_labels_from_csv(self):
-        params = CreateRequestForTakedownParameters(name="rft-1", labels="label1, label2")
+        params = CreateRequestForTakedownParameters(
+            name="rft-1", labels="label1, label2"
+        )
         assert params.labels == ["label1", "label2"]
 
     def test_created_defaults_to_aware_datetime(self):
@@ -37,7 +39,9 @@ class TestCreateRequestForTakedownAction:
         assert action.params.takedown_type == "Brand-abuse"
         assert action.params.severity == "low"
 
-    def test_perform_action_sets_output_message(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_output_message(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {
             "Name": "rft-1",
             "Description": "desc",

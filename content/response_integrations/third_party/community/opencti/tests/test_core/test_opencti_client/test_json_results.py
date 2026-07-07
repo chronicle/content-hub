@@ -1,5 +1,6 @@
 import pytest
-from core.opencti_client.json_results import (
+
+from ....core.opencti_client.json_results import (
     BaseJSONResult,
     BaseObjectJSONResult,
     IncidentJSONResult,

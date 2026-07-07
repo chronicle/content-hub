@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import pycti
-from core.datamodels.base_octi_object import BaseOCTIObject
 from pydantic import AwareDatetime
+
+from ..datamodels.base_octi_object import BaseOCTIObject
 
 
 class Relationship(BaseOCTIObject):
     """Represent the Relationship model."""
+
     relationship_type: str
     source_ref: str
     target_ref: str
@@ -12,7 +16,7 @@ class Relationship(BaseOCTIObject):
     first_seen: AwareDatetime | None = None
     last_seen: AwareDatetime | None = None
     markings: list[str] | None = None
-    
+
     def _compute_stix_id(self) -> str:
         """Build a deterministic STIX ID for this object.
         Returns:
@@ -25,7 +29,7 @@ class Relationship(BaseOCTIObject):
             start_time=self.first_seen.isoformat() if self.first_seen else None,
             stop_time=self.last_seen.isoformat() if self.last_seen else None,
         )
-    
+
     def to_input_variables(self) -> dict:
         """Serialize the model into OpenCTI GraphQL payload.
         Returns:

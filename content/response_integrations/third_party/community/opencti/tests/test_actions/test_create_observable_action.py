@@ -3,7 +3,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from actions.CreateObservable import (
+
+from ...actions.CreateObservable import (
     SCRIPT_NAME,
     CreateObservable,
     CreateObservableParameters,
@@ -55,7 +56,9 @@ class TestCreateObservableAction:
         assert action.params.score == 50
         assert action.params.create_indicator is True
 
-    def test_perform_action_sets_correct_observable_type(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_correct_observable_type(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {
             "Observable Type": "Domain Name",
             "Observable Value": "google.com",

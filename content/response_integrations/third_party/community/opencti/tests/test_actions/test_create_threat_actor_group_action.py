@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from actions.CreateThreatActorGroup import (
+from ...actions.CreateThreatActorGroup import (
     SCRIPT_NAME,
     CreateThreatActorGroup,
     CreateThreatActorGroupParameters,
@@ -35,7 +35,9 @@ class TestCreateThreatActorGroupAction:
         assert action.params.name == "tag-1"
         assert action.params.threat_actor_types == ["crime-syndicate"]
 
-    def test_perform_action_sets_output_message(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_output_message(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {"Name": "tag-1"}
         result_mock = MagicMock()
         result_mock.id = "tag-id-1"

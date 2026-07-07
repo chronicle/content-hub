@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from actions.CreateAttackPattern import (
+from ...actions.CreateAttackPattern import (
     SCRIPT_NAME,
     CreateAttackPattern,
     CreateAttackPatternParameters,
@@ -32,7 +32,9 @@ class TestCreateAttackPatternAction:
         assert action.params.external_id == "T0001"
         assert action.params.labels == ["local", "test"]
 
-    def test_perform_action_sets_output_message(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_output_message(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {"Name": "ap-1"}
         result_mock = MagicMock()
         result_mock.id = "ap-id-1"

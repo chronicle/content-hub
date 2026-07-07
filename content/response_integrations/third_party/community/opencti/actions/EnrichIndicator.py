@@ -2,18 +2,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from core.base_action import BaseEnrichAction, EntityNotFoundError
-from core.base_action_parameters import BaseActionParameters
-from core.opencti_client.client import OpenCTIClientError
-from core.utils import score_to_color
 from pydantic import Field
 from TIPCommon.base.action import EntityTypesEnum
 from TIPCommon.base.action.base_enrich_action import EnrichActionError
 from TIPCommon.transformation import construct_csv
 
+from ..core.base_action import BaseEnrichAction, EntityNotFoundError
+from ..core.base_action_parameters import BaseActionParameters
+from ..core.opencti_client.client import OpenCTIClientError
+from ..core.utils import score_to_color
+
 if TYPE_CHECKING:
-    from core.opencti_client.enrich_results import IndicatorEnrichmentResult
     from TIPCommon.types import Entity
+
+    from ..core.opencti_client.enrich_results import IndicatorEnrichmentResult
 
 SCRIPT_NAME = "Enrich Indicator"
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from actions.CreateTool import SCRIPT_NAME, CreateTool, CreateToolParameters
+from ...actions.CreateTool import SCRIPT_NAME, CreateTool, CreateToolParameters
 
 
 class TestCreateToolParameters:
@@ -31,7 +31,9 @@ class TestCreateToolAction:
         assert action.params.name == "tool-1"
         assert action.params.tool_types == ["remote-access"]
 
-    def test_perform_action_sets_output_message(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_output_message(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {"Name": "tool-1"}
         result_mock = MagicMock()
         result_mock.id = "tool-id-1"

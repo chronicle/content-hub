@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from actions.CreateGrouping import SCRIPT_NAME, CreateGrouping, CreateGroupingParameters
+from ...actions.CreateGrouping import (
+    SCRIPT_NAME,
+    CreateGrouping,
+    CreateGroupingParameters,
+)
 
 
 class TestCreateGroupingParameters:

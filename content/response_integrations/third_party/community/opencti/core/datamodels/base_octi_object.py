@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 
 from pycti import MarkingDefinition
@@ -27,7 +29,9 @@ class BaseOCTIObject(BaseModel, ABC):
         Returns:
             A string representing the STIX ID of the entity.
         """
-        raise NotImplementedError("Subclasses of `BaseOCTIObject` must implement the '_compute_stix_id' method.")
+        raise NotImplementedError(
+            "Subclasses of `BaseOCTIObject` must implement the '_compute_stix_id' method."
+        )
 
     @abstractmethod
     def to_input_variables(self) -> dict:
@@ -40,7 +44,9 @@ class BaseOCTIObject(BaseModel, ABC):
         Returns:
             A dictionary containing the entity's attributes as input variables for OpenCTI.
         """
-        raise NotImplementedError("Subclasses of `BaseOCTIObject` must implement the 'to_input_variables' method.")
+        raise NotImplementedError(
+            "Subclasses of `BaseOCTIObject` must implement the 'to_input_variables' method."
+        )
 
     def _compute_markings_ids(self) -> list[str] | None:
         """Compute the list of marking IDs associated with the entity.
@@ -51,7 +57,10 @@ class BaseOCTIObject(BaseModel, ABC):
             A list of strings representing the marking IDs, or None if no markings are set.
         """
         if markings := getattr(self, "markings", []):
-            return [MarkingDefinition.generate_id("TLP", definition=marking) for marking in markings]
+            return [
+                MarkingDefinition.generate_id("TLP", definition=marking)
+                for marking in markings
+            ]
 
         return None
 

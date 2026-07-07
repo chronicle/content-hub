@@ -1,27 +1,32 @@
+from __future__ import annotations
+
 from typing import Literal, Protocol
 
-from core.datamodels.attack_pattern import AttackPattern
-from core.datamodels.campaign import Campaign
-from core.datamodels.grouping import Grouping
-from core.datamodels.incident import Incident
-from core.datamodels.incident_response import IncidentResponse
-from core.datamodels.indicator import Indicator
-from core.datamodels.intrusion_set import IntrusionSet
-from core.datamodels.malware import Malware
-from core.datamodels.observable import Observable
-from core.datamodels.relationship import Relationship
-from core.datamodels.report import Report
-from core.datamodels.request_for_information import RequestForInformation
-from core.datamodels.request_for_takedown import RequestForTakedown
-from core.datamodels.sighting import Sighting
-from core.datamodels.threat_actor_group import ThreatActorGroup
-from core.datamodels.tool import Tool
-from core.datamodels.vulnerability import Vulnerability
-from core.opencti_client.enrich_results import (
+from pycti import OpenCTIApiClient
+from pydantic import ValidationError
+
+from ..datamodels.attack_pattern import AttackPattern
+from ..datamodels.campaign import Campaign
+from ..datamodels.grouping import Grouping
+from ..datamodels.incident import Incident
+from ..datamodels.incident_response import IncidentResponse
+from ..datamodels.indicator import Indicator
+from ..datamodels.intrusion_set import IntrusionSet
+from ..datamodels.malware import Malware
+from ..datamodels.observable import Observable
+from ..datamodels.relationship import Relationship
+from ..datamodels.report import Report
+from ..datamodels.request_for_information import RequestForInformation
+from ..datamodels.request_for_takedown import RequestForTakedown
+from ..datamodels.sighting import Sighting
+from ..datamodels.threat_actor_group import ThreatActorGroup
+from ..datamodels.tool import Tool
+from ..datamodels.vulnerability import Vulnerability
+from ..opencti_client.enrich_results import (
     IndicatorEnrichmentResult,
     ObservableEnrichmentResult,
 )
-from core.opencti_client.json_results import (
+from ..opencti_client.json_results import (
     AddObjectToContainerJSONResult,
     AttackPatternJSONResult,
     CampaignJSONResult,
@@ -41,9 +46,7 @@ from core.opencti_client.json_results import (
     ToolJSONResult,
     VulnerabilityJSONResult,
 )
-from core.utils import get_hash_type
-from pycti import OpenCTIApiClient
-from pydantic import ValidationError
+from ..utils import get_hash_type
 
 
 class SOAREntity(Protocol):

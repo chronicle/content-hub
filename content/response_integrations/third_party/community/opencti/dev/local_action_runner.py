@@ -33,10 +33,16 @@ if _SOAR_SDK.exists() and str(_SOAR_SDK) not in sys.path:
     sys.path.insert(0, str(_SOAR_SDK))
 
 INTEGRATION_ROOT = Path(__file__).resolve().parent.parent
+INTEGRATION_PARENT = INTEGRATION_ROOT.parent
+
+# Add 'opencti' package parent ('community') so relative imports (..*) work
+if str(INTEGRATION_PARENT) not in sys.path:
+    sys.path.insert(0, str(INTEGRATION_PARENT))
+# Add 'opencti' package root so absolute imports (opencti.*) work
 if str(INTEGRATION_ROOT) not in sys.path:
     sys.path.insert(0, str(INTEGRATION_ROOT))
 
-from core.base_action import BaseAction  # noqa: E402
+BaseAction = importlib.import_module("opencti.core.base_action").BaseAction
 
 # Override sys.stdout to the real stdout so that print() calls in the SDK
 # (e.g. in TIPCommon.base.action) are visible in the console
@@ -99,7 +105,11 @@ def _build_configuration() -> dict[str, Any]:
             "OPENCTI_URL and OPENCTI_TOKEN must be set in the environment."
         )
 
-    return {"URL": opencti_url, "API Token": opencti_token, "Verify SSL": verify_ssl}
+    return {
+        "API Root": opencti_url,
+        "API Token": opencti_token,
+        "Verify SSL": verify_ssl,
+    }
 
 
 def _build_stub_soar_action(
@@ -132,7 +142,7 @@ def run_action(action_name: str, payload: dict[str, Any]) -> None:
     configuration = _build_configuration()
     stub_soar_action = _build_stub_soar_action(payload, configuration)
 
-    action_module = importlib.import_module(f"actions.{action_name}")
+    action_module = importlib.import_module(f"opencti.actions.{action_name}")
     action_class = getattr(action_module, action_name)
     script_name = BaseAction.build_script_name(_pascal_to_human(action_name))
 

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
-from core.base_action import BaseAction
-from core.base_action_parameters import BaseActionParameters
-from core.datamodels.observable import Observable
-from core.utils import is_ipv4, parse_csv_list
 from pydantic import Field, field_validator
 from TIPCommon.base.action import EntityTypesEnum
+
+from ..core.base_action import BaseAction
+from ..core.base_action_parameters import BaseActionParameters
+from ..core.datamodels.observable import Observable
+from ..core.utils import is_ipv4, parse_csv_list
 
 if TYPE_CHECKING:
     from TIPCommon.types import Entity
@@ -24,17 +26,6 @@ SUPPORTED_ENTITY_TYPES = [
     EntityTypesEnum.URL,
     EntityTypesEnum.USER,
 ]
-
-ENTITY_TYPE_TO_OPENCTI_SCO_TYPE = {
-    EntityTypesEnum.ADDRESS: "IPv4-Addr",  # may be overridden to IPv6-Addr based on value
-    EntityTypesEnum.DOMAIN: "Domain-Name",
-    EntityTypesEnum.EMAIL_MESSAGE: "Email-Message",
-    EntityTypesEnum.FILE_HASH: "StixFile",
-    EntityTypesEnum.FILE_NAME: "File-Name",
-    EntityTypesEnum.HOST_NAME: "Hostname",
-    EntityTypesEnum.URL: "Url",
-    EntityTypesEnum.USER: "Email-Addr",
-}
 
 
 class CreateObservablesParameters(BaseActionParameters):
@@ -110,25 +101,40 @@ class CreateObservables(BaseAction):
         """
         return SUPPORTED_ENTITY_TYPES
 
-    def _resolve_observable_type(self, current_entity: Entity) -> str:  # type: ignore[type-var]
+    def _resolve_observable_type(self, current_entity: Entity) -> str | None:  # type: ignore[type-var]
         """Map a SOAR entity type to its OpenCTI observable type.
 
         Args:
             current_entity: The SOAR entity currently being processed.
 
         Returns:
-            The OpenCTI observable type to create.
+            The OpenCTI observable type to create, or `None` if the entity does not
+            map to any supported observable type.
         """
-        entity_type = EntityTypesEnum(current_entity.entity_type)
+        entity_type_to_opencti_sco_type = {
+            EntityTypesEnum.ADDRESS: "IPv4-Addr",  # may be overridden to IPv6-Addr based on value
+            EntityTypesEnum.DOMAIN: "Domain-Name",
+            EntityTypesEnum.EMAIL_MESSAGE: "Email-Message",
+            EntityTypesEnum.FILE_HASH: "StixFile",
+            EntityTypesEnum.FILE_NAME: "File-Name",
+            EntityTypesEnum.HOST_NAME: "Hostname",
+            EntityTypesEnum.URL: "Url",
+            EntityTypesEnum.USER: "Email-Addr",  # may be ignored if the value is not a valid email address
+        }
 
+        entity_type = EntityTypesEnum(current_entity.entity_type)
         if entity_type == EntityTypesEnum.ADDRESS:
             return (
                 "IPv4-Addr"
                 if is_ipv4(current_entity.original_identifier)
                 else "IPv6-Addr"
             )
+        if entity_type == EntityTypesEnum.USER:
+            email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+            if not re.match(email_regex, current_entity.original_identifier):
+                return None  # Google SOAR User objects may not always be email addresses; skip if not valid
 
-        return ENTITY_TYPE_TO_OPENCTI_SCO_TYPE[entity_type]
+        return entity_type_to_opencti_sco_type.get(entity_type)
 
     def _perform_action(self, current_entity: Entity) -> None:  # type: ignore[type-var]
         """Create one observable in OpenCTI for the current entity.
@@ -143,6 +149,11 @@ class CreateObservables(BaseAction):
         """
         identifier = current_entity.original_identifier
         observable_type = self._resolve_observable_type(current_entity)
+        if not observable_type:
+            raise ValueError(
+                f"Entity '{identifier}' of type '{current_entity.entity_type}' "
+                "does not map to a supported observable type."
+            )
 
         observable = Observable(
             type=observable_type,  # type: ignore[arg-type]

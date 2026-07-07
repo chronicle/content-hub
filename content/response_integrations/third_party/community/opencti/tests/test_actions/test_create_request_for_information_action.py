@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from actions.CreateRequestForInformation import (
+from ...actions.CreateRequestForInformation import (
     SCRIPT_NAME,
     CreateRequestForInformation,
     CreateRequestForInformationParameters,
@@ -12,7 +12,9 @@ from actions.CreateRequestForInformation import (
 
 class TestCreateRequestForInformationParameters:
     def test_parse_labels_from_csv(self):
-        params = CreateRequestForInformationParameters(name="rfi-1", labels="label1, label2")
+        params = CreateRequestForInformationParameters(
+            name="rfi-1", labels="label1, label2"
+        )
         assert params.labels == ["label1", "label2"]
 
     def test_created_defaults_to_aware_datetime(self):
@@ -37,7 +39,9 @@ class TestCreateRequestForInformationAction:
         assert action.params.rfi_type == "Fraud"
         assert action.params.severity == "medium"
 
-    def test_perform_action_sets_output_message(self, mock_soar_action, mock_api_client):
+    def test_perform_action_sets_output_message(
+        self, mock_soar_action, mock_api_client
+    ):
         mock_soar_action.parameters = {
             "Name": "rfi-1",
             "Description": "desc",
