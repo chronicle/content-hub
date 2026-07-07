@@ -860,6 +860,9 @@ class OpenCTIClient:
 
         if entity_type == "FILEHASH":
             hash_type = get_hash_type(identifier)
+            if not hash_type:
+                return None
+
             # Maps hash algorithm names (from get_hash_type) to the pycti filter key.
             filter_key_by_hash_type = {
                 "md5": "hashes.MD5",

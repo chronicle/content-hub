@@ -42,15 +42,16 @@ class Observable(BaseOCTIObject):
             observable_data = {"type": "email-message", "subject": self.value}
         elif self.type == "StixFile":
             hash_type = get_hash_type(self.value)
+            hash_value = self.value.lower()
             match hash_type:
                 case "md5":
-                    hashes = {"md5": self.value}
+                    hashes = {"md5": hash_value}
                 case "sha1":
-                    hashes = {"sha-1": self.value}
+                    hashes = {"sha-1": hash_value}
                 case "sha256":
-                    hashes = {"sha-256": self.value}
+                    hashes = {"sha-256": hash_value}
                 case "sha512":
-                    hashes = {"sha-512": self.value}
+                    hashes = {"sha-512": hash_value}
                 case _:
                     raise ValueError("Observable Value is not a supported hash type")
             observable_data = {"type": "file", "hashes": hashes}
