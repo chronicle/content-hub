@@ -73,11 +73,11 @@ def is_ipv4(value):
     try:
         ipaddress.IPv4Address(value)  # Check for individual IP
         return True
-    except ipaddress.AddressValueError:
+    except (ipaddress.AddressValueError, TypeError):
         try:
             ipaddress.IPv4Network(value, strict=False)  # Check for CIDR notation
             return True
-        except (ipaddress.AddressValueError, ipaddress.NetmaskValueError):
+        except (ipaddress.AddressValueError, ipaddress.NetmaskValueError, TypeError):
             return False
 
 
