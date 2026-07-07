@@ -14,10 +14,8 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
-from integration_testing.platform.script_output import MockActionOutput
 from integration_testing.set_meta import set_metadata
+from pytest_mock import MockerFixture
 
 from ...actions import FindFirstAlert
 
@@ -26,20 +24,18 @@ from ...actions import FindFirstAlert
     integration_config={},
     parameters={},
 )
-@patch.object(FindFirstAlert, "SiemplifyAction")
-def test_find_first_alert_success(
-    mock_siemplify_action_class: MagicMock,
-    action_output: MockActionOutput,
+def test_find_first_alert_alert_scope_success(
+    mocker: MockerFixture,
 ) -> None:
-    mock_siemplify: MagicMock = MagicMock()
-    mock_siemplify_action_class.return_value = mock_siemplify
+    mock_siemplify = mocker.MagicMock()
+    mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)
     
-    mock_case: MagicMock = MagicMock()
-    mock_alert1: MagicMock = MagicMock()
+    mock_case = mocker.MagicMock()
+    mock_alert1 = mocker.MagicMock()
     mock_alert1.identifier = "alert1"
     mock_alert1.creation_time = 100
     
-    mock_alert2: MagicMock = MagicMock()
+    mock_alert2 = mocker.MagicMock()
     mock_alert2.identifier = "alert2"
     mock_alert2.creation_time = 200
     
@@ -49,8 +45,107 @@ def test_find_first_alert_success(
     mock_siemplify.case = mock_case
     mock_siemplify.current_alert = mock_alert1
     
-    mock_execution_scope: MagicMock = MagicMock()
-    mock_execution_scope.value = "Alert"
+    mock_execution_scope = mocker.MagicMock()
+    mock_execution_scope.value = 1  # ExecutionScope.Alert.value
+    mock_siemplify.execution_scope = mock_execution_scope
+    
+    FindFirstAlert.main()
+    
+    mock_siemplify.end.assert_called_once()
+    args, _ = mock_siemplify.end.call_args
+    assert "This is the first alert." in args[0]
+    assert args[1] == "alert1"
+
+
+@set_metadata(
+    integration_config={},
+    parameters={},
+)
+def test_find_first_alert_case_scope_success(
+    mocker: MockerFixture,
+) -> None:
+    mock_siemplify = mocker.MagicMock()
+    mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)
+    
+    mock_case = mocker.MagicMock()
+    mock_alert1 = mocker.MagicMock()
+    mock_alert1.identifier = "alert1"
+    mock_alert1.creation_time = 100
+    
+    mock_alert2 = mocker.MagicMock()
+    mock_alert2.identifier = "alert2"
+    mock_alert2.creation_time = 200
+    
+    mock_case.alerts = [mock_alert2, mock_alert1]
+    mock_case.open_alerts = mock_case.alerts
+    
+    mock_siemplify.case = mock_case
+    mock_siemplify.current_alert = mock_alert1
+    
+    mock_execution_scope = mocker.MagicMock()
+    mock_execution_scope.value = 2  # ExecutionScope.Case.value
+    mock_siemplify.execution_scope = mock_execution_scope
+    
+    FindFirstAlert.main()
+    
+    mock_siemplify.end.assert_called_once()
+    args, _ = mock_siemplify.end.call_args
+    assert "First alert of the case is: alert1" in args[0]
+    assert args[1] == "alert1"
+
+
+@set_metadata(
+    integration_config={},
+    parameters={},
+)
+def test_find_first_alert_empty_alerts(
+    mocker: MockerFixture,
+) -> None:
+    mock_siemplify = mocker.MagicMock()
+    mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)
+    
+    mock_case = mocker.MagicMock()
+    mock_case.alerts = []
+    mock_case.open_alerts = []
+    
+    mock_siemplify.case = mock_case
+    
+    mock_execution_scope = mocker.MagicMock()
+    mock_execution_scope.value = 2  # ExecutionScope.Case.value
+    mock_siemplify.execution_scope = mock_execution_scope
+    
+    FindFirstAlert.main()
+    
+    mock_siemplify.end.assert_called_once_with("No alerts found in the case.", "false")
+
+
+@set_metadata(
+    integration_config={},
+    parameters={},
+)
+def test_find_first_alert_empty_open_alerts_fallback(
+    mocker: MockerFixture,
+) -> None:
+    mock_siemplify = mocker.MagicMock()
+    mocker.patch.object(FindFirstAlert, "SiemplifyAction", return_value=mock_siemplify)
+    
+    mock_case = mocker.MagicMock()
+    mock_alert1 = mocker.MagicMock()
+    mock_alert1.identifier = "alert1"
+    mock_alert1.creation_time = 100
+    
+    mock_alert2 = mocker.MagicMock()
+    mock_alert2.identifier = "alert2"
+    mock_alert2.creation_time = 200
+    
+    mock_case.alerts = [mock_alert2, mock_alert1]
+    mock_case.open_alerts = []
+    
+    mock_siemplify.case = mock_case
+    mock_siemplify.current_alert = mock_alert1
+    
+    mock_execution_scope = mocker.MagicMock()
+    mock_execution_scope.value = 2  # ExecutionScope.Case.value
     mock_siemplify.execution_scope = mock_execution_scope
     
     FindFirstAlert.main()
