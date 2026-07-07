@@ -41,12 +41,8 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
-    findings_ids = extract_action_param(
-        siemplify, param_name="Finding IDs", is_mandatory=True, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
+    findings_ids = extract_action_param(siemplify, param_name="Finding IDs", is_mandatory=True, print_value=True)
     aws_region = extract_action_param(
         siemplify,
         param_name="AWS Region",
@@ -73,58 +69,40 @@ def main():
             siemplify_logger=siemplify.LOGGER,
         )
         manager.test_connectivity()  # this validates the credentials
-        siemplify.LOGGER.info(
-            f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service"
-        )
+        siemplify.LOGGER.info(f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service")
 
         # Split the findings IDs
         findings_ids = utils.load_csv_to_list(findings_ids, "Finding IDs")
 
         siemplify.LOGGER.info(f"Archiving findings of detector {detector_id}")
 
-        fetched_findings = manager.get_findings_by_ids(
-            detector_id=detector_id, findings_ids=findings_ids
-        )
+        fetched_findings = manager.get_findings_by_ids(detector_id=detector_id, findings_ids=findings_ids)
         fetched_findings_ids = [finding.id for finding in fetched_findings]
-        not_archived_findings = [
-            id for id in findings_ids if id not in fetched_findings_ids
-        ]
+        not_archived_findings = [id for id in findings_ids if id not in fetched_findings_ids]
 
         for finding in fetched_findings_ids:
             try:
                 manager.archive_findings(detector_id=detector_id, finding_ids=[finding])
-                siemplify.LOGGER.info(
-                    f"Successfully Archiving finding with id {finding} of detector {detector_id}"
-                )
+                siemplify.LOGGER.info(f"Successfully Archiving finding with id {finding} of detector {detector_id}")
                 archived_findings.append(finding)
 
             except Exception as error:
-                siemplify.LOGGER.info(
-                    f"Action wasn’t able to archive Finding: {finding} Error {error}"
-                )
-                siemplify.LOGGER.exception(
-                    f"Action wasn’t able to archive Finding {finding} Error {error}"
-                )
+                siemplify.LOGGER.info(f"Action wasn’t able to archive Finding: {finding} Error {error}")
+                siemplify.LOGGER.exception(f"Action wasn’t able to archive Finding {finding} Error {error}")
 
         if archived_findings:
             output_message += (
-                "The following findings were successfully archived: "
-                + ", ".join(archived_findings)
-                + "\n"
+                "The following findings were successfully archived: " + ", ".join(archived_findings) + "\n"
             )
             result_value = "true"
 
         if not_archived_findings:
-            output_message += "Could not archive the following findings: " + ", ".join(
-                not_archived_findings
-            )
+            output_message += "Could not archive the following findings: " + ", ".join(not_archived_findings)
 
         status = EXECUTION_STATE_COMPLETED
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

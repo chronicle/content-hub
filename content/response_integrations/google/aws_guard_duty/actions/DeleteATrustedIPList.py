@@ -41,9 +41,7 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
     ip_lists_ids = extract_action_param(
         siemplify, param_name="Trusted IP List IDs", is_mandatory=True, print_value=True
     )
@@ -65,24 +63,20 @@ def main():
             aws_access_key=aws_access_key,
             aws_secret_key=aws_secret_key,
             aws_default_region=aws_default_region,
+            role_arn=role_arn,
+            service_account_json=service_account_json,
+            workload_identity_email=workload_identity_email,
+            siemplify_logger=siemplify.LOGGER,
         )
         manager.test_connectivity()  # this validates the credentials
-        siemplify.LOGGER.info(
-            f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service"
-        )
+        siemplify.LOGGER.info(f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service")
 
-        manager.get_detector(
-            detector_id=detector_id
-        )  # Validate that the detector exists
+        manager.get_detector(detector_id=detector_id)  # Validate that the detector exists
 
         for ip_list_id in ip_lists_ids:
             try:
-                siemplify.LOGGER.info(
-                    f"Deleting IP list {ip_list_id} details (detector {detector_id})"
-                )
-                manager.delete_ip_set_by_id(
-                    detector_id=detector_id, ip_set_id=ip_list_id
-                )
+                siemplify.LOGGER.info(f"Deleting IP list {ip_list_id} details (detector {detector_id})")
+                manager.delete_ip_set_by_id(detector_id=detector_id, ip_set_id=ip_list_id)
                 successful_ids.append(ip_list_id)
 
             except Exception as e:
@@ -91,22 +85,20 @@ def main():
                 siemplify.LOGGER.exception(e)
 
         if successful_ids:
-            output_message += (
-                "Successfully deleted the following Trusted IP lists:\n{}\n\n".format(
-                    "\n".join(successful_ids)
-                )
+            output_message += "Successfully deleted the following Trusted IP lists:\n{}\n\n".format(
+                "\n".join(successful_ids)
             )
             result_value = "true"
 
         if failed_ids:
-            output_message += "Action wasn't able to  delete the following Trusted IP Lists from AWS GuardDuty:\n{}".format(
-                "\n".join(failed_ids)
+            output_message += (
+                "Action wasn't able to  delete the following Trusted IP Lists from AWS GuardDuty:\n{}".format(
+                    "\n".join(failed_ids)
+                )
             )
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

@@ -40,9 +40,7 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
 
     max_results_to_return = extract_action_param(
         siemplify,
@@ -86,23 +84,17 @@ def main():
         manager.test_connectivity()  # this validates the credentials
         siemplify.LOGGER.info("Successfully connected to AWS GuardDuty service")
 
-        siemplify.LOGGER.info(
-            f"Fetching trusted IP lists ids for detector {detector_id}"
-        )
+        siemplify.LOGGER.info(f"Fetching trusted IP lists ids for detector {detector_id}")
         ti_sets_ids = manager.get_threat_intelligence_sets_ids(
             detector_id=detector_id, max_results=max_results_to_return
         )
-        siemplify.LOGGER.info(
-            f"Successfully found {len(ti_sets_ids)} threat intelligence sets ids."
-        )
+        siemplify.LOGGER.info(f"Successfully found {len(ti_sets_ids)} threat intelligence sets ids.")
         output_message = f"Successfully listed available Threat Intelligence Sets."
 
         json_results["ThreatIntelSetIds"] = ti_sets_ids
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

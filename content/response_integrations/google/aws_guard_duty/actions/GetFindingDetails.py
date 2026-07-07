@@ -42,12 +42,8 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
-    findings_ids = extract_action_param(
-        siemplify, param_name="Finding IDs", is_mandatory=True, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
+    findings_ids = extract_action_param(siemplify, param_name="Finding IDs", is_mandatory=True, print_value=True)
     aws_region = extract_action_param(
         siemplify,
         param_name="AWS Region",
@@ -82,15 +78,11 @@ def main():
         siemplify.LOGGER.info("Successfully connected to AWS GuardDuty service")
 
         siemplify.LOGGER.info(f"Fetching findings details for detector {detector_id}")
-        findings = manager.get_findings_by_ids(
-            detector_id=detector_id, findings_ids=findings_ids
-        )
+        findings = manager.get_findings_by_ids(detector_id=detector_id, findings_ids=findings_ids)
 
         if findings:
             siemplify.LOGGER.info(f"Found {len(findings)} findings details.")
-            siemplify.result.add_data_table(
-                "Findings", construct_csv([finding.as_csv() for finding in findings])
-            )
+            siemplify.result.add_data_table("Findings", construct_csv([finding.as_csv() for finding in findings]))
 
             found_findings_ids = [finding.id for finding in findings]
             not_found_ids = []
@@ -111,19 +103,15 @@ def main():
 
         else:
             siemplify.LOGGER.info(f"No findings details were found.")
-            output_message += (
-                "Failed to retrieve information for the following findings:\n{}".format(
-                    "\n".join(findings_ids)
-                )
+            output_message += "Failed to retrieve information for the following findings:\n{}".format(
+                "\n".join(findings_ids)
             )
             result_value = "false"
 
         json_results["Findings"] = [finding.raw_data for finding in findings]
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

@@ -44,9 +44,7 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_ids = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
+    detector_ids = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
@@ -62,11 +60,13 @@ def main():
             aws_access_key=aws_access_key,
             aws_secret_key=aws_secret_key,
             aws_default_region=aws_default_region,
+            role_arn=role_arn,
+            service_account_json=service_account_json,
+            workload_identity_email=workload_identity_email,
+            siemplify_logger=siemplify.LOGGER,
         )
         manager.test_connectivity()  # this validates the credentials
-        siemplify.LOGGER.info(
-            f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service"
-        )
+        siemplify.LOGGER.info(f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service")
 
         # Split the detectors IDs
         detector_ids = utils.load_csv_to_list(detector_ids, "Detector ID")
@@ -81,9 +81,7 @@ def main():
                 found_detectors.append(detector_obj)
 
             except Exception as e:
-                siemplify.LOGGER.error(
-                    f"An error occurred when tried to fetch {detector_id}"
-                )
+                siemplify.LOGGER.error(f"An error occurred when tried to fetch {detector_id}")
                 siemplify.LOGGER.exception(e)
                 not_found_detectors_id.append(detector_id)
 
@@ -100,13 +98,8 @@ def main():
             siemplify.LOGGER.info("Processing Detectors")
             founds_ids = json_results.keys()
             json_results = convert_dict_to_json_result_dict(json_results)
-            siemplify.result.add_data_table(
-                "Detectors Details", construct_csv(csv_list)
-            )
-            founds_message = (
-                f"Successfully retrieved information about "
-                f"{[detectorId for detectorId in founds_ids]}"
-            )
+            siemplify.result.add_data_table("Detectors Details", construct_csv(csv_list))
+            founds_message = f"Successfully retrieved information about {[detectorId for detectorId in founds_ids]}"
             result_value = "true"
             output_message = f"{founds_message} \n {not_founds_message}"
             siemplify.LOGGER.info("Done Processing Detectors")
@@ -120,9 +113,7 @@ def main():
         status = EXECUTION_STATE_COMPLETED
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

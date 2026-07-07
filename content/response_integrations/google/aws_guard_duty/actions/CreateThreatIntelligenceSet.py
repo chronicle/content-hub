@@ -42,18 +42,10 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
-    name = extract_action_param(
-        siemplify, param_name="Name", is_mandatory=True, print_value=True
-    )
-    file_format = extract_action_param(
-        siemplify, param_name="File Format", is_mandatory=True, print_value=True
-    )
-    file_location = extract_action_param(
-        siemplify, param_name="File Location", is_mandatory=True, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
+    name = extract_action_param(siemplify, param_name="Name", is_mandatory=True, print_value=True)
+    file_format = extract_action_param(siemplify, param_name="File Format", is_mandatory=True, print_value=True)
+    file_location = extract_action_param(siemplify, param_name="File Location", is_mandatory=True, print_value=True)
     activate = extract_action_param(
         siemplify,
         param_name="Active",
@@ -61,9 +53,7 @@ def main():
         print_value=True,
         input_type=bool,
     )
-    tags = extract_action_param(
-        siemplify, param_name="Tags", is_mandatory=False, print_value=True
-    )
+    tags = extract_action_param(siemplify, param_name="Tags", is_mandatory=False, print_value=True)
 
     file_format = FILE_FORMATS[file_format]
 
@@ -78,6 +68,10 @@ def main():
             aws_access_key=aws_access_key,
             aws_secret_key=aws_secret_key,
             aws_default_region=aws_default_region,
+            role_arn=role_arn,
+            service_account_json=service_account_json,
+            workload_identity_email=workload_identity_email,
+            siemplify_logger=siemplify.LOGGER,
         )
         manager.test_connectivity()  # this validates the credentials
         siemplify.LOGGER.info("Successfully connected to AWS GuardDuty service")
@@ -91,9 +85,7 @@ def main():
             activate=activate,
             tags=tags,
         )
-        siemplify.LOGGER.info(
-            f"Successfully created the Threat Intelligence Set {threat_intel_set_id}."
-        )
+        siemplify.LOGGER.info(f"Successfully created the Threat Intelligence Set {threat_intel_set_id}.")
         json_results["ThreatIntelSetId"] = threat_intel_set_id
 
         status = EXECUTION_STATE_COMPLETED
@@ -101,9 +93,7 @@ def main():
         result_value = "true"
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

@@ -59,11 +59,13 @@ def main():
             aws_access_key=aws_access_key,
             aws_secret_key=aws_secret_key,
             aws_default_region=aws_default_region,
+            role_arn=role_arn,
+            service_account_json=service_account_json,
+            workload_identity_email=workload_identity_email,
+            siemplify_logger=siemplify.LOGGER,
         )
         manager.test_connectivity()  # this validates the credentials
-        siemplify.LOGGER.info(
-            f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service"
-        )
+        siemplify.LOGGER.info(f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service")
 
         siemplify.LOGGER.info(f"Creating detector.")
         detector_id = manager.create_detector(enable=enable)
@@ -77,13 +79,13 @@ def main():
     except exceptions.AWSGuardDutyResourceAlreadyExistsException as e:
         siemplify.LOGGER.info(e)
         status = EXECUTION_STATE_COMPLETED
-        output_message = "Action wasn't able to create a detector. Reason: a detector already exists for the current account."
+        output_message = (
+            "Action wasn't able to create a detector. Reason: a detector already exists for the current account."
+        )
         result_value = "false"
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

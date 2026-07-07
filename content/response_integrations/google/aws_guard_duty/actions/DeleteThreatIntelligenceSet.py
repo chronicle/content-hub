@@ -41,9 +41,7 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
     ti_sets_ids = extract_action_param(
         siemplify,
         param_name="Threat Intelligence Set IDs",
@@ -68,47 +66,43 @@ def main():
             aws_access_key=aws_access_key,
             aws_secret_key=aws_secret_key,
             aws_default_region=aws_default_region,
+            role_arn=role_arn,
+            service_account_json=service_account_json,
+            workload_identity_email=workload_identity_email,
+            siemplify_logger=siemplify.LOGGER,
         )
         manager.test_connectivity()  # this validates the credentials
-        siemplify.LOGGER.info(
-            f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service"
-        )
+        siemplify.LOGGER.info(f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service")
 
-        manager.get_detector(
-            detector_id=detector_id
-        )  # Validate that the detector exists
+        manager.get_detector(detector_id=detector_id)  # Validate that the detector exists
 
         for ti_set_id in ti_sets_ids:
             try:
-                siemplify.LOGGER.info(
-                    f"Deleting Threat Intelligence set {ti_set_id} details (detector {detector_id})"
-                )
-                manager.delete_threat_intel_set_by_id(
-                    detector_id=detector_id, threat_intel_set_id=ti_set_id
-                )
+                siemplify.LOGGER.info(f"Deleting Threat Intelligence set {ti_set_id} details (detector {detector_id})")
+                manager.delete_threat_intel_set_by_id(detector_id=detector_id, threat_intel_set_id=ti_set_id)
                 successful_ids.append(ti_set_id)
 
             except Exception as e:
                 failed_ids.append(ti_set_id)
-                siemplify.LOGGER.error(
-                    f"An error occurred on Threat Intelligence set {ti_set_id}"
-                )
+                siemplify.LOGGER.error(f"An error occurred on Threat Intelligence set {ti_set_id}")
                 siemplify.LOGGER.exception(e)
 
         if successful_ids:
-            output_message += "Successfully deleted the following Threat Intelligence Sets in AWS GuardDuty:\n{}\n\n".format(
-                "\n".join(successful_ids)
+            output_message += (
+                "Successfully deleted the following Threat Intelligence Sets in AWS GuardDuty:\n{}\n\n".format(
+                    "\n".join(successful_ids)
+                )
             )
 
         if failed_ids:
-            output_message += "Action wasn't able to delete the following Threat Intelligence Sets in AWS GuardDuty:\n{}".format(
-                "\n".join(failed_ids)
+            output_message += (
+                "Action wasn't able to delete the following Threat Intelligence Sets in AWS GuardDuty:\n{}".format(
+                    "\n".join(failed_ids)
+                )
             )
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

@@ -41,12 +41,8 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
-    findings_ids = extract_action_param(
-        siemplify, param_name="Finding IDs", is_mandatory=True, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
+    findings_ids = extract_action_param(siemplify, param_name="Finding IDs", is_mandatory=True, print_value=True)
 
     siemplify.LOGGER.info("----------------- Main - Started -----------------")
 
@@ -60,63 +56,46 @@ def main():
             aws_access_key=aws_access_key,
             aws_secret_key=aws_secret_key,
             aws_default_region=aws_default_region,
+            role_arn=role_arn,
+            service_account_json=service_account_json,
+            workload_identity_email=workload_identity_email,
+            siemplify_logger=siemplify.LOGGER,
         )
         manager.test_connectivity()  # this validates the credentials
-        siemplify.LOGGER.info(
-            f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service"
-        )
+        siemplify.LOGGER.info(f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service")
 
         # Split the findings IDs
         findings_ids = utils.load_csv_to_list(findings_ids, "Finding IDs")
 
         siemplify.LOGGER.info(f"Un-archiving findings of detector {detector_id}")
 
-        fetched_findings = manager.get_findings_by_ids(
-            detector_id=detector_id, findings_ids=findings_ids
-        )
+        fetched_findings = manager.get_findings_by_ids(detector_id=detector_id, findings_ids=findings_ids)
         fetched_findings_ids = [finding.id for finding in fetched_findings]
-        not_unarchived_findings = [
-            id for id in findings_ids if id not in fetched_findings_ids
-        ]
+        not_unarchived_findings = [id for id in findings_ids if id not in fetched_findings_ids]
 
         for finding in fetched_findings_ids:
             try:
-                manager.unarchive_findings(
-                    detector_id=detector_id, finding_ids=[finding]
-                )
-                siemplify.LOGGER.info(
-                    f"Successfully un-archiving finding with id {finding} of detector {detector_id}"
-                )
+                manager.unarchive_findings(detector_id=detector_id, finding_ids=[finding])
+                siemplify.LOGGER.info(f"Successfully un-archiving finding with id {finding} of detector {detector_id}")
                 unarchived_findings.append(finding)
 
             except Exception as error:
-                siemplify.LOGGER.info(
-                    f"Action wasn’t able to un-archive Finding: {finding} Error {error}"
-                )
-                siemplify.LOGGER.exception(
-                    f"Action wasn’t able to un-archive Finding {finding} Error {error}"
-                )
+                siemplify.LOGGER.info(f"Action wasn’t able to un-archive Finding: {finding} Error {error}")
+                siemplify.LOGGER.exception(f"Action wasn’t able to un-archive Finding {finding} Error {error}")
 
         if unarchived_findings:
             output_message += (
-                "The following findings were successfully un-archived: "
-                + ", ".join(unarchived_findings)
-                + "\n"
+                "The following findings were successfully un-archived: " + ", ".join(unarchived_findings) + "\n"
             )
             result_value = "true"
 
         if not_unarchived_findings:
-            output_message += (
-                "Could not un-archive the following findings: "
-                + ", ".join(not_unarchived_findings)
-            )
+            output_message += "Could not un-archive the following findings: " + ", ".join(not_unarchived_findings)
 
         status = EXECUTION_STATE_COMPLETED
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

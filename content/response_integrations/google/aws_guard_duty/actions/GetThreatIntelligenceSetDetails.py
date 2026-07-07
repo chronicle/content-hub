@@ -42,9 +42,7 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
     ti_sets_ids = extract_action_param(
         siemplify,
         param_name="Threat Intelligence Set IDs",
@@ -86,35 +84,25 @@ def main():
         manager.test_connectivity()  # this validates the credentials
         siemplify.LOGGER.info("Successfully connected to AWS GuardDuty service")
 
-        manager.get_detector(
-            detector_id=detector_id
-        )  # Validate that the detector exists
+        manager.get_detector(detector_id=detector_id)  # Validate that the detector exists
 
         found_ti_sets = []
 
         for ti_set_id in ti_sets_ids:
             try:
-                siemplify.LOGGER.info(
-                    f"Fetching Threat Intelligence set {ti_set_id} details (detector {detector_id})"
-                )
-                ti_set = manager.get_threat_intel_set_by_id(
-                    detector_id=detector_id, threat_intel_set_id=ti_set_id
-                )
+                siemplify.LOGGER.info(f"Fetching Threat Intelligence set {ti_set_id} details (detector {detector_id})")
+                ti_set = manager.get_threat_intel_set_by_id(detector_id=detector_id, threat_intel_set_id=ti_set_id)
                 found_ti_sets.append(ti_set)
                 successful_ids.append(ti_set_id)
                 json_results[ti_set_id] = ti_set.raw_data
 
             except Exception as e:
                 failed_ids.append(ti_set_id)
-                siemplify.LOGGER.error(
-                    f"An error occurred on Threat Intelligence set {ti_set_id}"
-                )
+                siemplify.LOGGER.error(f"An error occurred on Threat Intelligence set {ti_set_id}")
                 siemplify.LOGGER.exception(e)
 
         if found_ti_sets:
-            siemplify.LOGGER.info(
-                f"Found {len(found_ti_sets)} Threat Intelligence sets details."
-            )
+            siemplify.LOGGER.info(f"Found {len(found_ti_sets)} Threat Intelligence sets details.")
             siemplify.result.add_data_table(
                 "Threat Intelligence Set Details",
                 construct_csv([ti_set.as_csv() for ti_set in found_ti_sets]),
@@ -131,18 +119,12 @@ def main():
                 )
 
         else:
-            siemplify.LOGGER.info(
-                f"No details were retrieved about the provided Threat Intelligence Sets."
-            )
-            output_message += (
-                "No details were retrieved about the provided Threat Intelligence Sets."
-            )
+            siemplify.LOGGER.info(f"No details were retrieved about the provided Threat Intelligence Sets.")
+            output_message += "No details were retrieved about the provided Threat Intelligence Sets."
             result_value = "false"
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

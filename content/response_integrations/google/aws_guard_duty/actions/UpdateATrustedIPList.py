@@ -41,18 +41,10 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
-    ip_set_id = extract_action_param(
-        siemplify, param_name="Trusted IP List ID", is_mandatory=True, print_value=True
-    )
-    name = extract_action_param(
-        siemplify, param_name="Name", is_mandatory=False, print_value=True
-    )
-    file_location = extract_action_param(
-        siemplify, param_name="File Location", is_mandatory=False, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
+    ip_set_id = extract_action_param(siemplify, param_name="Trusted IP List ID", is_mandatory=True, print_value=True)
+    name = extract_action_param(siemplify, param_name="Name", is_mandatory=False, print_value=True)
+    file_location = extract_action_param(siemplify, param_name="File Location", is_mandatory=False, print_value=True)
     activate = extract_action_param(
         siemplify,
         param_name="Activate",
@@ -94,16 +86,12 @@ def main():
         )
 
         status = EXECUTION_STATE_COMPLETED
-        output_message = (
-            f"Successfully updated the trusted IP list '{ip_set_id}' in AWS GuardDuty."
-        )
+        output_message = f"Successfully updated the trusted IP list '{ip_set_id}' in AWS GuardDuty."
         siemplify.LOGGER.info(output_message)
         result_value = "true"
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

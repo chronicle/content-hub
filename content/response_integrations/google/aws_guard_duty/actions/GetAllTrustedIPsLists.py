@@ -48,9 +48,7 @@ def main():
         default_value=aws_default_region,
     )
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
 
     max_results_to_return = extract_action_param(
         siemplify,
@@ -87,23 +85,15 @@ def main():
         manager.test_connectivity()  # this validates the credentials
         siemplify.LOGGER.info("Successfully connected to AWS GuardDuty service")
 
-        siemplify.LOGGER.info(
-            f"Fetching trusted IP lists ids for detector {detector_id}"
-        )
-        ip_list_ids = manager.get_trusted_ip_lists_ids(
-            detector_id=detector_id, max_results=max_results_to_return
-        )
-        siemplify.LOGGER.info(
-            f"Successfully found {len(ip_list_ids)} trusted IP lists ids"
-        )
+        siemplify.LOGGER.info(f"Fetching trusted IP lists ids for detector {detector_id}")
+        ip_list_ids = manager.get_trusted_ip_lists_ids(detector_id=detector_id, max_results=max_results_to_return)
+        siemplify.LOGGER.info(f"Successfully found {len(ip_list_ids)} trusted IP lists ids")
         output_message = f"Successfully retrieved available Trusted IP lists."
 
         json_results["IpSetIds"] = ip_list_ids
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

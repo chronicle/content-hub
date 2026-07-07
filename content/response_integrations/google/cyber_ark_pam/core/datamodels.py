@@ -13,25 +13,61 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon import dict_to_flat
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+from TIPCommon.transformation import dict_to_flat
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 class BaseModel:
-    def __init__(self, raw_data):
+    """Base model class representing structured API response data."""
+
+    def __init__(self, raw_data: SingleJson) -> None:
+        """Initialize the model with raw JSON data."""
         self.raw_data = raw_data
 
-    def to_json(self):
+    def to_json(self) -> SingleJson:
+        """Return the raw JSON representation of the model.
+
+        Returns:
+            The raw JSON data dictionary.
+
+        """
         return self.raw_data
 
-    def to_flat(self):
+    def to_flat(self) -> SingleJson:
+        """Return a flattened JSON representation of the model.
+
+        Returns:
+            A flattened JSON data dictionary.
+
+        """
         return dict_to_flat(self.to_json())
 
-    def to_csv(self):
+    def to_csv(self) -> SingleJson:
+        """Return a flat JSON representation suitable for CSV conversion.
+
+        Returns:
+            A flat JSON data dictionary.
+
+        """
         return self.to_flat()
 
 
 class Account(BaseModel):
-    def to_csv(self):
+    """Account data model class."""
+
+    def to_csv(self) -> SingleJson:
+        """Return a filtered flat JSON representation of account data suitable for CSV.
+
+        Returns:
+            A filtered flat JSON data dictionary.
+
+        """
         flat_dict = self.to_flat()
         return {
             "Id": flat_dict.get("id"),
@@ -39,3 +75,16 @@ class Account(BaseModel):
             "User Name": flat_dict.get("userName"),
             "Secret Type": flat_dict.get("secretType"),
         }
+
+
+@dataclass
+class IntegrationParameters:
+    """Integration parameters for CyberArk PAM."""
+
+    api_root: str
+    username: str
+    password: str
+    verify_ssl: bool
+    ca_certificate: str | None
+    client_certificate: str | None
+    client_certificate_passphrase: str | None

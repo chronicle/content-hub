@@ -42,9 +42,7 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
 
     is_useful = extract_action_param(
         siemplify,
@@ -54,13 +52,9 @@ def main():
         input_type=bool,
     )
 
-    finding_ids = extract_action_param(
-        siemplify, param_name="Findings IDs", is_mandatory=True, print_value=True
-    )
+    finding_ids = extract_action_param(siemplify, param_name="Findings IDs", is_mandatory=True, print_value=True)
 
-    comment = extract_action_param(
-        siemplify, param_name="Comment", is_mandatory=False, print_value=True
-    )
+    comment = extract_action_param(siemplify, param_name="Comment", is_mandatory=False, print_value=True)
 
     aws_region = extract_action_param(
         siemplify,
@@ -89,18 +83,14 @@ def main():
             siemplify_logger=siemplify.LOGGER,
         )
         manager.test_connectivity()  # this validates the credentials
-        siemplify.LOGGER.info(
-            f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service"
-        )
+        siemplify.LOGGER.info(f"Successfully connected to {INTEGRATION_DISPLAY_NAME} service")
 
         # Split the findings IDs
         finding_ids = utils.load_csv_to_list(finding_ids, "Findings IDs")
         useful = USEFUL if is_useful else NOT_USEFUL
 
         # Get finding by id's to see if exist
-        findings_found = manager.get_findings_by_ids(
-            detector_id=detector_id, findings_ids=finding_ids
-        )
+        findings_found = manager.get_findings_by_ids(detector_id=detector_id, findings_ids=finding_ids)
 
         fetched_findings = [find.id for find in findings_found]
         for id in finding_ids:
@@ -117,30 +107,20 @@ def main():
             finding_ids=fetched_findings,
             comment=comment,
         )
-        siemplify.LOGGER.info(
-            f"Successfully Updated Findings Feedback for {fetched_findings}"
-        )
+        siemplify.LOGGER.info(f"Successfully Updated Findings Feedback for {fetched_findings}")
 
         status = EXECUTION_STATE_COMPLETED
 
-        output_message += (
-            f"Findings feedback was updated for finding: {updated_findings}"
-            if fetched_findings
-            else ""
-        )
+        output_message += f"Findings feedback was updated for finding: {updated_findings}" if fetched_findings else ""
 
         output_message += (
-            f"Unable to update feedback findings: {failed_to_update_findings}"
-            if not_updated_finding
-            else ""
+            f"Unable to update feedback findings: {failed_to_update_findings}" if not_updated_finding else ""
         )
 
         result_value = "true" if fetched_findings else "false"
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

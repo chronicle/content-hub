@@ -47,6 +47,10 @@ def main():
             aws_access_key=aws_access_key,
             aws_secret_key=aws_secret_key,
             aws_default_region=aws_default_region,
+            role_arn=role_arn,
+            service_account_json=service_account_json,
+            workload_identity_email=workload_identity_email,
+            siemplify_logger=siemplify.LOGGER,
         )
         manager.test_connectivity()
         status = EXECUTION_STATE_COMPLETED
@@ -54,9 +58,7 @@ def main():
         result_value = "true"
 
     except Exception as e:
-        siemplify.LOGGER.error(
-            f"Failed to connect to the AWS GuardDuty server! Error is {e}"
-        )
+        siemplify.LOGGER.error(f"Failed to connect to the AWS GuardDuty server! Error is {e}")
         siemplify.LOGGER.exception(e)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

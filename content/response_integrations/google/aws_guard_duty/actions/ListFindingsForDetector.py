@@ -40,9 +40,7 @@ def main():
         workload_identity_email,
     ) = extract_integration_params(siemplify)
 
-    detector_id = extract_action_param(
-        siemplify, param_name="Detector ID", is_mandatory=True, print_value=True
-    )
+    detector_id = extract_action_param(siemplify, param_name="Detector ID", is_mandatory=True, print_value=True)
 
     max_results_to_return = extract_action_param(
         siemplify,
@@ -52,9 +50,7 @@ def main():
         input_type=int,
     )
 
-    sort_by = extract_action_param(
-        siemplify, param_name="Sort By", is_mandatory=False, print_value=True
-    )
+    sort_by = extract_action_param(siemplify, param_name="Sort By", is_mandatory=False, print_value=True)
 
     order_by = extract_action_param(
         siemplify,
@@ -106,16 +102,12 @@ def main():
             max_results=max_results_to_return,
         )
         siemplify.LOGGER.info(f"Successfully found {len(findings_ids)} findings ids")
-        output_message = (
-            f"Successfully retrieved available findings IDs for detector {detector_id}."
-        )
+        output_message = f"Successfully retrieved available findings IDs for detector {detector_id}."
 
         json_results["FindingIds"] = findings_ids
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(
-            f"Error executing action '{SCRIPT_NAME}'. Reason: {error}"
-        )
+        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"
