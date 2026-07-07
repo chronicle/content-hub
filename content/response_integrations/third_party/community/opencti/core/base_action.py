@@ -48,7 +48,7 @@ class _OpenCTIMixin:
         octi_url: str = extract_configuration_param(
             self.soar_action,
             provider_name=self.INTEGRATION_IDENTIFIER,
-            param_name="URL",
+            param_name="API Root",
             input_type=str,
             is_mandatory=True,
             print_value=True,
