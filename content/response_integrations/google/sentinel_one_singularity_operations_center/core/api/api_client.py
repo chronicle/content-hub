@@ -20,7 +20,10 @@ from TIPCommon.base.interfaces import Apiable
 
 from ..constants import REQUEST_TIMEOUT, SEVERITIES
 from ..data_models import AlertNote, AlertUpdateResult, SentinelOneAlertDetails
-from ..exceptions import UserNotFoundError
+from ..exceptions import (
+    SentinelOneSingularityOperationsCenterError,
+    UserNotFoundError,
+)
 from .api_utils import get_full_url, validate_response
 from .queries import (
     ADD_ALERT_NOTE_MUTATION,
@@ -96,7 +99,9 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
         for key in path:
             if not isinstance(val, dict):
                 return {}
-            val = val.get(key) or {}
+            val = val.get(key)
+            if val is None:
+                return {}
         return val
 
     @staticmethod
@@ -390,8 +395,16 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
             msg = f"User with email '{email}' was not found in SentinelOne."
             raise UserNotFoundError(msg)
 
-        # Extract the ID of the matching user
-        return int(data[0]["id"])
+        # Extract the ID of the matching user safely
+        first_user = data[0]
+        if not isinstance(first_user, dict) or "id" not in first_user:
+            msg = f"User data for '{email}' is malformed or missing 'id'."
+            raise SentinelOneSingularityOperationsCenterError(msg)
+        try:
+            return int(first_user["id"])
+        except (ValueError, TypeError) as e:
+            msg = f"Failed to parse user ID '{first_user.get('id')}' as integer: {e}"
+            raise SentinelOneSingularityOperationsCenterError(msg) from e
 
     def add_alert_comment(
         self,
