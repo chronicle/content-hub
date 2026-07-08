@@ -68,6 +68,8 @@ class SpyCloudUdmConverter:
         "source_id",
         "severity",
         "password_type",
+        "email",
+        "username",
         "email_domain",
         "domain",
         "subdomain",
