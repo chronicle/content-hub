@@ -1,0 +1,49 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+from ..core.base_action import SentinelOneSingularityOperationsCenterAction
+from ..core.constants import PING_SCRIPT_NAME
+
+SUCCESS_MESSAGE: str = (
+    "Successfully connected to the SentinelOne Singularity Operations Center "
+    "server with the provided connection parameters!"
+)
+ERROR_MESSAGE: str = "Failed to connect to the SentinelOne Singularity Operations Center server! Error is {error}"
+
+
+class Ping(SentinelOneSingularityOperationsCenterAction):
+    """Ping action to test connectivity to SentinelOne Singularity Operations Center."""
+
+    def __init__(self) -> None:
+        super().__init__(PING_SCRIPT_NAME)
+        self.output_message: str = SUCCESS_MESSAGE
+        self.error_output_message: str = ERROR_MESSAGE
+
+    def _perform_action(self, current_entity: None = None) -> None:  # noqa: ARG002
+        try:
+            self.api_client.test_connectivity()
+        except Exception as e:
+            self.error_output_message = self.error_output_message.format(error=e)
+            raise
+
+
+def main() -> None:
+    """Run the Ping action."""
+    Ping().run()
+
+
+if __name__ == "__main__":
+    main()
