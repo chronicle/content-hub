@@ -37,7 +37,6 @@ class UpdateAlert(SentinelOneSingularityOperationsCenterAction):
             int: User ID for assignment.
             None: Unassign alert.
             bool (False): Resolution failed (error message set in self.output_message).
-
         """
         assignee_stripped = assignee_input.strip()
         if assignee_stripped.lower() == "unassign":

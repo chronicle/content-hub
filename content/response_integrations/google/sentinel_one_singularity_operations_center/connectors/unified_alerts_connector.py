@@ -64,7 +64,6 @@ class UnifiedAlertsConnector(Connector):
 
         Raises:
             ConnectorSetupError: If parameter validation fails.
-
         """
         # Normalize boolean parameters
         self.params.use_dynamic_list_as_a_blocklist = (
@@ -170,7 +169,6 @@ class UnifiedAlertsConnector(Connector):
 
         Returns:
             int: The start timestamp in milliseconds.
-
         """
         return super().get_last_success_time(
             max_backwards_param_name="max_hours_backwards",
@@ -193,7 +191,6 @@ class UnifiedAlertsConnector(Connector):
 
         Returns:
             bool: True if max alerts processed, False otherwise.
-
         """
         return len(processed_alerts) >= self.params.max_alerts_to_fetch
 
@@ -205,7 +202,6 @@ class UnifiedAlertsConnector(Connector):
 
         Returns:
             bool: True if overflowed, False otherwise.
-
         """
         return not self.params.disable_overflow and is_overflowed(
             self.siemplify,
@@ -221,7 +217,6 @@ class UnifiedAlertsConnector(Connector):
 
         Returns:
             bool: True if alert is new or updated, False otherwise.
-
         """
         return convert_datetime_to_unix_time(
             dateutil.parser.parse(alert.updated_at)
@@ -232,7 +227,6 @@ class UnifiedAlertsConnector(Connector):
 
         Returns:
             list[SentinelOneAlert]: The list of fetched alerts.
-
         """
         start_timestamp_ms = convert_datetime_to_unix_time(
             self.context.last_success_timestamp
@@ -284,7 +278,6 @@ class UnifiedAlertsConnector(Connector):
 
         Returns:
             bool: True if the alert passes, False otherwise.
-
         """
         return pass_whitelist_filter(
             siemplify=self.siemplify,
@@ -302,7 +295,6 @@ class UnifiedAlertsConnector(Connector):
 
         Returns:
             AlertInfo: The mapped AlertInfo object.
-
         """
         flat_alert = dict_to_flat(
             processed_alert.details.raw_data if processed_alert.details else {}

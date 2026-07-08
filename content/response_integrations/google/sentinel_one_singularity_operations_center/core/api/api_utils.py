@@ -43,7 +43,6 @@ def get_full_url(
 
     Returns:
         str: The full URL constructed from API root, endpoint identifier and variables
-
     """
     endpoints = endpoints or ENDPOINTS
     # Strip trailing slash from api_root and leading slash from endpoint if needed
@@ -65,7 +64,6 @@ def validate_response(
 
     Raises:
         SentinelOneSingularityOperationsCenterError: If there is any error in the response
-
     """
     try:
         response.raise_for_status()

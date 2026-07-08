@@ -51,7 +51,6 @@ def build_auth_params(soar_sdk_object: ChronicleSOAR) -> IntegrationParameters:
 
     Raises:
         SentinelOneSingularityOperationsCenterError: If the provided SOAR instance is not supported.
-
     """
     sdk_class = type(soar_sdk_object).__name__
     if sdk_class == SiemplifyAction.__name__:
@@ -103,7 +102,6 @@ class AuthenticatedSession(Authable):
 
         Args:
             params (SessionAuthenticationParameters): Session authentication parameters.
-
         """
         self.session = get_authenticated_session(session_parameters=params)
 
@@ -118,7 +116,6 @@ def get_authenticated_session(
 
     Returns:
         Session: Authenticated session object.
-
     """
     session: Session = CreateSession.create_session()
     _authenticate_session(session, session_parameters=session_parameters)

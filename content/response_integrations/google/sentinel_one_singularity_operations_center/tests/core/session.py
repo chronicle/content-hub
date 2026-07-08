@@ -38,7 +38,7 @@ class SentinelOneSession(MockSession[MockRequest, MockResponse, SentinelOne]):
             self.users_endpoint,
         ]
 
-    @router.post(r"/web/api/v2.1/unifiedalerts/graphql")  # type: ignore # noqa: PGH003
+    @router.post(r"/web/api/v2.1/unifiedalerts/graphql")
     def graphql_endpoint(self, request: MockRequest) -> MockResponse:  # noqa: PLR0911
         try:
             payload: SingleJson = get_request_payload(request)
@@ -108,7 +108,7 @@ class SentinelOneSession(MockSession[MockRequest, MockResponse, SentinelOne]):
             content={"errors": [{"message": "Unknown query"}]}, status_code=200
         )
 
-    @router.get(r"/web/api/v2.1/users")  # type: ignore # noqa: PGH003
+    @router.get(r"/web/api/v2.1/users")
     def users_endpoint(self, request: MockRequest) -> MockResponse:
         email = None
         params_kwarg = request.kwargs.get("params") or {}

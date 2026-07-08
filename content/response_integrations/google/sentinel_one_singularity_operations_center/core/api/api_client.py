@@ -54,7 +54,7 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
         logger: ScriptLogger,
     ) -> None:
         super().__init__(
-            authenticated_session=authenticated_session,  # type: ignore # noqa: PGH003
+            authenticated_session=authenticated_session,
             configuration=configuration,
         )
         self.logger: ScriptLogger = logger
@@ -93,7 +93,6 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
 
         Returns:
             dict | list: The value at the end of the path, or an empty dict if not found.
-
         """
         val = data
         for key in path:
@@ -113,7 +112,6 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
 
         Returns:
             dict, optional: The node dictionary if available, otherwise None.
-
         """
         return edge.get("node") if edge else None
 
@@ -131,7 +129,6 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
         Returns:
             dict, optional: A dictionary representing the OrFilterSelectionInput payload,
                             or None if no filters are applicable.
-
         """
         common_filters = []
         if lowest_severity:
@@ -192,7 +189,6 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
 
         Yields:
             tuple[list[dict], dict]: A tuple of (edges list, page_info dict) for each page.
-
         """
         cursor: str | None = None
         has_next_page = True
@@ -232,7 +228,6 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
 
         Yields:
             dict: An individual raw alert dictionary.
-
         """
         url = get_full_url(self.api_root, "graphql_unified_alerts")
         or_filter = self.build_unified_alerts_or_filter(
@@ -272,7 +267,6 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
 
         Returns:
             SentinelOneAlertDetails: The alert details object.
-
         """
         url: str = get_full_url(self.api_root, "graphql_unified_alerts")
         payload = {"query": GET_ALERT_DETAILS_QUERY, "variables": {"id": alert_id}}
@@ -307,7 +301,6 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
 
         Returns:
             AlertUpdateResult: The structured result of the update.
-
         """
         # Build the actions payload list based on provided arguments
         actions_payload = []
@@ -376,7 +369,6 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
 
         Raises:
             UserNotFoundError: If no matching user is found in SentinelOne.
-
         """
         url = get_full_url(self.api_root, "users")
         response = self.session.get(
@@ -421,7 +413,6 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
 
         Returns:
             AlertNote: The created alert note.
-
         """
         url = get_full_url(self.api_root, "graphql_unified_alerts")
 

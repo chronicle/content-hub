@@ -43,7 +43,6 @@ class SentinelOneSingularityOperationsCenterAction(Action, ABC):
 
         Returns:
             SentinelOneSingularityOperationsCenterApiClient: SentinelOne API Client.
-
         """
         auth_params = build_auth_params(self.soar_action)
         authenticator: AuthenticatedSession = AuthenticatedSession()
@@ -71,7 +70,6 @@ class SentinelOneSingularityOperationsCenterAction(Action, ABC):
 
         Returns:
             bool: True if the action succeeded, False otherwise.
-
         """
         return self._result_value
 

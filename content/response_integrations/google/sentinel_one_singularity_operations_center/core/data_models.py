@@ -124,7 +124,6 @@ class SentinelOneAlert(BaseAlert):
 
         Returns:
             AlertInfo: The mapped AlertInfo object.
-
         """
         alert_info = AlertInfo()
 
@@ -215,7 +214,6 @@ class SentinelOneAlertDetails:
 
         Returns:
             object, optional: The value corresponding to the key, or default.
-
         """
         return self.raw_data.get(key, default)
 
@@ -297,7 +295,6 @@ class SentinelOneAlertDetails:
 
         Returns:
             dict: The flattened event dictionary.
-
         """
         data = self.raw_data.copy()
         data.pop("observables", None)
@@ -341,7 +338,6 @@ class AlertObservable:
 
         Returns:
             dict: The flattened event dictionary.
-
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.OBSERVABLE.value
@@ -380,7 +376,6 @@ class AlertIndicator:
 
         Returns:
             dict: The flattened event dictionary.
-
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.INDICATOR.value
@@ -417,7 +412,6 @@ class AlertAsset:
 
         Returns:
             dict: The flattened event dictionary.
-
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.ASSET.value
@@ -463,7 +457,6 @@ class AlertUpdateResult:
 
         Raises:
             AlertUpdateError: If the API returns errors or the update fails.
-
         """
         data = response_data.get("data", {}) or {}
         result = data.get("alertTriggerActions") or {}
