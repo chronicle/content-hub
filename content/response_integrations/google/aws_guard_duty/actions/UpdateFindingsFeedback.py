@@ -46,7 +46,7 @@ def main():
 
     is_useful = extract_action_param(
         siemplify,
-        param_name="Useful?",
+        param_name="Useful",
         is_mandatory=True,
         print_value=True,
         input_type=bool,
