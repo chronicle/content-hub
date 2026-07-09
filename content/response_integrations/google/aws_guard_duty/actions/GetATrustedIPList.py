@@ -13,21 +13,23 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon.extraction import extract_action_param
-from ..core.utils import extract_integration_params
-from TIPCommon.transformation import construct_csv
-from ..core.AWSGuardDutyManager import AWSGuardDutyManager
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
-from ..core.consts import INTEGRATION_NAME
+from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
+from TIPCommon.extraction import extract_action_param
+from TIPCommon.transformation import construct_csv
+
 from ..core import utils
+from ..core.AWSGuardDutyManager import AWSGuardDutyManager
+from ..core.consts import INTEGRATION_NAME
+from ..core.utils import extract_integration_params
 
 SCRIPT_NAME = "Get a Trusted IP List"
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME} - {SCRIPT_NAME}"
     siemplify.LOGGER.info("================= Main - Param Init =================")
@@ -88,7 +90,7 @@ def main():
 
             except Exception as e:
                 failed_ids.append(ip_list_id)
-                siemplify.LOGGER.error(f"An error occurred on IP list {ip_list_id}")
+                siemplify.LOGGER.exception(f"An error occurred on IP list {ip_list_id}")
                 siemplify.LOGGER.exception(e)
 
         if found_ip_sets:
@@ -109,12 +111,12 @@ def main():
                 )
 
         else:
-            siemplify.LOGGER.info(f"No details were retrieved about the provided Trusted IP Lists.")
+            siemplify.LOGGER.info("No details were retrieved about the provided Trusted IP Lists.")
             output_message += "No details were retrieved about the provided Trusted IP Lists."
             result_value = "false"
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
+        siemplify.LOGGER.exception(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

@@ -25,26 +25,25 @@
 
 # ============================= IMPORTS ===================================== #
 from __future__ import annotations
+
 import logging
 from typing import Any
+
 import boto3
 import botocore
 
-from .exceptions import (
-    AWSGuardDutyStatusCodeException,
-    AWSGuardDutyResourceAlreadyExistsException,
-    AWSGuardDutyNotFoundException,
-)
-from .AWSGuardDutyParser import AWSGuardDutyParser
+from . import consts, utils
 from .AWSGuardDutyIdentityFederation import AWSGuardDutyIdentityFederation
-from . import consts
-from . import utils
+from .AWSGuardDutyParser import AWSGuardDutyParser
+from .exceptions import (
+    AWSGuardDutyNotFoundException,
+    AWSGuardDutyResourceAlreadyExistsException,
+    AWSGuardDutyStatusCodeException,
+)
 
 
 class AWSGuardDutyManager:
-    """
-    AWS GuardDuty Manager
-    """
+    """AWS GuardDuty Manager."""
 
     VALID_STATUS_CODES = (200,)
 
@@ -58,7 +57,7 @@ class AWSGuardDutyManager:
         service_account_json: dict[str, Any] | None = None,
         workload_identity_email: str | None = None,
         siemplify_logger: logging.Logger | None = None,
-    ):
+    ) -> None:
         self.aws_access_key = aws_access_key
         self.aws_secret_key = aws_secret_key
         self.aws_default_region = aws_default_region
@@ -76,9 +75,12 @@ class AWSGuardDutyManager:
                 session = federation.get_web_identity_session()
             else:
                 if not aws_access_key or not aws_secret_key:
-                    raise ValueError(
+                    msg = (
                         "AWS Access Key ID and AWS Secret Key are required "
                         "for standard AWS role assumption when GCP OIDC credentials are not provided."
+                    )
+                    raise ValueError(
+                        msg
                     )
                 session = self._get_standard_assumed_role_session(
                     role_arn=role_arn,
@@ -89,9 +91,12 @@ class AWSGuardDutyManager:
                 )
         else:
             if not aws_access_key or not aws_secret_key:
-                raise ValueError(
+                msg = (
                     "AWS Access Key ID and AWS Secret Key are required "
                     "when Role ARN is not provided."
+                )
+                raise ValueError(
+                    msg
                 )
             session = boto3.Session(
                 aws_access_key_id=aws_access_key,
@@ -136,25 +141,24 @@ class AWSGuardDutyManager:
         )
 
     @staticmethod
-    def validate_response(response, error_msg="An error occurred"):
-        """
-        Validate client Security Hub response status code
+    def validate_response(response, error_msg="An error occurred") -> None:
+        """Validate client Security Hub response status code
         :param error_msg: {str} Error message to display in case of an error
         :param response: client Security Hub response
-        :return: raise AWSGuardDutyStatusCodeException if status code is not 200
+        :return: raise AWSGuardDutyStatusCodeException if status code is not 200.
         """
         if (
             response.get("ResponseMetadata", {}).get("HTTPStatusCode")
             not in AWSGuardDutyManager.VALID_STATUS_CODES
         ):
-            raise AWSGuardDutyStatusCodeException(f"{error_msg}. Response: {response}")
+            msg = f"{error_msg}. Response: {response}"
+            raise AWSGuardDutyStatusCodeException(msg)
 
-    def test_connectivity(self):
-        """
-        Test connectivity with AWS GuardDuty service
+    def test_connectivity(self) -> bool:
+        """Test connectivity with AWS GuardDuty service
         :return: true if successfully tested connectivity
                 raise botocore.exceptions.ClientError if connectivity failed
-                raise AWSGuardDutyStatusCodeException if connectivity failed to validate status code
+                raise AWSGuardDutyStatusCodeException if connectivity failed to validate status code.
         """
         response = self.client.list_detectors(MaxResults=1)
         self.validate_response(
@@ -164,12 +168,11 @@ class AWSGuardDutyManager:
         return True
 
     def get_trusted_ip_lists_ids(self, detector_id, max_results=None):
-        """
-        Get all trusted IP lists (IPSets) of the GuardDuty service specified by the detector ID.
+        """Get all trusted IP lists (IPSets) of the GuardDuty service specified by the detector ID.
         :param detector_id: {str} The unique ID of the detector that the IPSet is associated with.
         :param max_results: {int} maximum number of Result Values. Default is 50.
         :return: {list} List of list ids
-                raise AWSGuardDutyStatusCodeException if failed to validate response status code
+                raise AWSGuardDutyStatusCodeException if failed to validate response status code.
         """
         paginator = self.client.get_paginator("list_ip_sets")
         page_iterator = paginator.paginate(
@@ -198,12 +201,11 @@ class AWSGuardDutyManager:
         return list_ids[:max_results] if max_results is not None else list_ids
 
     def get_threat_intelligence_sets_ids(self, detector_id, max_results=None):
-        """
-        List available threat intelligence sets in AWS GuardDuty.
+        """List available threat intelligence sets in AWS GuardDuty.
         :param detector_id: {str} The unique ID of the detector that the IPSet is associated with.
         :param max_results: {int} maximum number of Result Values. Default is 50.
         :return: {list} List of TI sets ids
-                raise AWSGuardDutyStatusCodeException if failed to validate response status code
+                raise AWSGuardDutyStatusCodeException if failed to validate response status code.
         """
         paginator = self.client.get_paginator("list_threat_intel_sets")
         page_iterator = paginator.paginate(
@@ -241,8 +243,7 @@ class AWSGuardDutyManager:
         asc=True,
         sort_by="updatedAt",
     ):
-        """
-        Get findings single page by various filters.
+        """Get findings single page by various filters.
         :param detector_id: {str} The unique ID of the detector that the IPSet is associated with.
         :param min_severity: {int} Lowest severity that will be used to fetch findings. Possible values are in range from 1 to 8.
         :param updated_at: {int} search for findings that were updated after the given updated time (milliseconds)
@@ -252,7 +253,7 @@ class AWSGuardDutyManager:
         :param search_after_token: {str} token from where to start fetching next page
         :return: {tuple} ({str} next token, {list} of Finding objects) next token will be None if all findings were fetched
                 raise AWSGuardDutyStatusCodeException if failed to validate response status code
-                raise AWSGuardDutyValidationException if failed to validate parameters
+                raise AWSGuardDutyValidationException if failed to validate parameters.
         """
         pagination_config = {
             # limit the API to return Max findings in page iteration. If more results exist NextToken will be returned
@@ -297,14 +298,13 @@ class AWSGuardDutyManager:
     def get_findings_ids_for_detector(
         self, detector_id, sort_by=None, order_by=consts.ASC, max_results=None
     ):
-        """
-        Lists all Amazon GuardDuty findings for the specified detector ID.
+        """Lists all Amazon GuardDuty findings for the specified detector ID.
         :param detector_id: {str} The unique ID of the detector that the IPSet is associated with.
         :param order_by: {str} whether to bring results in ascending order or descending order
         :param sort_by: {str} field name to sort the results by
         :param max_results: {int} maximum number of Result Values. Default is 50.
         :return: {list} List of findings ids
-                raise AWSGuardDutyStatusCodeException if failed to validate response status code
+                raise AWSGuardDutyStatusCodeException if failed to validate response status code.
         """
         paginator = self.client.get_paginator("list_findings")
         pagination_config = {
@@ -340,13 +340,12 @@ class AWSGuardDutyManager:
     def get_findings_by_ids(
         self, detector_id, findings_ids, asc=True, sort_by="updatedAt"
     ):
-        """
-        Get findings details for a given detector by their IDs
+        """Get findings details for a given detector by their IDs
         :param detector_id: {str} The ID of the detector
         :param findings_ids: {list} List of the findings IDs to fetch
         :param asc: {bool} if true, the findings will be in ascending order, otherwise descending
         :param sort_by: {str} field name to sort the results by
-        :return: {[datamodels.Finding]} List of the found findings details
+        :return: {[datamodels.Finding]} List of the found findings details.
         """
         response = self.client.get_findings(
             DetectorId=detector_id,
@@ -366,11 +365,10 @@ class AWSGuardDutyManager:
         ]
 
     def get_ip_set_by_id(self, detector_id, ip_set_id):
-        """
-        Get Ip Set details by its ID
+        """Get Ip Set details by its ID
         :param detector_id: {str} The ID of the detector
         :param ip_set_id: {str} The ID of the IP set
-        :return: {datamodels.IpSet} The IpSet details
+        :return: {datamodels.IpSet} The IpSet details.
         """
         response = self.client.get_ip_set(DetectorId=detector_id, IpSetId=ip_set_id)
         self.validate_response(
@@ -381,14 +379,13 @@ class AWSGuardDutyManager:
     def create_ip_set(
         self, detector_id, name, file_format, file_location, activate=True
     ):
-        """
-        Create an IP Set
+        """Create an IP Set
         :param detector_id: {str} The ID of the detector
         :param name: {str} Specify the name of the Trusted IP List.
         :param file_format: {str} The format of the file that should be used to create a Trusted IP List
         :param file_location: {str} Specify the URI location, where the file is located.
         :param activate: {bool} If true, the newly created Trusted IP List will be activated.
-        :return: {str} The ID of the created IP Set
+        :return: {str} The ID of the created IP Set.
         """
         response = self.client.create_ip_set(
             DetectorId=detector_id,
@@ -402,15 +399,14 @@ class AWSGuardDutyManager:
 
     def update_ip_set(
         self, detector_id, ip_set_id, name=None, file_location=None, activate=True
-    ):
-        """
-        Update an IP Set
+    ) -> bool:
+        """Update an IP Set
         :param detector_id: {str} The ID of the detector
         :param ip_set_id: {str} The ID of the Trusted IP List to update
         :param name: {str} Specify the name of the Trusted IP List.
         :param file_location: {str} Specify the URI location, where the file is located.
         :param activate: {bool} If true, the newly created Trusted IP List will be activated.
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         params = {
             "DetectorId": detector_id,
@@ -425,12 +421,11 @@ class AWSGuardDutyManager:
         )
         return True
 
-    def delete_ip_set_by_id(self, detector_id, ip_set_id):
-        """
-        Delete Ip Set by its ID
+    def delete_ip_set_by_id(self, detector_id, ip_set_id) -> bool:
+        """Delete Ip Set by its ID
         :param detector_id: {str} The ID of the detector
         :param ip_set_id: {str} The ID of the IP set
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         response = self.client.delete_ip_set(DetectorId=detector_id, IpSetId=ip_set_id)
         self.validate_response(
@@ -439,11 +434,10 @@ class AWSGuardDutyManager:
         return True
 
     def get_threat_intel_set_by_id(self, detector_id, threat_intel_set_id):
-        """
-        Get TI Set details by its ID
+        """Get TI Set details by its ID
         :param detector_id: {str} The ID of the detector
         :param threat_intel_set_id: {str} The ID of the TI set
-        :return: {datamodels.TISet} The TISet details
+        :return: {datamodels.TISet} The TISet details.
         """
         response = self.client.get_threat_intel_set(
             DetectorId=detector_id, ThreatIntelSetId=threat_intel_set_id
@@ -459,15 +453,14 @@ class AWSGuardDutyManager:
     def create_threat_intel_set(
         self, detector_id, name, file_format, file_location, activate=True, tags=None
     ):
-        """
-        Create an Threat Intelligence Set
+        """Create an Threat Intelligence Set
         :param detector_id: {str} The ID of the detector
         :param name: {str} Specify the name of the Threat Intelligence Set.
         :param file_format: {str} The format of the file that should be used to create a Threat Intelligence set
         :param file_location: {str} Specify the URI location, where the file is located.
         :param activate: {bool} If true, the newly created Threat Intelligence set will be activated.
         :param tags: {dict} The tags to be added to a new threat list resource.
-        :return: {str} The ID of the created Threat Intelligence Set
+        :return: {str} The ID of the created Threat Intelligence Set.
         """
         response = self.client.create_threat_intel_set(
             DetectorId=detector_id,
@@ -489,15 +482,14 @@ class AWSGuardDutyManager:
         name=None,
         file_location=None,
         activate=True,
-    ):
-        """
-        Update an Threat Intelligence Set
+    ) -> bool:
+        """Update an Threat Intelligence Set
         :param detector_id: {str} The ID of the detector
         :param threat_intel_set_id: {str} The ID of the Threat Intelligence Set to update
         :param name: {str} Specify the name of the Threat Intelligence Set.
         :param file_location: {str} Specify the URI location, where the file is located.
         :param activate: {bool} If true, the newly created Threat Intelligence Set will be activated.
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         params = {
             "DetectorId": detector_id,
@@ -515,12 +507,11 @@ class AWSGuardDutyManager:
         )
         return True
 
-    def delete_threat_intel_set_by_id(self, detector_id, threat_intel_set_id):
-        """
-        Delete TI Set by its ID
+    def delete_threat_intel_set_by_id(self, detector_id, threat_intel_set_id) -> bool:
+        """Delete TI Set by its ID
         :param detector_id: {str} The ID of the detector
         :param threat_intel_set_id: {str} The ID of the TI set
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         response = self.client.delete_threat_intel_set(
             DetectorId=detector_id, ThreatIntelSetId=threat_intel_set_id
@@ -532,12 +523,11 @@ class AWSGuardDutyManager:
         return True
 
     def create_detector(self, enable=False):
-        """
-        Creates a single Amazon GuardDuty detector. A detector is a resource that represents the GuardDuty service.
+        """Creates a single Amazon GuardDuty detector. A detector is a resource that represents the GuardDuty service.
         To start using GuardDuty, you must create a detector in each Region where you enable the service. You can have
         only one detector per account per Region. All data sources are enabled in a new detector by default.
         :param enable: {bool} A Boolean value that specifies whether the detector is to be enabled.
-        :return: {str} The ID of the created detector
+        :return: {str} The ID of the created detector.
         """
         try:
             response = self.client.create_detector(Enable=enable)
@@ -545,18 +535,20 @@ class AWSGuardDutyManager:
             return response.get("DetectorId")
         except botocore.exceptions.ClientError as error:
             if error.response.get("Error", {}).get("Code") == "BadRequestException":
-                raise AWSGuardDutyResourceAlreadyExistsException(
+                msg = (
                     f"Unable to create detector."
                     f" Reason: {error.response.get('Message')}"
+                )
+                raise AWSGuardDutyResourceAlreadyExistsException(
+                    msg
                 )
 
             raise
 
-    def delete_detector(self, detector_id):
-        """
-        Deletes an Amazon GuardDuty detector that is specified by the detector ID.
+    def delete_detector(self, detector_id) -> bool:
+        """Deletes an Amazon GuardDuty detector that is specified by the detector ID.
         :param detector_id: {str} The unique ID of the detector that you want to delete.
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         response = self.client.delete_detector(DetectorId=detector_id)
         self.validate_response(
@@ -565,10 +557,9 @@ class AWSGuardDutyManager:
         return True
 
     def get_detector(self, detector_id):
-        """
-        Deletes an Amazon GuardDuty detector that is specified by the detector ID.
+        """Deletes an Amazon GuardDuty detector that is specified by the detector ID.
         :param detector_id: {str} The unique ID of the detector that you want to delete.
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         response = self.client.get_detector(DetectorId=detector_id)
         self.validate_response(
@@ -576,12 +567,11 @@ class AWSGuardDutyManager:
         )
         return self.parser.build_siemplify_detector_obj(response, id=detector_id)
 
-    def update_detector(self, detector_id, enable=False):
-        """
-        Update the Amazon GuardDuty detector specified by the detector ID.
+    def update_detector(self, detector_id, enable=False) -> bool:
+        """Update the Amazon GuardDuty detector specified by the detector ID.
         :param detector_id: {str} The unique ID of the detector that you want to update.
         :param enable: {bool} Specifies whether the detector should be enabled
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         response = self.client.update_detector(DetectorId=detector_id, Enable=enable)
         self.validate_response(
@@ -590,8 +580,7 @@ class AWSGuardDutyManager:
         return True
 
     def list_detectors(self, max_results=None, page_size=consts.PAGE_SIZE):
-        """
-        Lists detectorIds of all the existing Amazon GuardDuty detector resources.
+        """Lists detectorIds of all the existing Amazon GuardDuty detector resources.
         :param page_size:
         :param max_results: {int} Specify how many detectors to return. Default is 50.
         :return: {list} List of detector Ids of all the existing Amazon GuardDuty detector resources.
@@ -622,8 +611,7 @@ class AWSGuardDutyManager:
         return detector_ids
 
     def get_detector_details(self, detector_id):
-        """
-        Retrieve an Amazon GuardDuty detector specified by the detector ID.
+        """Retrieve an Amazon GuardDuty detector specified by the detector ID.
         :param detector_id: {str} The unique ID of the detector that you want to retrieve. Comma separated values
         :return: {datamodels.Detector} if successful, exception otherwise.
         """
@@ -634,12 +622,11 @@ class AWSGuardDutyManager:
         )
         return self.parser.build_siemplify_detector_obj(response, id=detector_id)
 
-    def archive_findings(self, detector_id, finding_ids):
-        """
-        Archive GuardDuty findings that are specified by finding IDs.
+    def archive_findings(self, detector_id, finding_ids) -> bool:
+        """Archive GuardDuty findings that are specified by finding IDs.
         :param detector_id: {str} The unique ID of the detector.
         :param finding_ids: {list} The IDs of the findings that you want to archive. Comma separated ids.
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         response = self.client.archive_findings(
             DetectorId=detector_id, FindingIds=finding_ids
@@ -647,12 +634,11 @@ class AWSGuardDutyManager:
         self.validate_response(response, error_msg="Unable to archive findings")
         return True
 
-    def unarchive_findings(self, detector_id, finding_ids):
-        """
-        Unarchive GuardDuty findings that are specified by finding IDs..
+    def unarchive_findings(self, detector_id, finding_ids) -> bool:
+        """Unarchive GuardDuty findings that are specified by finding IDs..
         :param detector_id: {str} The unique ID of the detector.
         :param finding_ids: {list} The IDs of the findings that you want to unarchive. Comma separated ids.
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         response = self.client.unarchive_findings(
             DetectorId=detector_id, FindingIds=finding_ids
@@ -660,12 +646,11 @@ class AWSGuardDutyManager:
         self.validate_response(response, error_msg="Unable to un-archive findings")
         return True
 
-    def create_sample_findings(self, detector_id, finding_types):
-        """
-        Generates example findings of types specified by the list of findings.
+    def create_sample_findings(self, detector_id, finding_types) -> bool | None:
+        """Generates example findings of types specified by the list of findings.
         :param detector_id: {str} The unique ID of the detector to create sample findings for.
         :param finding_types: {list} The types of sample findings to generate. Comma separated values.
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         try:
             response = self.client.create_sample_findings(
@@ -686,14 +671,13 @@ class AWSGuardDutyManager:
 
             raise
 
-    def update_findings_feedback(self, detector_id, useful, finding_ids, comment):
-        """
-        Mark the specified Amazon GuardDuty findings as useful or not useful.
+    def update_findings_feedback(self, detector_id, useful, finding_ids, comment) -> bool:
+        """Mark the specified Amazon GuardDuty findings as useful or not useful.
         :param detector_id: {str} The unique ID of the detector associated with the findings to update feedback for.
         :param useful: {bool} The feedback for the finding.
         :param finding_ids: {list} The IDs of the findings that you want to mark as useful or not useful. Comma separated values.
         :param comment: {str} Additional feedback about the GuardDuty findings.
-        :return: {bool} True if successful, exception otherwise
+        :return: {bool} True if successful, exception otherwise.
         """
         params = {
             "DetectorId": detector_id,

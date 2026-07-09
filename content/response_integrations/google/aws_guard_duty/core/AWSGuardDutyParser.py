@@ -13,18 +13,16 @@
 # limitations under the License.
 
 from __future__ import annotations
-from .datamodels import Finding, IpSet, TISet, Detector
+
+from .datamodels import Detector, Finding, IpSet, TISet
 
 
 class AWSGuardDutyParser:
-    """
-    AWS Guard Duty Transformation Layer.
-    """
+    """AWS Guard Duty Transformation Layer."""
 
     @staticmethod
     def build_siemplify_finding_obj(raw_data, detector_id: str):
-        """
-        :param raw_data: raw json response of single element in 'Findings' raw data response
+        """:param raw_data: raw json response of single element in 'Findings' raw data response
         :param detector_id: detector_id using which the data was retireved
         :return: Finding data model.
         """
@@ -49,8 +47,7 @@ class AWSGuardDutyParser:
 
     @staticmethod
     def build_siemplify_ip_set_obj(raw_data, id=None):
-        """
-        :param raw_data: raw json response of single element in 'IpSet' raw data response
+        """:param raw_data: raw json response of single element in 'IpSet' raw data response
         :return: IpSet data model.
         """
         return IpSet(
@@ -65,8 +62,7 @@ class AWSGuardDutyParser:
 
     @staticmethod
     def build_siemplify_threat_intel_set_obj(raw_data, id=None):
-        """
-        :param raw_data: raw json response of single element in 'threatIntelSet' raw data response
+        """:param raw_data: raw json response of single element in 'threatIntelSet' raw data response
         :return: TISet data model.
         """
         return TISet(
@@ -81,8 +77,7 @@ class AWSGuardDutyParser:
 
     @staticmethod
     def build_siemplify_detector_obj(raw_data, id=None):
-        """
-        :param raw_data: raw json response of single element in 'threatIntelSet' raw data response
+        """:param raw_data: raw json response of single element in 'threatIntelSet' raw data response
         :return: TISet data model.
         """
         return Detector(

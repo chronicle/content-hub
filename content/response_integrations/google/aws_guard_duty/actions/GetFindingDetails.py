@@ -13,21 +13,23 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon.extraction import extract_action_param
-from ..core.utils import extract_integration_params
-from TIPCommon.transformation import construct_csv
-from ..core.AWSGuardDutyManager import AWSGuardDutyManager
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from ..core.consts import INTEGRATION_NAME
+from TIPCommon.extraction import extract_action_param
+from TIPCommon.transformation import construct_csv
+
 from ..core import utils
+from ..core.AWSGuardDutyManager import AWSGuardDutyManager
+from ..core.consts import INTEGRATION_NAME
+from ..core.utils import extract_integration_params
 
 SCRIPT_NAME = "Get Finding Details"
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME} - {SCRIPT_NAME}"
     siemplify.LOGGER.info("================= Main - Param Init =================")
@@ -85,11 +87,8 @@ def main():
             siemplify.result.add_data_table("Findings", construct_csv([finding.as_csv() for finding in findings]))
 
             found_findings_ids = [finding.id for finding in findings]
-            not_found_ids = []
 
-            for findings_id in findings_ids:
-                if findings_id not in found_findings_ids:
-                    not_found_ids.append(findings_id)
+            not_found_ids = [findings_id for findings_id in findings_ids if findings_id not in found_findings_ids]
 
             if found_findings_ids:
                 output_message += "Successfully retrieved information for the following findings:\n{}\n\n".format(
@@ -102,7 +101,7 @@ def main():
                 )
 
         else:
-            siemplify.LOGGER.info(f"No findings details were found.")
+            siemplify.LOGGER.info("No findings details were found.")
             output_message += "Failed to retrieve information for the following findings:\n{}".format(
                 "\n".join(findings_ids)
             )
@@ -111,7 +110,7 @@ def main():
         json_results["Findings"] = [finding.raw_data for finding in findings]
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
+        siemplify.LOGGER.exception(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

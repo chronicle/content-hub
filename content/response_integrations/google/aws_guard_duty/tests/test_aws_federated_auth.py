@@ -1,12 +1,25 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
+
 
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from core.AWSGuardDutyIdentityFederation import AWSGuardDutyIdentityFederation
 from core.AWSGuardDutyManager import AWSGuardDutyManager
-
 
 # ==============================================================================
 # Helper tests (AWSGuardDutyIdentityFederation.py functional split methods)
@@ -285,7 +298,7 @@ def test_get_workload_identity_token_missing_email() -> None:
     federation = AWSGuardDutyIdentityFederation(
         workload_identity_email=None,
     )
-    with pytest.raises(ValueError, match="Workload Identity email must be provided."):
+    with pytest.raises(ValueError, match=r"Workload Identity email must be provided\."):
         federation.get_workload_identity_token()
 
 
@@ -294,7 +307,7 @@ def test_get_standard_sa_token_missing_json() -> None:
     federation = AWSGuardDutyIdentityFederation(
         service_account_json=None,
     )
-    with pytest.raises(ValueError, match="Service Account JSON must be provided."):
+    with pytest.raises(ValueError, match=r"Service Account JSON must be provided\."):
         federation.get_standard_sa_token()
 
 
@@ -318,7 +331,7 @@ def test_get_standard_sa_token_missing_client_email(
         service_account_json=fake_json_content,
     )
     with pytest.raises(
-        ValueError, match="Service Account JSON is missing 'client_email'."
+        ValueError, match=r"Service Account JSON is missing 'client_email'\."
     ):
         federation.get_standard_sa_token()
 
@@ -354,7 +367,7 @@ def test_get_standard_sa_token_no_token_generated(
     )
     with pytest.raises(
         ValueError,
-        match="No token generated from standard service account credentials.",
+        match=r"No token generated from standard service account credentials\.",
     ):
         federation.get_standard_sa_token()
 
@@ -516,7 +529,10 @@ def test_guardduty_manager_workload_identity_success(
 def test_guardduty_manager_standard_assume_role_success(
     mock_session_class: MagicMock,
 ) -> None:
-    """Test manager setup using standard STS assume_role fallback when role_arn is present but GCP credentials are not."""
+    """Test manager setup using standard STS assume_role fallback.
+
+    This fallback is used when role_arn is present but GCP credentials are not.
+    """
     # We expect two Session instances to be created:
     # 1. sts_session = Session(aws_access_key_id, aws_secret_access_key, region_name)
     # 2. assumed_session = Session(aws_access_key_id, aws_secret_access_key, aws_session_token, region_name)

@@ -13,20 +13,22 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon.extraction import extract_action_param
-from ..core.utils import extract_integration_params
-from ..core.AWSGuardDutyManager import AWSGuardDutyManager
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from ..core.consts import INTEGRATION_NAME, INTEGRATION_DISPLAY_NAME
+from TIPCommon.extraction import extract_action_param
+
 from ..core import utils
+from ..core.AWSGuardDutyManager import AWSGuardDutyManager
+from ..core.consts import INTEGRATION_DISPLAY_NAME, INTEGRATION_NAME
+from ..core.utils import extract_integration_params
 
 SCRIPT_NAME = "Delete Threat Intelligence Set"
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME} - {SCRIPT_NAME}"
     siemplify.LOGGER.info("================= Main - Param Init =================")
@@ -84,7 +86,7 @@ def main():
 
             except Exception as e:
                 failed_ids.append(ti_set_id)
-                siemplify.LOGGER.error(f"An error occurred on Threat Intelligence set {ti_set_id}")
+                siemplify.LOGGER.exception(f"An error occurred on Threat Intelligence set {ti_set_id}")
                 siemplify.LOGGER.exception(e)
 
         if successful_ids:
@@ -102,7 +104,7 @@ def main():
             )
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
+        siemplify.LOGGER.exception(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

@@ -13,13 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon.transformation import dict_to_flat
+
 import uuid
 
-from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
 from soar_sdk.SiemplifyConnectorsDataModel import AlertInfo
-from . import consts
+from soar_sdk.SiemplifyUtils import convert_string_to_unix_time
+from TIPCommon.transformation import dict_to_flat
 
+from . import consts
 
 FILE_FORMATS = {
     "Plaintext": "TXT",
@@ -35,9 +36,7 @@ SEVERITIES = {"INFORMATIONAL": -1, "LOW": 40, "MEDIUM": 60, "HIGH": 80, "CRITICA
 
 
 class Finding:
-    """
-    Finding data model.
-    """
+    """Finding data model."""
 
     def __init__(
         self,
@@ -56,7 +55,7 @@ class Finding:
         type=None,
         count=None,
         **kwargs
-    ):
+    ) -> None:
         self.raw_data = raw_data
         self.detector_id = detector_id
         self.id = finding_id
@@ -122,10 +121,9 @@ class Finding:
         return SEVERITIES["INFORMATIONAL"]
 
     def as_alert_info(self, environment_common):
-        """
-        Create an AlertInfo out of the current finding
+        """Create an AlertInfo out of the current finding
         :param environment_common: {EnvironmentHandle} The environment common object for fetching the environment
-        :return: {AlertInfo} The created AlertInfo object
+        :return: {AlertInfo} The created AlertInfo object.
         """
         alert_info = AlertInfo()
         alert_info.environment = environment_common.get_environment(self.as_event())
@@ -144,9 +142,7 @@ class Finding:
 
 
 class IpSet:
-    """
-    IP Set data model.
-    """
+    """IP Set data model."""
 
     def __init__(
         self,
@@ -158,7 +154,7 @@ class IpSet:
         status=None,
         tags=None,
         **kwargs
-    ):
+    ) -> None:
         self.raw_data = raw_data
         self.id = id
         self.name = name
@@ -185,9 +181,7 @@ class IpSet:
 
 
 class TISet:
-    """
-    Threat Intelligence Set data model.
-    """
+    """Threat Intelligence Set data model."""
 
     def __init__(
         self,
@@ -199,7 +193,7 @@ class TISet:
         status=None,
         tags=None,
         **kwargs
-    ):
+    ) -> None:
         self.raw_data = raw_data
         self.id = id
         self.name = name
@@ -226,9 +220,7 @@ class TISet:
 
 
 class Detector:
-    """
-    Detector data model.
-    """
+    """Detector data model."""
 
     def __init__(
         self,
@@ -241,7 +233,7 @@ class Detector:
         finding_publishing_frequency=None,
         tags=None,
         **kwargs
-    ):
+    ) -> None:
         self.raw_data = raw_data
         self.id = id
         self.created_at = created_at
@@ -270,8 +262,7 @@ class Detector:
         }
 
     def to_table(self):
-        """
-        Function that prepares the detector's data to be used on the table
-        :return {list} List containing dict of detector's data
+        """Function that prepares the detector's data to be used on the table
+        :return {list} List containing dict of detector's data.
         """
         return [self.to_csv()]

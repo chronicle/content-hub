@@ -13,10 +13,14 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import sys
 
+from EnvironmentCommon import GetEnvironmentCommonFactory
+from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
+from soar_sdk.SiemplifyUtils import convert_datetime_to_unix_time, output_handler, unix_now
 from TIPCommon.extraction import extract_connector_param
-from TIPCommon.validation import ParameterValidator
+from TIPCommon.filters import pass_whitelist_filter
 from TIPCommon.smp_io import read_ids_by_timestamp, write_ids_with_timestamp
 from TIPCommon.smp_time import (
     get_last_success_time,
@@ -24,22 +28,19 @@ from TIPCommon.smp_time import (
     save_timestamp,
 )
 from TIPCommon.utils import is_overflowed
-from TIPCommon.filters import pass_whitelist_filter
-from EnvironmentCommon import GetEnvironmentCommonFactory
+from TIPCommon.validation import ParameterValidator
 
+from ..core.AWSGuardDutyManager import AWSGuardDutyManager
 from ..core.consts import (
     CONNECTOR_NAME,
     DEFAULT_FETCH_LIMIT,
     DEFAULT_HOURS_BACKWARDS,
     PAGE_SIZE,
 )
-from ..core.AWSGuardDutyManager import AWSGuardDutyManager
-from soar_sdk.SiemplifyConnectors import SiemplifyConnectorExecution
-from soar_sdk.SiemplifyUtils import output_handler, unix_now, convert_datetime_to_unix_time
 
 
 @output_handler
-def main(is_test_run):
+def main(is_test_run) -> None:
     connector_starting_time = unix_now()
     processed_alerts = []
     processed_findings = []
@@ -88,8 +89,9 @@ def main(is_test_run):
     )
 
     if not role_arn and (not aws_access_key or not aws_secret_key):
+        msg = "AWS Access Key ID and AWS Secret Key are required when Role ARN is not provided."
         raise ValueError(
-            "AWS Access Key ID and AWS Secret Key are required when Role ARN is not provided."
+            msg
         )
 
     verify_ssl = extract_connector_param(
@@ -146,8 +148,9 @@ def main(is_test_run):
 
     if min_severity < 1 or min_severity > 8:
         # Severity value is invalid
+        msg = "Severity {} is invalid. Valid values are in range from 1 to 8."
         raise Exception(
-            "Severity {} is invalid. Valid values are in range from 1 to 8."
+            msg
         )
 
     whitelist_as_a_blacklist = extract_connector_param(
@@ -315,7 +318,7 @@ def main(is_test_run):
                 siemplify.LOGGER.info(f"Alert {alert.id} was created.")
 
             except Exception as e:
-                siemplify.LOGGER.error(
+                siemplify.LOGGER.exception(
                     f"Failed to process alert {alert.id}", alert_id=alert.id
                 )
                 siemplify.LOGGER.exception(e)
@@ -340,7 +343,7 @@ def main(is_test_run):
             )
 
     except Exception as err:
-        siemplify.LOGGER.error(f"Got exception on main handler. Error: {err}")
+        siemplify.LOGGER.exception(f"Got exception on main handler. Error: {err}")
         siemplify.LOGGER.exception(err)
         if is_test_run:
             raise

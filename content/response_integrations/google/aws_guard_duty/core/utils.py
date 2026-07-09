@@ -13,8 +13,9 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 import json
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from TIPCommon.extraction import extract_configuration_param
 from TIPCommon.validation import ParameterValidator
@@ -27,33 +28,31 @@ if TYPE_CHECKING:
 
 
 def remove_empty_kwargs(kwargs):
-    """
-    Remove keys from dictionary that has the value None
+    """Remove keys from dictionary that has the value None
     :param kwargs: key value arguments
-    :return: dictionary without keys that have the value None
+    :return: dictionary without keys that have the value None.
     """
     return {k: v for k, v in kwargs.items() if v is not None}
 
 
 def validate_filter_json_object(filter_json):
-    """
-    Loads filter json object string to a dictionary.
+    """Loads filter json object string to a dictionary.
     :param filter_json: {str} of filter json object
     :return: {dict} of filter_json
             raise AWSGuardDutyValidationException if failed to load filter json object string
-                  to a dictionary
+                  to a dictionary.
     """
     try:  # validate filter json object
         filter_json = json.loads(filter_json)
     except Exception:
-        raise AWSGuardDutyValidationException("Failed to validate Filter JSON Object.")
+        msg = "Failed to validate Filter JSON Object."
+        raise AWSGuardDutyValidationException(msg)
 
     return filter_json
 
 
 def get_mapped_value(mappings, key, default_value):
-    """
-    Returns mapped value of 'key' parameter. if default value is provided, and key equals default_value, None will be returned.
+    """Returns mapped value of 'key' parameter. if default value is provided, and key equals default_value, None will be returned.
     otherwise, if key does not exist in mappings - an AWSGuardDutyValidationException will be thrown.
 
     :param mappings: {dict} of mapped keys to values
@@ -67,31 +66,31 @@ def get_mapped_value(mappings, key, default_value):
     if not key or key == default_value:
         return None
     if key not in mappings:
-        raise AWSGuardDutyValidationException(f"Failed to validate parameter {key}")
+        msg = f"Failed to validate parameter {key}"
+        raise AWSGuardDutyValidationException(msg)
     return mappings.get(key)
 
 
 def load_csv_to_list(csv, param_name):
-    """
-    Load comma separated values represented as string to a list
+    """Load comma separated values represented as string to a list
     :param csv: {str} of comma separated values with delimiter ','
     :param param_name: {str} the name of the variable we are validation
     :return: {list} of values
-            raise AWSGuardDutyValidationException if failed to parse csv
+            raise AWSGuardDutyValidationException if failed to parse csv.
     """
     try:
         return [t.strip() for t in csv.split(",")]
     except Exception:
-        raise AWSGuardDutyValidationException(f"Failed to parse parameter {param_name}")
+        msg = f"Failed to parse parameter {param_name}"
+        raise AWSGuardDutyValidationException(msg)
 
 
 def load_kv_csv_to_dict(kv_csv, param_name):
-    """
-    Load comma separated values of 'key':'value' represented as string to dictionary
+    """Load comma separated values of 'key':'value' represented as string to dictionary
     :param kv_csv: {str} of comma separated values of 'key':'value' represented as a string
     :param param_name: {str} name of the parameter
     :return: {dict} of key:value
-            raise AWSGuardDutyValidationException if failed to parse kv_csv
+            raise AWSGuardDutyValidationException if failed to parse kv_csv.
     """
     try:
         return {
@@ -99,7 +98,8 @@ def load_kv_csv_to_dict(kv_csv, param_name):
             for kv in kv_csv.split(",")
         }
     except Exception:
-        raise AWSGuardDutyValidationException(f"Failed to parse parameter {param_name}")
+        msg = f"Failed to parse parameter {param_name}"
+        raise AWSGuardDutyValidationException(msg)
 
 
 def extract_integration_params(
@@ -112,13 +112,14 @@ def extract_integration_params(
     dict[str, Any] | None,
     str | None,
 ]:
-    """Extracts AWS GuardDuty integration configuration parameters.
+    """Extract AWS GuardDuty integration configuration parameters.
 
     Args:
         siemplify: The Siemplify action object.
 
     Returns:
         The extracted and validated integration parameters.
+
     """
     aws_access_key = extract_configuration_param(
         siemplify,
@@ -169,10 +170,10 @@ def extract_integration_params(
     )
 
     if not role_arn and (not aws_access_key or not aws_secret_key):
+        msg = "AWS Access Key ID and AWS Secret Key are required when Role ARN is not provided."
         raise ValueError(
-            "AWS Access Key ID and AWS Secret Key are required when Role ARN is not provided."
+            msg
         )
-
 
     return (
         aws_access_key,

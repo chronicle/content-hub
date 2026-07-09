@@ -13,23 +13,24 @@
 # limitations under the License.
 
 from __future__ import annotations
-from TIPCommon.extraction import extract_action_param
-from ..core.utils import extract_integration_params
-from TIPCommon.transformation import construct_csv
-from ..core.AWSGuardDutyManager import AWSGuardDutyManager
+
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
-from soar_sdk.SiemplifyUtils import output_handler, convert_dict_to_json_result_dict
-from ..core.consts import INTEGRATION_NAME, INTEGRATION_DISPLAY_NAME
-from ..core.exceptions import AWSGuardDutyNotFoundException
-from ..core import utils
+from soar_sdk.SiemplifyUtils import convert_dict_to_json_result_dict, output_handler
+from TIPCommon.extraction import extract_action_param
+from TIPCommon.transformation import construct_csv
 
+from ..core import utils
+from ..core.AWSGuardDutyManager import AWSGuardDutyManager
+from ..core.consts import INTEGRATION_DISPLAY_NAME, INTEGRATION_NAME
+from ..core.exceptions import AWSGuardDutyNotFoundException
+from ..core.utils import extract_integration_params
 
 SCRIPT_NAME = "Get Detector Details"
 
 
 @output_handler
-def main():
+def main() -> None:
     siemplify = SiemplifyAction()
     siemplify.script_name = f"{INTEGRATION_NAME} - {SCRIPT_NAME}"
     siemplify.LOGGER.info("================= Main - Param Init =================")
@@ -81,17 +82,18 @@ def main():
                 found_detectors.append(detector_obj)
 
             except Exception as e:
-                siemplify.LOGGER.error(f"An error occurred when tried to fetch {detector_id}")
+                siemplify.LOGGER.exception(f"An error occurred when tried to fetch {detector_id}")
                 siemplify.LOGGER.exception(e)
                 not_found_detectors_id.append(detector_id)
 
         if not found_detectors:
-            raise AWSGuardDutyNotFoundException(f"Invalid detector details.")
+            msg = "Invalid detector details."
+            raise AWSGuardDutyNotFoundException(msg)
 
         siemplify.LOGGER.info("Done Fetching Detectors details by id")
 
         if not_found_detectors_id:
-            not_founds_message = f"Action wasn’t able to get {[_id for _id in not_found_detectors_id]} detectors."
+            not_founds_message = f"Action wasn’t able to get {list(not_found_detectors_id)} detectors."
 
         # If at least one of the api calls returns a detector valid details
         if csv_list and json_results:
@@ -99,7 +101,7 @@ def main():
             founds_ids = json_results.keys()
             json_results = convert_dict_to_json_result_dict(json_results)
             siemplify.result.add_data_table("Detectors Details", construct_csv(csv_list))
-            founds_message = f"Successfully retrieved information about {[detectorId for detectorId in founds_ids]}"
+            founds_message = f"Successfully retrieved information about {list(founds_ids)}"
             result_value = "true"
             output_message = f"{founds_message} \n {not_founds_message}"
             siemplify.LOGGER.info("Done Processing Detectors")
@@ -113,7 +115,7 @@ def main():
         status = EXECUTION_STATE_COMPLETED
 
     except Exception as error:  # action failed
-        siemplify.LOGGER.error(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
+        siemplify.LOGGER.exception(f"Error executing action '{SCRIPT_NAME}'. Reason: {error}")
         siemplify.LOGGER.exception(error)
         status = EXECUTION_STATE_FAILED
         result_value = "false"

@@ -4,8 +4,8 @@ import logging
 from typing import Any
 
 import boto3
-from google.auth import impersonated_credentials
 import google.auth
+from google.auth import impersonated_credentials
 from google.auth.transport.requests import Request
 from google.oauth2 import credentials as oauth2_credentials
 from google.oauth2 import service_account
@@ -24,7 +24,7 @@ class AWSGuardDutyIdentityFederation:
         region_name: str | None = None,
         role_session_name: str = consts.DEFAULT_ROLE_SESSION_NAME,
         siemplify_logger: logging.Logger | None = None,
-    ):
+    ) -> None:
         self.role_arn = role_arn
         self.service_account_json = service_account_json
         self.workload_identity_email = workload_identity_email
@@ -74,12 +74,14 @@ class AWSGuardDutyIdentityFederation:
 
         Returns:
             The generated Google OIDC ID token.
+
         """
         if auth_request is None:
             auth_request = Request()
 
         if not self.workload_identity_email:
-            raise ValueError("Workload Identity email must be provided.")
+            msg = "Workload Identity email must be provided."
+            raise ValueError(msg)
 
         self.logger.info(
             "Generating OIDC token via Workload Identity Impersonation "
@@ -120,18 +122,21 @@ class AWSGuardDutyIdentityFederation:
 
         Returns:
             The generated Google OIDC ID token.
+
         """
         if auth_request is None:
             auth_request = Request()
 
         if not self.service_account_json:
-            raise ValueError("Service Account JSON must be provided.")
+            msg = "Service Account JSON must be provided."
+            raise ValueError(msg)
 
         self.logger.info("Generating OIDC token via Service Account Impersonation.")
         source_info = self.service_account_json.get("source_credentials")
         if not source_info:
+            msg = "Impersonated credential JSON is missing 'source_credentials'."
             raise ValueError(
-                "Impersonated credential JSON is missing 'source_credentials'."
+                msg
             )
 
         # Load the source credentials.
@@ -149,9 +154,12 @@ class AWSGuardDutyIdentityFederation:
         # Extract target service account email.
         url = self.service_account_json.get("service_account_impersonation_url", "")
         if not url:
-            raise ValueError(
+            msg = (
                 "Impersonated credential JSON is missing "
                 "'service_account_impersonation_url'."
+            )
+            raise ValueError(
+                msg
             )
         target_sa = url.split("/")[-1].split(":")[0]
 
@@ -180,12 +188,14 @@ class AWSGuardDutyIdentityFederation:
 
         Returns:
             The generated Google OIDC ID token.
+
         """
         if auth_request is None:
             auth_request = Request()
 
         if not self.service_account_json:
-            raise ValueError("Service Account JSON must be provided.")
+            msg = "Service Account JSON must be provided."
+            raise ValueError(msg)
 
         target_audience = self.service_account_json.get("client_id") or audience
         self.logger.info(
@@ -202,7 +212,8 @@ class AWSGuardDutyIdentityFederation:
         # (issuer: https://accounts.google.com) rather than being client-side self-signed.
         service_account_email = self.service_account_json.get("client_email")
         if not service_account_email:
-            raise ValueError("Service Account JSON is missing 'client_email'.")
+            msg = "Service Account JSON is missing 'client_email'."
+            raise ValueError(msg)
 
         return self._generate_id_token(
             source_creds=source_creds,
@@ -228,7 +239,8 @@ class AWSGuardDutyIdentityFederation:
         Raises:
             ValueError: If neither Service Account JSON nor Workload Identity
               Email is provided.
-            """
+
+        """
         auth_request = Request()
         try:
             if self.workload_identity_email:
@@ -238,9 +250,12 @@ class AWSGuardDutyIdentityFederation:
                 )
 
             if not self.service_account_json:
-                raise ValueError(
+                msg = (
                     "Either Service Account JSON or Workload Identity Email "
                     "must be provided."
+                )
+                raise ValueError(
+                    msg
                 )
 
             cred_type = self.service_account_json.get("type")
@@ -255,7 +270,7 @@ class AWSGuardDutyIdentityFederation:
                 auth_request=auth_request,
             )
 
-        except Exception as e:
+        except Exception:
             self.logger.exception("Failed to parse or generate token.")
             raise
 
@@ -264,9 +279,11 @@ class AWSGuardDutyIdentityFederation:
 
         Returns:
             The authenticated AWS boto3 session.
+
         """
         if not self.role_arn:
-            raise ValueError("Role ARN must be provided to assume a role.")
+            msg = "Role ARN must be provided to assume a role."
+            raise ValueError(msg)
 
         token = self.get_gcp_oidc_token()
         sts_client = boto3.client("sts", region_name=self.region_name)
