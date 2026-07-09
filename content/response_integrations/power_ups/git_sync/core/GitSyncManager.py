@@ -78,6 +78,7 @@ class GitSyncManager:
         smp_verify: bool = True,
         git_verify: bool = True,
         git_server_fingerprint: str = '',
+        deconstruct_playbooks: bool = True,
     ):
         self.logger = siemplify.LOGGER
         self._siemplify = siemplify
@@ -105,7 +106,7 @@ class GitSyncManager:
             self.logger,
             git_server_fingerprint=git_server_fingerprint,
         )
-        self.content = GitContentManager(self.git_client, self.api)
+        self.content = GitContentManager(self.git_client, self.api, deconstruct_playbooks=deconstruct_playbooks)
 
     def __del__(self):
         try:
@@ -191,6 +192,7 @@ class GitSyncManager:
             input_type=bool,
         )
         git_verify = get_conf_param("Git Verify SSL", print_value=True, input_type=bool)
+        
         return cls(
             siemplify,
             repo_url,
