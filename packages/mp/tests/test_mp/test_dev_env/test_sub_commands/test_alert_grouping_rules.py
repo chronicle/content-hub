@@ -135,3 +135,26 @@ def test_push_alert_grouping_rule_create(
         {"name": "projects//locations//instances//alertGroupingRules/new", "displayName": "Rule New"},
     )
     mock_api.update_alert_grouping_rule.assert_not_called()
+
+
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.pull.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.pull.get_backend_api")
+def test_pull_alert_grouping_rule_with_custom_missing_dirs(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_alert_grouping_rules.return_value = [
+        {"name": "projects//locations//instances//alertGroupingRules/1", "id": 1, "displayName": "Rule One"},
+    ]
+
+    custom_dir = tmp_path / "missing" / "dirs"
+    custom_path = custom_dir / "rule.yaml"
+
+    result = runner.invoke(pull_app, ["alert-grouping-rule", "Rule One", "--custom", str(custom_path)])
+
+    assert result.exit_code == 0
+    assert custom_path.exists()

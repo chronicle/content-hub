@@ -158,3 +158,34 @@ def test_push_custom_field_create(
         {"name": "projects//locations//instances//customFields/new", "displayName": "New Field", "type": "String"},
     )
     mock_api.update_custom_field.assert_not_called()
+
+
+@mock.patch("mp.dev_env.sub_commands.custom_field.pull.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.custom_field.pull.get_backend_api")
+def test_pull_custom_field_with_custom_missing_dirs(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_custom_fields.return_value = [
+        {"name": "projects//locations//instances//customFields/1", "id": 1, "displayName": "Test Field"},
+    ]
+
+    mock_api.download_custom_field.return_value = {
+        "name": "projects//locations//instances//customFields/1",
+        "id": 1,
+        "displayName": "Test Field",
+        "type": "String",
+    }
+
+    custom_dir = tmp_path / "missing" / "dirs"
+    custom_path = custom_dir / "field.yaml"
+
+    result = runner.invoke(pull_app, ["custom-field", "Test Field", "--custom", str(custom_path)])
+
+    assert result.exit_code == 0
+    mock_api.download_custom_field.assert_called_once_with(1)
+    assert custom_path.exists()

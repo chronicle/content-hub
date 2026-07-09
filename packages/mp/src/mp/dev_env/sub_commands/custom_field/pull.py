@@ -140,6 +140,7 @@ def _download_and_save_custom_field(
 
     logger.info("Saving custom field to %s...", actual_dst)
     try:
+        actual_dst.parent.mkdir(parents=True, exist_ok=True)
         mp.core.file_utils.save_yaml(field_data, actual_dst)
     except Exception as e:
         logger.exception("Failed to save custom field to '%s'", actual_dst)
