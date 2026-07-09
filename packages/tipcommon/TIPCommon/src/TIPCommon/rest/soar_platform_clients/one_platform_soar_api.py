@@ -1754,10 +1754,10 @@ class OnePlatformSoarApi(BaseSoarApi):
         return last_response
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_ontology_records(self) -> requests.Response:
+    def get_ontology_records(self) -> list[SingleJson]:
         """Get ontology records."""
-        endpoint = "/ontologyRecords"
-        return self._make_request(HttpMethod.GET, endpoint)
+        endpoint = f"/ontologyRecords?pageSize={_PAGE_SIZE}"
+        return self._paginate_results(endpoint, "ontologyRecords")
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_mapping_rules(self) -> requests.Response:
