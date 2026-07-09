@@ -83,7 +83,9 @@ def assert_build_integration(
     def wrapper(integration_path: Path) -> None:
         community: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
         shutil.copytree(
-            integration_path.parent, community, ignore=shutil.ignore_patterns(".venv", ".git", "__pycache__")
+            integration_path.parent,
+            community,
+            ignore=shutil.ignore_patterns(".venv", ".git", "__pycache__"),
         )
         integration: Path = community / built_integration.name
         py_version: Path = integration / mp.core.constants.PYTHON_VERSION_FILE
@@ -99,7 +101,8 @@ def assert_build_integration(
         actual_file_names: set[str]
 
         actual_file_names, expected_file_names = test_mp.common.compare_files(
-            expected=built_integration, actual=out_integration
+            expected=built_integration,
+            actual=out_integration,
         )
         assert actual_file_names == expected_file_names
 

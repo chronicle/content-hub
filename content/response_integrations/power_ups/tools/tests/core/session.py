@@ -36,6 +36,7 @@ class ToolsSession(MockSession[MockRequest, MockResponse, Tools]):
             self.get_alert_full_details,
             self.attach_workflow_to_case,
             self.update_alerts_additional,
+            self.import_custom_case,
         ]
 
     @router.get(r".*/dynamic-cases/GetCaseDetails/(?P<case_id>[^/]+)")
@@ -90,3 +91,17 @@ class ToolsSession(MockSession[MockRequest, MockResponse, Tools]):
     def update_alerts_additional(self, request: MockRequest) -> MockResponse:
         """Mock update alerts additional data REST endpoint."""
         return MockResponse(content={"isSuccessful": True})
+
+    @router.post(r".*/legacyCases:importCustomCase")
+    @router.post(r".*/attackssimulator/ImportCustomCase")
+    def import_custom_case(self, request: MockRequest) -> MockResponse:
+        """Mock import custom case REST endpoint."""
+        payload = request.kwargs.get("json") or {}
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except json.JSONDecodeError:
+                payload = {}
+        self._product.get_imported_custom_cases().append(payload)
+
+        return MockResponse(content=True)

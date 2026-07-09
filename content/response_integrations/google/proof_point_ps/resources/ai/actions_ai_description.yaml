@@ -1,0 +1,456 @@
+Enrich Entities:
+    ai_description: "### General Description\nThe **Enrich Entities** action retrieves\
+        \ quarantine message information from **ProofPoint Email Protection (PS)**\
+        \ for specific entities. It identifies email traffic associated with Hostnames\
+        \ (via domain) and Users (via email address) to provide context on potential\
+        \ mail-related security events.\n\n### Parameters\n| Parameter | Type | Mandatory\
+        \ | Description |\n| :--- | :--- | :--- | :--- |\n| None | N/A | N/A | This\
+        \ action does not take any input parameters; it uses the global integration\
+        \ configuration. |\n\n### Additional Notes\n* **User Validation**: User entities\
+        \ are only processed if their identifier matches a standard email regex pattern.\n\
+        * **Data Cleaning**: The action automatically strips `dlpviolation` and `messagestatus`\
+        \ fields from the ProofPoint records before enrichment to maintain data relevance.\n\
+        \n### Flow Description\n1. **Connection**: Establishes a session with the\
+        \ ProofPoint PS API using the configured API Root and credentials.\n2. **Entity\
+        \ Processing**: Iterates through target entities in the current context.\n\
+        3. **Search Logic**:\n    * **Hostnames**: Extracts the domain from the hostname\
+        \ and searches for quarantine\nrecords where the sender or recipient domain\
+        \ matches.\n    * **Users**: Validates the email format and searches for quarantine\
+        \ records\nwhere the user is the sender or recipient. 4. **Data Transformation**:\
+        \ Flattens the resulting JSON records and applies a `ProofPointPS` prefix.\n\
+        5. **Internal Update**: Updates the `additional_properties` of the entities\
+        \ in Google SecOps and saves the changes."
+    capabilities:
+        can_create_case_comments: false
+        can_create_insight: false
+        can_modify_alert_data: false
+        can_mutate_external_data: false
+        can_mutate_internal_data: true
+        can_update_entities: true
+        external_data_mutation_explanation: null
+        fetches_data: true
+        internal_data_mutation_explanation: Updates the 'additional_properties' attribute
+            of Hostname and User entities with flattened quarantine data retrieved
+            from ProofPoint.
+    categories:
+        enrichment: true
+    entity_usage:
+        entity_types:
+        - HOSTNAME
+        - USERUNIQNAME
+        filters_by_additional_properties: false
+        filters_by_alert_identifier: false
+        filters_by_case_identifier: false
+        filters_by_creation_time: false
+        filters_by_entity_type: true
+        filters_by_identifier: false
+        filters_by_is_artifact: false
+        filters_by_is_enriched: false
+        filters_by_is_internal: false
+        filters_by_is_pivot: false
+        filters_by_is_suspicious: false
+        filters_by_is_vulnerable: false
+        filters_by_modification_time: false
+Ping:
+    ai_description: '### General Description
+
+        Tests the connectivity to the ProofPoint Protection Server by attempting to
+        authenticate and perform a basic search query against the quarantine API.
+        This ensures that the integration configuration (API Root, Username, Password)
+        is correct and the server is reachable.
+
+
+        ### Parameters Description
+
+        | Parameter | Type | Mandatory | Description |
+
+        | :--- | :--- | :--- | :--- |
+
+        | N/A | N/A | N/A | This action does not have any input parameters. |
+
+
+        ### Flow Description
+
+        1. **Configuration Retrieval**: The action retrieves the integration''s configuration,
+        including the API Root, credentials, and SSL verification settings.
+
+        2. **Manager Initialization**: A `ProofPointPSManager` instance is created
+        using the retrieved configuration.
+
+        3. **Connectivity Test**: The action calls the `test_connectivity` method,
+        which executes a GET request to the `/rest/v1/quarantine` endpoint with a
+        wildcard sender filter (`*`).
+
+        4. **Result Handling**: If the request is successful, the action returns a
+        success message indicating that the connection is established.
+
+
+        ### Additional Notes
+
+        This is a standard connectivity test and does not interact with or modify
+        any entities in the environment.'
+    capabilities:
+        can_create_case_comments: false
+        can_create_insight: false
+        can_modify_alert_data: false
+        can_mutate_external_data: false
+        can_mutate_internal_data: false
+        can_update_entities: false
+        external_data_mutation_explanation: null
+        fetches_data: true
+        internal_data_mutation_explanation: null
+    categories:
+        enrichment: false
+    entity_usage:
+        entity_types: []
+        filters_by_additional_properties: false
+        filters_by_alert_identifier: false
+        filters_by_case_identifier: false
+        filters_by_creation_time: false
+        filters_by_entity_type: false
+        filters_by_identifier: false
+        filters_by_is_artifact: false
+        filters_by_is_enriched: false
+        filters_by_is_internal: false
+        filters_by_is_pivot: false
+        filters_by_is_suspicious: false
+        filters_by_is_vulnerable: false
+        filters_by_modification_time: false
+Search Quarantined Emails:
+    ai_description: '### General Description
+
+        Trace and search for quarantined email messages filtered by the Proofpoint
+        Protection Server. Supports extensive smart search query parameters (sender,
+        recipient, subject, start/end dates, folders, global GUIDs, message status,
+        and limit).
+
+        ### Parameters Description
+
+        | Parameter | Type | Mandatory | Description | | :--- | :--- | :--- | :---
+        | | Message GUID | String | Optional | The global unique ID of the email message.
+        | | Message ID | String | Optional | The Message-ID header value. | | Sender
+        | String | Optional | Email address of the sender. | | Recipient | String
+        | Optional | Email address of the recipient. | | Subject | String | Optional
+        | The subject of the email message. | | Start Date | String | Optional | Start
+        date of range (YYYY-MM-DD hh:mm:ss). | | End Date | String | Optional | End
+        date of range (YYYY-MM-DD hh:mm:ss). | | Folder Name | String | Optional |
+        Quarantine folder name. | | Query ID | String | Optional | ID for search result
+        tracking. | | DLP Violation | String | Optional | "t" or "details" to fetch
+        DLP information. | | Message Status | String | Optional | "t" to fetch message
+        status and comments. | | Limit | Integer | Optional | The maximum number of
+        email messages to return. |
+
+        ### Flow Description
+
+        1. **Parameter Gathering**: Extracts search parameters from the action context.
+        2. **API Call**: Executes GET /rest/v1/quarantine on Proofpoint Protection
+        Server. 3. **State Serialization**: Parses records into `QuarantineRecord`
+        structures and serializes them cleanly into dicts using `.to_json()`.'
+    capabilities:
+        can_create_case_comments: false
+        can_create_insight: false
+        can_modify_alert_data: false
+        can_mutate_external_data: false
+        can_mutate_internal_data: false
+        can_update_entities: false
+        external_data_mutation_explanation: null
+        fetches_data: true
+        internal_data_mutation_explanation: null
+    categories:
+        enrichment: false
+    entity_usage:
+        entity_types: []
+        filters_by_additional_properties: false
+        filters_by_alert_identifier: false
+        filters_by_case_identifier: false
+        filters_by_creation_time: false
+        filters_by_entity_type: false
+        filters_by_identifier: false
+        filters_by_is_artifact: false
+        filters_by_is_enriched: false
+        filters_by_is_internal: false
+        filters_by_is_pivot: false
+        filters_by_is_suspicious: false
+        filters_by_is_vulnerable: false
+        filters_by_modification_time: false
+Release Quarantined Email:
+    ai_description: '### General Description
+
+        Releases specified quarantined messages to the email infrastructure without
+        further scanning. Optionally moves the message to a deleted folder, branding
+        templates, rescanning, or security policies.
+
+        ### Parameters Description
+
+        | Parameter | Type | Mandatory | Description | | :--- | :--- | :--- | :---
+        | | Message GUIDs | String | True | Comma-separated list of quarantined message
+        GUIDs. | | Folder Name | String | True | Name of the folder where the message
+        is stored. | | Deleted Folder Name | String | Optional | Name of the folder
+        to move the released message to. | | Rescan Message | String | Optional |
+        "t" to rescan released message by DLP/Attachment Defense. | | Branding Template
+        | String | Optional | Branding template to use when released. | | Security
+        Policy | String | Optional | Secure Reader response profile. |
+
+        ### Flow Description
+
+        1. **Extraction**: Extracts folder, guids list, and optional variables. 2.
+        **POST Request**: Executes POST /rest/v1/quarantine with action "release".'
+    capabilities:
+        can_create_case_comments: false
+        can_create_insight: false
+        can_modify_alert_data: false
+        can_mutate_external_data: true
+        can_mutate_internal_data: false
+        can_update_entities: false
+        external_data_mutation_explanation: Releases emails from the quarantine folder
+            back into the corporate mail flow.
+        fetches_data: false
+        internal_data_mutation_explanation: null
+    categories:
+        enrichment: false
+    entity_usage:
+        entity_types: []
+        filters_by_additional_properties: false
+        filters_by_alert_identifier: false
+        filters_by_case_identifier: false
+        filters_by_creation_time: false
+        filters_by_entity_type: false
+        filters_by_identifier: false
+        filters_by_is_artifact: false
+        filters_by_is_enriched: false
+        filters_by_is_internal: false
+        filters_by_is_pivot: false
+        filters_by_is_suspicious: false
+        filters_by_is_vulnerable: false
+        filters_by_modification_time: false
+Resubmit Quarantined Email:
+    ai_description: '### General Description
+
+        Resubmits specified quarantined messages to the filtering modules for rescanning.
+
+        ### Parameters Description
+
+        | Parameter | Type | Mandatory | Description | | :--- | :--- | :--- | :---
+        | | Message GUIDs | String | True | Comma-separated list of quarantined message
+        GUIDs. | | Folder Name | String | True | Name of the folder where the message
+        is stored. |
+
+        ### Flow Description
+
+        1. **POST Request**: Executes POST /rest/v1/quarantine with action "resubmit"
+        and local GUIDs.'
+    capabilities:
+        can_create_case_comments: false
+        can_create_insight: false
+        can_modify_alert_data: false
+        can_mutate_external_data: true
+        can_mutate_internal_data: false
+        can_update_entities: false
+        external_data_mutation_explanation: Resubmits emails to filtering queues on
+            the Proofpoint Protection Server.
+        fetches_data: false
+        internal_data_mutation_explanation: null
+    categories:
+        enrichment: false
+    entity_usage:
+        entity_types: []
+        filters_by_additional_properties: false
+        filters_by_alert_identifier: false
+        filters_by_case_identifier: false
+        filters_by_creation_time: false
+        filters_by_entity_type: false
+        filters_by_identifier: false
+        filters_by_is_artifact: false
+        filters_by_is_enriched: false
+        filters_by_is_internal: false
+        filters_by_is_pivot: false
+        filters_by_is_suspicious: false
+        filters_by_is_vulnerable: false
+        filters_by_modification_time: false
+Forward Quarantined Email:
+    ai_description: '### General Description
+
+        Forwards specified quarantined messages to another recipient.
+
+        ### Parameters Description
+
+        | Parameter | Type | Mandatory | Description | | :--- | :--- | :--- | :---
+        | | Message GUIDs | String | True | Comma-separated list of quarantined message
+        GUIDs. | | Folder Name | String | True | Name of the folder where the message
+        is stored. | | Deleted Folder Name | String | Optional | Name of the folder
+        to move the forwarded message to. | | New Subject | String | Optional | Overwrites
+        the original subject for the forwarded message. | | Append Old Subject | String
+        | Optional | "t" to append original subject to the new subject. | | From Address
+        | String | Optional | Overwrites the envelope email address of the sender.
+        | | Header From | String | Optional | Overwrites the Header From email address.
+        | | To Address | String | Optional | Recipient email addresses to forward
+        to. | | New Body Comment | String | Optional | New message body comment. |
+
+        ### Flow Description
+
+        1. **POST Request**: Executes POST /rest/v1/quarantine with action "forward"
+        and override values.'
+    capabilities:
+        can_create_case_comments: false
+        can_create_insight: false
+        can_modify_alert_data: false
+        can_mutate_external_data: true
+        can_mutate_internal_data: false
+        can_update_entities: false
+        external_data_mutation_explanation: Forwards copies of emails to specified
+            redirect addresses.
+        fetches_data: false
+        internal_data_mutation_explanation: null
+    categories:
+        enrichment: false
+    entity_usage:
+        entity_types: []
+        filters_by_additional_properties: false
+        filters_by_alert_identifier: false
+        filters_by_case_identifier: false
+        filters_by_creation_time: false
+        filters_by_entity_type: false
+        filters_by_identifier: false
+        filters_by_is_artifact: false
+        filters_by_is_enriched: false
+        filters_by_is_internal: false
+        filters_by_is_pivot: false
+        filters_by_is_suspicious: false
+        filters_by_is_vulnerable: false
+        filters_by_modification_time: false
+Move Quarantined Email:
+    ai_description: '### General Description
+
+        Moves specified quarantined messages to the designated target folder.
+
+        ### Parameters Description
+
+        | Parameter | Type | Mandatory | Description | | :--- | :--- | :--- | :---
+        | | Message GUIDs | String | True | Comma-separated list of quarantined message
+        GUIDs. | | Folder Name | String | True | Name of the folder where the message
+        is stored. | | Target Folder Name | String | True | Target quarantine folder
+        to move the message to. |
+
+        ### Flow Description
+
+        1. **POST Request**: Executes POST /rest/v1/quarantine with action "move"
+        and target folder name.'
+    capabilities:
+        can_create_case_comments: false
+        can_create_insight: false
+        can_modify_alert_data: false
+        can_mutate_external_data: true
+        can_mutate_internal_data: false
+        can_update_entities: false
+        external_data_mutation_explanation: Moves emails to another quarantine folder
+            inside Proofpoint Protection Server.
+        fetches_data: false
+        internal_data_mutation_explanation: null
+    categories:
+        enrichment: false
+    entity_usage:
+        entity_types: []
+        filters_by_additional_properties: false
+        filters_by_alert_identifier: false
+        filters_by_case_identifier: false
+        filters_by_creation_time: false
+        filters_by_entity_type: false
+        filters_by_identifier: false
+        filters_by_is_artifact: false
+        filters_by_is_enriched: false
+        filters_by_is_internal: false
+        filters_by_is_pivot: false
+        filters_by_is_suspicious: false
+        filters_by_is_vulnerable: false
+        filters_by_modification_time: false
+Delete Quarantined Email:
+    ai_description: '### General Description
+
+        Deletes specified quarantined messages from the designated quarantine folder.
+
+        ### Parameters Description
+
+        | Parameter | Type | Mandatory | Description | | :--- | :--- | :--- | :---
+        | | Message GUIDs | String | True | Comma-separated list of quarantined message
+        GUIDs. | | Folder Name | String | True | Name of the folder where the message
+        is stored. | | Deleted Folder Name | String | Optional | Name of the deleted
+        folder to move the message to. |
+
+        ### Flow Description
+
+        1. **POST Request**: Executes POST /rest/v1/quarantine with action "delete"
+        and deleted folder.'
+    capabilities:
+        can_create_case_comments: false
+        can_create_insight: false
+        can_modify_alert_data: false
+        can_mutate_external_data: true
+        can_mutate_internal_data: false
+        can_update_entities: false
+        external_data_mutation_explanation: Deletes or archives emails in the deleted
+            folders of the Proofpoint server.
+        fetches_data: false
+        internal_data_mutation_explanation: null
+    categories:
+        enrichment: false
+    entity_usage:
+        entity_types: []
+        filters_by_additional_properties: false
+        filters_by_alert_identifier: false
+        filters_by_case_identifier: false
+        filters_by_creation_time: false
+        filters_by_entity_type: false
+        filters_by_identifier: false
+        filters_by_is_artifact: false
+        filters_by_is_enriched: false
+        filters_by_is_internal: false
+        filters_by_is_pivot: false
+        filters_by_is_suspicious: false
+        filters_by_is_vulnerable: false
+        filters_by_modification_time: false
+Download Quarantined Email:
+    ai_description: '### General Description
+
+        Downloads the raw quarantined email message data by GUID and attaches it securely
+        to the case wall.
+
+        ### Parameters Description
+
+        | Parameter | Type | Mandatory | Description | | :--- | :--- | :--- | :---
+        | | Message GUID | String | True | Global unique ID of the email message to
+        download. |
+
+        ### Flow Description
+
+        1. **GET Request**: Executes GET /rest/v1/quarantine?guid=<guid> returning
+        raw email bytes. 2. **Attachment Creation**: Writes bytes into a secure temporary
+        `.eml` file. 3. **Flush**: Calls `self.soar_action.add_attachment()` to upload
+        the raw EML directly to the case wall.'
+    capabilities:
+        can_create_case_comments: false
+        can_create_insight: false
+        can_modify_alert_data: false
+        can_mutate_external_data: false
+        can_mutate_internal_data: true
+        can_update_entities: false
+        external_data_mutation_explanation: null
+        fetches_data: true
+        internal_data_mutation_explanation: Attaches a raw EML email file to the case
+            results in Google SecOps.
+    categories:
+        enrichment: false
+    entity_usage:
+        entity_types: []
+        filters_by_additional_properties: false
+        filters_by_alert_identifier: false
+        filters_by_case_identifier: false
+        filters_by_creation_time: false
+        filters_by_entity_type: false
+        filters_by_identifier: false
+        filters_by_is_artifact: false
+        filters_by_is_enriched: false
+        filters_by_is_internal: false
+        filters_by_is_pivot: false
+        filters_by_is_suspicious: false
+        filters_by_is_vulnerable: false
+        filters_by_modification_time: false
