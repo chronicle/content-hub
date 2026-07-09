@@ -32,13 +32,13 @@ from TIPCommon.data_models import (
     CustomField,
     CustomFieldValue,
     EmailTemplate,
-    Environment,
     EntityCard,
+    Environment,
     EventCard,
     Insight,
-    InternalDomain,
-    IntegrationSetting,
     InstalledIntegrationInstance,
+    IntegrationSetting,
+    InternalDomain,
     OntologyRecord,
     UserDetails,
     VisualFamily,
@@ -238,6 +238,7 @@ def get_integration_connectors(
 
     res_json = response.json()
     return res_json.get("connectors", []) if isinstance(res_json, dict) else []
+
 
 def get_connector_cards(
     chronicle_soar: ChronicleSOAR,
@@ -2652,7 +2653,7 @@ def get_visual_families(
 
     families: list[VisualFamily] = []
     if isinstance(data, dict) and "visualFamilies" in data:
-        families = [VisualFamily.from_json(vf) for vf in data["visualFamilies"]] #Qa fixes
+        families = [VisualFamily.from_json(vf) for vf in data["visualFamilies"]]
     elif isinstance(data, list):
         families = [VisualFamily.from_json(vf) for vf in data]
     elif isinstance(data, dict):
@@ -2726,6 +2727,7 @@ def get_case_tags(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
         records = []
     return records
 
+
 def get_case_stages(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """Get case stages.
 
@@ -2749,6 +2751,7 @@ def get_case_stages(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
         return []
 
     return raw_data.json()
+
 
 def get_case_close_reasons(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     """Get case close reasons.
@@ -2800,10 +2803,7 @@ def get_sla_records(chronicle_soar: ChronicleSOAR) -> list[SingleJson]:
     result = api_client.get_sla_records()
     if isinstance(result, list):
         return result
-    if not result.text or not result.text.strip():
-        response = []
-    else:
-        response = result.json()
+    response = [] if not result.text or not result.text.strip() else result.json()
 
     try:
         if response is None:
@@ -2927,6 +2927,7 @@ def attache_workflow_to_case(
     validate_response(response, validate_json=False)
     return response.json()
 
+
 def import_custom_case(
     chronicle_soar: ChronicleSOAR,
     case_data: SingleJson,
@@ -2939,6 +2940,7 @@ def import_custom_case(
     validate_response(response, validate_json=False)
     return response.json()
 
+
 def case_search_everything(
     chronicle_soar: ChronicleSOAR,
     search_data: SingleJson,
@@ -2950,6 +2952,7 @@ def case_search_everything(
     response = api_client.case_search_everything()
     validate_response(response, validate_json=False)
     return response.json()
+
 
 def get_environment_action_definition(
     chronicle_soar: ChronicleSOAR,
@@ -3182,6 +3185,7 @@ def add_job(chronicle_soar: ChronicleSOAR, job: SingleJson, job_definition_id: s
     validate_response(response, validate_json=False)
     return response.content
 
+
 def update_job_instance(
     chronicle_soar: ChronicleSOAR,
     job_instance_name: str,
@@ -3265,6 +3269,8 @@ def get_installed_integrations(chronicle_soar: ChronicleSOAR) -> list[SingleJson
     api_client = get_soar_client(chronicle_soar)
     response = api_client.get_installed_integrations()
     return response
+
+
 def get_case_close_comment(
     chronicle_soar: ChronicleSOAR,
     case_id: str | int,

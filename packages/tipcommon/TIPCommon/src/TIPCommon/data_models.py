@@ -1986,7 +1986,7 @@ class Environment:
     weight: int | None
 
     @classmethod
-    def from_json(cls, data: dict) -> "Environment":
+    def from_json(cls, data: dict) -> Environment:
         aliases = data.get("aliases")
         if aliases is None:
             try:
@@ -2121,7 +2121,6 @@ class IntegrationSetting:
         )
 
 
-
 @dataclasses.dataclass(slots=True)
 class VisualFamily:
     _id: Any
@@ -2185,7 +2184,6 @@ class OntologyRecord:
             example_event_fields=data.get("exampleEventFields", [])
         )
 
-
     def to_json(self) -> SingleJson:
         return {
             "id": self._id,
@@ -2198,6 +2196,7 @@ class OntologyRecord:
             "changeSource": self.change_source,
             "exampleEventFields": self.example_event_fields,
         }
+
 
 @dataclasses.dataclass(slots=True)
 class CaseTag:
@@ -2215,7 +2214,7 @@ class CaseTag:
     modification_time_unix_time_in_ms: int
 
     @classmethod
-    def from_json(cls, data: SingleJson) -> "CaseTag":
+    def from_json(cls, data: SingleJson) -> CaseTag:
         """Parses a case tag JSON object and guarantees non-empty value."""
 
         name = data.get("displayName") or data.get("name") or ""
@@ -2286,7 +2285,7 @@ class Domain:
     modification_time_unix_time_in_ms: int
 
     @classmethod
-    def from_legacy_or_1p(cls, data: SingleJson) -> "Domain":
+    def from_legacy_or_1p(cls, data: SingleJson) -> Domain:
         if "environments" in data:
             envs = data.get("environments") or []
         else:
@@ -2331,7 +2330,7 @@ class CaseStage:
     modification_time_unix_time_in_ms: int
 
     @classmethod
-    def from_legacy_or_1p(cls, data: SingleJson) -> "CaseStage":
+    def from_legacy_or_1p(cls, data: SingleJson) -> CaseStage:
         return cls(
             name=data.get("displayName") or data.get("name") or "",
             order=data.get("order", 0),
@@ -2355,6 +2354,7 @@ class CaseStage:
             "order": self.order,
         }
 
+
 @dataclasses.dataclass(slots=True)
 class CaseCloseReasons:
     identifier: int
@@ -2364,7 +2364,7 @@ class CaseCloseReasons:
     modification_time_unix_time_in_ms: int | None
 
     @classmethod
-    def from_legacy_or_1p(cls, data: dict) -> "CaseCloseReasons":
+    def from_legacy_or_1p(cls, data: dict) -> CaseCloseReasons:
         return cls(
             identifier=data.get("id"),
             root_cause=data.get("rootCause", ""),
@@ -2389,6 +2389,7 @@ class CaseCloseReasons:
             "closeReason": self.close_reason,
         }
 
+
 @dataclasses.dataclass(slots=True)
 class CustomList:
     entity_identifier: str
@@ -2400,7 +2401,7 @@ class CustomList:
     modification_time_unix_time_in_ms: int
 
     @classmethod
-    def from_legacy_or_1p(cls, data: SingleJson) -> "CustomList":
+    def from_legacy_or_1p(cls, data: SingleJson) -> CustomList:
         envs = data.get("environments")
         if envs is None:
             envs_json = data.get("environmentsJson")
@@ -2433,7 +2434,7 @@ class CustomList:
             "modificationTimeUnixTimeInMs": self.modification_time_unix_time_in_ms,
         }
 
-    def to_1p(self)-> SingleJson:
+    def to_1p(self) -> SingleJson:
         return {
             "category": self.category,
             "entityIdentifier": self.entity_identifier,
@@ -2451,7 +2452,7 @@ class Blacklist:
     identifier: int
 
     @classmethod
-    def from_legacy_or_1p(cls, data: SingleJson) -> "Blacklist":
+    def from_legacy_or_1p(cls, data: SingleJson) -> Blacklist:
         return cls(
             entity_identifier=data.get("entityIdentifier", ""),
             entity_type=data.get("entityType", ""),
@@ -2493,7 +2494,7 @@ class Network:
     modification_time_unix_time_in_ms: int | None
 
     @classmethod
-    def from_legacy_or_1p(cls, data: dict) -> "Network":
+    def from_legacy_or_1p(cls, data: dict) -> Network:
         # environments can come from legacy (list) or 1p (string → JSON list)
         envs = data.get("environments")
         if envs is None:
@@ -2555,7 +2556,7 @@ class SlaDefinition:
     values: list[str]
 
     @classmethod
-    def from_legacy_or_1p(cls, data: dict) -> "SlaDefinition":
+    def from_legacy_or_1p(cls, data: dict) -> SlaDefinition:
         SLA_TYPE_MAP = {
             0: "AlertRuleGenerator",
             1: "AlertType",
@@ -2691,7 +2692,7 @@ class SoarBlockEntity:
     identifier: int
 
     @classmethod
-    def from_legacy_or_1p(cls, data: dict) -> "SoarBlockEntity":
+    def from_legacy_or_1p(cls, data: dict) -> SoarBlockEntity:
         """Creates a SoarBlockEntity object from a JSON dictionary.
 
         Args:
@@ -2755,7 +2756,7 @@ class SimulatedCases:
     debug_output: Any
 
     @classmethod
-    def from_legacy_or_1p(cls, data: dict) -> "SimulatedCases":
+    def from_legacy_or_1p(cls, data: dict) -> SimulatedCases:
         cases = list(data.get("cases") or [])
 
         for idx, case in enumerate(cases):
@@ -2825,7 +2826,7 @@ class BlockRecord:
     environments: list[str]
 
     @classmethod
-    def from_legacy_or_1p(cls, data: SingleJson) -> "BlockRecord":
+    def from_legacy_or_1p(cls, data: SingleJson) -> BlockRecord:
         """
         Factory method to create an Entity instance from a dictionary.
         Handles cases where environments might be a JSON string or a list.
@@ -2836,7 +2837,7 @@ class BlockRecord:
                 envs = json.loads(envs)
             except json.JSONDecodeError:
                 envs = []
-        
+
         return cls(
             identifier=data.get("id", 0),
             entity_identifier=data.get("entityIdentifier", ""),
@@ -2867,6 +2868,8 @@ class BlockRecord:
             "scope": self.scope,
             "environments": self.environments,
         }
+
+
 class CaseCloseComment:
     comment: str
 

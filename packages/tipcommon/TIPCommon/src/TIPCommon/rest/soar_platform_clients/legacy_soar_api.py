@@ -760,7 +760,7 @@ class LegacySoarApi(BaseSoarApi):
         return self._make_request(HttpMethod.GET, endpoint)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def save_case_title_settings(self) -> requests.Response:#QA fixes
+    def save_case_title_settings(self) -> requests.Response:
         """Save case title settings."""
         endpoint: str = "/settings/SaveCaseTitleSettings"
         payload = self.params.settings
@@ -770,7 +770,7 @@ class LegacySoarApi(BaseSoarApi):
     def add_or_update_company_logo(self) -> requests.Response:
         """Add or update company logo."""
         endpoint: str = "/settings/AddOrUpdateCompanyLogo"
-        payload = self.params.company_logo #QA fixes
+        payload = self.params.company_logo
         return self._make_request(HttpMethod.POST, endpoint, json_payload=payload)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
@@ -817,8 +817,8 @@ class LegacySoarApi(BaseSoarApi):
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_company_logo(self) -> requests.Response:
         """Get company logo."""
-        endpoint: str = "/settings/GetCompanyLogo" # QA fixes
-        return self._make_request(HttpMethod.GET, endpoint) # QA Fixes
+        endpoint: str = "/settings/GetCompanyLogo"
+        return self._make_request(HttpMethod.GET, endpoint)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_case_title_settings(self) -> requests.Response:
@@ -849,7 +849,7 @@ class LegacySoarApi(BaseSoarApi):
         """Add dynamic environment parameter"""
         endpoint: str = "/settings/AddOrUpdateDynamicParameters"
         payload = {
-            "id": 0, #QA fixes
+            "id": 0,
             "name": self.params.name,
             "type": self.params.type,
             "defaultValue": self.params.default_value,
@@ -1060,12 +1060,6 @@ class LegacySoarApi(BaseSoarApi):
             "/playbooks/GetWorkflowFullInfoWithEnvFilterByIdentifier/"
             f"{self.params.playbook_identifier}"
         )
-        return self._make_request(HttpMethod.GET, endpoint)
-
-    @temporarily_remove_header(DATAPLANE_1P_HEADER)
-    def get_installed_jobs(self) -> requests.Response:
-        """Get installed jobs."""
-        endpoint: str = "/jobs/GetInstalledJobs"
         return self._make_request(HttpMethod.GET, endpoint)
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)

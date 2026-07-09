@@ -332,9 +332,6 @@ class SoarApiClient(Protocol):
     def get_sla_records(self) -> requests.Response:
         """Get sla records"""
 
-    def add_tags_to_case_in_bulk(self) -> requests.Response:
-        """Add tags to case in bulk"""
-
     def get_all_model_block_records(self) -> requests.Response:
         """Get all model block records"""
 

@@ -1150,7 +1150,7 @@ class OnePlatformSoarApi(BaseSoarApi):
                 data["params"] = data["parameters"]
                 detailed_data_list.append(data)
             else:
-                self.chronicle_soar.LOGGER.error(f"Failed to fetch details for {name}") #QA fixes
+                self.chronicle_soar.LOGGER.error(f"Failed to fetch details for {name}")
 
         return detailed_data_list
 
@@ -1171,7 +1171,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             root_response_key="connector_instances"
         )
 
-        return self._enrich_connector_instances_with_params({"connector_instances": results}) #QA fixes
+        return self._enrich_connector_instances_with_params({"connector_instances": results})
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def get_connector_params(self) -> requests.Response:
@@ -1548,7 +1548,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         endpoint = "/legacyPlaybooks:legacyGetWorkflowCategories"
         return self._make_request(HttpMethod.GET, endpoint)
 
-
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def update_connector(self) -> requests.Response:
         """Update connector (Create new instance)."""
@@ -1602,7 +1601,6 @@ class OnePlatformSoarApi(BaseSoarApi):
         clean_path = self._clean_resource_name(resource_name)
         endpoint = f"/{clean_path}"
         return self._make_request(HttpMethod.PATCH, endpoint, json_payload=self.params.job)
-
 
     @temporarily_remove_header(DATAPLANE_1P_HEADER)
     def add_email_template(self) -> requests.Response:

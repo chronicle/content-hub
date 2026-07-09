@@ -17,9 +17,9 @@
 from __future__ import annotations
 
 import re
-import requests
-from enum import Enum
 from typing import TYPE_CHECKING
+
+import requests
 
 from TIPCommon.data_models import Container
 from TIPCommon.utils import get_sdk_api_uri
