@@ -55,7 +55,6 @@ def main():
 
     commit_msg = siemplify.extract_job_param("Commit")
     commit_passwords = siemplify.extract_job_param("Commit Passwords", input_type=bool)
-    include_blocks = True
 
     # Features
     features = {}
