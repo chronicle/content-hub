@@ -79,7 +79,7 @@ class GitSyncManager:
         git_verify: bool = True,
         git_server_fingerprint: str = '',
         deconstruct_playbooks: bool = True,
-    ):
+    ) -> None:
         self.logger = siemplify.LOGGER
         self._siemplify = siemplify
         self._cache = {}

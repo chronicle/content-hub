@@ -19,7 +19,7 @@ import pathlib
 import stat
 import zipfile
 from io import BytesIO
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Iterator
 
 from .definitions import (
     Connector,
@@ -64,7 +64,7 @@ SLA_DEFINITIONS_FILE = f"{SETTINGS_PATH}/slaDefinitions.json"
 
 
 class GitContentManager:
-    def __init__(self, git: Git, api: SiemplifyApiClient, deconstruct_playbooks: bool = True):
+    def __init__(self, git: Git, api: SiemplifyApiClient, deconstruct_playbooks: bool = True) -> None:
         self.git = git
         self.api = api
         self.deconstruct_playbooks = deconstruct_playbooks
@@ -157,13 +157,12 @@ class GitContentManager:
         for f in all_files:
             p = pathlib.Path(f.path)
             for pb_dir in definition_paths:
-                if f.path.startswith(pb_dir + "/"):
-                    rel_path = f.path[len(pb_dir) + 1:]
+                pb_path = pathlib.Path(pb_dir)
+                if p.is_relative_to(pb_path) and p != pb_path:
+                    rel_path = str(p.relative_to(pb_path))
                     definition_paths[pb_dir][rel_path] = f.content
                     break
-                elif p.name == "definition.yaml" and str(p.parent) == pb_dir:
-                    definition_paths[pb_dir]["definition.yaml"] = f.content
-                    break
+
 
         from .PlaybookYAMLConverter import PlaybookYAMLConverter
        
@@ -211,7 +210,7 @@ class GitContentManager:
             return None
         return None
 
-    def get_playbooks(self) -> list[Workflow]:
+    def get_playbooks(self) -> Iterator[Workflow]:
         for wf in self._reconstruct_deconstructed_workflows(PLAYBOOKS_PATH):
             yield wf
         for wf in self._reconstruct_deconstructed_workflows(BLOCKS_PATH):

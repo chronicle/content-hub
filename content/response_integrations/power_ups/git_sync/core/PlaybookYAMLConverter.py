@@ -543,7 +543,7 @@ def non_built_to_step(nb: dict, is_1p: bool = False) -> dict:
 
 class PlaybookYAMLConverter:
     @staticmethod
-    def deconstruct_playbook(playbook_dict: dict, existing_files: dict[str, bytes] = None) -> list[File]:
+    def deconstruct_playbook(playbook_dict: dict, existing_files: dict[str, bytes] | None = None) -> list[File]:
         """Convert a built playbook dict into deconstructed YAML File objects.
         If existing_files is provided, parses metadata fields (e.g. from display_info.yaml
         or release_notes.yaml) to preserve details like authors and version notes.
@@ -607,7 +607,9 @@ class PlaybookYAMLConverter:
         existing_display = {}
         if "display_info.yaml" in existing_files:
             try:
-                existing_display = yaml.safe_load(existing_files["display_info.yaml"]) or {}
+                parsed = yaml.safe_load(existing_files["display_info.yaml"])
+                if isinstance(parsed, dict):
+                    existing_display = parsed
             except Exception:
                 pass
                 
@@ -644,7 +646,7 @@ class PlaybookYAMLConverter:
                 "version": playbook_dict.get("version") or 1.0,
                 "item_name": playbook_dict.get("name"),
                 "item_type": "Block" if str(playbook_dict.get("playbookType")) in ("1", "block") else "Playbook",
-                "publish_time": int(playbook_dict.get("modificationTimeUnixTimeInMs", 0) / 1000) or 0,
+                "publish_time": int((playbook_dict.get("modificationTimeUnixTimeInMs") or 0) / 1000),
                 "ticket_number": ""
             }]
         rn_content = yaml.safe_dump(existing_rn, indent=4, sort_keys=False)
@@ -692,7 +694,7 @@ class PlaybookYAMLConverter:
                 steps.append(step_obj)
                 
                 # Dynamic stepsRelations reconstruction
-                parent_ids = nb_step.get("parent_step_ids", [])
+                parent_ids = nb_step.get("parent_step_ids") or []
                 parent_id = nb_step.get("parent_step_id")
                 if parent_id and parent_id not in parent_ids:
                     parent_ids = list(parent_ids) + [parent_id]
