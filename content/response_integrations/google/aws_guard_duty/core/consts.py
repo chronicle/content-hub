@@ -32,3 +32,4 @@ CONNECTOR_NAME = "AWS GuardDuty - Findings Connector"
 STS_AUDIENCE = "https://sts.amazonaws.com"
 DEFAULT_ROLE_SESSION_NAME = "SOAR-GuardDuty-Session"
 CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
+VALID_STATUS_CODES = (200,)

@@ -15,17 +15,17 @@
 from __future__ import annotations
 
 
-class AWSGuardDutyStatusCodeException(Exception):
+class AWSGuardDutyStatusCodeError(Exception):
     """Status Code exception from AWS GuardDuty manager."""
 
 
-class AWSGuardDutyValidationException(Exception):
+class AWSGuardDutyValidationError(Exception):
     """Validation Exception for AWS GuardDuty manager."""
 
 
-class AWSGuardDutyResourceAlreadyExistsException(Exception):
+class AWSGuardDutyResourceAlreadyExistsError(Exception):
     """Resource already exists Exception for AWS GuardDuty manager."""
 
 
-class AWSGuardDutyNotFoundException(Exception):
+class AWSGuardDutyNotFoundError(Exception):
     """Not Found Exception for AWS GuardDuty manager."""

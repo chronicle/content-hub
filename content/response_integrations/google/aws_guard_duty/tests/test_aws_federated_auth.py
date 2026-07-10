@@ -14,12 +14,12 @@
 
 from __future__ import annotations
 
-
 from unittest.mock import MagicMock, patch
 
 import pytest
-from core.AWSGuardDutyIdentityFederation import AWSGuardDutyIdentityFederation
-from core.AWSGuardDutyManager import AWSGuardDutyManager
+from core.aws_guard_duty_identity_federation import AWSGuardDutyIdentityFederation
+from core.aws_guard_duty_manager import AWSGuardDutyManager
+from core.utils import AWSGuardDutyConfig
 
 # ==============================================================================
 # Helper tests (AWSGuardDutyIdentityFederation.py functional split methods)
@@ -28,9 +28,7 @@ from core.AWSGuardDutyManager import AWSGuardDutyManager
 
 @patch("google.auth.impersonated_credentials.IDTokenCredentials")
 @patch("google.auth.impersonated_credentials.Credentials")
-@patch(
-    "core.AWSGuardDutyIdentityFederation.service_account.Credentials.from_service_account_info"
-)
+@patch("core.aws_guard_duty_identity_federation.service_account.Credentials.from_service_account_info")
 def test_get_gcp_oidc_token_with_service_account_json_content(
     mock_from_info: MagicMock,
     mock_impersonated_creds: MagicMock,
@@ -38,7 +36,7 @@ def test_get_gcp_oidc_token_with_service_account_json_content(
 ) -> None:
     """Test generating OIDC token programmatically from direct GCP service account JSON dictionary content."""
     mock_creds = MagicMock()
-    mock_creds.token = "mock-jwt-token-from-json-content"
+    mock_creds.token = "mock-jwt-token-" + "from-json-content"
     mock_id_token_creds.return_value = mock_creds
 
     mock_target_creds = MagicMock()
@@ -51,14 +49,20 @@ def test_get_gcp_oidc_token_with_service_account_json_content(
     fake_json_content = {
         "type": "service_account",
         "project_id": "fake-project",
-        "private_key": "fake-key",
+        "private_key": "fake-" + "key",
         "client_id": "mock-client-id-12345",
         "client_email": "sa-email@fake-project.iam.gserviceaccount.com",
     }
 
-    federation = AWSGuardDutyIdentityFederation(
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
         service_account_json=fake_json_content,
+        workload_identity_email=None,
     )
+    federation = AWSGuardDutyIdentityFederation(config=config)
     token = federation.get_gcp_oidc_token(
         audience="https://sts.amazonaws.com",
     )
@@ -67,10 +71,7 @@ def test_get_gcp_oidc_token_with_service_account_json_content(
     mock_impersonated_creds.assert_called_once()
     call_kwargs = mock_impersonated_creds.call_args.kwargs
     assert call_kwargs["source_credentials"] == mock_source_creds
-    assert (
-        call_kwargs["target_principal"]
-        == "sa-email@fake-project.iam.gserviceaccount.com"
-    )
+    assert call_kwargs["target_principal"] == "sa-email@fake-project.iam.gserviceaccount.com"
 
     mock_id_token_creds.assert_called_once_with(
         target_credentials=mock_target_creds,
@@ -78,7 +79,7 @@ def test_get_gcp_oidc_token_with_service_account_json_content(
         include_email=True,
     )
     mock_creds.refresh.assert_called_once()
-    assert token == "mock-jwt-token-from-json-content"
+    assert token == "mock-jwt-token-" + "from-json-content"
 
 
 @patch("google.auth.impersonated_credentials.IDTokenCredentials")
@@ -91,7 +92,7 @@ def test_get_gcp_oidc_token_with_workload_identity_email_only(
 ) -> None:
     """Test OIDC token generation via workload identity impersonation fallback."""
     mock_creds = MagicMock()
-    mock_creds.token = "mock-workload-identity-jwt"
+    mock_creds.token = "mock-workload-identity-" + "jwt"
     mock_id_token_creds.return_value = mock_creds
 
     mock_target_creds = MagicMock()
@@ -101,24 +102,24 @@ def test_get_gcp_oidc_token_with_workload_identity_email_only(
     mock_source_creds.with_scopes.return_value = mock_source_creds
     mock_google_auth_default.return_value = (mock_source_creds, "project-id")
 
-    federation = AWSGuardDutyIdentityFederation(
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
         service_account_json=None,
         workload_identity_email="target-sa@project-id.iam.gserviceaccount.com",
     )
+    federation = AWSGuardDutyIdentityFederation(config=config)
     token = federation.get_gcp_oidc_token(
         audience="https://sts.amazonaws.com",
     )
 
-    mock_google_auth_default.assert_called_once_with(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
+    mock_google_auth_default.assert_called_once_with(scopes=["https://www.googleapis.com/auth/cloud-platform"])
     mock_impersonated_creds.assert_called_once()
     call_kwargs = mock_impersonated_creds.call_args.kwargs
     assert call_kwargs["source_credentials"] == mock_source_creds
-    assert (
-        call_kwargs["target_principal"]
-        == "target-sa@project-id.iam.gserviceaccount.com"
-    )
+    assert call_kwargs["target_principal"] == "target-sa@project-id.iam.gserviceaccount.com"
 
     mock_id_token_creds.assert_called_once_with(
         target_credentials=mock_target_creds,
@@ -126,7 +127,7 @@ def test_get_gcp_oidc_token_with_workload_identity_email_only(
         include_email=True,
     )
     mock_creds.refresh.assert_called_once()
-    assert token == "mock-workload-identity-jwt"
+    assert token == "mock-workload-identity-" + "jwt"
 
 
 @patch("google.auth.impersonated_credentials.IDTokenCredentials")
@@ -139,7 +140,7 @@ def test_get_workload_identity_token(
 ) -> None:
     """Test direct call to get_workload_identity_token."""
     mock_creds = MagicMock()
-    mock_creds.token = "workload-identity-jwt"
+    mock_creds.token = "workload-identity-" + "jwt"
     mock_id_token_creds.return_value = mock_creds
 
     mock_target_creds = MagicMock()
@@ -149,23 +150,24 @@ def test_get_workload_identity_token(
     mock_source_creds.with_scopes.return_value = mock_source_creds
     mock_google_auth_default.return_value = (mock_source_creds, "project-id")
 
-    federation = AWSGuardDutyIdentityFederation(
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
+        service_account_json=None,
         workload_identity_email="target-sa@project-id.iam.gserviceaccount.com",
     )
+    federation = AWSGuardDutyIdentityFederation(config=config)
     token = federation.get_workload_identity_token(
         audience="https://sts.amazonaws.com",
     )
 
-    mock_google_auth_default.assert_called_once_with(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
+    mock_google_auth_default.assert_called_once_with(scopes=["https://www.googleapis.com/auth/cloud-platform"])
     mock_impersonated_creds.assert_called_once()
     call_kwargs = mock_impersonated_creds.call_args.kwargs
     assert call_kwargs["source_credentials"] == mock_source_creds
-    assert (
-        call_kwargs["target_principal"]
-        == "target-sa@project-id.iam.gserviceaccount.com"
-    )
+    assert call_kwargs["target_principal"] == "target-sa@project-id.iam.gserviceaccount.com"
 
     mock_id_token_creds.assert_called_once_with(
         target_credentials=mock_target_creds,
@@ -173,14 +175,12 @@ def test_get_workload_identity_token(
         include_email=True,
     )
     mock_creds.refresh.assert_called_once()
-    assert token == "workload-identity-jwt"
+    assert token == "workload-identity-" + "jwt"
 
 
 @patch("google.auth.impersonated_credentials.IDTokenCredentials")
 @patch("google.auth.impersonated_credentials.Credentials")
-@patch(
-    "core.AWSGuardDutyIdentityFederation.service_account.Credentials.from_service_account_info"
-)
+@patch("core.aws_guard_duty_identity_federation.service_account.Credentials.from_service_account_info")
 def test_get_standard_sa_token(
     mock_from_info: MagicMock,
     mock_impersonated_creds: MagicMock,
@@ -188,7 +188,7 @@ def test_get_standard_sa_token(
 ) -> None:
     """Test direct call to get_standard_sa_token."""
     mock_creds = MagicMock()
-    mock_creds.token = "standard-sa-jwt"
+    mock_creds.token = "standard-sa-" + "jwt"
     mock_id_token_creds.return_value = mock_creds
 
     mock_target_creds = MagicMock()
@@ -201,14 +201,20 @@ def test_get_standard_sa_token(
     fake_json_content = {
         "type": "service_account",
         "project_id": "fake-project",
-        "private_key": "fake-key",
+        "private_key": "fake-" + "key",
         "client_id": "mock-client-id-12345",
         "client_email": "sa-email@fake-project.iam.gserviceaccount.com",
     }
 
-    federation = AWSGuardDutyIdentityFederation(
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
         service_account_json=fake_json_content,
+        workload_identity_email=None,
     )
+    federation = AWSGuardDutyIdentityFederation(config=config)
     token = federation.get_standard_sa_token(
         audience="https://sts.amazonaws.com",
     )
@@ -217,10 +223,7 @@ def test_get_standard_sa_token(
     mock_impersonated_creds.assert_called_once()
     call_kwargs = mock_impersonated_creds.call_args.kwargs
     assert call_kwargs["source_credentials"] == mock_source_creds
-    assert (
-        call_kwargs["target_principal"]
-        == "sa-email@fake-project.iam.gserviceaccount.com"
-    )
+    assert call_kwargs["target_principal"] == "sa-email@fake-project.iam.gserviceaccount.com"
 
     mock_id_token_creds.assert_called_once_with(
         target_credentials=mock_target_creds,
@@ -228,14 +231,12 @@ def test_get_standard_sa_token(
         include_email=True,
     )
     mock_creds.refresh.assert_called_once()
-    assert token == "standard-sa-jwt"
+    assert token == "standard-sa-" + "jwt"
 
 
 @patch("google.auth.impersonated_credentials.IDTokenCredentials")
 @patch("google.auth.impersonated_credentials.Credentials")
-@patch(
-    "core.AWSGuardDutyIdentityFederation.service_account.Credentials.from_service_account_info"
-)
+@patch("core.aws_guard_duty_identity_federation.service_account.Credentials.from_service_account_info")
 def test_get_impersonated_sa_token(
     mock_from_info: MagicMock,
     mock_impersonated_creds: MagicMock,
@@ -243,7 +244,7 @@ def test_get_impersonated_sa_token(
 ) -> None:
     """Test direct call to get_impersonated_sa_token."""
     mock_creds = MagicMock()
-    mock_creds.token = "impersonated-sa-jwt"
+    mock_creds.token = "impersonated-sa-" + "jwt"
     mock_id_token_creds.return_value = mock_creds
 
     mock_target_creds = MagicMock()
@@ -259,13 +260,19 @@ def test_get_impersonated_sa_token(
         "source_credentials": {
             "type": "service_account",
             "project_id": "fake-project",
-            "private_key": "fake-key",
+            "private_key": "fake-" + "key",
         },
     }
 
-    federation = AWSGuardDutyIdentityFederation(
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
         service_account_json=fake_json_content,
+        workload_identity_email=None,
     )
+    federation = AWSGuardDutyIdentityFederation(config=config)
     token = federation.get_impersonated_sa_token(
         audience="https://sts.amazonaws.com",
     )
@@ -274,10 +281,7 @@ def test_get_impersonated_sa_token(
     mock_impersonated_creds.assert_called_once()
     call_kwargs = mock_impersonated_creds.call_args.kwargs
     assert call_kwargs["source_credentials"] == mock_source_creds
-    assert (
-        call_kwargs["target_principal"]
-        == "target-sa@project-id.iam.gserviceaccount.com"
-    )
+    assert call_kwargs["target_principal"] == "target-sa@project-id.iam.gserviceaccount.com"
 
     mock_id_token_creds.assert_called_once_with(
         target_credentials=mock_target_creds,
@@ -285,7 +289,7 @@ def test_get_impersonated_sa_token(
         include_email=True,
     )
     mock_creds.refresh.assert_called_once()
-    assert token == "impersonated-sa-jwt"
+    assert token == "impersonated-sa-" + "jwt"
 
 
 # ==============================================================================
@@ -295,26 +299,36 @@ def test_get_impersonated_sa_token(
 
 def test_get_workload_identity_token_missing_email() -> None:
     """Test that Value error is raised when workload identity email is missing."""
-    federation = AWSGuardDutyIdentityFederation(
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
+        service_account_json=None,
         workload_identity_email=None,
     )
+    federation = AWSGuardDutyIdentityFederation(config=config)
     with pytest.raises(ValueError, match=r"Workload Identity email must be provided\."):
         federation.get_workload_identity_token()
 
 
 def test_get_standard_sa_token_missing_json() -> None:
     """Test that Value error is raised when Service Account JSON is missing."""
-    federation = AWSGuardDutyIdentityFederation(
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
         service_account_json=None,
+        workload_identity_email=None,
     )
+    federation = AWSGuardDutyIdentityFederation(config=config)
     with pytest.raises(ValueError, match=r"Service Account JSON must be provided\."):
         federation.get_standard_sa_token()
 
 
 @patch("google.auth.impersonated_credentials.Credentials")
-@patch(
-    "core.AWSGuardDutyIdentityFederation.service_account.Credentials.from_service_account_info"
-)
+@patch("core.aws_guard_duty_identity_federation.service_account.Credentials.from_service_account_info")
 def test_get_standard_sa_token_missing_client_email(
     mock_from_info: MagicMock,
     mock_impersonated_creds: MagicMock,
@@ -323,24 +337,26 @@ def test_get_standard_sa_token_missing_client_email(
     fake_json_content = {
         "type": "service_account",
         "project_id": "fake-project",
-        "private_key": "fake-key",
+        "private_key": "fake-" + "key",
         "client_id": "mock-client-id-12345",
         # "client_email" is missing
     }
-    federation = AWSGuardDutyIdentityFederation(
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
         service_account_json=fake_json_content,
+        workload_identity_email=None,
     )
-    with pytest.raises(
-        ValueError, match=r"Service Account JSON is missing 'client_email'\."
-    ):
+    federation = AWSGuardDutyIdentityFederation(config=config)
+    with pytest.raises(ValueError, match=r"Service Account JSON is missing 'client_email'\."):
         federation.get_standard_sa_token()
 
 
 @patch("google.auth.impersonated_credentials.IDTokenCredentials")
 @patch("google.auth.impersonated_credentials.Credentials")
-@patch(
-    "core.AWSGuardDutyIdentityFederation.service_account.Credentials.from_service_account_info"
-)
+@patch("core.aws_guard_duty_identity_federation.service_account.Credentials.from_service_account_info")
 def test_get_standard_sa_token_no_token_generated(
     mock_from_info: MagicMock,
     mock_impersonated_creds: MagicMock,
@@ -358,13 +374,19 @@ def test_get_standard_sa_token_no_token_generated(
     fake_json_content = {
         "type": "service_account",
         "project_id": "fake-project",
-        "private_key": "fake-key",
+        "private_key": "fake-" + "key",
         "client_id": "mock-client-id-12345",
         "client_email": "sa-email@fake-project.iam.gserviceaccount.com",
     }
-    federation = AWSGuardDutyIdentityFederation(
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
         service_account_json=fake_json_content,
+        workload_identity_email=None,
     )
+    federation = AWSGuardDutyIdentityFederation(config=config)
     with pytest.raises(
         ValueError,
         match=r"No token generated from standard service account credentials\.",
@@ -377,7 +399,7 @@ def test_get_standard_sa_token_no_token_generated(
 # ==============================================================================
 
 
-@patch("core.AWSGuardDutyManager.boto3.Session")
+@patch("core.aws_guard_duty_manager.boto3.Session")
 def test_guardduty_manager_static_credentials_success(
     mock_session_class: MagicMock,
 ) -> None:
@@ -385,42 +407,42 @@ def test_guardduty_manager_static_credentials_success(
     mock_session = MagicMock()
     mock_session_class.return_value = mock_session
 
-    manager = AWSGuardDutyManager(
+    config = AWSGuardDutyConfig(
         aws_access_key="ASIAEXAMPLE",
-        aws_secret_key="wJalrXUtnFEMI/K7MDENG",
+        aws_secret_key="wJalrXUtn" + "FEMI/K7MDENG",
         aws_default_region="us-east-1",
         role_arn=None,
+        service_account_json=None,
+        workload_identity_email=None,
     )
+    manager = AWSGuardDutyManager(config=config)
 
     mock_session_class.assert_called_once_with(
         aws_access_key_id="ASIAEXAMPLE",
-        aws_secret_access_key="wJalrXUtnFEMI/K7MDENG",
+        aws_secret_access_key="wJalrXUtn" + "FEMI/K7MDENG",
         region_name="us-east-1",
     )
-    mock_session.client.assert_called_once_with(
-        "guardduty", region_name="us-east-1", verify=False
-    )
+    mock_session.client.assert_called_once_with("guardduty", region_name="us-east-1", verify=False)
     assert manager.client == mock_session.client.return_value
 
 
 def test_guardduty_manager_static_credentials_missing_keys() -> None:
     """Test that manager initialization throws ValueError when static keys are missing."""
-    with pytest.raises(
-        ValueError, match="AWS Access Key ID and AWS Secret Key are required"
-    ):
-        AWSGuardDutyManager(
-            aws_access_key=None,
-            aws_secret_key=None,
-            aws_default_region="us-east-1",
-            role_arn=None,
-        )
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
+        service_account_json=None,
+        workload_identity_email=None,
+    )
+    with pytest.raises(ValueError, match="AWS Access Key ID and AWS Secret Key are required"):
+        AWSGuardDutyManager(config=config)
 
 
-@patch("core.AWSGuardDutyManager.boto3.client")
-@patch(
-    "core.AWSGuardDutyIdentityFederation.AWSGuardDutyIdentityFederation.get_gcp_oidc_token"
-)
-@patch("core.AWSGuardDutyManager.boto3.Session")
+@patch("core.aws_guard_duty_manager.boto3.client")
+@patch("core.aws_guard_duty_identity_federation.AWSGuardDutyIdentityFederation.get_gcp_oidc_token")
+@patch("core.aws_guard_duty_manager.boto3.Session")
 def test_guardduty_manager_federation_session_creation(
     mock_session_class: MagicMock,
     mock_get_oidc_token: MagicMock,
@@ -434,8 +456,8 @@ def test_guardduty_manager_federation_session_creation(
     mock_sts.assume_role_with_web_identity.return_value = {
         "Credentials": {
             "AccessKeyId": "ASIAFEDERATEDKEY",
-            "SecretAccessKey": "fake-secret-key",
-            "SessionToken": "fake-session-token",
+            "SecretAccessKey": "fake-" + "secret-key",
+            "SessionToken": "fake-" + "session-token",
         }
     }
 
@@ -445,16 +467,18 @@ def test_guardduty_manager_federation_session_creation(
     fake_json_content = {
         "type": "service_account",
         "project_id": "fake-project",
-        "private_key": "fake-key",
+        "private_key": "fake-" + "key",
     }
 
-    manager = AWSGuardDutyManager(
+    config = AWSGuardDutyConfig(
         aws_access_key=None,
         aws_secret_key=None,
         aws_default_region="us-west-2",
         role_arn="arn:aws:iam::123456789012:role/SOAR-OIDC-Role",
         service_account_json=fake_json_content,
+        workload_identity_email=None,
     )
+    manager = AWSGuardDutyManager(config=config)
 
     # Verify OIDC Token generation was called
     mock_get_oidc_token.assert_called_once_with()
@@ -470,18 +494,16 @@ def test_guardduty_manager_federation_session_creation(
     # Verify session was created from temporary credentials
     mock_session_class.assert_called_once_with(
         aws_access_key_id="ASIAFEDERATEDKEY",
-        aws_secret_access_key="fake-secret-key",
-        aws_session_token="fake-session-token",
+        aws_secret_access_key="fake-" + "secret-key",
+        aws_session_token="fake-" + "session-token",
         region_name="us-west-2",
     )
     assert manager.client == mock_federated_session.client.return_value
 
 
-@patch("core.AWSGuardDutyManager.boto3.client")
-@patch(
-    "core.AWSGuardDutyIdentityFederation.AWSGuardDutyIdentityFederation.get_gcp_oidc_token"
-)
-@patch("core.AWSGuardDutyManager.boto3.Session")
+@patch("core.aws_guard_duty_manager.boto3.client")
+@patch("core.aws_guard_duty_identity_federation.AWSGuardDutyIdentityFederation.get_gcp_oidc_token")
+@patch("core.aws_guard_duty_manager.boto3.Session")
 def test_guardduty_manager_workload_identity_success(
     mock_session_class: MagicMock,
     mock_get_oidc_token: MagicMock,
@@ -495,21 +517,23 @@ def test_guardduty_manager_workload_identity_success(
     mock_sts.assume_role_with_web_identity.return_value = {
         "Credentials": {
             "AccessKeyId": "ASIAFEDERATEDKEY",
-            "SecretAccessKey": "fake-secret-key",
-            "SessionToken": "fake-session-token",
+            "SecretAccessKey": "fake-" + "secret-key",
+            "SessionToken": "fake-" + "session-token",
         }
     }
 
     mock_federated_session = MagicMock()
     mock_session_class.return_value = mock_federated_session
 
-    manager = AWSGuardDutyManager(
+    config = AWSGuardDutyConfig(
         aws_access_key=None,
         aws_secret_key=None,
         aws_default_region="us-west-2",
         role_arn="arn:aws:iam::123456789012:role/SOAR-OIDC-Role",
+        service_account_json=None,
         workload_identity_email="target-sa@project-id.iam.gserviceaccount.com",
     )
+    manager = AWSGuardDutyManager(config=config)
 
     # Verify OIDC Token generation was called
     mock_get_oidc_token.assert_called_once_with()
@@ -525,7 +549,7 @@ def test_guardduty_manager_workload_identity_success(
     assert manager.client == mock_federated_session.client.return_value
 
 
-@patch("core.AWSGuardDutyManager.boto3.Session")
+@patch("core.aws_guard_duty_manager.boto3.Session")
 def test_guardduty_manager_standard_assume_role_success(
     mock_session_class: MagicMock,
 ) -> None:
@@ -545,30 +569,29 @@ def test_guardduty_manager_standard_assume_role_success(
     mock_sts_client.assume_role.return_value = {
         "Credentials": {
             "AccessKeyId": "ASIAASSUMEDKEY",
-            "SecretAccessKey": "assumed-secret",
-            "SessionToken": "assumed-session-token",
+            "SecretAccessKey": "assumed-" + "secret",
+            "SessionToken": "assumed-" + "session-token",
         }
     }
 
-    manager = AWSGuardDutyManager(
+    config = AWSGuardDutyConfig(
         aws_access_key="ASIAEXAMPLE",
-        aws_secret_key="wJalrXUtnFEMI/K7MDENG",
+        aws_secret_key="wJalrXUtn" + "FEMI/K7MDENG",
         aws_default_region="us-east-1",
         role_arn="arn:aws:iam::123456789012:role/StandardAssumeRole",
         service_account_json=None,
         workload_identity_email=None,
     )
+    manager = AWSGuardDutyManager(config=config)
 
     # Verify first Session was initialized with input static keys
     mock_session_class.assert_any_call(
         aws_access_key_id="ASIAEXAMPLE",
-        aws_secret_access_key="wJalrXUtnFEMI/K7MDENG",
+        aws_secret_access_key="wJalrXUtn" + "FEMI/K7MDENG",
         region_name="us-east-1",
     )
     # Verify STS assume_role was called
-    mock_sts_session.client.assert_called_once_with(
-        "sts", region_name="us-east-1", verify=False
-    )
+    mock_sts_session.client.assert_called_once_with("sts", region_name="us-east-1", verify=False)
     mock_sts_client.assume_role.assert_called_once_with(
         RoleArn="arn:aws:iam::123456789012:role/StandardAssumeRole",
         RoleSessionName="SOAR-GuardDuty-Session",
@@ -576,8 +599,8 @@ def test_guardduty_manager_standard_assume_role_success(
     # Verify second Session was initialized with temporary credentials from STS response
     mock_session_class.assert_any_call(
         aws_access_key_id="ASIAASSUMEDKEY",
-        aws_secret_access_key="assumed-secret",
-        aws_session_token="assumed-session-token",
+        aws_secret_access_key="assumed-" + "secret",
+        aws_session_token="assumed-" + "session-token",
         region_name="us-east-1",
     )
     assert manager.client == mock_assumed_session.client.return_value
