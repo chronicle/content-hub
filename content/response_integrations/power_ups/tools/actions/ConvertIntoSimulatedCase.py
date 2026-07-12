@@ -16,12 +16,16 @@ from __future__ import annotations
 
 import base64
 import json
+from typing import Any
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.rest.soar_api import import_simulator_custom_case
 
+from TIPCommon.rest.soar_api import import_simulator_custom_case
+from TIPCommon.types import SingleJson
+
+from ..core import constants
 from ..core.ToolsCommon import (
     ExecutionScope,
     get_execution_scope,
@@ -115,7 +119,8 @@ def main():
         case_data["Name"] = overrideName
 
     # Prepare the data to be pushed or saved.
-    myJson = {"cases": [case_data]}
+    aligned_case_data = align_case_data(case_data)
+    myJson = {"cases": [aligned_case_data]}
 
     # Push the data to the simulator or save it as a JSON file, depending on
     # the parameters.
@@ -140,6 +145,129 @@ def main():
     # Add the JSON data to the action result and end the action.
     siemplify.result.add_result_json(myJson)
     siemplify.end(output_message, result_value, status)
+
+
+def align_case_data(case_data: SingleJson) -> SingleJson:
+    """Align case data format with custom case import endpoints.
+    Args:
+        case_data: The dictionary containing the raw case data.
+
+    Returns:
+        The aligned case data dictionary.
+    """
+    case_data_copy = dict(case_data)
+    align_case_enum_fields(case_data_copy)
+
+    new_case: SingleJson = {}
+
+    for k, v in case_data_copy.items():
+        if k.startswith("__") or v == constants.UNDEFINED_VALUE:
+            continue
+
+        camel_k: str = to_camel_case(k)
+
+        if camel_k == "events" and isinstance(v, list):
+            new_case[camel_k] = transform_events_list(v)
+        else:
+            new_case[camel_k] = v
+
+    return new_case
+
+
+def align_case_enum_fields(case_data: SingleJson) -> None:
+    """Align the enum integer fields of a case.
+    Args:
+        case_data: The dictionary containing the raw case data.
+    """
+    align_enum_field(case_data, constants.CASE_TYPE_KEYS, constants.CASE_TYPE_MAP)
+    align_enum_field(
+        case_data,
+        constants.DATA_TYPE_KEYS,
+        constants.DATA_TYPE_MAP,
+    )
+    align_enum_field(
+        case_data,
+        constants.SOURCE_TYPE_KEYS,
+        constants.SOURCE_TYPE_MAP,
+    )
+
+
+def align_enum_field(
+    data: SingleJson,
+    keys: list[str],
+    value_map: dict[int, str],
+) -> None:
+    """Align a single enum field inside a data dictionary.
+    Args:
+        data: The dictionary containing the raw data.
+        keys: The list of keys that represent the enum field.
+        value_map: The mapping dictionary for the enum values.
+    """
+    for key in keys:
+        if key in data:
+            val: Any = data[key]
+            if isinstance(val, int) and not isinstance(val, bool):
+                if val in value_map:
+                    data[key] = value_map[val]
+                else:
+                    data.pop(key, None)
+
+
+def transform_events_list(events: list[Any]) -> list[Any]:
+    """Transform a list of events.
+    Args:
+        events: The list of raw events.
+
+    Returns:
+        The list of aligned events.
+    """
+    new_events: list[Any] = []
+    for event in events:
+        if isinstance(event, dict):
+            new_events.append(transform_event(event))
+        else:
+            new_events.append(event)
+    return new_events
+
+
+def transform_event(event: SingleJson) -> SingleJson:
+    """Transform an event dictionary to align its property names.
+    Args:
+        event: The raw event dictionary.
+
+    Returns:
+        The aligned event dictionary.
+    """
+    new_event: SingleJson = {}
+    for ek, ev in event.items():
+        if ek.startswith("__") or ev == constants.UNDEFINED_VALUE:
+            continue
+        camel_ek: str = to_camel_case(ek)
+
+        if camel_ek in (constants.FIELDS_KEY, constants.DATA_FIELDS_KEY) and isinstance(ev, dict):
+            new_event[camel_ek] = {
+                k2: v2 for k2, v2 in ev.items() if not k2.startswith("__")
+            }
+        else:
+            new_event[camel_ek] = ev
+    return new_event
+
+
+def to_camel_case(key_name: str) -> str:
+    """Convert PascalCase property names to camelCase.
+    Args:
+        key_name: The string to convert.
+
+    Returns:
+        The camelCase converted string.
+    """
+    if not key_name:
+        return key_name
+    if key_name == constants.RAW_FIELDS_KEY:
+        return constants.FIELDS_KEY
+    if key_name == constants.RAW_DATA_FIELDS_KEY:
+        return constants.DATA_FIELDS_KEY
+    return key_name[0].lower() + key_name[1:]
 
 
 if __name__ == "__main__":
