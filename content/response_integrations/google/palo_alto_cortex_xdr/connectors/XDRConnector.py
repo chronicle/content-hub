@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import annotations
 
 import copy
@@ -9,8 +23,8 @@ import sys
 from typing import TYPE_CHECKING, Callable, TypeVar
 
 import requests
-from SiemplifyConnectors import CaseInfo
-from SiemplifyUtils import (
+from soar_sdk.SiemplifyConnectorsDataModel import CaseInfo
+from soar_sdk.SiemplifyUtils import (
     convert_datetime_to_unix_time,
     dict_to_flat,
     unix_now,
@@ -24,22 +38,21 @@ from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.types import SingleJson
 from TIPCommon.utils import is_test_run
 from TIPCommon.validation import ParameterValidator
-
-import constants
-from auth import AuthenticatedSession
-from datamodels import (
+from ..core import constants
+from ..core.auth import AuthenticatedSession
+from ..core.datamodels import (
     Alert,
     FileArtifact,
     IncidentExtraData,
     IncidentInfo,
     NetworkArtifact,
 )
-from exceptions import PaloAltoXdrValidationError, XDRException
-from utils import get_integration_parameters
-from XDRManager import ApiParameters, XDRManager
+from ..core.exceptions import PaloAltoXdrValidationError, XDRException
+from ..core.utils import get_integration_parameters
+from ..core.XDRManager import ApiParameters, XDRManager
 
 if TYPE_CHECKING:
-    from datamodels import IntegrationParameters
+    from ..core.datamodels import IntegrationParameters
 
 SEVERITY_RANK: dict[str, int] = {
     sev: i for i, sev in enumerate(constants.SEVERITY_ORDER)
