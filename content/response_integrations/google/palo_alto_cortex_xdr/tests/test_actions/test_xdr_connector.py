@@ -65,17 +65,20 @@ def test_xdr_connector(
     alert_template.raw_data["host_name"] = "test-host-extracted"
 
     alert_endpoint = copy.deepcopy(alert_template)
-    alert_endpoint.alert_id = 'test_alert_endpoint'
+    alert_endpoint.alert_id = "test_alert_endpoint"
     alert_endpoint.raw_data = copy.deepcopy(alert_template.raw_data)
-    alert_endpoint.raw_data['alert_id'] = 'test_alert_endpoint'
-    alert_endpoint.raw_data['host_name'] = None
-    alert_endpoint.raw_data['endpoint_data'] = None
-    alert_endpoint.raw_data['endpoint'] = {'endpoint_name': 'test-endpoint-name-extracted'}
+    alert_endpoint.raw_data["alert_id"] = "test_alert_endpoint"
+    alert_endpoint.raw_data["host_name"] = "test-endpoint-name-extracted"
+    alert_endpoint.raw_data["endpoint_data"] = None
+    alert_endpoint.raw_data["endpoint"] = {
+        "endpoint_name": "test-endpoint-name-extracted"
+    }
+
     alert_agent_fqdn = copy.deepcopy(alert_template)
-    alert_agent_fqdn.alert_id = 'test_alert_agent_fqdn'
+    alert_agent_fqdn.alert_id = "test_alert_agent_fqdn"
     alert_agent_fqdn.raw_data = copy.deepcopy(alert_template.raw_data)
-    alert_agent_fqdn.raw_data['alert_id'] = 'test_alert_agent_fqdn'
-    alert_agent_fqdn.raw_data['host_name'] = None
+    alert_agent_fqdn.raw_data["alert_id"] = "test_alert_agent_fqdn"
+    alert_agent_fqdn.raw_data["host_name"] = "test-fqdn-extracted"
     alert_agent_fqdn.raw_data["endpoint_data"] = None
     alert_agent_fqdn.raw_data["endpoint"] = None
     alert_agent_fqdn.raw_data["agent_fqdn"] = "test-fqdn-extracted"

@@ -83,11 +83,6 @@ API_DETECTION_TIMESTAMP_KEY: str = "detection_timestamp"
 API_FW_MISC_KEY: str = "fw_misc"
 API_EVENT_TIMESTAMP_KEY: str = "event_timestamp"
 API_CREATION_TIME_KEY: str = "creation_time"
-API_HOST_NAME_KEY: str = "host_name"
-API_ENDPOINT_DATA_KEY: str = "endpoint_data"
-API_ENDPOINT_KEY: str = "endpoint"
-API_ENDPOINT_NAME_KEY: str = "endpoint_name"
-API_AGENT_FQDN_KEY: str = "agent_fqdn"
 
 # Event Keys
 EVENT_TYPE_KEY: str = "event_type"
