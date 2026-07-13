@@ -75,7 +75,7 @@ def test_get_gcp_oidc_token_with_service_account_json_content(
 
     mock_id_token_creds.assert_called_once_with(
         target_credentials=mock_target_creds,
-        target_audience="mock-client-id-12345",
+        target_audience="https://sts.amazonaws.com",
         include_email=True,
     )
     mock_creds.refresh.assert_called_once()
@@ -227,10 +227,61 @@ def test_get_standard_sa_token(
 
     mock_id_token_creds.assert_called_once_with(
         target_credentials=mock_target_creds,
-        target_audience="mock-client-id-12345",
+        target_audience="https://sts.amazonaws.com",
         include_email=True,
     )
     mock_creds.refresh.assert_called_once()
+    assert token == "standard-sa-" + "jwt"
+
+
+@patch("google.auth.impersonated_credentials.IDTokenCredentials")
+@patch("google.auth.impersonated_credentials.Credentials")
+@patch("core.aws_guard_duty_identity_federation.service_account.Credentials.from_service_account_info")
+def test_get_standard_sa_token_fallback_to_client_id(
+    mock_from_info: MagicMock,
+    mock_impersonated_creds: MagicMock,
+    mock_id_token_creds: MagicMock,
+) -> None:
+    """Test get_standard_sa_token falls back to client_id when audience is None."""
+    mock_creds = MagicMock()
+    mock_creds.token = "standard-sa-" + "jwt"
+    mock_id_token_creds.return_value = mock_creds
+
+    mock_target_creds = MagicMock()
+    mock_impersonated_creds.return_value = mock_target_creds
+
+    mock_source_creds = MagicMock()
+    mock_source_creds.with_scopes.return_value = mock_source_creds
+    mock_from_info.return_value = mock_source_creds
+
+    fake_json_content = {
+        "type": "service_account",
+        "project_id": "fake-project",
+        "private_key": "fake-key",
+        "client_id": "mock-client-id-12345",
+        "client_email": "sa-email@fake-project.iam.gserviceaccount.com",
+    }
+
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
+        service_account_json=fake_json_content,
+        workload_identity_email=None,
+    )
+    federation = AWSGuardDutyIdentityFederation(config=config)
+    token = federation.get_standard_sa_token(
+        audience=None,
+    )
+
+    mock_from_info.assert_called_once_with(fake_json_content)
+    mock_impersonated_creds.assert_called_once()
+    mock_id_token_creds.assert_called_once_with(
+        target_credentials=mock_target_creds,
+        target_audience="mock-client-id-12345",
+        include_email=True,
+    )
     assert token == "standard-sa-" + "jwt"
 
 
@@ -422,7 +473,7 @@ def test_guardduty_manager_static_credentials_success(
         aws_secret_access_key="wJalrXUtn" + "FEMI/K7MDENG",
         region_name="us-east-1",
     )
-    mock_session.client.assert_called_once_with("guardduty", region_name="us-east-1", verify=False)
+    mock_session.client.assert_called_once_with("guardduty", region_name="us-east-1", verify=True)
     assert manager.client == mock_session.client.return_value
 
 
@@ -437,6 +488,20 @@ def test_guardduty_manager_static_credentials_missing_keys() -> None:
         workload_identity_email=None,
     )
     with pytest.raises(ValueError, match="AWS Access Key ID and AWS Secret Key are required"):
+        AWSGuardDutyManager(config=config)
+
+
+def test_guardduty_manager_federation_missing_role_arn() -> None:
+    """Test that manager initialization throws ValueError when Role ARN is missing for federation."""
+    config = AWSGuardDutyConfig(
+        aws_access_key=None,
+        aws_secret_key=None,
+        aws_default_region="us-east-1",
+        role_arn=None,
+        service_account_json={"type": "service_account"},
+        workload_identity_email=None,
+    )
+    with pytest.raises(ValueError, match="Role ARN is required when using GCP OIDC credentials"):
         AWSGuardDutyManager(config=config)
 
 
@@ -484,7 +549,7 @@ def test_guardduty_manager_federation_session_creation(
     mock_get_oidc_token.assert_called_once_with()
 
     # Verify STS Role Assumption was called
-    mock_boto3_client.assert_called_once_with("sts", region_name="us-west-2")
+    mock_boto3_client.assert_called_once_with("sts", region_name="us-west-2", verify=True)
     mock_sts.assume_role_with_web_identity.assert_called_once_with(
         RoleArn="arn:aws:iam::123456789012:role/SOAR-OIDC-Role",
         RoleSessionName="SOAR-GuardDuty-Session",
@@ -539,7 +604,7 @@ def test_guardduty_manager_workload_identity_success(
     mock_get_oidc_token.assert_called_once_with()
 
     # Verify STS Role Assumption was called
-    mock_boto3_client.assert_called_once_with("sts", region_name="us-west-2")
+    mock_boto3_client.assert_called_once_with("sts", region_name="us-west-2", verify=True)
     mock_sts.assume_role_with_web_identity.assert_called_once_with(
         RoleArn="arn:aws:iam::123456789012:role/SOAR-OIDC-Role",
         RoleSessionName="SOAR-GuardDuty-Session",
@@ -591,7 +656,7 @@ def test_guardduty_manager_standard_assume_role_success(
         region_name="us-east-1",
     )
     # Verify STS assume_role was called
-    mock_sts_session.client.assert_called_once_with("sts", region_name="us-east-1", verify=False)
+    mock_sts_session.client.assert_called_once_with("sts", region_name="us-east-1", verify=True)
     mock_sts_client.assume_role.assert_called_once_with(
         RoleArn="arn:aws:iam::123456789012:role/StandardAssumeRole",
         RoleSessionName="SOAR-GuardDuty-Session",

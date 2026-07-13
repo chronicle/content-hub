@@ -49,7 +49,7 @@ class AWSGuardDutyManager(
         self,
         config: utils.AWSGuardDutyConfig,
         *,
-        verify_ssl: bool = False,
+        verify_ssl: bool = True,
         siemplify_logger: logging.Logger | None = None,
     ) -> None:
         """Initialize AWS GuardDuty manager.
@@ -72,6 +72,7 @@ class AWSGuardDutyManager(
             if config.service_account_json or config.workload_identity_email:
                 federation = AWSGuardDutyIdentityFederation(
                     config=config,
+                    verify_ssl=verify_ssl,
                     siemplify_logger=self.logger,
                 )
                 session = federation.get_web_identity_session()
@@ -90,6 +91,9 @@ class AWSGuardDutyManager(
                     verify_ssl=verify_ssl,
                 )
         else:
+            if config.service_account_json or config.workload_identity_email:
+                msg = "Role ARN is required when using GCP OIDC credentials for federation."
+                raise ValueError(msg)
             if not config.aws_access_key or not config.aws_secret_key:
                 msg = "AWS Access Key ID and AWS Secret Key are required when Role ARN is not provided."
                 raise ValueError(msg)

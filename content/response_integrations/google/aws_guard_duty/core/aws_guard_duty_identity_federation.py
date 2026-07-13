@@ -40,6 +40,8 @@ class AWSGuardDutyIdentityFederation:
         self,
         config: AWSGuardDutyConfig,
         role_session_name: str = consts.DEFAULT_ROLE_SESSION_NAME,
+        *,
+        verify_ssl: bool = True,
         siemplify_logger: logging.Logger | None = None,
     ) -> None:
         """Initialize the identity federation helper.
@@ -47,6 +49,7 @@ class AWSGuardDutyIdentityFederation:
         Args:
             config: Integration configuration parameters.
             role_session_name: Role session name.
+            verify_ssl: Whether to verify SSL connection.
             siemplify_logger: Logger instance.
 
         """
@@ -55,6 +58,7 @@ class AWSGuardDutyIdentityFederation:
         self.workload_identity_email = config.workload_identity_email
         self.region_name = config.aws_default_region
         self.role_session_name = role_session_name
+        self.verify_ssl = verify_ssl
         self.logger = siemplify_logger or logging.getLogger("AWSFederatedAuth")
 
     @staticmethod
@@ -101,7 +105,7 @@ class AWSGuardDutyIdentityFederation:
 
     def get_workload_identity_token(
         self,
-        audience: str = consts.STS_AUDIENCE,
+        audience: str | None = consts.STS_AUDIENCE,
         auth_request: Request | None = None,
     ) -> str:
         """Generate a Google OIDC ID token via Workload Identity Impersonation.
@@ -139,14 +143,14 @@ class AWSGuardDutyIdentityFederation:
         return self._generate_id_token(
             source_creds=source_creds,
             target_principal=self.workload_identity_email,
-            audience=audience,
+            audience=audience or consts.STS_AUDIENCE,
             auth_request=auth_request,
             error_message=(f"No token generated for workload identity email: {self.workload_identity_email}"),
         )
 
     def get_impersonated_sa_token(
         self,
-        audience: str = consts.STS_AUDIENCE,
+        audience: str | None = consts.STS_AUDIENCE,
         auth_request: Request | None = None,
     ) -> str:
         """Generate a Google OIDC ID token via Service Account Impersonation.
@@ -195,14 +199,14 @@ class AWSGuardDutyIdentityFederation:
         return self._generate_id_token(
             source_creds=source_creds,
             target_principal=target_sa,
-            audience=audience,
+            audience=audience or consts.STS_AUDIENCE,
             auth_request=auth_request,
             error_message=(f"No token generated for impersonated service account: {target_sa}"),
         )
 
     def get_standard_sa_token(
         self,
-        audience: str = consts.STS_AUDIENCE,
+        audience: str | None = consts.STS_AUDIENCE,
         auth_request: Request | None = None,
     ) -> str:
         """Generate a Google OIDC ID token from standard Service Account JSON.
@@ -227,7 +231,7 @@ class AWSGuardDutyIdentityFederation:
             msg = "Service Account JSON must be provided."
             raise ValueError(msg)
 
-        target_audience = self.service_account_json.get("client_id") or audience
+        target_audience = audience or self.service_account_json.get("client_id") or consts.STS_AUDIENCE
         self.logger.info(
             f"Generating OIDC token from standard Service Account JSON. Target audience: {target_audience}"
         )
@@ -252,7 +256,7 @@ class AWSGuardDutyIdentityFederation:
 
     def get_gcp_oidc_token(
         self,
-        audience: str = consts.STS_AUDIENCE,
+        audience: str | None = consts.STS_AUDIENCE,
     ) -> str:
         """Generate a Google OIDC ID token (JWT) for the specified audience.
 
@@ -292,7 +296,7 @@ class AWSGuardDutyIdentityFederation:
                 auth_request=auth_request,
             )
 
-        except Exception:
+        except Exception as e:  # noqa: F841
             self.logger.exception("Failed to parse or generate token.")
             raise
 
@@ -311,7 +315,7 @@ class AWSGuardDutyIdentityFederation:
             raise ValueError(msg)
 
         token = self.get_gcp_oidc_token()
-        sts_client = boto3.client("sts", region_name=self.region_name)
+        sts_client = boto3.client("sts", region_name=self.region_name, verify=self.verify_ssl)
 
         # In AWS GuardDuty integration, some of the boto3 interactions use stubs.
         # This function generates an active session.
