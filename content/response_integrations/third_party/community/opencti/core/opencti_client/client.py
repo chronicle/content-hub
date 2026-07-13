@@ -80,7 +80,7 @@ class OpenCTIClient:
                 api_token,
                 ssl_verify=ssl_verify,
             )
-        except ValueError as e:
+        except Exception as e:
             raise OpenCTIClientError(
                 f"Failed to establish connection with OpenCTI: {str(e)}"
             ) from e
