@@ -46,7 +46,7 @@ def convert_date_format(date_str: str) -> str:
     return datetime_obj.isoformat()
 
 
-def get_hash_type(value):
+def get_hash_type(value: str) -> str | None:
     """Infer hash type from a hexadecimal hash string.
 
     Args:
@@ -68,7 +68,7 @@ def get_hash_type(value):
         return None
 
 
-def is_ipv4(value):
+def is_ipv4(value: str) -> bool:
     """Determine whether the provided string is an IPv4 address or valid IPv4 CIDR."""
     try:
         ipaddress.IPv4Address(value)  # Check for individual IP

@@ -27,7 +27,7 @@ class Observable(BaseOCTIObject):
     score: int | None = None
     create_indicator: bool = False
 
-    def _compute_stix_id(self) -> None:
+    def _compute_stix_id(self) -> None:  # type: ignore[override]
         # OpenCTI computes deterministic IDs for observables from observableData.
         # We do not build a deterministic ID client-side for this entity.
         """No deterministic STIX ID is generated client-side for observables."""
