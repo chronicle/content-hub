@@ -889,8 +889,9 @@ class OpenCTIClient:
                 f"Failed to enrich Observable in OpenCTI: {str(e)}"
             ) from e
 
+        base_url = self._api_client.api_url.rstrip("/graphql")
         entity_id = data["id"]
-        link = f"{self._api_client.api_url}/dashboard/id/{entity_id}"
+        link = f"{base_url}/dashboard/id/{entity_id}"
         relationships = self._fetch_relationships(entity_id)
 
         return ObservableEnrichmentResult(
@@ -932,7 +933,8 @@ class OpenCTIClient:
             ) from e
 
         entity_id = data["id"]
-        link = f"{self._api_client.api_url}/dashboard/id/{entity_id}"
+        base_url = self._api_client.api_url.rstrip("/graphql")
+        link = f"{base_url}/dashboard/id/{entity_id}"
         relationships = self._fetch_relationships(entity_id)
 
         return IndicatorEnrichmentResult(
