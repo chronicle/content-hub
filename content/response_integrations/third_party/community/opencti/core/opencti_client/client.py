@@ -85,6 +85,10 @@ class OpenCTIClient:
                 f"Failed to establish connection with OpenCTI: {str(e)}"
             ) from e
 
+    def health_check(self) -> bool:
+        """Verify connectivity and token validity with the OpenCTI server."""
+        return self._api_client.health_check()
+
     def _upsert_vocabulary_entries(self, category: str, *values: str | None) -> None:
         """Ensure vocabulary entries exist in OpenCTI for the provided category values.
 

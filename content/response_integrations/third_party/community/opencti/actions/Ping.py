@@ -29,7 +29,7 @@ class Ping(BaseAction):
         On success the action completes with the ping success message;
         on failure an exception propagates and the framework marks the action as failed.
         """
-        self.api_client._api_client.health_check()
+        self.api_client.health_check()
 
 
 def main() -> None:
