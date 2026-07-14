@@ -162,13 +162,7 @@ class SyncIntegrationCredentialJob(Job):
         self.logger.info("'Sync Integration Credential Job' completed.")
 
     async def _async_main(self) -> None:
-        """Execute the main asynchronous flow.
-
-        Raises:
-            IntegrationCredentialSyncError: If one or more errors occur
-                during credential synchronization.
-
-        """
+        """Execute the main asynchronous flow."""
         await self._init_cyber_ark_pam_client()
         self._load_context()
         async_soar = AsyncChronicleSOAR(self.soar_job)
@@ -179,23 +173,35 @@ class SyncIntegrationCredentialJob(Job):
             await self._sync_integration_instances(api, semaphore)
 
             if self._is_approaching_timeout():
+                self._check_sync_errors_and_raise()
                 return
 
             await self._sync_connectors(api, semaphore)
 
             if self._is_approaching_timeout():
+                self._check_sync_errors_and_raise()
                 return
 
             await self._sync_jobs(api, semaphore)
 
-            if self._sync_errors:
-                summary = "\n".join(f"- {err}" for err in self._sync_errors)
-                msg = f"Credential synchronization completed with one or more errors:\n{summary}"
-                raise IntegrationCredentialSyncError(msg)
+            self._check_sync_errors_and_raise()
         finally:
             self._save_context()
             self.logger.info("Closing async client session.")
             await async_soar.close()
+
+    def _check_sync_errors_and_raise(self) -> None:
+        """Raise IntegrationCredentialSyncError if any errors occurred.
+
+        Raises:
+            IntegrationCredentialSyncError: If one or more errors occur
+                during credential synchronization.
+
+        """
+        if self._sync_errors:
+            summary: str = "\n".join(f"- {err}" for err in self._sync_errors)
+            msg: str = f"Credential synchronization completed with one or more errors:\n{summary}"
+            raise IntegrationCredentialSyncError(msg)
 
     def _load_context(self) -> None:
         """Load job context property from SOAR platform."""
@@ -210,8 +216,8 @@ class SyncIntegrationCredentialJob(Job):
             return
 
         try:
-            loaded = yaml.safe_load(context_str)
-        except yaml.YAMLError as e:
+            loaded = json.loads(context_str)
+        except json.JSONDecodeError as e:
             self.logger.warn(f"Failed to parse job context: {e}. Starting fresh.")
             self.state_context = {}
             return
@@ -309,7 +315,7 @@ class SyncIntegrationCredentialJob(Job):
 
         return False
 
-    async def _resolve_account_and_version(self, mapped_value: str) -> tuple[str, int | None]:
+    def _resolve_account_and_version(self, mapped_value: str) -> tuple[str, int | None]:
         """Parse the mapped string, resolving account_id and version.
 
         Args:
@@ -488,7 +494,7 @@ class SyncIntegrationCredentialJob(Job):
         """
         for param_name, mapped_value in param_mapping.items():
             context: str = f"param '{param_name}' on instance '{name}' (id: {identifier})"
-            account_id, version_id = await self._resolve_account_and_version(mapped_value)
+            account_id, version_id = self._resolve_account_and_version(mapped_value)
 
             state_key: str = f"instance:{identifier}:{param_name}"
             state_val: str = f"{mapped_value}::{version_id}"
@@ -651,7 +657,7 @@ class SyncIntegrationCredentialJob(Job):
         """
         for param_name, mapped_value in param_mapping.items():
             context: str = f"param '{param_name}' on connector '{name}' (id: {identifier})"
-            account_id, version_id = await self._resolve_account_and_version(mapped_value)
+            account_id, version_id = self._resolve_account_and_version(mapped_value)
 
             state_key: str = f"connector:{identifier}:{param_name}"
             state_val: str = f"{mapped_value}::{version_id}"
@@ -810,11 +816,13 @@ class SyncIntegrationCredentialJob(Job):
 
         param_index: SingleJson = self._build_param_index(parameters)
 
+        pending_state_updates: dict[str, str] = {}
         updated_count: int = await self._apply_secrets_to_params(
             job_name,
             param_mapping,
             parameters,
             param_index,
+            pending_state_updates,
         )
 
         if updated_count == 0:
@@ -823,6 +831,7 @@ class SyncIntegrationCredentialJob(Job):
 
         job_data["parameters"] = parameters
         await self._persist_job(api, job_name, job_data, updated_count)
+        self.state_context.update(pending_state_updates)
 
     async def _resolve_job_data(
         self,
@@ -948,6 +957,7 @@ class SyncIntegrationCredentialJob(Job):
         param_mapping: SingleJson,
         parameters: list[SingleJson],
         param_index: dict[str, int],
+        pending_state_updates: dict[str, str],
     ) -> int:
         """Fetch passwords and swap values into the parameters list.
 
@@ -956,6 +966,7 @@ class SyncIntegrationCredentialJob(Job):
             param_mapping (SingleJson): Map of param name → account ID.
             parameters (list[SingleJson]): The mutable parameter list.
             param_index (dict[str, int]): Name → index lookup.
+            pending_state_updates (dict[str, str]): State updates to apply after save.
 
         Returns:
             The number of parameters successfully updated.
@@ -974,7 +985,7 @@ class SyncIntegrationCredentialJob(Job):
                 continue
 
             context: str = f"param '{param_name}' on job '{job_name}'"
-            account_id, version_id = await self._resolve_account_and_version(mapped_value)
+            account_id, version_id = self._resolve_account_and_version(mapped_value)
 
             state_key: str = f"job:{job_name}:{param_name}"
             state_val: str = f"{mapped_value}::{version_id}"
@@ -994,7 +1005,7 @@ class SyncIntegrationCredentialJob(Job):
             idx: int = param_index[param_name]
             parameters[idx]["value"] = secret_value
             updated_count += 1
-            self.state_context[state_key] = state_val
+            pending_state_updates[state_key] = state_val
             self.logger.info(
                 f"Set '{param_name}' on job '{job_name}' from account '{mask_id(account_id)}' (version '{version_id}')."
             )

@@ -25,6 +25,7 @@ import pytest
 from cyber_ark_pam.core.exceptions import (
     IntegrationCredentialSyncError,
     InvalidConfigurationError,
+    JobSaveError,
 )
 from cyber_ark_pam.jobs.sync_integration_credential_job import (
     SyncIntegrationCredentialJob,
@@ -150,32 +151,29 @@ class TestValidateParams:
 class TestResolveAccountAndVersion:
     """Tests for _resolve_account_and_version."""
 
-    @pytest.mark.anyio
-    async def test_explicit_version(self) -> None:
+    def test_explicit_version(self) -> None:
         """'accounts/123_45/versions/3' returns ('123_45', 3)."""
         job = _make_job()
 
-        account_id, version_id = await job._resolve_account_and_version(
+        account_id, version_id = job._resolve_account_and_version(
             "accounts/123_45/versions/3",
         )
 
         assert account_id == "123_45"
         assert version_id == 3
 
-    @pytest.mark.anyio
-    async def test_no_version(self) -> None:
+    def test_no_version(self) -> None:
         """'accounts/123_45' returns ('123_45', None)."""
         job = _make_job()
 
-        account_id, version_id = await job._resolve_account_and_version(
+        account_id, version_id = job._resolve_account_and_version(
             "accounts/123_45",
         )
 
         assert account_id == "123_45"
         assert version_id is None
 
-    @pytest.mark.anyio
-    async def test_invalid_format_raises(self) -> None:
+    def test_invalid_format_raises(self) -> None:
         """Raises InvalidConfigurationError on invalid format."""
         job = _make_job()
 
@@ -183,7 +181,7 @@ class TestResolveAccountAndVersion:
             InvalidConfigurationError,
             match="Invalid credential mapping format",
         ):
-            await job._resolve_account_and_version("invalid/path")
+            job._resolve_account_and_version("invalid/path")
 
 
 # -------------------------------------------------------------------
@@ -416,6 +414,63 @@ class TestSkippingLogic:
         )
         assert job.state_context["instance:inst_id:param_x"] == "accounts/123/versions/2::2"
 
+    @pytest.mark.anyio
+    async def test_update_single_job_state_updates_on_success(self) -> None:
+        """State is updated when job update successfully persists."""
+        job = _make_job()
+        job.state_context = {}
+        mock_api = AsyncMock()
+        job._fetch_secret_value_pre_resolved = AsyncMock(return_value="new-secret")
+
+        param_mapping = {"API Key": "accounts/999_88"}
+        parameters = [{"displayName": "API Key", "value": "old"}]
+        name_to_job = {
+            "Sync Job": {
+                "name": "Sync Job",
+                "id": "Job_1",
+                "parameters": parameters,
+            }
+        }
+
+        await job._update_single_job(
+            api=mock_api,
+            job_name="Sync Job",
+            param_mapping=param_mapping,
+            name_to_job=name_to_job,
+        )
+
+        mock_api.save_or_update_job.assert_called_once()
+        assert job.state_context["job:Sync Job:API Key"] == "accounts/999_88::None"
+
+    @pytest.mark.anyio
+    async def test_update_single_job_state_not_updated_on_failure(self) -> None:
+        """State is not updated if saving the job fails."""
+        job = _make_job()
+        job.state_context = {}
+        mock_api = AsyncMock()
+        mock_api.save_or_update_job.side_effect = JobSaveError("Failed to save")
+        job._fetch_secret_value_pre_resolved = AsyncMock(return_value="new-secret")
+
+        param_mapping = {"API Key": "accounts/999_88"}
+        parameters = [{"displayName": "API Key", "value": "old"}]
+        name_to_job = {
+            "Sync Job": {
+                "name": "Sync Job",
+                "id": "Job_1",
+                "parameters": parameters,
+            }
+        }
+
+        with pytest.raises(JobSaveError):
+            await job._update_single_job(
+                api=mock_api,
+                job_name="Sync Job",
+                param_mapping=param_mapping,
+                name_to_job=name_to_job,
+            )
+
+        assert "job:Sync Job:API Key" not in job.state_context
+
 
 # -------------------------------------------------------------------
 # Secret Fetch Caching & Timeout
@@ -476,6 +531,36 @@ class TestTimeoutHandling:
         # Mock start time as 10 hours ago
         job.job_start_time = int(time.time() * 1000) - (10 * 60 * 60 * 1000)
         assert job._is_approaching_timeout() is True
+
+    @pytest.mark.anyio
+    async def test_timeout_raises_if_errors_exist(self) -> None:
+        """Raises IntegrationCredentialSyncError on timeout if preceding errors exist."""
+        job = _make_job()
+        job._soar_job = MagicMock()
+        job._sync_errors = ["Some integration sync error"]
+
+        with (
+            patch.object(job, "_is_approaching_timeout", return_value=True),
+            patch.object(job, "_init_cyber_ark_pam_client"),
+            patch.object(job, "_load_context"),
+            patch.object(job, "_save_context"),
+            patch(
+                "cyber_ark_pam.jobs.sync_integration_credential_job.AsyncChronicleSOAR"
+            ) as mock_soar_cls,
+            patch(
+                "cyber_ark_pam.jobs.sync_integration_credential_job.AsyncMarketplaceApi"
+            ) as mock_market_cls,
+        ):
+            mock_soar = AsyncMock()
+            mock_soar_cls.return_value = mock_soar
+            mock_market = AsyncMock()
+            mock_market_cls.return_value = mock_market
+
+            # Mock the sync methods called before timeout checks
+            job._sync_integration_instances = AsyncMock()
+
+            with pytest.raises(IntegrationCredentialSyncError):
+                await job._async_main()
 
 
 # -------------------------------------------------------------------
