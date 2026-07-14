@@ -14,8 +14,14 @@
 
 """Exceptions for CyberArk PAM."""
 
+from __future__ import annotations
 
-class CyberArkPamManagerError(Exception):
+
+class CyberArkPamError(Exception):
+    """Top-level base exception for all CyberArk PAM integration errors."""
+
+
+class CyberArkPamManagerError(CyberArkPamError):
     """General Exception for CyberArk PAM manager."""
 
 
@@ -27,7 +33,7 @@ class CyberArkPamAccountNotManagedError(CyberArkPamManagerError):
     """Account Not Managed Exception for CyberArk PAM manager."""
 
 
-class CyberArkPamSyncJobError(Exception):
+class CyberArkPamSyncJobError(CyberArkPamError):
     """Base exception for the CyberArk PAM sync credential job."""
 
 

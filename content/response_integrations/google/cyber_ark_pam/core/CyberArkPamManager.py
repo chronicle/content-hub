@@ -33,20 +33,18 @@ from cryptography.hazmat.primitives.serialization.pkcs12 import (
 )
 from requests_toolbelt.adapters.x509 import X509Adapter
 
-from .CyberArkPamParser import CyberArkPamParser
-from .datamodels import ListAccountsQuery
 from .constants import (
     CA_CERT_PATH,
     GET_TOKEN_TIMEOUT,
     MAX_RETRIES,
     URLS,
 )
+from .CyberArkPamParser import CyberArkPamParser
+from .datamodels import ListAccountsQuery
 from .exceptions import CyberArkPamManagerError
 from .utils import validate_response
 
 if TYPE_CHECKING:
-    from TIPCommon.types import SingleJson
-
     from .datamodels import Account
 
 

@@ -16,8 +16,10 @@ from __future__ import annotations
 
 import re
 
+# Integration identifier
 INTEGRATION_NAME: str = "CyberArk PAM"
 
+# Manager configuration
 CA_CERT_PATH: str = "cacert.pem"
 URLS: dict[str, str] = {
     "get_access_token": "/PasswordVault/API/Auth/CyberArk/Logon",
@@ -27,16 +29,24 @@ URLS: dict[str, str] = {
 }
 MAX_RETRIES: int = 1
 GET_TOKEN_TIMEOUT: int = 60
+
+# Masking configurations
 MIN_MASK_LENGTH: int = 6
 
+# Sync Credential Job constants
 ACCOUNTS_PATTERN: re.Pattern = re.compile(
     r"^accounts/(?P<account>[^/]+)(?:/versions/(?P<version>\d+))?$"
 )
-
-ANY_INTEGRATION_FILTER_VALUE: str = "-"
-ASYNC_SEMAPHORE_LIMIT: int = 10
-CONNECTORS_KEY: str = "connectors"
-INTEGRATION_INSTANCES_KEY: str = "integration_instances"
-JOBS_KEY: str = "jobs"
-TIMEOUT_THRESHOLD_MS: int = 1000 * 540
 SYNC_CREDENTIAL_JOB_SCRIPT_NAME: str = "Sync Integration Credential Job"
+
+# Credential mapping JSON keys
+INTEGRATION_INSTANCES_KEY: str = "integration_instances"
+CONNECTORS_KEY: str = "connectors"
+JOBS_KEY: str = "jobs"
+
+# API filter values
+ANY_INTEGRATION_FILTER_VALUE: str = "-"
+
+# Async concurrency control
+ASYNC_SEMAPHORE_LIMIT: int = 10
+TIMEOUT_THRESHOLD_MS: int = 1000 * 540

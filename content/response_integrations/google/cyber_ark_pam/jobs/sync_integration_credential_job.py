@@ -15,11 +15,13 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import dataclasses
 import json
 import time
 from itertools import starmap
 from operator import itemgetter
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import yaml
 from TIPCommon.base.job import Job
@@ -28,17 +30,6 @@ from TIPCommon.rest.async_soar_platform_clients.soar_api_client import (
     AsyncMarketplaceApi,
 )
 
-from ..core.CyberArkPamManager import CyberArkPamManager
-from ..core.utils import build_lookup_with_warnings, mask_id
-from ..core.exceptions import (
-    CyberArkPamNotFoundError,
-    IntegrationCredentialSyncError,
-    InvalidConfigurationError,
-    JobFetchError,
-    JobSaveError,
-    ParameterUpdateError,
-    SecretAccessError,
-)
 from ..core.constants import (
     ACCOUNTS_PATTERN,
     ANY_INTEGRATION_FILTER_VALUE,
@@ -49,21 +40,30 @@ from ..core.constants import (
     SYNC_CREDENTIAL_JOB_SCRIPT_NAME,
     TIMEOUT_THRESHOLD_MS,
 )
+from ..core.CyberArkPamManager import CyberArkPamManager
+from ..core.exceptions import (
+    CyberArkPamNotFoundError,
+    IntegrationCredentialSyncError,
+    InvalidConfigurationError,
+    JobFetchError,
+    JobSaveError,
+    ParameterUpdateError,
+    SecretAccessError,
+)
+from ..core.utils import build_lookup_with_warnings, mask_id
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
     from TIPCommon.base.interfaces import ScriptLogger
     from TIPCommon.types import SingleJson
 
 NameIdentifierMap = dict[str, str]
 
 
+@dataclasses.dataclass
 class LoggerWrapper:
     """Wraps ScriptLogger to match standard siemplify.LOGGER attribute access."""
 
-    def __init__(self, logger: ScriptLogger) -> None:
-        self.LOGGER = logger
+    LOGGER: ScriptLogger
 
 
 class SyncIntegrationCredentialJob(Job):
@@ -260,10 +260,10 @@ class SyncIntegrationCredentialJob(Job):
             self.logger.info(f"Using cached payload for account '{mask_id(account_id)}' (version '{version_id}').")
             return self._secret_cache[cache_key]
 
-        try:
-            ticket_id_raw = getattr(self.params, "ticket_id", None)
-            ticket_id = int(ticket_id_raw) if ticket_id_raw and str(ticket_id_raw).isdigit() else None
+        ticket_id_raw = getattr(self.params, "ticket_id", None)
+        ticket_id = int(ticket_id_raw) if ticket_id_raw and str(ticket_id_raw).isdigit() else None
 
+        try:
             password: str = await asyncio.to_thread(
                 self.cyber_ark_manager.get_password,
                 account=account_id,
@@ -272,18 +272,22 @@ class SyncIntegrationCredentialJob(Job):
                 ticket_id=ticket_id,
                 version=version_id,
             )
-
-            # API response might be a JSON string like "password_value"
-            try:
-                password = json.loads(password)
-            except json.JSONDecodeError:
-                pass
         except CyberArkPamNotFoundError as e:
-            msg = f"Account '{mask_id(account_id)}' (version '{version_id}') not found for {context_label}: {e}"
+            msg = (
+                f"Account '{mask_id(account_id)}' (version '{version_id}') "
+                f"not found for {context_label}: {e}"
+            )
             raise SecretAccessError(msg) from e
         except Exception as e:
-            msg = f"Failed to fetch password for account '{mask_id(account_id)}' (version '{version_id}') for {context_label}: {e}"
+            msg = (
+                f"Failed to fetch password for account '{mask_id(account_id)}' "
+                f"(version '{version_id}') for {context_label}: {e}"
+            )
             raise SecretAccessError(msg) from e
+
+        # API response might be a JSON string like "password_value"
+        with contextlib.suppress(json.JSONDecodeError):
+            password = json.loads(password)
 
         self._secret_cache[cache_key] = password
         return password
@@ -334,7 +338,9 @@ class SyncIntegrationCredentialJob(Job):
         version_str = gd["version"]
         version = int(version_str) if version_str is not None else None
 
-        self.logger.info(f"Resolved mapped value '{mapped_value}' to account '{mask_id(account)}' (version '{version}').")
+        self.logger.info(
+            f"Resolved mapped value '{mapped_value}' to account '{mask_id(account)}' (version '{version}')."
+        )
         return account, version
 
     async def _sync_integration_instances(
