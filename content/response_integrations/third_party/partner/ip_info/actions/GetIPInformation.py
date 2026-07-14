@@ -31,6 +31,34 @@ PROVIDER = "IPInfo"
 INTEGRATION_PREFIX = "IPInfo"
 
 
+def normalize_bundle_payload(ip_information):
+    """
+    Normalize a bundle response so it conforms to the unified JSON result schema.
+
+    Bundles disagree on the type of the ``asn`` field: the Lite bundle returns it
+    as a flat string (e.g. "AS13335") while the Legacy bundle returns it as an
+    object. To keep a single JSON result schema (see
+    resources/GetIPInformation_JsonResult_example.json) ``asn`` is always emitted
+    as an object; the Lite string is folded into it alongside the flat
+    ``as_name``/``as_domain`` fields. Core/Plus/Max expose AS data under a
+    separate ``as`` object and are left untouched.
+
+    Args:
+        ip_information: Raw per-IP payload from IPInfo. Mutated in place.
+
+    Returns:
+        The same dict, with ``asn`` normalized to an object when needed.
+    """
+    asn = ip_information.get("asn")
+    if isinstance(asn, str):
+        ip_information["asn"] = {
+            "asn": asn,
+            "name": ip_information.get("as_name"),
+            "domain": ip_information.get("as_domain"),
+        }
+    return ip_information
+
+
 def enrich_legacy(ipinfo_manager, siemplify, ip_entities):
     """
     Enrich ADDRESS entities one-by-one via the IPInfo legacy per-IP endpoint.
@@ -131,10 +159,14 @@ def enrich_batch(ipinfo_manager, siemplify, ip_entities, bundle):
                 errors.append(error_message)
                 continue
             elif not isinstance(ip_information, dict):
-                error_message = f"Failed fetching information for {entity.identifier}, unexpected response type: {type(ip_information)}"
+                error_message = (
+                    f"Failed fetching information for {entity.identifier}, "
+                    f"unexpected response type: {type(ip_information)}"
+                )
                 siemplify.LOGGER.error(error_message)
                 errors.append(error_message)
                 continue
+            ip_information = normalize_bundle_payload(ip_information)
             json_results[entity.identifier] = ip_information
             flat_info = dict_to_flat(ip_information)
             entity.additional_properties.update(add_prefix_to_dict(flat_info, INTEGRATION_PREFIX))
