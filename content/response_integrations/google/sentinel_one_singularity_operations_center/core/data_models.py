@@ -79,17 +79,24 @@ class SentinelOneAlert(BaseAlert):
 
     @property
     def updated_at(self) -> str | None:
-        """The alert tracking timestamp string, prioritizing details updatedAt."""
+        """The alert update timestamp string."""
         if self.details:
-            return self.details.updated_at or self.details.created_at
-        return self.raw_data.get("updatedAt") or self.raw_data.get("createdAt")
+            return self.details.updated_at
+        return self.raw_data.get("updatedAt")
 
     @property
     def created_at(self) -> str | None:
-        """The alert creation timestamp string, prioritizing details createdAt."""
+        """The alert creation timestamp string."""
         if self.details:
-            return self.details.created_at or self.details.detected_at
-        return self.raw_data.get("createdAt") or self.raw_data.get("detectedAt")
+            return self.details.created_at
+        return self.raw_data.get("createdAt")
+
+    @property
+    def last_seen_at(self) -> str | None:
+        """The alert last seen timestamp string."""
+        if self.details:
+            return self.details.last_seen_at
+        return self.raw_data.get("lastSeenAt")
 
     @property
     def observables(self) -> list[AlertObservable]:
@@ -174,8 +181,8 @@ class SentinelOneAlert(BaseAlert):
             else last_success_timestamp
         )
 
-        updated_at_str = self.updated_at
-        dt_end = dateutil.parser.parse(updated_at_str) if updated_at_str else dt_start
+        last_seen_at_str = self.last_seen_at
+        dt_end = dateutil.parser.parse(last_seen_at_str) if last_seen_at_str else dt_start
 
         alert_info.start_time = convert_datetime_to_unix_time(dt_start)
         alert_info.end_time = convert_datetime_to_unix_time(dt_end)
@@ -188,11 +195,11 @@ class SentinelOneAlert(BaseAlert):
         if self.details:
             events.append(self.details.as_event())
 
-        events.extend(obs.as_event(self.updated_at) for obs in self.observables)
+        events.extend(obs.as_event(self.last_seen_at) for obs in self.observables)
 
-        events.extend(ind.as_event(self.updated_at) for ind in self.indicators)
+        events.extend(ind.as_event(self.last_seen_at) for ind in self.indicators)
 
-        events.extend(asset.as_event(self.updated_at) for asset in self.assets)
+        events.extend(asset.as_event(self.last_seen_at) for asset in self.assets)
 
         alert_info.events = events
 
@@ -330,18 +337,18 @@ class AlertObservable:
         """The observable type."""
         return self.raw_data.get("type")
 
-    def as_event(self, alert_updated_at: str | None) -> dict:
+    def as_event(self, alert_timestamp: str | None) -> dict:
         """Serialize observable to a flat Siemplify event dictionary.
 
         Args:
-            alert_updated_at (str, optional): The timestamp when the alert was updated.
+            alert_timestamp (str, optional): The timestamp of the alert.
 
         Returns:
             dict: The flattened event dictionary.
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.OBSERVABLE.value
-        data[LAST_SEEN_AT_FIELD] = alert_updated_at
+        data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt") or data.get("createdAt")
         if self.name:
             data[self.name] = self.value
         return dict_to_flat(data)
@@ -368,18 +375,18 @@ class AlertIndicator:
         """The indicator type."""
         return self.raw_data.get("type")
 
-    def as_event(self, alert_updated_at: str | None) -> dict:
+    def as_event(self, alert_timestamp: str | None) -> dict:
         """Serialize indicator to a flat Siemplify event dictionary.
 
         Args:
-            alert_updated_at (str, optional): The timestamp when the alert was updated.
+            alert_timestamp (str, optional): The timestamp of the alert.
 
         Returns:
             dict: The flattened event dictionary.
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.INDICATOR.value
-        data[LAST_SEEN_AT_FIELD] = alert_updated_at
+        data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt") or data.get("createdAt")
         return dict_to_flat(data)
 
 
@@ -404,18 +411,18 @@ class AlertAsset:
         """The asset type."""
         return self.raw_data.get("type")
 
-    def as_event(self, alert_updated_at: str | None) -> dict:
+    def as_event(self, alert_timestamp: str | None) -> dict:
         """Serialize asset to a flat Siemplify event dictionary.
 
         Args:
-            alert_updated_at (str, optional): The timestamp when the alert was updated.
+            alert_timestamp (str, optional): The timestamp of the alert.
 
         Returns:
             dict: The flattened event dictionary.
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.ASSET.value
-        data[LAST_SEEN_AT_FIELD] = alert_updated_at
+        data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt") or data.get("createdAt")
         return dict_to_flat(data)
 
 

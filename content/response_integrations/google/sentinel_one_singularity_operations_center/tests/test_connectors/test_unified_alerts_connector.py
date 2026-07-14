@@ -216,16 +216,18 @@ def test_id_cache_cleanup_optimization(
         property_value=json.dumps(dummy_ids),
     )
 
-    # Modify mock alert's list and details updatedAt to be newer (current time)
+    # Modify mock alert's list and details lastSeenAt to be newer (current time)
     new_timestamp_str = arrow.utcnow().format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z"
     new_alert_data = copy.deepcopy(sentinelone.alerts[0])
     new_alert_data["node"]["updatedAt"] = new_timestamp_str
+    new_alert_data["node"]["lastSeenAt"] = new_timestamp_str
     sentinelone.alerts = [new_alert_data]
 
     new_details = copy.deepcopy(
         sentinelone.details["019d114e-e4f4-7ad6-82c3-9829b6d0a801"]
     )
     new_details["updatedAt"] = new_timestamp_str
+    new_details["lastSeenAt"] = new_timestamp_str
     sentinelone.details["019d114e-e4f4-7ad6-82c3-9829b6d0a801"] = new_details
 
     connector = UnifiedAlertsConnector(is_test)
@@ -343,13 +345,14 @@ def test_alert_updates_supported(
         ),
     )
 
-    # Modify mock alert's list and details updatedAt to be newer (15 minutes ago)
+    # Modify mock alert's list and details lastSeenAt to be newer (15 minutes ago)
     new_timestamp_str = (
         arrow.utcnow().shift(minutes=-15).format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z"
     )
 
     new_alert_data = copy.deepcopy(sentinelone.alerts[0])
     new_alert_data["node"]["updatedAt"] = new_timestamp_str
+    new_alert_data["node"]["lastSeenAt"] = new_timestamp_str
     new_alert_data["node"]["status"] = "IN_PROGRESS"
     new_alert_data["node"]["analystVerdict"] = "TRUE_POSITIVE_MALWARE"
     sentinelone.alerts = [new_alert_data]
@@ -358,6 +361,7 @@ def test_alert_updates_supported(
         sentinelone.details["019d114e-e4f4-7ad6-82c3-9829b6d0a801"]
     )
     new_details["updatedAt"] = new_timestamp_str
+    new_details["lastSeenAt"] = new_timestamp_str
     new_details["status"] = "IN_PROGRESS"
     new_details["analystVerdict"] = "TRUE_POSITIVE_MALWARE"
     sentinelone.details["019d114e-e4f4-7ad6-82c3-9829b6d0a801"] = new_details
@@ -399,15 +403,7 @@ def test_build_unified_alerts_or_filter_omits_severity_for_info() -> None:
             {
                 "and": [
                     {
-                        "fieldId": "createdAt",
-                        "dateTimeRange": {"start": 1000, "end": None},
-                    }
-                ]
-            },
-            {
-                "and": [
-                    {
-                        "fieldId": "updatedAt",
+                        "fieldId": "lastSeenAt",
                         "dateTimeRange": {"start": 1000, "end": None},
                     }
                 ]
@@ -426,4 +422,3 @@ def test_build_unified_alerts_or_filter_omits_severity_for_info() -> None:
         "stringIn": {"values": ["MEDIUM", "HIGH", "CRITICAL"]},
     }
     assert expected_severity_filter in filter_medium["or"][0]["and"]
-    assert expected_severity_filter in filter_medium["or"][1]["and"]

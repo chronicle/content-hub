@@ -147,10 +147,10 @@ class UnifiedAlertsConnector(Connector):
                 del self.context.existing_ids[key]
 
     def store_alert_in_cache(self, processed_alert: SentinelOneAlert) -> None:
-        """Store processed alert ID and its updated timestamp in cache."""
+        """Store processed alert ID and its lastSeenAt timestamp in cache."""
         self.context.existing_ids[processed_alert.alert_id] = (
             convert_datetime_to_unix_time(
-                dateutil.parser.parse(processed_alert.updated_at)
+                dateutil.parser.parse(processed_alert.last_seen_at)
             )
         )
         if len(self.context.existing_ids) > MAX_CACHE_SIZE:
@@ -176,10 +176,10 @@ class UnifiedAlertsConnector(Connector):
         )
 
     def set_last_success_time(self, alerts: list[SentinelOneAlert]) -> None:
-        """Save the updated success timestamp based on createdAt to prevent horizon leaps."""
+        """Save the updated success timestamp based on lastSeenAt to prevent horizon leaps."""
         super().set_last_success_time(
             alerts=alerts,
-            timestamp_key="created_at",
+            timestamp_key="last_seen_at",
             convert_a_string_timestamp_to_unix=True,
         )
 
@@ -210,16 +210,16 @@ class UnifiedAlertsConnector(Connector):
         )
 
     def _is_unprocessed(self, alert: SentinelOneAlert) -> bool:
-        """Check if an alert is new or has been updated since last fetch.
+        """Check if an alert is new or has been updated/reseen since last fetch.
 
         Args:
             alert (SentinelOneAlert): The alert to check.
 
         Returns:
-            bool: True if alert is new or updated, False otherwise.
+            bool: True if alert is new or updated/reseen, False otherwise.
         """
         return convert_datetime_to_unix_time(
-            dateutil.parser.parse(alert.updated_at)
+            dateutil.parser.parse(alert.last_seen_at)
         ) > self.context.existing_ids.get(alert.alert_id, -1)
 
     def get_alerts(self) -> list[SentinelOneAlert]:

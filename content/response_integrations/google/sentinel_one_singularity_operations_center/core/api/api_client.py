@@ -149,26 +149,17 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
                 return None
             return {"or": [{"and": common_filters}]}
 
-        branch_created = {
+        branch_last_seen = {
             "and": [
                 {
-                    "fieldId": "createdAt",
-                    "dateTimeRange": {"start": start_timestamp_ms, "end": None},
-                },
-                *common_filters,
-            ]
-        }
-        branch_updated = {
-            "and": [
-                {
-                    "fieldId": "updatedAt",
+                    "fieldId": "lastSeenAt",
                     "dateTimeRange": {"start": start_timestamp_ms, "end": None},
                 },
                 *common_filters,
             ]
         }
 
-        return {"or": [branch_created, branch_updated]}
+        return {"or": [branch_last_seen]}
 
     def _fetch_pages(
         self,
@@ -238,7 +229,7 @@ class SentinelOneSingularityOperationsCenterApiClient(Apiable):
             "first": self.PAGE_SIZE,
             "viewType": "ALL",
             "orFilter": or_filter,
-            "sorts": [{"by": "createdAt", "order": "ASC"}],
+            "sorts": [{"by": "lastSeenAt", "order": "ASC"}],
         }
 
         pages_gen = self._fetch_pages(
