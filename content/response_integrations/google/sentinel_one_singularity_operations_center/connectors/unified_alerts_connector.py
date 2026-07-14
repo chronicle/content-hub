@@ -53,7 +53,12 @@ PRUNED_CACHE_SIZE = 1000
 
 
 class UnifiedAlertsConnector(Connector):
-    """SentinelOne Singularity Operations Center Connector."""
+    """SentinelOne Singularity Operations Center Connector.
+
+    Fetches unified alerts from SentinelOne using GraphQL. Checkpointing is based on
+    the `lastSeenAt` timestamp to ensure accurate tracking across alert updates and creations,
+    with processed alert IDs and timestamps cached to prevent duplicate ingestion.
+    """
 
     def __init__(self, is_test_connector_run: bool) -> None:  # noqa: FBT001
         super().__init__(CONNECTOR_SCRIPT_NAME, is_test_connector_run)
