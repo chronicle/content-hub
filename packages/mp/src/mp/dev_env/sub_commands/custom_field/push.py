@@ -23,7 +23,7 @@ import typer
 
 import mp.core.file_utils
 from mp.dev_env.sub_commands.push import push_app
-from mp.dev_env.utils import find_entity_identifier, get_backend_api, load_dev_env_config
+from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -32,18 +32,58 @@ logger: logging.Logger = logging.getLogger(__name__)
 @push_app.command(name="custom-field")
 @track_command
 def push_custom_field(  # noqa: C901, PLR0915
-    field_file_or_name: Annotated[str, typer.Argument(help="The custom field YAML file path or name to push.")],
+    field_file_or_name: Annotated[
+        str | None, typer.Argument(help="The custom field YAML file path or name to push.")
+    ] = None,
+    *,
+    push_all: Annotated[
+        bool,
+        typer.Option(
+            "--all",
+            help="Push all custom fields from the local directory to the environment.",
+        ),
+    ] = False,
+    allow_create: Annotated[
+        bool,
+        typer.Option(
+            "--allow-create",
+            help="Allow creating new custom fields if they do not exist on the platform.",
+        ),
+    ] = False,
 ) -> None:
-    """Push a custom field to the SOAR environment.
+    """Push custom field(s) to the SOAR environment.
 
     Raises:
         typer.Exit: If the push fails.
 
     """
+    if field_file_or_name is None and not push_all:
+        logger.error("You must specify either a custom field name/file, or use the --all flag.")
+        raise typer.Exit(1)
+
+    custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
+
+    if push_all:
+        logger.info("Pushing all custom fields from '%s'...", custom_fields_root)
+        if not custom_fields_root.exists() or not custom_fields_root.is_dir():
+            logger.error("Custom fields directory not found.")
+            raise typer.Exit(1)
+        
+        yaml_files = list(custom_fields_root.glob("*.yaml")) + list(custom_fields_root.glob("*.yml"))
+        if not yaml_files:
+            logger.info("No custom field files found to push.")
+            return
+
+        for f in yaml_files:
+            _push_single_custom_field(f, allow_create)
+        
+        logger.info("Successfully finished pushing all custom fields.")
+        return
+
+    # Standard single push
     field_file = Path(field_file_or_name)
     if not field_file.is_file():
         # Try resolving by name in the default custom fields directory
-        custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
         safe_name = field_file_or_name.replace("/", "_").replace(" ", "_")
         candidate_file = custom_fields_root / f"{safe_name}.yaml"
         if candidate_file.is_file():
@@ -51,8 +91,12 @@ def push_custom_field(  # noqa: C901, PLR0915
         else:
             logger.error("Custom field file not found at '%s' or '%s'", field_file_or_name, candidate_file)
             raise typer.Exit(1)
+    
+    _push_single_custom_field(field_file, allow_create)
 
-    logger.info("Loading custom field YAML...")
+
+def _push_single_custom_field(field_file: Path, allow_create: bool) -> None:
+    logger.info("Loading custom field YAML from '%s'...", field_file)
     try:
         field_data = mp.core.file_utils.load_yaml_file(field_file)
     except Exception as e:
@@ -73,21 +117,25 @@ def push_custom_field(  # noqa: C901, PLR0915
         logger.exception("Failed to fetch installed custom fields")
         raise typer.Exit(1) from e
 
-    field_name = field_data.get("name")
+    field_name = field_data.get("displayName")
     if not field_name:
-        logger.error("Custom field data is missing a 'name' field.")
+        logger.error("Custom field data is missing a 'displayName' field.")
         raise typer.Exit(1)
 
     existing_id = None
-    with contextlib.suppress(typer.Exit):
-        existing_id = find_entity_identifier(field_name, installed_fields, "Custom Field")
+    for field in installed_fields:
+        if str(field.get("displayName")).lower() == field_name.lower():
+            existing_id = field.get("id")
+            break
 
     if existing_id is not None:
         logger.info("Updating existing custom field (ID: %s)...", existing_id)
-        # Avoid trying to mutate id in the patch payload unless strictly required,
-        # but passing it doesn't usually hurt.
         try:
             numeric_id = int(existing_id)
+            # Update the payload with the target environment's ID and name
+            field_data["id"] = numeric_id
+            field_data["name"] = f"projects//locations//instances//customFields/{numeric_id}"
+            
             backend_api.update_custom_field(numeric_id, field_data)
         except (ValueError, TypeError) as e:
             logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
@@ -96,6 +144,10 @@ def push_custom_field(  # noqa: C901, PLR0915
             logger.exception("Failed to update custom field '%s'", field_name)
             raise typer.Exit(1) from e
     else:
+        if not allow_create:
+            logger.error("Custom field '%s' not found on the platform. Skipping because --allow-create was not specified.", field_name)
+            raise typer.Exit(1)
+            
         logger.info("Creating new custom field...")
         try:
             backend_api.create_custom_field(field_data)

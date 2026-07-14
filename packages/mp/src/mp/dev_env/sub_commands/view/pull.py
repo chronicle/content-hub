@@ -98,7 +98,7 @@ def download_and_deconstruct_view(backend_api: BackendAPI, view_identifier: str,
         raise typer.Exit(1)
 
     try:
-        normalized_view_data = _normalize_downloaded_view(built_view_data)
+        normalized_view_data = _normalize_downloaded_view(built_view_data, backend_api)
         overview = Overview.from_built(normalized_view_data)
         logger.info("Deconstructing view to %s...", dst)
         deconstructor = ViewDeconstructor(overview, dst)
@@ -108,23 +108,53 @@ def download_and_deconstruct_view(backend_api: BackendAPI, view_identifier: str,
         raise typer.Exit(1) from e
 
 
-def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
+def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAPI) -> BuiltOverview:
     """Normalize flat camelCase view payload from SOAR REST API into BuiltOverview.
 
     Args:
         flat_view: The flat camelCase dictionary representing the view downloaded from SOAR.
+        backend_api: The backend API client to fetch installed entities like Custom Fields.
 
     Returns:
         The normalized BuiltOverview structure.
 
     """
+    installed_cf = []
+    try:
+        installed_cf = backend_api.list_custom_fields()
+    except Exception as e:
+        logger.warning(f"Failed to fetch installed custom fields during view normalization: {e}")
+
+    id_to_cf_name = {cf.get("id"): cf.get("displayName") for cf in installed_cf if cf.get("id") is not None}
+
     built_widgets = []
     for w in flat_view.get("widgets") or []:
         meta = w.get("metadata") or {}
         config = w.get("config") or {}
 
-        # If data is HTML, we must include the htmlContent in config
-        # Actually in widgets list, htmlContent was inside DataDefinitionJson
+        # Resolve Custom Fields
+        cfs = config.get("customFields")
+        if isinstance(cfs, list):
+            for cf_item in cfs:
+                if isinstance(cf_item, dict) and "id" in cf_item:
+                    cf_id = cf_item.pop("id")
+                    cf_name = id_to_cf_name.get(cf_id)
+                    if cf_name:
+                        cf_item["displayName"] = cf_name
+                        # Auto-pull the dependent custom field
+                        try:
+                            from mp.dev_env.sub_commands.custom_field.pull import _download_and_save_custom_field
+                            import typer
+                            
+                            _download_and_save_custom_field(backend_api, cf_id, None)
+                        except typer.Exit:
+                            logger.warning("Failed to auto-pull dependent custom field '%s' (ID: %s).", cf_name, cf_id)
+                        except Exception as e:
+                            logger.warning("Error auto-pulling custom field '%s' (ID: %s): %s", cf_name, cf_id, e)
+                    else:
+                        logger.warning(f"Could not resolve custom field ID {cf_id} to a displayName.")
+                        cf_item["id"] = cf_id # Put it back
+
         # Serialize the config back into DataDefinitionJson
         data_definition_json = json.dumps(config)
 
@@ -181,13 +211,27 @@ def _normalize_downloaded_view(flat_view: dict[str, Any]) -> BuiltOverview:
         }
         built_widgets.append(built_widget)
 
+    alert_rule_type = flat_view.get("alertRuleType")
+    if alert_rule_type is not None:
+        try:
+            from mp.dev_env.sub_commands.alert_grouping_rule.pull import _save_alert_grouping_rule
+            # It's a small list, so fetching all is fine
+            rules = backend_api.list_alert_grouping_rules()
+            rule_data = next((r for r in rules if str(r.get("id")) == str(alert_rule_type)), None)
+            if rule_data:
+                _save_alert_grouping_rule(rule_data, None)
+            else:
+                logger.warning("Alert Grouping Rule ID %s not found on server during auto-pull.", alert_rule_type)
+        except Exception as e:
+            logger.warning("Failed to auto-pull dependent alert grouping rule (ID: %s): %s", alert_rule_type, e)
+
     overview_template: dict[str, Any] = {
         "Identifier": flat_view.get("identifier") or "",
         "Name": flat_view.get("name") or "",
         "Creator": flat_view.get("creator"),
         "PlaybookDefinitionIdentifier": flat_view.get("playbookIdentifier") or "",
         "Type": flat_view.get("type") or 0,
-        "AlertRuleType": flat_view.get("alertRuleType"),
+        "AlertRuleType": alert_rule_type,
         "Widgets": built_widgets,
         "Roles": flat_view.get("roles") or [],
     }

@@ -105,7 +105,7 @@ def test_push_alert_grouping_rule_update(
     assert result.exit_code == 0
     mock_api.update_alert_grouping_rule.assert_called_once_with(
         1,
-        {"name": "projects//locations//instances//alertGroupingRules/1", "displayName": "Rule One"},
+        {"name": "projects//locations//instances//alertGroupingRules/1", "displayName": "Rule One", "id": 1},
     )
     mock_api.create_alert_grouping_rule.assert_not_called()
 
@@ -128,7 +128,7 @@ def test_push_alert_grouping_rule_create(
         "displayName": "Rule New",
     }))
 
-    result = runner.invoke(push_app, ["alert-grouping-rule", str(rule_file)])
+    result = runner.invoke(push_app, ["alert-grouping-rule", str(rule_file), "--allow-create"])
 
     assert result.exit_code == 0
     mock_api.create_alert_grouping_rule.assert_called_once_with(

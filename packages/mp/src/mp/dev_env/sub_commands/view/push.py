@@ -145,16 +145,25 @@ def push_view(
         download_and_deconstruct_view(backend_api, final_identifier, target_path)
 
 
-def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
+def _denormalize_pushed_view(built_view: BuiltOverview, backend_api: BackendAPI) -> dict[str, Any]:
     """Convert wrapped PascalCase BuiltOverview back into flat camelCase payload expected by SOAR.
 
     Args:
         built_view: The BuiltOverview dictionary structure representing the view.
+        backend_api: The backend API client to fetch installed entities like Custom Fields.
 
     Returns:
         The flat camelCase dictionary payload.
 
     """
+    installed_cf = []
+    try:
+        installed_cf = backend_api.list_custom_fields()
+    except Exception as e:
+        logger.warning(f"Failed to fetch installed custom fields during view denormalization: {e}")
+
+    name_to_cf_id = {cf.get("displayName"): cf.get("id") for cf in installed_cf if cf.get("displayName") and cf.get("id") is not None}
+
     template = built_view.get("OverviewTemplate") or {}
 
     # 1. Map widgets
@@ -165,6 +174,23 @@ def _denormalize_pushed_view(built_view: BuiltOverview) -> dict[str, Any]:
         if isinstance(data_def, str):
             with contextlib.suppress(json.JSONDecodeError):
                 config_dict = json.loads(data_def)
+
+        # Resolve Custom Fields
+        cfs = config_dict.get("customFields")
+        if isinstance(cfs, list):
+            for cf_item in cfs:
+                if isinstance(cf_item, dict) and "displayName" in cf_item:
+                    cf_name = cf_item.pop("displayName")
+                    cf_id = name_to_cf_id.get(cf_name)
+                    if cf_id is not None:
+                        cf_item["id"] = cf_id
+                    else:
+                        logger.error(
+                            "Custom field '%s' not found on the target platform. "
+                            "Please push this custom field before pushing the view.",
+                            cf_name,
+                        )
+                        raise typer.Exit(1)
 
         cg = w.get("ConditionsGroup")
         flat_cg = None
@@ -380,6 +406,12 @@ def _validate_push_preconditions(
         )
         logger.error("Failed to push view '%s'.", view_name_or_id)
         raise typer.Exit(1)
+    else:
+        if not flat_view_data.get("identifier"):
+            import uuid
+            new_uuid = str(uuid.uuid4())
+            logger.info("Generating new UUID '%s' for new view.", new_uuid)
+            flat_view_data["identifier"] = new_uuid
 
 
 def _upload_built_view_data(
@@ -406,7 +438,7 @@ def _upload_built_view_data(
     backend_api = get_backend_api(config)
 
     logger.info("Uploading view to SOAR platform...")
-    flat_view_data = _denormalize_pushed_view(cast("BuiltOverview", view_data))
+    flat_view_data = _denormalize_pushed_view(cast("BuiltOverview", view_data), backend_api)
 
     _validate_push_preconditions(
         backend_api,

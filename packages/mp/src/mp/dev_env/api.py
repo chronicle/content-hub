@@ -266,6 +266,8 @@ class BackendAPI:
         """
         url: str = f"{self.api_root}/api/external/v1/case-overview/SaveOverviewTemplate"
         resp = self.session.post(url, json=view_data)
+        if not resp.ok:
+            logger.error(f"SaveOverviewTemplate failed with status {resp.status_code}. Response: {resp.text}")
         resp.raise_for_status()
         return resp.json()
 
@@ -278,8 +280,16 @@ class BackendAPI:
         """
         url: str = f"{self.api_root}/api/1p/external/v1/customFields"
         resp = self.session.get(url)
+        if not resp.ok:
+            logger.error(f"list_custom_fields failed: {resp.status_code} - {resp.text}")
         resp.raise_for_status()
-        return resp.json().get("items", [])
+        if resp.status_code == 204:
+            return []
+        try:
+            return resp.json().get("items", [])
+        except Exception:
+            logger.error(f"JSON Decode Error in list_custom_fields. Response text: {resp.text}")
+            raise
 
     def download_custom_field(self, field_id: int) -> dict[str, Any]:
         """Download a custom field by ID from the SOAR platform.
@@ -337,6 +347,8 @@ class BackendAPI:
         url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
         resp = self.session.get(url)
         resp.raise_for_status()
+        if resp.status_code == 204:
+            return []
         return resp.json().get("items", [])
 
     def create_alert_grouping_rule(self, data: dict[str, Any]) -> dict[str, Any]:

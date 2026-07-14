@@ -127,7 +127,7 @@ def test_push_custom_field_update(
     assert result.exit_code == 0
     mock_api.update_custom_field.assert_called_once_with(
         1,
-        {"name": "projects//locations//instances//customFields/1", "displayName": "Test Field", "type": "String"},
+        {"name": "projects//locations//instances//customFields/1", "displayName": "Test Field", "type": "String", "id": 1},
     )
     mock_api.create_custom_field.assert_not_called()
 
@@ -151,7 +151,7 @@ def test_push_custom_field_create(
         "type": "String",
     }))
 
-    result = runner.invoke(push_app, ["custom-field", str(field_file)])
+    result = runner.invoke(push_app, ["custom-field", str(field_file), "--allow-create"])
 
     assert result.exit_code == 0
     mock_api.create_custom_field.assert_called_once_with(
