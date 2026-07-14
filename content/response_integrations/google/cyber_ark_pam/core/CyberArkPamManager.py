@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import base64
 import pathlib
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
@@ -35,54 +34,20 @@ from cryptography.hazmat.primitives.serialization.pkcs12 import (
 from requests_toolbelt.adapters.x509 import X509Adapter
 
 from .CyberArkPamParser import CyberArkPamParser
+from .datamodels import ListAccountsQuery
+from .constants import (
+    CA_CERT_PATH,
+    GET_TOKEN_TIMEOUT,
+    MAX_RETRIES,
+    URLS,
+)
+from .exceptions import CyberArkPamManagerError
+from .utils import validate_response
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
 
     from .datamodels import Account
-
-# ============================= CONSTS ===================================== #
-CA_CERT_PATH = "cacert.pem"
-URLS = {
-    "get_access_token": "/PasswordVault/API/Auth/CyberArk/Logon",
-    "list_accounts": "PasswordVault/API/Accounts",
-    "get_password": "PasswordVault/API/Accounts/{account_id}/Password/Retrieve/",
-    "change_password": "PasswordVault/API/Accounts/{account_id}/Change",
-}
-MAX_RETRIES = 1
-GET_TOKEN_TIMEOUT = 60
-# ============================= CLASSES ===================================== #
-
-
-@dataclass
-class ListAccountsQuery:
-    search: str | None = None
-    searchType: str | None = None  # noqa: N815
-    offset: int | None = None
-    limit: int | None = None
-    filter: str | None = None
-    savedfilter: str | None = None
-
-    def as_query(self) -> SingleJson:
-        """Convert the dataclass into a query parameters dictionary.
-
-        Returns:
-            A dictionary containing not-None query parameters.
-
-        """
-        return {key: value for key, value in self.__dict__.items() if value is not None}
-
-
-class CyberArkPamManagerError(Exception):
-    """General Exception for CyberArk PAM manager."""
-
-
-class CyberArkPamNotFoundError(CyberArkPamManagerError):
-    """Not Found Exception for CyberArk PAM manager."""
-
-
-class CyberArkPamAccountNotManagedError(CyberArkPamManagerError):
-    """Account Not Managed Exception for CyberArk PAM manager."""
 
 
 class CyberArkPamManager:
@@ -226,41 +191,10 @@ class CyberArkPamManager:
             json=payload,
             timeout=GET_TOKEN_TIMEOUT,
         )
-        self.validate_response(response)
+        validate_response(response)
         self.siemplify.LOGGER.info("Received access token")
 
         return response.text[1:-1]
-
-    @staticmethod
-    def validate_response(response: requests.Response) -> None:
-        """Validate HTTP response and raise appropriate exceptions on failure.
-
-        Args:
-            response: The Response object to validate.
-
-        Raises:
-            CyberArkPamNotFoundError: If HTTP status code is 404.
-            CyberArkPamAccountNotManagedError: If account is not managed by CPM.
-            CyberArkPamManagerError: If any other HTTP error status is returned.
-
-        """
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as e:
-            error_code = ""
-            try:
-                error_json = response.json()
-                error_message = error_json.get("ErrorMessage", "")
-                error_code = error_json.get("ErrorCode", "")
-                msg = error_message or (response.reason or str(e))
-            except Exception:  # noqa: BLE001
-                msg = response.reason or str(e)
-
-            if response.status_code == 404:  # noqa: PLR2004
-                raise CyberArkPamNotFoundError(msg) from e
-            if response.status_code == 400 and (error_code == "CAWS00001E" or "not managed by the cpm" in msg.lower()):  # noqa: PLR2004
-                raise CyberArkPamAccountNotManagedError(msg) from e
-            raise CyberArkPamManagerError(msg) from e
 
     def list_accounts(  # noqa: PLR0913, PLR0917
         self,
@@ -298,7 +232,7 @@ class CyberArkPamManager:
             url=self.__build_full_uri("list_accounts"),
             params=list_accounts_query.as_query(),
         )
-        self.validate_response(response)
+        validate_response(response)
 
         return self.parser.build_accounts(response.json())
 
@@ -335,7 +269,7 @@ class CyberArkPamManager:
             url=self.__build_full_uri("get_password", account_id=account),
             json=prepared_payload,
         )
-        self.validate_response(response)
+        validate_response(response)
 
         return response.text
 
@@ -351,4 +285,4 @@ class CyberArkPamManager:
             url=self.__build_full_uri("change_password", account_id=account),
             json=payload,
         )
-        self.validate_response(response)
+        validate_response(response)

@@ -1,0 +1,113 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Utility functions for CyberArk PAM."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+import requests
+
+from .constants import MIN_MASK_LENGTH
+from .exceptions import (
+    CyberArkPamAccountNotManagedError,
+    CyberArkPamManagerError,
+    CyberArkPamNotFoundError,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from TIPCommon.base.interfaces import ScriptLogger
+    from TIPCommon.types import SingleJson
+
+
+def validate_response(response: requests.Response) -> None:
+    """Validate HTTP response and raise appropriate exceptions on failure.
+
+    Args:
+        response: The Response object to validate.
+
+    Raises:
+        CyberArkPamNotFoundError: If HTTP status code is 404.
+        CyberArkPamAccountNotManagedError: If account is not managed by CPM.
+        CyberArkPamManagerError: If any other HTTP error status is returned.
+
+    """
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as e:
+        error_code = ""
+        try:
+            error_json = response.json()
+            error_message = error_json.get("ErrorMessage", "")
+            error_code = error_json.get("ErrorCode", "")
+            msg = error_message or (response.reason or str(e))
+        except Exception:  # noqa: BLE001
+            msg = response.reason or str(e)
+
+        if response.status_code == 404:  # noqa: PLR2004
+            raise CyberArkPamNotFoundError(msg) from e
+        if response.status_code == 400 and (error_code == "CAWS00001E" or "not managed by the cpm" in msg.lower()):  # noqa: PLR2004
+            raise CyberArkPamAccountNotManagedError(msg) from e
+        raise CyberArkPamManagerError(msg) from e
+
+
+def mask_id(value: str) -> str:
+    """Mask a secret ID for safe logging.
+
+    Args:
+        value (str): The secret ID to mask.
+
+    Returns:
+        str: The masked secret ID.
+
+    """
+    if len(value) <= MIN_MASK_LENGTH:
+        return "***"
+
+    return f"{value[:3]}***{value[-3:]}"
+
+
+def build_lookup_with_warnings(
+    items: list[Any],
+    get_key: Callable[[Any], Any],
+    get_value: Callable[[Any], Any],
+    entity_type: str,
+    logger: ScriptLogger,
+) -> SingleJson:
+    """Build a lookup dictionary from a list and warn on duplicates.
+
+    Args:
+        items: The list of items to process.
+        get_key: Function to extract the key from an item.
+        get_value: Function to extract the value from an item.
+        entity_type: Label for logging (e.g., 'job name').
+        logger: The logger instance to use for warnings.
+
+    Returns:
+        The constructed dictionary mapping.
+
+    """
+    lookup: dict = {}
+    for item in items:
+        key = get_key(item)
+        if not key:
+            continue
+        if key in lookup:
+            logger.warn(f"Duplicate {entity_type} '{key}' detected. Later entry will overwrite.")
+        lookup[key] = get_value(item)
+
+    return lookup

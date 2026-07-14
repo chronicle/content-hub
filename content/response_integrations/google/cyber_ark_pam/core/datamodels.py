@@ -88,3 +88,24 @@ class IntegrationParameters:
     ca_certificate: str | None
     client_certificate: str | None
     client_certificate_passphrase: str | None
+
+
+@dataclass
+class ListAccountsQuery:
+    """Query parameters for listing accounts in CyberArk PAM."""
+
+    search: str | None = None
+    searchType: str | None = None  # noqa: N815
+    offset: int | None = None
+    limit: int | None = None
+    filter: str | None = None
+    savedfilter: str | None = None
+
+    def as_query(self) -> SingleJson:
+        """Convert the dataclass into a query parameters dictionary.
+
+        Returns:
+            A dictionary containing not-None query parameters.
+
+        """
+        return {key: value for key, value in self.__dict__.items() if value is not None}

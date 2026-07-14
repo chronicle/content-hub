@@ -24,7 +24,7 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import CyberArkPamAction
 from ..core.constants import INTEGRATION_NAME
-from ..core.CyberArkPamManager import (
+from ..core.exceptions import (
     CyberArkPamAccountNotManagedError,
     CyberArkPamNotFoundError,
 )

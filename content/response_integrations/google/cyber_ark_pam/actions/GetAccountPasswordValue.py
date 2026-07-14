@@ -21,7 +21,8 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_action_param, extract_configuration_param
 
 from ..core.constants import INTEGRATION_NAME
-from ..core.CyberArkPamManager import CyberArkPamManager, CyberArkPamNotFoundError
+from ..core.CyberArkPamManager import CyberArkPamManager
+from ..core.exceptions import CyberArkPamNotFoundError
 
 SCRIPT_NAME = "Get Account Password Value"
 
