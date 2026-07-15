@@ -35,10 +35,6 @@ class GetBlueAgentAnalysis(Action):
             f'Error executing action "{constants.GET_BLUE_AGENT_ANALYSIS_SCRIPT_NAME}"'
         )
 
-    @property
-    def result_value(self) -> Any:
-        return self._result_value
-
     @result_value.setter
     def result_value(self, value: Any) -> None:
         self._result_value = value
@@ -76,8 +72,6 @@ class GetBlueAgentAnalysis(Action):
                 f"Threat with ID {self.params.threat_id} wasn't found in "
                 f"{constants.INTEGRATION_NAME}."
             ) from e
-        except exceptions.WizManagerError as e:
-            raise e
 
         if analysis is None:
             self.logger.info("Blue Agent analysis is not available for this threat.")
