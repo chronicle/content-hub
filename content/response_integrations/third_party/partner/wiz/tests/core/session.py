@@ -154,7 +154,6 @@ class WizSession(MockSession[MockRequest, MockResponse, Wiz]):
         )
 
 
-
 @router.post("/oauth/token")
 def get_oauth_token(request: MockRequest) -> MockResponse:
     """Get an OAuth token"""

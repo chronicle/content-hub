@@ -83,7 +83,7 @@ def build_threat_ai_analysis_object(
     Returns:
         A ThreatAIAnalysis object or None if aiAnalysis is not present.
     """
-    issue_data = response_json.get("data", {}).get("issue")
+    issue_data = (response_json.get("data") or {}).get("issue")
 
     if issue_data is None:
         return None

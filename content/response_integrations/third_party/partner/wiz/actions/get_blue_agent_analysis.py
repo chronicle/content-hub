@@ -25,9 +25,7 @@ from TIPCommon.smp_time import is_approaching_action_timeout
 from ..core import action_init, api_client, constants, exceptions
 
 if TYPE_CHECKING:
-    from typing import NoReturn, Any
-    from TIPCommon.types import SingleJson
-    from ..core import datamodels
+    from typing import Any, NoReturn
 
 
 class GetBlueAgentAnalysis(Action):
@@ -52,13 +50,6 @@ class GetBlueAgentAnalysis(Action):
             is_mandatory=True,
             print_value=True,
         )
-        self.params.additional_data = json.loads(
-            extract_action_param(
-                siemplify=self.soar_action,
-                param_name="additional_data",
-                default_value="{}",
-            ),
-        )
 
     def _init_api_clients(self) -> api_client.WizApiClient:
         return action_init.create_api_client(self.soar_action)
@@ -69,7 +60,7 @@ class GetBlueAgentAnalysis(Action):
             self.soar_action.async_total_duration_deadline,
         )
 
-    def _perform_action(self, _) -> None:
+    def _perform_action(self, _: Any) -> None:
         if self._is_approaching_async_timeout():
             self.logger.info(
                 "Action is approaching async timeout, and will exit gracefully."
@@ -88,7 +79,15 @@ class GetBlueAgentAnalysis(Action):
         except exceptions.WizManagerError as e:
             raise e
 
-        if analysis is not None and analysis.status == "COMPLETED":
+        if analysis is None:
+            self.logger.info("Blue Agent analysis is not available for this threat.")
+            self.output_message = (
+                "Blue Agent analysis is not available for threat"
+                f" {self.params.threat_id}."
+            )
+            self.result_value = False
+            self.execution_state = ExecutionState.COMPLETED
+        elif analysis.status == "COMPLETED":
             self.logger.info("Analysis is COMPLETED. Finishing action.")
             self.json_results = analysis.to_json()
             self.output_message = (
@@ -99,8 +98,8 @@ class GetBlueAgentAnalysis(Action):
             self.execution_state = ExecutionState.COMPLETED
         else:
             self.logger.info(
-                "Analysis is still pending or not available yet."
-                " Execution state set to IN_PROGRESS."
+                f"Analysis status is {analysis.status}. Execution state set to"
+                " IN_PROGRESS."
             )
             self.output_message = (
                 "Waiting for Wiz Blue Agent analysis for threat"

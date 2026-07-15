@@ -26,7 +26,7 @@ from . import (
     data_parser,
     datamodels,
     exceptions,
-    query_builder
+    query_builder,
 )
 
 if TYPE_CHECKING:
@@ -287,11 +287,13 @@ class WizApiClient(Apiable):
         """Get threat AI analysis for a specific threat by its issue ID.
 
         Args:
-            issue_id (str): The ID of the issue/threat to retrieve details for.
+            issue_id: The ID of the issue/threat to retrieve details for.
 
         Returns:
-            datamodels.ThreatAIAnalysis | None: A ThreatAIAnalysis object containing details,
-            or None if analysis is not found.
+            A ThreatAIAnalysis object containing details, or None if analysis is not found.
+
+        Raises:
+            IssueNotFoundError: If the threat with specified ID is not found.
         """
         threat_analysis_query_builder: query_builder.ThreatAIAnalysisQueryBuilder = (
             query_builder.ThreatAIAnalysisQueryBuilder(issue_id=issue_id)
@@ -308,7 +310,7 @@ class WizApiClient(Apiable):
         api_utils.validate_response(response=response)
 
         response_json = response.json()
-        if response_json.get("data", {}).get("issue") is None:
+        if (response_json.get("data") or {}).get("issue") is None:
             raise exceptions.IssueNotFoundError(
                 f"Threat with ID {issue_id} wasn't found"
                 f" in {constants.INTEGRATION_NAME}."
