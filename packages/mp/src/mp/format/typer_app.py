@@ -14,10 +14,10 @@
 
 from __future__ import annotations
 
+import logging
 import pathlib
 from typing import TYPE_CHECKING, Annotated
 
-import rich
 import typer
 
 import mp.core.code_manipulation
@@ -34,6 +34,9 @@ if TYPE_CHECKING:
 
 __all__: list[str] = ["format_app", "format_files"]
 format_app: typer.Typer = typer.Typer()
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @format_app.command(name="format", help="Format '.py' files.")
@@ -83,12 +86,12 @@ def format_files(
     run_params.set_in_config()
     sources: list[str] = _get_source_files(file_paths, changed_file=changed_files)
     if not sources:
-        rich.print("No files found to check")
+        logger.info("No files found to check")
         return
 
     paths: set[Path] = _get_relevant_source_paths(sources)
     if not paths:
-        rich.print("No relevant python files to format")
+        logger.info("No relevant python files to format")
         return
 
     _format_python_files(paths)
@@ -99,16 +102,19 @@ def _get_source_files(file_paths: list[str], *, changed_file: bool) -> list[str]
 
 
 def _get_relevant_source_paths(sources: list[str]) -> set[Path]:
-    return {
-        path
-        for source in sources
-        if mp.core.file_utils.is_python_file(
-            path := pathlib.Path(source).resolve().expanduser().absolute(),
-        )
-        or path.is_dir()
-    }
+    paths: set[Path] = set()
+    for source in sources:
+        path: Path = pathlib.Path(source).resolve().expanduser().absolute()
+        if mp.core.file_utils.is_python_file(path) or path.is_dir():
+            paths.add(path)
+            continue
+
+        if integration_path := mp.core.file_utils.get_marketplace_integration_path(source):
+            paths.add(integration_path)
+
+    return paths
 
 
 def _format_python_files(paths: Iterable[Path]) -> None:
-    rich.print(f"Formatting Python files: {', '.join(p.name for p in paths)}")
+    logger.info("Formatting Python files: %s", ", ".join(p.name for p in paths))
     mp.core.code_manipulation.format_python_files(paths)

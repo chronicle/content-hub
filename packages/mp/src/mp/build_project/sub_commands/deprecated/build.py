@@ -15,15 +15,15 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated
 
-import rich
 import typer
 
 import mp.core.config
-from mp.build_project.flow.integrations.flow import build_integrations
-from mp.build_project.flow.playbooks.flow import build_playbooks
+from mp.build_project.flow.integrations.flow import BuildIntegrationsParams, build_integrations
+from mp.build_project.flow.playbooks.flow import BuildPlaybooksParams, build_playbooks
 from mp.core.custom_types import RepositoryType
 from mp.core.utils import ensure_valid_list, should_preform_integration_logic, should_preform_playbook_logic
 from mp.telemetry import track_command
@@ -32,6 +32,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from mp.core.config import RuntimeParams
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -185,18 +187,21 @@ def build(  # noqa: PLR0913, PLR0917
         quiet: quiet log options
         verbose: Verbose log options
 
-    """  # noqa: DOC501
+    Raises:
+        typer.Exit: If no arguments are provided.
+
+    """
     if ctx.invoked_subcommand is not None:
         return
 
     if not any([repositories, integrations, playbooks]):
-        typer.echo(ctx.get_help())
+        logger.info(ctx.get_help())
         raise typer.Exit
 
-    rich.print(
-        "[yellow]Note: 'build' flags are deprecated. "
+    logger.warning(
+        "Note: 'build' flags are deprecated. "
         "Use 'mp build integration' or 'mp build playbook' or mp build repository "
-        "instead.[/yellow]"
+        "instead."
     )
 
     repositories = ensure_valid_list(repositories)
@@ -224,16 +229,19 @@ def build(  # noqa: PLR0913, PLR0917
     try:
         if should_preform_integration_logic(integrations, repositories):
             build_integrations(
-                integrations,
-                repositories,
-                src=src,
-                dst=dst,
-                deconstruct=deconstruct,
-                custom_integration=custom_integration,
+                BuildIntegrationsParams(
+                    integrations,
+                    repositories,
+                    src=src,
+                    dst=dst,
+                    deconstruct=deconstruct,
+                    custom_integration=custom_integration,
+                )
             )
 
         if should_preform_playbook_logic(playbooks, repositories):
-            build_playbooks(playbooks, repositories, src=src, dst=dst, deconstruct=deconstruct)
+            build_playbooks(BuildPlaybooksParams(playbooks, repositories, src=src, dst=dst, deconstruct=deconstruct))
+
     finally:
         mp.core.config.clear_custom_src()
         mp.core.config.clear_custom_dst()

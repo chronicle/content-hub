@@ -19,6 +19,7 @@ jobs:
       mp: ${{ steps.filter.outputs.mp }}
       integration_packages: ${{ steps.filter.outputs.integration_packages }}
       response_integrations_third_party: ${{ steps.filter.outputs.response_integrations_third_party }}
+      response_integrations_google: ${{ steps.filter.outputs.response_integrations_google }}
       changed_integrations: ${{ steps.find_integrations.outputs.integrations }}
       test_all: ${{ steps.find_integrations.outputs.test_all }}
     steps:
@@ -32,7 +33,6 @@ jobs:
         id: filter
         with:
           base: ${{ github.event.pull_request.base.sha }}
-          list-files: csv
           # language=yaml
           filters: |
             mp:
@@ -45,6 +45,8 @@ jobs:
             response_integrations_third_party:
               - 'content/response_integrations/third_party/**'
               - 'content/response_integrations/power_ups/**'
+            response_integrations_google:
+              - 'content/response_integrations/google/**'
 
       - name: Find changed integrations
         id: find_integrations
@@ -52,7 +54,9 @@ jobs:
           FILTER_MP: ${{ steps.filter.outputs.mp }}
           FILTER_PACKAGES: ${{ steps.filter.outputs.integration_packages }}
           FILTER_THIRD_PARTY: ${{ steps.filter.outputs.response_integrations_third_party }}
-          FILTER_THIRD_PARTY_FILES: ${{ steps.filter.outputs.response_integrations_third_party_files }}
+          FILTER_GOOGLE: ${{ steps.filter.outputs.response_integrations_google }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         # language=bash
         run: |
           # If shared packages or mp changed, test everything
@@ -65,23 +69,37 @@ jobs:
 
           echo "test_all=false" >> $GITHUB_OUTPUT
 
-          # Extract unique integration names from changed file paths
+          # Get changed files directly from git to avoid environment variable limits
+          # Use three-dot diff to get changes in the PR branch relative to the base branch
+          # Use --diff-filter=d to exclude deleted files (we can't test what's not there)
+          git diff --name-only --diff-filter=d "$BASE_SHA...$HEAD_SHA" > changed_files.txt
+
+          INTEGRATIONS=""
+          # Extract unique integration names from changed file paths (Third-Party/Power-Ups)
           if [[ "$FILTER_THIRD_PARTY" == "true" ]]; then
-            INTEGRATIONS=$(echo "$FILTER_THIRD_PARTY_FILES" | tr ',' '\n' | \
-              sed 's/"//g' | \
-              grep "^content/response_integrations/" | \
+            THIRD_PARTY_INTS=$(grep "^content/response_integrations/third_party/\|^content/response_integrations/power_up[s]*/" changed_files.txt | \
               sed 's|content/response_integrations/third_party/[^/]*/||' | \
               sed 's|content/response_integrations/power_up[s]*/||' | \
               cut -d'/' -f1 | \
               sort -u | \
               tr '\n' ' ' | xargs)
-            echo "integrations=$INTEGRATIONS" >> $GITHUB_OUTPUT
-          else
-            echo "integrations=" >> $GITHUB_OUTPUT
+            INTEGRATIONS="$INTEGRATIONS $THIRD_PARTY_INTS"
           fi
 
-  test_third_party:
-    name: Test Third-Party Integrations
+          # Extract unique integration names from changed file paths (Google)
+          if [[ "$FILTER_GOOGLE" == "true" ]]; then
+            GOOGLE_INTS=$(grep "^content/response_integrations/google/" changed_files.txt | \
+              sed 's|content/response_integrations/google/||' | \
+              cut -d'/' -f1 | \
+              sort -u | \
+              tr '\n' ' ' | xargs)
+            INTEGRATIONS="$INTEGRATIONS $GOOGLE_INTS"
+          fi
+
+          echo "integrations=$(echo $INTEGRATIONS | xargs)" >> $GITHUB_OUTPUT
+
+  test_integrations:
+    name: Test Integrations
     needs: changes
     if: >-
       (needs.changes.outputs.test_all == 'true' ||
@@ -120,7 +138,7 @@ jobs:
 
           if [[ "$TEST_ALL" == "true" ]]; then
             echo "Shared packages changed — testing all integrations"
-            mp test --repository third_party --raise-error-on-violations
+            mp test --repository third_party --repository google --raise-error-on-violations
           else
             echo "Testing only changed integrations: $CHANGED_INTEGRATIONS"
             FAILED=0

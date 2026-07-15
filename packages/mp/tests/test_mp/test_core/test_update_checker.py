@@ -22,7 +22,7 @@ from mp.core.update_checker import PYPROJECT_URL, TIMEOUT_SECONDS, UpdateChecker
 
 
 @patch("mp.core.update_checker.requests.get")
-@patch("mp.core.update_checker.rich.print")
+@patch("mp.core.update_checker.logger.warning")
 def test_check_for_updates_newer_version(mock_rich_print: MagicMock, mock_get: MagicMock) -> None:
     """Test that a warning is printed when a newer version is available."""
     # 1. Instantiate the class directly (no singletons needed)
@@ -52,7 +52,7 @@ def test_check_for_updates_newer_version(mock_rich_print: MagicMock, mock_get: M
 
 
 @patch("mp.core.update_checker.requests.get")
-@patch("mp.core.update_checker.rich.print")
+@patch("mp.core.update_checker.logger.warning")
 def test_check_for_updates_same_version(mock_rich_print: MagicMock, mock_get: MagicMock) -> None:
     """Test that NO warning is printed when versions are the same."""
     checker = UpdateChecker()
@@ -68,7 +68,7 @@ def test_check_for_updates_same_version(mock_rich_print: MagicMock, mock_get: Ma
 
 
 @patch("mp.core.update_checker.requests.get")
-@patch("mp.core.update_checker.rich.print")
+@patch("mp.core.update_checker.logger.warning")
 def test_check_for_updates_older_remote(mock_rich_print: MagicMock, mock_get: MagicMock) -> None:
     """Test that NO warning is printed when a remote version is older."""
     checker = UpdateChecker()
@@ -84,7 +84,7 @@ def test_check_for_updates_older_remote(mock_rich_print: MagicMock, mock_get: Ma
 
 
 @patch("mp.core.update_checker.requests.get")
-@patch("mp.core.update_checker.rich.print")
+@patch("mp.core.update_checker.logger.warning")
 def test_check_for_updates_network_error(mock_rich_print: MagicMock, mock_get: MagicMock) -> None:
     """Test that the function fails silently on network error."""
     checker = UpdateChecker()
@@ -98,7 +98,7 @@ def test_check_for_updates_network_error(mock_rich_print: MagicMock, mock_get: M
 
 
 @patch("mp.core.update_checker.requests.get")
-@patch("mp.core.update_checker.rich.print")
+@patch("mp.core.update_checker.logger.warning")
 def test_check_for_updates_invalid_toml(mock_rich_print: MagicMock, mock_get: MagicMock) -> None:
     """Test that the function fails silently on invalid TOML."""
     checker = UpdateChecker()

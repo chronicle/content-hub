@@ -108,7 +108,7 @@ class ActionParameter(
             name=built["Name"],
             optional_values=built.get("OptionalValues"),
             type_=ActionParamType(int(built["Type"])),
-            default_value=built.get("Value", built.get("DefaultValue")),
+            default_value=v if (v := built.get("Value")) not in {"", None} else built.get("DefaultValue"),
         )
 
     @classmethod

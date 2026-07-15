@@ -16,9 +16,8 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import logging
 from typing import TYPE_CHECKING
-
-import rich
 
 import mp.core.constants
 from mp.core.data_models.common.widget.data import WidgetType
@@ -32,6 +31,9 @@ if TYPE_CHECKING:
     from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
 
 
+logger: logging.Logger = logging.getLogger(__name__)
+
+
 @dataclasses.dataclass(slots=True)
 class PlaybookBuilder:
     playbook: Playbook
@@ -40,7 +42,7 @@ class PlaybookBuilder:
 
     def build(self) -> None:
         """Build a specific playbook to its "out" path."""
-        rich.print("Loading widgets from external files...")
+        logger.info("Loading widgets from external files...")
         self._load_widgets_html_content()
         self._load_widgets_html_content_to_overviews()
         built_playbook: BuiltPlaybook = self.playbook.to_built()

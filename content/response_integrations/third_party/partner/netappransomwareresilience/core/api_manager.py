@@ -6,14 +6,22 @@ from TIPCommon.oauth import CredStorage
 
 from .auth_manager import RRSOAuthAdapter, RRSOAuthManager
 from .constants import (
+    ENDPOINT_BLOCK_USER,
     ENDPOINT_ENRICH_IP,
     ENDPOINT_ENRICH_STORAGE,
     ENDPOINT_JOB_STATUS,
     ENDPOINT_TAKE_SNAPSHOT,
+    ENDPOINT_UNBLOCK_USER,
     ENDPOINT_VOLUME_OFFLINE,
+    ENDPOINT_VOLUME_ONLINE,
     RRS_SERVICE_URL,
 )
-from .utils import build_rrs_url, extract_domain_from_uri, generate_encryption_key
+from .utils import (
+    build_rrs_url,
+    extract_domain_from_uri,
+    generate_encryption_key,
+    mask_sensitive_value,
+)
 
 
 class ApiManager:
@@ -33,9 +41,7 @@ class ApiManager:
 
         # Get credentials from Integration config
         self.CLIENT_ID = self.siemplify.extract_configuration_param("Integration", "Client ID")
-        self.CLIENT_SECRET = self.siemplify.extract_configuration_param(
-            "Integration", "Client Secret"
-        )
+        self.CLIENT_SECRET = self.siemplify.extract_configuration_param("Integration", "Client Secret")
         self.ACCOUNT_ID = self.siemplify.extract_configuration_param("Integration", "Account ID")
         self.SSL_VERIFY = self.siemplify.extract_configuration_param(
             "Integration", "Verify SSL", input_type=bool, default_value=True
@@ -44,9 +50,7 @@ class ApiManager:
         self.ENDPOINT_URL = RRS_SERVICE_URL
         self.DOMAIN = extract_domain_from_uri(self.ENDPOINT_URL)
 
-        self.siemplify.LOGGER.info(
-            f"ApiManager: SAAS Domain={self.DOMAIN}, Verify SSL={self.SSL_VERIFY}"
-        )
+        self.siemplify.LOGGER.info(f"ApiManager: SAAS Domain={self.DOMAIN}, Verify SSL={self.SSL_VERIFY}")
 
         self.token = ""
 
@@ -58,9 +62,7 @@ class ApiManager:
         )
 
         self.cred_storage = CredStorage(
-            encryption_password=generate_encryption_key(
-                self.CLIENT_ID, self.DOMAIN, self.CLIENT_SECRET
-            ),
+            encryption_password=generate_encryption_key(self.CLIENT_ID, self.DOMAIN, self.CLIENT_SECRET),
             chronicle_soar=self.siemplify,
         )
 
@@ -109,9 +111,7 @@ class ApiManager:
         self.token = token.access_token
         self.session.headers.update({"Authorization": f"Bearer {self.token}"})
 
-        self.siemplify.LOGGER.info(
-            "ApiManager.generate_token - Token generated and saved successfully"
-        )
+        self.siemplify.LOGGER.info("ApiManager.generate_token - Token generated and saved successfully")
 
         return self.token
 
@@ -148,9 +148,7 @@ class ApiManager:
 
         # Parse response
         response_data = response.json()
-        self.siemplify.LOGGER.info(
-            f"ApiManager.enrich_ip: API call successful. Status: {response.status_code}"
-        )
+        self.siemplify.LOGGER.info(f"ApiManager.enrich_ip: API call successful. Status: {response.status_code}")
 
         return response_data
 
@@ -171,9 +169,7 @@ class ApiManager:
             requests.HTTPError: If the API call returns a non-2xx status code.
         """
 
-        self.siemplify.LOGGER.info(
-            "ApiManager.enrich_storage: Enriching storage for given agent_id and system_id"
-        )
+        self.siemplify.LOGGER.info("ApiManager.enrich_storage: Enriching storage for given agent_id and system_id")
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_ENRICH_STORAGE)
@@ -191,9 +187,7 @@ class ApiManager:
 
         # Parse response
         response_data = response.json()
-        self.siemplify.LOGGER.info(
-            f"ApiManager.enrich_storage: API call successful. Status: {response.status_code}"
-        )
+        self.siemplify.LOGGER.info(f"ApiManager.enrich_storage: API call successful. Status: {response.status_code}")
 
         return response_data
 
@@ -215,9 +209,7 @@ class ApiManager:
             requests.HTTPError: If the API call returns a non-2xx status code.
         """
 
-        self.siemplify.LOGGER.info(
-            f"ApiManager.check_job_status: Checking job status for job_id: {job_id}"
-        )
+        self.siemplify.LOGGER.info(f"ApiManager.check_job_status: Checking job status for job_id: {job_id}")
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_JOB_STATUS)
@@ -235,9 +227,7 @@ class ApiManager:
 
         # Parse response
         response_data = response.json()
-        self.siemplify.LOGGER.info(
-            f"ApiManager.check_job_status: API call successful. Status: {response.status_code}"
-        )
+        self.siemplify.LOGGER.info(f"ApiManager.check_job_status: API call successful. Status: {response.status_code}")
 
         return response_data
 
@@ -259,9 +249,7 @@ class ApiManager:
             requests.HTTPError: If the API call returns a non-2xx status code.
 
         """
-        self.siemplify.LOGGER.info(
-            f"ApiManager.take_snapshot: Taking snapshot for volume_id: {volume_id}"
-        )
+        self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: Taking snapshot for volume_id: {volume_id}")
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_TAKE_SNAPSHOT)
@@ -279,9 +267,7 @@ class ApiManager:
 
         # Parse response
         response_data = response.json()
-        self.siemplify.LOGGER.info(
-            f"ApiManager.take_snapshot: API call successful. Status: {response.status_code}"
-        )
+        self.siemplify.LOGGER.info(f"ApiManager.take_snapshot: API call successful. Status: {response.status_code}")
 
         return response_data
 
@@ -303,9 +289,7 @@ class ApiManager:
             requests.HTTPError: If the API call returns a non-2xx status code.
 
         """
-        self.siemplify.LOGGER.info(
-            f"ApiManager.volume_offline: Taking volume offline for volume_id: {volume_id}"
-        )
+        self.siemplify.LOGGER.info(f"ApiManager.volume_offline: Taking volume offline for volume_id: {volume_id}")
 
         # Build full URL
         url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_VOLUME_OFFLINE)
@@ -323,8 +307,146 @@ class ApiManager:
 
         # Parse response
         response_data = response.json()
+        self.siemplify.LOGGER.info(f"ApiManager.volume_offline: API call successful. Status: {response.status_code}")
+
+        return response_data
+
+    def volume_online(self, volume_id: str, agent_id: str, system_id: str) -> dict:
+        """
+        Bring a volume online.
+
+        Extracts volume parameters from action and brings the volume online.
+
+        Args:
+            volume_id: Volume ID to bring online, extracted from action parameters.
+            agent_id: Console agent ID, extracted from action parameters.
+            system_id: Storage system ID, extracted from action parameters.
+
+        Returns:
+            Response data from the volume online API.
+
+        Raises:
+            requests.HTTPError: If the API call returns a non-2xx status code.
+
+        """
+        self.siemplify.LOGGER.info(f"ApiManager.volume_online: Bringing volume online for volume_id: {volume_id}")
+
+        # Build full URL
+        url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_VOLUME_ONLINE)
+
+        # Build request payload
+        request_payload = {"volume_id": volume_id, "agent_id": agent_id, "system_id": system_id}
+
+        self.siemplify.LOGGER.info(f"ApiManager.volume_online: POST URL={url}")
+
+        # Make API call using session (already has Authorization header from __init__)
+        response = self.session.post(url, json=request_payload, verify=self.SSL_VERIFY)
+
+        # Check if request was successful
+        response.raise_for_status()
+
+        # Parse response
+        response_data = response.json()
+        self.siemplify.LOGGER.info(f"ApiManager.volume_online: API call successful. Status: {response.status_code}")
+
+        return response_data
+
+    def block_user(self, user_id: str, user_ips: str, duration: str) -> dict:
+        """
+        Block a user.
+
+        Blocks a user with the specified parameters.
+
+        Args:
+            user_id: ID of the user to block (optional).
+            user_ips: Client IPs to block as comma-separated string
+                (required for NFS; optional for CIFS).
+            duration: Block duration - permanent or hours (1, 2, 4, 8, 12, 24).
+
+        Returns:
+            dict: Response data from the block user API.
+
+        Raises:
+            requests.HTTPError: If the API call returns a non-2xx status code.
+
+        """
+        # Mask sensitive values for logging
+        masked_user_id = mask_sensitive_value(user_id) if user_id else "N/A"
+
+        # Convert comma-separated IPs to list
+        user_ips_list = [ip.strip() for ip in user_ips.split(",") if ip.strip()] if user_ips else []
+
         self.siemplify.LOGGER.info(
-            f"ApiManager.volume_offline: API call successful. Status: {response.status_code}"
+            f"ApiManager.block_user: Blocking user with user_id: {masked_user_id}, "
+            f"user_ips: {mask_sensitive_value(user_ips)}, "
+            f"duration: {duration}"
         )
+
+        # Build full URL
+        url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_BLOCK_USER)
+
+        # Build request payload
+        request_payload = {"user_id": user_id, "user_ips": user_ips_list, "duration": duration}
+
+        self.siemplify.LOGGER.info(f"ApiManager.block_user: POST URL={url}")
+
+        # Make API call using session (already has Authorization header from __init__)
+        response = self.session.post(url, json=request_payload, verify=self.SSL_VERIFY)
+
+        # Check if request was successful
+        response.raise_for_status()
+
+        # Parse response
+        response_data = response.json()
+        self.siemplify.LOGGER.info(f"ApiManager.block_user: API call successful. Status: {response.status_code}")
+
+        return response_data
+
+    def unblock_user(self, user_id: str, user_ips: str) -> dict:
+        """
+        Unblock a user.
+
+        Unblocks a previously blocked user with the specified parameters.
+
+        Args:
+            user_id: ID of the user to unblock.
+            user_ips: Client IPs to unblock as comma-separated string
+                (required for NFS; optional for CIFS).
+
+        Returns:
+            dict: Response data from the unblock user API.
+
+        Raises:
+            requests.HTTPError: If the API call returns a non-2xx status code.
+
+        """
+        # Mask sensitive values for logging
+        masked_user_id = mask_sensitive_value(user_id) if user_id else "N/A"
+
+        # Convert comma-separated IPs to list
+        user_ips_list = [ip.strip() for ip in user_ips.split(",") if ip.strip()] if user_ips else []
+
+        self.siemplify.LOGGER.info(
+            f"ApiManager.unblock_user: Unblocking user with user_id: {masked_user_id}, "
+            f"user_ips: {mask_sensitive_value(user_ips)}"
+        )
+
+        # Build full URL
+        url = build_rrs_url(self.ENDPOINT_URL, self.ACCOUNT_ID, ENDPOINT_UNBLOCK_USER)
+
+        # Build request payload
+        request_payload = {"user_id": user_id, "user_ips": user_ips_list}
+
+        self.siemplify.LOGGER.info(f"ApiManager.unblock_user: POST URL={url}")
+
+        # Make API call using session (already has Authorization header from __init__)
+        response = self.session.post(url, json=request_payload, verify=self.SSL_VERIFY)
+
+        # Check if request was successful
+        response.raise_for_status()
+
+        # Parse response
+        response_data = response.json()
+        self.siemplify.LOGGER.info(f"ApiManager.unblock_user: API call successful. Status: {response.status_code}")
 
         return response_data

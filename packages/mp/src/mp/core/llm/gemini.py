@@ -74,7 +74,7 @@ class ApiKeyNotFoundError(Exception):
 
 
 class GeminiConfig(LlmConfig):
-    model_name: str = "gemini-3-pro-preview"
+    model_name: str = "gemini-3.1-pro-preview"
     temperature: float = 0.0
     sexually_explicit: str = "OFF"
     dangerous_content: str = "OFF"
@@ -96,12 +96,12 @@ class GeminiConfig(LlmConfig):
             ApiKeyNotFoundError: If the API key is not found.
 
         """
+        if mp_api_key := mp.core.config.get_gemini_api_key():
+            return mp_api_key
+
         gemini_api_key: str | None = os.environ.get("GEMINI_API_KEY")
         if gemini_api_key:
             return gemini_api_key
-
-        if mp_api_key := mp.core.config.get_gemini_api_key():
-            return mp_api_key
 
         msg: str = (
             "Could not find a saved Gemini API key in the configuration. "

@@ -19,25 +19,23 @@ import csv
 import re
 from abc import abstractmethod
 from io import StringIO
-from typing import Generic
+from typing import TYPE_CHECKING, Generic
 
-from ...data_models import ConnectorCard, InstalledIntegrationInstance
-from ...exceptions import RefreshTokenRenewalJobException
-from ...rest.soar_api import (
-    get_connector_cards,
-    get_installed_integrations_of_environment,
-)
-from ...types import Contains
-from ..interfaces import ApiClient
+from TIPCommon.base.interfaces import ApiClient
+from TIPCommon.exceptions import RefreshTokenRenewalJobException
+from TIPCommon.rest.soar_api import get_connector_cards, get_installed_integrations_of_environment
+
 from .base_job import Job
+
+if TYPE_CHECKING:
+    from TIPCommon.data_models import ConnectorCard, InstalledIntegrationInstance
+    from TIPCommon.types import Contains
 
 INTEGRATION_KEY = "integration"
 SUPPORTED_PLATFORM_VERSION = "6.2.35.0"
 
 
-SuccessFailureTuple = collections.namedtuple(
-    "SuccessFailureTuple", ["success_list", "failure_list"]
-)
+SuccessFailureTuple = collections.namedtuple("SuccessFailureTuple", ["success_list", "failure_list"])
 
 
 class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
@@ -197,10 +195,8 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
         current_version_tuple = _version_string_to_tuple(current_version_str)
 
         if current_version_tuple < supported_version_tuple:
-            raise RefreshTokenRenewalJobException(
-                f"{self.error_msg} its supported on SOAR Platform version "
-                f"{SUPPORTED_PLATFORM_VERSION} and higher."
-            )
+            msg = f"{self.error_msg} its supported on SOAR Platform version {SUPPORTED_PLATFORM_VERSION} and higher."
+            raise RefreshTokenRenewalJobException(msg)
 
     def _fetch_integrations_to_update(
         self,
@@ -236,9 +232,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
                 continue
 
             fetched_integrations.extend([
-                instance
-                for instance in env_instances
-                if instance.integration_identifier == integration_identifier
+                instance for instance in env_instances if instance.integration_identifier == integration_identifier
             ])
 
         return SuccessFailureTuple(
@@ -276,19 +270,13 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
             integration_name=integration_identifier,
         )
         connector_cards = [
-            cards_json
-            for cards_json in response_json
-            if cards_json.integration == integration_identifier
+            cards_json for cards_json in response_json if cards_json.integration == integration_identifier
         ]
-        connector_display_names = [
-            connector_card.display_name for connector_card in connector_cards
-        ]
+        connector_display_names = [connector_card.display_name for connector_card in connector_cards]
         not_found_connectors = set(connector_names).difference(connector_display_names)
 
         connectors_found = [
-            connector_card
-            for connector_card in connector_cards
-            if connector_card.display_name in connector_names
+            connector_card for connector_card in connector_cards if connector_card.display_name in connector_names
         ]
 
         return SuccessFailureTuple(
@@ -317,10 +305,7 @@ class RefreshTokenRenewalJob(Job, Generic[ApiClient]):
         """
         if failed_to_find_environments or failed_to_find_connectors:
             failed_instances = failed_to_find_environments + failed_to_find_connectors
-            error_msg = (
-                f"{self.error_msg} the specified instances "
-                f"were not found: {', '.join(failed_instances)}"
-            )
+            error_msg = f"{self.error_msg} the specified instances were not found: {', '.join(failed_instances)}"
             raise RefreshTokenRenewalJobException(error_msg)
 
     def _refresh_integrations_instance_token(
@@ -472,9 +457,8 @@ def validate_param_csv_to_multi_value(
 
 def _validate_double_quotes_count(param_name: str, param_value: str) -> None:
     if param_value.count('"') % 2 == 1:
-        raise ValueError(
-            f'Invalid input values: Unmatched double quotes for parameter "{param_name}".'
-        )
+        msg = f'Invalid input values: Unmatched double quotes for parameter "{param_name}".'
+        raise ValueError(msg)
 
 
 def _get_parsed_csv_values(
@@ -513,10 +497,10 @@ def _validate_values(
             invalid_values.append(value)
 
     if invalid_values:
-        raise ValueError(
-            f'Parameter "{param_name}" values not provided in '
-            f'double-quotes or incorrect: "{", ".join(invalid_values)}"'
+        msg = (
+            f'Parameter "{param_name}" values not provided in double-quotes or incorrect: "{", ".join(invalid_values)}"'
         )
+        raise ValueError(msg)
 
     return valid_values
 

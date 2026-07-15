@@ -32,6 +32,7 @@ from base64 import urlsafe_b64decode
 from collections import Counter
 from email.message import Message
 from email.utils import parseaddr
+from enum import Enum
 from html import unescape
 from json import JSONEncoder
 from typing import Any
@@ -59,6 +60,13 @@ from .EmailUtilitiesManager import (
     extract_valid_ips_from_body,
     fix_malformed_eml_content,
 )
+
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
 
 if typing.TYPE_CHECKING:
     from collections.abc import Iterable
@@ -1187,7 +1195,7 @@ class EMLParser:
 
                 self.msg.policy = email.policy.compat32  # type: ignore
 
-                for value in self.msg.get_all(header, []):
+                for value in self.msg.get_all(k, []):
                     if k == "from":
                         value = EMLParser.get_from_address(self.msg)
                     if value != "":
@@ -1487,7 +1495,7 @@ class EMLParser:
                 # used policy
                 try:
                     raw_body.append((encoding, raw_body_str, msg.items()))
-                except (AttributeError, TypeError):
+                except (AttributeError, IndexError, TypeError):
                     former_policy: email.policy.Policy = msg.policy  # type: ignore
                     msg.policy = email.policy.compat32  # type: ignore
                     raw_body.append((encoding, raw_body_str, msg.items()))
@@ -1630,19 +1638,52 @@ class EmailManager:
 
     def get_alert_entity_identifiers(self):
         self.siemplify.load_case_data()
-        return [
-            self.get_entity_original_identifier(entity)
-            for alert in self.siemplify.case.alerts
-            for entity in alert.entities
-        ]
+        execution_scope = getattr(
+            self.siemplify, "execution_scope", ExecutionScope.Alert
+        )
+        if execution_scope.value == ExecutionScope.Alert.value:
+            alerts = [self.siemplify.current_alert]
+        else:
+            alerts = getattr(
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
+
+        identifiers = []
+        for alert in alerts:
+            try:
+                for entity in alert.entities:
+                    identifiers.append(self.get_entity_original_identifier(entity))
+            except Exception as e:
+                self.logger.error(
+                    "Failed to retrieve entities for alert "
+                    f"{alert.identifier}: {e}"
+                )
+        return identifiers
 
     def get_alert_entity_identifiers_with_entity_type(self):
         self.siemplify.load_case_data()
-        return [
-            f"{entity.entity_type}:{self.get_entity_original_identifier(entity)}"
-            for alert in self.siemplify.case.alerts
-            for entity in alert.entities
-        ]
+        execution_scope = getattr(
+            self.siemplify, "execution_scope", ExecutionScope.Alert
+        )
+        if execution_scope.value == ExecutionScope.Alert.value:
+            alerts = [self.siemplify.current_alert]
+        else:
+            alerts = getattr(
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
+
+        identifiers = []
+        for alert in alerts:
+            try:
+                for entity in alert.entities:
+                    orig_id = self.get_entity_original_identifier(entity)
+                    identifiers.append(f"{entity.entity_type}:{orig_id}")
+            except Exception as e:
+                self.logger.error(
+                    "Failed to retrieve entities for alert "
+                    f"{alert.identifier}: {e}"
+                )
+        return identifiers
 
     def get_entity_original_identifier(self, entity: EntityTypes) -> str:
         """Helper function for getting entity original identifier
@@ -1659,9 +1700,27 @@ class EmailManager:
 
     def get_alert_entities(self):
         self.siemplify.load_case_data()
-        return [
-            entity for alert in self.siemplify.case.alerts for entity in alert.entities
-        ]
+        execution_scope = getattr(
+            self.siemplify, "execution_scope", ExecutionScope.Alert
+        )
+        if execution_scope.value == ExecutionScope.Alert.value:
+            alerts = [self.siemplify.current_alert]
+        else:
+            alerts = getattr(
+                self.siemplify.case, "open_alerts", self.siemplify.case.alerts
+            )
+
+        entities = []
+        for alert in alerts:
+            try:
+                for entity in alert.entities:
+                    entities.append(entity)
+            except Exception as e:
+                self.logger.error(
+                    "Failed to retrieve entities for alert "
+                    f"{alert.identifier}: {e}"
+                )
+        return entities
 
     def create_entity_with_relation(
         self,

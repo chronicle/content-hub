@@ -82,7 +82,11 @@ def assert_build_integration(
 ) -> Callable[[Path], None]:
     def wrapper(integration_path: Path) -> None:
         community: Path = tmp_path / mp.core.constants.THIRD_PARTY_REPO_NAME
-        shutil.copytree(integration_path.parent, community)
+        shutil.copytree(
+            integration_path.parent,
+            community,
+            ignore=shutil.ignore_patterns(".venv", ".git", "__pycache__"),
+        )
         integration: Path = community / built_integration.name
         py_version: Path = integration / mp.core.constants.PYTHON_VERSION_FILE
         if integration.exists():
@@ -97,7 +101,8 @@ def assert_build_integration(
         actual_file_names: set[str]
 
         actual_file_names, expected_file_names = test_mp.common.compare_files(
-            expected=built_integration, actual=out_integration
+            expected=built_integration,
+            actual=out_integration,
         )
         assert actual_file_names == expected_file_names
 
@@ -120,6 +125,18 @@ def assert_build_integration(
             actual=(out_integration / mp.core.constants.INTEGRATION_DEF_FILE.format(built_integration.name)),
         )
         assert actual == expected
+
+        # Check action definitions
+        expected_actions_dir: Path = built_integration / mp.core.constants.OUT_ACTIONS_META_DIR
+        actual_actions_dir: Path = out_integration / mp.core.constants.OUT_ACTIONS_META_DIR
+        if expected_actions_dir.exists():
+            for expected_action_file in expected_actions_dir.rglob(f"*{mp.core.constants.ACTIONS_META_SUFFIX}"):
+                actual_action_file = actual_actions_dir / expected_action_file.name
+                actual_action, expected_action = test_mp.common.get_json_content(
+                    expected=expected_action_file,
+                    actual=actual_action_file,
+                )
+                assert actual_action == expected_action
 
         actual, expected = test_mp.common.get_json_content(
             expected=(

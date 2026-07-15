@@ -15,13 +15,16 @@
 from __future__ import annotations
 
 import base64
+import logging
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 import requests
-import rich
 import typer
 import urllib3
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -51,25 +54,24 @@ class BackendAPI:
             typer.Exit: Validations error.
 
         """
-        self.api_root = api_root.rstrip("/")
-        self.username = username
-        self.password = password
-        self.api_key = api_key
-        self.session = requests.Session()
-        self.token = None
+        self.api_root: str = api_root.rstrip("/")
+        self.username: str | None = username
+        self.password: str | None = password
+        self.api_key: str | None = api_key
+        self.session: requests.Session = requests.Session()
+        self.token: str | None = None
 
         if self._is_localhost():
-            rich.print("[yellow]Localhost deployment detected. "
-                       "TLS verification disabled.[/yellow]")
+            logger.info("Localhost deployment detected. TLS verification disabled.")
             self._disable_tls()
 
         if api_key is not None:
             if username is not None or password is not None:
-                rich.print("[red]Cannot use both API key and username/password[/red]")
+                logger.error("Cannot use both API key and username/password")
                 raise typer.Exit(1)
 
         elif username is None or password is None:
-            rich.print("[red]You must provide username and password or api key[/red]")
+            logger.error("You must provide username and password or api key")
             raise typer.Exit(1)
 
     def _disable_tls(self) -> None:

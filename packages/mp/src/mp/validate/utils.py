@@ -15,19 +15,19 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from mp.core import constants, exclusions, file_utils
 from mp.core.data_models.common.release_notes.metadata import ReleaseNote
 from mp.core.data_models.integrations.script.parameter import ScriptParamType
 from mp.core.exceptions import FatalValidationError
-from mp.validate.data_models import BUILD, POST_BUILD, PRE_BUILD, FullReport, ValidationResults
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
     from mp.core.custom_types import ActionName, ConnectorName, JobName, YamlFileContent
+    from mp.validate.data_models import FullReport
 
 
 DEF_FILE_NAME_KEY: str = "name"
@@ -54,6 +54,11 @@ def get_marketplace_paths_from_names(
     for path in marketplace_paths:
         for n in names:
             if (p := path / n).exists():
+                results.add(p)
+
+            # Check if the name matches a suffixed integration (e.g. 'http' -> 'http_integration')
+            suffixed_name: str = f"{n}_integration"
+            if suffixed_name in constants.INTEGRATIONS_WITH_INTEGRATION_SUFFIX and (p := path / suffixed_name).exists():
                 results.add(p)
     return results
 
@@ -84,7 +89,7 @@ def load_integration_def(integration_path: Path) -> YamlFileContent:
     """
     try:
         integration_def = integration_path / constants.DEFINITION_FILE
-        return file_utils.load_yaml_file(integration_def)
+        return cast("YamlFileContent", file_utils.load_yaml_file(integration_def))
     except Exception as e:
         msg: str = f"Failed to load integration def file: {e}"
         raise FatalValidationError(msg) from e
@@ -113,7 +118,8 @@ def load_components_defs(integration_path: Path, *components: str) -> dict[str, 
             component_dir: Path = integration_path / component_dir_name
             if component_dir.is_dir():
                 component_defs[component_dir_name] = [
-                    file_utils.load_yaml_file(p) for p in component_dir.glob(f"*{constants.YAML_SUFFIX}")
+                    cast("YamlFileContent", file_utils.load_yaml_file(p))
+                    for p in component_dir.glob(f"*{constants.YAML_SUFFIX}")
                 ]
     except Exception as e:
         msg: str = f"Failed to load components def files: {e}"
@@ -234,20 +240,17 @@ def combine_results(*validations_outputs: FullReport) -> FullReport:
         A single report.
 
     """
-    combined_output: FullReport = {}
-    keys_to_combine = (PRE_BUILD, BUILD, POST_BUILD)
+    combined_output: FullReport = {"Validations": []}
+    all_lists_are_none = True
 
-    for key in keys_to_combine:
-        combined_list: list[ValidationResults] = []
-        all_lists_are_none = True
-
-        for output_dict in validations_outputs:
-            current_list = output_dict.get(key)
+    for output_dict in validations_outputs:
+        for current_list in output_dict.values():
             if current_list is not None:
-                combined_list.extend(current_list)
+                combined_output["Validations"].extend(current_list)
                 all_lists_are_none = False
 
-        combined_output[key] = [] if all_lists_are_none else combined_list
+    if all_lists_are_none:
+        return {}
 
     return combined_output
 
@@ -259,4 +262,9 @@ def should_fail_program(validations_output: FullReport) -> bool:
         True if need to fail overwise False.
 
     """
-    return any(validation_result for validation_result in validations_output.values())
+    for stage_results in validations_output.values():
+        if stage_results:
+            for result in stage_results:
+                if not result.is_success:
+                    return True
+    return False

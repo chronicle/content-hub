@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, NamedTuple
-
-import rich
 
 import mp.core.constants
 import mp.core.file_utils
@@ -30,35 +29,43 @@ if TYPE_CHECKING:
     from mp.core.custom_types import RepositoryType
 
 
+logger: logging.Logger = logging.getLogger(__name__)
+
+
 class Repos(NamedTuple):
     commercial: PlaybooksRepo
     community: PlaybooksRepo
     custom: PlaybooksRepo | None = None
 
 
-def build_playbooks(
-    playbooks: Iterable[str],
-    repositories: Iterable[RepositoryType],
-    src: Path | None,
-    dst: Path | None,
-    *,
-    deconstruct: bool = False,
-) -> None:
-    """Entry point of the build or deconstruct playbook operation."""
-    repos: Repos = _create_repos(src, dst)
+class BuildPlaybooksParams(NamedTuple):
+    playbooks: Iterable[str]
+    repositories: Iterable[RepositoryType]
+    src: Path | None = None
+    dst: Path | None = None
+    deconstruct: bool = False
 
-    if playbooks:
+
+def build_playbooks(p: BuildPlaybooksParams, /) -> None:
+    """Entry point of the build or deconstruct playbook operation."""
+    repos: Repos = _create_repos(p.src, p.dst)
+
+    if p.playbooks:
         if repos.custom is not None:
-            _build_playbooks(set(playbooks), repos.custom, deconstruct=deconstruct)
+            _build_playbooks(set(p.playbooks), repos.custom, deconstruct=p.deconstruct)
 
         else:
-            commercial_not_found: set[str] = _build_playbooks(set(playbooks), repos.commercial, deconstruct=deconstruct)
-            community_not_found: set[str] = _build_playbooks(set(playbooks), repos.community, deconstruct=deconstruct)
+            commercial_not_found: set[str] = _build_playbooks(
+                set(p.playbooks), repos.commercial, deconstruct=p.deconstruct
+            )
+            community_not_found: set[str] = _build_playbooks(
+                set(p.playbooks), repos.community, deconstruct=p.deconstruct
+            )
 
             if commercial_not_found.intersection(community_not_found):
-                rich.print(mp.core.constants.RECONFIGURE_MP_MSG)
+                logger.info(mp.core.constants.RECONFIGURE_MP_MSG)
 
-    elif repositories:
+    elif p.repositories:
         _build_playbooks_repositories([repos.commercial, repos.community])
         write_playbooks_json(repos.commercial, repos.community)
 
@@ -84,10 +91,10 @@ def _create_repos(modified_src: Path | None, modified_dst: Path | None) -> Repos
 
 
 def _build_playbooks_repositories(repos: list[PlaybooksRepo]) -> None:
-    rich.print("[blue]Building all playbooks in repository...[/blue]")
+    logger.info("Building all playbooks in repository...")
     for repository in repos:
         _build_single_repo_folder(repository)
-    rich.print("[blue]Done repository playbook build.[/blue]")
+    logger.info("Done repository playbook build.")
 
 
 def _build_single_repo_folder(repository: PlaybooksRepo) -> None:
@@ -112,13 +119,14 @@ def _build_playbooks(
     normalized_playbooks: set[str] = {_normalize_name_to_json(name, deconstruct=deconstruct) for name in playbooks}
     not_found_playbooks: set[str] = normalized_playbooks.difference(valid_playbooks_names)
     if not_found_playbooks:
-        rich.print(
-            f"The following playbooks could not be found in the {repository.name} "
-            f"repository: {', '.join(not_found_playbooks)}"
+        logger.error(
+            "The following playbooks could not be found in the %s repository: %s",
+            repository.name,
+            ", ".join(not_found_playbooks),
         )
 
     if valid_playbooks_paths:
-        rich.print(f"[blue]Building the following playbooks: {', '.join(valid_playbooks_names)}[/blue]")
+        logger.info("Building the following playbooks: %s", ", ".join(valid_playbooks_names))
 
         if deconstruct:
             repository.deconstruct_playbooks(valid_playbooks_paths)

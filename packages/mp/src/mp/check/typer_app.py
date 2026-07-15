@@ -14,11 +14,11 @@
 
 from __future__ import annotations
 
+import logging
 import pathlib
 import warnings
 from typing import TYPE_CHECKING, Annotated, NamedTuple
 
-import rich
 import typer
 
 import mp.core.code_manipulation
@@ -35,6 +35,9 @@ if TYPE_CHECKING:
 
 __all__: list[str] = ["check", "check_app"]
 check_app: typer.Typer = typer.Typer()
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class CheckParams(NamedTuple):
@@ -180,25 +183,25 @@ def _check_paths(check_params: CheckParams) -> None:
         changed_files=check_params.changed_files,
     )
     if not sources:
-        rich.print("No files found to check")
+        logger.info("No files found to check")
         return
 
     paths: set[Path] = _get_relevant_source_paths(sources)
     if not paths:
-        rich.print("No relevant python files to check")
+        logger.info("No relevant python files to check")
         return
 
     if check_params.raise_error_on_violations:
         warnings.filterwarnings("error")
 
     names: str = "\n".join(p.name for p in paths)
-    rich.print(f"Checking {names}")
+    logger.info("Checking %s", names)
     mp.core.code_manipulation.lint_python_files(
         paths,
         params=check_params.ruff_params,
     )
     if check_params.static_type_check:
-        rich.print("Performing static type checking on files")
+        logger.info("Performing static type checking on files")
         mp.core.code_manipulation.static_type_check_python_files(paths)
 
 
@@ -207,11 +210,14 @@ def _get_source_files(file_paths: list[str], *, changed_files: bool) -> list[str
 
 
 def _get_relevant_source_paths(sources: list[str]) -> set[Path]:
-    return {
-        path
-        for source in sources
-        if mp.core.file_utils.is_python_file(
-            path := pathlib.Path(source).resolve().expanduser().absolute(),
-        )
-        or path.is_dir()
-    }
+    paths: set[Path] = set()
+    for source in sources:
+        path: Path = pathlib.Path(source).resolve().expanduser().absolute()
+        if mp.core.file_utils.is_python_file(path) or path.is_dir():
+            paths.add(path)
+            continue
+
+        if integration_path := mp.core.file_utils.get_marketplace_integration_path(source):
+            paths.add(integration_path)
+
+    return paths

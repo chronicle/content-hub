@@ -6,6 +6,7 @@ on:
     branches:
       - '**'
     paths:
+      - 'packages/**'
       - 'content/response_integrations/third_party/**'
       - 'content/response_integrations/power_ups/**'
 
@@ -13,12 +14,94 @@ on:
     branches:
       - '**'
     paths:
+      - 'packages/**'
       - 'content/response_integrations/third_party/**'
       - 'content/response_integrations/power_ups/**'
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mp: ${{ steps.filter.outputs.mp }}
+      integration_packages: ${{ steps.filter.outputs.integration_packages }}
+      changed_integrations: ${{ steps.find_integrations.outputs.integrations }}
+      test_all: ${{ steps.find_integrations.outputs.test_all }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # language=yaml
+          filters: |
+            mp:
+              - 'packages/mp/**'
+            integration_packages:
+              - 'packages/envcommon/**'
+              - 'packages/tipcommon/**'
+              - 'packages/integration_testing/**'
+              - 'packages/integration_testing_whls/**'
+            response_integrations_third_party:
+              - 'content/response_integrations/third_party/**'
+              - 'content/response_integrations/power_ups/**'
+
+      - name: Find changed integrations
+        id: find_integrations
+        env:
+          FILTER_MP: ${{ steps.filter.outputs.mp }}
+          FILTER_PACKAGES: ${{ steps.filter.outputs.integration_packages }}
+          FILTER_THIRD_PARTY: ${{ steps.filter.outputs.response_integrations_third_party }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        # language=bash
+        run: |
+          # If shared packages or mp changed, test everything
+          if [[ "$FILTER_MP" == "true" ]] || \
+             [[ "$FILTER_PACKAGES" == "true" ]]; then
+            echo "test_all=true" >> $GITHUB_OUTPUT
+            echo "integrations=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "test_all=false" >> $GITHUB_OUTPUT
+
+          # Get changed files directly from git to avoid environment variable limits
+          if [[ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] || [[ -z "$BASE_SHA" ]]; then
+            # New branch or push without base, compare against parent
+            git diff --name-only --diff-filter=d HEAD~1 HEAD > changed_files.txt
+          else
+            # Use three-dot diff for PRs to get changes relative to the merge base
+            # For pushes, it works as a standard two-dot diff if the range is valid
+            git diff --name-only --diff-filter=d "$BASE_SHA...$HEAD_SHA" > changed_files.txt || \
+            git diff --name-only --diff-filter=d "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
+          fi
+
+          INTEGRATIONS=""
+          # Extract unique integration names from changed file paths (Third-Party/Power-Ups)
+          if [[ "$FILTER_THIRD_PARTY" == "true" ]]; then
+            THIRD_PARTY_INTS=$(grep "^content/response_integrations/third_party/\|^content/response_integrations/power_up[s]*/" changed_files.txt | \
+              sed 's|content/response_integrations/third_party/[^/]*/||' | \
+              sed 's|content/response_integrations/power_up[s]*/||' | \
+              cut -d'/' -f1 | \
+              sort -u | \
+              tr '\n' ' ' | xargs)
+            INTEGRATIONS="$INTEGRATIONS $THIRD_PARTY_INTS"
+          fi
+
+          echo "integrations=$(echo $INTEGRATIONS | xargs)" >> $GITHUB_OUTPUT
+
   mp_check:
     name: Code Linter
+    needs: changes
+    if: >-
+      needs.changes.outputs.test_all == 'true' ||
+      needs.changes.outputs.changed_integrations != ''
     runs-on: ubuntu-latest
 
     steps:
@@ -35,23 +118,31 @@ jobs:
       - name: Install mp package
         # language=bash
         run: |
-          pip install --upgrade pip
-          pip install -e ./packages/mp
+          python -m pip install uv
+          uv pip install --system -e ./packages/mp
 
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v44
-        with:
-          files: |
-            content/response_integrations/third_party/**/*.py
-            content/response_integrations/power_ups/**/*.py
-
-      - name: Run mp check with changed files
-        if: steps.changed-files.outputs.any_changed == 'true'
-        shell: bash
+      - name: Run mp check on Third-Party integrations
         env:
-          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+          TEST_ALL: ${{ needs.changes.outputs.test_all }}
+          CHANGED_INTEGRATIONS: ${{ needs.changes.outputs.changed_integrations }}
         # language=bash
         run: |
           mp config --root-path . --processes 10 --display-config
-          mp check $ALL_CHANGED_FILES --raise-error-on-violations --output-format grouped
+          if [[ "$TEST_ALL" == "true" ]]; then
+            echo "Shared packages changed — checking all Third-Party integrations"
+            mp check content/response_integrations/third_party content/response_integrations/power_ups --raise-error-on-violations --output-format grouped
+          else
+            echo "Checking only changed Third-Party integrations: $CHANGED_INTEGRATIONS"
+            FAILED=0
+            for integration in $CHANGED_INTEGRATIONS; do
+              # Try third_party first, then power_ups
+              INT_PATH=$(find content/response_integrations/third_party content/response_integrations/power_ups -name "$integration" -type d -maxdepth 2 | head -n 1)
+              if [[ -n "$INT_PATH" ]]; then
+                echo "--- Checking: $integration ($INT_PATH) ---"
+                mp check "$INT_PATH" --raise-error-on-violations --output-format grouped || FAILED=1
+              else
+                echo "Warning: Could not find path for integration $integration"
+              fi
+            done
+            exit $FAILED
+          fi
