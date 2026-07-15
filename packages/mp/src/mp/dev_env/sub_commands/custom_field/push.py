@@ -81,18 +81,33 @@ def push_custom_field(  # noqa: C901, PLR0915
         return
 
     # Standard single push
+    files_to_push = []
     field_file = Path(field_file_or_name)
-    if not field_file.is_file():
+    if field_file.is_file():
+        files_to_push.append(field_file)
+    else:
         # Try resolving by name in the default custom fields directory
         safe_name = field_file_or_name.replace("/", "_").replace(" ", "_")
         candidate_file = custom_fields_root / f"{safe_name}.yaml"
         if candidate_file.is_file():
-            field_file = candidate_file
+            files_to_push.append(candidate_file)
         else:
-            logger.error("Custom field file not found at '%s' or '%s'", field_file_or_name, candidate_file)
-            raise typer.Exit(1)
-    
-    _push_single_custom_field(field_file, allow_create)
+            # Look for suffix matching (e.g. name_scopes.yaml)
+            matching_files = [
+                f for f in custom_fields_root.iterdir()
+                if f.is_file() and f.suffix in {".yaml", ".yml"} and f.name.startswith(f"{safe_name}_")
+            ]
+            if matching_files:
+                files_to_push.extend(matching_files)
+            else:
+                logger.error("Custom field file not found at '%s' or '%s'", field_file_or_name, candidate_file)
+                raise typer.Exit(1)
+
+    if len(files_to_push) > 1:
+        logger.info("Found %d files matching '%s'. Pushing all of them...", len(files_to_push), field_file_or_name)
+
+    for f in files_to_push:
+        _push_single_custom_field(f, allow_create)
 
 
 def _push_single_custom_field(field_file: Path, allow_create: bool) -> None:
@@ -123,8 +138,22 @@ def _push_single_custom_field(field_file: Path, allow_create: bool) -> None:
         raise typer.Exit(1)
 
     existing_id = None
+    local_scopes = field_data.get("scopes")
     for field in installed_fields:
         if str(field.get("displayName")).lower() == field_name.lower():
+            if local_scopes is not None:
+                server_scopes = field.get("scopes")
+
+                def normalize_scopes(val) -> set[str]:
+                    if not val:
+                        return set()
+                    if isinstance(val, list):
+                        return {str(x).strip().lower() for x in val}
+                    return {x.strip().lower() for x in str(val).split(",") if x.strip()}
+
+                if normalize_scopes(local_scopes) != normalize_scopes(server_scopes):
+                    continue
+
             existing_id = field.get("id")
             break
 
@@ -132,6 +161,11 @@ def _push_single_custom_field(field_file: Path, allow_create: bool) -> None:
         logger.info("Updating existing custom field (ID: %s)...", existing_id)
         try:
             numeric_id = int(existing_id)
+            # Align the casing of displayName to match the server's to avoid validation errors (name change is forbidden)
+            server_field = next((f for f in installed_fields if f.get("id") == numeric_id), None)
+            if server_field and server_field.get("displayName"):
+                field_data["displayName"] = server_field["displayName"]
+
             # Update the payload with the target environment's ID and name
             field_data["id"] = numeric_id
             field_data["name"] = f"projects//locations//instances//customFields/{numeric_id}"

@@ -104,10 +104,65 @@ def pull_custom_field(  # noqa: C901
     if field_name_or_id is None:
         logger.error("field_name_or_id is required if not pulling or listing all")
         raise typer.Exit(1)
-    field_id = find_entity_identifier(field_name_or_id, installed_fields, "Custom Field")
-    if field_id is None:
+
+    target_name = field_name_or_id
+    target_scopes = None
+
+    # Check if the input is a local file path
+    input_path = Path(field_name_or_id)
+    if input_path.is_file():
+        try:
+            local_data = mp.core.file_utils.load_yaml_file(input_path)
+            if isinstance(local_data, dict):
+                target_name = local_data.get("displayName") or target_name
+                target_scopes = local_data.get("scopes")
+                if not dst:
+                    dst = input_path
+        except Exception:
+            logger.warning("Failed to load local file '%s' to extract displayName.", field_name_or_id)
+
+    matching_fields = []
+    try:
+        numeric_id = int(field_name_or_id)
+        for field in installed_fields:
+            if field.get("id") == numeric_id:
+                matching_fields.append(field)
+                break
+    except ValueError:
+        for field in installed_fields:
+            if str(field.get("displayName")).lower() == target_name.lower():
+                if target_scopes is not None:
+                    server_scopes = field.get("scopes")
+
+                    def normalize_scopes(val) -> set[str]:
+                        if not val:
+                            return set()
+                        if isinstance(val, list):
+                            return {str(x).strip().lower() for x in val}
+                        return {x.strip().lower() for x in str(val).split(",") if x.strip()}
+
+                    if normalize_scopes(target_scopes) != normalize_scopes(server_scopes):
+                        continue
+                matching_fields.append(field)
+
+    if not matching_fields:
+        logger.error("Custom Field '%s' not found in installed entities in SOAR platform.", field_name_or_id)
         raise typer.Exit(1)
-    _download_and_save_custom_field(backend_api, field_id, dst)
+
+    if len(matching_fields) > 1:
+        if dst is not None and dst.suffix in {".yaml", ".yml"}:
+            logger.error(
+                "Multiple custom fields found matching '%s', but a single destination file was specified. "
+                "Please specify a directory path for --custom, or pull by ID.",
+                field_name_or_id,
+            )
+            raise typer.Exit(1)
+        logger.info("Found %d custom fields matching '%s'. Pulling all of them...", len(matching_fields), field_name_or_id)
+
+    for field in matching_fields:
+        field_id = field.get("id")
+        if field_id is not None:
+            _download_and_save_custom_field(backend_api, field_id, dst)
 
 
 def _download_and_save_custom_field(
@@ -127,7 +182,19 @@ def _download_and_save_custom_field(
     # Determine destination path
     raw_name = str(field_data.get("displayName") or field_data.get("name") or field_id)
     safe_name = raw_name.replace("/", "_").replace(" ", "_")
-    file_name = f"{safe_name}.yaml"
+    scopes_val = field_data.get("scopes")
+    if scopes_val:
+        def normalize_scopes_for_filename(val) -> str:
+            if isinstance(val, list):
+                parts = [str(x).strip().lower() for x in val]
+            else:
+                parts = [x.strip().lower() for x in str(val).split(",") if x.strip()]
+            return "_".join(sorted(parts))
+        
+        scopes_suffix = normalize_scopes_for_filename(scopes_val)
+        file_name = f"{safe_name}_{scopes_suffix}.yaml"
+    else:
+        file_name = f"{safe_name}.yaml"
 
     if dst is None:
         custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
