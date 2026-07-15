@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path  # noqa: TC003
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -23,7 +23,7 @@ import typer
 import mp.core.file_utils
 import mp.dev_env.api
 from mp.dev_env.sub_commands.pull import pull_app
-from mp.dev_env.utils import find_entity_identifier, get_backend_api, load_dev_env_config
+from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -134,7 +134,7 @@ def pull_custom_field(  # noqa: C901
                 if target_scopes is not None:
                     server_scopes = field.get("scopes")
 
-                    def normalize_scopes(val) -> set[str]:
+                    def normalize_scopes(val: str | list | None) -> set[str]:
                         if not val:
                             return set()
                         if isinstance(val, list):
@@ -184,13 +184,13 @@ def _download_and_save_custom_field(
     safe_name = raw_name.replace("/", "_").replace(" ", "_")
     scopes_val = field_data.get("scopes")
     if scopes_val:
-        def normalize_scopes_for_filename(val) -> str:
+        def normalize_scopes_for_filename(val: str | list) -> str:
             if isinstance(val, list):
                 parts = [str(x).strip().lower() for x in val]
             else:
                 parts = [x.strip().lower() for x in str(val).split(",") if x.strip()]
             return "_".join(sorted(parts))
-        
+
         scopes_suffix = normalize_scopes_for_filename(scopes_val)
         file_name = f"{safe_name}_{scopes_suffix}.yaml"
     else:

@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import logging
 from pathlib import Path
 from typing import Annotated
@@ -31,7 +30,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @push_app.command(name="custom-field")
 @track_command
-def push_custom_field(  # noqa: C901, PLR0915
+def push_custom_field(  # noqa: C901
     field_file_or_name: Annotated[
         str | None, typer.Argument(help="The custom field YAML file path or name to push.")
     ] = None,
@@ -68,7 +67,7 @@ def push_custom_field(  # noqa: C901, PLR0915
         if not custom_fields_root.exists() or not custom_fields_root.is_dir():
             logger.error("Custom fields directory not found.")
             raise typer.Exit(1)
-        
+
         yaml_files = list(custom_fields_root.glob("*.yaml")) + list(custom_fields_root.glob("*.yml"))
         if not yaml_files:
             logger.info("No custom field files found to push.")
@@ -76,7 +75,7 @@ def push_custom_field(  # noqa: C901, PLR0915
 
         for f in yaml_files:
             _push_single_custom_field(f, allow_create)
-        
+
         logger.info("Successfully finished pushing all custom fields.")
         return
 
@@ -144,7 +143,7 @@ def _push_single_custom_field(field_file: Path, allow_create: bool) -> None:
             if local_scopes is not None:
                 server_scopes = field.get("scopes")
 
-                def normalize_scopes(val) -> set[str]:
+                def normalize_scopes(val: str | list | None) -> set[str]:
                     if not val:
                         return set()
                     if isinstance(val, list):
@@ -169,7 +168,7 @@ def _push_single_custom_field(field_file: Path, allow_create: bool) -> None:
             # Update the payload with the target environment's ID and name
             field_data["id"] = numeric_id
             field_data["name"] = f"projects//locations//instances//customFields/{numeric_id}"
-            
+
             backend_api.update_custom_field(numeric_id, field_data)
         except (ValueError, TypeError) as e:
             logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
@@ -181,7 +180,7 @@ def _push_single_custom_field(field_file: Path, allow_create: bool) -> None:
         if not allow_create:
             logger.error("Custom field '%s' not found on the platform. Skipping because --allow-create was not specified.", field_name)
             raise typer.Exit(1)
-            
+
         logger.info("Creating new custom field...")
         try:
             backend_api.create_custom_field(field_data)
