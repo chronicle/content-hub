@@ -75,3 +75,37 @@ class VulnerabilityFinding(BaseModel):
             name=json_data.get("name", ""),
             severity=json_data.get("severity", ""),
         )
+
+
+@dataclasses.dataclass(slots=True)
+class ThreatAIAnalysis(BaseModel):
+    analysis_id: str | None
+    status: str | None
+    verdict: str | None
+    analyzed_at: str | None
+    severity: str | None
+    confidence_level: str | None
+    conclusion: str | None
+    investigation_process: str | None
+
+    @classmethod
+    def from_json(
+        cls,
+        raw_data: SingleJson,
+        json_data: SingleJson | None
+    ) -> ThreatAIAnalysis | None:
+        """Create a ThreatAIAnalysis instance from JSON data."""
+        if not json_data:
+            return None
+
+        return cls(
+            raw_data=raw_data,
+            analysis_id=json_data.get("id"),
+            status=json_data.get("status"),
+            verdict=json_data.get("verdict"),
+            analyzed_at=json_data.get("analyzedAt"),
+            severity=json_data.get("severity"),
+            confidence_level=json_data.get("confidenceLevel"),
+            conclusion=json_data.get("conclusion"),
+            investigation_process=json_data.get("investigationProcess"),
+        )

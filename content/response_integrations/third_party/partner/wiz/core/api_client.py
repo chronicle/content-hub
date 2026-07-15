@@ -19,7 +19,15 @@ from typing import TYPE_CHECKING, NamedTuple
 import requests
 from TIPCommon.base.interfaces import Apiable
 
-from . import api_utils, auth_manager, constants, data_parser, datamodels, query_builder
+from . import (
+    api_utils,
+    auth_manager,
+    constants,
+    data_parser,
+    datamodels,
+    exceptions,
+    query_builder
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -271,3 +279,40 @@ class WizApiClient(Apiable):
         if cve_ids:
             findings = [f for f in findings if f.name in cve_ids]
         return findings[:first]
+
+    def get_threat_ai_analysis(
+        self,
+        issue_id: str
+    ) -> datamodels.ThreatAIAnalysis | None:
+        """Get threat AI analysis for a specific threat by its issue ID.
+
+        Args:
+            issue_id (str): The ID of the issue/threat to retrieve details for.
+
+        Returns:
+            datamodels.ThreatAIAnalysis | None: A ThreatAIAnalysis object containing details,
+            or None if analysis is not found.
+        """
+        threat_analysis_query_builder: query_builder.ThreatAIAnalysisQueryBuilder = (
+            query_builder.ThreatAIAnalysisQueryBuilder(issue_id=issue_id)
+        )
+
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=threat_analysis_query_builder.build_query(),
+        )
+        api_utils.validate_response(response=response)
+
+        response_json = response.json()
+        if response_json.get("data", {}).get("issue") is None:
+            raise exceptions.IssueNotFoundError(
+                f"Threat with ID {issue_id} wasn't found"
+                f" in {constants.INTEGRATION_NAME}."
+            )
+
+        return self.parser.build_threat_ai_analysis_object(response_json)
+
