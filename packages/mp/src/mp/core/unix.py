@@ -91,16 +91,21 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
 def _remove_safe_to_ignore_packages_from_requirements(requirements_path: Path) -> None:
     if not requirements_path.exists():
         return
-    with open(requirements_path, "r", encoding="utf-8") as f:
+    with requirements_path.open(encoding="utf-8") as f:
         lines = f.readlines()
-    
-    filtered_lines = []
-    for line in lines:
-        if not any(re.match(fr"^{re.escape(pkg)}(?:==|>=|<=|~=|;|\s|$)", line, re.IGNORECASE) for pkg in constants.SAFE_TO_IGNORE_PACKAGES):
-            filtered_lines.append(line)
-            
-    with open(requirements_path, "w", encoding="utf-8") as f:
+
+    filtered_lines = [
+        line
+        for line in lines
+        if not any(
+            re.match(rf"^{re.escape(pkg)}(?:==|>=|<=|~=|;|\s|$)", line, re.IGNORECASE)
+            for pkg in constants.SAFE_TO_IGNORE_PACKAGES
+        )
+    ]
+
+    with requirements_path.open("w", encoding="utf-8") as f:
         f.writelines(filtered_lines)
+
 
 def run_pip_command(command: list[str], cwd: Path) -> None:
     """Run a pip command and ignore safe-to-ignore errors.
