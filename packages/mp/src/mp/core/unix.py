@@ -88,14 +88,19 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def _get_safe_to_ignore_packages(e: sp.CalledProcessError, /) -> list[str]:
-    full_msg: str = f"{e.stdout or ''}\n{e.stderr or ''}"
-    ignored_packages: list[str] = [pkg for pkg in constants.SAFE_TO_IGNORE_PACKAGES if pkg in full_msg]
-    ignored_messages: list[bool] = [msg in full_msg for msg in constants.SAFE_TO_IGNORE_ERROR_MESSAGES]
-    if ignored_messages and ignored_packages:
-        return ignored_packages
-    return []
-
+def _remove_safe_to_ignore_packages_from_requirements(requirements_path: Path) -> None:
+    if not requirements_path.exists():
+        return
+    with open(requirements_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    
+    filtered_lines = []
+    for line in lines:
+        if not any(re.match(fr"^{re.escape(pkg)}(?:==|>=|<=|~=|;|\s|$)", line, re.IGNORECASE) for pkg in constants.SAFE_TO_IGNORE_PACKAGES):
+            filtered_lines.append(line)
+            
+    with open(requirements_path, "w", encoding="utf-8") as f:
+        f.writelines(filtered_lines)
 
 def run_pip_command(command: list[str], cwd: Path) -> None:
     """Run a pip command and ignore safe-to-ignore errors.
@@ -110,15 +115,6 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
-        # Check if this is a safe-to-ignore error / marker issue
-        if ignored_packages := _get_safe_to_ignore_packages(e):
-            message = (
-                f"[INFO] Ignored safe-to-ignore packages due to Python version "
-                f"incompatibility: {', '.join(ignored_packages)}\n"
-            )
-            logger.info(message)
-            return
-
         _handle_pip_no_matching_distribution_error(e)
         raise FatalCommandError from e
 
@@ -187,6 +183,8 @@ def download_wheels_from_requirements(
     command.extend(runtime_config)
     logger.debug("Downloading wheels from %s to %s", requirements_path, dst_path)
     logger.debug("Running command: %s", command)
+
+    _remove_safe_to_ignore_packages_from_requirements(requirements_path)
 
     try:
         if is_windows():
