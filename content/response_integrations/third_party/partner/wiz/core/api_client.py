@@ -19,14 +19,14 @@ from typing import TYPE_CHECKING, NamedTuple
 import requests
 from TIPCommon.base.interfaces import Apiable
 
-from . import (
+from . import (  # isort: skip
     api_utils,
     auth_manager,
     constants,
     data_parser,
     datamodels,
     exceptions,
-    query_builder,
+    query_builder
 )
 
 if TYPE_CHECKING:
