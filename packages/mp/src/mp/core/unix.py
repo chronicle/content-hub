@@ -110,15 +110,6 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
-        # Check if this is a safe-to-ignore error / marker issue
-        if ignored_packages := _get_safe_to_ignore_packages(e):
-            message = (
-                f"[INFO] Ignored safe-to-ignore packages due to Python version "
-                f"incompatibility: {', '.join(ignored_packages)}\n"
-            )
-            logger.info(message)
-            return
-
         _handle_pip_no_matching_distribution_error(e)
         raise FatalCommandError from e
 
