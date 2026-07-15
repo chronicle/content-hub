@@ -45,7 +45,9 @@ def _get_integration_modules_import_strings(integration: pathlib.Path) -> list[s
             if not module.is_file() or module.suffix not in VALID_SUFFIXES:
                 continue
 
-            import_: str = _get_import_string(integration.stem, package.stem, module.stem)
+            import_: str = _get_import_string(
+                integration.stem, package.stem, module.stem
+            )
             results.append(import_)
 
     return results

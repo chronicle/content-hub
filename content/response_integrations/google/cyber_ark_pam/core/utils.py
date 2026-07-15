@@ -18,9 +18,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import requests
+from urllib.parse import urljoin
 
-from .constants import MIN_MASK_LENGTH
+import requests
+from TIPCommon.extraction import extract_configuration_param
+
+from .constants import INTEGRATION_NAME, MIN_MASK_LENGTH, URLS
+from .datamodels import IntegrationParameters
 from .exceptions import (
     CyberArkPamAccountNotManagedError,
     CyberArkPamManagerError,
@@ -31,7 +35,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from TIPCommon.base.interfaces import ScriptLogger
-    from TIPCommon.types import SingleJson
+    from TIPCommon.types import ChronicleSOAR, SingleJson
 
 
 def validate_response(response: requests.Response) -> None:
@@ -60,7 +64,9 @@ def validate_response(response: requests.Response) -> None:
 
         if response.status_code == 404:  # noqa: PLR2004
             raise CyberArkPamNotFoundError(msg) from e
-        if response.status_code == 400 and (error_code == "CAWS00001E" or "not managed by the cpm" in msg.lower()):  # noqa: PLR2004
+        if response.status_code == 400 and (
+            error_code == "CAWS00001E" or "not managed by the cpm" in msg.lower()
+        ):  # noqa: PLR2004
             raise CyberArkPamAccountNotManagedError(msg) from e
         raise CyberArkPamManagerError(msg) from e
 
@@ -107,7 +113,93 @@ def build_lookup_with_warnings(
         if not key:
             continue
         if key in lookup:
-            logger.warn(f"Duplicate {entity_type} '{key}' detected. Later entry will overwrite.")
+            logger.warn(
+                f"Duplicate {entity_type} '{key}' detected. Later entry will overwrite."
+            )
         lookup[key] = get_value(item)
 
     return lookup
+
+
+def extract_integration_parameters(
+    soar_object: ChronicleSOAR,
+) -> IntegrationParameters:
+    """Extract global integration configuration parameters for CyberArk PAM.
+
+    Args:
+        soar_object: The Chronicle SOAR action, job, or connector SDK object.
+
+    Returns:
+        IntegrationParameters: An IntegrationParameters instance with extracted values.
+
+    """
+    api_root = extract_configuration_param(
+        soar_object,
+        provider_name=INTEGRATION_NAME,
+        param_name="Api Root",
+        is_mandatory=True,
+        print_value=True,
+    )
+    username = extract_configuration_param(
+        soar_object,
+        provider_name=INTEGRATION_NAME,
+        param_name="Username",
+        is_mandatory=True,
+        print_value=True,
+    )
+    password = extract_configuration_param(
+        soar_object,
+        provider_name=INTEGRATION_NAME,
+        param_name="Password",
+        is_mandatory=True,
+        remove_whitespaces=False,
+    )
+    verify_ssl = extract_configuration_param(
+        soar_object,
+        provider_name=INTEGRATION_NAME,
+        param_name="Verify SSL",
+        is_mandatory=False,
+        input_type=bool,
+        default_value=True,
+        print_value=True,
+    )
+    ca_certificate = extract_configuration_param(
+        soar_object,
+        provider_name=INTEGRATION_NAME,
+        param_name="CA Certificate",
+    )
+    client_certificate = extract_configuration_param(
+        soar_object,
+        provider_name=INTEGRATION_NAME,
+        param_name="Client Certificate",
+    )
+    client_certificate_passphrase = extract_configuration_param(
+        soar_object,
+        provider_name=INTEGRATION_NAME,
+        param_name="Client Certificate Passphrase",
+        remove_whitespaces=False,
+    )
+    return IntegrationParameters(
+        api_root=api_root,
+        username=username,
+        password=password,
+        verify_ssl=verify_ssl,
+        ca_certificate=ca_certificate,
+        client_certificate=client_certificate,
+        client_certificate_passphrase=client_certificate_passphrase,
+    )
+
+
+def build_full_url(api_root: str, url_key: str, **kwargs: object) -> str:
+    """Build the full URL from an API root and a URL key in URLS.
+
+    Args:
+        api_root: Base URL of the CyberArk PAM instance.
+        url_key: The key in URLS dictionary mapping to the endpoint path.
+        **kwargs: Variables passed for URL path formatting.
+
+    Returns:
+        The formatted full URL.
+
+    """
+    return urljoin(api_root, URLS[url_key].format(**kwargs))

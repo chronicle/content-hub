@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .datamodels import Account
 
@@ -45,4 +45,23 @@ class CyberArkPamParser:
 
         """
         accounts_json = json_response["value"]
-        return [CyberArkPamParser.build_account(account_json) for account_json in accounts_json]
+
+        return [
+            CyberArkPamParser.build_account(account_json)
+            for account_json in accounts_json
+        ]
+
+    @staticmethod
+    def build_versions(json_response: SingleJson | list[Any]) -> list[Any]:
+        """Build a list of version objects/values from raw JSON response.
+
+        Returns:
+            A list of secret versions.
+
+        """
+        if isinstance(json_response, dict) and "value" in json_response:
+            return json_response["value"]
+        if isinstance(json_response, list):
+            return json_response
+
+        return [json_response]

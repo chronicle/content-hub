@@ -13,11 +13,11 @@
 # limitations under the License.
 
 
-"""Change Account Password action for CyberArk PAM integration."""
+"""Get Account Password Versions action for CyberArk PAM integration."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from TIPCommon.extraction import extract_action_param
 from TIPCommon.transformation import string_to_multi_value
@@ -32,17 +32,17 @@ from ..core.exceptions import (
 if TYPE_CHECKING:
     from TIPCommon.types import Entity
 
-SCRIPT_NAME = "Change Account Password"
+SCRIPT_NAME = "Get Account Password Versions"
 
 
-class ChangeAccountPassword(CyberArkPamAction):
-    """Change Account Password action class."""
+class GetAccountPasswordVersions(CyberArkPamAction):
+    """Get Account Password Versions action class."""
 
     def __init__(self) -> None:
-        """Initialize the ChangeAccountPassword action."""
+        """Initialize the GetAccountPasswordVersions action."""
         super().__init__(f"{INTEGRATION_NAME} - {SCRIPT_NAME}")
         self.accounts: list[str] = []
-        self.successful_accounts: list[str] = []
+        self.successful_accounts: dict[str, Any] = {}
         self.failed_accounts: dict[str, str] = {}
 
     def _extract_action_parameters(self) -> None:
@@ -59,8 +59,8 @@ class ChangeAccountPassword(CyberArkPamAction):
         """Perform the action logic."""
         for account in self.accounts:
             try:
-                self.api_client.change_password(account=account)
-                self.successful_accounts.append(account)
+                versions = self.api_client.get_secret_versions(account=account)
+                self.successful_accounts[account] = versions
             except CyberArkPamNotFoundError as e:
                 self.logger.exception(
                     f"Account with id {account} was not found in CyberArk PAM."
@@ -84,28 +84,31 @@ class ChangeAccountPassword(CyberArkPamAction):
 
         if self.successful_accounts:
             output_parts.append(
-                "Successfully queued an immediate password change task in CyberArk PAM for "
-                f"the following accounts: {', '.join(self.successful_accounts)}"
+                "Successfully retrieved secret versions in CyberArk PAM for "
+                f"the following accounts: {', '.join(self.successful_accounts.keys())}"
             )
 
         if self.failed_accounts:
             self.result_value = False
             if self.successful_accounts:
                 output_parts.append(
-                    "Action wasn't able to queue an immediate password change task in CyberArk PAM for "
+                    "Action wasn't able to retrieve secret versions in CyberArk PAM for "
                     f"the following accounts: {', '.join(self.failed_accounts.keys())}. "
                     "Please check JSON Result for more information."
                 )
             else:
                 output_parts.append(
-                    "None of the provided accounts were queued for a password change task. "
+                    "None of the provided accounts were retrieved for secret versions. "
                     "Please check JSON Result for more information."
                 )
 
         self.output_message = "\n".join(output_parts)
 
         self.json_results = {
-            "successful_accounts": self.successful_accounts,
+            "successful_accounts": [
+                {"account_id": acc, "versions": versions}
+                for acc, versions in self.successful_accounts.items()
+            ],
             "failed_accounts": [
                 {"account_id": acc, "error": reason}
                 for acc, reason in self.failed_accounts.items()
@@ -114,8 +117,8 @@ class ChangeAccountPassword(CyberArkPamAction):
 
 
 def main() -> None:
-    """Run the ChangeAccountPassword action."""
-    ChangeAccountPassword().run()
+    """Run the GetAccountPasswordVersions action."""
+    GetAccountPasswordVersions().run()
 
 
 if __name__ == "__main__":

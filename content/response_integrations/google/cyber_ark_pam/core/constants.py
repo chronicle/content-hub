@@ -22,13 +22,14 @@ INTEGRATION_NAME: str = "CyberArk PAM"
 # Manager configuration
 CA_CERT_PATH: str = "cacert.pem"
 URLS: dict[str, str] = {
-    "get_access_token": "/PasswordVault/API/Auth/CyberArk/Logon",
+    "logon": "/PasswordVault/API/Auth/CyberArk/Logon",
     "list_accounts": "PasswordVault/API/Accounts",
     "get_password": "PasswordVault/API/Accounts/{account_id}/Password/Retrieve/",
     "change_password": "PasswordVault/API/Accounts/{account_id}/Change",
+    "get_secret_versions": "PasswordVault/API/Accounts/{account_id}/Secret/Versions",
 }
 MAX_RETRIES: int = 1
-GET_TOKEN_TIMEOUT: int = 60
+AUTHENTICATION_TIMEOUT: int = 60
 
 # Masking configurations
 MIN_MASK_LENGTH: int = 6

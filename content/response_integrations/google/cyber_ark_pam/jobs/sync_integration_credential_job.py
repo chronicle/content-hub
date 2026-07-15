@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import dataclasses
 import json
 import time
 from itertools import starmap
@@ -40,7 +39,8 @@ from ..core.constants import (
     SYNC_CREDENTIAL_JOB_SCRIPT_NAME,
     TIMEOUT_THRESHOLD_MS,
 )
-from ..core.CyberArkPamManager import CyberArkPamManager
+from ..core.cyber_ark_pam_manager import CyberArkPamManager
+from ..core.datamodels import IntegrationParameters
 from ..core.exceptions import (
     CyberArkPamNotFoundError,
     IntegrationCredentialSyncError,
@@ -50,20 +50,16 @@ from ..core.exceptions import (
     ParameterUpdateError,
     SecretAccessError,
 )
-from ..core.utils import build_lookup_with_warnings, mask_id
+from ..core.utils import (
+    build_lookup_with_warnings,
+    extract_integration_parameters,
+    mask_id,
+)
 
 if TYPE_CHECKING:
-    from TIPCommon.base.interfaces import ScriptLogger
     from TIPCommon.types import SingleJson
 
 NameIdentifierMap = dict[str, str]
-
-
-@dataclasses.dataclass
-class LoggerWrapper:
-    """Wraps ScriptLogger to match standard siemplify.LOGGER attribute access."""
-
-    LOGGER: ScriptLogger
 
 
 class SyncIntegrationCredentialJob(Job):
@@ -90,18 +86,56 @@ class SyncIntegrationCredentialJob(Job):
     def _init_api_clients(self) -> None:
         """No-op. Async API clients are initialized inside the async event loop."""
 
+    def _has_job_level_parameters(self) -> bool:
+        """Check if the job instance has its connection parameters populated in UI configuration."""
+        return bool(getattr(self.params, "api_root", None))
+
+    def _extract_from_job_params(self) -> IntegrationParameters:
+        """Extract connection parameters directly from the Job UI configuration container."""
+        return IntegrationParameters(
+            api_root=self.params.api_root,
+            username=self.params.username,
+            password=self.params.password,
+            verify_ssl=self.params.verify_ssl
+            if self.params.verify_ssl is not None
+            else False,
+            ca_certificate=self.params.ca_certificate,
+            client_certificate=self.params.client_certificate,
+            client_certificate_passphrase=self.params.client_certificate_passphrase,
+        )
+
+    def _extract_from_fallback_configuration(self) -> IntegrationParameters:
+        """Extract parameters from global integration configuration."""
+        return extract_integration_parameters(self.soar_job)
+
+    def _get_integration_parameters(self) -> IntegrationParameters:
+        """Extract CyberArk PAM connection parameters from Job UI or fall back to global Integration configuration."""
+        if self._has_job_level_parameters():
+            self.logger.info(
+                "Extracting CyberArk PAM connection parameters directly from the Job's UI configuration settings."
+            )
+            return self._extract_from_job_params()
+
+        self.logger.info(
+            "Job UI configuration parameters are empty or incomplete. "
+            "Falling back to the global Integration Instance configuration..."
+        )
+        return self._extract_from_fallback_configuration()
+
     async def _init_cyber_ark_pam_client(self) -> None:
         """Initialize the CyberArk PAM manager."""
+        params = self._get_integration_parameters()
+
         self.cyber_ark_manager = await asyncio.to_thread(
             CyberArkPamManager,
-            api_root=getattr(self.params, "api_root", ""),
-            username=getattr(self.params, "username", ""),
-            password=getattr(self.params, "password", ""),
-            siemplify=LoggerWrapper(self.logger),
-            verify_ssl=getattr(self.params, "verify_ssl", False),
-            ca_certificate=getattr(self.params, "ca_certificate", None),
-            client_certificate=getattr(self.params, "client_certificate", None),
-            client_certificate_passphrase=getattr(self.params, "client_certificate_passphrase", None),
+            api_root=params.api_root,
+            username=params.username,
+            password=params.password,
+            logger=self.logger,
+            verify_ssl=params.verify_ssl,
+            ca_certificate=params.ca_certificate,
+            client_certificate=params.client_certificate,
+            client_certificate_passphrase=params.client_certificate_passphrase,
         )
 
     def _validate_params(self) -> None:
@@ -116,7 +150,9 @@ class SyncIntegrationCredentialJob(Job):
 
         """
         try:
-            self.credential_mapping = yaml.safe_load(self.params.credential_mapping) or {}
+            self.credential_mapping = (
+                yaml.safe_load(self.params.credential_mapping) or {}
+            )
         except yaml.YAMLError as e:
             msg = f"Invalid Credential Mapping syntax: {e}"
             raise InvalidConfigurationError(msg) from e
@@ -128,9 +164,7 @@ class SyncIntegrationCredentialJob(Job):
         valid_keys = {INTEGRATION_INSTANCES_KEY, CONNECTORS_KEY, JOBS_KEY}
         invalid_keys = set(self.credential_mapping.keys()) - valid_keys
         if invalid_keys:
-            msg = (
-                f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. Allowed keys are: {list(valid_keys)}."
-            )
+            msg = f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. Allowed keys are: {list(valid_keys)}."
             raise InvalidConfigurationError(msg)
 
         for category in valid_keys:
@@ -263,18 +297,24 @@ class SyncIntegrationCredentialJob(Job):
         """
         cache_key = (account_id, version_id)
         if cache_key in self._secret_cache:
-            self.logger.info(f"Using cached payload for account '{mask_id(account_id)}' (version '{version_id}').")
+            self.logger.info(
+                f"Using cached payload for account '{mask_id(account_id)}' (version '{version_id}')."
+            )
             return self._secret_cache[cache_key]
 
-        ticket_id_raw = getattr(self.params, "ticket_id", None)
-        ticket_id = int(ticket_id_raw) if ticket_id_raw and str(ticket_id_raw).isdigit() else None
+        ticket_id_raw = self.params.ticket_id
+        ticket_id = (
+            int(ticket_id_raw)
+            if ticket_id_raw and str(ticket_id_raw).isdigit()
+            else None
+        )
 
         try:
             password: str = await asyncio.to_thread(
                 self.cyber_ark_manager.get_password,
                 account=account_id,
-                reason=getattr(self.params, "reason", "Credential Synchronization Job"),
-                ticketing_system_name=getattr(self.params, "ticketing_system_name", None),
+                reason=self.params.reason or "Credential Synchronization Job",
+                ticketing_system_name=self.params.ticketing_system_name,
                 ticket_id=ticket_id,
                 version=version_id,
             )
@@ -361,7 +401,9 @@ class SyncIntegrationCredentialJob(Job):
         )
 
         if not instances:
-            self.logger.info("No integration instances in credential mapping. Skipping.")
+            self.logger.info(
+                "No integration instances in credential mapping. Skipping."
+            )
             return
 
         self.logger.info(f"Processing {len(instances)} integration instance(s)...")
@@ -441,7 +483,9 @@ class SyncIntegrationCredentialJob(Job):
 
         identifier: str | None = self._resolve_instance_identifier(name)
         if identifier is None:
-            self.logger.warn(f"Skipping instance '{name}' — could not resolve identifier.")
+            self.logger.warn(
+                f"Skipping instance '{name}' — could not resolve identifier."
+            )
             return
 
         await self._set_integration_params(api, name, identifier, param_mapping)
@@ -493,7 +537,9 @@ class SyncIntegrationCredentialJob(Job):
 
         """
         for param_name, mapped_value in param_mapping.items():
-            context: str = f"param '{param_name}' on instance '{name}' (id: {identifier})"
+            context: str = (
+                f"param '{param_name}' on instance '{name}' (id: {identifier})"
+            )
             account_id, version_id = self._resolve_account_and_version(mapped_value)
 
             state_key: str = f"instance:{identifier}:{param_name}"
@@ -550,7 +596,9 @@ class SyncIntegrationCredentialJob(Job):
             cards,
         )
 
-        self.logger.info(f"Found {len(self.connector_name_to_identifier)} connector(s).")
+        self.logger.info(
+            f"Found {len(self.connector_name_to_identifier)} connector(s)."
+        )
 
         async def update_task(name: str, param_mapping: SingleJson) -> None:
             if self._is_approaching_timeout():
@@ -609,7 +657,9 @@ class SyncIntegrationCredentialJob(Job):
 
         identifier: str | None = self._resolve_connector_identifier(name)
         if identifier is None:
-            self.logger.warn(f"Skipping connector '{name}' — could not resolve identifier.")
+            self.logger.warn(
+                f"Skipping connector '{name}' — could not resolve identifier."
+            )
             return
 
         await self._set_connector_params(api, name, identifier, param_mapping)
@@ -656,7 +706,9 @@ class SyncIntegrationCredentialJob(Job):
 
         """
         for param_name, mapped_value in param_mapping.items():
-            context: str = f"param '{param_name}' on connector '{name}' (id: {identifier})"
+            context: str = (
+                f"param '{param_name}' on connector '{name}' (id: {identifier})"
+            )
             account_id, version_id = self._resolve_account_and_version(mapped_value)
 
             state_key: str = f"connector:{identifier}:{param_name}"
@@ -747,7 +799,10 @@ class SyncIntegrationCredentialJob(Job):
         """
         installed_jobs_response: SingleJson = await api.get_installed_jobs()
 
-        if isinstance(installed_jobs_response, dict) and "job_instances" in installed_jobs_response:
+        if (
+            isinstance(installed_jobs_response, dict)
+            and "job_instances" in installed_jobs_response
+        ):
             job_instances: list[SingleJson] = installed_jobs_response["job_instances"]
         elif isinstance(installed_jobs_response, list):
             job_instances = installed_jobs_response
@@ -826,7 +881,9 @@ class SyncIntegrationCredentialJob(Job):
         )
 
         if updated_count == 0:
-            self.logger.warn(f"No parameters updated for job '{job_name}' — skipping save.")
+            self.logger.warn(
+                f"No parameters updated for job '{job_name}' — skipping save."
+            )
             return
 
         job_data["parameters"] = parameters
@@ -880,7 +937,9 @@ class SyncIntegrationCredentialJob(Job):
             return None
 
         if not parameters:
-            self.logger.warn(f"Job '{job_name}' has an empty parameters list — nothing to update.")
+            self.logger.warn(
+                f"Job '{job_name}' has an empty parameters list — nothing to update."
+            )
             return None
 
         return job_data, parameters
@@ -907,10 +966,14 @@ class SyncIntegrationCredentialJob(Job):
         """
         job_instance_id: str | None = job_data.get("id")
         if job_instance_id is None:
-            self.logger.warn(f"Job '{job_name}' has no id and no parameters — cannot update.")
+            self.logger.warn(
+                f"Job '{job_name}' has no id and no parameters — cannot update."
+            )
             return None
 
-        self.logger.info(f"Fetching full details for job '{job_name}' (id: {job_instance_id}).")
+        self.logger.info(
+            f"Fetching full details for job '{job_name}' (id: {job_instance_id})."
+        )
         try:
             full_job: SingleJson = await api.get_installed_jobs(
                 job_instance_id=job_instance_id,
@@ -1033,7 +1096,9 @@ class SyncIntegrationCredentialJob(Job):
         """
         try:
             await api.save_or_update_job(job_data=job_data)
-            self.logger.info(f"Saved job '{job_name}' with {updated_count} updated parameter(s).")
+            self.logger.info(
+                f"Saved job '{job_name}' with {updated_count} updated parameter(s)."
+            )
         except JobSaveError:
             raise
         except Exception as e:

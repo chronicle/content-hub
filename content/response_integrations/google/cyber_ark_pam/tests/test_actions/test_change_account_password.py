@@ -14,7 +14,6 @@
 
 """Tests for the ChangeAccountPassword action in CyberArk PAM integration."""
 
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -33,7 +32,10 @@ if TYPE_CHECKING:
 
 class TestChangeAccountPassword:
     """Test suite for the ChangeAccountPassword action."""
-    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_11"})
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_11"}
+    )
     def test_change_password_success(
         self,
         action_output: MockActionOutput,
@@ -53,7 +55,9 @@ class TestChangeAccountPassword:
             "failed_accounts": [],
         }
 
-    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "25_30"})
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "25_30"}
+    )
     def test_change_password_all_fail(
         self,
         action_output: MockActionOutput,
@@ -92,12 +96,13 @@ class TestChangeAccountPassword:
         )
         assert action_output.results.json_output.json_result == {
             "successful_accounts": [],
-            "failed_accounts": [
-                {"account_id": "25_30", "error": "Bad Request"}
-            ],
+            "failed_accounts": [{"account_id": "25_30", "error": "Bad Request"}],
         }
 
-    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_11, 25_30"})
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={"Account ID": "28_11, 25_30"},
+    )
     def test_change_password_mixed(
         self,
         action_output: MockActionOutput,
@@ -149,12 +154,12 @@ class TestChangeAccountPassword:
         )
         assert action_output.results.json_output.json_result == {
             "successful_accounts": ["28_11"],
-            "failed_accounts": [
-                {"account_id": "25_30", "error": "Bad Request"}
-            ],
+            "failed_accounts": [{"account_id": "25_30", "error": "Bad Request"}],
         }
 
-    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "36_4"})
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "36_4"}
+    )
     def test_change_password_account_not_managed(
         self,
         action_output: MockActionOutput,
