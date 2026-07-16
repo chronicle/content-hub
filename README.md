@@ -43,7 +43,7 @@ For more detailed information, use the following guides as a reference while you
     * [Parser Structure](/docs/content_deep_dive/parsers/parser_structure.md)
 * **Tooling and TIPCommon Library**
     * [CLI Tool (mp)](docs/tools_and_sdk/mp.md)
-    * [Parser Validation Script](tools/parsers/docs/README.md)
+    * [Parser Validation Script](tools/parsers/validations/docs/README.md)
     * [Google SecOps SOAR SDK Reference](/docs/tools_and_sdk/soar_sdk.md)
     * [TIPCommon Reference](/docs/tools_and_sdk/tipcommon_and_envcommon.md)
     * [GitHub Actions](/docs/github_actions.md)
