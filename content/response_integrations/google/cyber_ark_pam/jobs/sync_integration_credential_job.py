@@ -87,11 +87,21 @@ class SyncIntegrationCredentialJob(Job):
         """No-op. Async API clients are initialized inside the async event loop."""
 
     def _has_job_level_parameters(self) -> bool:
-        """Check if the job instance has its connection parameters populated in UI configuration."""
+        """Check if the job instance has connection parameters in UI configuration.
+
+        Returns:
+            bool: True if job level parameters are set, False otherwise.
+
+        """
         return bool(getattr(self.params, "api_root", None))
 
     def _extract_from_job_params(self) -> IntegrationParameters:
-        """Extract connection parameters directly from the Job UI configuration container."""
+        """Extract connection parameters directly from the Job UI configuration container.
+
+        Returns:
+            IntegrationParameters: Extracted parameters.
+
+        """
         return IntegrationParameters(
             api_root=self.params.api_root,
             username=self.params.username,
@@ -105,11 +115,21 @@ class SyncIntegrationCredentialJob(Job):
         )
 
     def _extract_from_fallback_configuration(self) -> IntegrationParameters:
-        """Extract parameters from global integration configuration."""
+        """Extract parameters from global integration configuration.
+
+        Returns:
+            IntegrationParameters: Extracted fallback parameters.
+
+        """
         return extract_integration_parameters(self.soar_job)
 
     def _get_integration_parameters(self) -> IntegrationParameters:
-        """Extract CyberArk PAM connection parameters from Job UI or fall back to global Integration configuration."""
+        """Extract CyberArk PAM parameters from Job UI or fall back to global configuration.
+
+        Returns:
+            IntegrationParameters: Connection parameters.
+
+        """
         if self._has_job_level_parameters():
             self.logger.info(
                 "Extracting CyberArk PAM connection parameters directly from the Job's UI configuration settings."
@@ -164,7 +184,10 @@ class SyncIntegrationCredentialJob(Job):
         valid_keys = {INTEGRATION_INSTANCES_KEY, CONNECTORS_KEY, JOBS_KEY}
         invalid_keys = set(self.credential_mapping.keys()) - valid_keys
         if invalid_keys:
-            msg = f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. Allowed keys are: {list(valid_keys)}."
+            msg = (
+                f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. "
+                f"Allowed keys are: {list(valid_keys)}."
+            )
             raise InvalidConfigurationError(msg)
 
         for category in valid_keys:
@@ -203,26 +226,30 @@ class SyncIntegrationCredentialJob(Job):
         try:
             api = AsyncMarketplaceApi(async_soar)
             semaphore = asyncio.Semaphore(ASYNC_SEMAPHORE_LIMIT)
-
-            await self._sync_integration_instances(api, semaphore)
-
-            if self._is_approaching_timeout():
-                self._check_sync_errors_and_raise()
-                return
-
-            await self._sync_connectors(api, semaphore)
-
-            if self._is_approaching_timeout():
-                self._check_sync_errors_and_raise()
-                return
-
-            await self._sync_jobs(api, semaphore)
-
-            self._check_sync_errors_and_raise()
+            await self._run_sync_pipeline(api, semaphore)
         finally:
             self._save_context()
             self.logger.info("Closing async client session.")
             await async_soar.close()
+
+    async def _run_sync_pipeline(
+        self,
+        api: AsyncMarketplaceApi,
+        semaphore: asyncio.Semaphore,
+    ) -> None:
+        """Run synchronization tasks across instances, connectors, and jobs."""
+        await self._sync_integration_instances(api, semaphore)
+        if self._is_approaching_timeout():
+            self._check_sync_errors_and_raise()
+            return
+
+        await self._sync_connectors(api, semaphore)
+        if self._is_approaching_timeout():
+            self._check_sync_errors_and_raise()
+            return
+
+        await self._sync_jobs(api, semaphore)
+        self._check_sync_errors_and_raise()
 
     def _check_sync_errors_and_raise(self) -> None:
         """Raise IntegrationCredentialSyncError if any errors occurred.

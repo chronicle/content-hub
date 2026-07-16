@@ -30,6 +30,8 @@ URLS: dict[str, str] = {
 }
 MAX_RETRIES: int = 1
 AUTHENTICATION_TIMEOUT: int = 60
+HTTP_STATUS_BAD_REQUEST: int = 400
+HTTP_STATUS_NOT_FOUND: int = 404
 
 # Masking configurations
 MIN_MASK_LENGTH: int = 6

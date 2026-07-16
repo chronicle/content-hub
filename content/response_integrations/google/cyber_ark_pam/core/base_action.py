@@ -17,12 +17,15 @@
 from __future__ import annotations
 
 from abc import ABC
+from typing import TYPE_CHECKING
 
 from TIPCommon.base.action import Action
 
 from .cyber_ark_pam_manager import CyberArkPamManager
-from .datamodels import IntegrationParameters
 from .utils import extract_integration_parameters
+
+if TYPE_CHECKING:
+    from .datamodels import IntegrationParameters
 
 
 class CyberArkPamAction(Action, ABC):

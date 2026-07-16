@@ -17,13 +17,18 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
-
 from urllib.parse import urljoin
 
 import requests
 from TIPCommon.extraction import extract_configuration_param
 
-from .constants import INTEGRATION_NAME, MIN_MASK_LENGTH, URLS
+from .constants import (
+    HTTP_STATUS_BAD_REQUEST,
+    HTTP_STATUS_NOT_FOUND,
+    INTEGRATION_NAME,
+    MIN_MASK_LENGTH,
+    URLS,
+)
 from .datamodels import IntegrationParameters
 from .exceptions import (
     CyberArkPamAccountNotManagedError,
@@ -62,11 +67,11 @@ def validate_response(response: requests.Response) -> None:
         except Exception:  # noqa: BLE001
             msg = response.reason or str(e)
 
-        if response.status_code == 404:  # noqa: PLR2004
+        if response.status_code == HTTP_STATUS_NOT_FOUND:
             raise CyberArkPamNotFoundError(msg) from e
-        if response.status_code == 400 and (
+        if response.status_code == HTTP_STATUS_BAD_REQUEST and (
             error_code == "CAWS00001E" or "not managed by the cpm" in msg.lower()
-        ):  # noqa: PLR2004
+        ):
             raise CyberArkPamAccountNotManagedError(msg) from e
         raise CyberArkPamManagerError(msg) from e
 

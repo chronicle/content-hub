@@ -95,10 +95,8 @@ class GetAccountPasswordValue(CyberArkPamAction):
                 f"and supplied version {self.version} was not found in the CyberArk PAM"
             )
             self.result_value = False
-        except Exception as e:
-            self.logger.exception(
-                f'Error executing action "{SCRIPT_NAME}". Reason: {e}'
-            )
+        except Exception:
+            self.logger.exception(f'Error executing action "{SCRIPT_NAME}".')
             raise
 
 

@@ -71,7 +71,12 @@ class ListAccounts(CyberArkPamAction):
         )
 
     def _perform_action(self, _: Entity | None = None) -> None:
-        """Perform the action logic."""
+        """Perform the action logic.
+
+        Raises:
+            ValueError: If parameter validation fails.
+
+        """
         prefix = ""
         if self.filter_query and self.saved_filter:
             prefix = "Both the Filter Query and Saved Filter parameters are provided, Saved Filter takes priority"
@@ -105,10 +110,8 @@ class ListAccounts(CyberArkPamAction):
                 filter_query=self.filter_query,
                 saved_filter=self.saved_filter,
             )
-        except Exception as e:
-            self.logger.exception(
-                f'Error executing action "{SCRIPT_NAME}". Reason: {e}'
-            )
+        except Exception:
+            self.logger.exception(f'Error executing action "{SCRIPT_NAME}".')
             raise
 
         if accounts:

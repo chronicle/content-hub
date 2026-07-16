@@ -42,7 +42,10 @@ class Ping(CyberArkPamAction):
         try:
             self.logger.info(f"Connecting to {INTEGRATION_NAME}.")
             self.api_client.test_connectivity()
-            self.output_message = f"Successfully connected to the {INTEGRATION_NAME} server with the provided connection parameters!"
+            self.output_message = (
+                f"Successfully connected to the {INTEGRATION_NAME} server "
+                "with the provided connection parameters!"
+            )
             self.result_value = True
         except Exception as e:
             log_message = (

@@ -660,7 +660,7 @@ class TestAggregatedErrors:
 
 
 class TestInitCyberArkPamClient:
-    """Tests for _init_cyber_ark_pam_client parameter resolution."""
+    """Tests for _init_cyber_ark_pam_client behavior."""
 
     @pytest.mark.anyio
     async def test_init_client_uses_job_params_when_provided(self) -> None:
@@ -668,11 +668,11 @@ class TestInitCyberArkPamClient:
         job = _make_job()
         job.params.api_root = "https://job-pam-url"
         job.params.username = "job_user"
-        job.params.password = "job_pass"
+        job.params.password = "job_pass"  # noqa: S105
         job.params.verify_ssl = True
         job.params.ca_certificate = "job_ca"
         job.params.client_certificate = "job_cert"
-        job.params.client_certificate_passphrase = "job_cert_pass"
+        job.params.client_certificate_passphrase = "job_cert_pass"  # noqa: S105
 
         with (
             patch(
@@ -688,12 +688,12 @@ class TestInitCyberArkPamClient:
             mock_manager_cls.assert_called_once_with(
                 api_root="https://job-pam-url",
                 username="job_user",
-                password="job_pass",
+                password="job_pass",  # noqa: S106
                 logger=ANY,
                 verify_ssl=True,
                 ca_certificate="job_ca",
                 client_certificate="job_cert",
-                client_certificate_passphrase="job_cert_pass",
+                client_certificate_passphrase="job_cert_pass",  # noqa: S106
             )
 
     @pytest.mark.anyio
@@ -712,11 +712,11 @@ class TestInitCyberArkPamClient:
         fallback_params = IntegrationParameters(
             api_root="https://integration-pam-url",
             username="integration_user",
-            password="integration_pass",
+            password="integration_pass",  # noqa: S106
             verify_ssl=False,
             ca_certificate="integration_ca",
             client_certificate="integration_cert",
-            client_certificate_passphrase="integration_cert_pass",
+            client_certificate_passphrase="integration_cert_pass",  # noqa: S106
         )
 
         with (
@@ -734,10 +734,10 @@ class TestInitCyberArkPamClient:
             mock_manager_cls.assert_called_once_with(
                 api_root="https://integration-pam-url",
                 username="integration_user",
-                password="integration_pass",
+                password="integration_pass",  # noqa: S106
                 logger=ANY,
                 verify_ssl=False,
                 ca_certificate="integration_ca",
                 client_certificate="integration_cert",
-                client_certificate_passphrase="integration_cert_pass",
+                client_certificate_passphrase="integration_cert_pass",  # noqa: S106
             )
