@@ -174,18 +174,16 @@ class SentinelOneAlert(BaseAlert):
         alert_info.source_grouping_identifier = classification
 
         # Timestamp parsing
-        created_at_str = self.created_at
-        dt_start = (
-            dateutil.parser.parse(created_at_str)
-            if created_at_str
+        last_seen_at_str = self.last_seen_at or self.created_at
+        dt_last_seen = (
+            dateutil.parser.parse(last_seen_at_str)
+            if last_seen_at_str
             else last_success_timestamp
         )
+        last_seen_ms = convert_datetime_to_unix_time(dt_last_seen)
 
-        last_seen_at_str = self.last_seen_at
-        dt_end = dateutil.parser.parse(last_seen_at_str) if last_seen_at_str else dt_start
-
-        alert_info.start_time = convert_datetime_to_unix_time(dt_start)
-        alert_info.end_time = convert_datetime_to_unix_time(dt_end)
+        alert_info.start_time = last_seen_ms
+        alert_info.end_time = last_seen_ms
 
         # Environment
         alert_info.environment = environment
