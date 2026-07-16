@@ -37,19 +37,24 @@ def test_pull_alert_grouping_rule(
     mock_get_backend_api.return_value = mock_api
 
     mock_api.list_alert_grouping_rules.return_value = [
-        {"name": "projects//locations//instances//alertGroupingRules/1", "id": 1, "displayName": "Rule One"},
+        {"name": "projects//locations//instances//alertGroupingRules/1", "id": 1, "category": "All"},
     ]
 
     with mock.patch(
         "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
         return_value=tmp_path,
     ):
-        result = runner.invoke(pull_app, ["alert-grouping-rule", "Rule One"])
+        result = runner.invoke(pull_app, ["alert-grouping-rule", "All"])
 
     assert result.exit_code == 0
 
-    saved_file = tmp_path / "Rule_One.yaml"
+    saved_file = tmp_path / "All.yaml"
     assert saved_file.exists()
+    with saved_file.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+        assert "id" not in data
+        assert "name" not in data
+        assert data["category"] == "All"
 
 
 @mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.pull.load_dev_env_config")
@@ -63,7 +68,7 @@ def test_pull_all_alert_grouping_rules(
     mock_get_backend_api.return_value = mock_api
 
     mock_api.list_alert_grouping_rules.return_value = [
-        {"name": "projects//locations//instances//alertGroupingRules/1", "id": 1, "displayName": "Rule One"},
+        {"name": "projects//locations//instances//alertGroupingRules/1", "id": 1, "category": "All"},
     ]
 
     with mock.patch(
@@ -73,7 +78,12 @@ def test_pull_all_alert_grouping_rules(
         result = runner.invoke(pull_app, ["alert-grouping-rule", "--all"])
 
     assert result.exit_code == 0
-    assert (tmp_path / "Rule_One.yaml").exists()
+    saved_file = tmp_path / "All.yaml"
+    assert saved_file.exists()
+    with saved_file.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+        assert "id" not in data
+        assert "name" not in data
 
 
 @mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.push.load_dev_env_config")
@@ -87,25 +97,25 @@ def test_push_alert_grouping_rule_update(
     mock_get_backend_api.return_value = mock_api
 
     mock_api.list_alert_grouping_rules.return_value = [
-        {"name": "projects//locations//instances//alertGroupingRules/1", "id": 1, "displayName": "Rule One"},
+        {"name": "projects//locations//instances//alertGroupingRules/1", "id": 1, "category": "All"},
     ]
 
-    rule_file = tmp_path / "Rule_One.yaml"
+    rule_file = tmp_path / "All.yaml"
     rule_file.write_text(yaml.dump({
-        "name": "projects//locations//instances//alertGroupingRules/1",
-        "displayName": "Rule One",
+        "category": "All",
+        "groupingType": "Entities",
     }))
 
     with mock.patch(
         "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
         return_value=tmp_path,
     ):
-        result = runner.invoke(push_app, ["alert-grouping-rule", "Rule One"])
+        result = runner.invoke(push_app, ["alert-grouping-rule", "All"])
 
     assert result.exit_code == 0
     mock_api.update_alert_grouping_rule.assert_called_once_with(
         1,
-        {"name": "projects//locations//instances//alertGroupingRules/1", "displayName": "Rule One", "id": 1},
+        {"category": "All", "groupingType": "Entities", "id": 1, "name": "projects//locations//instances//alertGroupingRules/1"},
     )
     mock_api.create_alert_grouping_rule.assert_not_called()
 
@@ -122,17 +132,17 @@ def test_push_alert_grouping_rule_create(
 
     mock_api.list_alert_grouping_rules.return_value = []
 
-    rule_file = tmp_path / "Rule_New.yaml"
+    rule_file = tmp_path / "AlertType.yaml"
     rule_file.write_text(yaml.dump({
-        "name": "projects//locations//instances//alertGroupingRules/new",
-        "displayName": "Rule New",
+        "category": "AlertType",
+        "groupingType": "Entities",
     }))
 
-    result = runner.invoke(push_app, ["alert-grouping-rule", str(rule_file), "--allow-create"])
+    result = runner.invoke(push_app, ["alert-grouping-rule", str(rule_file), "--force"])
 
     assert result.exit_code == 0
     mock_api.create_alert_grouping_rule.assert_called_once_with(
-        {"name": "projects//locations//instances//alertGroupingRules/new", "displayName": "Rule New"},
+        {"category": "AlertType", "groupingType": "Entities"},
     )
     mock_api.update_alert_grouping_rule.assert_not_called()
 
@@ -148,13 +158,104 @@ def test_pull_alert_grouping_rule_with_custom_missing_dirs(
     mock_get_backend_api.return_value = mock_api
 
     mock_api.list_alert_grouping_rules.return_value = [
-        {"name": "projects//locations//instances//alertGroupingRules/1", "id": 1, "displayName": "Rule One"},
+        {"name": "projects//locations//instances//alertGroupingRules/1", "id": 1, "category": "All"},
     ]
 
     custom_dir = tmp_path / "missing" / "dirs"
     custom_path = custom_dir / "rule.yaml"
 
-    result = runner.invoke(pull_app, ["alert-grouping-rule", "Rule One", "--custom", str(custom_path)])
+    result = runner.invoke(pull_app, ["alert-grouping-rule", "All", "--custom", str(custom_path)])
 
     assert result.exit_code == 0
     assert custom_path.exists()
+
+
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.pull.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.pull.get_backend_api")
+def test_pull_multiple_rules_same_category(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_alert_grouping_rules.return_value = [
+        {
+            "name": "projects//locations//instances//alertGroupingRules/1",
+            "id": 1,
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}]
+        },
+        {
+            "name": "projects//locations//instances//alertGroupingRules/2",
+            "id": 2,
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}]
+        },
+    ]
+
+    with mock.patch(
+        "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
+        return_value=tmp_path,
+    ):
+        result = runner.invoke(pull_app, ["alert-grouping-rule", "Alert Type"])
+
+    assert result.exit_code == 0
+    
+    file_1 = tmp_path / "AlertType_phishing.yaml"
+    file_2 = tmp_path / "AlertType_brute_force.yaml"
+    assert file_1.exists()
+    assert file_2.exists()
+
+
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.push.get_backend_api")
+def test_push_multiple_rules_same_category(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_alert_grouping_rules.return_value = [
+        {
+            "name": "projects//locations//instances//alertGroupingRules/1",
+            "id": 1,
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}]
+        },
+        {
+            "name": "projects//locations//instances//alertGroupingRules/2",
+            "id": 2,
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}]
+        },
+    ]
+
+    # Create two files
+    file_1 = tmp_path / "AlertType_phishing.yaml"
+    file_1.write_text(yaml.dump({
+        "category": "AlertType",
+        "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+        "groupingType": "Entities",
+    }))
+
+    with mock.patch(
+        "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
+        return_value=tmp_path,
+    ):
+        result = runner.invoke(push_app, ["alert-grouping-rule", "AlertType"])
+
+    assert result.exit_code == 0
+    mock_api.update_alert_grouping_rule.assert_called_once_with(
+        1,
+        {
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+            "groupingType": "Entities",
+            "id": 1,
+            "name": "projects//locations//instances//alertGroupingRules/1"
+        },
+    )

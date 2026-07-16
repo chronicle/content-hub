@@ -43,11 +43,11 @@ def push_alert_grouping_rule(  # noqa: C901, PLR0915
             help="Push all alert grouping rules from the local directory to the environment.",
         ),
     ] = False,
-    allow_create: Annotated[
+    force: Annotated[
         bool,
         typer.Option(
-            "--allow-create",
-            help="Allow creating new alert grouping rules if they do not exist on the platform.",
+            "--force",
+            help="Force creating new alert grouping rules if they do not exist on the platform.",
         ),
     ] = False,
 ) -> None:
@@ -75,27 +75,29 @@ def push_alert_grouping_rule(  # noqa: C901, PLR0915
             return
 
         for f in yaml_files:
-            _push_single_alert_grouping_rule(f, allow_create)
+            _push_single_alert_grouping_rule(f, force)
         
         logger.info("Successfully finished pushing all alert grouping rules.")
         return
 
     # Standard single push
     rule_file = Path(rule_file_or_name)
-    if not rule_file.is_file():
-        # Try resolving by name in the default alert grouping rules directory
+    if rule_file.is_file():
+        _push_single_alert_grouping_rule(rule_file, force)
+    else:
+        # Resolve by name/prefix lookup
+        # E.g. rule_file_or_name = "AlertType" -> matches AlertType.yaml, AlertType_malware.yaml, etc.
         safe_name = rule_file_or_name.replace("/", "_").replace(" ", "_")
-        candidate_file = rules_root / f"{safe_name}.yaml"
-        if candidate_file.is_file():
-            rule_file = candidate_file
-        else:
-            logger.error("Alert grouping rule file not found at '%s' or '%s'", rule_file_or_name, candidate_file)
+        matched_files = list(rules_root.glob(f"{safe_name}*.yaml")) + list(rules_root.glob(f"{safe_name}*.yml"))
+        if not matched_files:
+            logger.error("No alert grouping rule files matching '%s' found in '%s'", rule_file_or_name, rules_root)
             raise typer.Exit(1)
-            
-    _push_single_alert_grouping_rule(rule_file, allow_create)
+        
+        for f in matched_files:
+            _push_single_alert_grouping_rule(f, force)
 
 
-def _push_single_alert_grouping_rule(rule_file: Path, allow_create: bool) -> None:
+def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:
     logger.info("Loading alert grouping rule YAML from '%s'...", rule_file)
     try:
         rule_data = mp.core.file_utils.load_yaml_file(rule_file)
@@ -117,16 +119,20 @@ def _push_single_alert_grouping_rule(rule_file: Path, allow_create: bool) -> Non
         logger.exception("Failed to fetch installed alert grouping rules")
         raise typer.Exit(1) from e
 
-    rule_name = rule_data.get("displayName")
-    if not rule_name:
-        logger.error("Alert grouping rule data is missing a 'displayName' field.")
+    rule_category = rule_data.get("category")
+    if not rule_category:
+        logger.error("Alert grouping rule data is missing a 'category' field.")
         raise typer.Exit(1)
+
+    local_subs = {x.get("identifier") for x in rule_data.get("categoryDetails", []) if x.get("identifier")}
 
     existing_id = None
     for rule in installed_rules:
-        if str(rule.get("displayName")).lower() == rule_name.lower():
-            existing_id = rule.get("id")
-            break
+        if str(rule.get("category")).lower() == str(rule_category).lower():
+            server_subs = {x.get("identifier") for x in rule.get("categoryDetails", []) if x.get("identifier")}
+            if server_subs == local_subs:
+                existing_id = rule.get("id")
+                break
 
     if existing_id is not None:
         logger.info("Updating existing alert grouping rule (ID: %s)...", existing_id)
@@ -141,18 +147,18 @@ def _push_single_alert_grouping_rule(rule_file: Path, allow_create: bool) -> Non
             logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
             raise typer.Exit(1) from e
         except Exception as e:
-            logger.exception("Failed to update alert grouping rule '%s'", rule_name)
+            logger.exception("Failed to update alert grouping rule for category '%s'", rule_category)
             raise typer.Exit(1) from e
     else:
-        if not allow_create:
-            logger.error("Alert grouping rule '%s' not found on the platform. Skipping because --allow-create was not specified.", rule_name)
+        if not force:
+            logger.error("Alert grouping rule for category '%s' not found on the platform. Skipping because --force was not specified.", rule_category)
             raise typer.Exit(1)
             
         logger.info("Creating new alert grouping rule...")
         try:
             backend_api.create_alert_grouping_rule(rule_data)
         except Exception as e:
-            logger.exception("Failed to create alert grouping rule '%s'", rule_name)
+            logger.exception("Failed to create alert grouping rule for category '%s'", rule_category)
             raise typer.Exit(1) from e
 
-    logger.info("Alert grouping rule '%s' pushed successfully.", rule_name)
+    logger.info("Alert grouping rule for category '%s' pushed successfully.", rule_category)

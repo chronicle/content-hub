@@ -89,25 +89,53 @@ def pull_alert_grouping_rule(
     if rule_name_or_id is None:
         logger.error("rule_name_or_id is required if not pulling or listing all")
         raise typer.Exit(1)
-    rule_id = find_entity_identifier(rule_name_or_id, installed_rules, "Alert Grouping Rule")
+    matched_rules = []
+    
+    # First, try to match by ID if it's numeric
+    try:
+        numeric_id = int(rule_name_or_id)
+        rule_data = next((r for r in installed_rules if r.get("id") == numeric_id), None)
+        if rule_data:
+            matched_rules.append(rule_data)
+    except (ValueError, TypeError):
+        pass
+        
+    # If not matched by ID, match by Category name (friendly display name or code)
+    if not matched_rules:
+        def match_category(user_input: str, rule: dict) -> bool:
+            category = str(rule.get("category", "")).lower()
+            category_mappings = {
+                "all": "all",
+                "alert type": "alerttype",
+                "alert_type": "alerttype",
+                "alerttype": "alerttype",
+                "data source": "datasource",
+                "data_source": "datasource",
+                "datasource": "datasource",
+                "product": "productname",
+                "product name": "productname",
+                "product_name": "productname",
+                "productname": "productname"
+            }
+            normalized_input = category_mappings.get(user_input.lower(), user_input.lower())
+            return normalized_input == category
 
-    # In the Alert Grouping Rule API, list usually returns all fields, but we will use the matched dict directly,
-    # or download it if there was a separate download method. We don't have download_alert_grouping_rule,
-    # so we'll just extract it from installed_rules.
-    rule_data = next(
-        (
-            r
-            for r in installed_rules
-            if any(r.get(k) == rule_id for k in ("Identifier", "identifier", "Id", "id"))
-        ),
-        None,
-    )
+        matched_rules = [r for r in installed_rules if match_category(rule_name_or_id, r)]
 
-    if not rule_data:
-        logger.error("Could not find rule data for ID %s", rule_id)
+    if not matched_rules:
+        logger.error("Could not find rule data matching '%s'", rule_name_or_id)
         raise typer.Exit(1)
 
-    _save_alert_grouping_rule(rule_data, dst)
+    if len(matched_rules) > 1 and dst is not None and dst.suffix in {".yaml", ".yml"}:
+        logger.error(
+            "Multiple alert grouping rules found matching '%s', but target destination '%s' is a single file path.",
+            rule_name_or_id,
+            dst,
+        )
+        raise typer.Exit(1)
+
+    for rule in matched_rules:
+        _save_alert_grouping_rule(rule, dst)
 
 
 def _list_alert_grouping_rules(installed_rules: list[dict]) -> None:
@@ -133,11 +161,15 @@ def _pull_all_alert_grouping_rules(installed_rules: list[dict], dst: Path | None
 
 
 def _save_alert_grouping_rule(rule_data: dict, dst: Path | None) -> None:
-    # Determine destination path
-    rule_id = rule_data.get("id", "Unknown")
-    raw_name = str(rule_data.get("displayName") or rule_data.get("name") or rule_id)
-    safe_name = raw_name.replace("/", "_").replace(" ", "_")
-    file_name = f"{safe_name}.yaml"
+    # Determine destination path using category and subcategories to keep it clean and prevent collisions
+    category_name = rule_data.get("category") or "Unknown"
+    subs = [x.get("identifier") for x in rule_data.get("categoryDetails", []) if x.get("identifier")]
+    if subs:
+        # Join sorted subcategories to create a clean suffix
+        safe_subs = [str(s).replace(" ", "_").replace("/", "_").lower() for s in sorted(subs)]
+        file_name = f"{category_name}_{'_'.join(safe_subs)}.yaml"
+    else:
+        file_name = f"{category_name}.yaml"
 
     if dst is None:
         rules_root = mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir()
@@ -149,6 +181,9 @@ def _save_alert_grouping_rule(rule_data: dict, dst: Path | None) -> None:
         actual_dst = dst
 
     logger.info("Saving alert grouping rule to %s...", actual_dst)
+    # Clean up environment-specific fields to keep the files environment-agnostic
+    rule_data.pop("id", None)
+    rule_data.pop("name", None)
     try:
         actual_dst.parent.mkdir(parents=True, exist_ok=True)
         mp.core.file_utils.save_yaml(rule_data, actual_dst)

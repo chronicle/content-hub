@@ -50,11 +50,11 @@ def push_view(
             help="Source folder containing the view directory.",
         ),
     ] = None,
-    allow_create: Annotated[
+    force: Annotated[
         bool,
         typer.Option(
-            "--allow-create",
-            help="Allow creating a new view if it does not already exist on the platform.",
+            "--force",
+            help="Force creating a new view if it does not already exist on the platform.",
         ),
     ] = False,
     validate: Annotated[
@@ -108,7 +108,7 @@ def push_view(
         return
 
     # 4. Upload to SOAR
-    final_identifier = _upload_built_view_data(view_data, view_name_or_id, allow_create=allow_create)
+    final_identifier = _upload_built_view_data(view_data, view_name_or_id, force=force)
 
     # 5. Automatically pull back the view from the server to sync local changes (e.g. order, system predefined details)
     if final_identifier:
@@ -314,12 +314,12 @@ def _verify_widgets(
     existing_identifier: str,
     flat_view_data: dict[str, Any],
     *,
-    allow_create: bool,
+    force: bool,
 ) -> None:
-    """Verify that pushed widgets exist on the server unless allow_create is True.
+    """Verify that pushed widgets exist on the server unless force is True.
 
     Raises:
-        typer.Exit: If a widget doesn't exist on the server and allow_create is False.
+        typer.Exit: If a widget doesn't exist on the server and force is False.
 
     """
     existing_view = None
@@ -339,7 +339,7 @@ def _verify_widgets(
         for w in flat_view_data.get("widgets") or []:
             meta = w.get("metadata") or {}
             w_id = meta.get("identifier")
-            if (not w_id or w_id.lower() not in existing_widget_ids) and not allow_create:
+            if (not w_id or w_id.lower() not in existing_widget_ids) and not force:
                 logger.error(
                     "Widget '%s' (UUID: '%s') does not exist in the view on the platform.",
                     meta.get("title") or "unnamed",
@@ -347,7 +347,7 @@ def _verify_widgets(
                 )
                 logger.error(
                     "Creation of new widgets is blocked by default. "
-                    "Use the --allow-create flag to force creation."
+                    "Use the --force flag to force creation."
                 )
                 logger.error("Failed to push view '%s'.", view_name_or_id)
                 raise typer.Exit(1)
@@ -358,12 +358,12 @@ def _validate_push_preconditions(
     view_name_or_id: str,
     flat_view_data: dict[str, Any],
     *,
-    allow_create: bool,
+    force: bool,
 ) -> None:
     """Validate push preconditions, resolving view ID and verifying widgets.
 
     Raises:
-        typer.Exit: If the view doesn't exist and allow_create is False, or if a widget check fails.
+        typer.Exit: If the view doesn't exist and force is False, or if a widget check fails.
 
     """
     local_identifier = flat_view_data.get("identifier")
@@ -392,9 +392,9 @@ def _validate_push_preconditions(
             view_name_or_id,
             server_uuid,
             flat_view_data,
-            allow_create=allow_create,
+            force=force,
         )
-    elif not allow_create:
+    elif not force:
         logger.error(
             "View '%s' (UUID: '%s') does not exist on the platform (checked by UUID and Name).",
             view_name_or_id,
@@ -402,7 +402,7 @@ def _validate_push_preconditions(
         )
         logger.error(
             "Creation of new views is blocked by default. "
-            "Use the --allow-create flag to force creation."
+            "Use the --force flag to force creation."
         )
         logger.error("Failed to push view '%s'.", view_name_or_id)
         raise typer.Exit(1)
@@ -418,14 +418,14 @@ def _upload_built_view_data(
     view_data: dict[str, Any],
     view_name_or_id: str,
     *,
-    allow_create: bool = False,
+    force: bool = False,
 ) -> str | None:
     """Upload built view template data to the SOAR environment.
 
     Args:
         view_data: The built view template dictionary structure.
         view_name_or_id: The view name or identifier.
-        allow_create: Allow creating a new view if it doesn't exist.
+        force: Force creating a new view if it doesn't exist.
 
     Returns:
         The final identifier of the view template used for upload if successful, otherwise None.
@@ -444,7 +444,7 @@ def _upload_built_view_data(
         backend_api,
         view_name_or_id,
         flat_view_data,
-        allow_create=allow_create,
+        force=force,
     )
 
     try:

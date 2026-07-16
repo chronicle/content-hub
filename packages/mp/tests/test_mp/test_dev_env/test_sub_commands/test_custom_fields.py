@@ -63,6 +63,8 @@ def test_pull_custom_field(
     with saved_file.open("r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
         assert data["displayName"] == "Test Field"
+        assert "id" not in data
+        assert "name" not in data
 
 
 @mock.patch("mp.dev_env.sub_commands.custom_field.pull.load_dev_env_config")
@@ -94,7 +96,13 @@ def test_pull_all_custom_fields(
 
     assert result.exit_code == 0
     mock_api.download_custom_field.assert_called_once_with(1)
-    assert (tmp_path / "Test_Field.yaml").exists()
+    
+    saved_file = tmp_path / "Test_Field.yaml"
+    assert saved_file.exists()
+    with saved_file.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+        assert "id" not in data
+        assert "name" not in data
 
 
 @mock.patch("mp.dev_env.sub_commands.custom_field.push.load_dev_env_config")
@@ -151,7 +159,7 @@ def test_push_custom_field_create(
         "type": "String",
     }))
 
-    result = runner.invoke(push_app, ["custom-field", str(field_file), "--allow-create"])
+    result = runner.invoke(push_app, ["custom-field", str(field_file), "--force"])
 
     assert result.exit_code == 0
     mock_api.create_custom_field.assert_called_once_with(

@@ -378,6 +378,6 @@ class BackendAPI:
 
         """
         url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules/{rule_id}"
-        resp = self.session.put(url, json=data)
+        resp = self.session.patch(url, json=data)
         resp.raise_for_status()
         return resp.json()

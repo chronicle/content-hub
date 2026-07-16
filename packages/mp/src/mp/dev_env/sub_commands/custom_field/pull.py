@@ -206,6 +206,9 @@ def _download_and_save_custom_field(
         actual_dst = dst
 
     logger.info("Saving custom field to %s...", actual_dst)
+    # Clean up environment-specific fields to keep the files environment-agnostic
+    field_data.pop("id", None)
+    field_data.pop("name", None)
     try:
         actual_dst.parent.mkdir(parents=True, exist_ok=True)
         mp.core.file_utils.save_yaml(field_data, actual_dst)

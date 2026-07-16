@@ -429,10 +429,10 @@ def test_push_view_allows_new_widget_with_flag(
     with mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"):
         result = runner.invoke(
             push_app,
-            ["view", "system_case_default", "--custom", str(src_dir), "--allow-create"],
+            ["view", "system_case_default", "--custom", str(src_dir), "--force"],
         )
 
-    # Should succeed with the --allow-create flag
+    # Should succeed with the --force flag
     assert result.exit_code == 0
     mock_api.upload_view.assert_called_once()
 

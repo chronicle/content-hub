@@ -42,11 +42,11 @@ def push_custom_field(  # noqa: C901
             help="Push all custom fields from the local directory to the environment.",
         ),
     ] = False,
-    allow_create: Annotated[
+    force: Annotated[
         bool,
         typer.Option(
-            "--allow-create",
-            help="Allow creating new custom fields if they do not exist on the platform.",
+            "--force",
+            help="Force creating new custom fields if they do not exist on the platform.",
         ),
     ] = False,
 ) -> None:
@@ -74,7 +74,7 @@ def push_custom_field(  # noqa: C901
             return
 
         for f in yaml_files:
-            _push_single_custom_field(f, allow_create)
+            _push_single_custom_field(f, force)
 
         logger.info("Successfully finished pushing all custom fields.")
         return
@@ -106,10 +106,10 @@ def push_custom_field(  # noqa: C901
         logger.info("Found %d files matching '%s'. Pushing all of them...", len(files_to_push), field_file_or_name)
 
     for f in files_to_push:
-        _push_single_custom_field(f, allow_create)
+        _push_single_custom_field(f, force)
 
 
-def _push_single_custom_field(field_file: Path, allow_create: bool) -> None:
+def _push_single_custom_field(field_file: Path, force: bool) -> None:
     logger.info("Loading custom field YAML from '%s'...", field_file)
     try:
         field_data = mp.core.file_utils.load_yaml_file(field_file)
@@ -177,8 +177,8 @@ def _push_single_custom_field(field_file: Path, allow_create: bool) -> None:
             logger.exception("Failed to update custom field '%s'", field_name)
             raise typer.Exit(1) from e
     else:
-        if not allow_create:
-            logger.error("Custom field '%s' not found on the platform. Skipping because --allow-create was not specified.", field_name)
+        if not force:
+            logger.error("Custom field '%s' not found on the platform. Skipping because --force was not specified.", field_name)
             raise typer.Exit(1)
 
         logger.info("Creating new custom field...")
