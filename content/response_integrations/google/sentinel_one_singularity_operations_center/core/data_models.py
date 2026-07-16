@@ -174,7 +174,7 @@ class SentinelOneAlert(BaseAlert):
         alert_info.source_grouping_identifier = classification
 
         # Timestamp parsing
-        last_seen_at_str = self.last_seen_at or self.created_at
+        last_seen_at_str = self.last_seen_at
         dt_last_seen = (
             dateutil.parser.parse(last_seen_at_str)
             if last_seen_at_str
@@ -346,7 +346,7 @@ class AlertObservable:
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.OBSERVABLE.value
-        data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt") or data.get("createdAt")
+        data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt")
         if self.name:
             data[self.name] = self.value
         return dict_to_flat(data)
@@ -384,7 +384,7 @@ class AlertIndicator:
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.INDICATOR.value
-        data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt") or data.get("createdAt")
+        data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt")
         return dict_to_flat(data)
 
 
@@ -420,7 +420,7 @@ class AlertAsset:
         """
         data = self.raw_data.copy()
         data[EVENT_TYPE_FIELD] = EventType.ASSET.value
-        data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt") or data.get("createdAt")
+        data[LAST_SEEN_AT_FIELD] = alert_timestamp or data.get("lastSeenAt")
         return dict_to_flat(data)
 
 
