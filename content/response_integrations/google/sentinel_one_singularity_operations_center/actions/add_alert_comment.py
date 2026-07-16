@@ -20,7 +20,7 @@ from ..core.base_action import SentinelOneSingularityOperationsCenterAction
 from ..core.exceptions import SentinelOneSingularityOperationsCenterError
 
 # Mapping from UI Dropdowns to SentinelOne API Enum Values
-COMMENT_TYPE_MAP = {"Plain Text": "PLAIN_TEXT", "Markdown": "MARKDOWN", "HTML": "HTML"}
+COMMENT_TYPE_MAP = {"Plain Text": "PLAIN_TEXT", "Markdown": "MARKDOWN"}
 
 
 class AddAlertComment(SentinelOneSingularityOperationsCenterAction):
