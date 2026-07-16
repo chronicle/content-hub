@@ -195,6 +195,88 @@ def test_classification_allowlist_filter(
     assert len(alerts) == 0
 
 
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters={**DEFAULT_PARAMETERS, "Use dynamic list as a blocklist": "False"},
+)
+def test_classification_allowlist_filter_case_insensitive(
+    sentinelone: SentinelOne,
+    script_session: SentinelOneSession,
+    connector_output: MockConnectorOutput,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that classification matching is case-insensitive in allowlist mode."""
+    set_is_test_run_to_true()
+    is_test = is_test_run(sys.argv)
+    connector = UnifiedAlertsConnector(is_test)
+
+    # Mock lowercase 'malware' in whitelist matching 'MALWARE' in alert data
+    monkeypatch.setattr(
+        type(connector.siemplify), "whitelist", property(lambda _: ["malware"])
+    )
+
+    connector.start()
+
+    alerts = connector_output.results.json_output.alerts
+    assert len(alerts) == 1
+    assert alerts[0].source_grouping_identifier == "MALWARE"
+
+
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters={**DEFAULT_PARAMETERS, "Use dynamic list as a blocklist": "True"},
+)
+def test_classification_blocklist_filter_case_insensitive(
+    sentinelone: SentinelOne,
+    script_session: SentinelOneSession,
+    connector_output: MockConnectorOutput,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that matching items are blocked case-insensitively when blocklist mode is enabled."""
+    set_is_test_run_to_true()
+    is_test = is_test_run(sys.argv)
+    connector = UnifiedAlertsConnector(is_test)
+
+    # Mock lowercase 'malware' in whitelist matching 'MALWARE' in alert data
+    monkeypatch.setattr(
+        type(connector.siemplify), "whitelist", property(lambda _: ["malware"])
+    )
+
+    connector.start()
+
+    # MALWARE matches blocklist 'malware', so it should be filtered out
+    alerts = connector_output.results.json_output.alerts
+    assert len(alerts) == 0
+
+
+@set_metadata(
+    connector_def_file_path=DEF_PATH,
+    parameters={**DEFAULT_PARAMETERS, "Use dynamic list as a blocklist": "True"},
+)
+def test_classification_blocklist_filter_passes_unmatched(
+    sentinelone: SentinelOne,
+    script_session: SentinelOneSession,
+    connector_output: MockConnectorOutput,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that non-matching items pass through when blocklist mode is enabled."""
+    set_is_test_run_to_true()
+    is_test = is_test_run(sys.argv)
+    connector = UnifiedAlertsConnector(is_test)
+
+    # Mock 'phishing' in blocklist, alert is 'MALWARE'
+    monkeypatch.setattr(
+        type(connector.siemplify), "whitelist", property(lambda _: ["phishing"])
+    )
+
+    connector.start()
+
+    # MALWARE does not match blocklist 'phishing', so it should be ingested
+    alerts = connector_output.results.json_output.alerts
+    assert len(alerts) == 1
+    assert alerts[0].source_grouping_identifier == "MALWARE"
+
+
 @set_metadata(connector_def_file_path=DEF_PATH, parameters=DEFAULT_PARAMETERS)
 def test_id_cache_cleanup_optimization(
     sentinelone: SentinelOne,

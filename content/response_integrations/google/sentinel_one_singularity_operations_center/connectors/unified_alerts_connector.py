@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import sys
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import dateutil.parser
@@ -284,12 +285,19 @@ class UnifiedAlertsConnector(Connector):
         Returns:
             bool: True if the alert passes, False otherwise.
         """
+        classification = alert.classification.upper() if alert.classification else ""
+        whitelist = (
+            [item.upper() for item in self.params.whitelist]
+            if self.params.whitelist
+            else None
+        )
+
         return pass_whitelist_filter(
             siemplify=self.siemplify,
             whitelist_as_a_blacklist=self.params.use_dynamic_list_as_a_blocklist,
-            model=alert,
+            model=SimpleNamespace(classification=classification),
             model_key="classification",
-            whitelist=self.params.whitelist,
+            whitelist=whitelist,
         )
 
     def create_alert_info(self, processed_alert: SentinelOneAlert) -> AlertInfo:
