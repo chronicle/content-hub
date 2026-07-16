@@ -580,7 +580,11 @@ class TestAggregatedErrors:
         """Collects errors from various failing components and raises IntegrationCredentialSyncError."""
         job = _make_job()
         job._soar_job = MagicMock()
-        job.params.credential_mapping = '{"integration_instances": {"inst1": {}}, "connectors": {"conn1": {}}, "jobs": {"job1": {}}}'
+        job.params.credential_mapping = (
+            '{"integration_instances": {"inst1": {}}, '
+            '"connectors": {"conn1": {}}, '
+            '"jobs": {"job1": {}}}'
+        )
         job._validate_params()
         job._sync_errors = []
 
