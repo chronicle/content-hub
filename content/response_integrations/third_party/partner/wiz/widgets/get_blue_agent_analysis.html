@@ -666,6 +666,7 @@
 
 <body>
   <div class="wrapper">
+
     <section class="main-content" id="mainContent">
     </section>
   </div>
@@ -753,7 +754,40 @@
     window.addEventListener('message', handleThemeUpdate);
 
 
-    const actionListData = [{ stepInstanceName }.JsonResult];
+    // JSON placeholder [{stepInstanceName}.JsonResult]
+    const actionListData = [{stepInstanceName}.JsonResult];
+
+    function extractAiAnalysis(actionListData) {
+      if (!actionListData) {
+        return {};
+      }
+      const dataList = Array.isArray(actionListData) ? actionListData : [actionListData];
+      if (dataList.length === 0) {
+        return {};
+      }
+      const rawData = dataList[0];
+      if (!rawData) {
+        return {};
+      }
+      if (rawData.data?.issue?.threatDetectionDetails?.aiAnalysis) {
+        return rawData.data.issue.threatDetectionDetails.aiAnalysis;
+      }
+      if (rawData.issue?.threatDetectionDetails?.aiAnalysis) {
+        return rawData.issue.threatDetectionDetails.aiAnalysis;
+      }
+      if (rawData.threatDetectionDetails?.aiAnalysis) {
+        return rawData.threatDetectionDetails.aiAnalysis;
+      }
+      if (rawData.aiAnalysis) {
+        return rawData.aiAnalysis;
+      }
+      if (rawData.status !== undefined || rawData.verdict !== undefined) {
+        return rawData;
+      }
+      return rawData;
+    }
+
+    const aiAnalysisData = extractAiAnalysis(actionListData);
 
     // Constant for fields that are allowed to be modified
     const allowlistedFields = [];
@@ -785,23 +819,6 @@
       }
     });
 
-    // Extract aiAnalysis object if present, to keep key names clean (e.g. id, status, verdict)
-    let displayData = actionListData;
-    if (actionListData && actionListData.length > 0) {
-      const rawData = actionListData[0];
-      if (rawData) {
-        if (rawData.data && rawData.data.issue && rawData.data.issue.threatDetectionDetails && rawData.data.issue.threatDetectionDetails.aiAnalysis) {
-          displayData = rawData.data.issue.threatDetectionDetails.aiAnalysis;
-        } else if (rawData.issue && rawData.issue.threatDetectionDetails && rawData.issue.threatDetectionDetails.aiAnalysis) {
-          displayData = rawData.issue.threatDetectionDetails.aiAnalysis;
-        } else if (rawData.threatDetectionDetails && rawData.threatDetectionDetails.aiAnalysis) {
-          displayData = rawData.threatDetectionDetails.aiAnalysis;
-        } else if (rawData.aiAnalysis) {
-          displayData = rawData.aiAnalysis;
-        }
-      }
-    }
-
     // Filter actionListData based on allowlistedFields
     const filteredActionListData = function (actionListData) {
       let filteredEntityResult;
@@ -814,7 +831,7 @@
     };
 
     // Update the UI with filtered data
-    renderKeysInUI(flattenKeys(filteredActionListData(displayData)));
+    renderKeysInUI(flattenKeys(filteredActionListData(aiAnalysisData)));
     // Initial rendering of modals
     renderModal();
 
