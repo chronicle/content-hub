@@ -127,6 +127,20 @@ def main(is_first_run):
         provider_name=INTEGRATION_NAME,
         param_name="CA Certificate File - parsed into Base64 String",
     )
+    connection_timeout = extract_action_param(
+        siemplify,
+        param_name="Connection Timeout",
+        input_type=int,
+        is_mandatory=False,
+        default_value=10,
+    )
+    receive_timeout = extract_action_param(
+        siemplify,
+        param_name="Receive Timeout",
+        input_type=int,
+        is_mandatory=False,
+        default_value=60,
+    )
 
     mark_entities_as_internal = extract_action_param(
         siemplify,
@@ -186,6 +200,8 @@ def main(is_first_run):
             custom_query_fields,
             ca_certificate,
             siemplify.LOGGER,
+            connection_timeout=connection_timeout,
+            receive_timeout=receive_timeout,
         )
         if is_first_run:
             result_value["pending"] = [

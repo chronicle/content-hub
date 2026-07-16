@@ -170,13 +170,32 @@ class ActiveDirectoryManager:
         custom_query_fields=None,
         ca_certificate_file=None,
         siemplify_logger=None,
+        connection_timeout=None,
+        receive_timeout=None,
     ):
 
         self.siemplify_logger = siemplify_logger
         self.use_ssl = use_ssl
         self.tls = None
         self._verify_certificate_file(ca_certificate_file)
-        self.server = Server(server_ip, use_ssl=self.use_ssl, tls=self.tls)
+
+        # Safely convert timeouts to integers, fallback to defaults to prevent hangs
+        try:
+            self.connection_timeout = int(connection_timeout) if connection_timeout is not None else 10
+        except (ValueError, TypeError):
+            self.connection_timeout = 10
+
+        try:
+            self.receive_timeout = int(receive_timeout) if receive_timeout is not None else 60
+        except (ValueError, TypeError):
+            self.receive_timeout = 60
+
+        self.server = Server(
+            server_ip,
+            use_ssl=self.use_ssl,
+            tls=self.tls,
+            connect_timeout=self.connection_timeout,
+        )
         # Create base DN from domain name
         self.domain = self._domain_base_dn(domain)
         self.parser = ActiveDirectoryParser(siemplify_logger)
@@ -186,7 +205,12 @@ class ActiveDirectoryManager:
         )
         try:
             self.conn = Connection(
-                self.server, username, password, auto_bind=True, auto_encode=True
+                self.server,
+                username,
+                password,
+                auto_bind=True,
+                auto_encode=True,
+                receive_timeout=self.receive_timeout,
             )
         except LDAPSocketOpenError as e:
             if "socket ssl wrapping" in str(e):
