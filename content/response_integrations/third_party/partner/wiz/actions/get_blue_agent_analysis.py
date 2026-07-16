@@ -35,7 +35,7 @@ class GetBlueAgentAnalysis(Action):
             f'Error executing action "{constants.GET_BLUE_AGENT_ANALYSIS_SCRIPT_NAME}"'
         )
 
-    @result_value.setter
+    @Action.result_value.setter
     def result_value(self, value: Any) -> None:
         self._result_value = value
 
