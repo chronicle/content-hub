@@ -52,7 +52,7 @@ from ..core.exceptions import (
     ParameterUpdateError,
     SecretAccessError,
 )
-from ..core.manager import AkeylessClient
+from ..core.manager import AkeylessClient, AkeylessClientConfig
 from ..core.utils import build_lookup_with_warnings, mask_id
 
 if TYPE_CHECKING:
@@ -88,12 +88,17 @@ class SyncIntegrationCredentialJob(Job):
         """Initialize the Akeyless client."""
         auth_params: IntegrationParameters = build_auth_params(self.soar_job)
 
-        self.akeyless_client = AkeylessClient(
+        config = AkeylessClientConfig(
             access_id=auth_params.access_id,
             access_key=auth_params.access_key,
             access_type=auth_params.access_type,
             api_gateway_url=auth_params.api_gateway_url,
             verify_ssl=auth_params.verify_ssl,
+        )
+
+        self.akeyless_client = AkeylessClient(
+            config,
+            logger=self.logger,
         )
 
     def _validate_params(self) -> None:
@@ -121,8 +126,7 @@ class SyncIntegrationCredentialJob(Job):
         invalid_keys = set(self.credential_mapping.keys()) - valid_keys
         if invalid_keys:
             msg = (
-                f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. "
-                f"Allowed keys are: {list(valid_keys)}."
+                f"Invalid root keys in Credential Mapping: {list(invalid_keys)}. Allowed keys are: {list(valid_keys)}."
             )
             raise InvalidConfigurationError(msg)
 
@@ -135,9 +139,7 @@ class SyncIntegrationCredentialJob(Job):
             for component_name, param_mapping in category_mapping.items():
                 if not isinstance(param_mapping, dict):
                     msg = f"Parameters for '{component_name}' in category '{category}' must be a dictionary."
-                    raise InvalidConfigurationError(
-                        msg
-                    )
+                    raise InvalidConfigurationError(msg)
 
                 for param_name, mapped_value in param_mapping.items():
                     val = str(mapped_value).strip()
@@ -147,9 +149,7 @@ class SyncIntegrationCredentialJob(Job):
                             f"in category '{category}': '{val}'. "
                             f"Expected format: 'secret_name' or 'secret_name:version'."
                         )
-                        raise InvalidConfigurationError(
-                            msg
-                        )
+                        raise InvalidConfigurationError(msg)
 
     def _perform_job(self) -> None:
         """Fetch secrets and sync to SOAR platform."""
@@ -158,40 +158,44 @@ class SyncIntegrationCredentialJob(Job):
         self.logger.info("'Sync Integration Credential Job' completed.")
 
     async def _async_main(self) -> None:
-        """Execute the job asynchronously.
+        """Execute the job asynchronously."""
+        self._init_akeyless_client()
+        self._load_context()
+        async_soar = AsyncChronicleSOAR(self.soar_job)
+        try:
+            await self._run_sync(async_soar)
+        finally:
+            self._save_context()
+            self.logger.info("Closing async client session.")
+            await async_soar.close()
+
+    async def _run_sync(self, async_soar: AsyncChronicleSOAR) -> None:
+        """Run the credential synchronization process.
 
         Raises:
             IntegrationCredentialSyncError: If one or more errors occur
                 during credential synchronization.
 
         """
-        self._init_akeyless_client()
-        self._load_context()
-        async_soar = AsyncChronicleSOAR(self.soar_job)
-        try:
-            api = AsyncMarketplaceApi(async_soar)
-            semaphore = asyncio.Semaphore(ASYNC_SEMAPHORE_LIMIT)
+        api = AsyncMarketplaceApi(async_soar)
+        semaphore = asyncio.Semaphore(ASYNC_SEMAPHORE_LIMIT)
 
-            await self._sync_integration_instances(api, semaphore)
+        await self._sync_integration_instances(api, semaphore)
 
-            if self._is_approaching_timeout():
-                return
+        if self._is_approaching_timeout():
+            return
 
-            await self._sync_connectors(api, semaphore)
+        await self._sync_connectors(api, semaphore)
 
-            if self._is_approaching_timeout():
-                return
+        if self._is_approaching_timeout():
+            return
 
-            await self._sync_jobs(api, semaphore)
+        await self._sync_jobs(api, semaphore)
 
-            if self._sync_errors:
-                summary = "\n".join(f"- {err}" for err in self._sync_errors)
-                msg = f"Credential synchronization completed with one or more errors:\n{summary}"
-                raise IntegrationCredentialSyncError(msg)
-        finally:
-            self._save_context()
-            self.logger.info("Closing async client session.")
-            await async_soar.close()
+        if self._sync_errors:
+            summary = "\n".join(f"- {err}" for err in self._sync_errors)
+            msg = f"Credential synchronization completed with one or more errors:\n{summary}"
+            raise IntegrationCredentialSyncError(msg)
 
     def _load_context(self) -> None:
         """Load job context property from SOAR platform."""
