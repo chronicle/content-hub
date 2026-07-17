@@ -110,8 +110,7 @@ def push_view(
         for view_dir in local_views:
             try:
                 _push_single_view(view_dir, force=force, validate=validate)
-                logger.info("View directory '%s' pushed successfully.", view_dir.name)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error("Failed to push view directory '%s': %s", view_dir.name, e)  # noqa: TRY400
                 raise typer.Exit(1) from None
         return
@@ -158,13 +157,17 @@ def _push_single_view(view_src_path: Path, *, force: bool = False, validate: boo
         logger.error("Failed to parse built view JSON: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
+    view_name = view_data.get("name")
     if validate:
         _validate_view(view_data)
-        logger.info("✅ View '%s' is valid.", view_src_path.name)
+        if view_name and view_name != view_src_path.name:
+            logger.info("✅ View '%s' (from directory '%s') is valid.", view_name, view_src_path.name)
+        else:
+            logger.info("✅ View '%s' is valid.", view_src_path.name)
         return
 
     # Upload to SOAR
-    _upload_built_view_data(view_data, view_src_path.name, force=force)
+    _upload_built_view_data(view_data, view_src_path, force=force)
 
 
 def _validate_view(view_data: dict[str, Any]) -> None:
@@ -516,7 +519,7 @@ def _validate_push_preconditions(
 
 def _upload_built_view_data(
     view_data: dict[str, Any],
-    view_name_or_id: str,
+    view_src_path: Path,
     *,
     force: bool = False,
 ) -> str | None:
@@ -524,7 +527,7 @@ def _upload_built_view_data(
 
     Args:
         view_data: The built view template dictionary structure.
-        view_name_or_id: The view name or identifier.
+        view_src_path: Path to the view source directory.
         force: Force creating a new view if it doesn't exist.
 
     Returns:
@@ -539,10 +542,11 @@ def _upload_built_view_data(
 
     logger.info("Uploading view to SOAR platform...")
     flat_view_data = _denormalize_pushed_view(cast("BuiltOverview", view_data), backend_api)
+    view_name = flat_view_data.get("name") or view_src_path.name
 
     _validate_push_preconditions(
         backend_api,
-        view_name_or_id,
+        view_name,
         flat_view_data,
         force=force,
     )
@@ -563,10 +567,17 @@ def _upload_built_view_data(
         logger.error("=" * 80)  # noqa: TRY400
         raise typer.Exit(1) from None
     except Exception as e:
-        logger.error("Upload failed for view '%s': %s", view_name_or_id, e)  # noqa: TRY400
+        logger.error("Upload failed for view '%s': %s", view_name, e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
-    logger.info("View '%s' pushed successfully.", view_name_or_id)
+    if view_name != view_src_path.name:
+        logger.info(
+            "View '%s' (from directory '%s') pushed successfully.",
+            view_name,
+            view_src_path.name,
+        )
+    else:
+        logger.info("View '%s' pushed successfully.", view_name)
     return flat_view_data.get("identifier")
 
 
