@@ -71,16 +71,10 @@ class AddAlertComment(SentinelOneSingularityOperationsCenterAction):
                 or "invalid uuid" in err_msg.lower()
                 or "not found" in err_msg.lower()
             ):
-                self.output_message = (
-                    f'Error executing action "Add Alert Comment". Reason: alert with ID {alert_id} '
-                    f"wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
-                )
-            else:
-                self.output_message = (
-                    f'Error executing action "Add Alert Comment". Reason: {err_msg}'
-                )
-            self.result_value = False
-            return
+                raise SentinelOneSingularityOperationsCenterError(
+                    f"alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
+                ) from e
+            raise SentinelOneSingularityOperationsCenterError(err_msg) from e
 
         if note.id:
             self.output_message = (
@@ -88,8 +82,9 @@ class AddAlertComment(SentinelOneSingularityOperationsCenterAction):
             )
             self.result_value = True
         else:
-            self.output_message = f"Failed to add comment to SentinelOne alert '{alert_id}': No response data received."
-            self.result_value = False
+            raise SentinelOneSingularityOperationsCenterError(
+                f'Error executing action "Add Alert Comment". Reason: No response data received for alert {alert_id}.'
+            )
 
 
 def main() -> None:

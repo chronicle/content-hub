@@ -88,12 +88,9 @@ class UpdateAlert(SentinelOneSingularityOperationsCenterAction):
         )
 
         if not any([status_input, verdict_input, assignee_input]):
-            self.output_message = (
-                "Failed to update alert: At least one update parameter "
-                "('Status', 'Verdict', or 'Assignee') must be provided."
+            raise SentinelOneSingularityOperationsCenterError(
+                'at least one of the "Status", "Verdict" or "Assignee" parameters should have a value.'
             )
-            self.result_value = False
-            return
 
         status_api = STATUS_MAP.get(status_input) if status_input else None
         verdict_api = VERDICT_MAP.get(verdict_input) if verdict_input else None
@@ -102,8 +99,7 @@ class UpdateAlert(SentinelOneSingularityOperationsCenterAction):
         if assignee_input:
             assignee_id = self._resolve_assignee_id(assignee_input)
             if assignee_id is False:
-                self.result_value = False
-                return
+                raise SentinelOneSingularityOperationsCenterError(self.output_message)
 
         self.logger.info(f"Updating SentinelOne alert {alert_id}...")
 
@@ -121,16 +117,10 @@ class UpdateAlert(SentinelOneSingularityOperationsCenterAction):
                 or "invalid uuid" in err_msg.lower()
                 or "not found" in err_msg.lower()
             ):
-                self.output_message = (
-                    f'Error executing action "Update Alert". Reason: alert with ID {alert_id} '
-                    f"wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
-                )
-            else:
-                self.output_message = (
-                    f'Error executing action "Update Alert". Reason: {err_msg}'
-                )
-            self.result_value = False
-            return
+                raise SentinelOneSingularityOperationsCenterError(
+                    f"alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
+                ) from e
+            raise SentinelOneSingularityOperationsCenterError(err_msg) from e
 
         if result.is_scheduled:
             self.output_message = (
@@ -139,8 +129,8 @@ class UpdateAlert(SentinelOneSingularityOperationsCenterAction):
             )
             self.result_value = True
         elif result.is_skipped:
-            self.output_message = (
-                f"Action was skipped for alert '{alert_id}'. "
+            raise SentinelOneSingularityOperationsCenterError(
+                f'Error executing action "Update Alert". Reason: Action was skipped for alert \'{alert_id}\'. '
                 f"Reasons: {', '.join(result.skips)}"
             )
             self.result_value = False

@@ -134,7 +134,7 @@ class TestAddAlertComment:
         add_alert_comment.main()
 
         assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
         assert "API Connection error" in action_output.results.output_message
 
@@ -156,9 +156,9 @@ class TestAddAlertComment:
         add_alert_comment.main()
 
         assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
         assert (
-            f"Error executing action \"Add Alert Comment\". Reason: alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
+            f"alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
             in action_output.results.output_message
         )

@@ -148,7 +148,7 @@ class TestUpdateAlert:
         assert req_0.url.path.endswith("/web/api/v2.1/users")
 
         assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
         assert (
             "User with email 'not_found@company.com' was not found in SentinelOne"
@@ -210,9 +210,9 @@ class TestUpdateAlert:
         assert len(script_session.request_history) == 0
 
         assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
-        assert "At least one update parameter" in action_output.results.output_message
+        assert "at least one" in action_output.results.output_message
 
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
@@ -235,7 +235,7 @@ class TestUpdateAlert:
         assert len(script_session.request_history) == 0
 
         assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
         assert (
             "Assignee parameter must be an email address, a numerical User ID, or 'Unassign'"
@@ -263,10 +263,10 @@ class TestUpdateAlert:
 
         assert len(script_session.request_history) == 1
         assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
         assert (
-            f"Error executing action \"Update Alert\". Reason: alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
+            f"alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
             in action_output.results.output_message
         )
 
@@ -290,9 +290,9 @@ class TestUpdateAlert:
         update_alert.main()
 
         assert action_output.results is not None
-        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.execution_state == ExecutionState.FAILED
         assert action_output.results.result_value is False
         assert (
-            f"Error executing action \"Update Alert\". Reason: alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
+            f"alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
             in action_output.results.output_message
         )
