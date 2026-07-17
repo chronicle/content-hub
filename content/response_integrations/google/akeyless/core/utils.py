@@ -21,8 +21,10 @@ from typing import TYPE_CHECKING, Any
 from .constants import MIN_MASK_LENGTH
 
 if TYPE_CHECKING:
-    import logging
     from collections.abc import Callable
+
+    from TIPCommon.base.interfaces import ScriptLogger
+    from TIPCommon.types import SingleJson
 
 
 def mask_id(value: str) -> str:
@@ -43,8 +45,8 @@ def build_lookup_with_warnings(
     get_key: Callable[[Any], str],
     get_value: Callable[[Any], Any],
     entity_type: str,
-    logger: logging.Logger,
-) -> dict[str, Any]:
+    logger: ScriptLogger,
+) -> SingleJson:
     """Build a lookup dict and warn on duplicates.
 
     Args:
@@ -58,7 +60,7 @@ def build_lookup_with_warnings(
         The constructed dictionary mapping.
 
     """
-    lookup: dict[str, Any] = {}
+    lookup: SingleJson = {}
     for item in items:
         key = get_key(item)
         if not key:

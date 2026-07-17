@@ -26,7 +26,7 @@ from akeyless.core.exceptions import (
     InvalidConfigurationError,
     SecretAccessError,
 )
-from akeyless.core.manager import AkeylessClient
+from akeyless.core.manager import AkeylessClient, AkeylessClientConfig
 
 
 class TestAkeylessClient:
@@ -34,26 +34,29 @@ class TestAkeylessClient:
 
     def test_init_success(self, mock_akeyless_api: MagicMock) -> None:
         """Client initializes successfully with valid credentials."""
-        client = AkeylessClient(access_id="test-access-id", access_key="test-access-key")
-        assert client.access_id == "test-access-id"
-        assert client.access_key == "test-access-key"
-        assert client.verify_ssl is True
+        config = AkeylessClientConfig(access_id="test-access-id", access_key="test-access-key")
+        client = AkeylessClient(config)
+        assert client.config.access_id == "test-access-id"
+        assert client.config.access_key == "test-access-key"
+        assert client.config.verify_ssl is True
         assert client.configuration.verify_ssl is True
 
     def test_init_explicit_verify_ssl_false(self, mock_akeyless_api: MagicMock) -> None:
         """Client initializes successfully with verify_ssl set to False."""
-        client = AkeylessClient(
+        config = AkeylessClientConfig(
             access_id="test-access-id",
             access_key="test-access-key",
             verify_ssl=False,
         )
-        assert client.verify_ssl is False
+        client = AkeylessClient(config)
+        assert client.config.verify_ssl is False
         assert client.configuration.verify_ssl is False
 
     def test_init_missing_access_id_raises(self, mock_akeyless_api: MagicMock) -> None:
         """Raises InvalidConfigurationError when access_id is missing."""
+        config = AkeylessClientConfig(access_id="")
         with pytest.raises(InvalidConfigurationError, match="Access ID must be provided"):
-            AkeylessClient(access_id="")
+            AkeylessClient(config)
 
     def test_test_connectivity_success(self, mock_akeyless_api: MagicMock) -> None:
         """test_connectivity returns True on successful auth."""
@@ -61,7 +64,8 @@ class TestAkeylessClient:
         mock_auth_res.token = "test-token"
         mock_akeyless_api.auth.return_value = mock_auth_res
 
-        client = AkeylessClient(access_id="test-access-id", access_key="test-access-key")
+        config = AkeylessClientConfig(access_id="test-access-id", access_key="test-access-key")
+        client = AkeylessClient(config)
         assert client.test_connectivity() is True
         mock_akeyless_api.auth.assert_called_once()
 
@@ -69,7 +73,8 @@ class TestAkeylessClient:
         """test_connectivity raises ConnectivityError on API error."""
         mock_akeyless_api.auth.side_effect = Exception("Invalid credentials")
 
-        client = AkeylessClient(access_id="test-access-id", access_key="test-access-key")
+        config = AkeylessClientConfig(access_id="test-access-id", access_key="test-access-key")
+        client = AkeylessClient(config)
         with pytest.raises(ConnectivityError, match="Failed to connect to Akeyless"):
             client.test_connectivity()
 
@@ -81,7 +86,8 @@ class TestAkeylessClient:
 
         mock_akeyless_api.get_secret_value.return_value = {"my-secret": "super-secret-payload"}
 
-        client = AkeylessClient(access_id="test-access-id", access_key="test-access-key")
+        config = AkeylessClientConfig(access_id="test-access-id", access_key="test-access-key")
+        client = AkeylessClient(config)
         result = client.get_secret_value("my-secret")
         assert result == "super-secret-payload"
 
@@ -93,7 +99,8 @@ class TestAkeylessClient:
 
         mock_akeyless_api.get_secret_value.return_value = {}
 
-        client = AkeylessClient(access_id="test-access-id", access_key="test-access-key")
+        config = AkeylessClientConfig(access_id="test-access-id", access_key="test-access-key")
+        client = AkeylessClient(config)
         with pytest.raises(SecretAccessError, match="not found in Akeyless response"):
             client.get_secret_value("my-secret")
 
@@ -105,7 +112,8 @@ class TestAkeylessClient:
         mock_auth_res.token = "gcp-session-token"
         mock_akeyless_api.auth.return_value = mock_auth_res
 
-        client = AkeylessClient(access_id="test-access-id", access_type="gcp")
+        config = AkeylessClientConfig(access_id="test-access-id", access_type="gcp")
+        client = AkeylessClient(config)
         token = client.get_token()
 
         assert token == "gcp-session-token"
@@ -120,7 +128,8 @@ class TestAkeylessClient:
         mock_auth_res.token = "fallback-access-key-token"
         mock_akeyless_api.auth.return_value = mock_auth_res
 
-        client = AkeylessClient(access_id="test-access-id", access_key="test-access-key", access_type="gcp")
+        config = AkeylessClientConfig(access_id="test-access-id", access_key="test-access-key", access_type="gcp")
+        client = AkeylessClient(config)
         token = client.get_token()
 
         assert token == "fallback-access-key-token"
@@ -132,6 +141,7 @@ class TestAkeylessClient:
         """Raises ConnectivityError when GCP authentication fails and no access_key is provided."""
         mock_fetch_gcp.side_effect = Exception("Metadata server not reachable")
 
-        client = AkeylessClient(access_id="test-access-id", access_key=None, access_type="gcp")
+        config = AkeylessClientConfig(access_id="test-access-id", access_key=None, access_type="gcp")
+        client = AkeylessClient(config)
         with pytest.raises(ConnectivityError, match="Failed to authenticate with Akeyless using GCP IAM"):
             client.get_token()
