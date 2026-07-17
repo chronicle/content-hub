@@ -2,65 +2,41 @@ AddOrUpdate:
   ai_description: >-
     ### General Description
 
-    This action allows users to synchronize data with an Airtable table by either
-    adding new records or updating existing ones. It is designed to handle batch operations
-    provided via a JSON-formatted string. The action searches for existing records
-    based on a user-defined unique field; if a match is found, the record is updated
-    with the new data; if no match is found, a new record is created.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory | Notes |
-
-    | :--- | :--- | :--- | :--- | :--- |
-
-    | **Base id** | The unique identifier for the Airtable base where the table resides.
-    | String | Yes | Found in the Airtable API documentation for the specific base.
-    |
-
-    | **Table name** | The name of the table within the specified base to perform
-    operations on. | String | Yes | Must match the table name in Airtable exactly.
-    |
-
-    | **Field name** | The name of the field (column) used to identify existing records
-    for updates. | String | Yes | This field acts as the unique key for the 'search'
-    logic. |
-
-    | **Json fields** | A JSON-formatted string representing a list of record objects
-    to be processed. | String | Yes | Expected format is a list of dictionaries, e.g.,
-    `[{"Email": "test@example.com", "Status": "Active"}]`. |
-
-
-    ### Additional Notes
-
-    - The action expects the `Json fields` parameter to be a valid JSON array of objects.
-
-    - If multiple records in Airtable match the `Field name` value, all matching records
-    will be updated with the provided data.
+    Adds new records or updates existing records in a specified Airtable base and
+    table. The action searches for existing records based on a specified field name
+    and value. If a match is found, it updates the existing record; otherwise, it
+    inserts a new record.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves the Airtable API key from the integration
-    configuration and extracts the Base ID, Table Name, Field Name, and JSON data
-    from the action parameters.
+    1. Extracts the Airtable API key from the integration configuration.
 
-    2. **Data Parsing**: The `Json fields` string is parsed into a Python list of
-    dictionaries.
+    2. Retrieves the Base ID, Table Name, Field Name, and JSON fields from the action
+    parameters.
 
-    3. **Search and Match**: For each dictionary in the list, the action performs
-    a search in the specified Airtable table where the column defined by `Field name`
-    matches the value provided in the input data.
+    3. Parses the provided JSON fields into a list of dictionaries.
 
-    4. **Update Logic**: If the search returns one or more existing records, the action
-    iterates through them and updates each record using the provided data.
+    4. Iterates through each item in the parsed JSON.
 
-    5. **Insert Logic**: If no records are found during the search, the action inserts
-    a new record into the table using the provided data.
+    5. Makes an API call to search Airtable for an existing record matching the specified
+    field name and value.
 
-    6. **Completion**: The action concludes by providing a summary message indicating
-    the total number of records inserted and updated.
+    6. If a matching record is found, makes an API call to update the record with
+    the new data.
+
+    7. If no matching record is found, makes an API call to insert a new record.
+
+    8. Returns a summary message detailing the number of inserted and updated records.
+
+
+    ### Additional Notes
+
+    The `Json fields` parameter should be a valid JSON string representing a list
+    of dictionaries, where each dictionary contains the fields to be added or updated.
+  ai_short_description: >-
+    Adds new records or updates existing records in a specified Airtable base and
+    table based on a matching field.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -69,14 +45,52 @@ AddOrUpdate:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action performs 'update' and 'insert' operations on the target Airtable
-      table, modifying the state of the external database.
-    fetches_data: true
+      Inserts new records or updates existing records in an external Airtable database.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes API calls to Airtable to search, insert, and update records.
+      Because it modifies data in an external system (Airtable), `can_mutate_external_data`
+      is true. It does not fetch data for SecOps enrichment, nor does it mutate internal
+      SecOps data, update entities, create insights, modify alerts, or create case
+      comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -90,143 +104,89 @@ AddOrUpdate:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or iterate over `siemplify.target_entities`.
+      It operates entirely on the provided action parameters (Base ID, Table name,
+      JSON fields) to interact with Airtable. Therefore, all entity type and filter
+      flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs generic database insert and update operations on Airtable.
+      It does not specifically enrich IOCs/assets, manage ITSM tickets, modify security
+      controls (blocklists/allowlists), or interact with identities, hosts, or emails.
+      Thus, it does not match any of the predefined security outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Base id | String | Yes | Base id |
+
+    | Table name | String | Yes | Table name |
+
+    | Field name | String | Yes | Field name |
+
+    | Json fields | String | Yes | Json fields |
 Create:
   ai_description: >-
     ### General Description
 
-    The **Create** action allows users to programmatically insert new records into
-    a specific table within an AirTable base. It is designed to handle bulk operations
-    by accepting a JSON array of field-value pairs, making it suitable for logging,
-    tracking, or synchronizing data from Google SecOps to AirTable.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Base id** | string | Yes | The unique identifier for the AirTable base (database).
-    This can be found in the URL of the AirTable API page for the specific base. |
-
-    | **Table name** | string | Yes | The name of the specific table within the base
-    where the records should be inserted. |
-
-    | **Json fields** | content | Yes | A JSON-formatted array of objects. Each object
-    represents a single row to be created, with keys matching the AirTable column
-    names and values matching the desired cell content. |
+    Creates new records in a specific AirTable table. This action takes a JSON array
+    of row data and inserts them into the designated AirTable base and table.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action extracts the AirTable API key from
-    the integration settings and the Base ID, Table Name, and JSON fields from the
-    action parameters.
+    1. Extracts the AirTable API key from the integration configuration.
 
-    2. **Connection Initialization**: It initializes the AirTable client using the
-    provided credentials and base/table identifiers.
+    2. Retrieves the Base ID, Table Name, and JSON fields from the action parameters.
 
-    3. **Data Parsing**: The action parses the `Json fields` string into a list of
-    Python dictionaries.
+    3. Parses the provided JSON fields into a list of dictionaries representing the
+    rows to be inserted.
 
-    4. **Record Creation**: It iterates through each dictionary in the list and performs
-    an `insert` operation into the target AirTable table.
+    4. Iterates through the parsed rows and makes an API call (`airtable.insert`)
+    to insert each record into the specified AirTable table.
 
-    5. **Result Compilation**: The action collects the unique IDs and field data of
-    the successfully created records.
+    5. Collects the IDs and fields of the newly created records.
 
-    6. **Finalization**: It outputs a summary message indicating the number of records
-    added and attaches the full JSON response of the created records to the action
-    results.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: true
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: >-
-      This action creates new records (rows) in a specified AirTable table.
-    fetches_data: false
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Delete:
-  ai_description: >-
-    ### General Description
-
-    The **Delete** action allows users to remove records from a specific Airtable
-    table based on a matching field value. It searches for records where a designated
-    column (field) contains a specific value and deletes the resulting records up
-    to a defined limit.
-
-
-    ### Parameters Description
-
-    | Parameter | Description | Type | Mandatory | Notes |
-
-    | :--- | :--- | :--- | :--- | :--- |
-
-    | **Field value** | The specific value to search for within the designated field.
-    | String | Yes | Records containing this value will be targeted for deletion.
-    |
-
-    | **Field name** | The name of the column (field) in the Airtable table to search.
-    | String | Yes | This identifies which column to check for the 'Field value'.
-    |
-
-    | **Table name** | The name of the table within the Airtable base. | String |
-    Yes | Specifies the target table for the operation. |
-
-    | **Base id** | The unique identifier for the Airtable base (database). | String
-    | Yes | Found in the Airtable API documentation URL for the specific base. |
-
-    | **Max records** | The maximum number of records to be deleted in a single execution.
-    | String | Yes | Default is 100. This limits the scope of the deletion to prevent
-    accidental mass data loss. |
+    6. Returns the results as a JSON object and outputs a summary message indicating
+    the number of records successfully added.
 
 
     ### Additional Notes
 
-    *   **Warning:** This action performs a destructive operation by deleting entire
-    records (rows) from Airtable, not just clearing specific cell values.
-
-    *   The action first performs a search to identify record IDs and then iterates
-    through those IDs to execute the deletion.
-
-
-    ### Flow Description
-
-    1.  **Configuration Extraction:** Retrieves the Airtable API key from the integration
-    settings and the Base ID, Table Name, and search criteria from the action parameters.
-
-    2.  **Search Phase:** Connects to the Airtable API and searches the specified
-    table for records where the `Field name` matches the `Field value`, limited by
-    the `Max records` parameter.
-
-    3.  **Deletion Phase:** Iterates through the list of matching records retrieved
-    in the search phase.
-
-    4.  **Execution:** For each matching record, it calls the Airtable delete method
-    using the unique record ID.
-
-    5.  **Reporting:** Returns a summary message to the Google SecOps platform indicating
-    the total number of records successfully deleted.
+    This action supports the creation of multiple rows simultaneously. The `Json fields`
+    parameter must be formatted as a valid JSON array of objects, where each object
+    represents a row and its keys represent the column names.
+  ai_short_description: >-
+    Creates new records in a specific AirTable table using provided JSON fields.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -235,14 +195,51 @@ Delete:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action deletes records from an Airtable table based on search criteria provided
-      in the parameters.
-    fetches_data: true
+      Inserts new records into a specified AirTable database table.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action parses input JSON and makes an external API call (`airtable.insert`)
+      to create new records in AirTable, which mutates external data. It does not
+      fetch contextual data for alerts/entities, mutate internal SecOps data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -256,53 +253,229 @@ Delete:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script does not interact with `siemplify.target_entities`. It solely relies
+      on the provided action parameters to create records in AirTable. Therefore,
+      it does not run on or filter any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates generic records in an AirTable database. It does not specifically
+      enrich IOCs/assets, update alerts, create ITSM tickets (AirTable is a generic
+      database, not a dedicated ITSM platform), block/allow IOCs, manage identities,
+      contain hosts, or manage emails. Therefore, it does not match any of the specific
+      predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Base id | String | Yes | Base is a database in Airtable in which you store data.The
+    base ID can be found in the URL of the API page of the base. |
+
+    | Table name | String | Yes | A table stores similar (structured) data, and each
+    base can have multiple tables.  This parameter indicates the name of the table
+    within the base. |
+
+    | Json fields | Content | Yes | The fields (columns) and their value in a JSON
+    format. This action supports creation of multiple rows. |
+Delete:
+  ai_description: "### General Description\nDeletes specific records in an Airtable\
+    \ database (Base) based on a matching field name and value. \n\n### Flow Description\n\
+    1. Extracts the Airtable Base ID, Table Name, Field Name, Field Value, and Max\
+    \ Records from the action parameters.\n2. Initializes the Airtable client using\
+    \ the provided API key and Base ID.\n3. Makes an API call to search the specified\
+    \ table for records where the given field name matches the provided field value,\
+    \ up to the maximum records limit.\n4. Iterates through the search results and\
+    \ makes an API call to delete each matching record by its unique ID.\n5. Returns\
+    \ the total count of successfully deleted records to the platform.\n\n### Additional\
+    \ Notes\nAlthough the original description mentions deleting fields (columns),\
+    \ the underlying API logic actually deletes the entire record (row) that matches\
+    \ the specified field criteria."
+  ai_short_description: >-
+    Deletes records in an Airtable table that match a specific field name and value.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Deletes records in an external Airtable database that match the specified field
+      criteria.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a DELETE request to the Airtable API to remove records, which
+      mutates external data. It does not fetch contextual data to enrich SecOps alerts/entities,
+      nor does it mutate internal data, update entities, create insights, modify alerts,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over `siemplify.target_entities`. It
+      relies entirely on the provided action parameters to identify and delete records
+      in Airtable. Therefore, it does not run on any entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes records in an external Airtable database. This does not align
+      with any of the specific expected outcomes such as enriching IOCs/assets, managing
+      tickets, updating alerts, blocking/allowing IOCs, managing identities, or interacting
+      with emails/hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Field value | String | Yes | The value of a specific field in a table |
+
+    | Field name | String | Yes | The name of a specific field (column) in the table
+    |
+
+    | Table name | String | Yes | A table stores similar (structured) data, and each
+    base can have multiple tables. This parameter indicates the name of the table
+    within the base. |
+
+    | Base id | String | Yes | Base is a database in Airtable in which you store data.
+    The base ID can be found in the URL of the API page of the base. |
+
+    | Max records | String | Yes | The maximum records (rows) that will be affected
+    by the action |
 Delete All Records:
   ai_description: >-
     ### General Description
 
-    Deletes all records from a specified table within an Airtable base. This action
-    is useful for clearing out temporary data or resetting a table's state as part
-    of an automated workflow.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Description | Type | Mandatory | Notes |
-
-    | :--- | :--- | :--- | :--- | :--- |
-
-    | Base Id | The unique identifier for the Airtable base (database). This can be
-    found in the Airtable API documentation for the specific base. | string | Yes
-    | Required to locate the correct database. |
-
-    | Table name | The name of the table within the specified base from which all
-    records will be deleted. | string | Yes | Required to target the specific data
-    set. |
-
-
-    ### Additional Notes
-
-    **Warning:** This is a destructive action. It retrieves all record IDs currently
-    in the table and performs a batch delete. Ensure the correct Base ID and Table
-    Name are provided to avoid accidental data loss.
+    Deletes all records within a specified table in an Airtable base. This action
+    connects to the Airtable API, retrieves all existing records for the given table,
+    and performs a batch deletion operation to remove them entirely.
 
 
     ### Flow Description
 
-    1. **Authentication:** The action retrieves the Airtable API key from the integration
-    configuration.
+    1. Extracts the Airtable API key from the integration configuration.
 
-    2. **Data Retrieval:** It connects to the specified Airtable base and table to
-    fetch all existing records.
+    2. Retrieves the `Base Id` and `Table name` from the action parameters.
 
-    3. **ID Extraction:** The action iterates through the retrieved records to collect
-    their unique identifiers.
+    3. Initializes the Airtable client and makes an API call (`get_all`) to fetch
+    all existing records in the specified table.
 
-    4. **Batch Deletion:** It uses the collected IDs to perform a batch delete operation,
-    removing all records from the table.
+    4. Extracts the record IDs from the fetched results.
 
-    5. **Reporting:** The action concludes by reporting the total number of records
-    successfully deleted.
+    5. Makes an API call (`batch_delete`) to delete all identified records from the
+    table.
+
+    6. Returns a success message with the total count of deleted records.
+
+
+    ### Additional Notes
+
+    This action permanently modifies external data by deleting records from the specified
+    Airtable base. Ensure that the correct Base ID and Table Name are provided to
+    prevent accidental data loss.
+  ai_short_description: >-
+    Deletes all records within a specified table in an Airtable base.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -311,14 +484,51 @@ Delete All Records:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      The action performs a batch delete operation on the specified Airtable table,
-      permanently removing all records found within it.
-    fetches_data: true
+      Deletes all records from a specified table in an Airtable base.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes an API call to Airtable to delete records, which mutates external
+      data. It does not fetch contextual data for alerts/entities (it only fetches
+      records to identify what to delete), nor does it mutate internal SecOps data,
+      update entities, create insights, modify alerts, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -332,111 +542,147 @@ Delete All Records:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Enrich Entities From Table:
-  ai_description: >-
-    Enriches entities by searching for matching records within a specified Airtable
-    table. This action allows users to map entity identifiers or specific entity properties
-    to columns in Airtable to retrieve supplemental context.
-
-
-    ### Parameters
-
+    reasoning: >-
+      The code does not iterate over `siemplify.target_entities` or reference any
+      entity-specific identifiers. It operates entirely on the provided `Base Id`
+      and `Table name` parameters. Therefore, it does not run on entities, and all
+      entity-related flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action deletes records from an Airtable database. This is a generic data
+      manipulation operation for a productivity tool and does not match any of the
+      predefined security-specific outcome categories such as Enrich IOC, Update Alert,
+      Create Ticket, or Blocklist.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Base id | String | Yes | The unique identifier for the Airtable base (database).
-    |
+    | Base Id | String | Yes | Base is a database in Airtable in which you store data.
+    The base ID can be found in the URL of the API page of the base. |
 
-    | Table name | String | Yes | The name of the table within the base to search.
-    |
+    | Table name | String | Yes | Each Base can include multiple tables. The parameter
+    indicates the name of the table within the base. |
+Enrich Entities From Table:
+  ai_description: >-
+    ### General Description
 
-    | Field name | String | Yes | The specific column name in the Airtable table to
-    match against. |
-
-    | Enrichment Prefix | String | No | A prefix added to the keys of the retrieved
-    data when stored in entity properties (default: 'AT_'). |
-
-    | Max records | String | No | The maximum number of records to consider for the
-    search (default: '100'). |
-
-    | Entity Field | String | No | The entity property to use for the search. If not
-    provided, the entity's identifier is used. |
+    Enriches entities by searching for specific fields within an AirTable database
+    table. This action queries AirTable using either the entity's identifier or a
+    specified enrichment field, retrieves the matching record, flattens the data,
+    and appends it to the entity's additional properties with a customizable prefix.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action retrieves the Airtable API key from the integration
-    configuration and extracts the user-provided parameters (Base ID, Table Name,
-    Field Name, etc.).
+    1. Initializes the AirTable client using the provided Base ID, Table Name, and
+    API key.
 
-    2. **Entity Processing**: For each target entity, the action determines the search
-    value. It uses either a specific property defined in 'Entity Field' or the entity's
-    identifier.
+    2. Iterates through the target entities in the case.
 
-    3. **Airtable Query**: It performs a search in the specified Airtable table, matching
-    the 'Field name' column against the search value. It also attempts a case-insensitive
-    (lowercase) search if the initial search yields no results.
+    3. Determines the search value for each entity, using either a specified entity
+    field from its additional properties or its default identifier.
 
-    4. **Data Enrichment**: If a matching record is found, the action flattens the
-    record's data structure and updates the entity's additional properties with this
-    data, applying the specified prefix.
+    4. Makes an API call (`airtable.search`) to search the specified AirTable column
+    for the entity's value.
 
-    5. **Finalization**: The action updates all successfully enriched entities in
-    Google SecOps and provides a summary of the results, including any errors encountered
-    during the process.
+    5. If a match is found, retrieves the first record, flattens the JSON structure,
+    and applies the configured enrichment prefix.
+
+    6. Updates the entity's additional properties with the retrieved data.
+
+    7. Returns the results as a JSON object and updates the entities in the SecOps
+    platform.
+
+
+    ### Additional Notes
+
+    If the initial search yields no results, the action automatically retries the
+    search using a lowercase version of the search value. Errors for individual entities
+    (such as missing fields) are captured and returned in the JSON output.
+  ai_short_description: >-
+    Enriches entities by searching for matching records in an AirTable database and
+    appending the retrieved data to the entities' additional properties.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity additional properties with flattened data retrieved from Airtable
-      records.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from AirTable using `airtable.search` (fetches_data=True).
+      It does not mutate external data as it only performs a search. It updates internal
+      entities with the retrieved data using `siemplify.update_entities` (can_update_entities=True).
+      It does not create insights, modify alert data, or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
-    - USERUNIQNAME
-    filters_by_additional_properties: true
+      address: true
+      alert: true
+      application: true
+      child_hash: true
+      child_process: true
+      cluster: true
+      container: true
+      credit_card: true
+      cve: true
+      cve_id: true
+      database: true
+      deployment: true
+      destination_domain: true
+      domain: true
+      email_message: true
+      event: true
+      file_hash: true
+      file_name: true
+      generic: true
+      host_name: true
+      ip_set: true
+      mac_address: true
+      parent_hash: true
+      parent_process: true
+      phone_number: true
+      pod: true
+      process: true
+      service: true
+      source_domain: true
+      threat_actor: true
+      threat_campaign: true
+      threat_signature: true
+      url: true
+      usb: true
+      user: true
+    filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
     filters_by_creation_time: false
@@ -449,65 +695,106 @@ Enrich Entities From Table:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` without applying any `entity_type`
+      filtering, meaning it supports and runs on all entity types. It does not filter
+      the entities by identifier, time, or other specific boolean attributes before
+      execution.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries an external database (AirTable) to retrieve contextual information
+      and appends it to the entities. Depending on the data stored in AirTable, this
+      serves the expected outcome of enriching IOCs (with custom threat data) or enriching
+      Assets (with custom inventory data). Therefore, both Enrich IOC and Enrich Asset
+      apply.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Enrichment Prefix | String | No | Prefix to use for entity enrichment. Default
+    is 'AT_'. |
+
+    | Max records | String | No | The maximum records (rows) that will be affected
+    by the action. Default is 100. |
+
+    | Base id | String | Yes | Base is a database in Airtable in which you store data.
+    The base ID can be found in the URL of the API page of the base. |
+
+    | Table name | String | Yes | A table stores similar (structured) data, and each
+    base can have multiple tables. This parameter indicates the name of the table
+    within the base. |
+
+    | Field name | String | Yes | The name of a specific field (column) in the table.
+    |
+
+    | Entity Field | String | No | Entity field to be used for the AirTable search
+    (Can be Identifier or any other enrichment field). Default is Identifier. |
 Get All Records:
   ai_description: >-
     ### General Description
 
-    The **Get All Records** action retrieves a specified number of records from a
-    designated table within an Airtable base. It allows for sorting the results based
-    on a specific column in either ascending or descending order. This action is primarily
-    used for data retrieval and synchronization tasks between Airtable and Google
-    SecOps.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Base Id** | string | Yes | The unique ID of the Airtable base (database).
-    Found in the API documentation URL for the base. |
-
-    | **Table name** | string | Yes | The name of the specific table within the base
-    from which to fetch records. |
-
-    | **Max Records** | string | Yes | The maximum number of rows/records to be retrieved
-    by the action. |
-
-    | **Sort by** | string | No | The name of the column to use for sorting the retrieved
-    records. |
-
-    | **Sort Direction** | ddl | Yes | Specifies whether the records should be sorted
-    in 'Ascending' or 'Descending' order. |
-
-
-    ### Additional Notes
-
-    - This action does not operate on SecOps entities; it is a utility action for
-    database interaction.
-
-    - If **Sort by** is not provided, the records will be returned in the default
-    order provided by the Airtable API.
+    Retrieves all records from a specified table within an Airtable base. This action
+    allows users to fetch data, optionally sorting it by a specific column and limiting
+    the number of returned records.
 
 
     ### Flow Description
 
-    1. **Configuration Extraction**: The action retrieves the Airtable API key from
-    the integration configuration and the user-provided parameters (Base ID, Table
-    Name, Max Records, Sort By, and Sort Direction).
+    1. Extracts the Airtable API key from the integration configuration.
 
-    2. **Client Initialization**: An Airtable client is initialized using the provided
-    Base ID, Table Name, and API Key.
+    2. Retrieves action parameters including Base ID, Table name, Max Records, Sort
+    by, and Sort Direction.
 
-    3. **Sort Logic**: The action maps the user-friendly 'Ascending/Descending' input
-    to the API-required 'asc/desc' values.
+    3. Initializes the Airtable client with the provided credentials and base details.
 
-    4. **Data Retrieval**: The action calls the Airtable API to fetch the records,
-    applying the limit and sorting criteria if specified.
+    4. Determines the sorting direction (ascending or descending).
 
-    5. **Result Processing**: The retrieved records are counted and formatted into
-    a JSON result, which is then attached to the action output in Google SecOps.
+    5. Makes an API call (`airtable.get_all`) to fetch the records from the specified
+    table, applying the sorting and limit parameters if provided.
+
+    6. Adds the retrieved records to the action's JSON result.
+
+    7. Completes the action and outputs a message indicating the number of records
+    fetched.
+
+
+    ### Additional Notes
+
+    - The action relies on the `airtable` Python library to interact with the Airtable
+    API.
+
+    - The results are returned as a JSON array containing the fetched records.
+  ai_short_description: >-
+    Retrieves all records from a specified table within an Airtable base, with optional
+    sorting and record limits.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -518,10 +805,47 @@ Get All Records:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data from an external system (Airtable) using a GET request
+      (`airtable.get_all`). It does not mutate external data, mutate internal data,
+      update entities, create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -535,52 +859,88 @@ Get All Records:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process any entities. It simply retrieves
+      data from an external Airtable database based on the provided parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves generic records from an Airtable database. It does not
+      enrich specific IOCs or assets, update alerts, manage tickets, or perform any
+      containment/remediation actions. Therefore, it does not match any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Base Id | String | Yes | Base is a database in Airtable in which you store data.
+    The base ID can be found in the URL of the API page of the base. |
+
+    | Table name | String | Yes | Each Base can include multiple tables. The parameter
+    indicates the name of the table within the base. |
+
+    | Max Records | String | Yes | The maximum rows that will be affected by the action
+    |
+
+    | Sort by | String | No | The column name you would like to sort by |
+
+    | Sort Direction | String | Yes | The direction of the records you would like
+    to sort by - Descending\Ascending |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is designed to verify the connectivity between Google SecOps
-    and the AirTable service. It ensures that the provided credentials and configuration
-    details (API Key, Base ID, and Table Name) are valid and that the service is reachable.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Api key | String | Yes | The API key used to authenticate with the AirTable
-    API. This is extracted from the integration configuration. |
-
-    | Base id | String | Yes | The unique identifier for the AirTable base. This is
-    extracted from the integration configuration. |
-
-    | Table name | String | Yes | The name of the specific table within the base to
-    test connectivity against. This is extracted from the integration configuration.
-    |
-
-
-    ### Additional Notes
-
-    This action does not process any entities and is strictly used for health checks
-    of the integration configuration. It does not accept any action-specific input
-    parameters.
+    Tests the connection to the AirTable product to ensure the integration is configured
+    correctly and can successfully communicate with the AirTable API.
 
 
     ### Flow Description
 
-    1. **Configuration Extraction**: The action retrieves the API Key, Base ID, and
-    Table Name from the integration's configuration settings.
+    1. Extracts the API key, Base ID, and Table Name from the integration-level configuration.
 
-    2. **Client Initialization**: An AirTable client is initialized using the retrieved
-    credentials.
+    2. Initializes the AirTable client using the provided credentials.
 
-    3. **Connectivity Test**: The action attempts to fetch a single record from the
-    specified table using the `get_all` method with `maxRecords=1`.
+    3. Makes a lightweight API call (`get_all` with `maxRecords=1`) to verify connectivity
+    and authentication.
 
-    4. **Result Reporting**: If the request is successful, the action concludes with
-    a success message indicating that AirTable is connected.
+    4. Returns a success message to the platform if the connection is successfully
+    established.
+
+
+    ### Additional Notes
+
+    This is a utility action typically used during integration setup or troubleshooting.
+    It does not process entities, mutate external data, or affect case data.
+  ai_short_description: >-
+    Tests the connection to the AirTable product by making a lightweight API request
+    to verify configuration credentials.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -589,12 +949,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to AirTable to test connectivity, but it does
+      not fetch contextual data for alerts or entities. It does not mutate external
+      data, update internal entities, create insights, or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -608,30 +1005,75 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or reference any entities. It solely tests the connection
+      to the AirTable API using integration configuration parameters, so all entity-related
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connection test (Ping) to verify AirTable configuration
+      credentials. It does not enrich entities, mutate alerts, interact with tickets,
+      or perform any operations that match the specified outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Search:
   ai_description: >-
-    ### General Description  The **Search** action allows users to query an Airtable
-    base for specific records. It searches a designated table and column (field) for
-    a matching value and retrieves the corresponding row data. This is useful for
-    looking up asset information, user details, or threat intelligence stored within
-    Airtable.  ### Parameters Description  | Parameter | Type | Mandatory | Description
-    | | :--- | :--- | :--- | :--- | | **Base id** | string | Yes | The unique identifier
-    for the Airtable base (found in the API URL). | | **Table name** | string | Yes
-    | The name of the table within the base where the search will be performed. |
-    | **Field name** | string | Yes | The name of the column to search in. | | **Field
-    value** | string | Yes | The specific value to search for within the specified
-    field. | | **Max records** | string | No | The maximum number of records to return
-    (default is 100). |  ### Flow Description  1. **Initialization**: The action retrieves
-    the Airtable API key from the integration configuration and extracts the search
-    parameters (Base ID, Table Name, Field Name, Field Value, and Max Records) from
-    the input. 2. **Client Setup**: An Airtable client is initialized using the provided
-    Base ID and API Key. 3. **Execution**: The action performs a search query against
-    the specified table, filtering by the provided field name and value. 4. **Output**:
-    The matching records are returned as a JSON object, and a summary message indicates
-    the number of records found.  ### Additional Notes  - This action does not process
-    SOAR entities; it operates strictly based on the provided input parameters. -
-    The Max records parameter is converted to an integer; if an invalid value is provided,
-    the script logic defaults to 5.
+    ### General Description
+
+    Searches for specific records within an Airtable database (Base) by matching a
+    field name to a specific value. It retrieves the matching rows and returns them
+    as a JSON object for further use within the playbook.
+
+
+    ### Flow Description
+
+    1. Extracts the Airtable API key from the integration configuration.
+
+    2. Retrieves the Base ID, Table name, Field name, Field value, and Max records
+    from the action parameters.
+
+    3. Initializes the Airtable client and executes a search query (`airtable.search`)
+    against the specified table using the provided field name and value.
+
+    4. Returns the matched records as a JSON result and outputs the total count of
+    matched records to the environment.
+
+
+    ### Additional Notes
+
+    This action does not operate on SecOps entities. It strictly queries Airtable
+    based on the provided parameters and returns the raw JSON results. Ensure the
+    Base ID and Table name are accurately provided as they appear in the Airtable
+    API URL.
+  ai_short_description: >-
+    Searches for specific records within an Airtable database by matching a field
+    name to a specific value and returns the matched records as a JSON result.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -642,10 +1084,48 @@ Search:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data from Airtable via a search query (`fetches_data` = true).
+      It does not mutate external data as it only performs a read operation. It does
+      not mutate internal data, update entities, create insights, modify alert data,
+      or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -659,66 +1139,94 @@ Search:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It strictly uses action parameters to query Airtable. Therefore,
+      all entity type and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries an external database (Airtable) for records matching specific
+      criteria. It does not enrich IOCs or assets, update alerts, manage tickets,
+      block/allow IOCs, manage identities, contain hosts, search SecOps events/emails,
+      or submit files. Since it is a generic data retrieval action from a 3rd party
+      system that does not fit the strict definitions of the available outcome categories,
+      all flags are set to false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Field value | String | Yes | The value of a specific field in a table |
+
+    | Field name | String | Yes | The name of a specific field (column) in the table
+    |
+
+    | Table name | String | Yes | A table stores similar (structured) data, and each
+    base can have multiple tables.  This parameter indicates the name of the table
+    within the base. |
+
+    | Base id | String | Yes | Base is a database in Airtable in which you store data.The
+    base ID can be found in the URL of the API page of the base. |
+
+    | Max records | String | No | The maximum records (rows) that will be affected
+    by the action |
 Update:
   ai_description: >-
     ### General Description
 
-    Updates specific records in an Airtable table based on a search criterion. This
-    action allows for bulk updates of records that share a common field value, enabling
-    automated data management within Airtable bases.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Base id | string | Yes | The unique identifier for the Airtable base, found
-    in the API URL. |
-
-    | Table name | string | Yes | The name of the table within the base where the
-    update will occur. |
-
-    | Field name | string | Yes | The name of the column used to filter/search for
-    records to be updated. |
-
-    | Field value | string | Yes | The specific value to search for in the 'Field
-    name' column. |
-
-    | Json fields | content | Yes | A JSON-formatted string representing a dictionary
-    of field names and the new values to be applied (e.g., `{"Status": "Closed", "Priority":
-    "Low"}`). |
-
-    | Max records | string | Yes | The maximum number of records that the action will
-    attempt to search for and update in a single execution. |
+    Updates specific fields in an Airtable table based on a search query. This action
+    searches for records matching a specific field value and applies a JSON-formatted
+    set of field updates to all matching records.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action extracts the API key from the integration configuration
-    and parameters from the action input.
+    1. Initializes the Airtable client using the provided Base ID, Table Name, and
+    API key.
 
-    2. **Search**: It connects to the specified Airtable base and table to search
-    for records where the `Field name` matches the `Field value`.
+    2. Searches the specified table for records where the given `Field name` matches
+    the `Field value`, up to the `Max records` limit.
 
-    3. **Limit**: The search result is limited by the `Max records` parameter to prevent
-    accidental bulk changes beyond the intended scope.
+    3. Iterates through the search results and updates each matching record with the
+    provided `Json fields` via an API call to Airtable.
 
-    4. **Update**: The action iterates through each record found in the search results
-    and performs an update operation using the key-value pairs provided in the `Json
-    fields` parameter.
-
-    5. **Completion**: It returns a summary message indicating the total number of
-    records that were successfully updated.
+    4. Returns the total number of successfully updated records to the SecOps platform.
 
 
     ### Additional Notes
 
-    - The `Json fields` parameter must be a valid JSON object string.
-
-    - The action performs a search-then-update flow; if no records match the search
-    criteria, no updates will be performed.
+    The `Json fields` parameter must be provided in a valid JSON format representing
+    the columns and their new values.
+  ai_short_description: >-
+    Updates specific fields in an Airtable table by searching for matching records
+    and applying the provided JSON field values.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -727,14 +1235,51 @@ Update:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Updates existing records in an Airtable table with new values provided in the
-      'Json fields' parameter.
-    fetches_data: true
+      Updates specific records in an Airtable table with new field values.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action searches for records in Airtable and then iterates over the results
+      to update them using `airtable.update()`. This mutates external data in Airtable.
+      It does not fetch contextual data for entities, nor does it mutate internal
+      SecOps data, update entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -748,3 +1293,62 @@ Update:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with `siemplify.target_entities` or any entity-specific
+      data. It operates entirely on Airtable records based on the provided action
+      parameters. Therefore, all entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs a generic update operation on an Airtable database. It does
+      not specifically align with any of the predefined outcome categories such as
+      updating a ticket, enriching an IOC, or modifying an identity. Therefore, all
+      outcome category flags are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max records | String | Yes | The maximum records (rows) that will be affected
+    by the action |
+
+    | Json fields | Content | Yes | The fields (columns) and their value in a JSON
+    format. |
+
+    | Field value | String | Yes | The value of a specific field in a table |
+
+    | Field name | String | Yes | The name of a specific field (column) in the table
+    |
+
+    | Table name | String | Yes | A table stores similar (structured) data, and each
+    base can have multiple tables. This parameter indicates the name of the table
+    within the base. |
+
+    | Base id | String | Yes | Base is a database in Airtable in which you store data.
+    The base ID can be found in the URL of the API page of the base. |
