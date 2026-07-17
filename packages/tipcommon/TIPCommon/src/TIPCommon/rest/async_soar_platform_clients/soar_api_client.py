@@ -233,7 +233,7 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
         self,
         integration_identifier: str,
         environment: str,
-    ) -> SingleJson:
+    ) -> list[SingleJson]:
         """Get integration instances for a given environment.
 
         Args:
@@ -248,20 +248,17 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
             httpx.HTTPStatusError: If the API request fails.
 
         """
-        endpoint: str = (
-            f"/integrations/{integration_identifier}/integrationInstances"
-        )
         env_literal: str = escape_odata_literal(
             "*" if environment == "Shared Instances" else environment,
         )
-        params: SingleJson = {
-            "$filter": f"environment eq '{env_literal}'",
-        }
-        response: httpx.Response = await self.get(endpoint, params=params)
-        if response.status_code == STATUS_CODE_NO_CONTENT:
-            return {"integrationInstances": []}
-
-        return response.json()
+        query_string = f"$filter=environment eq '{env_literal}'&pageSize={DEFAULT_PAGE_SIZE}"
+        endpoint: str = (
+            f"/integrations/{integration_identifier}/integrationInstances?{query_string}"
+        )
+        return await self._paginate_results(
+            endpoint,
+            "integrationInstances",
+        )
 
     async def get_connector_cards(
         self,

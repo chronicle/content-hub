@@ -186,3 +186,50 @@ class BaseAsyncSoarApi:
 
         """
         return await self._make_request(HttpMethod.DELETE.value, endpoint)
+
+    async def _paginate_results(
+        self,
+        initial_endpoint: str,
+        root_response_key: str,
+    ) -> list[SingleJson]:
+        """Handles paginated API requests, managing tokens and aggregating results.
+
+        Avoids infinite loops by using a controlled loop condition.
+
+        Args:
+            initial_endpoint (str): The initial API endpoint to fetch data from.
+            root_response_key (str): The key in the response JSON where records are
+                stored.
+
+        Returns:
+            list[SingleJson]: A list of all records retrieved across paginated
+            responses.
+
+        """
+        all_records = []
+        next_token = None
+        current_endpoint = initial_endpoint
+
+        while True if next_token is None else bool(next_token):
+            separator = "&" if "?" in current_endpoint else "?"
+            endpoint_with_token = (
+                f"{current_endpoint}{separator}pageToken={next_token}"
+                if next_token
+                else current_endpoint
+            )
+
+            try:
+                response = await self.get(endpoint_with_token)
+                response_data = response.json()
+            except Exception as e:
+                self.logger.error(f"Failed to fetch page: {e}")
+                break
+
+            current_records = response_data.get(root_response_key, [])
+            all_records.extend(current_records)
+
+            next_token = response_data.get("nextPageToken")
+            if not next_token:
+                break
+
+        return all_records

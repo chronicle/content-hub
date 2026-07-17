@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import httpx
 import pytest
@@ -42,7 +42,10 @@ async def test_get_installed_integrations_of_environment_success(
     client = AsyncMarketplaceApi(mock_async_sdk)
     mock_response = mocker.MagicMock(spec=httpx.Response)
     mock_response.status_code = 200
-    mock_response.json.return_value = {"integrationInstances": [{"id": 1}]}
+    mock_response.json.return_value = {
+        "integrationInstances": [{"id": 1}],
+        "nextPageToken": None,
+    }
     mock_async_sdk.client.request.return_value = mock_response
 
     res = await client.get_installed_integrations_of_environment(
@@ -50,11 +53,11 @@ async def test_get_installed_integrations_of_environment_success(
         environment="Prod",
     )
 
-    assert res == {"integrationInstances": [{"id": 1}]}
+    assert res == [{"id": 1}]
     mock_async_sdk.client.request.assert_called_once_with(
         "GET",
-        "/integrations/intel_1/integrationInstances",
-        params={"$filter": "environment eq 'Prod'"},
+        "/integrations/intel_1/integrationInstances?$filter=environment eq 'Prod'&pageSize=1000",
+        params=None,
         json=None,
         headers=None,
     )
@@ -68,7 +71,10 @@ async def test_get_installed_integrations_of_environment_shared(
     client = AsyncMarketplaceApi(mock_async_sdk)
     mock_response = mocker.MagicMock(spec=httpx.Response)
     mock_response.status_code = 200
-    mock_response.json.return_value = {"integrationInstances": [{"id": 2}]}
+    mock_response.json.return_value = {
+        "integrationInstances": [{"id": 2}],
+        "nextPageToken": None,
+    }
     mock_async_sdk.client.request.return_value = mock_response
 
     res = await client.get_installed_integrations_of_environment(
@@ -76,11 +82,11 @@ async def test_get_installed_integrations_of_environment_shared(
         environment="Shared Instances",
     )
 
-    assert res == {"integrationInstances": [{"id": 2}]}
+    assert res == [{"id": 2}]
     mock_async_sdk.client.request.assert_called_once_with(
         "GET",
-        "/integrations/intel_1/integrationInstances",
-        params={"$filter": "environment eq '*'"},
+        "/integrations/intel_1/integrationInstances?$filter=environment eq '*'&pageSize=1000",
+        params=None,
         json=None,
         headers=None,
     )
@@ -94,6 +100,7 @@ async def test_get_installed_integrations_of_environment_no_content(
     client = AsyncMarketplaceApi(mock_async_sdk)
     mock_response = mocker.MagicMock(spec=httpx.Response)
     mock_response.status_code = 204
+    mock_response.json.side_effect = ValueError("No JSON object could be decoded")
     mock_async_sdk.client.request.return_value = mock_response
 
     res = await client.get_installed_integrations_of_environment(
@@ -101,7 +108,59 @@ async def test_get_installed_integrations_of_environment_no_content(
         environment="Prod",
     )
 
-    assert res == {"integrationInstances": []}
+    assert res == []
+
+
+@pytest.mark.anyio
+async def test_get_installed_integrations_of_environment_multi_page(
+    mocker: MockerFixture, mock_async_sdk: MagicMock
+) -> None:
+    """Test get_installed_integrations_of_environment aggregates results from multiple pages."""
+    client = AsyncMarketplaceApi(mock_async_sdk)
+
+    mock_response_1 = mocker.MagicMock(spec=httpx.Response)
+    mock_response_1.status_code = 200
+    mock_response_1.json.return_value = {
+        "integrationInstances": [{"id": 1}],
+        "nextPageToken": "token_123",
+    }
+
+    mock_response_2 = mocker.MagicMock(spec=httpx.Response)
+    mock_response_2.status_code = 200
+    mock_response_2.json.return_value = {
+        "integrationInstances": [{"id": 2}],
+        "nextPageToken": None,
+    }
+
+    mock_async_sdk.client.request.side_effect = [
+        mock_response_1,
+        mock_response_2,
+    ]
+
+    res = await client.get_installed_integrations_of_environment(
+        integration_identifier="intel_1",
+        environment="Prod",
+    )
+
+    assert res == [{"id": 1}, {"id": 2}]
+
+    assert mock_async_sdk.client.request.call_count == 2
+    mock_async_sdk.client.request.assert_has_calls([
+        call(
+            "GET",
+            "/integrations/intel_1/integrationInstances?$filter=environment eq 'Prod'&pageSize=1000",
+            params=None,
+            json=None,
+            headers=None,
+        ),
+        call(
+            "GET",
+            "/integrations/intel_1/integrationInstances?$filter=environment eq 'Prod'&pageSize=1000&pageToken=token_123",
+            params=None,
+            json=None,
+            headers=None,
+        ),
+    ])
 
 
 @pytest.mark.anyio
