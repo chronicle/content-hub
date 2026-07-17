@@ -325,6 +325,9 @@ class SyncIntegrationCredentialJob(Job):
         ticket_id_raw = self.params.ticket_id
         ticket_id = int(ticket_id_raw) if ticket_id_raw and str(ticket_id_raw).isdigit() else None
 
+        if self.cyber_ark_manager is None:
+            msg = "CyberArk PAM manager is not initialized."
+            raise SecretAccessError(msg)
         try:
             password: str = await asyncio.to_thread(
                 self.cyber_ark_manager.get_password,
@@ -446,7 +449,7 @@ class SyncIntegrationCredentialJob(Job):
                         name,
                         param_mapping,
                     )
-                except Exception as e:  # ruff:ignore[blind-except]
+                except Exception as e:  # ruff:ignore[BLE001]
                     self.logger.warn(f"Failed to update instance '{name}': {e}")
                     self._sync_errors.append(f"Failed to update instance '{name}'")
 
@@ -614,7 +617,7 @@ class SyncIntegrationCredentialJob(Job):
                         name,
                         param_mapping,
                     )
-                except Exception as e:  # ruff:ignore[blind-except]
+                except Exception as e:  # ruff:ignore[BLE001]
                     self.logger.warn(f"Failed to update connector '{name}': {e}")
                     self._sync_errors.append(f"Failed to update connector '{name}'")
 
@@ -779,7 +782,7 @@ class SyncIntegrationCredentialJob(Job):
                         param_mapping,
                         name_to_job,
                     )
-                except Exception as e:  # ruff:ignore[blind-except]
+                except Exception as e:  # ruff:ignore[BLE001]
                     self.logger.warn(f"Failed to update job '{job_name}': {e}")
                     self._sync_errors.append(f"Failed to update job '{job_name}'")
 
