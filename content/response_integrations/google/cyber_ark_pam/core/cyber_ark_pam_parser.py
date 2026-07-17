@@ -58,8 +58,13 @@ class CyberArkPamParser:
             A list of secret versions.
 
         """
-        if isinstance(json_response, dict) and "value" in json_response:
-            return json_response["value"]
+        if isinstance(json_response, dict):
+            if "value" in json_response:
+                return json_response["value"]
+            if "Versions" in json_response:
+                return json_response["Versions"]
+            if "versions" in json_response:
+                return json_response["versions"]
         if isinstance(json_response, list):
             return json_response
 

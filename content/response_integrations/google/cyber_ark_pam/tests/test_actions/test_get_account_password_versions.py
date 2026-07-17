@@ -174,3 +174,74 @@ class TestGetAccountPasswordVersions:
             "successful_accounts": [{"account_id": "28_11", "versions": [1, 2]}],
             "failed_accounts": [{"account_id": "25_30", "error": "Account not found"}],
         }
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_14"}
+    )
+    def test_get_password_versions_success_with_versions_dict(
+        self,
+        action_output: MockActionOutput,
+        mock_session: MagicMock,
+    ) -> None:
+        """Test successfully retrieving secret versions for an account where response has nested 'Versions' key."""
+        versions_response = MagicMock()
+        versions_response.status_code = 200
+        versions_response.json.return_value = {
+            "Versions": [
+                {
+                    "versionID": 34,
+                    "modifiedBy": "Administrator",
+                    "modificationDate": 1784090383,
+                    "isTemporary": False,
+                },
+                {
+                    "versionID": 23,
+                    "modifiedBy": "Administrator",
+                    "modificationDate": 1781785304,
+                    "isTemporary": False,
+                },
+            ],
+            "Total": 2,
+        }
+        versions_response.raise_for_status.return_value = None
+
+        def mock_http_calls(url: str, *args: object, **kwargs: object) -> MagicMock:
+            if "/Auth/CyberArk/Logon" in url:
+                mock_logon = MagicMock()
+                mock_logon.status_code = 200
+                mock_logon.text = '"mock-token"'
+                mock_logon.raise_for_status.return_value = None
+                return mock_logon
+            if "28_14/Secret/Versions" in url:
+                return versions_response
+            return MagicMock(status_code=404)
+
+        mock_session.post.side_effect = mock_http_calls
+        mock_session.get.side_effect = mock_http_calls
+
+        get_account_password_versions.main()
+
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is True
+        assert action_output.results.json_output.json_result == {
+            "successful_accounts": [
+                {
+                    "account_id": "28_14",
+                    "versions": [
+                        {
+                            "versionID": 34,
+                            "modifiedBy": "Administrator",
+                            "modificationDate": 1784090383,
+                            "isTemporary": False,
+                        },
+                        {
+                            "versionID": 23,
+                            "modifiedBy": "Administrator",
+                            "modificationDate": 1781785304,
+                            "isTemporary": False,
+                        },
+                    ],
+                }
+            ],
+            "failed_accounts": [],
+        }
