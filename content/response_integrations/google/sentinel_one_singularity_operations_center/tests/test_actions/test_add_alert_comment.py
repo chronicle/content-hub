@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Never
 
-from integration_testing.requests.response import MockResponse
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
@@ -122,8 +121,6 @@ class TestAddAlertComment:
         monkeypatch: pytest.MonkeyPatch,
         action_output: MockActionOutput,
     ) -> None:
-        alert_id = "019d114e-e4f4-7ad6-82c3-9829b6d0a801"
-
         def mock_add_comment_raise(*_args: object, **_kwargs: object) -> Never:
             msg = "API Connection error"
             raise SentinelOneSingularityOperationsCenterError(msg)

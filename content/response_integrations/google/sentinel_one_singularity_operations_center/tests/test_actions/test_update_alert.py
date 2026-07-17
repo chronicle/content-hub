@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from integration_testing.requests.response import MockResponse
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
