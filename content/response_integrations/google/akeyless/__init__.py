@@ -15,17 +15,20 @@
 # ruff:file-ignore[non-empty-init-module]
 
 import importlib
+import os
 import sys
 
 # Re-route third-party package attributes to prevent shadowing.
 # When python loads the local 'akeyless' package, we temporarily clean sys.path of local
 # paths, load the real third-party 'akeyless' SDK package, and inject its contents here.
 _original_path = sys.path.copy()
+
 try:
     sys.path = [
         p
         for p in sys.path
-        if not p.endswith("response_integrations/google/akeyless") and not p.endswith("response_integrations/google")
+        if not os.path.normpath(p).endswith(os.path.normpath("response_integrations/google/akeyless"))
+        and not os.path.normpath(p).endswith(os.path.normpath("response_integrations/google"))
     ]
     # Remove from sys.modules to force loading the third-party library
     _old_module = sys.modules.pop("akeyless", None)
