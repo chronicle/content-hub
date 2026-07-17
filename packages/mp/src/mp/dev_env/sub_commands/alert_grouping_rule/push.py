@@ -23,7 +23,8 @@ import typer
 
 import mp.core.file_utils
 from mp.dev_env.sub_commands.push import push_app
-from mp.dev_env.utils import get_backend_api, load_dev_env_config
+from mp.dev_env.sub_commands.utils import get_backend_api_clean as get_backend_api
+from mp.dev_env.utils import load_dev_env_config
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -102,8 +103,8 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:
     try:
         rule_data = mp.core.file_utils.load_yaml_file(rule_file)
     except Exception as e:
-        logger.exception("Failed to parse alert grouping rule YAML")
-        raise typer.Exit(1) from e
+        logger.error("Failed to parse alert grouping rule YAML: %s", e)  # noqa: TRY400
+        raise typer.Exit(1) from None
 
     if not isinstance(rule_data, dict):
         logger.error("Alert grouping rule data must be a dictionary.")
@@ -116,8 +117,8 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:
     try:
         installed_rules = backend_api.list_alert_grouping_rules()
     except Exception as e:
-        logger.exception("Failed to fetch installed alert grouping rules")
-        raise typer.Exit(1) from e
+        logger.error("Failed to fetch installed alert grouping rules: %s", e)  # noqa: TRY400
+        raise typer.Exit(1) from None
 
     rule_category = rule_data.get("category")
     if not rule_category:
@@ -147,18 +148,22 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:
             logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
             raise typer.Exit(1) from e
         except Exception as e:
-            logger.exception("Failed to update alert grouping rule for category '%s'", rule_category)
-            raise typer.Exit(1) from e
+            logger.error("Failed to update alert grouping rule for category '%s': %s", rule_category, e)  # noqa: TRY400
+            raise typer.Exit(1) from None
     else:
         if not force:
-            logger.error("Alert grouping rule for category '%s' not found on the platform. Skipping because --force was not specified.", rule_category)
+            logger.error("=" * 80)
+            logger.error("[VALIDATION ERROR] Alert Grouping Rule Not Installed")
+            logger.error("Alert grouping rule for category '%s' not found on the platform.", rule_category)
+            logger.error("Creation of new alert grouping rules is blocked by default. Use the --force flag to force creation.")
+            logger.error("=" * 80)
             raise typer.Exit(1)
             
         logger.info("Creating new alert grouping rule...")
         try:
             backend_api.create_alert_grouping_rule(rule_data)
         except Exception as e:
-            logger.exception("Failed to create alert grouping rule for category '%s'", rule_category)
-            raise typer.Exit(1) from e
+            logger.error("Failed to create alert grouping rule for category '%s': %s", rule_category, e)  # noqa: TRY400
+            raise typer.Exit(1) from None
 
     logger.info("Alert grouping rule for category '%s' pushed successfully.", rule_category)

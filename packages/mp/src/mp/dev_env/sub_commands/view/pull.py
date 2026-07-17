@@ -25,7 +25,8 @@ import mp.core.file_utils
 from mp.build_project.restructure.views.deconstruct import ViewDeconstructor
 from mp.core.data_models.common.overview.metadata import Overview
 from mp.dev_env.sub_commands.pull import pull_app
-from mp.dev_env.utils import find_entity_identifier, get_backend_api, load_dev_env_config
+from mp.dev_env.sub_commands.utils import get_backend_api_clean as get_backend_api
+from mp.dev_env.utils import find_entity_identifier, load_dev_env_config
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ if TYPE_CHECKING:
 @pull_app.command(name="view")
 @track_command
 def pull_view(
-    view_name_or_id: Annotated[str, typer.Argument(help="The view name or identifier to pull.")],
+    view_name_or_id: Annotated[str | None, typer.Argument(help="The view name or identifier to pull.")] = None,
     dst: Annotated[
         Path | None,
         typer.Option(
@@ -46,6 +47,13 @@ def pull_view(
             help="Destination folder. Defaults to 'content/views/<view_identifier>'.",
         ),
     ] = None,
+    all_views: Annotated[
+        bool,
+        typer.Option(
+            "--all",
+            help="Pull all views from the platform.",
+        ),
+    ] = False,
 ) -> None:
     """Pull and deconstruct a view template from the SOAR environment.
 
@@ -53,6 +61,10 @@ def pull_view(
         typer.Exit: If the pull or deconstruction fails.
 
     """
+    if not all_views and not view_name_or_id:
+        logger.error("Error: You must provide a view name or ID, or specify the --all option.")
+        raise typer.Exit(1)
+
     config = load_dev_env_config()
     backend_api = get_backend_api(config)
 
@@ -60,9 +72,62 @@ def pull_view(
     try:
         installed_views = backend_api.list_views()
     except Exception as e:
-        logger.exception("Failed to fetch installed views")
-        raise typer.Exit(1) from e
+        logger.error("Failed to fetch installed views: %s", e)  # noqa: TRY400
+        raise typer.Exit(1) from None
 
+    views_root = mp.core.file_utils.create_or_get_views_root_dir()
+
+    if all_views:
+        if dst is not None:
+            logger.error("Error: --custom destination option cannot be used when pulling all views.")
+            raise typer.Exit(1)
+
+        logger.info("Pulling all %d views...", len(installed_views))
+        for view in installed_views:
+            view_id = None
+            for key in ("Identifier", "identifier", "Id", "id"):
+                if key in view and view[key] is not None:
+                    view_id = str(view[key])
+                    break
+
+            view_name = None
+            for key in ("Name", "name", "DisplayName", "displayName"):
+                if key in view and view[key] is not None:
+                    view_name = str(view[key])
+                    break
+
+            if view_id:
+                # Find matching local folder
+                existing_local_folder = None
+                if views_root.is_dir():
+                    for folder in views_root.iterdir():
+                        if not folder.is_dir():
+                            continue
+                        view_yaml_path = folder / mp.core.constants.VIEW_FILE_NAME
+                        if not view_yaml_path.exists():
+                            continue
+                        try:
+                            view_meta = mp.core.file_utils.load_yaml_file(view_yaml_path)
+                            if isinstance(view_meta, dict):
+                                local_uuid = view_meta.get("identifier")
+                                local_name = view_meta.get("name")
+                                if (local_uuid and local_uuid.lower() == view_id.lower()) or (
+                                    view_name and local_name and local_name.lower() == view_name.lower()
+                                ):
+                                    existing_local_folder = folder
+                                    break
+                        except Exception:
+                            pass
+
+                view_dst = existing_local_folder if existing_local_folder else views_root / view_id
+                try:
+                    download_and_deconstruct_view(backend_api, view_id, view_dst)
+                    logger.info("View '%s' (ID: %s) pulled successfully to %s.", view_name or view_id, view_id, view_dst)
+                except Exception as e:
+                    logger.error("Failed to pull view '%s' (ID: %s): %s", view_name or view_id, view_id, e)
+        return
+
+    # Standard single pull
     view_identifier_raw = find_entity_identifier(view_name_or_id, installed_views, "View")
     if view_identifier_raw is None:
         raise typer.Exit(1)
@@ -70,8 +135,32 @@ def pull_view(
 
     # Determine destination path
     if dst is None:
-        views_root = mp.core.file_utils.create_or_get_views_root_dir()
-        dst = views_root / view_identifier
+        existing_local_folder = None
+        if views_root.is_dir():
+            for folder in views_root.iterdir():
+                if not folder.is_dir():
+                    continue
+                view_yaml_path = folder / mp.core.constants.VIEW_FILE_NAME
+                if not view_yaml_path.exists():
+                    continue
+                try:
+                    view_meta = mp.core.file_utils.load_yaml_file(view_yaml_path)
+                    if isinstance(view_meta, dict):
+                        local_uuid = view_meta.get("identifier")
+                        local_name = view_meta.get("name")
+                        if (local_uuid and local_uuid.lower() == view_identifier.lower()) or (
+                            local_name and local_name.lower() == view_name_or_id.lower()
+                        ):
+                            existing_local_folder = folder
+                            break
+                except Exception:
+                    pass
+
+        if existing_local_folder:
+            dst = existing_local_folder
+            logger.info("Matching local view folder found at '%s'. Overwriting it in-place.", dst)
+        else:
+            dst = views_root / view_identifier
     else:
         dst /= view_identifier
 
@@ -90,8 +179,8 @@ def download_and_deconstruct_view(backend_api: BackendAPI, view_identifier: str,
     try:
         built_view_data = backend_api.download_view(view_identifier)
     except Exception as e:
-        logger.exception("Failed to download view '%s'", view_identifier)
-        raise typer.Exit(1) from e
+        logger.error("Failed to download view '%s': %s", view_identifier, e)  # noqa: TRY400
+        raise typer.Exit(1) from None
 
     if not isinstance(built_view_data, dict):
         logger.error("Downloaded view data is not a valid JSON object.")
@@ -104,8 +193,8 @@ def download_and_deconstruct_view(backend_api: BackendAPI, view_identifier: str,
         deconstructor = ViewDeconstructor(overview, dst)
         deconstructor.deconstruct()
     except Exception as e:
-        logger.exception("Deconstruction failed for view '%s'", view_identifier)
-        raise typer.Exit(1) from e
+        logger.error("Deconstruction failed for view '%s': %s", view_identifier, e)  # noqa: TRY400
+        raise typer.Exit(1) from None
 
 
 def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAPI) -> BuiltOverview:

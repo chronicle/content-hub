@@ -73,9 +73,17 @@ class ViewDeconstructor:
 
         non_built_widgets: list[NonBuiltPlaybookWidgetMetadata] = [w.to_non_built() for w in self.overview.widgets]
 
+        used_filenames: set[str] = set()
         for i, w in enumerate(non_built_widgets):
             sanitized_title = sanitize_widget_filename(w.get("title") or "")
-            filename = sanitized_title or f"widget_{w.get('identifier') or i}"
+            base_filename = sanitized_title or f"widget_{w.get('identifier') or i}"
+            filename = base_filename
+            counter = 1
+            while filename.lower() in used_filenames:
+                filename = f"{base_filename}_{counter}"
+                counter += 1
+            used_filenames.add(filename.lower())
+
             widget_path: Path = widgets_path / f"{filename}{mp.core.constants.YAML_SUFFIX}"
             try:
                 mp.core.file_utils.save_yaml(w, widget_path)
@@ -89,10 +97,18 @@ class ViewDeconstructor:
                 )
                 raise
 
+        used_html_filenames: set[str] = set()
         for i, w in enumerate(self.overview.widgets):
             if w.type is WidgetType.HTML:
                 sanitized_title = sanitize_widget_filename(w.title or "")
-                filename = sanitized_title or f"widget_{w.identifier or i}"
+                base_filename = sanitized_title or f"widget_{w.identifier or i}"
+                filename = base_filename
+                counter = 1
+                while filename.lower() in used_html_filenames:
+                    filename = f"{base_filename}_{counter}"
+                    counter += 1
+                used_html_filenames.add(filename.lower())
+
                 widget_filename = f"{filename}.{mp.core.constants.HTML_SUFFIX}"
                 widget_path: Path = widgets_path / widget_filename
                 html_content: str = ""

@@ -64,10 +64,18 @@ class ViewBuilder:
 
         """
         widgets_folder_path: Path = self.view_path / mp.core.constants.WIDGETS_DIR
+        used_html_filenames: set[str] = set()
         for i, w in enumerate(overview.widgets or []):
             if w.type is WidgetType.HTML:
                 sanitized_title = sanitize_widget_filename(w.title or "")
-                filename = sanitized_title or f"widget_{w.identifier or i}"
+                base_filename = sanitized_title or f"widget_{w.identifier or i}"
+                filename = base_filename
+                counter = 1
+                while filename.lower() in used_html_filenames:
+                    filename = f"{base_filename}_{counter}"
+                    counter += 1
+                used_html_filenames.add(filename.lower())
+
                 html_file_path = widgets_folder_path / f"{filename}.html"
                 if html_file_path.exists():
                     html_content = html_file_path.read_text(encoding="utf-8")

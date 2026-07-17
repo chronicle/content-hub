@@ -57,7 +57,7 @@ def test_pull_custom_field(
     assert result.exit_code == 0
     mock_api.download_custom_field.assert_called_once_with(1)
 
-    saved_file = tmp_path / "Test_Field.yaml"
+    saved_file = tmp_path / "shared" / "Test_Field.yaml"
     assert saved_file.exists()
 
     with saved_file.open("r", encoding="utf-8") as f:
@@ -97,7 +97,7 @@ def test_pull_all_custom_fields(
     assert result.exit_code == 0
     mock_api.download_custom_field.assert_called_once_with(1)
     
-    saved_file = tmp_path / "Test_Field.yaml"
+    saved_file = tmp_path / "shared" / "Test_Field.yaml"
     assert saved_file.exists()
     with saved_file.open("r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
@@ -230,8 +230,8 @@ def test_pull_custom_field_multiple_matches(
     mock_api.download_custom_field.assert_any_call(1)
     mock_api.download_custom_field.assert_any_call(2)
 
-    assert (tmp_path / "Test_Field_alert.yaml").exists()
-    assert (tmp_path / "Test_Field_case.yaml").exists()
+    assert (tmp_path / "alert" / "Test_Field_alert.yaml").exists()
+    assert (tmp_path / "case" / "Test_Field_case.yaml").exists()
 
 
 @mock.patch("mp.dev_env.sub_commands.custom_field.pull.load_dev_env_config")

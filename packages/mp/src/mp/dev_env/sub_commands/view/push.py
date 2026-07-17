@@ -20,6 +20,7 @@ import logging
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any, cast
 
+import requests
 import typer
 
 import mp.core.constants
@@ -27,8 +28,8 @@ import mp.core.file_utils
 from mp.build_project.restructure.views.build import ViewBuilder
 from mp.core.utils import to_snake_case
 from mp.dev_env.sub_commands.push import push_app
-from mp.dev_env.sub_commands.view.pull import download_and_deconstruct_view
-from mp.dev_env.utils import get_backend_api, load_dev_env_config
+from mp.dev_env.sub_commands.utils import get_backend_api_clean as get_backend_api
+from mp.dev_env.utils import load_dev_env_config
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -41,7 +42,10 @@ if TYPE_CHECKING:
 @push_app.command(name="view")
 @track_command
 def push_view(
-    view_name_or_id: Annotated[str, typer.Argument(help="The view name or identifier to build and push.")],
+    view_name_or_id: Annotated[
+        str | None,
+        typer.Argument(help="The view name or identifier to build and push."),
+    ] = None,
     *,
     src: Annotated[
         Path | None,
@@ -64,6 +68,13 @@ def push_view(
             help="Validate the view locally without uploading it to the server.",
         ),
     ] = False,
+    all_views: Annotated[
+        bool,
+        typer.Option(
+            "--all",
+            help="Push all views from the local repository.",
+        ),
+    ] = False,
 ) -> None:
     """Build and push a view template to the SOAR environment.
 
@@ -71,18 +82,62 @@ def push_view(
         typer.Exit: If the built view file cannot be found or parsed.
 
     """
-    # 1. Locate source path
+    if not all_views and not view_name_or_id:
+        logger.error("Error: You must provide a view name or ID, or specify the --all option.")
+        raise typer.Exit(1)
+
+    if all_views:
+        if view_name_or_id:
+            logger.error("Error: View name or ID cannot be specified when using --all option.")
+            raise typer.Exit(1)
+
+        views_root = src or mp.core.file_utils.create_or_get_views_root_dir()
+        if not views_root.exists() or not views_root.is_dir():
+            logger.error("Views directory '%s' not found.", views_root)
+            raise typer.Exit(1)
+
+        local_views = [
+            folder
+            for folder in views_root.iterdir()
+            if folder.is_dir() and (folder / mp.core.constants.VIEW_FILE_NAME).exists()
+        ]
+
+        if not local_views:
+            logger.info("No views found to push.")
+            return
+
+        logger.info("Found %d views to push. Pushing all of them...", len(local_views))
+        for view_dir in local_views:
+            try:
+                _push_single_view(view_dir, force=force, validate=validate)
+                logger.info("View directory '%s' pushed successfully.", view_dir.name)
+            except Exception as e:
+                logger.error("Failed to push view directory '%s': %s", view_dir.name, e)  # noqa: TRY400
+                raise typer.Exit(1) from None
+        return
+
+    # Standard single push
     view_src_path = _get_view_path_by_name(view_name_or_id, src)
+    _push_single_view(view_src_path, force=force, validate=validate)
+
+
+def _push_single_view(view_src_path: Path, *, force: bool = False, validate: bool = False) -> None:
+    """Build and push a single view directory.
+
+    Raises:
+        typer.Exit: If build, parsing, or upload fails.
+
+    """
     logger.info("Found source view path at: %s", view_src_path)
 
-    # 2. Build the view to a temp or output directory
+    # Build the view to a temp or output directory
     out_dir = mp.core.file_utils.get_view_out_dir()
     builder = ViewBuilder(view_src_path, out_dir)
     try:
         builder.build()
     except Exception as e:
-        logger.exception("Failed to build/validate view")
-        raise typer.Exit(1) from e
+        logger.error("Failed to build/validate view: %s", e)  # noqa: TRY400
+        raise typer.Exit(1) from None
 
     # The built JSON name is to_snake_case(view_src_path.stem).json
     built_json_name = f"{to_snake_case(view_src_path.stem)}{mp.core.constants.JSON_SUFFIX}"
@@ -95,54 +150,111 @@ def push_view(
     if not mp.core.file_utils.is_built_view(built_json_path):
         raise typer.Exit(1)
 
-    # 3. Load built JSON data
+    # Load built JSON data
     logger.info("Loading built view JSON...")
     try:
         view_data: dict[str, Any] = json.loads(built_json_path.read_text(encoding="utf-8"))
     except Exception as e:
-        logger.exception("Failed to parse built view JSON")
-        raise typer.Exit(1) from e
+        logger.error("Failed to parse built view JSON: %s", e)  # noqa: TRY400
+        raise typer.Exit(1) from None
 
     if validate:
-        logger.info("✅ View '%s' is valid.", view_name_or_id)
+        _validate_view(view_data)
+        logger.info("✅ View '%s' is valid.", view_src_path.name)
         return
 
-    # 4. Upload to SOAR
-    final_identifier = _upload_built_view_data(view_data, view_name_or_id, force=force)
+    # Upload to SOAR
+    _upload_built_view_data(view_data, view_src_path.name, force=force)
 
-    # 5. Automatically pull back the view from the server to sync local changes (e.g. order, system predefined details)
-    if final_identifier:
-        local_identifier = view_data.get("OverviewTemplate", {}).get("Identifier")
-        target_path = view_src_path
-        if local_identifier and local_identifier.lower() != final_identifier.lower():
-            new_folder_name = final_identifier.lower()
-            new_view_src_path = view_src_path.parent / new_folder_name
-            logger.info(
-                "Local UUID '%s' differs from server UUID '%s'. Renaming folder '%s' to '%s' to align with server.",
-                local_identifier,
-                final_identifier,
-                view_src_path.name,
-                new_folder_name,
-            )
+
+def _validate_view(view_data: dict[str, Any]) -> None:
+    """Validate view's custom fields against target environment.
+
+    Raises:
+        typer.Exit: If validation fails.
+
+    """
+    config = load_dev_env_config()
+    backend_api = get_backend_api(config)
+    try:
+        _denormalize_pushed_view(cast("BuiltOverview", view_data), backend_api)
+    except typer.Exit:
+        raise
+    except Exception as e:
+        logger.error("Validation failed with an unexpected error: %s", e)  # noqa: TRY400
+        raise typer.Exit(1) from None
+
+
+def _get_local_custom_fields() -> dict[str, Path]:
+    """Find all local custom field files and map their displayName to file path.
+
+    Returns:
+        A dictionary mapping the display name of local custom fields to their file Path.
+
+    """
+    try:
+        custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
+    except Exception:  # noqa: BLE001
+        return {}
+
+    local_fields = {}
+    if custom_fields_root.exists() and custom_fields_root.is_dir():
+        for f in custom_fields_root.rglob("*.yaml"):
             try:
-                view_src_path.rename(new_view_src_path)
-                target_path = new_view_src_path
-            except Exception as ex:
-                logger.exception(
-                    "Failed to rename local view folder from '%s' to '%s'",
-                    view_src_path,
-                    new_view_src_path,
-                )
-                raise typer.Exit(1) from ex
+                data = mp.core.file_utils.load_yaml_file(f)
+                if isinstance(data, dict) and "displayName" in data:
+                    local_fields[data["displayName"]] = f
+            except Exception as ex:  # noqa: BLE001
+                logger.debug("Failed to load local custom field file %s: %s", f, ex)
+    return local_fields
 
-        logger.info(
-            "Automatically pulling back view '%s' (ID: %s) to sync local folder...",
-            view_name_or_id,
-            final_identifier,
-        )
-        config = load_dev_env_config()
-        backend_api = get_backend_api(config)
-        download_and_deconstruct_view(backend_api, final_identifier, target_path)
+
+def _resolve_widget_custom_fields(config_dict: dict[str, Any], name_to_cf_id: dict[str, int]) -> None:
+    """Resolve custom field displayNames to IDs, checking local workspace if missing on server.
+
+    Raises:
+        typer.Exit: If a custom field is not found on the platform.
+
+    """
+    cfs = config_dict.get("customFields")
+    if not isinstance(cfs, list):
+        return
+    for cf_item in cfs:
+        if isinstance(cf_item, dict) and "displayName" in cf_item:
+            cf_name = cf_item.pop("displayName")
+            cf_id = name_to_cf_id.get(cf_name)
+            if cf_id is not None:
+                cf_item["id"] = cf_id
+            else:
+                local_cf_files = _get_local_custom_fields()
+                local_file = local_cf_files.get(cf_name)
+                if local_file:
+                    content_root = mp.core.file_utils.create_or_get_content_dir()
+                    relative_path = local_file.relative_to(content_root.parent)
+                    logger.error("=" * 80)
+                    logger.error("[VALIDATION ERROR] Custom Field Not Installed")
+                    logger.error(
+                        "Custom field '%s' referenced in the view exists locally in your workspace "
+                        "at '%s', but it is not installed on the SOAR platform.",
+                        cf_name,
+                        relative_path,
+                    )
+                    logger.error(
+                        'Please push this custom field first using:\n'
+                        '  uv run --project packages/mp mp push custom-field "%s"',
+                        cf_name,
+                    )
+                    logger.error("=" * 80)
+                else:
+                    logger.error("=" * 80)
+                    logger.error("[VALIDATION ERROR] Custom Field Not Found")
+                    logger.error(
+                        "Custom field '%s' referenced in the view was not found on the SOAR platform, "
+                        "and no local file was found under 'content/custom_fields/' directory.",
+                        cf_name,
+                    )
+                    logger.error("=" * 80)
+                raise typer.Exit(1)
 
 
 def _denormalize_pushed_view(built_view: BuiltOverview, backend_api: BackendAPI) -> dict[str, Any]:
@@ -160,7 +272,7 @@ def _denormalize_pushed_view(built_view: BuiltOverview, backend_api: BackendAPI)
     try:
         installed_cf = backend_api.list_custom_fields()
     except Exception as e:
-        logger.warning(f"Failed to fetch installed custom fields during view denormalization: {e}")
+        logger.warning("Failed to fetch installed custom fields during view denormalization: %s", e)
 
     name_to_cf_id = {cf.get("displayName"): cf.get("id") for cf in installed_cf if cf.get("displayName") and cf.get("id") is not None}
 
@@ -176,21 +288,7 @@ def _denormalize_pushed_view(built_view: BuiltOverview, backend_api: BackendAPI)
                 config_dict = json.loads(data_def)
 
         # Resolve Custom Fields
-        cfs = config_dict.get("customFields")
-        if isinstance(cfs, list):
-            for cf_item in cfs:
-                if isinstance(cf_item, dict) and "displayName" in cf_item:
-                    cf_name = cf_item.pop("displayName")
-                    cf_id = name_to_cf_id.get(cf_name)
-                    if cf_id is not None:
-                        cf_item["id"] = cf_id
-                    else:
-                        logger.error(
-                            "Custom field '%s' not found on the target platform. "
-                            "Please push this custom field before pushing the view.",
-                            cf_name,
-                        )
-                        raise typer.Exit(1)
+        _resolve_widget_custom_fields(config_dict, name_to_cf_id)
 
         cg = w.get("ConditionsGroup")
         flat_cg = None
@@ -340,6 +438,8 @@ def _verify_widgets(
             meta = w.get("metadata") or {}
             w_id = meta.get("identifier")
             if (not w_id or w_id.lower() not in existing_widget_ids) and not force:
+                logger.error("=" * 80)
+                logger.error("[VALIDATION ERROR] Missing Widget on Platform")
                 logger.error(
                     "Widget '%s' (UUID: '%s') does not exist in the view on the platform.",
                     meta.get("title") or "unnamed",
@@ -350,6 +450,7 @@ def _verify_widgets(
                     "Use the --force flag to force creation."
                 )
                 logger.error("Failed to push view '%s'.", view_name_or_id)
+                logger.error("=" * 80)
                 raise typer.Exit(1)
 
 
@@ -406,12 +507,11 @@ def _validate_push_preconditions(
         )
         logger.error("Failed to push view '%s'.", view_name_or_id)
         raise typer.Exit(1)
-    else:
-        if not flat_view_data.get("identifier"):
-            import uuid
-            new_uuid = str(uuid.uuid4())
-            logger.info("Generating new UUID '%s' for new view.", new_uuid)
-            flat_view_data["identifier"] = new_uuid
+    elif not flat_view_data.get("identifier"):
+        import uuid
+        new_uuid = str(uuid.uuid4())
+        logger.info("Generating new UUID '%s' for new view.", new_uuid)
+        flat_view_data["identifier"] = new_uuid
 
 
 def _upload_built_view_data(
@@ -450,9 +550,21 @@ def _upload_built_view_data(
     try:
         result = backend_api.upload_view(flat_view_data)
         logger.debug("Upload response: %s", result)
+    except requests.exceptions.HTTPError as e:
+        try:
+            err_data = e.response.json()
+            err_msg = err_data.get("errorMessage") or e.response.text
+        except Exception:  # noqa: BLE001
+            err_msg = e.response.text
+
+        logger.error("=" * 80)  # noqa: TRY400
+        logger.error("[SERVER VALIDATION ERROR] View Upload Failed (Status Code %s)", e.response.status_code)  # noqa: TRY400
+        logger.error("%s", err_msg)  # noqa: TRY400
+        logger.error("=" * 80)  # noqa: TRY400
+        raise typer.Exit(1) from None
     except Exception as e:
-        logger.exception("Upload failed for view '%s'", view_name_or_id)
-        raise typer.Exit(1) from e
+        logger.error("Upload failed for view '%s': %s", view_name_or_id, e)  # noqa: TRY400
+        raise typer.Exit(1) from None
 
     logger.info("View '%s' pushed successfully.", view_name_or_id)
     return flat_view_data.get("identifier")

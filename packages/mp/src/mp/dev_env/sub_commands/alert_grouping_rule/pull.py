@@ -22,7 +22,8 @@ import typer
 
 import mp.core.file_utils
 from mp.dev_env.sub_commands.pull import pull_app
-from mp.dev_env.utils import find_entity_identifier, get_backend_api, load_dev_env_config
+from mp.dev_env.sub_commands.utils import get_backend_api_clean as get_backend_api
+from mp.dev_env.utils import find_entity_identifier, load_dev_env_config
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -74,8 +75,8 @@ def pull_alert_grouping_rule(
     try:
         installed_rules = backend_api.list_alert_grouping_rules()
     except Exception as e:
-        logger.exception("Failed to fetch installed alert grouping rules")
-        raise typer.Exit(1) from e
+        logger.error("Failed to fetch installed alert grouping rules: %s", e)  # noqa: TRY400
+        raise typer.Exit(1) from None
 
     if list_only:
         _list_alert_grouping_rules(installed_rules)
@@ -154,8 +155,8 @@ def _pull_all_alert_grouping_rules(installed_rules: list[dict], dst: Path | None
 
         try:
             _save_alert_grouping_rule(rule, dst)
-        except Exception:
-            logger.exception("Skipping alert grouping rule '%s' due to an error.", rule_name)
+        except Exception as e:
+            logger.error("Skipping alert grouping rule '%s' due to an error: %s", rule_name, e)  # noqa: TRY400
 
     logger.info("Successfully finished pulling all alert grouping rules.")
 
@@ -188,5 +189,5 @@ def _save_alert_grouping_rule(rule_data: dict, dst: Path | None) -> None:
         actual_dst.parent.mkdir(parents=True, exist_ok=True)
         mp.core.file_utils.save_yaml(rule_data, actual_dst)
     except Exception as e:
-        logger.exception("Failed to save alert grouping rule to '%s'", actual_dst)
-        raise typer.Exit(1) from e
+        logger.error("Failed to save alert grouping rule to '%s': %s", actual_dst, e)  # noqa: TRY400
+        raise typer.Exit(1) from None
