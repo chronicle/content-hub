@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-# ruff: noqa: S105
+# ruff:file-ignore[hardcoded-password-string]
 from unittest.mock import MagicMock, patch
 
 import pytest
