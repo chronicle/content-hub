@@ -116,6 +116,7 @@ class UpdateAlert(SentinelOneSingularityOperationsCenterAction):
                 "could not be parsed into a UUID" in err_msg
                 or "invalid uuid" in err_msg.lower()
                 or "not found" in err_msg.lower()
+                or "encountered failures" in err_msg.lower()
             ):
                 raise SentinelOneSingularityOperationsCenterError(
                     f"alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."

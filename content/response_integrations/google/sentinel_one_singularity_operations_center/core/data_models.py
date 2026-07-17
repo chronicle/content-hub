@@ -473,19 +473,33 @@ class AlertUpdateResult:
             skips = []
             success_count = 0
 
+            has_alert_not_found = False
+
             for action in actions:
                 success_count += len(action.get("success") or [])
-                failures.extend(
-                    f"{action['actionId']}: {f.get('errorMessage')}"
-                    for f in action.get("failure") or []
-                )
-                skips.extend(
-                    f"{action['actionId']}: {s.get('skipMessage')}"
-                    for s in action.get("skip") or []
-                )
+                for f in action.get("failure") or []:
+                    err_type = f.get("errorType")
+                    err_msg = f.get("errorMessage")
+                    if err_type == "ALERT_NOT_FOUND":
+                        has_alert_not_found = True
+                    details = err_msg or err_type or "unknown error"
+                    failures.append(f"{action['actionId']}: {details}")
+                for s in action.get("skip") or []:
+                    skips.append(f"{action['actionId']}: {s.get('skipMessage')}")
 
             if failures:
-                msg = f"Alert update encountered failures for alert '{alert_id}': {', '.join(failures)}"
+                has_only_null_errors = all(
+                    f.get("errorMessage") is None
+                    for action in actions
+                    for f in (action.get("failure") or [])
+                )
+                if has_alert_not_found or (success_count == 0 and has_only_null_errors):
+                    msg = (
+                        f"alert with ID {alert_id} wasn't found in SentinelOne "
+                        f"Singularity Operations Center. Please check the spelling."
+                    )
+                else:
+                    msg = f"Alert update encountered failures for alert '{alert_id}': {', '.join(failures)}"
                 raise AlertUpdateError(msg)
 
             return cls(
