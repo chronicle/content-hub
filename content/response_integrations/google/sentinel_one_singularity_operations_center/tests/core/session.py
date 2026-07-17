@@ -83,7 +83,7 @@ class SentinelOneSession(MockSession[MockRequest, MockResponse, SentinelOne]):
                 return MockResponse(content=data, status_code=200)
             except Exception as e:  # noqa: BLE001
                 return MockResponse(
-                    content={"errors": [{"message": str(e)}]}, status_code=500
+                    content={"errors": [{"message": str(e)}]}, status_code=200
                 )
 
         elif "AddAlertNote" in query:
@@ -101,7 +101,7 @@ class SentinelOneSession(MockSession[MockRequest, MockResponse, SentinelOne]):
                 return MockResponse(content=data, status_code=200)
             except Exception as e:  # noqa: BLE001
                 return MockResponse(
-                    content={"errors": [{"message": str(e)}]}, status_code=500
+                    content={"errors": [{"message": str(e)}]}, status_code=200
                 )
 
         return MockResponse(

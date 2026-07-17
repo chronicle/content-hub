@@ -77,8 +77,15 @@ def validate_response(
         msg = f"{error_msg}: Response is not valid JSON."
         raise SentinelOneSingularityOperationsCenterError(msg) from error
 
-    if isinstance(response_json, dict) and "errors" in response_json:
+    if isinstance(response_json, dict) and response_json.get("errors"):
         errors = response_json["errors"]
-        err_msg = json.dumps(errors) if errors else "GraphQL Error"
-        msg_0 = f"{error_msg}: {err_msg}"
+        error_msgs = []
+        if isinstance(errors, list):
+            for err in errors:
+                if isinstance(err, dict) and err.get("message"):
+                    error_msgs.append(err["message"])
+                elif isinstance(err, str):
+                    error_msgs.append(err)
+        err_str = ", ".join(error_msgs) if error_msgs else "GraphQL Error"
+        msg_0 = f"{error_msg}: {err_str}"
         raise SentinelOneSingularityOperationsCenterError(msg_0)

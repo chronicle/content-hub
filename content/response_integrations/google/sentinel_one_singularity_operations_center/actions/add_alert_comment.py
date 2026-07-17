@@ -65,9 +65,20 @@ class AddAlertComment(SentinelOneSingularityOperationsCenterAction):
                 comment_type=comment_type,
             )
         except SentinelOneSingularityOperationsCenterError as e:
-            self.output_message = (
-                f"Failed to add comment to SentinelOne alert '{alert_id}': {e}"
-            )
+            err_msg = str(e)
+            if (
+                "could not be parsed into a UUID" in err_msg
+                or "invalid uuid" in err_msg.lower()
+                or "not found" in err_msg.lower()
+            ):
+                self.output_message = (
+                    f'Error executing action "Add Alert Comment". Reason: alert with ID {alert_id} '
+                    f"wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
+                )
+            else:
+                self.output_message = (
+                    f'Error executing action "Add Alert Comment". Reason: {err_msg}'
+                )
             self.result_value = False
             return
 

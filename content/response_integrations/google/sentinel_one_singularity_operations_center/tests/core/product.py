@@ -203,6 +203,10 @@ class SentinelOne:
         with contextlib.suppress(Exception):
             alert_id = alert_filter["or"][0]["and"][0]["stringEqual"]["value"]
 
+        if alert_id and "-" not in alert_id:
+            msg = f'Exception while fetching data (/alertTriggerActions) : Invalid UUID: "{alert_id}"'
+            raise ValueError(msg)
+
         # If alert ID is not found or not in details, return a mock error
         if not alert_id or alert_id not in self.details:
             return {
@@ -282,6 +286,9 @@ class SentinelOne:
         note_type: str | None = None,
     ) -> SingleJson:
         """Mock method to add alert note and return GraphQL response."""
+        if alert_id and "-" not in alert_id:
+            msg = f'Exception while fetching data (/addAlertNote) : Value "{alert_id}" could not be parsed into a UUID'
+            raise ValueError(msg)
         new_note = {
             "id": "mock_note_id_12345",
             "alertId": alert_id,

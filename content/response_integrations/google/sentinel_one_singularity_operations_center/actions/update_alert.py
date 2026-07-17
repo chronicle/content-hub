@@ -115,7 +115,20 @@ class UpdateAlert(SentinelOneSingularityOperationsCenterAction):
                 assignee_id=assignee_id,
             )
         except SentinelOneSingularityOperationsCenterError as e:
-            self.output_message = str(e)
+            err_msg = str(e)
+            if (
+                "could not be parsed into a UUID" in err_msg
+                or "invalid uuid" in err_msg.lower()
+                or "not found" in err_msg.lower()
+            ):
+                self.output_message = (
+                    f'Error executing action "Update Alert". Reason: alert with ID {alert_id} '
+                    f"wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
+                )
+            else:
+                self.output_message = (
+                    f'Error executing action "Update Alert". Reason: {err_msg}'
+                )
             self.result_value = False
             return
 

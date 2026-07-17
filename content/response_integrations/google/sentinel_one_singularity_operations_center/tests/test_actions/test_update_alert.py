@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from integration_testing.requests.response import MockResponse
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
@@ -245,7 +246,7 @@ class TestUpdateAlert:
     @set_metadata(
         integration_config_file_path=CONFIG_PATH,
         parameters={
-            "Alert ID": "non_existent_id",
+            "Alert ID": "00000000-0000-0000-0000-000000000000",
             "Status": "Resolved",
             "Verdict": "",
             "Assignee": "",
@@ -257,7 +258,7 @@ class TestUpdateAlert:
         action_output: MockActionOutput,
         sentinelone: SentinelOne,
     ) -> None:
-        alert_id = "non_existent_id"
+        alert_id = "00000000-0000-0000-0000-000000000000"
 
         update_alert.main()
 
@@ -266,6 +267,33 @@ class TestUpdateAlert:
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
         assert (
-            f"Failed to update SentinelOne alert '{alert_id}' due to API error:"
+            f"Error executing action \"Update Alert\". Reason: alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
+            in action_output.results.output_message
+        )
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={
+            "Alert ID": "B7269EFE0B7A2AC3",
+            "Status": "Resolved",
+            "Verdict": "",
+            "Assignee": "",
+        },
+    )
+    def test_update_alert_invalid_uuid_error(
+        self,
+        script_session: SentinelOneSession,
+        action_output: MockActionOutput,
+    ) -> None:
+        """Test handling of GraphQL error when alert ID is not a valid UUID."""
+        alert_id = "B7269EFE0B7A2AC3"
+
+        update_alert.main()
+
+        assert action_output.results is not None
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is False
+        assert (
+            f"Error executing action \"Update Alert\". Reason: alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
             in action_output.results.output_message
         )

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Never
 
+from integration_testing.requests.response import MockResponse
 from integration_testing.set_meta import set_metadata
 from TIPCommon.base.action import ExecutionState
 
@@ -138,7 +139,29 @@ class TestAddAlertComment:
         assert action_output.results is not None
         assert action_output.results.execution_state == ExecutionState.COMPLETED
         assert action_output.results.result_value is False
+        assert "API Connection error" in action_output.results.output_message
+
+    @set_metadata(
+        integration_config_file_path=CONFIG_PATH,
+        parameters={
+            "Alert ID": "B7269EFE0B7A2AC3",
+            "Comment": "Test comment with invalid UUID",
+        },
+    )
+    def test_add_alert_comment_invalid_uuid_error(
+        self,
+        script_session: SentinelOneSession,
+        action_output: MockActionOutput,
+    ) -> None:
+        """Test handling of GraphQL error when alert ID is not a valid UUID."""
+        alert_id = "B7269EFE0B7A2AC3"
+
+        add_alert_comment.main()
+
+        assert action_output.results is not None
+        assert action_output.results.execution_state == ExecutionState.COMPLETED
+        assert action_output.results.result_value is False
         assert (
-            f"Failed to add comment to SentinelOne alert '{alert_id}': API Connection error"
+            f"Error executing action \"Add Alert Comment\". Reason: alert with ID {alert_id} wasn't found in SentinelOne Singularity Operations Center. Please check the spelling."
             in action_output.results.output_message
         )
