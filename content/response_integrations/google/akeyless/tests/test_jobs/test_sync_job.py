@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-# ruff: noqa: S105, S106
+# ruff:file-ignore[hardcoded-password-string, hardcoded-password-func-arg]
 import time
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 

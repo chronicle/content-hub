@@ -34,7 +34,7 @@ API_GATEWAY_URL_PARAM: str = "API Gateway URL"
 VERIFY_SSL_PARAM: str = "Verify SSL"
 
 # Akeyless API defaults
-DEFAULT_SECRET_VERSION: str = "latest"  # noqa: S105
+DEFAULT_SECRET_VERSION: str = "latest"  # ruff:ignore[hardcoded-password-string]
 TOKEN_TTL_SECONDS: int = 50 * 60  # 50 minutes (conservative buffer under 60-min default)
 
 # Authentication mechanisms

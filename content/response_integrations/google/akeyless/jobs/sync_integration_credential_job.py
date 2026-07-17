@@ -211,7 +211,7 @@ class SyncIntegrationCredentialJob(Job):
 
         try:
             self.state_context = json.loads(context_str)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # ruff:ignore[blind-except]
             self.logger.warn(f"Failed to parse job context JSON: {e}. Starting fresh.")
             self.state_context = {}
 
@@ -224,7 +224,7 @@ class SyncIntegrationCredentialJob(Job):
                 property_key=SYNC_CREDENTIALS_STATE_KEY,
                 property_value=json.dumps(self.state_context),
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # ruff:ignore[blind-except]
             self.logger.warn(f"Failed to save job context state: {e}")
 
     async def _fetch_secret_value_pre_resolved(
@@ -362,7 +362,7 @@ class SyncIntegrationCredentialJob(Job):
                         name,
                         param_mapping,
                     )
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:  # ruff:ignore[blind-except]
                     self.logger.warn(f"Failed to update instance '{name}': {e}")
                     self._sync_errors.append(f"Failed to update instance '{name}': {e}")
 
@@ -523,7 +523,7 @@ class SyncIntegrationCredentialJob(Job):
                         name,
                         param_mapping,
                     )
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:  # ruff:ignore[blind-except]
                     self.logger.warn(f"Failed to update connector '{name}': {e}")
                     self._sync_errors.append(f"Failed to update connector '{name}': {e}")
 
@@ -678,7 +678,7 @@ class SyncIntegrationCredentialJob(Job):
                         param_mapping,
                         name_to_job,
                     )
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:  # ruff:ignore[blind-except]
                     self.logger.warn(f"Failed to update job '{job_name}': {e}")
                     self._sync_errors.append(f"Failed to update job '{job_name}': {e}")
 

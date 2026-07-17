@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-# ruff: noqa: E402
+# ruff:file-ignore[module-import-not-at-top-of-file]
 import sys
 
 # Re-order sys.path to prioritize site-packages over the local integration folder.

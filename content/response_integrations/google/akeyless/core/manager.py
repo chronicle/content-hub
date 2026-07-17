@@ -95,10 +95,10 @@ class AkeylessClient:
 
         """
         url = GCP_METADATA_URL_TEMPLATE.format(audience=audience)
-        req = urllib.request.Request(url)  # noqa: S310
+        req = urllib.request.Request(url)  # ruff:ignore[suspicious-url-open-usage]
         req.add_header(GCP_METADATA_HEADER_NAME, GCP_METADATA_HEADER_VALUE)
         try:
-            with urllib.request.urlopen(req, timeout=GCP_METADATA_TIMEOUT_SECONDS) as response:  # noqa: S310
+            with urllib.request.urlopen(req, timeout=GCP_METADATA_TIMEOUT_SECONDS) as response:  # ruff:ignore[suspicious-url-open-usage]
                 return response.read().decode("utf-8")
         except Exception as e:
             msg = f"GCP Metadata server not reachable or token request failed: {e}"
