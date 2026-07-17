@@ -14,6 +14,9 @@
 
 from __future__ import annotations
 
+from .alert_grouping_rules import (
+    create_or_get_alert_grouping_rules_root_dir,
+)
 from .common import (
     VALID_REPEATED_FILES,
     create_dir_if_not_exists,
@@ -30,6 +33,9 @@ from .common import (
     remove_rglobs_if_exists,
     save_yaml,
     validate_safe_path,
+)
+from .custom_fields import (
+    create_or_get_custom_fields_root_dir,
 )
 from .integrations import (
     IntegrationParityValidator,
@@ -86,7 +92,9 @@ __all__: list[str] = [
     "base64_to_png_file",
     "create_dir_if_not_exists",
     "create_dirs_if_not_exists",
+    "create_or_get_alert_grouping_rules_root_dir",
     "create_or_get_content_dir",
+    "create_or_get_custom_fields_root_dir",
     "create_or_get_download_dir",
     "create_or_get_integrations_dir",
     "create_or_get_integrations_path",

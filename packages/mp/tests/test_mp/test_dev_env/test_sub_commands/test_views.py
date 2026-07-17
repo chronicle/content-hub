@@ -106,6 +106,146 @@ def test_pull_view_cli(
     assert (view_folder / "widgets" / "Widget One.html").read_text(encoding="utf-8") == "<h1>Hello</h1>"
 
 
+@mock.patch("mp.dev_env.sub_commands.view.pull.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.pull.get_backend_api")
+def test_pull_view_matches_local_folder(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    # Setup mock backend API
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_views.return_value = [
+        {"Identifier": "system_case_default", "Name": "Default Case View"}
+    ]
+
+    mock_api.download_view.return_value = {
+        "identifier": "system_case_default",
+        "name": "Default Case View",
+        "creator": "system",
+        "playbookIdentifier": "playbook_1",
+        "type": 3,
+        "widgets": [],
+        "roles": [],
+    }
+
+    # Pre-create local view folder with a custom name but matching view name
+    custom_folder = tmp_path / "my_custom_folder_name"
+    custom_folder.mkdir()
+    (custom_folder / "view.yaml").write_text(yaml.dump({
+        "identifier": "old_identifier",
+        "name": "Default Case View",
+        "type": "system_case",
+        "creator": "system",
+        "widgets_details": []
+    }), encoding="utf-8")
+
+    with mock.patch("mp.core.file_utils.create_or_get_views_root_dir", return_value=tmp_path):
+        result = runner.invoke(pull_app, ["view", "Default Case View"])
+
+    assert result.exit_code == 0
+    # Overwrote local folder in-place
+    assert (custom_folder / "view.yaml").exists()
+    with (custom_folder / "view.yaml").open(encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+        assert data["identifier"] == "system_case_default"
+
+    # No duplicate folder was created
+    assert not (tmp_path / "system_case_default").exists()
+
+
+@mock.patch("mp.dev_env.sub_commands.view.pull.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.pull.get_backend_api")
+def test_pull_view_all(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_views.return_value = [
+        {"identifier": "view_id_1", "name": "View One"},
+        {"identifier": "view_id_2", "name": "View Two"},
+    ]
+
+    mock_api.download_view.side_effect = [
+        {"identifier": "view_id_1", "name": "View One", "type": 3, "widgets": [], "roles": []},
+        {"identifier": "view_id_2", "name": "View Two", "type": 3, "widgets": [], "roles": []},
+    ]
+
+    with mock.patch("mp.core.file_utils.create_or_get_views_root_dir", return_value=tmp_path):
+        result = runner.invoke(pull_app, ["view", "--all"])
+
+    assert result.exit_code == 0
+    assert mock_api.download_view.call_count == 2
+    mock_api.download_view.assert_any_call("view_id_1")
+    mock_api.download_view.assert_any_call("view_id_2")
+
+    assert (tmp_path / "view_id_1" / "view.yaml").exists()
+    assert (tmp_path / "view_id_2" / "view.yaml").exists()
+
+
+@mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.push.get_backend_api")
+def test_push_view_all(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+    mock_api.upload_view.return_value = {"success": True}
+    mock_api.list_views.return_value = [
+        {"identifier": "view_id_1", "id": 1},
+        {"identifier": "view_id_2", "id": 2},
+    ]
+    mock_api.download_view.side_effect = [
+        {"identifier": "view_id_1", "name": "View One", "type": 3, "widgets": []},
+        {"identifier": "view_id_2", "name": "View Two", "type": 3, "widgets": []},
+        # For the post-push download_and_deconstruct_view calls:
+        {"identifier": "view_id_1", "name": "View One", "type": 3, "widgets": [], "roles": []},
+        {"identifier": "view_id_2", "name": "View Two", "type": 3, "widgets": [], "roles": []},
+    ]
+
+    # Create dummy local view directories
+    view_1_dir = tmp_path / "view_id_1"
+    view_1_dir.mkdir()
+    (view_1_dir / "view.yaml").write_text(yaml.dump({
+        "identifier": "view_id_1",
+        "name": "View One",
+        "type": "system_case",
+        "creator": "system",
+        "playbook_id": "playbook_1",
+        "alert_rule_type": None,
+        "roles": [1, 2],
+        "role_names": ["Tier 1", "Tier 2"],
+        "widgets_details": []
+    }), encoding="utf-8")
+
+    view_2_dir = tmp_path / "view_id_2"
+    view_2_dir.mkdir()
+    (view_2_dir / "view.yaml").write_text(yaml.dump({
+        "identifier": "view_id_2",
+        "name": "View Two",
+        "type": "system_case",
+        "creator": "system",
+        "playbook_id": "playbook_1",
+        "alert_rule_type": None,
+        "roles": [1, 2],
+        "role_names": ["Tier 1", "Tier 2"],
+        "widgets_details": []
+    }), encoding="utf-8")
+
+    with mock.patch("mp.core.file_utils.create_or_get_views_root_dir", return_value=tmp_path):
+        result = runner.invoke(push_app, ["view", "--all"])
+
+    assert result.exit_code == 0
+    assert mock_api.upload_view.call_count == 2
+
+
 @mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
 @mock.patch("mp.dev_env.sub_commands.view.push.get_backend_api")
 def test_push_view_cli(
@@ -232,15 +372,9 @@ def test_push_view_cli(
     assert widgets[0]["metadata"]["title"] == "Widget One"
     assert widgets[0]["config"]["htmlContent"] == "<h1>Hello from push</h1>"
 
-    # Verify automatic pull-back updated local directory with server values
-    assert mock_api.download_view.call_count == 2
+    # Verify download_view was only called once during widget verification
+    assert mock_api.download_view.call_count == 1
     assert (view_folder / "view.yaml").exists()
-    with (view_folder / "view.yaml").open(encoding="utf-8") as f:
-        updated_view_data = yaml.safe_load(f)
-    assert updated_view_data["name"] == "Default Case View - Server Updated Name"
-
-    assert (view_folder / "widgets" / "Widget One.html").exists()
-    assert (view_folder / "widgets" / "Widget One.html").read_text(encoding="utf-8") == "<h1>Hello from server</h1>"
 
 
 @mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
@@ -429,10 +563,10 @@ def test_push_view_allows_new_widget_with_flag(
     with mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"):
         result = runner.invoke(
             push_app,
-            ["view", "system_case_default", "--custom", str(src_dir), "--allow-create"],
+            ["view", "system_case_default", "--custom", str(src_dir), "--force"],
         )
 
-    # Should succeed with the --allow-create flag
+    # Should succeed with the --force flag
     assert result.exit_code == 0
     mock_api.upload_view.assert_called_once()
 
@@ -495,14 +629,13 @@ def test_push_view_fallback_to_name_and_type_matching(
     assert called_args["id"] == 100                 # Server ID is injected
     assert called_args["type"] == 3
 
-    # Verify download_view was called twice with "server_uuid"
-    assert mock_api.download_view.call_count == 2
-    assert mock_api.download_view.call_args_list[0][0][0] == "server_uuid"
-    assert mock_api.download_view.call_args_list[1][0][0] == "server_uuid"
+    # Verify download_view was only called once during widget verification
+    assert mock_api.download_view.call_count == 1
+    mock_api.download_view.assert_called_once_with("server_uuid")
 
-    # Verify local folder was renamed to match server UUID
-    assert not (src_dir / "local_uuid").exists()
-    assert (src_dir / "server_uuid").exists()
+    # Verify local folder was not renamed
+    assert (src_dir / "local_uuid").exists()
+    assert not (src_dir / "server_uuid").exists()
 
 
 @mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
@@ -593,5 +726,85 @@ def test_push_view_missing_widget_fails(
         )
 
     # Should fail due to missing widget validation error
+    assert result.exit_code != 0
+    mock_api.upload_view.assert_not_called()
+
+
+@mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.push.get_backend_api")
+def test_push_view_missing_integration_fails(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+    mock_api.list_views.return_value = [{"identifier": "test_uuid", "id": 100}]
+    mock_api.download_view.return_value = {
+        "widgets": [
+            {
+                "metadata": {
+                    "title": "Widget One",
+                    "identifier": "widget_one_id",
+                }
+            }
+        ]
+    }
+    mock_api.list_installed_integrations.return_value = [
+        {"identifier": "OtherIntegration", "displayName": "Other Integration"}
+    ]
+
+    src_dir = tmp_path / "views"
+    view_folder = src_dir / "test_uuid"
+    view_folder.mkdir(parents=True)
+
+    view_yaml_data = {
+        "identifier": "test_uuid",
+        "name": "Test View",
+        "creator": "system",
+        "playbook_id": "playbook_1",
+        "type": "system_case",
+        "alert_rule_type": None,
+        "roles": [1, 2],
+        "role_names": ["Tier 1", "Tier 2"],
+        "widgets_details": [{"title": "Widget One", "size": "half_width", "order": 1}],
+    }
+    with (view_folder / "view.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(view_yaml_data, f)
+
+    widgets_dir = view_folder / "widgets"
+    widgets_dir.mkdir()
+    widget_yaml_data = {
+        "title": "Widget One",
+        "description": "HTML Widget",
+        "identifier": "widget_one_id",
+        "order": 1,
+        "template_identifier": "temp_one",
+        "type": "html",
+        "data_definition": {
+            "html_height": 100,
+            "safe_rendering": True,
+            "widget_definition_scope": "alert",
+            "type": "html",
+        },
+        "widget_size": "half_width",
+        "action_widget_template_id": None,
+        "step_id": None,
+        "step_integration": None,
+        "block_step_id": None,
+        "block_step_instance_name": None,
+        "present_if_empty": False,
+        "conditions_group": {"logical_operator": "and", "conditions": []},
+        "integration_name": "MissingIntegration",
+    }
+    with (widgets_dir / "Widget One.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(widget_yaml_data, f)
+
+    with mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"):
+        result = runner.invoke(
+            push_app,
+            ["view", "test_uuid", "--custom", str(src_dir)],
+        )
+
     assert result.exit_code != 0
     mock_api.upload_view.assert_not_called()

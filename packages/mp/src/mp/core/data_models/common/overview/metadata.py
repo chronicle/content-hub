@@ -40,6 +40,9 @@ class OverviewType(RepresentableEnum):
     SYSTEM_ALERT = 2
     SYSTEM_CASE = 3
     ALERT_TYPE = 4
+    SYSTEM_DEFAULT_CASE = 5
+    SYSTEM_DEFAULT_ALERT = 6
+    SYSTEM_DETECTION = 7
 
 
 class OverviewWidgetDetails(TypedDict):
@@ -168,8 +171,11 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
 
         # Load all widgets from widgets/ directory
         all_widget: list[PlaybookWidgetMetadata] = PlaybookWidgetMetadata.from_non_built_path(path)
+        all_widget.sort(key=lambda w: w.order)
 
         widget_details: list[OverviewWidgetDetails] = non_built_view.get("widgets_details") or []
+        widget_details.sort(key=lambda wd: wd.get("order") or 0)
+        
         widget_by_title: dict[str, list[PlaybookWidgetMetadata]] = {}
         for w in all_widget:
             if w.title:
@@ -206,10 +212,13 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
             alert_rule_type=built["OverviewTemplate"]["AlertRuleType"],
             roles=built["OverviewTemplate"]["Roles"],
             role_names=built.get("Roles", []),
-            widgets=[
-                PlaybookWidgetMetadata.from_built("", built_widget)
-                for built_widget in built["OverviewTemplate"]["Widgets"]
-            ],
+            widgets=sorted(
+                [
+                    PlaybookWidgetMetadata.from_built("", built_widget)
+                    for built_widget in built["OverviewTemplate"]["Widgets"]
+                ],
+                key=lambda w: w.order,
+            ),
         )
 
     @classmethod
@@ -269,7 +278,7 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
                     size=w.widget_size.to_string(),
                     order=w.order,
                 )
-                for w in self.widgets
+                for w in sorted(self.widgets, key=lambda w: w.order)
             ],
         )
         return non_built

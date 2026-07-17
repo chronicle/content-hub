@@ -178,6 +178,43 @@ class BackendAPI:
         resp.raise_for_status()
         return resp
 
+    def list_installed_integrations(self) -> list[dict[str, Any]]:
+        """List all installed integrations on the SOAR platform.
+
+        Returns:
+            The list of installed integrations.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/integrations"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        if resp.status_code == 204:
+            return []
+        data = resp.json()
+        if isinstance(data, dict):
+            return data.get("items", [])
+        return data if isinstance(data, list) else []
+
+    def list_integration_instances(self, integration_id: str = "$all") -> list[dict[str, Any]]:
+        """List integration instances for a given integration identifier or all integrations.
+
+        Args:
+            integration_id: The integration identifier, defaults to '$all'.
+
+        Returns:
+            The list of integration instances.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/integrations/{integration_id}/integrationInstances"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        if resp.status_code == 204:
+            return []
+        data = resp.json()
+        if isinstance(data, dict):
+            return data.get("items", [])
+        return data if isinstance(data, list) else []
+
     def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
         """Upload a zipped playbook package to the backend.
 
@@ -266,5 +303,118 @@ class BackendAPI:
         """
         url: str = f"{self.api_root}/api/external/v1/case-overview/SaveOverviewTemplate"
         resp = self.session.post(url, json=view_data)
+        if not resp.ok:
+            logger.error(f"SaveOverviewTemplate failed with status {resp.status_code}. Response: {resp.text}")
+        resp.raise_for_status()
+        return resp.json()
+
+    def list_custom_fields(self) -> list[dict[str, Any]]:
+        """List all custom fields from the SOAR platform.
+
+        Returns:
+            list[dict[str, Any]]: The list of custom fields.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields"
+        resp = self.session.get(url)
+        if not resp.ok:
+            logger.error(f"list_custom_fields failed: {resp.status_code} - {resp.text}")
+        resp.raise_for_status()
+        if resp.status_code == 204:
+            return []
+        try:
+            return resp.json().get("items", [])
+        except Exception:
+            logger.error(f"JSON Decode Error in list_custom_fields. Response text: {resp.text}")
+            raise
+
+    def download_custom_field(self, field_id: int) -> dict[str, Any]:
+        """Download a custom field by ID from the SOAR platform.
+
+        Args:
+            field_id: The ID of the custom field.
+
+        Returns:
+            The custom field details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields/{field_id}"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        return resp.json()
+
+    def create_custom_field(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Create a new custom field on the SOAR platform.
+
+        Args:
+            data: The custom field data.
+
+        Returns:
+            The created custom field details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields"
+        resp = self.session.post(url, json=data)
+        resp.raise_for_status()
+        return resp.json()
+
+    def update_custom_field(self, field_id: int, data: dict[str, Any]) -> dict[str, Any]:
+        """Update an existing custom field on the SOAR platform.
+
+        Args:
+            field_id: The ID of the custom field.
+            data: The custom field data.
+
+        Returns:
+            The updated custom field details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields/{field_id}"
+        resp = self.session.patch(url, json=data)
+        resp.raise_for_status()
+        return resp.json()
+
+    def list_alert_grouping_rules(self) -> list[dict[str, Any]]:
+        """List all alert grouping rules from the SOAR platform.
+
+        Returns:
+            The list of alert grouping rules.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        if resp.status_code == 204:
+            return []
+        return resp.json().get("items", [])
+
+    def create_alert_grouping_rule(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Create a new alert grouping rule on the SOAR platform.
+
+        Args:
+            data: The alert grouping rule data.
+
+        Returns:
+            The created alert grouping rule details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
+        resp = self.session.post(url, json=data)
+        resp.raise_for_status()
+        return resp.json()
+
+    def update_alert_grouping_rule(self, rule_id: int, data: dict[str, Any]) -> dict[str, Any]:
+        """Update an existing alert grouping rule on the SOAR platform.
+
+        Args:
+            rule_id: The ID of the alert grouping rule.
+            data: The alert grouping rule data.
+
+        Returns:
+            The updated alert grouping rule details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules/{rule_id}"
+        resp = self.session.patch(url, json=data)
         resp.raise_for_status()
         return resp.json()
