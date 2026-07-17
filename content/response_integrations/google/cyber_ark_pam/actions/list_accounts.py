@@ -45,12 +45,8 @@ class ListAccounts(CyberArkPamAction):
 
     def _extract_action_parameters(self) -> None:
         """Extract action parameters from SOAR."""
-        self.search_query = extract_action_param(
-            self.soar_action, param_name="Search Query", print_value=True
-        )
-        self.search_operator = extract_action_param(
-            self.soar_action, param_name="Search operator", print_value=True
-        )
+        self.search_query = extract_action_param(self.soar_action, param_name="Search Query", print_value=True)
+        self.search_operator = extract_action_param(self.soar_action, param_name="Search operator", print_value=True)
         self.max_records_to_return = extract_action_param(
             self.soar_action,
             param_name="Max Records To Return",
@@ -63,12 +59,8 @@ class ListAccounts(CyberArkPamAction):
             input_type=int,
             print_value=True,
         )
-        self.filter_query = extract_action_param(
-            self.soar_action, param_name="Filter Query", print_value=True
-        )
-        self.saved_filter = extract_action_param(
-            self.soar_action, param_name="Saved Filter", print_value=True
-        )
+        self.filter_query = extract_action_param(self.soar_action, param_name="Filter Query", print_value=True)
+        self.saved_filter = extract_action_param(self.soar_action, param_name="Saved Filter", print_value=True)
 
     def _perform_action(self, _: Entity | None = None) -> None:
         """Perform the action logic.
@@ -121,15 +113,11 @@ class ListAccounts(CyberArkPamAction):
                 construct_csv([account.to_csv() for account in accounts]),
             )
             self.result_value = True
-            log_message = (
-                "Successfully found accounts for the provided criteria in CyberArk PAM"
-            )
+            log_message = "Successfully found accounts for the provided criteria in CyberArk PAM"
             self.output_message = prefix + log_message if prefix else log_message
         else:
             self.result_value = False
-            log_message = (
-                "No accounts were found for the provided criteria in CyberArk PAM"
-            )
+            log_message = "No accounts were found for the provided criteria in CyberArk PAM"
             self.output_message = prefix + log_message if prefix else log_message
 
 

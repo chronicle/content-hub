@@ -19,25 +19,27 @@ from typing import TYPE_CHECKING, Any
 
 import requests
 
-from .authentication import CyberArkPamAuthenticator
+from .authentication import AuthenticatorConfig, CyberArkPamAuthenticator
 from .cyber_ark_pam_parser import CyberArkPamParser
 from .datamodels import ListAccountsQuery
 from .utils import build_full_url, validate_response
 
 if TYPE_CHECKING:
+    from TIPCommon.base.interfaces import ScriptLogger
+
     from .datamodels import Account
 
 
 class CyberArkPamManager:
     """CyberArk PAM Manager."""
 
-    def __init__(  # noqa: PLR0913, PLR0917
+    def __init__(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
         self,
         api_root: str,
         username: str,
         password: str,
-        logger: Any = None,  # noqa: ANN401
-        verify_ssl: bool = False,  # noqa: FBT001, FBT002
+        logger: ScriptLogger | None = None,
+        verify_ssl: bool = False,  # ruff:ignore[boolean-type-hint-positional-argument, boolean-default-value-positional-argument]
         ca_certificate: str | None = None,
         client_certificate: str | None = None,
         client_certificate_passphrase: str | None = None,
@@ -61,13 +63,16 @@ class CyberArkPamManager:
         self.username = username
         self.password = password
         self.parser = CyberArkPamParser()
-        self.authenticator = CyberArkPamAuthenticator(
-            session=self.session,
+        config = AuthenticatorConfig(
             api_root=self.api_root,
             verify_ssl=verify_ssl,
             ca_certificate=ca_certificate,
             client_certificate=client_certificate,
             client_certificate_passphrase=client_certificate_passphrase,
+        )
+        self.authenticator = CyberArkPamAuthenticator(
+            session=self.session,
+            config=config,
             logger=self.logger,
         )
         if self.logger:
@@ -82,7 +87,7 @@ class CyberArkPamManager:
         if "Authorization" not in self.session.headers:
             self.test_connectivity()
 
-    def list_accounts(  # noqa: PLR0913, PLR0917
+    def list_accounts(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
         self,
         search_query: str | None,
         search_operator: str | None,
@@ -151,9 +156,7 @@ class CyberArkPamManager:
             "TicketId": ticket_id,
             "Version": version,
         }
-        prepared_payload = {
-            key: value for key, value in payload.items() if value is not None
-        }
+        prepared_payload = {key: value for key, value in payload.items() if value is not None}
 
         response = self.session.post(
             url=build_full_url(self.api_root, "get_password", account_id=account),
@@ -190,9 +193,7 @@ class CyberArkPamManager:
         """
         self._ensure_authenticated()
         response = self.session.get(
-            url=build_full_url(
-                self.api_root, "get_secret_versions", account_id=account
-            ),
+            url=build_full_url(self.api_root, "get_secret_versions", account_id=account),
         )
         validate_response(response)
 

@@ -45,10 +45,7 @@ class CyberArkPamParser:
         """
         accounts_json = json_response["value"]
 
-        return [
-            CyberArkPamParser.build_account(account_json)
-            for account_json in accounts_json
-        ]
+        return [CyberArkPamParser.build_account(account_json) for account_json in accounts_json]
 
     @staticmethod
     def build_versions(json_response: SingleJson | list[Any]) -> list[Any]:

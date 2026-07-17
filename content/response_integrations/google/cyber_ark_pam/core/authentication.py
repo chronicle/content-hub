@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import base64
 import pathlib
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.serialization import (
@@ -37,38 +38,42 @@ from .utils import build_full_url, validate_response
 
 if TYPE_CHECKING:
     import requests
+    from TIPCommon.base.interfaces import ScriptLogger
+
+
+@dataclass
+class AuthenticatorConfig:
+    """Configuration options for CyberArk PAM Authenticator."""
+
+    api_root: str
+    verify_ssl: bool = False
+    ca_certificate: str | None = None
+    client_certificate: str | None = None
+    client_certificate_passphrase: str | None = None
 
 
 class CyberArkPamAuthenticator:
     """Handles authentication and SSL configuration for CyberArk PAM."""
 
-    def __init__(  # noqa: PLR0913, PLR0917
+    def __init__(
         self,
         session: requests.Session,
-        api_root: str,
-        verify_ssl: bool = False,  # noqa: FBT001, FBT002
-        ca_certificate: str | None = None,
-        client_certificate: str | None = None,
-        client_certificate_passphrase: str | None = None,
-        logger: Any = None,  # noqa: ANN401
+        config: AuthenticatorConfig,
+        logger: ScriptLogger | None = None,
     ) -> None:
         """Initialize the CyberArk PAM Authenticator.
 
         Args:
             session: requests.Session instance to configure.
-            api_root: Base URL of the CyberArk PAM instance.
-            verify_ssl: Whether to verify SSL certificates.
-            ca_certificate: Base64 encoded CA certificate content.
-            client_certificate: Base64 encoded client PKCS12 certificate.
-            client_certificate_passphrase: Passphrase for the client certificate.
+            config: AuthenticatorConfig instance.
             logger: Optional logger instance.
 
         """
         self.session = session
-        self.api_root = api_root
+        self.api_root = config.api_root
         self.logger = logger
-        self.__set_certificates(client_certificate_passphrase, client_certificate)
-        self.__set_verify(verify_ssl, ca_certificate)
+        self.__set_certificates(config.client_certificate_passphrase, config.client_certificate)
+        self.__set_verify(config.verify_ssl, config.ca_certificate)
 
     def __set_certificates(
         self,
@@ -96,9 +101,7 @@ class CyberArkPamAuthenticator:
             else client_certificate_passphrase
         )
 
-        decoded_cert = load_key_and_certificates(
-            data=encoded_cert, password=encoded_passphrase, backend=backend
-        )
+        decoded_cert = load_key_and_certificates(data=encoded_cert, password=encoded_passphrase, backend=backend)
         if self.logger:
             self.logger.info("Loaded Client's certificate")
 
@@ -125,7 +128,7 @@ class CyberArkPamAuthenticator:
         if self.logger:
             self.logger.info("Set Client's certificate for session")
 
-    def __set_verify(self, verify_ssl: bool, ca_certificate: str | None = None) -> None:  # noqa: FBT001
+    def __set_verify(self, verify_ssl: bool, ca_certificate: str | None = None) -> None:  # ruff:ignore[boolean-type-hint-positional-argument]
         """Set SSL verification for the session.
 
         Args:
@@ -180,11 +183,9 @@ class CyberArkPamAuthenticator:
 
         """
         token = self.logon(username, password)
-        self.session.headers.update(
-            {
-                "Content-Type": "application/json",
-                "Authorization": token,
-            }
-        )
+        self.session.headers.update({
+            "Content-Type": "application/json",
+            "Authorization": token,
+        })
         if self.logger:
             self.logger.info("Connectivity test completed successfully.")

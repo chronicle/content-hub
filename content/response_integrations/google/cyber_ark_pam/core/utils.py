@@ -64,7 +64,7 @@ def validate_response(response: requests.Response) -> None:
             error_message = error_json.get("ErrorMessage", "")
             error_code = error_json.get("ErrorCode", "")
             msg = error_message or (response.reason or str(e))
-        except Exception:  # noqa: BLE001
+        except Exception:  # ruff:ignore[blind-except]
             msg = response.reason or str(e)
 
         if response.status_code == HTTP_STATUS_NOT_FOUND:
@@ -118,9 +118,7 @@ def build_lookup_with_warnings(
         if not key:
             continue
         if key in lookup:
-            logger.warn(
-                f"Duplicate {entity_type} '{key}' detected. Later entry will overwrite."
-            )
+            logger.warn(f"Duplicate {entity_type} '{key}' detected. Later entry will overwrite.")
         lookup[key] = get_value(item)
 
     return lookup

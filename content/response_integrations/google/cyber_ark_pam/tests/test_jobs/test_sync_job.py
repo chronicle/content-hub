@@ -39,7 +39,7 @@ class MockParams:
         self.credential_mapping = "{}"
         self.api_root = "https://mock-pam"
         self.username = "user"
-        self.password = "pass"  # noqa: S105
+        self.password = "pass"  # ruff:ignore[hardcoded-password-string]
         self.verify_ssl = False
         self.ca_certificate = None
         self.client_certificate = None
@@ -81,9 +81,7 @@ class TestValidateParams:
     def test_valid_json(self) -> None:
         """Parses valid JSON credential mapping with valid resource names."""
         job = _make_job()
-        job.params.credential_mapping = (
-            '{"integration_instances": {"inst1": {"p1": "accounts/123_45"}}}'
-        )
+        job.params.credential_mapping = '{"integration_instances": {"inst1": {"p1": "accounts/123_45"}}}'
 
         job._validate_params()
 
@@ -95,9 +93,7 @@ class TestValidateParams:
     def test_valid_yaml(self) -> None:
         """Parses valid YAML credential mapping with valid resource names."""
         job = _make_job()
-        job.params.credential_mapping = (
-            "integration_instances:\n  inst1:\n    p1: accounts/123_45/versions/3\n"
-        )
+        job.params.credential_mapping = "integration_instances:\n  inst1:\n    p1: accounts/123_45/versions/3\n"
 
         job._validate_params()
 
@@ -137,9 +133,7 @@ class TestValidateParams:
     def test_invalid_value_format_raises(self) -> None:
         """Raises InvalidConfigurationError on invalid parameter value format."""
         job = _make_job()
-        job.params.credential_mapping = (
-            '{"integration_instances": {"inst1": {"p1": "short-secret-name"}}}'
-        )
+        job.params.credential_mapping = '{"integration_instances": {"inst1": {"p1": "short-secret-name"}}}'
 
         with pytest.raises(
             InvalidConfigurationError,
@@ -201,15 +195,11 @@ class TestSyncFlow:
     async def test_sync_integration_instances_success(self) -> None:
         """Tests successful synchronization of integration instances."""
         job = _make_job()
-        job.credential_mapping = {
-            "integration_instances": {"Akeyless": {"Password": "accounts/123_45"}}
-        }
+        job.credential_mapping = {"integration_instances": {"Akeyless": {"Password": "accounts/123_45"}}}
 
         mock_api = AsyncMock()
         mock_api.get_installed_integrations_of_environment.return_value = {
-            "instances": [
-                {"displayName": "Akeyless", "identifier": "Akeyless_Instance_1"}
-            ]
+            "instances": [{"displayName": "Akeyless", "identifier": "Akeyless_Instance_1"}]
         }
 
         mock_manager = MagicMock()
@@ -237,17 +227,11 @@ class TestSyncFlow:
     async def test_sync_connectors_success(self) -> None:
         """Tests successful synchronization of connectors."""
         job = _make_job()
-        job.credential_mapping = {
-            "connectors": {
-                "Akeyless Connector": {"Token": "accounts/123_45/versions/5"}
-            }
-        }
+        job.credential_mapping = {"connectors": {"Akeyless Connector": {"Token": "accounts/123_45/versions/5"}}}
 
         mock_api = AsyncMock()
         mock_api.get_connector_cards.return_value = {
-            "connectorInstances": [
-                {"displayName": "Akeyless Connector", "identifier": "Conn_1"}
-            ]
+            "connectorInstances": [{"displayName": "Akeyless Connector", "identifier": "Conn_1"}]
         }
 
         mock_manager = MagicMock()
@@ -318,9 +302,7 @@ class TestStateContextRegistry:
         """Loads valid JSON context state from soar_job."""
         job = _make_job()
         mock_soar_job = MagicMock()
-        mock_soar_job.get_job_context_property.return_value = (
-            '{"instance:id1:p1": "accounts/123::10"}'
-        )
+        mock_soar_job.get_job_context_property.return_value = '{"instance:id1:p1": "accounts/123::10"}'
         type(job).soar_job = PropertyMock(return_value=mock_soar_job)
 
         job._load_context()
@@ -413,10 +395,7 @@ class TestSkippingLogic:
             property_name="param_x",
             property_value="secret-pass",
         )
-        assert (
-            job.state_context["instance:inst_id:param_x"]
-            == "accounts/123/versions/2::2"
-        )
+        assert job.state_context["instance:inst_id:param_x"] == "accounts/123/versions/2::2"
 
     @pytest.mark.anyio
     async def test_update_single_job_state_updates_on_success(self) -> None:
@@ -548,12 +527,8 @@ class TestTimeoutHandling:
             patch.object(job, "_init_cyber_ark_pam_client"),
             patch.object(job, "_load_context"),
             patch.object(job, "_save_context"),
-            patch(
-                "cyber_ark_pam.jobs.sync_integration_credential_job.AsyncChronicleSOAR"
-            ) as mock_soar_cls,
-            patch(
-                "cyber_ark_pam.jobs.sync_integration_credential_job.AsyncMarketplaceApi"
-            ) as mock_market_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credential_job.AsyncChronicleSOAR") as mock_soar_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credential_job.AsyncMarketplaceApi") as mock_market_cls,
         ):
             mock_soar = AsyncMock()
             mock_soar_cls.return_value = mock_soar
@@ -581,9 +556,7 @@ class TestAggregatedErrors:
         job = _make_job()
         job._soar_job = MagicMock()
         job.params.credential_mapping = (
-            '{"integration_instances": {"inst1": {}}, '
-            '"connectors": {"conn1": {}}, '
-            '"jobs": {"job1": {}}}'
+            '{"integration_instances": {"inst1": {}}, "connectors": {"conn1": {}}, "jobs": {"job1": {}}}'
         )
         job._validate_params()
         job._sync_errors = []
@@ -597,9 +570,7 @@ class TestAggregatedErrors:
             "instances": [{"displayName": "other-inst", "identifier": "other-inst-id"}]
         }
         mock_api.get_connector_cards.return_value = {
-            "connectorInstances": [
-                {"displayName": "other-conn", "identifier": "other-conn-id"}
-            ]
+            "connectorInstances": [{"displayName": "other-conn", "identifier": "other-conn-id"}]
         }
         mock_api.get_installed_jobs.return_value = [
             {"displayName": "other-job", "id": "other-job-id", "parameters": []}
@@ -612,9 +583,7 @@ class TestAggregatedErrors:
 
         # Verify errors are collected
         assert len(job._sync_errors) == 3
-        assert any(
-            "Integration instance 'inst1' not found" in err for err in job._sync_errors
-        )
+        assert any("Integration instance 'inst1' not found" in err for err in job._sync_errors)
         assert any("Connector 'conn1' not found" in err for err in job._sync_errors)
         assert any("Job 'job1' not found" in err for err in job._sync_errors)
 
@@ -623,12 +592,8 @@ class TestAggregatedErrors:
             patch.object(job, "_init_cyber_ark_pam_client"),
             patch.object(job, "_load_context"),
             patch.object(job, "_save_context"),
-            patch(
-                "cyber_ark_pam.jobs.sync_integration_credential_job.AsyncChronicleSOAR"
-            ) as mock_soar_cls,
-            patch(
-                "cyber_ark_pam.jobs.sync_integration_credential_job.AsyncMarketplaceApi"
-            ) as mock_market_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credential_job.AsyncChronicleSOAR") as mock_soar_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credential_job.AsyncMarketplaceApi") as mock_market_cls,
         ):
             mock_soar = AsyncMock()
             mock_soar_cls.return_value = mock_soar
@@ -636,14 +601,10 @@ class TestAggregatedErrors:
             # Mock the marketplace API methods
             mock_market = AsyncMock()
             mock_market.get_installed_integrations_of_environment.return_value = {
-                "instances": [
-                    {"displayName": "other-inst", "identifier": "other-inst-id"}
-                ]
+                "instances": [{"displayName": "other-inst", "identifier": "other-inst-id"}]
             }
             mock_market.get_connector_cards.return_value = {
-                "connectorInstances": [
-                    {"displayName": "other-conn", "identifier": "other-conn-id"}
-                ]
+                "connectorInstances": [{"displayName": "other-conn", "identifier": "other-conn-id"}]
             }
             mock_market.get_installed_jobs.return_value = [
                 {"displayName": "other-job", "id": "other-job-id", "parameters": []}
@@ -654,10 +615,7 @@ class TestAggregatedErrors:
             with pytest.raises(IntegrationCredentialSyncError) as exc_info:
                 await job._async_main()
 
-            assert (
-                "Credential synchronization completed with one or more errors"
-                in str(exc_info.value)
-            )
+            assert "Credential synchronization completed with one or more errors" in str(exc_info.value)
             assert "Integration instance 'inst1' not found" in str(exc_info.value)
             assert "Connector 'conn1' not found" in str(exc_info.value)
             assert "Job 'job1' not found" in str(exc_info.value)
@@ -672,16 +630,14 @@ class TestInitCyberArkPamClient:
         job = _make_job()
         job.params.api_root = "https://job-pam-url"
         job.params.username = "job_user"
-        job.params.password = "job_pass"  # noqa: S105
+        job.params.password = "job_pass"  # ruff:ignore[hardcoded-password-string]
         job.params.verify_ssl = True
         job.params.ca_certificate = "job_ca"
         job.params.client_certificate = "job_cert"
-        job.params.client_certificate_passphrase = "job_cert_pass"  # noqa: S105
+        job.params.client_certificate_passphrase = "job_cert_pass"  # ruff:ignore[hardcoded-password-string]
 
         with (
-            patch(
-                "cyber_ark_pam.jobs.sync_integration_credential_job.CyberArkPamManager"
-            ) as mock_manager_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credential_job.CyberArkPamManager") as mock_manager_cls,
             patch(
                 "cyber_ark_pam.jobs.sync_integration_credential_job.extract_integration_parameters"
             ) as mock_extract_config,
@@ -692,12 +648,12 @@ class TestInitCyberArkPamClient:
             mock_manager_cls.assert_called_once_with(
                 api_root="https://job-pam-url",
                 username="job_user",
-                password="job_pass",  # noqa: S106
+                password="job_pass",  # ruff:ignore[hardcoded-password-func-arg]
                 logger=ANY,
                 verify_ssl=True,
                 ca_certificate="job_ca",
                 client_certificate="job_cert",
-                client_certificate_passphrase="job_cert_pass",  # noqa: S106
+                client_certificate_passphrase="job_cert_pass",  # ruff:ignore[hardcoded-password-func-arg]
             )
 
     @pytest.mark.anyio
@@ -716,17 +672,15 @@ class TestInitCyberArkPamClient:
         fallback_params = IntegrationParameters(
             api_root="https://integration-pam-url",
             username="integration_user",
-            password="integration_pass",  # noqa: S106
+            password="integration_pass",  # ruff:ignore[hardcoded-password-func-arg]
             verify_ssl=False,
             ca_certificate="integration_ca",
             client_certificate="integration_cert",
-            client_certificate_passphrase="integration_cert_pass",  # noqa: S106
+            client_certificate_passphrase="integration_cert_pass",  # ruff:ignore[hardcoded-password-func-arg]
         )
 
         with (
-            patch(
-                "cyber_ark_pam.jobs.sync_integration_credential_job.CyberArkPamManager"
-            ) as mock_manager_cls,
+            patch("cyber_ark_pam.jobs.sync_integration_credential_job.CyberArkPamManager") as mock_manager_cls,
             patch(
                 "cyber_ark_pam.jobs.sync_integration_credential_job.extract_integration_parameters",
                 return_value=fallback_params,
@@ -738,10 +692,10 @@ class TestInitCyberArkPamClient:
             mock_manager_cls.assert_called_once_with(
                 api_root="https://integration-pam-url",
                 username="integration_user",
-                password="integration_pass",  # noqa: S106
+                password="integration_pass",  # ruff:ignore[hardcoded-password-func-arg]
                 logger=ANY,
                 verify_ssl=False,
                 ca_certificate="integration_ca",
                 client_certificate="integration_cert",
-                client_certificate_passphrase="integration_cert_pass",  # noqa: S106
+                client_certificate_passphrase="integration_cert_pass",  # ruff:ignore[hardcoded-password-func-arg]
             )

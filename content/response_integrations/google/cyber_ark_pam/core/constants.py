@@ -37,9 +37,7 @@ HTTP_STATUS_NOT_FOUND: int = 404
 MIN_MASK_LENGTH: int = 6
 
 # Sync Credential Job constants
-ACCOUNTS_PATTERN: re.Pattern = re.compile(
-    r"^accounts/(?P<account>[^/]+)(?:/versions/(?P<version>\d+))?$"
-)
+ACCOUNTS_PATTERN: re.Pattern = re.compile(r"^accounts/(?P<account>[^/]+)(?:/versions/(?P<version>\d+))?$")
 SYNC_CREDENTIAL_JOB_SCRIPT_NAME: str = "Sync Integration Credential Job"
 
 # Credential mapping JSON keys

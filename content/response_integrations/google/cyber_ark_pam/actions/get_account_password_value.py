@@ -84,9 +84,7 @@ class GetAccountPasswordValue(CyberArkPamAction):
                 ticket_id=self.ticket_id,
                 version=self.version,
             )
-            self.output_message = (
-                f"Successfully fetched password value for account id {self.account}"
-            )
+            self.output_message = f"Successfully fetched password value for account id {self.account}"
             self.result_value = True
             self.json_results = {"content": password}
         except CyberArkPamNotFoundError:

@@ -33,9 +33,7 @@ if TYPE_CHECKING:
 class TestGetAccountPasswordVersions:
     """Test suite for the GetAccountPasswordVersions action."""
 
-    @set_metadata(
-        integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_11"}
-    )
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_11"})
     def test_get_password_versions_success(
         self,
         action_output: MockActionOutput,
@@ -74,9 +72,7 @@ class TestGetAccountPasswordVersions:
             "failed_accounts": [],
         }
 
-    @set_metadata(
-        integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "25_30"}
-    )
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "25_30"})
     def test_get_password_versions_all_fail(
         self,
         action_output: MockActionOutput,
@@ -109,8 +105,7 @@ class TestGetAccountPasswordVersions:
         assert action_output.results.result_value is False
         assert (
             "None of the provided accounts were retrieved for secret versions. "
-            "Please check JSON Result for more information."
-            in action_output.results.output_message
+            "Please check JSON Result for more information." in action_output.results.output_message
         )
         assert action_output.results.json_output.json_result == {
             "successful_accounts": [],
@@ -167,17 +162,14 @@ class TestGetAccountPasswordVersions:
         )
         assert (
             "Action wasn't able to retrieve secret versions in CyberArk PAM for the following "
-            "accounts: 25_30. Please check JSON Result for more information."
-            in action_output.results.output_message
+            "accounts: 25_30. Please check JSON Result for more information." in action_output.results.output_message
         )
         assert action_output.results.json_output.json_result == {
             "successful_accounts": [{"account_id": "28_11", "versions": [1, 2]}],
             "failed_accounts": [{"account_id": "25_30", "error": "Account not found"}],
         }
 
-    @set_metadata(
-        integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_14"}
-    )
+    @set_metadata(integration_config_file_path=CONFIG_PATH, parameters={"Account ID": "28_14"})
     def test_get_password_versions_success_with_versions_dict(
         self,
         action_output: MockActionOutput,

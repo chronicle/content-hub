@@ -62,14 +62,10 @@ class GetAccountPasswordVersions(CyberArkPamAction):
                 versions = self.api_client.get_secret_versions(account=account)
                 self.successful_accounts[account] = versions
             except CyberArkPamNotFoundError as e:
-                self.logger.exception(
-                    f"Account with id {account} was not found in CyberArk PAM."
-                )
+                self.logger.exception(f"Account with id {account} was not found in CyberArk PAM.")
                 self.failed_accounts[account] = str(e)
             except CyberArkPamAccountNotManagedError as e:
-                self.logger.exception(
-                    f"Account with id {account} is not managed by the CPM."
-                )
+                self.logger.exception(f"Account with id {account} is not managed by the CPM.")
                 self.failed_accounts[account] = str(e)
             except Exception as e:
                 self.logger.exception(f"Error executing action on account {account}.")
@@ -106,13 +102,9 @@ class GetAccountPasswordVersions(CyberArkPamAction):
 
         self.json_results = {
             "successful_accounts": [
-                {"account_id": acc, "versions": versions}
-                for acc, versions in self.successful_accounts.items()
+                {"account_id": acc, "versions": versions} for acc, versions in self.successful_accounts.items()
             ],
-            "failed_accounts": [
-                {"account_id": acc, "error": reason}
-                for acc, reason in self.failed_accounts.items()
-            ],
+            "failed_accounts": [{"account_id": acc, "error": reason} for acc, reason in self.failed_accounts.items()],
         }
 
 
