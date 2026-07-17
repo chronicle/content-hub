@@ -488,12 +488,7 @@ class AlertUpdateResult:
                     skips.append(f"{action['actionId']}: {s.get('skipMessage')}")
 
             if failures:
-                has_only_null_errors = all(
-                    f.get("errorMessage") is None
-                    for action in actions
-                    for f in (action.get("failure") or [])
-                )
-                if has_alert_not_found or (success_count == 0 and has_only_null_errors):
+                if has_alert_not_found:
                     msg = (
                         f"alert with ID {alert_id} wasn't found in SentinelOne "
                         f"Singularity Operations Center. Please check the spelling."
