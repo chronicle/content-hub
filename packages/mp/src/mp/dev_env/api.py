@@ -178,6 +178,43 @@ class BackendAPI:
         resp.raise_for_status()
         return resp
 
+    def list_installed_integrations(self) -> list[dict[str, Any]]:
+        """List all installed integrations on the SOAR platform.
+
+        Returns:
+            The list of installed integrations.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/integrations"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        if resp.status_code == 204:
+            return []
+        data = resp.json()
+        if isinstance(data, dict):
+            return data.get("items", [])
+        return data if isinstance(data, list) else []
+
+    def list_integration_instances(self, integration_id: str = "$all") -> list[dict[str, Any]]:
+        """List integration instances for a given integration identifier or all integrations.
+
+        Args:
+            integration_id: The integration identifier, defaults to '$all'.
+
+        Returns:
+            The list of integration instances.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/integrations/{integration_id}/integrationInstances"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        if resp.status_code == 204:
+            return []
+        data = resp.json()
+        if isinstance(data, dict):
+            return data.get("items", [])
+        return data if isinstance(data, list) else []
+
     def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
         """Upload a zipped playbook package to the backend.
 

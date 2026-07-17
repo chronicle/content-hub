@@ -103,15 +103,22 @@ def push_view(
         ]
 
         if not local_views:
-            logger.info("No views found to push.")
+            logger.info("No views found to %s.", "validate" if validate else "push")
             return
 
-        logger.info("Found %d views to push. Pushing all of them...", len(local_views))
+        if validate:
+            logger.info("Found %d views to validate. Validating all of them...", len(local_views))
+        else:
+            logger.info("Found %d views to push. Pushing all of them...", len(local_views))
+
         for view_dir in local_views:
             try:
                 _push_single_view(view_dir, force=force, validate=validate)
             except Exception as e:  # noqa: BLE001
-                logger.error("Failed to push view directory '%s': %s", view_dir.name, e)  # noqa: TRY400
+                if validate:
+                    logger.error("Validation failed for view directory '%s': %s", view_dir.name, e)  # noqa: TRY400
+                else:
+                    logger.error("Failed to push view directory '%s': %s", view_dir.name, e)  # noqa: TRY400
                 raise typer.Exit(1) from None
         return
 
@@ -157,21 +164,25 @@ def _push_single_view(view_src_path: Path, *, force: bool = False, validate: boo
         logger.error("Failed to parse built view JSON: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
-    view_name = view_data.get("name")
+    overview_tpl = view_data.get("OverviewTemplate")
+    view_name = (overview_tpl.get("Name") if isinstance(overview_tpl, dict) else None) or view_data.get("name")
     if validate:
-        _validate_view(view_data)
+        _validate_view(view_data, view_src_path)
         if view_name and view_name != view_src_path.name:
             logger.info("✅ View '%s' (from directory '%s') is valid.", view_name, view_src_path.name)
         else:
-            logger.info("✅ View '%s' is valid.", view_src_path.name)
+            logger.info("✅ View '%s' is valid.", view_name or view_src_path.name)
         return
 
     # Upload to SOAR
     _upload_built_view_data(view_data, view_src_path, force=force)
 
 
-def _validate_view(view_data: dict[str, Any]) -> None:
-    """Validate view's custom fields against target environment.
+def _validate_view(
+    view_data: dict[str, Any],
+    view_src_path: Path,
+) -> None:
+    """Validate view's custom fields, widgets, and integration dependencies against target environment.
 
     Raises:
         typer.Exit: If validation fails.
@@ -180,7 +191,14 @@ def _validate_view(view_data: dict[str, Any]) -> None:
     config = load_dev_env_config()
     backend_api = get_backend_api(config)
     try:
-        _denormalize_pushed_view(cast("BuiltOverview", view_data), backend_api)
+        flat_view_data = _denormalize_pushed_view(cast("BuiltOverview", view_data), backend_api)
+        view_name = flat_view_data.get("name") or view_src_path.name
+        _validate_push_preconditions(
+            backend_api,
+            view_name,
+            flat_view_data,
+            force=True,
+        )
     except typer.Exit:
         raise
     except Exception as e:
@@ -515,6 +533,111 @@ def _validate_push_preconditions(
         new_uuid = str(uuid.uuid4())
         logger.info("Generating new UUID '%s' for new view.", new_uuid)
         flat_view_data["identifier"] = new_uuid
+
+    _verify_integration_dependencies(
+        backend_api,
+        view_name_or_id,
+        flat_view_data,
+    )
+
+
+def _extract_required_integrations(flat_view_data: dict[str, Any]) -> set[str]:
+    """Extract all required integration names from view widgets.
+
+    Returns:
+        A set of required integration names.
+
+    """
+    required_integrations: set[str] = set()
+    for w in flat_view_data.get("widgets") or []:
+        meta = w.get("metadata") or {}
+        config = w.get("config") or {}
+        for key in ("integrationName", "stepIntegration"):
+            val = meta.get(key) or config.get(key)
+            if val and isinstance(val, str) and val.strip():
+                required_integrations.add(val.strip())
+    return required_integrations
+
+
+def _check_unconfigured_instances(
+    backend_api: BackendAPI,
+    installed_required: list[str],
+    installed_map: dict[str, dict[str, Any]],
+) -> None:
+    """Log warnings for required integrations that have no configured instance."""
+    try:
+        all_instances = backend_api.list_integration_instances("$all")
+    except Exception as ex:  # noqa: BLE001
+        logger.debug("Failed to verify integration instances configuration: %s", ex)
+        return
+
+    configured_integrations: set[str] = {
+        str(inst.get("integrationIdentifier") or inst.get("integrationName")).lower()
+        for inst in all_instances
+        if inst.get("isConfigured") and (inst.get("integrationIdentifier") or inst.get("integrationName"))
+    }
+
+    for integration in installed_required:
+        matched_item = installed_map.get(integration.lower()) or {}
+        target_ident = (matched_item.get("identifier") or integration).lower()
+        if target_ident not in configured_integrations and integration.lower() not in configured_integrations:
+            logger.warning(
+                "[VALIDATION WARNING] Integration '%s' is installed, "
+                "but has no configured instance in SOAR Settings.",
+                integration,
+            )
+
+
+def _verify_integration_dependencies(
+    backend_api: BackendAPI,
+    view_name_or_id: str,
+    flat_view_data: dict[str, Any],
+) -> None:
+    """Verify that required integrations are installed on the platform and log warnings for unconfigured instances.
+
+    Raises:
+        typer.Exit: If a required integration is not installed on the platform.
+
+    """
+    required_integrations = _extract_required_integrations(flat_view_data)
+    if not required_integrations:
+        return
+
+    try:
+        installed = backend_api.list_installed_integrations()
+    except Exception as ex:  # noqa: BLE001
+        logger.warning("Failed to fetch installed integrations from server: %s. Skipping dependency check.", ex)
+        return
+
+    installed_map: dict[str, dict[str, Any]] = {}
+    for item in installed:
+        for key in ("identifier", "name", "displayName"):
+            val = item.get(key)
+            if val:
+                installed_map[str(val).lower()] = item
+
+    missing_integrations: list[str] = []
+    installed_required: list[str] = []
+
+    for integration in sorted(required_integrations):
+        if integration.lower() in installed_map:
+            installed_required.append(integration)
+        else:
+            missing_integrations.append(integration)
+
+    if missing_integrations:
+        for missing in missing_integrations:
+            logger.error("=" * 80)
+            logger.error("[VALIDATION ERROR] Missing Integration on Platform")
+            logger.error(
+                "Integration '%s' referenced in view '%s' is not installed on the platform.",
+                missing,
+                view_name_or_id,
+            )
+            logger.error("=" * 80)
+        raise typer.Exit(1)
+
+    _check_unconfigured_instances(backend_api, installed_required, installed_map)
 
 
 def _upload_built_view_data(
