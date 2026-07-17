@@ -71,7 +71,7 @@ class ListAccounts(CyberArkPamAction):
         """
         prefix = ""
         if self.filter_query and self.saved_filter:
-            prefix = "Both the Filter Query and Saved Filter parameters are provided, Saved Filter takes priority"
+            prefix = "Both the Filter Query and Saved Filter parameters are provided, Saved Filter takes priority. "
 
         if self.max_records_to_return is not None and self.max_records_to_return <= 0:
             error_msg = (

@@ -272,8 +272,8 @@ class SyncIntegrationCredentialJob(Job):
             return
 
         try:
-            loaded = json.loads(context_str)
-        except json.JSONDecodeError as e:
+            loaded = yaml.safe_load(context_str)
+        except yaml.YAMLError as e:
             self.logger.warn(f"Failed to parse job context: {e}. Starting fresh.")
             self.state_context = {}
             return
@@ -344,8 +344,8 @@ class SyncIntegrationCredentialJob(Job):
             )
             raise SecretAccessError(msg) from e
 
-        with contextlib.suppress(json.JSONDecodeError):
-            password = json.loads(password)
+        with contextlib.suppress(yaml.YAMLError):
+            password = yaml.safe_load(password)
 
         self._secret_cache[cache_key] = password
         return password
@@ -878,7 +878,7 @@ class SyncIntegrationCredentialJob(Job):
         )
 
         if updated_count == 0:
-            self.logger.warn(f"No parameters updated for job '{job_name}' — skipping save.")
+            self.logger.info(f"No parameters updated for job '{job_name}' — skipping save.")
             return
 
         job_data["parameters"] = parameters
