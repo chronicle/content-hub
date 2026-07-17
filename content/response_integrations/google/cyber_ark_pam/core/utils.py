@@ -64,7 +64,7 @@ def validate_response(response: requests.Response) -> None:
             error_message = error_json.get("ErrorMessage", "")
             error_code = error_json.get("ErrorCode", "")
             msg = error_message or (response.reason or str(e))
-        except Exception:  # ruff:ignore[BLE001]
+        except Exception:  # ruff:ignore[blind-except]
             msg = response.reason or str(e)
 
         if response.status_code == HTTP_STATUS_NOT_FOUND:

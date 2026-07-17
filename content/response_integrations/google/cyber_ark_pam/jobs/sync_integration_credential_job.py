@@ -449,7 +449,7 @@ class SyncIntegrationCredentialJob(Job):
                         name,
                         param_mapping,
                     )
-                except Exception as e:  # ruff:ignore[BLE001]
+                except Exception as e:  # ruff:ignore[blind-except]
                     self.logger.warn(f"Failed to update instance '{name}': {e}")
                     self._sync_errors.append(f"Failed to update instance '{name}'")
 
@@ -617,7 +617,7 @@ class SyncIntegrationCredentialJob(Job):
                         name,
                         param_mapping,
                     )
-                except Exception as e:  # ruff:ignore[BLE001]
+                except Exception as e:  # ruff:ignore[blind-except]
                     self.logger.warn(f"Failed to update connector '{name}': {e}")
                     self._sync_errors.append(f"Failed to update connector '{name}'")
 
@@ -782,7 +782,7 @@ class SyncIntegrationCredentialJob(Job):
                         param_mapping,
                         name_to_job,
                     )
-                except Exception as e:  # ruff:ignore[BLE001]
+                except Exception as e:  # ruff:ignore[blind-except]
                     self.logger.warn(f"Failed to update job '{job_name}': {e}")
                     self._sync_errors.append(f"Failed to update job '{job_name}'")
 

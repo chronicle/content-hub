@@ -95,7 +95,7 @@ class ListAccountsQuery:
     """Query parameters for listing accounts in CyberArk PAM."""
 
     search: str | None = None
-    searchType: str | None = None  # ruff:ignore[N815]
+    searchType: str | None = None  # ruff:ignore[mixed-case-variable-in-class-scope]
     offset: int | None = None
     limit: int | None = None
     filter: str | None = None
