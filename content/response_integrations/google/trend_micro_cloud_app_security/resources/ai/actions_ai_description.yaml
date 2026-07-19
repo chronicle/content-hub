@@ -1,78 +1,37 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Add Entities To Blocklist:
   ai_description: >-
     ### General Description
 
-    This action adds specific entities to the blocklist in Trend Micro Cloud App Security
-    to prevent malicious activity. It supports URLs, SHA-1 File Hashes, and Email
-    addresses (represented as User entities). The action first retrieves the existing
-    blocklist to prevent duplicate entries and validates the format of each entity
-    before submission.
-
-
-    ### Parameters
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The base URL for the Trend Micro Cloud App Security
-    API instance. |
-
-    | API Key | String | Yes | The API key used for authentication with the Trend
-    Micro service. |
-
-    | Verify SSL | Boolean | Yes | If enabled (default), the action verifies the SSL
-    certificate of the Trend Micro server. |
-
-
-    ### Additional Notes
-
-    - **Hash Support:** Only SHA-1 hashes (40 characters) are supported by this action.
-    Other hash types (MD5, SHA-256) will be ignored.
-
-    - **Email Validation:** User entities are only processed if their identifier matches
-    a standard email address regex pattern.
-
-    - **URL Validation:** URL entities are validated for correct formatting before
-    being sent to the API.
+    Adds entities to a blocklist in Trend Micro Cloud App Security. Supported entities
+    include URL, Hash, and Email (User entity that matches an email address pattern).
 
 
     ### Flow Description
 
-    1. **Initialization:** The action initializes the Trend Micro manager using the
-    provided API credentials and configuration.
+    1. Initializes the Trend Micro Cloud App Security API client.
 
-    2. **Pre-check:** It fetches the current list of blocked URLs, senders, and hashes
-    from Trend Micro to identify entities that are already blocked.
+    2. Retrieves the current list of blocked entities from Trend Micro Cloud App Security
+    via a GET request.
 
-    3. **Entity Filtering:** It iterates through the target entities in the Google
-    SecOps case, filtering for URLs, Users (Emails), and File Hashes.
+    3. Iterates through the target entities in the case.
 
-    4. **Validation:** For each supported entity, it verifies the format (e.g., checking
-    if a hash is SHA-1 or if a user identifier is a valid email).
+    4. Validates the entity format (e.g., checks for valid URLs, valid email patterns
+    for User entities, and SHA-1 length for FileHash entities).
 
-    5. **Deduplication:** It checks if the entity identifier already exists in the
-    retrieved blocklist.
+    5. Checks if the entity's identifier is already present in the retrieved blocklist.
 
-    6. **Execution:** For valid entities not already on the blocklist, it sends a
-    POST request to Trend Micro to add them to the respective blocklist category.
+    6. If not already blocked, makes a POST request to the Trend Micro Cloud App Security
+    API to add the entity to the blocklist.
 
-    7. **Reporting:** The action tracks successful additions, failures, and entities
-    that were already blocked, providing a summary message at the end of execution.
+    7. Returns a summary of successfully blocked entities, failed entities, and entities
+    that were already blocked.
+
+
+    ### Additional Notes
+
+    Only SHA-1 hashes are supported for FileHash entities.
+  ai_short_description: >-
+    Adds URL, Hash, and Email entities to a blocklist in Trend Micro Cloud App Security.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -81,178 +40,52 @@ Add Entities To Blocklist:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Adds URLs, SHA-1 file hashes, or email addresses to the active blocklist configuration
-      in Trend Micro Cloud App Security via POST requests.
-    fetches_data: true
+      Adds URL, User (Email), or FileHash entities to the blocklist in Trend Micro
+      Cloud App Security.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action mutates external data by making a POST request to add entities to
+      a blocklist in Trend Micro Cloud App Security. It does not fetch contextual
+      enrichment data, nor does it mutate internal SecOps data such as updating entities,
+      creating insights, or adding case comments.
   entity_usage:
     entity_types:
-    - DestinationURL
-    - FILEHASH
-    - USERUNIQNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Enrich Entities:
-  ai_description: "### General Description\nThe **Enrich Entities** action retrieves\
-    \ threat intelligence from Trend Micro Cloud App Security to determine if specific\
-    \ entities\u2014URLs, SHA-1 File Hashes, or Email addresses\u2014are present in\
-    \ the organization's blocklist. This action enriches entities with block status\
-    \ metadata and flags suspicious entities, aiding analysts in identifying known\
-    \ threats within a case.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| **API Root** | String | Yes\
-    \ | The base URL for the Trend Micro Cloud App Security API instance. |\n| **API\
-    \ Key** | String | Yes | The API key used for authentication with the Trend Micro\
-    \ service. |\n| **Verify SSL** | Boolean | Yes | If enabled, the action verifies\
-    \ the SSL certificate of the API server. Default is `True`. |\n\n### Flow Description\n\
-    1. **Fetch Blocklist:** The action initiates a GET request to Trend Micro Cloud\
-    \ App Security to retrieve the current list of blocked URLs, senders, and file\
-    \ hashes.\n2. **Entity Iteration:** The action processes all `DestinationURL`,\
-    \ `FILEHASH`, and `USER` entities in the current context.\n3. **Validation & Matching:**\n\
-    \    * **URLs:** Extracts the hostname from the URL and checks for a match in\
-    \ the blocked URL list.\n    * **Emails:** Validates the entity as an email address\
-    \ and checks it against the blocked senders list.\n    * **Hashes:** Validates\
-    \ that the hash is a SHA-1 string and checks it against the blocked hashes list.\n\
-    4. **Internal Enrichment:**\n    * Updates the `is_suspicious` attribute to `True`\
-    \ for any entity found in the blocklist.\n    * Adds an enrichment field `TMCAS_blocked`\
-    \ (set to `True` or `False`) to the entity's additional properties.\n5. **Update\
-    \ & Output:** Updates the entities within Google SecOps and returns a JSON object\
-    \ containing the details of all blocked entities found.\n\n### Additional Notes\n\
-    * **Hash Compatibility:** This action only supports **SHA-1** hashes. Other hash\
-    \ types (like MD5 or SHA-256) will be ignored.\n* **URL Comparison:** The comparison\
-    \ logic is based on the domain/hostname of the URL, meaning the action will identify\
-    \ a match even if the specific path differs from the blocklist entry.\n* **User\
-    \ Entity Requirement:** User entities must match a standard email format to be\
-    \ processed for enrichment."
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: true
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates the 'is_suspicious' attribute and adds 'TMCAS_blocked' to the entity's
-      additional properties based on whether the entity is found in the Trend Micro
-      Cloud App Security blocklist.
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - DestinationURL
-    - FILEHASH
-    - USERUNIQNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Entity Email Search:
-  ai_description: >-
-    ### General Description
-
-    Searches for emails within Trend Micro Cloud App Security that match specific
-    entity criteria. This action is used to identify related email communications
-    by querying the platform for URLs, file hashes, email addresses, subjects, filenames,
-    and source IP addresses found in the case context. It retrieves detailed metadata
-    for each matching email, including sender, recipient, subject, and delivery time.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Default | Description |
-
-    | :--- | :--- | :--- | :--- | :--- |
-
-    | Max Days Backwards | Integer | No | 30 | Specifies the lookback period for the
-    search. The value must be between 1 and 90 days. If a value outside this range
-    is provided, the action will fail. |
-
-    | Max Emails To Return | Integer | No | 100 | The maximum number of unique email
-    records to retrieve across all processed entities. |
-
-
-    ### Additional Notes
-
-    - The action performs deduplication based on the `mail_unique_id` to ensure the
-    same email is not reported multiple times if it matches multiple entities.
-
-    - For `USER` entities, the action only performs a search if the entity identifier
-    matches a standard email address pattern.
-
-    - For `FILEHASH` entities, only SHA-1 (40 characters) and SHA-256 (64 characters)
-    formats are supported.
-
-
-    ### Flow Description
-
-    1. **Initialization**: Extracts API credentials and configuration parameters (API
-    Root, API Key, SSL verification).
-
-    2. **Parameter Validation**: Validates the `Max Days Backwards` parameter to ensure
-    it falls within the 1-90 day range allowed by the API.
-
-    3. **Entity Processing**: Iterates through all target entities in the current
-    context.
-
-    4. **Search Execution**: For each supported entity type, it calls the Trend Micro
-    API:
-        - **URL**: Searches for emails containing the specific URL.
-        - **User**: Searches the mailbox if the identifier is an email address.
-        - **File Hash**: Searches for emails with attachments matching the SHA-1 or
-    SHA-256 hash.
-        - **Email Subject**: Searches for emails with a matching subject line.
-        - **File Name**: Searches for emails containing attachments with the specified
-    filename.
-        - **Address**: Searches for emails originating from the specified source IP
-    address.
-    5. **Deduplication and Limiting**: Aggregates results, filters out duplicate email
-    IDs, and stops once the `Max Emails To Return` limit is reached.
-
-    6. **Output**: Returns the collected email data as a JSON result and provides
-    a summary message.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - FILEHASH
-    - FILENAME
-    - USERUNIQNAME
-    - DestinationURL
-    - EMAILSUBJECT
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -266,54 +99,377 @@ Entity Email Search:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by `entity_type`
+      (URL, USER, FILEHASH). It also filters entities by their `identifier` to ensure
+      they match specific formats (valid URL, email regex, SHA-1 length) and checks
+      if the identifier is already in the blocklist.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action makes a POST request to Trend Micro Cloud App Security to add specific
+      entities (URLs, Hashes, Emails) to a blocklist. This directly aligns with the
+      'Add IOC To Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches URL, File Hash, and User (Email) entities by checking their presence
+    in the Trend Micro Cloud App Security blocklist. The action retrieves the current
+    blocklist and updates the entities with their block status, marking them as suspicious
+    if they are found in the blocklist.
+
+
+    ### Flow Description
+
+    1. Initializes the connection to Trend Micro Cloud App Security using the provided
+    API credentials.
+
+    2. Retrieves the current list of blocked entities (URLs, file hashes, and senders)
+    from the external system via an API call.
+
+    3. Iterates through the target entities provided in the case.
+
+    4. For URL entities, extracts the hostname and checks if it matches any blocked
+    URLs.
+
+    5. For User entities (matching an email pattern), checks if the email address
+    is in the blocked senders list.
+
+    6. For File Hash entities (specifically SHA-1), checks if the hash is in the blocked
+    file hashes list.
+
+    7. If an entity is found in the blocklist, it is marked as suspicious and enriched
+    with a `TMCAS_blocked: True` property.
+
+    8. If an entity is not found in the blocklist, it is enriched with a `TMCAS_blocked:
+    False` property.
+
+    9. Updates the entities within Google SecOps and attaches a JSON result containing
+    the blocked entities.
+
+
+    ### Additional Notes
+
+    - The action only supports SHA-1 hashes for File Hash entities.
+
+    - For URL entities, the action extracts and uses the domain/hostname part of the
+    URL for enrichment.
+
+    - User entities must match a valid email address pattern to be processed.
+  ai_short_description: >-
+    Enriches URL, File Hash, and User (Email) entities by checking if they are present
+    in the Trend Micro Cloud App Security blocklist.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches the blocklist from Trend Micro Cloud App Security using a
+      GET request (fetches_data = true). It does not mutate any external data or internal
+      system data. It updates the entities with enrichment data and suspicious status
+      (can_update_entities = true). It does not create insights, modify alert data,
+      or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them based on
+      `entity.entity_type`. Specifically, it checks for `EntityTypes.URL`, `EntityTypes.USER`,
+      and `EntityTypes.FILEHASH`. Therefore, it targets URL, User, and File Hash entities
+      and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves threat intelligence (blocklist status) for indicators (URL,
+      Hash, Email) and enriches them. This aligns with the 'Enrich IOC' category.
+      It does not perform any blocking, containment, or ticketing actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Entity Email Search:
+  ai_description: >-
+    ### General Description
+
+    Searches for emails related to specific entities in Trend Micro Cloud App Security.
+    The action supports searching by URL, Hash, Email (User entity matching an email
+    pattern), Email Subject, File Name, and IP address.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities provided in the case.
+
+    2. Filters entities based on their type (URL, User, FileHash, EmailMessage, FileName,
+    Address) and specific conditions (e.g., User identifier must match an email regex,
+    FileHash must be SHA-1 or SHA-256).
+
+    3. For each valid entity, makes a GET request to the Trend Micro Cloud App Security
+    API (`/v1/sweeping/mails`) to search for associated emails within the specified
+    timeframe.
+
+    4. Collects unique email results up to the configured maximum limit.
+
+    5. Returns the aggregated email details as a JSON result.
+
+
+    ### Additional Notes
+
+    Only SHA-1 and SHA-256 hashes are supported for FileHash entities. The maximum
+    allowed value for 'Max Days Backwards' is 90.
+  ai_short_description: >-
+    Searches for emails related to specific entities in Trend Micro Cloud App Security
+    and returns the results as JSON.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GET request to the Trend Micro Cloud App
+      Security API to search for emails. It does not mutate external data, nor does
+      it update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: true
+      event: false
+      file_hash: true
+      file_name: true
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks `entity.entity_type`
+      against URL, USER, FILEHASH, EMAILMESSAGE, FILENAME, and ADDRESS. It also uses
+      `entity.identifier` to perform regex matching (for USER) and length checks (for
+      FILEHASH), and passes the identifier to the API search function.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for emails based on entity identifiers (like URL, Hash,
+      Email, Subject, File Name, IP) by querying the Trend Micro Cloud App Security
+      API. This directly aligns with the 'Search Email' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: true
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Max Days Backwards | String | No | Specify how many days backwards to look for
+    emails. Maximum is 90. Default: 30. |
+
+    | Max Emails To Return | String | No | Specify how many emails to return. Default:
+    100. |
 Mitigate Accounts:
   ai_description: >-
     ### General Description
 
-    The **Mitigate Accounts** action allows security analysts to perform administrative
-    mitigation actions on user accounts within Trend Micro Cloud App Security. This
-    action is specifically designed for Exchange accounts and operates asynchronously
-    to handle potentially long-running tasks.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Mitigation Action** | String (Dropdown) | Yes | The specific mitigation task
-    to perform. Options include: `Disable Account`, `Enable MFA`, `Reset Password`,
-    and `Revoke Sign In Sessions`. |
-
-    | **Email Addresses** | String | Yes | A comma-separated list of email addresses
-    belonging to the accounts that require mitigation. |
-
-
-    ### Additional Notes
-
-    - This action only supports **Exchange** accounts.
-
-    - The action is asynchronous; it initiates the process and then polls the Trend
-    Micro API for completion status using a batch ID.
+    Performs mitigation actions on user accounts via Trend Micro Cloud App Security.
+    Supported actions include Disable Account, Enable MFA, Reset Password, and Revoke
+    Sign In Sessions. Note that only Exchange accounts are supported.
 
 
     ### Flow Description
 
-    1. **Validation**: The script parses the comma-separated list of email addresses
-    and validates them against a standard email regex.
+    1. Validates the provided email addresses using a regular expression.
 
-    2. **Initiation**: It sends a POST request to the Trend Micro Cloud App Security
-    API to start the requested mitigation action for all valid emails.
+    2. Initiates the mitigation process for valid email addresses by making a POST
+    request to the Trend Micro Cloud App Security API (`/v1/mitigation/accounts`).
 
-    3. **Asynchronous Tracking**: The action stores a `batch_id` and enters an "In
-    Progress" state.
+    3. Stores the `batch_id` and the lists of successful and failed emails for asynchronous
+    tracking.
 
-    4. **Status Polling**: In subsequent runs, the action queries the API for the
-    status of the specific `batch_id` to check if the mitigation is complete.
+    4. In subsequent asynchronous runs, queries the mitigation status using the `batch_id`
+    via a GET request (`/v1/mitigation/accounts?batch_id={}`).
 
-    5. **Completion**: Once all accounts in the batch have reached a terminal state
-    (Success, Failed, or Skipped), the action reports the final results and completes.
+    5. Evaluates the status of each account's mitigation (Success, Executing, Skipped,
+    or Failed).
+
+    6. Completes the action once all mitigations have finished, returning the final
+    status and output message.
+
+
+    ### Additional Notes
+
+    Only Exchange accounts are supported by this action.
+  ai_short_description: >-
+    Performs mitigation actions (such as Disable Account, Enable MFA, Reset Password,
+    or Revoke Sign In Sessions) on user accounts via Trend Micro Cloud App Security.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -322,14 +478,52 @@ Mitigate Accounts:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Changes the state of user accounts in Trend Micro Cloud App Security by disabling
-      them, resetting passwords, revoking sessions, or enabling MFA.
-    fetches_data: true
+      Modifies user account settings in Trend Micro Cloud App Security (e.g., disabling
+      the account, resetting password, enabling MFA, or revoking sessions).
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request to Trend Micro Cloud App Security to mitigate
+      accounts (can_mutate_external_data=true). It does not fetch contextual data
+      for enrichment, nor does it update internal entities, create insights, or add
+      case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -343,58 +537,89 @@ Mitigate Accounts:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities`. Instead, it takes
+      a comma-separated list of email addresses as an input parameter. Therefore,
+      it does not run on entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: true
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs mitigation actions on user accounts. Depending on the selected
+      'Mitigation Action' parameter, it can disable an account (Disable Identity),
+      reset a password (Reset Identity Password), or modify account settings like
+      enabling MFA or revoking sessions (Update Identity).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: true
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: true
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Mitigation Action | Dropdown | Yes | Specify what mitigation action should be
+    applied. |
+
+    | Email Addresses | String | Yes | Specify a comma-separated list of email addresses
+    that need to be mitigated. |
 Mitigate Emails:
   ai_description: >-
     ### General Description
 
-    Deletes or quarantines emails using Trend Micro Cloud App Security. This action
-    allows security analysts to remediate malicious or unwanted emails across Gmail
-    and Exchange environments by providing specific message identifiers. It performs
-    a two-step process: first retrieving necessary metadata for the emails and then
-    executing the requested mitigation action.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Mitigation Action | String | Yes | Specifies the mitigation action to apply.
-    Options are 'Delete' or 'Quarantine'. |
-
-    | Service | String | Yes | Specifies the email service provider. Options are 'Gmail'
-    or 'Exchange'. |
-
-    | Message IDs | String | Yes | A comma-separated list of Trend Micro message identifiers
-    that need to be mitigated. |
-
-
-    ### Additional Notes
-
-    * **Gmail Restriction:** The 'Quarantine' action is not supported for Gmail; only
-    'Delete' can be used. If 'Quarantine' is selected with the 'Gmail' service, the
-    action will fail.
-
-    * **Execution Status:** This action initiates the mitigation process but does
-    not wait for or verify the final execution status of the mitigation on the Trend
-    Micro side.
+    Deletes or quarantines specific emails using Trend Micro Cloud App Security based
+    on provided message IDs. This action allows analysts to respond to malicious or
+    unwanted emails by removing them from user mailboxes or moving them to quarantine.
 
 
     ### Flow Description
 
-    1. **Validation:** Checks if the requested mitigation (Quarantine) is compatible
-    with the selected service (Gmail).
+    1. Extracts the provided message IDs, mitigation action (Delete or Quarantine),
+    and service type (Gmail or Exchange).
 
-    2. **Metadata Retrieval:** For each provided Message ID, the action queries Trend
-    Micro to retrieve essential metadata, including the mailbox, unique ID, and delivery
-    time.
+    2. Validates the input to ensure that the Quarantine action is not being attempted
+    on a Gmail service, as it is unsupported.
 
-    3. **Mitigation Execution:** Uses the retrieved metadata to send a mitigation
-    request (Delete or Quarantine) to the Trend Micro API.
+    3. Iterates through each provided message ID and fetches the email's details (such
+    as mailbox, unique ID, and delivery time) via a GET request to the Trend Micro
+    Cloud App Security API.
 
-    4. **Reporting:** Aggregates the results and provides a summary of which emails
-    were successfully processed and which failed.
+    4. If the email details are successfully retrieved, initiates the specified mitigation
+    action via a POST request to the API.
+
+    5. Compiles a list of successfully processed and failed message IDs and returns
+    a summary to the user.
+
+
+    ### Additional Notes
+
+    Currently, this action only initiates a mitigation request but does not verify
+    the final execution status of the mitigation. For Gmail, only the 'Delete' action
+    is supported.
+  ai_short_description: >-
+    Deletes or quarantines specific emails in Trend Micro Cloud App Security based
+    on their message IDs.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -403,14 +628,52 @@ Mitigate Emails:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Deletes or quarantines emails within the Trend Micro Cloud App Security platform
-      based on the provided message identifiers.
+      Deletes or quarantines specific emails in Trend Micro Cloud App Security.
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches email details using a GET request to the Trend Micro Cloud
+      App Security API (fetches_data=true). It then mutates external data by sending
+      a POST request to delete or quarantine the email (can_mutate_external_data=true).
+      It does not mutate internal SecOps data, update entities, create insights, modify
+      alerts, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -424,54 +687,83 @@ Mitigate Emails:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It relies entirely on the 'Message
+      IDs' provided as an action parameter to identify the emails to mitigate.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: true
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action can delete emails or move them to quarantine based on the selected
+      mitigation action. This aligns with both the 'Delete Email' (removing the email)
+      and 'Update Email' (modifying the state to quarantine) expected outcomes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: true
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Mitigation Action | Dropdown | Yes | Specify what mitigation action should be
+    applied. Supported values are 'Delete' and 'Quarantine'. |
+
+    | Service | Dropdown | Yes | Specify the service that is used for emails. Supported
+    values are 'Gmail' and 'Exchange'. |
+
+    | Message IDs | String | Yes | Specify a comma-separated list of message IDs that
+    need to be mitigated. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility designed to verify the connectivity
-    between Google SecOps and the Trend Micro Cloud App Security instance. It ensures
-    that the provided integration parameters (API Root and API Key) are valid and
-    that the network path is open.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **API Root** | String | Yes | The base URL of the Trend Micro Cloud App Security
-    API instance. |
-
-    | **API Key** | String | Yes | The API key used for authentication with the Trend
-    Micro service. |
-
-    | **Verify SSL** | Boolean | Yes | If enabled, the action will verify the SSL
-    certificate of the Trend Micro server. Defaults to `True`. |
-
-
-    ### Additional Notes
-
-    - This action does not process any entities or modify any data.
-
-    - It is primarily used during the initial setup of the integration or for troubleshooting
-    connection issues.
+    Tests connectivity to the Trend Micro Cloud App Security instance using the provided
+    integration configuration parameters.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the API Root, API Key, and SSL
-    verification settings from the integration configuration.
+    1. Extracts the API Root, API Key, and Verify SSL settings from the integration
+    configuration.
 
-    2. **Manager Initialization**: It initializes the `TrendMicroCloudAppSecurityManager`
-    with the provided credentials.
+    2. Initializes the Trend Micro Cloud App Security manager.
 
-    3. **Connectivity Test**: The action executes a `GET` request to the `/v1/sweeping/mails`
-    endpoint with a limit of 1 to test the API response.
+    3. Makes a GET request to the `/v1/sweeping/mails?limit=1` endpoint to verify
+    API access and authentication.
 
-    4. **Result Handling**: If the request is successful (HTTP 200), it returns a
-    success message. If an error occurs (e.g., 401 Unauthorized, 404 Not Found, or
-    network timeout), it catches the exception and reports a failure.
+    4. Returns a success message if the connection is established, or an error message
+    if it fails.
+
+
+    ### Additional Notes
+
+    This action is typically used to validate the integration setup and does not interact
+    with cases or entities.
+  ai_short_description: >-
+    Tests connectivity to the Trend Micro Cloud App Security instance to ensure the
+    integration is configured correctly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -482,10 +774,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to test API connectivity. It does not fetch contextual
+      data for alerts, mutate external data, mutate internal data, update entities,
+      create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -499,3 +828,39 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It solely tests the
+      connection to the external API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action only tests connectivity to the external service. It does not enrich
+      IOCs or assets, update alerts, create tickets, mutate external state, or perform
+      any other specific outcome category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

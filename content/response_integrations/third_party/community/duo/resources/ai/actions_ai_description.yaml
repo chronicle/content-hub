@@ -2,125 +2,45 @@ Get Authentication Logs for User:
   ai_description: >-
     ### General Description
 
-    This action retrieves user profile information and authentication logs from DUO
-    MFA for a specific username. It is designed to provide visibility into a user's
-    authentication patterns over a specified period (defaulting to 1 day). The action
-    also performs a frequency analysis on successful authentication sources (IP addresses,
-    states, operating systems, applications, devices, and factors) and filters them
-    based on a user-defined threshold to identify 'known' or 'safe' sources.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Authentication Threshold | string | Yes | The minimum number of successful authentications
-    required for an authentication source (e.g., an IP or device) to be included in
-    the summary lists. Default is 2. |
-
-    | Number Days Back | string | Yes | The number of days prior to the current time
-    to retrieve logs for. Default is 1. |
-
-    | Username | string | No | The DUO username for which to retrieve data. |
+    Retrieves user data and authentication logs for a specified user from DUO MFA
+    over a defined number of days. It aggregates authentication sources (such as IP
+    addresses, operating systems, applications, and devices) and filters them based
+    on a threshold to help identify normally seen, known-safe authentication sources.
 
 
     ### Flow Description
 
-    1. **Authentication**: Connects to the DUO Admin API using the configured Hostname,
-    Integration Key, and Secret Key.
+    1. Extracts the `Username`, `Number Days Back`, and `Authentication Threshold`
+    parameters from the action configuration.
 
-    2. **User Identification**: Queries DUO to find the `user_id` associated with
-    the provided `Username` parameter.
+    2. Calculates the timestamp range for the requested number of days back from the
+    current time.
 
-    3. **Log Retrieval**: Fetches all authentication logs for that user within the
-    time window defined by `Number Days Back`.
+    3. Makes an API call to DUO (`get_users_by_name`) to retrieve the target user's
+    profile and internal DUO user ID.
 
-    4. **Data Processing**: Iterates through the logs to identify successful authentications.
+    4. Makes a subsequent API call to DUO (`get_authentication_log`) to fetch the
+    user's authentication logs within the calculated timeframe.
 
-    5. **Frequency Analysis**: Counts occurrences of specific metadata fields (IP,
-    OS, Location, Device, etc.) for successful logins.
+    5. Parses the retrieved logs to count occurrences of access IPs, states, OS, applications,
+    endpoint keys, auth devices, and factors for successful authentications.
 
-    6. **Filtering**: Removes entries from the frequency counts that do not meet the
-    `Authentication Threshold`.
+    6. Filters the aggregated counts against the provided authentication threshold,
+    removing sources that do not meet the minimum count.
 
-    7. **Output**: Returns a comprehensive JSON object containing the user's profile,
-    raw logs, and the filtered frequency analysis.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
-    can_mutate_internal_data: false
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
-  entity_usage:
-    entity_types: []
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: false
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-Get Trust Monitor Events:
-  ai_description: >-
-    ### General Description
-
-    Retrieves Trust Monitor events from DUO Security for a specified lookback period.
-    This action interacts with the DUO Admin API to fetch security events that help
-    monitor trust assessments and potential security anomalies within the DUO environment.
-    It is primarily used for data gathering and auditing purposes.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Number Days Back | String | Yes | The number of days prior to the current time
-    to retrieve events from. The value is converted to an integer and used to calculate
-    the start timestamp for the API request. Default is '1'. |
+    7. Returns the final aggregated data, user profile, and raw logs as a JSON result.
 
 
     ### Additional Notes
 
-    - This action requires valid DUO Admin API credentials (API Hostname, Admin Secret
-    Key, and Admin Integration Key) to be configured in the integration settings.
+    - Requires DUO Admin API keys configured in the integration.
 
-    - The action does not process specific entities; it performs a global fetch of
-    events based on the time range provided.
-
-
-    ### Flow Description
-
-    1. **Configuration Retrieval**: The action extracts the DUO API Hostname, Admin
-    Secret Key, and Admin Integration Key from the integration's provider configuration.
-
-    2. **Time Calculation**: It calculates the start and end timestamps in milliseconds.
-    The start timestamp is determined by subtracting the specified number of days
-    (converted from the `Number Days Back` parameter) from the current time.
-
-    3. **API Initialization**: Initializes the DUO Admin API client using the provided
-    credentials.
-
-    4. **Data Retrieval**: Calls the DUO SDK method `get_trust_monitor_events_by_offset`
-    using the calculated time range to fetch Trust Monitor events.
-
-    5. **Result Processing**: Formats the retrieved events into a JSON structure and
-    attaches them to the action's result object for use in subsequent playbook steps.
+    - The script includes a built-in retry mechanism: if an API call fails (e.g.,
+    due to DUO rate limiting), it will pause for 60 seconds and attempt the call again.
+  ai_short_description: >-
+    Retrieves user data and authentication logs for a specified user from DUO MFA,
+    aggregating and filtering authentication sources based on a threshold to identify
+    known safe entities.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -131,10 +51,50 @@ Get Trust Monitor Events:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data by making GET requests to the DUO Admin API to retrieve
+      user profiles and authentication logs. It does not perform any state-changing
+      operations (POST/PUT/DELETE) on external systems, so it cannot mutate external
+      data. It also does not call any SDK methods to update entities, create insights,
+      modify alert data, or create case comments, meaning it does not mutate internal
+      data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -148,43 +108,230 @@ Get Trust Monitor Events:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script does not iterate over or reference `siemplify.target_entities`. Instead,
+      it relies entirely on the manually provided 'Username' action parameter to perform
+      its operations. Therefore, it does not run on entities, and all entity type
+      and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches historical authentication logs and telemetry data for a specific
+      user from DUO MFA. This directly aligns with the 'Search Events' expected outcome,
+      as it returns a collection of historical logs matching specific search parameters
+      (username and timeframe). It does not mutate external state, update alerts,
+      or enrich entities directly within the platform.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Authentication Threshold | String | Yes | Number of successful authentications
+    to indicate a source may be from a known safe entity. |
+
+    | Number Days Back | String | Yes | Number of days back to obtain authentication
+    logs from. Default 1 day. |
+
+    | Username | String | No | Username to retrieve logs for. |
+Get Trust Monitor Events:
+  ai_description: >-
+    ### General Description
+
+    Retrieves DUO Trust Monitor events from the specified number of days in the past
+    using the DUO Admin API. This action fetches historical security events and telemetry
+    data for analysis within the SecOps platform.
+
+
+    ### Flow Description
+
+    1. Extracts the `Number Days Back` parameter provided by the user.
+
+    2. Calculates the start (`mintime`) and end (`maxtime`) timestamps based on the
+    current time and the specified number of days back.
+
+    3. Authenticates with the DUO Admin API using the integration's configured credentials
+    (API Hostname, Admin Secret Key, Admin Integration Key).
+
+    4. Makes an API call (`get_trust_monitor_events_by_offset`) to fetch the Trust
+    Monitor events within the calculated time range.
+
+    5. Returns the fetched events as a JSON result to the SecOps platform.
+
+
+    ### Additional Notes
+
+    Requires DUO Admin API keys to be properly configured in the integration settings.
+  ai_short_description: >-
+    Retrieves DUO Trust Monitor events from the specified number of days in the past
+    using the DUO Admin API.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request (via SDK `get_trust_monitor_events_by_offset`)
+      to fetch events. It does not mutate external data, update internal entities,
+      create insights, modify alerts, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The script does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates globally based on the provided time range parameter,
+      so all entity type and filter flags must be false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches historical events/telemetry data (Trust Monitor events) from
+      DUO based on a time parameter. This aligns with the 'Search Events' category.
+      It does not enrich specific IOCs or assets, nor does it mutate any state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Number Days Back | String | Yes | Number of days back to pull events from |
 Get Users by Name:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed user information from DUO MFA using the Admin API based on
-    a specific username. This action is designed to fetch user-specific metadata,
-    including user IDs, authentication details, and device data, providing visibility
-    into a user's status within the DUO ecosystem.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Username | String | Yes | The specific username to query in the DUO Admin API
-    to retrieve associated data. |
+    Queries the DUO Admin API to retrieve detailed user, authentication, and device
+    information for a specified username. This action is useful for gathering context
+    about a user's multi-factor authentication (MFA) status and associated devices
+    directly from DUO.
 
 
     ### Flow Description
 
-    1. **Configuration Extraction**: Retrieves the DUO API Hostname, Admin Secret
-    Key, and Admin Integration Key from the integration's configuration settings.
+    1. Extracts the target `Username` from the action parameters.
 
-    2. **Parameter Extraction**: Retrieves the target `Username` provided as an action
-    input.
+    2. Initializes the DUO Admin API client using the integration's configured credentials
+    (API Hostname, Admin Secret Key, and Admin Integration Key).
 
-    3. **API Initialization**: Initializes the DUO Admin API client using the extracted
-    credentials.
+    3. Makes an API call to the DUO `get_users_by_name` endpoint via the DUO Python
+    SDK to fetch the user's data.
 
-    4. **Data Retrieval**: Calls the `get_users_by_name` endpoint to fetch all records
-    associated with the provided username.
+    4. Parses the API response to extract the `user_id` and compiles the full user
+    data.
 
-    5. **Result Processing**: Iterates through the returned data to identify the `user_id`
-    and aggregates the full response into a structured JSON result for use in subsequent
-    playbook steps.
+    5. Returns the compiled user information as a JSON result to the SecOps platform.
+
+
+    ### Additional Notes
+
+    - This action requires DUO Admin API keys to be properly configured in the integration
+    settings.
+
+    - The action does not operate on SecOps entities; it relies strictly on the provided
+    `Username` parameter.
+  ai_short_description: >-
+    Queries the DUO Admin API to retrieve detailed user, authentication, and device
+    information for a specified username.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -195,10 +342,48 @@ Get Users by Name:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes an API call to DUO (`get_users_by_name`) to fetch user data,
+      so `fetches_data` is true. It does not perform any state-changing operations
+      on DUO (no external mutation). It does not update entities, create insights,
+      modify alert data, or create case comments (no internal mutation).
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -212,36 +397,80 @@ Get Users by Name:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the manually provided `Username` action parameter.
+      Therefore, it does not run on entities, and all entity type and filtering flags
+      are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches contextual metadata (user, authentication, and device data)
+      for a specific user from DUO. This aligns with the 'Enrich Asset' expected outcome,
+      as it retrieves information about a user/identity. It does not modify alerts,
+      tickets, blocklists, or identities.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Username | String | Yes | Username |
 Ping:
   ai_description: >-
     ### General Description
 
-    Verifies the connectivity and credentials for the DUO Auth API. This action uses
-    the DUO Python SDK to call the `/check` endpoint, ensuring that the provided API
-    Hostname, Secret Key, and Integration Key are valid and that the request signature
-    is generated correctly.
-
-
-    ### Parameters
-
-    There are no input parameters for this action. It relies entirely on the integration's
-    configuration settings (API Hostname, Auth Secret Key, and Auth Integration Key).
+    Verifies the DUO Auth API integration and secret keys by pinging the `/check`
+    endpoint. This action ensures that the provided credentials are valid and that
+    the signature is being generated properly.
 
 
     ### Flow Description
 
-    1. **Configuration Extraction**: Retrieves the `API Hostname`, `Auth Secret Key`,
-    and `Auth Integration Key` from the DUO integration settings.
+    1. Extracts the API Hostname, Auth Secret Key, and Auth Integration Key from the
+    integration configuration.
 
-    2. **Client Initialization**: Initializes the DUO Auth API client using the retrieved
-    credentials.
+    2. Initializes the DUO Auth client using the provided credentials.
 
-    3. **Connectivity Check**: Executes the `check()` method against the DUO API to
-    verify the integration setup.
+    3. Calls the `/check` endpoint via the DUO SDK (`auth_api.check()`) to validate
+    the connection.
 
-    4. **Result Handling**: If the check is successful, it returns a confirmation
-    message. If an exception occurs, it reports a failure with the specific error
-    details.
+    4. Returns a success message if the credentials are valid, or an error message
+    if the connection fails.
+
+
+    ### Additional Notes
+
+    This action is primarily used for testing connectivity and credential validity.
+    It does not process any entities or mutate any data.
+  ai_short_description: >-
+    Verifies the DUO Auth API integration and secret keys by pinging the `/check`
+    endpoint to ensure valid credentials and proper signature generation.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -250,12 +479,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action only calls `auth_api.check()` to verify credentials. It does not
+      fetch contextual data for entities, mutate external systems, update internal
+      entities, create insights, modify alerts, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -269,3 +535,42 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script does not access `siemplify.target_entities` or perform any entity-specific
+      operations. It solely relies on integration configuration parameters to test
+      connectivity. Therefore, it does not run on entities and all entity-related
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity and credential check (Ping) for the DUO
+      API. It does not enrich IOCs or assets, update alerts or tickets, modify blocklists
+      or allowlists, manage identities, contain hosts, search events or emails, or
+      submit files. Therefore, it does not match any of the specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
