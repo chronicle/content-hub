@@ -261,7 +261,8 @@ mutate {
 }
 # Step 2: Perform conditional logic on the SAFE intermediate variable and Safely map to the final UDM schema.
     # Using merge handles array populations safely, and adding a second 
-    # on_error protects against type-mismatches during UDM assignment.␋if [source_hostname] != "" {
+    # on_error protects against type-mismatches during UDM assignment.
+if [source_hostname] != "" {
     mutate {
         replace => {
             "event.idm.read_only_udm.principal.hostname" => "%{source_hostname}"
