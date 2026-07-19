@@ -83,13 +83,14 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
     try:
         result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
         _log_subprocess_result(result)
+        _remove_safe_to_ignore_packages_from_requirements(requirements_path)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
 def _remove_safe_to_ignore_packages_from_requirements(requirements_path: Path) -> None:
-    if not requirements_path.exists():
+    if not requirements_path.is_file():
         return
     with requirements_path.open(encoding="utf-8") as f:
         lines = f.readlines()
@@ -98,7 +99,7 @@ def _remove_safe_to_ignore_packages_from_requirements(requirements_path: Path) -
         line
         for line in lines
         if not any(
-            re.match(rf"^{re.escape(pkg)}(?:==|>=|<=|~=|;|\s|$)", line, re.IGNORECASE)
+            re.match(rf"^\s*{re.escape(pkg)}(?:==|>=|<=|~=|;|\s|$)", line, re.IGNORECASE)
             for pkg in constants.SAFE_TO_IGNORE_PACKAGES
         )
     ]
@@ -188,8 +189,6 @@ def download_wheels_from_requirements(
     command.extend(runtime_config)
     logger.debug("Downloading wheels from %s to %s", requirements_path, dst_path)
     logger.debug("Running command: %s", command)
-
-    _remove_safe_to_ignore_packages_from_requirements(requirements_path)
 
     try:
         if is_windows():
