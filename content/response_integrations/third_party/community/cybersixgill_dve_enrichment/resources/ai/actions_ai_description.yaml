@@ -3,61 +3,88 @@ Enrich CVE:
     ### General Description
 
     Enriches CVE entities using Cybersixgill's Dynamic Vulnerability Exploit (DVE)
-    Score. This action provides deep visibility into vulnerabilities by retrieving
-    real-time threat intelligence from the deep and dark web, including DVE scores,
-    trending status, and proof-of-concept (POC) details. It helps security teams prioritize
-    critical vulnerabilities based on actual exploitation risk rather than static
-    scores alone.
-
-
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Client Id | String | Yes | The Client ID for Cybersixgill API authentication.
-    |
-
-    | Client Secret | String | Yes | The Client Secret for Cybersixgill API authentication.
-    |
+    Score and threat intelligence. This action retrieves dynamic attributes such as
+    trending data, POC exploit details, and CVSS scores to help prioritize critical
+    vulnerabilities.
 
 
     ### Flow Description
 
-    1. **Authentication:** Retrieves API credentials (Client ID and Secret) from the
-    integration configuration.
+    1. Iterates through the target entities in the case.
 
-    2. **Entity Filtering:** Identifies CVE entities within the current context.
+    2. Filters entities to process only those of type `CVE`.
 
-    3. **Data Retrieval:** Queries the Cybersixgill API for each CVE to fetch DVE
-    scores and associated metadata (NVD links, CVSS scores, exploitability probability).
+    3. Makes an API call to Cybersixgill to fetch DVE enrichment data for each CVE
+    identifier.
 
-    4. **Internal Enrichment:** Updates the entity's additional properties with the
-    retrieved data and marks the entity as enriched.
+    4. Updates the entity's additional properties with the retrieved threat intelligence
+    and marks it as enriched.
 
-    5. **Insight Generation:** Creates a detailed case insight for each CVE containing
-    a summary of the threat intelligence.
+    5. Generates a case insight and an entity table containing the vulnerability details
+    and scores.
 
-    6. **Data Visualization:** Adds a structured data table to the entity results
-    for easy review of vulnerability details.
+    6. Attaches the raw JSON results to the action's output.
+
+
+    ### Additional Notes
+
+    Requires Cybersixgill Client ID and Client Secret configured at the integration
+    level.
+  ai_short_description: >-
+    Enriches CVE entities with Cybersixgill's Dynamic Vulnerability Exploit (DVE)
+    Score and threat intelligence to provide deeper visibility into vulnerability
+    impact.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity properties with Cybersixgill DVE scores and metadata, and creates
-      case insights for the enriched CVEs.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to Cybersixgill API to fetch CVE enrichment data.
+      It does not mutate external data but updates internal entities with additional
+      properties and creates case insights.
   entity_usage:
     entity_types:
-    - CVE
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: true
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -71,43 +98,69 @@ Enrich CVE:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.CVE`. This means it targets CVE entities, filtering strictly
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches vulnerability intelligence and DVE scores for CVE entities
+      from Cybersixgill. This matches the 'Enrich IOC' expected outcome as it returns
+      threat intelligence for the indicator (CVE). It does not mutate data on external
+      systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
   ai_description: >-
     ### General Description
 
-    The Ping action is a diagnostic utility designed to verify the connectivity between
-    Google SecOps and the Cybersixgill DVE Enrichment service. Its primary purpose
-    is to ensure that the provided API credentials (Client ID and Client Secret) are
-    valid and that the network path to the Cybersixgill API is open.
-
-
-    ### Parameters Description
-
-    There are no input parameters for this action. It relies entirely on the global
-    integration configuration for authentication.
-
-
-    ### Additional Notes
-
-    This action is typically used during the initial setup of the integration or for
-    troubleshooting authentication issues. It does not process entities or modify
-    any data within the SOAR or the external system.
+    Tests connectivity to the Cybersixgill DVE Enrichment service.
 
 
     ### Flow Description
 
-    1. **Configuration Extraction**: The action retrieves the 'Client Id' and 'Client
-    Secret' from the integration's global settings.
+    1. Extracts the Client ID and Client Secret from the integration configuration.
 
-    2. **Manager Initialization**: It initializes the `SixgillEnrichManager` with
-    the extracted credentials.
+    2. Initializes the Cybersixgill manager.
 
-    3. **Connectivity Test**: The manager attempts to obtain an access token from
-    the Cybersixgill API using the `SixgillBaseClient`.
+    3. Makes an API call to retrieve an access token to verify connectivity.
 
-    4. **Result Reporting**: If the token is successfully retrieved, the action returns
-    a success status. If an exception occurs (e.g., invalid credentials or network
-    timeout), it returns a failure status with the error details.
+    4. Returns a success or failure message based on the connection result.
+
+
+    ### Additional Notes
+
+    This is a utility action used to ensure the integration is configured correctly
+    and can communicate with the Cybersixgill API.
+  ai_short_description: >-
+    Tests connectivity to the Cybersixgill DVE Enrichment service by attempting to
+    retrieve an access token.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -118,10 +171,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes an API call to get an access token to test connectivity, but
+      it does not fetch additional contextual data on alerts or entities. It does
+      not mutate external data, update internal entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -135,3 +225,39 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It is a standalone
+      connectivity test.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple ping/connectivity test and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

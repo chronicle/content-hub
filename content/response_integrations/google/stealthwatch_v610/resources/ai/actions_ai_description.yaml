@@ -1,33 +1,32 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Ping:
-  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
-    \ used to verify the connectivity between Google SecOps and the Cisco Stealthwatch\
-    \ (v6.10) instance. It ensures that the provided integration parameters\u2014\
-    such as the API Root, Username, and Password\u2014are correct and that the Stealthwatch\
-    \ server is reachable over the network.\n\n### Parameters\nThere are no user-input\
-    \ parameters for this action. It relies entirely on the integration's global configuration\
-    \ settings.\n\n### Flow Description\n1. **Configuration Retrieval**: The action\
-    \ fetches the 'Api Root', 'Username', and 'Password' from the StealthwatchV6-10\
-    \ integration settings.\n2. **Authentication**: The action initializes the `StealthwatchManager`,\
-    \ which performs a POST request to the `/token/v2/authenticate` endpoint to obtain\
-    \ a JWT cookie.\n3. **Connectivity Test**: The manager executes the `test_connectivity`\
-    \ method, which performs a GET request to the `/sw-reporting/v1/tenants` endpoint\
-    \ to retrieve available domains.\n4. **Result Reporting**: If the authentication\
-    \ and domain retrieval are successful, the action returns a 'Connected Successfully'\
-    \ message and a boolean `True` result."
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Stealthwatch V6-10 instance to ensure proper configuration
+    and communication.
+
+
+    ### Flow Description
+
+    1. Retrieves integration configurations including the API Root, Username, and
+    Password.
+
+    2. Initializes the StealthwatchManager with the provided credentials.
+
+    3. Executes a connectivity test by attempting to fetch domains from the Stealthwatch
+    API via an HTTP GET request.
+
+    4. Returns a success message if the connection is successfully established.
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup or troubleshooting of the
+    Stealthwatch V6-10 integration to verify that the SOAR platform can successfully
+    authenticate and communicate with the external service.
+  ai_short_description: >-
+    Tests connectivity to the Stealthwatch V6-10 instance to ensure proper configuration
+    and communication.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -36,12 +35,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to test connectivity but does not fetch contextual
+      data for alerts or entities. It does not mutate external or internal data, update
+      entities, create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -55,52 +91,80 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It solely tests the
+      connection to the Stealthwatch server using integration configurations, so all
+      entity-related flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Search Events:
   ai_description: >-
     ### General Description
 
-    This action retrieves security events for specific IP address entities from Cisco
-    Stealthwatch (v6.10) within a user-defined timeframe. It is designed to provide
-    security analysts with visibility into the network behavior of a host by identifying
-    events where the host acted as either a source or a destination. The results are
-    presented as both raw JSON data and formatted entity tables for easy review within
-    the Google SecOps platform.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Timeframe | Integer | Yes | Specifies the lookback period in hours from the
-    current time to search for security events. |
+    Retrieves security events associated with specific IP addresses from Cisco Secure
+    Network Analytics (Stealthwatch) for a given time frame.
 
 
     ### Flow Description
 
-    1. **Time Calculation**: The action calculates the start and end timestamps for
-    the search based on the current UTC time and the provided `Timeframe` parameter.
+    1. Initializes the Stealthwatch manager using the provided integration configurations.
 
-    2. **Entity Filtering**: It iterates through the target entities and processes
-    only those of type `ADDRESS` (IP addresses).
+    2. Calculates the search start and end times based on the `Timeframe` parameter.
 
-    3. **Domain Identification**: For each IP address, the action queries the Stealthwatch
-    API to determine the `domain_id` associated with that host.
+    3. Iterates through the target entities, filtering specifically for IP addresses
+    (ADDRESS).
 
-    4. **Search Initiation**: If a domain is found, the action initiates two separate
-    asynchronous search queries: one for events where the IP is the source and another
-    where it is the destination.
+    4. For each IP address, queries the Stealthwatch API to determine its associated
+    domain ID.
 
-    5. **Result Retrieval**: The action polls the Stealthwatch API for the completion
-    of these search jobs and retrieves the resulting event data.
+    5. Initiates two event searches via the Stealthwatch API: one where the IP address
+    is the source, and another where it is the destination.
 
-    6. **Data Attachment**: The retrieved events are attached to the entity in the
-    SOAR interface as a JSON object and a formatted CSV table containing security
-    event details.
+    6. Retrieves the search results for both queries and combines them into a single
+    list.
 
-    7. **Final Status**: The action concludes by reporting which entities had security
-    events found or if no events were discovered.
+    7. Attaches the combined event results as a JSON object and a CSV table to the
+    action's output for each processed entity.
+
+
+    ### Additional Notes
+
+    This action only operates on entities of type ADDRESS. If no events are found
+    for an entity, it is skipped in the final output summary.
+  ai_short_description: >-
+    Retrieves historical security events associated with specific IP addresses from
+    Cisco Secure Network Analytics (Stealthwatch) for a given time frame.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -111,11 +175,49 @@ Search Events:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches event data from the Stealthwatch API using GET and POST (for
+      search queries) requests. It does not mutate external data (no state changes
+      on the external system), nor does it mutate internal data (no entity updates,
+      insights, or case comments are created). It only attaches the retrieved data
+      as action results.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -129,34 +231,86 @@ Search Events:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script iterates over `siemplify.target_entities` and explicitly filters
+      them using the condition `if entity.entity_type == EntityTypes.ADDRESS:`. Therefore,
+      it targets ADDRESS entities and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries the Stealthwatch API to retrieve historical security events
+      and telemetry data associated with specific IP addresses over a defined timeframe.
+      This directly aligns with the 'Search Events' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Timeframe | String | Yes | Time frame in hours to search backwards from the
+    current time. |
 Search Flows:
-  ai_description: "### General Description\nThe **Search Flows** action retrieves\
-    \ network flow records from Cisco Stealthwatch (Secure Network Analytics) for\
-    \ specific IP address entities. It identifies flows where the target entity acts\
-    \ as either the source or the destination within a user-defined timeframe. This\
-    \ action is primarily used for network forensics and visibility, allowing analysts\
-    \ to see which internal or external hosts an IP has been communicating with.\n\
-    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| **Timeframe** | Integer | Yes | The number of\
-    \ hours to look back from the current time (e.g., 3) to define the search window.\
-    \ |\n| **Limit** | Integer | Yes | The maximum number of flow records to retrieve\
-    \ for each search (source and destination). |\n\n### Flow Description\n1. **Initialization**:\
-    \ The action retrieves the integration configuration (API Root, credentials) and\
-    \ the user-provided parameters: `Timeframe` and `Limit`.\n2. **Time Calculation**:\
-    \ It calculates the `start_time` and `end_time` in ISO format based on the current\
-    \ UTC time and the `Timeframe` parameter.\n3. **Domain Identification**: For each\
-    \ IP address entity, the action queries the Stealthwatch API to find the `domain_id`\
-    \ associated with that specific IP.\n4. **Flow Searching**: For each valid domain\
-    \ found, the action initiates two separate asynchronous search queries:\n    *\
-    \ A search for flows where the entity is the **source IP**.\n    * A search for\
-    \ flows where the entity is the **destination IP**.\n5. **Data Retrieval**: The\
-    \ action polls the Stealthwatch API for the status of the search jobs. Once completed,\
-    \ it retrieves the flow results up to the specified `Limit`.\n6. **Enrichment\
-    \ and Output**: \n    * The raw flow data is attached to the action results as\
-    \ a JSON object.\n    * A flattened CSV table of the flows is created and attached\
-    \ as an **Entity Table** for the specific IP address.\n7. **Completion**: The\
-    \ action concludes by listing the entities for which flows were successfully identified\
-    \ and retrieved."
+  ai_description: >-
+    ### General Description
+
+    Retrieves network flow data associated with specific IP address entities from
+    Cisco Secure Network Analytics (Stealthwatch).
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities and filters for IP Address entities.
+
+    2. For each IP address, queries Stealthwatch via API to determine its associated
+    domain ID.
+
+    3. Initiates a flow search in Stealthwatch for flows where the IP address is the
+    source.
+
+    4. Retrieves the results of the source flow search.
+
+    5. Initiates a second flow search in Stealthwatch for flows where the IP address
+    is the destination.
+
+    6. Retrieves the results of the destination flow search and combines them with
+    the source flow results.
+
+    7. Attaches the combined flow results to the entity as a JSON object and a CSV
+    table within the SecOps platform.
+
+
+    ### Additional Notes
+
+    The action requires a timeframe (in hours) and a limit for the number of flows
+    to retrieve.
+  ai_short_description: >-
+    Retrieves network flow data (both as source and destination) for IP address entities
+    from Cisco Secure Network Analytics (Stealthwatch) within a specified timeframe.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -167,11 +321,48 @@ Search Flows:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches flow data from Stealthwatch via HTTP POST and GET requests
+      (fetches_data=true). It does not mutate external data, update internal entities,
+      or create insights. It only attaches the retrieved data as JSON and tables to
+      the action results.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -185,3 +376,48 @@ Search Flows:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `if
+      entity.entity_type == EntityTypes.ADDRESS:`. This means it targets ADDRESS entities,
+      filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action searches for network flows (telemetry data) associated with specific
+      IP addresses within a given timeframe. This aligns with the 'Search Events'
+      category, which involves returning a collection of historical logs or telemetry
+      data matching specific search parameters.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Timeframe | String | Yes | Time frame in hours(e.g: 3). |
+
+    | Limit | String | Yes | The limit of the recieved flow. |
