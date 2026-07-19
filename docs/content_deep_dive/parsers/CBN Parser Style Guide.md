@@ -17,7 +17,7 @@ Below are the core steps which need to be followed in  the same order for  devel
    Before extracting any data, start by initializing the fields you plan to use to empty values (`""`).  
    **Why it is important:** 
 
-During the mapping phase, you will frequently write conditional statements to check if a piece of data exists before attempting to map it (e.g., `if [source_ip] != “”{ ... }`). If a field is not initialized and the extraction phase fails to populate it, referencing that missing field later can cause the parser to fail or produce unintended results. Initializing establishes a clean baseline.
+During the mapping phase, you will frequently write conditional statements to check if a piece of data exists before attempting to map it (e.g., `if [source_ip] != "" { ... }`). If a field is not initialized and the extraction phase fails to populate it, referencing that missing field later can cause the parser to fail or produce unintended results. Initializing establishes a clean baseline.
 
 ### **2\. Data Extraction**
 
