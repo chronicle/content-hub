@@ -155,7 +155,7 @@ grok {
   match => {
     "message" => [
       # 1. Predefined Patterns for standard fields:
-      "%{SYSLOGTIMESTAMP:syslog_timestamp} %{HOST:device_name} %{WORD:module_name}: User \\[(?P<target_username>[a-zA-Z0-9\\-]+)\\] ",status=<(?P<auth_status>[A-Z]+)>\\.%{SPACE}%{GREEDYDATA:kv_payload}"]
+      "%{SYSLOGTIMESTAMP:syslog_timestamp} %{HOST:device_name} %{WORD:module_name}: User \\[(?P<target_username>[a-zA-Z0-9\\-]+)\\] ,status=<(?P<auth_status>[A-Z]+)>\\.%{SPACE}%{GREEDYDATA:kv_payload}"]
   }
   # Overwrite explicitly prevents flakiness by replacing the initialized null/empty 
   # values with the newly fetched data from the GROK match.
