@@ -20,13 +20,13 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 
-class ActionProductCategories(BaseModel):
+class OutcomeCategories(BaseModel):
     reasoning: Annotated[
         str,
         Field(
             title="Categorization Reasoning",
             description=(
-                "Step-by-step reasoning evaluating the action against all available product "
+                "Step-by-step reasoning evaluating the action against all available outcome "
                 "categories. Explicitly state why the action matches or does not match the "
                 "'Expected Outcome' of relevant categories before setting their boolean flags."
             ),
@@ -352,7 +352,7 @@ class ActionProductCategories(BaseModel):
     ]
 
 
-class ActionProductCategory(enum.StrEnum):
+class OutcomeCategoriesEnum(enum.StrEnum):
     ENRICH_IOC = "Enrich IOC (Indicator of Compromise)"
     ENRICH_ASSET = "Enrich Asset"
     UPDATE_ALERT = "Update Alert"
@@ -382,32 +382,32 @@ class ActionProductCategory(enum.StrEnum):
     GET_ALERT_INFORMATION = "Get Alert Information"
 
 
-PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY: dict[str, ActionProductCategory] = {
-    "enrich_ioc": ActionProductCategory.ENRICH_IOC,
-    "enrich_asset": ActionProductCategory.ENRICH_ASSET,
-    "update_alert": ActionProductCategory.UPDATE_ALERT,
-    "add_alert_comment": ActionProductCategory.ADD_ALERT_COMMENT,
-    "create_ticket": ActionProductCategory.CREATE_TICKET,
-    "update_ticket": ActionProductCategory.UPDATE_TICKET,
-    "add_ioc_to_blocklist": ActionProductCategory.ADD_IOC_TO_BLOCKLIST,
-    "remove_ioc_from_blocklist": ActionProductCategory.REMOVE_IOC_FROM_BLOCKLIST,
-    "add_ioc_to_allowlist": ActionProductCategory.ADD_IOC_TO_ALLOWLIST,
-    "remove_ioc_from_allowlist": ActionProductCategory.REMOVE_IOC_FROM_ALLOWLIST,
-    "disable_identity": ActionProductCategory.DISABLE_IDENTITY,
-    "enable_identity": ActionProductCategory.ENABLE_IDENTITY,
-    "contain_host": ActionProductCategory.CONTAIN_HOST,
-    "uncontain_host": ActionProductCategory.UNCONTAIN_HOST,
-    "reset_identity_password": ActionProductCategory.RESET_IDENTITY_PASSWORD,
-    "update_identity": ActionProductCategory.UPDATE_IDENTITY,
-    "search_events": ActionProductCategory.SEARCH_EVENTS,
-    "execute_command_on_the_host": ActionProductCategory.EXECUTE_COMMAND_ON_THE_HOST,
-    "download_file": ActionProductCategory.DOWNLOAD_FILE,
-    "send_email": ActionProductCategory.SEND_EMAIL,
-    "search_email": ActionProductCategory.SEARCH_EMAIL,
-    "delete_email": ActionProductCategory.DELETE_EMAIL,
-    "update_email": ActionProductCategory.UPDATE_EMAIL,
-    "submit_file": ActionProductCategory.SUBMIT_FILE,
-    "send_message": ActionProductCategory.SEND_MESSAGE,
-    "search_asset": ActionProductCategory.SEARCH_ASSET,
-    "get_alert_information": ActionProductCategory.GET_ALERT_INFORMATION,
+OUTCOME_CATEGORIES_TO_DEF_OUTCOME_CATEGORIES_ENUM: dict[str, OutcomeCategoriesEnum] = {
+    "enrich_ioc": OutcomeCategoriesEnum.ENRICH_IOC,
+    "enrich_asset": OutcomeCategoriesEnum.ENRICH_ASSET,
+    "update_alert": OutcomeCategoriesEnum.UPDATE_ALERT,
+    "add_alert_comment": OutcomeCategoriesEnum.ADD_ALERT_COMMENT,
+    "create_ticket": OutcomeCategoriesEnum.CREATE_TICKET,
+    "update_ticket": OutcomeCategoriesEnum.UPDATE_TICKET,
+    "add_ioc_to_blocklist": OutcomeCategoriesEnum.ADD_IOC_TO_BLOCKLIST,
+    "remove_ioc_from_blocklist": OutcomeCategoriesEnum.REMOVE_IOC_FROM_BLOCKLIST,
+    "add_ioc_to_allowlist": OutcomeCategoriesEnum.ADD_IOC_TO_ALLOWLIST,
+    "remove_ioc_from_allowlist": OutcomeCategoriesEnum.REMOVE_IOC_FROM_ALLOWLIST,
+    "disable_identity": OutcomeCategoriesEnum.DISABLE_IDENTITY,
+    "enable_identity": OutcomeCategoriesEnum.ENABLE_IDENTITY,
+    "contain_host": OutcomeCategoriesEnum.CONTAIN_HOST,
+    "uncontain_host": OutcomeCategoriesEnum.UNCONTAIN_HOST,
+    "reset_identity_password": OutcomeCategoriesEnum.RESET_IDENTITY_PASSWORD,
+    "update_identity": OutcomeCategoriesEnum.UPDATE_IDENTITY,
+    "search_events": OutcomeCategoriesEnum.SEARCH_EVENTS,
+    "execute_command_on_the_host": OutcomeCategoriesEnum.EXECUTE_COMMAND_ON_THE_HOST,
+    "download_file": OutcomeCategoriesEnum.DOWNLOAD_FILE,
+    "send_email": OutcomeCategoriesEnum.SEND_EMAIL,
+    "search_email": OutcomeCategoriesEnum.SEARCH_EMAIL,
+    "delete_email": OutcomeCategoriesEnum.DELETE_EMAIL,
+    "update_email": OutcomeCategoriesEnum.UPDATE_EMAIL,
+    "submit_file": OutcomeCategoriesEnum.SUBMIT_FILE,
+    "send_message": OutcomeCategoriesEnum.SEND_MESSAGE,
+    "search_asset": OutcomeCategoriesEnum.SEARCH_ASSET,
+    "get_alert_information": OutcomeCategoriesEnum.GET_ALERT_INFORMATION,
 }

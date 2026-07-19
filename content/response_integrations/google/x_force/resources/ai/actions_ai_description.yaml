@@ -1,62 +1,91 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Get Hash Info:
-  ai_description: "### General Description\nEnriches File Hash entities using IBM\
-    \ X-Force threat intelligence. This action retrieves malware reports, including\
-    \ risk scores, malware family associations, and creation dates. It updates the\
-    \ entity's attributes within Google SecOps and can automatically mark entities\
-    \ as suspicious based on a configurable risk threshold.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | Threshold | String | No | The risk level threshold used to determine if an entity\
-    \ should be marked as suspicious. Possible values are 'low', 'medium', or 'high'.\
-    \ Defaults to 'low'. If the retrieved risk score exceeds this threshold, the entity\
-    \ is marked as suspicious and an insight is created. |\n\n### Additional Notes\n\
-    - The action supports MD5, SHA1, and SHA256 hash formats as supported by the IBM\
-    \ X-Force API.\n- If an entity is not found in the X-Force database, it will be\
-    \ skipped and noted in the final output message.\n\n### Flow Description\n1. **Initialization**:\
-    \ Connects to the IBM X-Force API using provided credentials and retrieves the\
-    \ user-defined risk threshold.\n2. **Entity Filtering**: Iterates through the\
-    \ target entities and selects only those of type `FILEHASH`.\n3. **Data Retrieval**:\
-    \ For each hash, it queries the IBM X-Force malware endpoint to fetch the reputation\
-    \ report.\n4. **Data Processing**: Extracts the risk score, malware families,\
-    \ and creation date from the API response.\n5. **Internal Enrichment**: \n   \
-    \ - Updates the entity's additional properties with `IBM_XForce_Risk` and `IBM_XForce_Families`.\n\
-    \    - Attaches the full raw JSON report to the entity.\n    - Sets the entity's\
-    \ `is_enriched` status to true.\n6. **Risk Assessment**: Compares the entity's\
-    \ risk score against the configured threshold. If the score is higher, the entity\
-    \ is marked as suspicious and a Case Insight is generated.\n7. **Reporting**:\
-    \ Generates a summary data table (CSV) containing the hash, risk level, and family\
-    \ info for all processed entities.\n8. **Finalization**: Updates all modified\
-    \ entities in the case and returns a summary message."
+  ai_description: >-
+    ### General Description
+
+    Queries IBM X-Force to retrieve threat intelligence information for file hash
+    entities. It fetches malware reports, risk scores, and associated malware families
+    to enrich the entities and evaluate their risk level.
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities and filters for File Hash entities.
+
+    2. Makes a GET request to the IBM X-Force API (`/malware/{file_hash}`) to fetch
+    hash information.
+
+    3. Extracts risk scores, creation dates, and malware families from the response.
+
+    4. Enriches the entity's additional properties with the retrieved data and marks
+    it as enriched.
+
+    5. Compares the risk score against the configured threshold; if it exceeds the
+    threshold, marks the entity as suspicious and creates an insight.
+
+    6. Attaches the raw JSON results and a summary CSV table to the action results.
+
+    7. Updates the entities in the platform.
+
+
+    ### Additional Notes
+
+    Handles 404 (Not Found) and 403 (Access Denied) errors gracefully by logging them
+    and continuing execution for the remaining entities.
+  ai_short_description: >-
+    Queries IBM X-Force to retrieve threat intelligence and risk scores for file hash
+    entities, enriching them and creating insights based on a specified risk threshold.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes with risk scores and malware family information, marks
-      entities as suspicious based on a threshold, and creates entity insights.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the IBM X-Force API to fetch hash information
+      (fetches_data=true). It does not mutate external data. It updates the entities
+      with the fetched data (can_update_entities=true) and creates insights if the
+      risk score exceeds the threshold (can_create_insight=true).
   entity_usage:
     entity_types:
-    - FILEHASH
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -70,54 +99,78 @@ Get Hash Info:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == HASH` (where HASH is defined as `EntityTypes.FILEHASH`). Therefore, it targets
+      FILEHASH entities and filters strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches malware reports, risk scores, and malware families for file
+      hash entities from IBM X-Force. This directly aligns with the 'Enrich IOC' expected
+      outcome. It does not mutate external data or perform other operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | No | The value of the threshold can be: low, medium or
+    high. Determines the risk level at which the entity is marked as suspicious and
+    an insight is created. |
 Get IP By Category:
   ai_description: >-
     ### General Description
 
-    The **Get IP By Category** action retrieves a list of IP addresses from IBM X-Force
-    that are associated with a specific threat category. This action is designed to
-    gather bulk intelligence on known malicious or suspicious infrastructure, such
-    as botnets, malware hosts, or anonymization services, which can then be used for
-    investigation or blocklist generation.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Category** | String | Yes | The threat category to query. Supported categories
-    include: `Spam`, `Anonymisation Services`, `Scanning IPs`, `Dynamic IPs`, `Malware`,
-    `Bots`, and `Botnet Command and Control Server`. |
+    Retrieves a list of IP addresses associated with a specific threat category from
+    IBM X-Force Exchange.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the XForceManager using the integration's
-    configuration (API Key, Password, and Address).
+    1. Retrieves the target category from the action parameters.
 
-    2. **Data Retrieval**: It executes a GET request to the IBM X-Force API, passing
-    the user-specified `Category` as a filter.
+    2. Makes an HTTP GET request to the IBM X-Force API (`/ipr` endpoint) to fetch
+    IP addresses matching the specified category.
 
-    3. **Data Processing**: The action parses the response to extract a list of IP
-    addresses and their associated metadata (e.g., score, creation date).
+    3. If IPs are found, formats the results into a CSV and JSON.
 
-    4. **Output Generation**:
-        *   **Data Table**: A CSV-formatted table of the retrieved IPs is added to
-    the case wall.
-        *   **JSON Result**: The raw list of IPs is returned as a JSON object for
-    use in subsequent playbook steps.
-        *   **Status**: The action ends with a success message and a boolean result
-    indicating whether IPs were found.
+    4. Attaches the CSV as a data table to the action results and returns the JSON
+    payload.
+
 
     ### Additional Notes
 
-    * This action does not process or filter existing entities within the Google SecOps
-    case; it is a standalone query based on the input parameter.
-
-    * If no IPs are found for the specified category, the action will return a 'false'
-    result value.
+    Supported categories typically include Spam, Anonymisation Services, Scanning
+    IPs, Dynamic IPs, Malware, Bots, and Botnet Command and Control Server.
+  ai_short_description: >-
+    Retrieves a list of IP addresses associated with a specific threat category from
+    IBM X-Force Exchange.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -128,10 +181,47 @@ Get IP By Category:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to the IBM X-Force API to fetch IPs by category
+      (fetches_data=true). It does not mutate external data, update internal entities,
+      create insights, or modify case/alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -145,48 +235,131 @@ Get IP By Category:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It uses a provided category string
+      parameter to fetch a list of IPs directly from the external service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a list of IPs based on a category. It does not enrich a specific
+      IOC, mutate external state, interact with tickets, or perform any of the other
+      specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Category | String | Yes | Category for IP. |
 Get IP Info:
-  ai_description: "### General Description\nEnriches IP Address entities using IBM\
-    \ X-Force Exchange threat intelligence. This action retrieves reputation scores,\
-    \ geographic location, and category classifications for external IP addresses.\
-    \ It helps security analysts determine the risk level of network traffic by providing\
-    \ historical context and real-time reputation data.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | Threshold | Integer | No | The risk score threshold (0-10). If the retrieved\
-    \ risk score exceeds this value, the entity is marked as suspicious and an insight\
-    \ is created. Defaults to 1 if not provided. |\n\n### Additional Notes\n- This\
-    \ action only processes entities of type **ADDRESS**.\n- Internal IP addresses\
-    \ (marked as `is_internal`) are automatically skipped to avoid unnecessary API\
-    \ calls and false positives.\n\n### Flow Description\n1. **Filter Entities:**\
-    \ The action identifies all `ADDRESS` entities in the current context that are\
-    \ not marked as internal.\n2. **API Query:** For each valid entity, it queries\
-    \ the IBM X-Force API to retrieve the IP reputation report.\n3. **Data Enrichment:**\
-    \ It updates the entity's additional properties with the risk score, country,\
-    \ and categories.\n4. **Table Generation:** \n    - Creates a detailed history\
-    \ table for each entity showing past reputation changes.\n    - Creates a global\
-    \ summary table for the action result showing all processed IPs and their scores.\n\
-    5. **Risk Assessment:** Compares the retrieved risk score against the configured\
-    \ `Threshold`.\n6. **Internal Mutation:** If the score exceeds the threshold,\
-    \ the entity is marked as `suspicious` and a Case Insight is generated with the\
-    \ risk details.\n7. **Final Update:** Updates all enriched entities within the\
-    \ Google SecOps platform."
+  ai_description: >-
+    ### General Description
+
+    Enriches IP Address entities using IBM X-Force. This action retrieves threat intelligence
+    including risk score, categories, and country information. It evaluates risk based
+    on a threshold, updates the entity's suspicious status, and generates an insight
+    with the analysis results.
+
+
+    ### Flow Description
+
+    1. Iterates over target entities and filters for external IP addresses.
+
+    2. Makes a GET request to the IBM X-Force API (`/ipr/{ip_address}`) to fetch IP
+    information.
+
+    3. Extracts risk score, categories, and country from the response.
+
+    4. Enriches the entity with the extracted data.
+
+    5. If the risk score exceeds the configured threshold, marks the entity as suspicious
+    and creates an insight.
+
+    6. Updates the entities in the platform and attaches JSON and CSV results.
+
+
+    ### Additional Notes
+
+    Skips internal IP addresses.
+  ai_short_description: >-
+    Enriches external IP Address entities using IBM X-Force to retrieve threat intelligence,
+    risk scores, and categorization, updating the entity's suspicious status if a
+    threshold is exceeded.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes with enrichment data (score, country, categories),
-      marks entities as suspicious based on risk thresholds, and creates entity insights.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to IBM X-Force API to fetch IP data. It does
+      not mutate external data but updates internal entities and creates insights.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -200,54 +373,139 @@ Get IP Info:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == ADDRESS and not entity.is_internal`. This means it targets ADDRESS entities,
+      filtering by entity_type and is_internal.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches IP data from IBM X-Force, returning threat intelligence and
+      evaluating risk. This matches the 'Enrich IOC' expected outcome. It does not
+      mutate data on external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | No | Threshold must be an integer(e.g: 3). |
 Get IP Malware:
-  ai_description: "### General Description\nThis action queries IBM X-Force to retrieve\
-    \ malware associated with specific IP address entities. It is designed to identify\
-    \ if an IP has been linked to known malware families, command-and-control (CnC)\
-    \ activity, or other malicious behaviors. The action enriches the entity with\
-    \ malware counts, provides detailed data tables of associated malware, and marks\
-    \ entities as suspicious if threats are found.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | Address | String | Yes | The base URL for the IBM X-Force API (e.g., https://api.xforce.ibmcloud.com).\
-    \ |\n| Api Key | String | Yes | The API Key used for authentication with IBM X-Force.\
-    \ |\n| Api Password | String | Yes | The API Password/Secret used for authentication\
-    \ with IBM X-Force. |\n| Verify SSL | Boolean | No | If enabled, the action will\
-    \ verify the SSL certificate of the X-Force API endpoint. Default is False. |\n\
-    \n### Additional Notes\n- This action only processes entities of type **ADDRESS**\
-    \ that are marked as **external** (is_internal = False).\n- If an IP is associated\
-    \ with one or more malware entries, the action automatically sets the entity's\
-    \ `is_suspicious` flag to `True`.\n\n### Flow Description\n1. **Initialization**:\
-    \ The action initializes the X-Force manager using the provided API credentials\
-    \ and connection settings.\n2. **Entity Filtering**: It iterates through the target\
-    \ entities in the case, selecting only external IP addresses.\n3. **Data Retrieval**:\
-    \ For each valid IP, it performs a GET request to the X-Force 'ipr/malware' endpoint\
-    \ to fetch associated malware reports.\n4. **Enrichment & Reporting**: \n    -\
-    \ If malware is found, it constructs a detailed CSV table containing MD5 hashes,\
-    \ malware families, and first/last seen timestamps.\n    - It updates the entity's\
-    \ additional properties with the total malware count.\n    - It marks the entity\
-    \ as 'enriched'.\n5. **Threat Identification**: If the malware count is greater\
-    \ than zero, the action marks the entity as suspicious and generates a Case Insight\
-    \ summarizing the findings.\n6. **Finalization**: The action updates all enriched\
-    \ entities in the Google SecOps platform and returns a summary message of the\
-    \ results."
+  ai_description: >-
+    ### General Description
+
+    Queries IBM XForce to retrieve malware associations for IP address entities. This
+    action fetches threat intelligence data regarding malware linked to specific external
+    IP addresses, enriches the entities with this information, and flags them as suspicious
+    if malware is detected.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities provided in the case.
+
+    2. Filters the entities to process only those of type `ADDRESS` that are not marked
+    as internal (`is_internal` is false).
+
+    3. For each suitable entity, makes a GET request to the IBM XForce API (`/ipr/malware/{ip_address}`)
+    to fetch the associated malware report.
+
+    4. If a report is found, extracts the malware details (such as MD5, domain, first
+    seen, last seen, families) and constructs a CSV table to attach to the entity.
+
+    5. Enriches the entity's additional properties with the total malware count.
+
+    6. If the malware count is greater than zero, marks the entity as suspicious and
+    creates an insight indicating the malware association.
+
+    7. Updates the enriched entities within the Google SecOps platform and attaches
+    the raw JSON results to the action's output.
+
+
+    ### Additional Notes
+
+    This action relies solely on integration-level configuration parameters for authentication
+    and does not require any action-specific parameters.
+  ai_short_description: >-
+    Queries IBM XForce to retrieve malware associations for external IP address entities,
+    enriching them with malware counts and marking them as suspicious if malware is
+    found.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action updates entity attributes (additional_properties), sets the 'is_suspicious'
-      and 'is_enriched' flags, adds entity insights, and attaches data tables to entities
-      within the case.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GET request to the IBM XForce API (`get_malware_for_ip`).
+      It does not mutate any external data. Internally, it updates entities by calling
+      `siemplify.update_entities` and creates insights by calling `siemplify.add_entity_insight`.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -261,34 +519,81 @@ Get IP Malware:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and applies the filter
+      `if entity.entity_type == EntityTypes.ADDRESS and not entity.is_internal:`.
+      This means it specifically targets ADDRESS entities and filters them based on
+      their `entity_type` and `is_internal` properties.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches malware association data for IP addresses from IBM XForce,
+      which is a form of threat intelligence enrichment. This directly aligns with
+      the 'Enrich IOC' expected outcome. It does not perform any state-changing operations
+      on external systems or modify alerts/tickets.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Url Info:
-  ai_description: "### General Description\nThe **Get Url Info** action enriches URL\
-    \ entities by querying the IBM X-Force Exchange threat intelligence platform.\
-    \ It retrieves reputation data, including a risk score and associated categories\
-    \ (e.g., Botnet, Malware), to help analysts assess the threat level of specific\
-    \ URLs within a case.\n\n### Parameters Description\n| Parameter | Type | Mandatory\
-    \ | Description |\n| :--- | :--- | :--- | :--- |\n| Threshold | Integer | No |\
-    \ Defines the risk score limit (default is 1). If the URL's risk score retrieved\
-    \ from X-Force exceeds this value, the entity is marked as suspicious in Google\
-    \ SecOps and an insight is generated. |\n\n### Additional Notes\n- The action\
-    \ specifically targets entities of type `DestinationURL`.\n- It uses a Basic Authentication\
-    \ scheme (API Key and Password) configured in the integration settings to communicate\
-    \ with the IBM X-Force API.\n\n### Flow Description\n1. **Initialization**: The\
-    \ action initializes the X-Force manager using the provided integration credentials\
-    \ and retrieves the `Threshold` parameter.\n2. **Entity Filtering**: It iterates\
-    \ through the target entities in the current context, filtering for those identified\
-    \ as URLs.\n3. **Data Retrieval**: For each URL, it performs a GET request to\
-    \ the IBM X-Force API to fetch the URL's reputation report.\n4. **Enrichment**:\
-    \ \n    - The action extracts the risk score and category descriptions.\n    -\
-    \ It updates the entity's additional properties with `IBM_XForce_Score` and `IBM_XForce_Categories`.\n\
-    \    - It marks the entity as enriched (`is_enriched = True`).\n5. **Risk Assessment**:\
-    \ If the retrieved risk score is higher than the configured `Threshold`, the action\
-    \ marks the entity as suspicious (`is_suspicious = True`) and adds a detailed\
-    \ entity insight to the case.\n6. **Reporting**: It generates a data table named\
-    \ \"Report\" containing the URL, Score, and Categories for all processed entities\
-    \ and attaches the raw JSON response to each entity for further inspection.\n\
-    7. **Finalization**: The action updates all enriched entities in the Google SecOps\
-    \ platform and returns a summary message."
+  ai_description: >-
+    ### General Description
+
+    Queries IBM X-Force to retrieve reputation and threat intelligence information
+    for URL entities. The action fetches risk scores and category descriptions, enriches
+    the entities, and can optionally mark them as suspicious based on a configurable
+    risk threshold.
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities and filters for URL entities.
+
+    2. For each URL, makes a GET request to the IBM X-Force API (`/url/{url}`) to
+    fetch the URL report.
+
+    3. Extracts the risk score and category descriptions from the report.
+
+    4. Enriches the entity's additional properties with the retrieved score and categories.
+
+    5. If the risk score exceeds the configured `Threshold` parameter, marks the entity
+    as suspicious and creates an insight.
+
+    6. Updates the entities in the platform and attaches the results as a JSON object
+    and a CSV data table.
+
+
+    ### Additional Notes
+
+    Entities that are not found in IBM X-Force or encounter access denied errors are
+    skipped and logged in the output message.
+  ai_short_description: >-
+    Queries IBM X-Force to retrieve reputation and threat intelligence information
+    for URL entities, enriching them with risk scores and categories, and marking
+    them as suspicious if a threshold is exceeded.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
@@ -299,14 +604,51 @@ Get Url Info:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: >-
-      The action updates entity attributes (additional properties), sets the 'is_suspicious'
-      flag based on the risk threshold, and creates entity insights within the Google
-      SecOps case.
-  categories:
-    enrichment: true
+      Updates URL entities with enrichment data (risk score, categories), marks them
+      as suspicious, and adds insights.
+    reasoning: >-
+      The action makes a GET request to the IBM X-Force API to fetch URL reputation
+      data (fetches_data=true). It does not mutate external data (can_mutate_external_data=false).
+      It updates internal entities with enrichment data and creates insights if the
+      risk score exceeds the threshold (can_mutate_internal_data=true, can_update_entities=true,
+      can_create_insight=true). It does not modify alert data or create case comments.
   entity_usage:
     entity_types:
-    - DestinationURL
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -320,61 +662,79 @@ Get Url Info:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script iterates over `siemplify.target_entities` and explicitly filters
+      them using `if entity.entity_type == URL:` (where URL is `EntityTypes.URL`).
+      Therefore, it only operates on URL entities and filters them by their entity
+      type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence (risk score, categories) for URL indicators
+      from IBM X-Force. This directly aligns with the 'Enrich IOC' expected outcome.
+      It does not modify external systems or perform other categorized actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | No | Threshold must be an integer (e.g: 3). If the retrieved
+    risk score exceeds this threshold, the entity is marked as suspicious and an insight
+    is created. Defaults to 1. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic tool designed to verify the connectivity between
-    Google SecOps and the IBM X-Force Exchange API. It ensures that the provided credentials
-    (API Key and API Password) are valid and that the network path to the X-Force
-    service is open.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Address | String | Yes | The base URL for the IBM X-Force API (e.g., https://api.xforce.ibmcloud.com).
-    |
-
-    | Api Key | String | Yes | The API Key used for Basic Authentication. |
-
-    | Api Password | String | Yes | The API Password used for Basic Authentication.
-    |
-
-    | Verify SSL | Boolean | Yes | If set to true, the action will verify the SSL
-    certificate of the X-Force API endpoint. |
-
-
-    ### Additional Notes
-
-    - This action does not process any entities from the case.
-
-    - It uses a hardcoded IP address (8.8.8.8) to perform a test reputation lookup
-    to confirm the API is responding correctly.
-
-    - As per standard SOAR practices, Ping actions are excluded from being categorized
-    as enrichment actions.
+    Tests connectivity to the IBM X-Force API to ensure the integration is configured
+    correctly and can communicate with the service.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval:** The action retrieves the integration configuration,
-    including the API endpoint, credentials, and SSL verification settings.
+    1. Retrieves integration configuration parameters including the API Key, API Password,
+    and Address.
 
-    2. **Manager Initialization:** An instance of the `XForceManager` is created,
-    which prepares the Basic Authentication header using the encoded Key and Password.
+    2. Initializes the X-Force manager with the provided credentials.
 
-    3. **Connectivity Test:** The action calls the `test_connectivity` method, which
-    executes a GET request to the IP reputation endpoint for the address '8.8.8.8'.
+    3. Executes a test connectivity request by fetching IP information for a hardcoded
+    IP address (8.8.8.8) via the X-Force API.
 
-    4. **Response Validation:** The manager validates the HTTP response. If a 403
-    (Access Denied) or 404 (Not Found) error occurs, specific exceptions are raised.
+    4. Returns a successful connection message if the request succeeds.
 
-    5. **Final Result:** If the request is successful, the action returns a 'Connected
-    Successfully' message and a boolean `True` value.
+
+    ### Additional Notes
+
+    This action is strictly used for verifying the integration setup and does not
+    process any case data or entities.
+  ai_short_description: >-
+    Tests connectivity to the IBM X-Force API to ensure the integration is configured
+    correctly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -383,12 +743,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a test API call to verify connectivity but does not fetch contextual
+      data for entities, mutate external or internal data, update entities, create
+      insights, modify alerts, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -402,3 +799,39 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It simply tests connectivity
+      to the external service using a hardcoded IP address.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
