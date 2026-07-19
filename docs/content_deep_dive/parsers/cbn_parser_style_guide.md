@@ -1301,14 +1301,13 @@ on_error => "invalid_resource_id"
 
 # ✅ GOOD PRACTICE: Mapping data to the current, active UDM field
 if [resource_id] != "" {
-   mutate {
-     replace => { 
-        "target.resource.product_object_id" => "%{resource_id}" 
-}
-on_error => "invalid_resource_id"
-
+  mutate {
+    replace => {
+      "target.resource.product_object_id" => "%{resource_id}"
     }
- }
+    on_error => "invalid_resource_id"
+  }
+}
 ```
 
 ### **6\. Error Handling**
