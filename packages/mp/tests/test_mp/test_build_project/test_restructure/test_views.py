@@ -190,3 +190,77 @@ def test_view_deconstructor_html_widget_oserror(tmp_path: Path) -> None:
         pytest.raises(OSError, match="Disk full"),
     ):
         deconstructor.deconstruct()
+
+
+def test_from_non_built_with_missing_optional_fields(tmp_path: Path) -> None:
+    """Verify Overview.from_non_built_view_path succeeds when optional fields are omitted from view.yaml."""
+    src_dir = tmp_path / "minimal_view"
+    src_dir.mkdir()
+
+    # Create minimal view.yaml missing creator, alert_rule_type, roles, etc.
+    with (src_dir / "view.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(
+            {
+                "identifier": "min_uuid",
+                "name": "Minimal View",
+                "type": "system_case",
+                "widgets_details": [],
+            },
+            f,
+        )
+
+    (src_dir / "widgets").mkdir()
+
+    overview = Overview.from_non_built_view_path(src_dir)
+    assert overview.identifier == "min_uuid"
+    assert overview.name == "Minimal View"
+    assert overview.creator is None
+    assert overview.alert_rule_type is None
+    assert overview.roles == []
+    assert overview.role_names == []
+
+
+def test_from_non_built_with_null_widget_size(tmp_path: Path) -> None:
+    """Verify Overview.from_non_built_view_path handles size: null in widgets_details without raising error."""
+    src_dir = tmp_path / "null_size_view"
+    src_dir.mkdir()
+
+    with (src_dir / "view.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(
+            {
+                "identifier": "null_size_uuid",
+                "name": "Null Size View",
+                "type": "system_case",
+                "widgets_details": [{"title": "Widget One", "order": 1, "size": None}],
+            },
+            f,
+        )
+
+    (src_dir / "widgets").mkdir()
+    with (src_dir / "widgets" / "Widget One.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(
+            {
+                "title": "Widget One",
+                "description": "Widget One",
+                "identifier": "w1",
+                "order": 1,
+                "template_identifier": "temp_1",
+                "type": "key_value",
+                "data_definition": {},
+                "widget_size": "half_width",
+                "action_widget_template_id": None,
+                "step_id": None,
+                "step_integration": None,
+                "block_step_id": None,
+                "block_step_instance_name": None,
+                "present_if_empty": False,
+                "conditions_group": {"logical_operator": "and", "conditions": []},
+                "integration_name": None,
+            },
+            f,
+        )
+
+    overview = Overview.from_non_built_view_path(src_dir)
+    assert len(overview.widgets) == 1
+    # Original widget_size from widget file should be preserved since w_d size is None
+    assert overview.widgets[0].widget_size == WidgetSize.HALF_WIDTH

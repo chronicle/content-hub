@@ -186,9 +186,9 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
             title = w_d.get("title")
             if title and title in widget_by_title and widget_by_title[title]:
                 widget = widget_by_title[title].pop(0)
-                if "order" in w_d:
+                if w_d.get("order") is not None:
                     widget.order = w_d["order"]
-                if "size" in w_d:
+                if w_d.get("size") is not None:
                     widget.widget_size = WidgetSize.from_string(w_d["size"])
                 widgets.append(widget)
             elif title:
@@ -223,15 +223,16 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
 
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltOverview) -> Self:
+        raw_type = non_built.get("type") or "system_case"
         return cls(
-            identifier=non_built["identifier"],
-            name=non_built["name"],
-            creator=non_built["creator"],
-            playbook_id=non_built["playbook_id"],
-            type_=OverviewType.from_string(non_built["type"]),
-            alert_rule_type=non_built["alert_rule_type"],
-            roles=non_built["roles"],
-            role_names=non_built.get("role_names", []),
+            identifier=non_built.get("identifier") or "",
+            name=non_built.get("name") or "",
+            creator=non_built.get("creator"),
+            playbook_id=non_built.get("playbook_id") or "",
+            type_=OverviewType.from_string(raw_type),
+            alert_rule_type=non_built.get("alert_rule_type"),
+            roles=non_built.get("roles") or [],
+            role_names=non_built.get("role_names") or [],
             widgets=[],
         )
 
