@@ -170,9 +170,9 @@ class ActiveDirectoryManager:
         custom_query_fields=None,
         ca_certificate_file=None,
         siemplify_logger=None,
-        connection_timeout=None,
-        receive_timeout=None,
-    ):
+        connection_timeout: int | None = None,
+        receive_timeout: int | None = None,
+    ) -> None:
 
         self.siemplify_logger = siemplify_logger
         self.use_ssl = use_ssl

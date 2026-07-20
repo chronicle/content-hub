@@ -3,13 +3,13 @@ import unittest
 from unittest.mock import patch, MagicMock, ANY
 
 # Import main from EnrichEntities action script
-from actions.EnrichEntities import main
+from ..actions.EnrichEntities import main
 
 class TestEnrichEntitiesAction(unittest.TestCase):
-    @patch("actions.EnrichEntities.SiemplifyAction")
-    @patch("actions.EnrichEntities.extract_configuration_param")
-    @patch("actions.EnrichEntities.extract_action_param")
-    @patch("actions.EnrichEntities.ActiveDirectoryManager")
+    @patch("content.response_integrations.google.active_directory.actions.EnrichEntities.SiemplifyAction")
+    @patch("content.response_integrations.google.active_directory.actions.EnrichEntities.extract_configuration_param")
+    @patch("content.response_integrations.google.active_directory.actions.EnrichEntities.extract_action_param")
+    @patch("content.response_integrations.google.active_directory.actions.EnrichEntities.ActiveDirectoryManager")
     def test_enrich_entities_action_timeouts_passed(
         self,
         mock_ad_manager,
