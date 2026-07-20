@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import os
 import pathlib
 import shutil
 from typing import TYPE_CHECKING
@@ -53,7 +52,7 @@ class TestDownloadQuarantinedEmail:
         proofpoint: ProofPointPSProduct,
     ) -> None:
         """Test successful download of a quarantined email."""
-        os.makedirs(TEST_DIR, exist_ok=True)
+        pathlib.Path(TEST_DIR).mkdir(parents=True, exist_ok=True)
         target_file = pathlib.Path(TEST_DIR) / "guid-111-Critical_Security_Warning.eml"
         if target_file.exists():
             target_file.unlink()
@@ -131,7 +130,7 @@ class TestDownloadQuarantinedEmail:
         proofpoint: ProofPointPSProduct,
     ) -> None:
         """Test download fails when Overwrite is False and target file already exists."""
-        os.makedirs(TEST_DIR, exist_ok=True)
+        pathlib.Path(TEST_DIR).mkdir(parents=True, exist_ok=True)
         target_file = pathlib.Path(TEST_DIR) / "guid-111-Critical_Security_Warning.eml"
         target_file.write_bytes(b"Existing content")
 
@@ -207,7 +206,7 @@ class TestDownloadQuarantinedEmail:
         proofpoint: ProofPointPSProduct,
     ) -> None:
         """Test download where one message succeeds and one fails."""
-        os.makedirs(TEST_DIR, exist_ok=True)
+        pathlib.Path(TEST_DIR).mkdir(parents=True, exist_ok=True)
         raw_email = b"Subject: Critical Security Warning\n\nBody content here."
         proofpoint.add_record(
             "Quarantine",
@@ -250,7 +249,7 @@ class TestDownloadQuarantinedEmail:
         proofpoint: ProofPointPSProduct,
     ) -> None:
         """Test download where multiple files already exist and overwrite is False."""
-        os.makedirs(TEST_DIR, exist_ok=True)
+        pathlib.Path(TEST_DIR).mkdir(parents=True, exist_ok=True)
         raw_email1 = b"Subject: First Mail\n\nBody content."
         raw_email2 = b"Subject: Second Mail\n\nBody content."
         proofpoint.add_record(

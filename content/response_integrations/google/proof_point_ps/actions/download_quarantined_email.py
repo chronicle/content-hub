@@ -26,7 +26,11 @@ from TIPCommon.transformation import string_to_multi_value
 
 from ..core.base_action import BaseProofPointPSAction
 from ..core.constants import DOWNLOAD_ACTION_NAME, TIME_FORMAT
-from ..core.exceptions import ProofPointPSError, ProofPointPSHTTPError
+from ..core.exceptions import (
+    FolderNotFoundError,
+    ProofPointPSError,
+    ProofPointPSHTTPError
+)
 
 if TYPE_CHECKING:
     from typing import Never
@@ -56,6 +60,7 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
             param_name="Download Folder Path",
             is_mandatory=True,
             print_value=True,
+            default_value="/tmp",
         )
         self.params.overwrite = extract_action_param(
             self.soar_action,
@@ -68,7 +73,6 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
         self.params.save_to_case_wall = extract_action_param(
             self.soar_action,
             param_name="Save To Case Wall",
-            is_mandatory=False,
             print_value=True,
             input_type=bool,
         )
@@ -129,9 +133,9 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
         missing_guids = []
 
         start_date = (
-            datetime.datetime.utcnow() - datetime.timedelta(days=30)
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=30)
         ).strftime(TIME_FORMAT)
-        end_date = datetime.datetime.utcnow().strftime(TIME_FORMAT)
+        end_date = datetime.datetime.now(datetime.timezone.utc).strftime(TIME_FORMAT)
 
         try:
             folder_records = self.api_client.search(
@@ -140,7 +144,7 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
                 start_date=start_date,
                 end_date=end_date,
             )
-        except ProofPointPSError:
+        except FolderNotFoundError:
             raise ProofPointPSError(f"Folder '{folder_name}' does not exist.")
 
         folder_records_map = {r.guid: r for r in folder_records if r.guid}
@@ -148,8 +152,8 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
             {r.localguid: r for r in folder_records if r.localguid}
         )
 
-        for guid in guids:
-            try:
+        try:
+            for guid in guids:
                 record = folder_records_map.get(guid)
                 if not record:
                     missing_guids.append(guid)
@@ -180,39 +184,44 @@ class DownloadQuarantinedEmail(BaseProofPointPSAction):
                     record_json["downloaded_file_path"] = str(target_file_path)
                     successful_records.append(record_json)
                 successful_guids.append(guid)
-            except ProofPointPSHTTPError as e:
-                failed_guids_errors.append((guid, str(e)))
 
-        if missing_guids:
-            raise ProofPointPSError(
-                "The following message guids were not found in Proofpoint: "
-                f"{', '.join(list(set(missing_guids)))}."
-            )
-
-        if existing_file_guids or failed_guids_errors:
-            error_messages = []
-            if existing_file_guids:
-                guids_str = ", ".join([g[0] for g in existing_file_guids])
-                if len(existing_file_guids) == 1:
-                    error_messages.append(
-                        f"GUID {existing_file_guids[0][0]} failed during execution. "
-                        f"Error: File '{existing_file_guids[0][1]}' already exists. "
-                        "Please change the path or set parameter 'Overwrite' to True."
-                    )
-                else:
-                    error_messages.append(
-                        f"GUIDs {guids_str} failed during execution. "
-                        "Error: File already exists. "
-                        "Please change the path or set parameter 'Overwrite' to True."
-                    )
-            for guid, err in failed_guids_errors:
-                error_messages.append(
-                    f"GUID {guid} failed during execution. Error: {err}"
+            if missing_guids:
+                raise ProofPointPSError(
+                    "The following message guids were not found in Proofpoint: "
+                    f"{', '.join(list(set(missing_guids)))}."
                 )
 
-            raise ProofPointPSError(
-                f"Failed to download quarantined email(s): {' '.join(error_messages)}"
-            )
+            if existing_file_guids or failed_guids_errors:
+                error_messages = []
+                if existing_file_guids:
+                    guids_str = ", ".join([g[0] for g in existing_file_guids])
+                    if len(existing_file_guids) == 1:
+                        error_messages.append(
+                            f"GUID {existing_file_guids[0][0]} failed during execution. "
+                            f"Error: File '{existing_file_guids[0][1]}' already exists. "
+                            "Please change the path or set parameter 'Overwrite' to True."
+                        )
+                    else:
+                        error_messages.append(
+                            f"GUIDs {guids_str} failed during execution. "
+                            "Error: File already exists. "
+                            "Please change the path or set parameter 'Overwrite' to True."
+                        )
+                for guid, err in failed_guids_errors:
+                    error_messages.append(
+                        f"GUID {guid} failed during execution. Error: {err}"
+                    )
+
+                raise ProofPointPSError(
+                    f"Failed to download quarantined email(s): {' '.join(error_messages)}"
+                )
+        except ProofPointPSError:
+            for _, file_path in downloaded_files:
+                try:
+                    file_path.unlink()
+                except OSError:
+                    pass
+            raise
 
         if self.params.save_to_case_wall:
             for guid, target_file_path in downloaded_files:

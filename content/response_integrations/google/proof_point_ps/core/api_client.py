@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 from .api_utils import validate_response
 from .constants import QUARANTINE_ENDPOINT
 from .data_parser import parse_quarantine_records
-from .exceptions import ProofPointPSHTTPError
+from .exceptions import FolderNotFoundError, ProofPointPSHTTPError
 
 if TYPE_CHECKING:
     import requests
@@ -59,8 +59,6 @@ class ProofPointPSApiClient:
         dlpviolation: str | None = None,
         messagestatus: str | None = None,
         limit: int | None = None,
-        guid: str | None = None,
-        msgid: str | None = None,
     ) -> list[QuarantineRecord]:
         """Search for quarantine messages with the specified parameters.
 
@@ -74,14 +72,13 @@ class ProofPointPSApiClient:
             dlpviolation: "t" or "details" to fetch DLP data.
             messagestatus: "t" to fetch message status and comments.
             limit: The maximum number of records to return.
-            guid: Optional message GUID filter.
-            msgid: Optional message-id filter.
 
         Returns:
             A list of found records.
 
         Raises:
             ProofPointPSHTTPError: If the API request fails or returns invalid JSON.
+            FolderNotFoundError: If the specified folder does not exist.
 
         """
         url = f"{self.server_address.rstrip('/')}{QUARANTINE_ENDPOINT}"
@@ -96,14 +93,18 @@ class ProofPointPSApiClient:
             "dlpviolation": dlpviolation,
             "messagestatus": messagestatus,
             "limit": limit,
-            "guid": guid,
-            "msgid": msgid,
         }
 
         data = {key: value for key, value in data.items() if value is not None}
         response = self.session.get(url, params=data)
 
-        validate_response(response, "Unable to search emails")
+        try:
+            validate_response(response, "Unable to search emails")
+        except ProofPointPSHTTPError as error:
+            if folder and "not found" in str(error).lower():
+                raise FolderNotFoundError from error
+            raise
+
         try:
             response_json = response.json()
         except ValueError as error:
