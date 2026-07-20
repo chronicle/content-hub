@@ -177,7 +177,7 @@ def _push_single_view(view_src_path: Path, *, force: bool = False, validate: boo
     overview_tpl = view_data.get("OverviewTemplate")
     view_name = (overview_tpl.get("Name") if isinstance(overview_tpl, dict) else None) or view_data.get("name")
     if validate:
-        _validate_view(view_data, view_src_path)
+        _validate_view(view_data, view_src_path, force=force)
         if view_name and view_name != view_src_path.name:
             logger.info("✅ View '%s' (from directory '%s') is valid.", view_name, view_src_path.name)
         else:
@@ -191,6 +191,8 @@ def _push_single_view(view_src_path: Path, *, force: bool = False, validate: boo
 def _validate_view(
     view_data: dict[str, Any],
     view_src_path: Path,
+    *,
+    force: bool = False,
 ) -> None:
     """Validate view's custom fields, widgets, and integration dependencies against target environment.
 
@@ -209,7 +211,7 @@ def _validate_view(
             view_name,
             flat_view_data,
             errors=errors,
-            force=True,
+            force=force,
         )
     except typer.Exit:
         raise
@@ -566,10 +568,25 @@ def _extract_required_integrations(flat_view_data: dict[str, Any]) -> set[str]:
     for w in flat_view_data.get("widgets") or []:
         meta = w.get("metadata") or {}
         config = w.get("config") or {}
-        for key in ("integrationName", "stepIntegration"):
+
+        # 1. Root-level integration fields
+        for key in ("integrationName", "stepIntegration", "integration_name", "step_integration"):
             val = meta.get(key) or config.get(key)
             if val and isinstance(val, str) and val.strip():
                 required_integrations.add(val.strip())
+
+        # 2. Quick Actions widget actions array
+        actions = config.get("actions") or []
+        if not isinstance(actions, list):
+            continue
+        for action in actions:
+            if not isinstance(action, dict):
+                continue
+            for key in ("integrationIdentifier", "integrationName", "integration_name"):
+                val = action.get(key)
+                if val and isinstance(val, str) and val.strip():
+                    required_integrations.add(val.strip())
+
     return required_integrations
 
 

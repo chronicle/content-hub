@@ -649,6 +649,7 @@ def test_push_view_validate_only(
     # Setup mock backend API
     mock_api = mock.MagicMock()
     mock_get_backend_api.return_value = mock_api
+    mock_api.list_views.return_value = [{"id": 1, "identifier": "test_uuid", "name": "Test View", "type": 5}]
 
     # Setup source directory structure to build from
     src_dir = tmp_path / "views"
@@ -1030,3 +1031,86 @@ def test_push_view_all_aggregates_failed_views(
     assert "[BULK VALIDATION ERROR] 2 view(s) failed" in caplog.text
     assert "view_1" in caplog.text
     assert "view_2" in caplog.text
+
+
+@mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.push.get_backend_api")
+def test_push_view_validates_quick_actions_integrations(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Verify that view validation extracts integration names from Quick Actions widget actions array."""
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_views.return_value = [
+        {"identifier": "qa_uuid", "name": "QA View", "type": 2, "widgets": []}
+    ]
+    mock_api.download_view.return_value = {"identifier": "qa_uuid", "widgets": []}
+    mock_api.list_custom_fields.return_value = []
+    # Akamai is NOT installed on platform
+    mock_api.list_installed_integrations.return_value = []
+
+    src_dir = tmp_path / "views"
+    view_folder = src_dir / "qa_uuid"
+    view_folder.mkdir(parents=True)
+
+    with (view_folder / "view.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(
+            {
+                "identifier": "qa_uuid",
+                "name": "QA View",
+                "creator": "system",
+                "playbook_id": "playbook_qa",
+                "type": "system_alert",
+                "alert_rule_type": None,
+                "roles": [],
+                "widgets_details": [{"title": "Quick Actions", "size": "full_width", "order": 1}],
+            },
+            f,
+        )
+
+    (view_folder / "widgets").mkdir()
+    with (view_folder / "widgets" / "Quick Actions.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(
+            {
+                "title": "Quick Actions",
+                "description": "QA widget",
+                "identifier": "w_qa",
+                "order": 1,
+                "template_identifier": "temp_qa",
+                "type": "quick_actions",
+                "data_definition": {
+                    "type": 21,
+                    "widgetDefinitionScope": 2,
+                    "actions": [
+                        {"integrationIdentifier": "Akamai", "actionName": "Ping"},
+                    ],
+                },
+                "widget_size": "full_width",
+                "action_widget_template_id": None,
+                "step_id": None,
+                "step_integration": None,
+                "block_step_id": None,
+                "block_step_instance_name": None,
+                "present_if_empty": False,
+                "conditions_group": {"logical_operator": "and", "conditions": []},
+                "integration_name": "",
+            },
+            f,
+        )
+
+    with (
+        mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"),
+        caplog.at_level("ERROR"),
+    ):
+        result = runner.invoke(
+            push_app,
+            ["view", "qa_uuid", "--custom", str(src_dir), "--validate"],
+        )
+
+    assert result.exit_code != 0
+    assert "[VALIDATION ERROR] Missing Integration on Platform" in caplog.text
+    assert "Akamai" in caplog.text
