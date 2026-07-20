@@ -374,21 +374,32 @@ class BaseClient:
 
         return params
 
-    def _paginate_results(
+    def _paginate_page(
         self,
         url: str,
         params: Optional[Dict[str, Any]] = None,
-        err_msg: str = "Unable to get results"
-    ) -> List[Dict[str, Any]]:
+        err_msg: str = "Unable to get results",
+        start_cursor: Optional[str] = None,
+        max_records: Optional[int] = None,
+    ) -> tuple:
         """
-        Paginate the results of a request.
-        :param url (str): The url to send request to
-        :param params (dict, optional): The params of the request
-        :param err_msg (str): The message to display on error
-        :return list: List of results
+        Resumable cursor pagination.
+
+        The SpyCloud API returns at most ~1,000 records per request and hands
+        back a ``cursor`` to fetch the next page (see integration guide). This
+        method fetches pages starting from ``start_cursor`` and stops once
+        ``max_records`` is reached (soft cap, checked at page boundaries) or the
+        cursor is exhausted.
+
+        :return tuple: ``(results, next_cursor)``. ``next_cursor`` is ``None``
+            when the query has been fully drained; otherwise it is the cursor to
+            resume from on the next call.
         """
         request_params = dict(params or {})
         results: List[Dict[str, Any]] = []
+
+        if start_cursor:
+            request_params["cursor"] = start_cursor
 
         while True:
             response = self._handler.get(url, params=request_params)
@@ -400,10 +411,27 @@ class BaseClient:
 
             cursor = json_body.get("cursor")
             if not cursor:
-                break
+                return results, None
 
             request_params["cursor"] = cursor
 
+            if max_records is not None and len(results) >= max_records:
+                return results, cursor
+
+    def _paginate_results(
+        self,
+        url: str,
+        params: Optional[Dict[str, Any]] = None,
+        err_msg: str = "Unable to get results"
+    ) -> List[Dict[str, Any]]:
+        """
+        Paginate the results of a request, draining every page.
+        :param url (str): The url to send request to
+        :param params (dict, optional): The params of the request
+        :param err_msg (str): The message to display on error
+        :return list: List of results
+        """
+        results, _ = self._paginate_page(url, params=params, err_msg=err_msg)
         return results
 
 
@@ -426,6 +454,27 @@ class BreachCatalogClient(BaseClient):
     ) -> List[Dict[str, Any]]:
         params = self._build_date_params(since=since, until=until)
         return self._paginate_results(ENDPOINT_BREACH_CATALOG, params)
+
+    def catalog_by_id(self, source_id: Any) -> Optional[Dict[str, Any]]:
+        """
+        Fetch a single breach catalog entry by its source_id.
+
+        Used for incremental, source_id-scoped enrichment (integration guide
+        9.1.2 Option A: cache the catalog locally and join on source_id) instead
+        of draining the entire global breach catalog on every connector cycle.
+        The global catalog is far larger than any single Watchlist, so this
+        keeps enrichment bounded and well inside the SecOps connector timeout.
+
+        Returns the catalog entry dict, or None if the source is not found.
+        """
+        endpoint = "{}/{}".format(ENDPOINT_BREACH_CATALOG, source_id)
+        response = self._handler.get(endpoint)
+        self._handler.validate_response(
+            response, "Unable to get breach catalog entry {}".format(source_id)
+        )
+        json_body = response.json() or {}
+        results = json_body.get("results") or []
+        return results[0] if results else None
 
 
 class BreachDataClient(BaseClient):
@@ -452,6 +501,40 @@ class BreachDataClient(BaseClient):
             additional_params=additional_params
         )
         return self._paginate_results(ENDPOINT_BREACH_DATA_WATCHLIST, params)
+
+    def watchlist_page(
+        self,
+        since: Optional[str] = None,
+        until: Optional[str] = None,
+        since_modification: Optional[str] = None,
+        until_modification: Optional[str] = None,
+        severities: Optional[List[int]] = None,
+        start_cursor: Optional[str] = None,
+        max_records: Optional[int] = None,
+    ) -> tuple:
+        """
+        Resumable variant of :meth:`watchlist` for high-volume, once-daily
+        modification pulls. Returns ``(records, next_cursor)`` so a caller can
+        drain a bounded slice per invocation and resume from ``next_cursor``.
+        """
+        additional_params: Dict[str, Any] = {}
+
+        if severities:
+            additional_params["severity"] = ",".join(str(x) for x in severities)
+
+        params = self._build_date_params(
+            since=since,
+            until=until,
+            since_modification=since_modification,
+            until_modification=until_modification,
+            additional_params=additional_params
+        )
+        return self._paginate_page(
+            ENDPOINT_BREACH_DATA_WATCHLIST,
+            params,
+            start_cursor=start_cursor,
+            max_records=max_records,
+        )
 
 
 class CompassClient(BaseClient):
