@@ -1,82 +1,95 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Hunt Domain:
   ai_description: >-
     ### General Description
 
-    The **Hunt Domain** action searches for a specific domain within the Palo Alto
-    AutoFocus threat intelligence platform. It retrieves associated metadata, tags,
-    and malware samples linked to the domain to provide deep context for security
-    investigations.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Results Limit | Integer | No | Specifies the maximum number of hits to process
-    for entity enrichment. If not provided, all hits are processed. |
+    Hunts for Hostname entities in Palo Alto AutoFocus to retrieve associated threat
+    intelligence and tags. This action queries the AutoFocus database to find any
+    known intelligence or hits related to the specified domains and enriches the entities
+    with the findings.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action identifies `HOSTNAME` entities in the current
-    scope and validates the API configuration.
+    1. Iterates through the target entities and filters for Hostname entities.
 
-    2. **Hunt Initiation**: For each valid entity, it triggers a search query in AutoFocus
-    and receives a unique query cookie (query identifier).
+    2. Initiates an asynchronous hunt query in AutoFocus for each valid domain via
+    the `samples_search` API.
 
-    3. **Asynchronous Polling**: The action enters an asynchronous state, periodically
-    checking the status of the hunt using the cookie until the search reaches 100%
-    completion.
+    3. Periodically checks the status of the hunt using the `samples_results` API
+    until the query completes.
 
-    4. **Data Retrieval**: Once the hunt is complete, the action retrieves the resulting
-    'hits' (intelligence data).
+    4. Retrieves the hunt results (hits) from AutoFocus.
 
-    5. **Enrichment and Reporting**:
-        - Updates the entity's additional properties with flattened hit data (prefixed
-    with 'AutoFocus').
-        - Marks the entity as **Suspicious** and **Enriched**.
-        - Attaches a CSV table of the trimmed results to the entity.
-        - Attaches a full JSON report as a base64-encoded attachment.
-        - Creates an entity insight summarizing the number of hits found in AutoFocus.
+    5. Enriches the entities with the retrieved data by adding it to their additional
+    properties.
+
+    6. Attaches a CSV table and a base64-encoded JSON report of the hits to the entities.
+
+    7. Marks the entities as enriched and suspicious, and creates an insight summarizing
+    the number of hits found.
+
+    8. Updates the entities within the Google SecOps platform.
+
 
     ### Additional Notes
 
-    - This is an asynchronous action that may take several minutes depending on the
-    AutoFocus query queue and complexity.
+    This is an asynchronous action. It will return an 'In Progress' status while waiting
+    for the AutoFocus hunt queries to complete.
+  ai_short_description: >-
+    Hunts for Hostname entities in Palo Alto AutoFocus to retrieve associated threat
+    intelligence and tags, enriching the entities with the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes (additional properties), sets the 'is_suspicious'
-      and 'is_enriched' flags, adds entity insights, and attaches CSV tables and JSON
-      reports to the entities.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET/POST requests to the AutoFocus API to search for domain
+      intelligence (fetches_data=true). It does not mutate external data. It updates
+      internal entities with the retrieved data (can_update_entities=true) and creates
+      insights (can_create_insight=true).
   entity_usage:
     entity_types:
-    - HOSTNAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -90,53 +103,132 @@ Hunt Domain:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `if
+      entity.entity_type not in SUPPORTED_ENTITIES:`, where `SUPPORTED_ENTITIES` is
+      `[EntityTypes.HOSTNAME]`. Therefore, it targets Hostname entities and filters
+      strictly by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence and tags for a domain/hostname from AutoFocus.
+      This directly aligns with the 'Enrich IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Hunt File:
-  ai_description: "### General Description\nThe **Hunt File** action searches for\
-    \ File Hash (MD5, SHA1, SHA256) or Filename entities within Palo Alto Networks\
-    \ AutoFocus to identify associated threat intelligence and samples. This is an\
-    \ asynchronous action that initiates a search, polls for completion, and then\
-    \ enriches the entities with the discovered data.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | **Api Key** | String | Yes | The API key used to authenticate with the AutoFocus\
-    \ service. |\n| **Results Limit** | Integer | No | The maximum number of hits\
-    \ (samples) to process for entity enrichment. If not provided, all hits are processed.\
-    \ |\n\n### Flow Description\n1. **Initialization**: The action identifies supported\
-    \ entities (File Hash or Filename) in the current scope and validates the API\
-    \ key.\n2. **Search Initiation**: For each entity, it sends a search request to\
-    \ AutoFocus. AutoFocus returns a 'cookie' (search identifier) which is stored\
-    \ for polling.\n3. **Asynchronous Polling**: The action enters an 'In Progress'\
-    \ state, periodically checking the status of the search using the cookie until\
-    \ the search is complete.\n4. **Data Retrieval**: Once the search is complete,\
-    \ the action retrieves the list of hits (samples) found in AutoFocus.\n5. **Enrichment**:\
-    \ \n    * Updates the entity's additional properties with flattened data from\
-    \ the hits (up to the specified limit).\n    * Attaches a CSV table containing\
-    \ the hit details to the entity.\n    * Uploads the full JSON search results as\
-    \ an attachment to the entity.\n    * Marks the entity as 'Enriched' and 'Suspicious'.\n\
-    \    * Creates an entity insight summarizing the number of hits found.\n6. **Completion**:\
-    \ The action updates the entities in Google SecOps and provides a summary of the\
-    \ results.\n\n### Additional Notes\n* The action automatically detects the hash\
-    \ type (MD5, SHA1, or SHA256) based on the string length of the File Hash entity.\n\
-    * This action is asynchronous and may take several minutes to complete depending\
-    \ on the AutoFocus search queue."
+  ai_description: >-
+    ### General Description
+
+    Initiates an asynchronous hunt for File Hash and File Name entities in Palo Alto
+    AutoFocus to retrieve associated intelligence and tags. The action enriches the
+    entities with the retrieved data, marks them as suspicious, and provides detailed
+    reports and insights.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities and filters for File Hash and File Name entity
+    types.
+
+    2. Initiates an asynchronous hunt query in AutoFocus for each valid entity (using
+    MD5, SHA1, SHA256, or filename).
+
+    3. Periodically checks the status of the hunt queries until they are completed.
+
+    4. Once completed, retrieves the hunt results (hits) from AutoFocus.
+
+    5. Enriches the entities with the retrieved data, marks them as enriched and suspicious,
+    and attaches a CSV table and a base64-encoded JSON report to the entities.
+
+    6. Creates an insight for each successfully enriched entity and updates the entities
+    in the platform.
+
+
+    ### Additional Notes
+
+    This action runs asynchronously to accommodate potentially long-running hunt queries
+    in AutoFocus.
+  ai_short_description: >-
+    Initiates an asynchronous hunt for File Hash and File Name entities in Palo Alto
+    AutoFocus to retrieve associated intelligence, enriching the entities with the
+    results and creating insights.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity properties (additional_properties, is_enriched, is_suspicious),
-      adds entity insights, attaches CSV tables of hits, and uploads full JSON reports
-      as entity attachments.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from AutoFocus via API queries (fetches_data=true).
+      It does not mutate external data or internal platform data outside of entities.
+      It updates entities with the retrieved data (can_update_entities=true) and creates
+      insights for them (can_create_insight=true).
   entity_usage:
     entity_types:
-    - FILEHASH
-    - FILENAME
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: true
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -150,82 +242,132 @@ Hunt File:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes
+      `EntityTypes.FILENAME` and `EntityTypes.FILEHASH`. Therefore, it targets File
+      Name and File Hash entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence and tags for File Hash and File Name
+      entities from AutoFocus, which directly aligns with the 'Enrich IOC' expected
+      outcome. It does not mutate external systems or perform other categorized actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Hunt Ip:
   ai_description: >-
     ### General Description
 
-    The **Hunt Ip** action is designed to perform a deep search (hunt) for IP Address
-    entities within the Palo Alto Networks AutoFocus threat intelligence platform.
-    Its primary purpose is to retrieve associated threat samples (hits) and tags to
-    provide context on the reputation and history of a specific IP. This action operates
-    asynchronously, meaning it initiates a search, polls for completion, and then
-    processes the results once the AutoFocus platform has finished its analysis.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Api Key | String | Yes | The API key used to authenticate with the AutoFocus
-    service. |
-
-    | Results Limit | Integer | No | The maximum number of hits (samples) to retrieve
-    and use for entity enrichment and data tables. If not specified, all available
-    hits are processed. |
+    This action hunts IP address entities in Palo Alto AutoFocus to retrieve a list
+    of associated tags and intelligence hits. It enriches the entities with the retrieved
+    data, marks them as suspicious if hits are found, and provides detailed reports.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action validates the provided API key and identifies
-    all IP Address entities within the current scope.
+    1. Iterates through the target entities and filters for IP Address entities.
 
-    2. **Hunt Initiation**: For each valid IP, the action sends a search request to
-    AutoFocus. The service returns a 'cookie' (a unique identifier for the search
-    task).
+    2. Initiates an asynchronous hunt query for each IP address using the AutoFocus
+    API (`samples_search`).
 
-    3. **Asynchronous Polling**: The action enters an 'In Progress' state, periodically
-    checking the status of each hunt using the associated cookie until the search
-    reaches 100% completion.
+    3. Periodically checks the status of the hunt queries (`samples_results`).
 
-    4. **Data Retrieval**: Once a hunt is complete, the action retrieves the list
-    of hits (samples) associated with the IP address.
+    4. Once completed, retrieves the intelligence hits for each IP address.
 
-    5. **Enrichment**: The action updates the entity's additional properties with
-    hit details (up to the specified limit), marks the entity as 'enriched', and sets
-    its status to 'suspicious' if hits are found.
+    5. Enriches the entities with the retrieved data, marks them as suspicious if
+    hits are found, and attaches a CSV table and JSON report to the entity.
 
-    6. **Reporting**: It generates a summary insight, constructs a CSV table of the
-    hits, and attaches a full JSON report (Base64 encoded) to the entity for further
-    investigation.
+    6. Creates an insight for each enriched entity summarizing the number of hits
+    found.
+
+    7. Updates the entities in the Google SecOps platform.
 
 
     ### Additional Notes
 
-    - This is an **asynchronous action**. It will remain in a pending state in the
-    SOAR platform until the external AutoFocus search task is finished.
-
-    - If no hits are found for an IP, the entity is not marked as suspicious, and
-    no enrichment data is added.
+    The action runs asynchronously. It relies on integration-level parameters for
+    API authentication and result limits.
+  ai_short_description: >-
+    Hunts IP address entities in Palo Alto AutoFocus to retrieve associated intelligence
+    hits, enriching the entities and generating insights based on the findings.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes (additional_properties, is_enriched, is_suspicious),
-      adds entity insights, attaches data tables, and adds file attachments to the
-      case.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from AutoFocus via API (fetches_data=true). It does
+      not mutate external data. It updates internal entities with the fetched data
+      (can_update_entities=true) and creates insights (can_create_insight=true). It
+      does not modify alert data or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -239,54 +381,127 @@ Hunt Ip:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` contains
+      only `EntityTypes.ADDRESS`. Therefore, it targets ADDRESS entities and filters
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action queries AutoFocus for IP address intelligence, retrieving tags and
+      hits, which aligns with the 'Enrich IOC' category. It does not perform any containment,
+      ticketing, or other operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Hunt Url:
-  ai_description: "### General Description\nThe **Hunt Url** action searches for a\
-    \ specific URL within Palo Alto Networks AutoFocus to retrieve associated threat\
-    \ intelligence, tags, and sample hits. This is an asynchronous action that initiates\
-    \ a 'hunt' (search task) and polls for completion. Once finished, it enriches\
-    \ the URL entity with detailed metadata, attaches a full threat report, and marks\
-    \ the entity as suspicious if hits are found.\n\n### Parameters Description\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | **Api Key** | String | Yes | The API key used to authenticate with the AutoFocus\
-    \ service. |\n| **Results Limit** | Integer | No | The maximum number of hits\
-    \ to process for entity enrichment and the data table. If not provided, all results\
-    \ are processed. |\n\n### Flow Description\n1.  **Initialization**: The action\
-    \ retrieves the API Key and identifies URL entities in the current scope.\n2.\
-    \  **Hunt Initiation**: For each URL entity, it calls the AutoFocus API to start\
-    \ a search. It receives an `af_cookie` (task identifier) and stores it in the\
-    \ action's state.\n3.  **Asynchronous Polling**: The action enters an 'In Progress'\
-    \ state. In subsequent cycles, it uses the `af_cookie` to check the completion\
-    \ percentage of the hunt.\n4.  **Data Retrieval**: Once the hunt status is 'complete',\
-    \ the action retrieves the list of 'hits' (intelligence data) associated with\
-    \ the URL.\n5.  **Enrichment**: \n    *   **Entity Properties**: Flattens hit\
-    \ data and adds it to the entity's additional properties (prefixed with 'AutoFocus').\n\
-    \    *   **Data Table**: Constructs a CSV table of the hits and attaches it to\
-    \ the entity.\n    *   **Attachment**: Encodes the full JSON result as a Base64\
-    \ report and attaches it to the entity.\n    *   **Status Update**: Marks the\
-    \ entity as 'Enriched' and 'Suspicious'.\n    *   **Insights**: Adds a case insight\
-    \ summarizing the number of hits found.\n6.  **Finalization**: Updates the entities\
-    \ in Google SecOps and returns the final results.\n\n### Additional Notes\n* \
-    \  This action is designed to handle multiple entities simultaneously by tracking\
-    \ individual task cookies.\n*   If no hits are found for a URL, the entity is\
-    \ not marked as suspicious or enriched."
+  ai_description: >-
+    ### General Description
+
+    Initiates an asynchronous hunt for URL entities in Palo Alto AutoFocus to retrieve
+    associated intelligence and tags.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities and filters for URL entities.
+
+    2. Initiates an asynchronous hunt query in AutoFocus for each URL via the AutoFocus
+    API.
+
+    3. Periodically checks the status of the hunt queries.
+
+    4. Once completed, retrieves the hunt results (hits).
+
+    5. Enriches the entities with the retrieved data, marks them as suspicious if
+    hits are found, and attaches the results as a CSV table and JSON report.
+
+    6. Generates an insight for each enriched entity summarizing the number of hits
+    found.
+
+
+    ### Additional Notes
+
+    This action runs asynchronously.
+  ai_short_description: >-
+    Initiates an asynchronous hunt for URL entities in Palo Alto AutoFocus to retrieve
+    associated intelligence and tags, enriching the entities with the results.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes (additional properties), sets the suspicious and enriched
-      flags, adds entity insights, and attaches CSV tables and JSON reports to the
-      entities within the case.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes requests to the AutoFocus API to initiate a hunt and fetch
+      results. It does not mutate external data but updates internal entities, adds
+      tables/attachments, and creates insights.
   entity_usage:
     entity_types:
-    - DestinationURL
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -300,28 +515,71 @@ Hunt Url:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      not in SUPPORTED_ENTITIES` where `SUPPORTED_ENTITIES = [EntityTypes.URL]`. This
+      means it targets URL entities, filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches intelligence and tags for URL entities from AutoFocus. This
+      matches the 'Enrich IOC' expected outcome. It does not perform any containment,
+      blocklist, or ticketing operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
-  ai_description: "### General Description\nThe **Ping** action is a diagnostic tool\
-    \ designed to verify the connectivity between Google SecOps and the Palo Alto\
-    \ Networks AutoFocus service. It ensures that the provided API key is valid and\
-    \ that the network path to the AutoFocus API is open. This action is typically\
-    \ used during the initial setup of the integration or for troubleshooting purposes.\n\
-    \n### Parameters Description\n| Parameter Name | Type | Mandatory | Description\
-    \ |\n| :--- | :--- | :--- | :--- |\n| **Api Key** | String | Yes | The API key\
-    \ required to authenticate requests with the AutoFocus service. This is retrieved\
-    \ from the integration configuration. |\n\n### Additional Notes\n- This action\
-    \ does not process any entities and is intended solely for connectivity testing.\n\
-    - It performs a dummy search query (searching for IP `8.8.8.8`) to validate the\
-    \ API response.\n\n### Flow Description\n1. **Initialization**: The action initializes\
-    \ the Siemplify context and logs the start of the process.\n2. **Configuration\
-    \ Retrieval**: It extracts the mandatory `Api Key` from the integration's configuration\
-    \ parameters.\n3. **Connectivity Test**: It instantiates the `AutoFocusManager`\
-    \ and calls the `test_connectivity` method.\n4. **API Interaction**: The manager\
-    \ sends a sample search request to the AutoFocus API using the provided credentials.\n\
-    5. **Result Handling**: \n    - If the API responds successfully (HTTP 200), the\
-    \ action completes with a success status and returns `true`.\n    - If an exception\
-    \ occurs (e.g., authentication failure, network timeout), the action catches the\
-    \ error, logs it, and returns a failure status with `false`."
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the AutoFocus integration. This action verifies that the
+    provided API credentials are valid and that the SecOps platform can successfully
+    communicate with the AutoFocus service.
+
+
+    ### Flow Description
+
+    1. Extracts the API key from the integration configuration.
+
+    2. Initializes the AutoFocus manager with the provided credentials.
+
+    3. Executes a test connectivity query (searching for a dummy IP address, 8.8.8.8)
+    against the AutoFocus API.
+
+    4. Returns a success message if the connection is established and the query succeeds,
+    or an error message if it fails.
+
+
+    ### Additional Notes
+
+    This action is typically used during integration setup or troubleshooting to verify
+    that the integration is configured correctly.
+  ai_short_description: >-
+    Tests connectivity to the AutoFocus integration by executing a basic search query.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -332,10 +590,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a basic API request to test connectivity. It does not fetch
+      contextual data for entities, mutate external data, mutate internal data, update
+      entities, create insights, modify alerts, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -349,3 +644,38 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process any entities. It only tests connectivity
+      to the external service using a hardcoded dummy query.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple ping/connectivity test and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticketing.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

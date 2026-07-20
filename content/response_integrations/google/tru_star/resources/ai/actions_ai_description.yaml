@@ -1,94 +1,93 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Entities:
-  ai_description: "Enriches entities with threat intelligence data from TruSTAR. This\
-    \ action retrieves metadata and summary information for various entity types to\
-    \ provide context on sightings, severity, and source tags.\n\n### Parameters\n\
-    | Parameter | Type | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n\
-    | Security Level Threshold | String | Yes | Specifies the minimum security level\
-    \ (Benign, Low, Medium, High) required for an entity to be automatically marked\
-    \ as suspicious in Google SecOps. Default is 'Low'. |\n| Enclave Filter | String\
-    \ | No | A comma-separated list of TruSTAR enclave names. If provided, the action\
-    \ only retrieves intelligence data from these specific enclaves. |\n\n### Flow\
-    \ Description\n1. **Initialization**: Validates the connection to TruSTAR and\
-    \ verifies that any provided enclave names in the 'Enclave Filter' exist in the\
-    \ target account.\n2. **Data Retrieval**: Fetches indicator metadata and summary\
-    \ information from TruSTAR for all target entities in the current scope.\n3. **Severity\
-    \ Assessment**: For each entity, the action calculates the maximum severity level\
-    \ based on the retrieved summaries.\n4. **Enrichment**: Updates entity attributes\
-    \ with data points such as first/last seen timestamps, sighting counts, source\
-    \ tags, and a direct link to the TruSTAR report.\n5. **Internal Mutation**: \n\
-    \    * Adds a visual **Insight** to the entity showing its severity level.\n \
-    \   * Adds an **Entity Link** for quick access to the TruSTAR platform.\n    *\
-    \ Attaches an **Entity Table** containing a CSV-formatted summary of the intelligence.\n\
-    6. **Suspicion Logic**: If the entity's maximum severity meets or exceeds the\
-    \ 'Security Level Threshold', the entity is marked as **Suspicious**.\n7. **Finalization**:\
-    \ Updates the entities within Google SecOps and returns a JSON result of all gathered\
-    \ data."
+  ai_description: >-
+    ### General Description
+
+    Enriches entities using threat intelligence from TruSTAR. It retrieves metadata
+    and indicator summaries for the target entities, optionally filtering by specific
+    enclaves. It evaluates the security level against a defined threshold to mark
+    entities as suspicious, updates entity properties, and generates insights, links,
+    and tables with the analysis results.
+
+
+    ### Flow Description
+
+    1. Retrieves the list of available enclaves from TruSTAR and validates the provided
+    enclave filters.
+
+    2. Fetches metadata and indicator summaries for the target entities from TruSTAR
+    via API requests.
+
+    3. Iterates through each entity to process the retrieved data.
+
+    4. Updates the entity's additional properties and marks it as enriched.
+
+    5. Adds an insight and a link to the TruSTAR report for the entity.
+
+    6. Evaluates the maximum severity against the configured threshold and marks the
+    entity as suspicious if the threshold is met or exceeded.
+
+    7. Updates the entities in the Google SecOps platform and attaches the JSON results.
+
+
+    ### Additional Notes
+
+    Supported entities: All.
+  ai_short_description: >-
+    Enriches entities using threat intelligence from TruSTAR, updating entity properties,
+    generating insights, and marking entities as suspicious based on a security level
+    threshold.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes (additional_properties), sets the 'is_enriched' and
-      'is_suspicious' flags, adds entity insights, creates entity links, and attaches
-      data tables to entities.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes API requests to TruSTAR to fetch indicator metadata and summaries
+      (fetches_data=true). It does not mutate external data (can_mutate_external_data=false).
+      It updates internal entities using `siemplify.update_entities` (can_update_entities=true)
+      and creates insights using `siemplify.add_entity_insight` (can_create_insight=true).
   entity_usage:
     entity_types:
-    - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
-    - USERUNIQNAME
+      address: true
+      alert: true
+      application: true
+      child_hash: true
+      child_process: true
+      cluster: true
+      container: true
+      credit_card: true
+      cve: true
+      cve_id: true
+      database: true
+      deployment: true
+      destination_domain: true
+      domain: true
+      email_message: true
+      event: true
+      file_hash: true
+      file_name: true
+      generic: true
+      host_name: true
+      ip_set: true
+      mac_address: true
+      parent_hash: true
+      parent_process: true
+      phone_number: true
+      pod: true
+      process: true
+      service: true
+      source_domain: true
+      threat_actor: true
+      threat_campaign: true
+      threat_signature: true
+      url: true
+      usb: true
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -102,60 +101,88 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and processes all entities
+      without applying any filters based on `entity_type` or other entity attributes.
+      Therefore, it supports all entity types and does not filter them.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence data (metadata and summaries) from TruSTAR
+      for the target entities, returning severity scores and tags. This aligns directly
+      with the 'Enrich IOC' expected outcome. It does not mutate external data, update
+      alerts, or perform containment actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Security Level Threshold | String | Yes | Specify what should be the lowest
+    security level for the entity to be marked as suspicious. |
+
+    | Enclave Filter | String | No | Specify a comma-separated list of enclave names
+    that should be used during the enrichment. |
 Get Related IOCs:
   ai_description: >-
     ### General Description
 
-    The **Get Related IOCs** action retrieves threat intelligence from TruSTAR regarding
-    indicators of compromise (IOCs) that are related to the entities provided in the
-    current context. It allows security analysts to uncover connected threats and
-    expand the scope of an investigation by identifying associated malicious infrastructure
-    or files.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Max IOCs To Return** | Integer | No | Specifies the maximum number of related
-    IOCs to retrieve. The value must be between 0 and 1000. If the provided value
-    is outside this range, the default value of 50 is used. |
-
-    | **Enclave Filter** | String | No | A comma-separated list of TruSTAR enclave
-    names. If provided, the action will only search for related IOCs within these
-    specific enclaves. If left empty, all available enclaves are searched. |
+    Retrieves information about Indicators of Compromise (IOCs) that are related to
+    the provided entities using TruSTAR. This action queries the TruSTAR platform
+    to find additional threat intelligence and related indicators based on the target
+    entities' identifiers.
 
 
     ### Flow Description
 
-    1. **Parameter Initialization**: The action retrieves the API credentials and
-    the user-defined parameters (`Max IOCs To Return` and `Enclave Filter`).
+    1. Extracts action parameters, including the maximum number of IOCs to return
+    and an optional enclave filter.
 
-    2. **Enclave Validation**: If an enclave filter is provided, the action fetches
-    the list of all available enclaves from TruSTAR to map the provided names to their
-    corresponding IDs and validates their existence.
+    2. If an enclave filter is provided, retrieves the list of available enclaves
+    from TruSTAR and validates the requested enclave names against the available ones.
 
-    3. **Data Retrieval**: The action sends a request to the TruSTAR API using the
-    identifiers of all target entities to find related IOCs, applying the enclave
-    filters and result limits.
+    3. Queries the TruSTAR API to fetch related IOCs for the identifiers of the target
+    entities, optionally filtering by the resolved enclave IDs.
 
-    4. **Result Processing**: The retrieved IOCs are grouped by their type (e.g.,
-    IP, URL, SHA256).
+    4. Aggregates the retrieved IOCs by their indicator type.
 
-    5. **Output Generation**: The action generates a 'Statistics' data table summarizing
-    the counts of each IOC type found and attaches the full list of related IOCs as
-    a JSON result.
+    5. Attaches the results as a JSON object and a statistical CSV table to the action's
+    output.
 
 
     ### Additional Notes
 
-    * This action supports all entity types as it queries TruSTAR based on the entity's
-    identifier string.
-
-    * If no entities are provided to the action, it will complete successfully but
-    return no results.
+    Supports all entity types. The maximum number of IOCs returned can be configured
+    up to 1000. If an invalid enclave name is provided in the filter, the action will
+    fail and list the missing enclaves.
+  ai_short_description: >-
+    Retrieves information about Indicators of Compromise (IOCs) related to the provided
+    entities from TruSTAR.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -166,45 +193,47 @@ Get Related IOCs:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action makes a GET request to the TruSTAR API to fetch related IOCs (fetches_data=true).
+      It does not perform any state-changing operations on external systems (can_mutate_external_data=false).
+      It does not update entities, create insights, or modify internal alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
-    - ALERT
-    - APPLICATION
-    - CHILDHASH
-    - CHILDPROCESS
-    - CLUSTER
-    - CONTAINER
-    - CREDITCARD
-    - CVE
-    - CVEID
-    - DATABASE
-    - DEPLOYMENT
-    - DESTINATIONDOMAIN
-    - DOMAIN
-    - EMAILSUBJECT
-    - EVENT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - IPSET
-    - MacAddress
-    - PARENTHASH
-    - PARENTPROCESS
-    - PHONENUMBER
-    - POD
-    - PROCESS
-    - SERVICE
-    - SOURCEDOMAIN
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - DestinationURL
-    - USB
-    - USERUNIQNAME
+      address: true
+      alert: true
+      application: true
+      child_hash: true
+      child_process: true
+      cluster: true
+      container: true
+      credit_card: true
+      cve: true
+      cve_id: true
+      database: true
+      deployment: true
+      destination_domain: true
+      domain: true
+      email_message: true
+      event: true
+      file_hash: true
+      file_name: true
+      generic: true
+      host_name: true
+      ip_set: true
+      mac_address: true
+      parent_hash: true
+      parent_process: true
+      phone_number: true
+      pod: true
+      process: true
+      service: true
+      source_domain: true
+      threat_actor: true
+      threat_campaign: true
+      threat_signature: true
+      url: true
+      usb: true
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -218,175 +247,142 @@ Get Related IOCs:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Get Related Reports:
-  ai_description: >-
-    The 'Get Related Reports' action retrieves threat intelligence reports from TruSTAR
-    that are correlated with the entities present in a Google SecOps case. It allows
-    security analysts to gain context on how specific indicators (IPs, Hashes, Domains,
-    etc.) have been documented in previous security reports within their enclaves.
-
-
-    ### Parameters Description
-
-
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and extracts their identifiers
+      without applying any entity type or property filters. Therefore, it supports
+      and runs on all entity types.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches related IOCs from TruSTAR for the provided entities, which
+      provides threat intelligence and context. This aligns with the 'Enrich IOC'
+      category. It does not mutate external systems, update alerts, or perform containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Create Insight | Boolean | No | If enabled (default), the action will create
-    a case-level insight summarizing the related reports found. |
+    | Max IOCs To Return | String | No | Specify how many IOCs to return. Default:
+    50. Maximum: 1000. |
 
-    | Include Report Body In Insight | Boolean | No | If enabled, the full text of
-    the report body will be included in the insight. Note: This can significantly
-    increase the size of the insight. |
+    | Enclave Filter | String | No | Specify a comma-separated list of enclave names
+    that should be used during the enrichment. |
+Get Related Reports:
+  ai_description: >-
+    ### General Description
 
-    | Enclave Filter | String | No | A comma-separated list of TruSTAR enclave names.
-    If provided, the search will be restricted to these specific enclaves. |
-
-    | Max Reports To Return | Integer | No | Specifies the maximum number of reports
-    to retrieve. Default is 10, maximum is 25. |
+    Retrieves information about reports related to the provided entities from TruSTAR.
+    This action queries TruSTAR for correlated reports based on the entity identifiers
+    and optionally filters them by specific enclaves. It returns detailed report information
+    and tags, which can be attached to the case as insights and data tables.
 
 
     ### Flow Description
 
+    1. Extracts action parameters and integration configurations.
 
-    1.  **Initialization**: The action initializes the TruSTAR manager using the provided
-    API credentials and configuration.
+    2. Iterates over the target entities, extracting domains for URL entities and
+    using identifiers for all other entity types.
 
-    2.  **Entity Processing**: It iterates through all target entities in the case.
-    If an entity is a URL, it extracts the domain or path to use as the search indicator;
-    otherwise, it uses the entity's identifier.
+    3. Retrieves a list of available enclaves from TruSTAR via a GET request.
 
-    3.  **Enclave Validation**: If an 'Enclave Filter' is provided, the action fetches
-    the list of available enclaves from TruSTAR to map the provided names to their
-    internal IDs. It validates that all specified enclaves exist.
+    4. Filters the enclaves based on the provided `Enclave Filter` parameter.
 
-    4.  **Report Retrieval**: It queries the TruSTAR API for reports correlated with
-    the collected entity indicators, optionally filtered by the specified enclaves.
+    5. Fetches correlated reports for the entities and filtered enclaves using a GET
+    request to TruSTAR.
 
-    5.  **Detail Enrichment**: For each found report, the action performs additional
-    API calls to fetch the full report details and associated tags.
+    6. For each correlated report, fetches detailed report information and tags via
+    GET requests.
 
-    6.  **Output Generation**: The action compiles the results into a JSON object,
-    constructs a CSV data table for the case wall, and (if configured) generates a
-    formatted HTML insight containing report titles, dates, status, tags, and links.
+    7. Aggregates the results, adds JSON and CSV data to the action result, and optionally
+    creates a case insight with the report details.
+
+
+    ### Additional Notes
+
+    This action supports all entity types. If a URL entity is provided, the action
+    will automatically parse and use its domain or path for the search.
+  ai_short_description: >-
+    Retrieves information about reports related to the provided entities from TruSTAR,
+    optionally creating case insights with the report details.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
-    can_update_entities: false
-    external_data_mutation_explanation: null
-    fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action creates a case insight in Google SecOps containing summaries and
-      links to the related TruSTAR reports.
-  categories:
-    enrichment: true
-  entity_usage:
-    entity_types:
-    - ADDRESS
-    - CREDITCARD
-    - CVE
-    - DestinationURL
-    - EMAILSUBJECT
-    - FILEHASH
-    - FILENAME
-    - GENERICENTITY
-    - HOSTNAME
-    - MacAddress
-    - PHONENUMBER
-    - PROCESS
-    - THREATACTOR
-    - THREATCAMPAIGN
-    - THREATSIGNATURE
-    - USB
-    - USERUNIQNAME
-    filters_by_additional_properties: false
-    filters_by_alert_identifier: false
-    filters_by_case_identifier: false
-    filters_by_creation_time: false
-    filters_by_entity_type: true
-    filters_by_identifier: false
-    filters_by_is_artifact: false
-    filters_by_is_enriched: false
-    filters_by_is_internal: false
-    filters_by_is_pivot: false
-    filters_by_is_suspicious: false
-    filters_by_is_vulnerable: false
-    filters_by_modification_time: false
-List Enclaves:
-  ai_description: >-
-    ### General Description
-
-    The **List Enclaves** action retrieves a list of available enclaves from the TruSTAR
-    platform. Enclaves in TruSTAR are distinct data containers or communities where
-    threat intelligence is shared and stored. This action is primarily used for discovery
-    and configuration purposes, allowing users to identify which enclaves they have
-    access to and their respective IDs for use in other TruSTAR actions.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Filter Logic** | String | No | Determines the comparison method for filtering
-    enclave names. Options are `Equal` (exact match) or `Contains` (partial match).
-    Defaults to `Equal`. |
-
-    | **Filter Value** | String | No | The specific string to search for in the enclave
-    names. If left empty, all retrieved enclaves are returned. |
-
-    | **Max Enclaves To Return** | Integer | No | The maximum number of enclave records
-    to retrieve and process. Defaults to 50. If a non-positive value is provided,
-    the default is used. |
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: The action extracts the API credentials (API Root,
-    Key, Secret) and the user-defined filtering parameters.
-
-    2. **API Interaction**: It establishes a session with TruSTAR and calls the `list_enclaves`
-    endpoint to fetch all enclaves accessible to the user.
-
-    3. **Pagination/Limiting**: The retrieved list is truncated based on the **Max
-    Enclaves To Return** parameter.
-
-    4. **Filtering Logic**: If a **Filter Value** is provided, the action iterates
-    through the enclaves and applies the selected **Filter Logic** (Equal or Contains)
-    against the enclave's name.
-
-    5. **Result Generation**: The final list of enclaves is added to the action's
-    execution results as a JSON object and a data table for display in the Google
-    SecOps interface.
-
-
-    ### Additional Notes
-
-    * **Data Table Title**: Note that the data table generated by this action is titled
-    "Related Reports" in the UI, although it contains enclave metadata (Name, ID,
-    Type, and Permissions).
-
-    * **Permissions**: The output includes boolean flags for each enclave indicating
-    if the user has `Read`, `Create`, or `Update` permissions.
-  capabilities:
-    can_create_case_comments: false
-    can_create_insight: false
-    can_modify_alert_data: false
-    can_mutate_external_data: false
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action makes GET requests to TruSTAR to fetch enclaves, correlated reports,
+      report details, and tags. It does not mutate external data. It creates case
+      insights using `siemplify.create_case_insight` but does not update entities
+      or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: true
+      alert: true
+      application: true
+      child_hash: true
+      child_process: true
+      cluster: true
+      container: true
+      credit_card: true
+      cve: true
+      cve_id: true
+      database: true
+      deployment: true
+      destination_domain: true
+      domain: true
+      email_message: true
+      event: true
+      file_hash: true
+      file_name: true
+      generic: true
+      host_name: true
+      ip_set: true
+      mac_address: true
+      parent_hash: true
+      parent_process: true
+      phone_number: true
+      pod: true
+      process: true
+      service: true
+      source_domain: true
+      threat_actor: true
+      threat_campaign: true
+      threat_signature: true
+      url: true
+      usb: true
+      user: true
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -400,52 +396,234 @@ List Enclaves:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Ping:
+    reasoning: >-
+      The action iterates over `siemplify.target_entities`. While it checks if an
+      entity is a URL to extract its domain, it processes all entity types by appending
+      their identifiers to the `supported_entities` list. It does not filter out any
+      entities based on type, identifier, or other properties.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches related reports from TruSTAR for the provided entities. Since
+      it supports all entity types, it can retrieve threat intelligence reports for
+      IOCs (Enrich IOC) as well as contextual reports for internal assets or users
+      (Enrich Asset). It does not perform any containment, ticketing, or blocking
+      operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Create Insight | Boolean | No | If enabled, action will create an insight containing
+    information about reports related to the entities. |
+
+    | Include Report Body In Insight | Boolean | No | If enabled, insight will contain
+    information about the report body. Note: report body can be very big in size.
+    |
+
+    | Enclave Filter | String | No | Specify a comma-separated list of enclave names
+    that should be used during the enrichment. |
+
+    | Max Reports To Return | String | No | Specify how many reports to return. Default:
+    10. Maximum: 25. |
+List Enclaves:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity to the TruSTAR service using the provided configuration
-    parameters. This action ensures that the API Root, API Key, and API Secret are
-    valid and that the Google SecOps platform can communicate with the TruSTAR API.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | API Root | String | Yes | The base URL of the TruSTAR API service. |
-
-    | API Key | String | Yes | The API Key used for authentication. |
-
-    | API Secret | String | Yes | The API Secret used for authentication. |
-
-    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
-    of the TruSTAR server. |
+    Retrieves a list of available enclaves from TruSTAR. This action allows users
+    to view and filter enclaves accessible to their account.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: Retrieves the API Root, API Key, API Secret, and
-    SSL verification preference from the integration configuration.
+    1. Connects to the TruSTAR API using the provided credentials.
 
-    2. **Manager Initialization**: Creates an instance of the `TruSTARManager`, which
-    automatically performs an OAuth2 authentication flow to obtain an access token
-    via a POST request to the `/oauth/token` endpoint.
+    2. Executes a GET request to the `/api/1.3/enclaves` endpoint to fetch available
+    enclaves.
 
-    3. **Connectivity Test**: Executes the `test_connectivity` method, which sends
-    a GET request to the TruSTAR version endpoint (`api/1.3/version`) to verify the
-    service is reachable and the credentials are valid.
+    3. Filters the retrieved enclaves based on the specified 'Filter Logic' and 'Filter
+    Value'.
 
-    4. **Result Reporting**: Returns a success status if the request completes without
-    error, or a failure status with the specific error message if the connection fails.
+    4. Limits the number of returned enclaves based on the 'Max Enclaves To Return'
+    parameter.
+
+    5. Returns the filtered enclaves as JSON and populates a data table with the results.
 
 
     ### Additional Notes
 
-    * This action does not process any entities and is intended for configuration
-    validation only.
+    None.
+  ai_short_description: >-
+    Retrieves a list of available enclaves from TruSTAR, optionally filtering them
+    by name.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the TruSTAR API to fetch available enclaves
+      (fetches_data=true). It does not mutate external data, update internal entities,
+      create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates globally to list enclaves from the TruSTAR service,
+      so all entity type flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a list of enclaves from TruSTAR. It does not enrich specific
+      IOCs or assets, nor does it mutate any alerts, tickets, or external systems.
+      Therefore, it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Filter Logic | Dropdown | No | Specify what filter logic should be applied (Equal,
+    Contains). |
+
+    | Filter Value | String | No | Specify what value should be used in the filter.
+    |
+
+    | Max Enclaves To Return | String | No | Specify how many enclaves to return.
+    Default: 50. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the TruSTAR service using the provided integration configuration
+    parameters.
+
+
+    ### Flow Description
+
+    1. Extracts the API Root, API Key, API Secret, and Verify SSL parameters from
+    the integration configuration.
+
+    2. Initializes the TruSTAR manager.
+
+    3. Makes an API call to the TruSTAR ping endpoint (`api/1.3/version`) to verify
+    connectivity.
+
+    4. Returns a success message if the connection is established, or an error message
+    if it fails.
+
+
+    ### Additional Notes
+
+    This action is typically used to verify that the integration is configured correctly
+    and can communicate with the TruSTAR API.
+  ai_short_description: >-
+    Tests connectivity to the TruSTAR service to ensure the integration is configured
+    correctly.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -456,10 +634,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action only makes a GET request to a ping endpoint to verify connectivity.
+      It does not fetch contextual data, mutate external or internal data, update
+      entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -473,3 +688,38 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process any entities. It only tests connectivity
+      to the external service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticket management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
