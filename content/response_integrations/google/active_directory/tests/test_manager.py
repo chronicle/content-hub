@@ -1,11 +1,12 @@
 from __future__ import annotations
 import unittest
 from unittest.mock import patch, MagicMock
+from ..core import ActiveDirectoryManager as adm_module
 from ..core.ActiveDirectoryManager import ActiveDirectoryManager
 
 class TestActiveDirectoryManager(unittest.TestCase):
-    @patch("content.response_integrations.google.active_directory.core.ActiveDirectoryManager.Server")
-    @patch("content.response_integrations.google.active_directory.core.ActiveDirectoryManager.Connection")
+    @patch.object(adm_module, "Server")
+    @patch.object(adm_module, "Connection")
     def test_manager_init_default_timeouts(self, mock_connection, mock_server):
         # Instantiate with default timeouts (None passed)
         ActiveDirectoryManager(
@@ -33,8 +34,8 @@ class TestActiveDirectoryManager(unittest.TestCase):
             receive_timeout=60,
         )
 
-    @patch("content.response_integrations.google.active_directory.core.ActiveDirectoryManager.Server")
-    @patch("content.response_integrations.google.active_directory.core.ActiveDirectoryManager.Connection")
+    @patch.object(adm_module, "Server")
+    @patch.object(adm_module, "Connection")
     def test_manager_init_custom_timeouts(self, mock_connection, mock_server):
         # Instantiate with custom timeouts
         ActiveDirectoryManager(
