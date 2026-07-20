@@ -1,94 +1,36 @@
 Advanced IOC Scan:
   ai_description: >-
-    ### Advanced IOC Scan
+    ### General Description
+
+    Initiates an advanced Indicator of Compromise (IOC) scan on specified Rubrik Security
+    Cloud objects. It supports various scan configurations including IOC types, date
+    ranges, file size filters, and path inclusions/exclusions.
 
 
-    #### General Description
+    ### Flow Description
 
-    Initiates an advanced Indicator of Compromise (IOC) scan (Threat Hunt) on specified
-    Rubrik objects within the Rubrik Security Cloud. This action allows security teams
-    to search for specific file patterns, hashes, or YARA rules across snapshots of
-    protected systems, providing granular control over scan criteria such as file
-    size, date ranges, and path inclusions/exclusions.
+    1. Extracts and validates action parameters including Object ID, IOC details,
+    and scan configurations.
 
+    2. Initializes the Rubrik Security Cloud API client.
 
-    #### Parameters Description
+    3. Executes a GraphQL mutation (`startBulkThreatHunt`) to start the advanced IOC
+    scan on the specified objects.
 
-    | Parameter | Type | Mandatory | Description |
+    4. Parses the response to extract the created threat hunt details.
 
-    | :--- | :--- | :--- | :--- |
-
-    | **Object ID** | String | Yes | Comma-separated list of Rubrik object IDs (snappables)
-    to perform the scan on. |
-
-    | **IOC Type** | DDL | No | The type of indicator to scan for. Options include:
-    `INDICATOR_OF_COMPROMISE_TYPE_PATH_OR_FILENAME`, `INDICATOR_OF_COMPROMISE_TYPE_HASH`,
-    or `INDICATOR_OF_COMPROMISE_TYPE_YARA_RULE`. |
-
-    | **IOC Value** | String | No | The specific value of the indicator to search
-    for (e.g., a file hash or path pattern). |
-
-    | **Scan Name** | String | No | Custom name for the threat hunt. If not provided,
-    a name is auto-generated using the format `Google-SecOps-YYYY-MM-DD-HH:MM:SS`.
-    |
-
-    | **Advanced IOC** | String | No | A JSON-encoded object where keys represent
-    IOC types and values are lists of indicators. |
-
-    | **Start Date** | String | No | Filter snapshots from this date. Supported formats:
-    `yyyy-mm-dd`, `yyyy-mm-ddTHH:MM:SSZ`. |
-
-    | **End Date** | String | No | Filter snapshots until this date. Supported formats:
-    `yyyy-mm-dd`, `yyyy-mm-ddTHH:MM:SSZ`. |
-
-    | **Max Snapshots Per Object** | String | No | The maximum number of snapshots
-    to scan for each specified object. |
-
-    | **Max Matches Per Snapshot** | String | No | The scan for a snapshot terminates
-    once this number of matches is detected. |
-
-    | **Min File Size** | String | No | Minimum file size in bytes to include in the
-    scan. |
-
-    | **Max File Size** | String | No | Maximum file size in bytes to include in the
-    scan. |
-
-    | **Paths To Include** | String | No | Comma-separated list of file paths to explicitly
-    include in the scan. |
-
-    | **Paths To Exclude** | String | No | Comma-separated list of file paths to exclude
-    from the scan. |
-
-    | **Paths To Exempt** | String | No | Comma-separated list of paths to exempt
-    from the exclusion list. |
+    5. Returns the results as a JSON object and populates a data table with the scan
+    details.
 
 
-    #### Additional Notes
+    ### Additional Notes
 
-    - **Requirement Logic:** Either the `Advanced IOC` parameter must be configured,
-    OR both `IOC Type` and `IOC Value` must be provided for the action to run. If
-    neither set is provided, the action will fail.
-
-    - The action returns a data table named "Advanced IOC Scan Results" containing
-    the Hunt IDs and their initial statuses.
-
-
-    #### Flow Description
-
-    1. **Initialization:** Extracts configuration parameters and action inputs.
-
-    2. **Validation:** Validates date formats, ensures integer parameters (like file
-    sizes and snapshot limits) are non-negative, and parses the `Advanced IOC` JSON
-    if provided.
-
-    3. **Authentication:** Establishes a session with Rubrik Security Cloud using
-    OAuth credentials.
-
-    4. **Scan Initiation:** Executes a GraphQL mutation (`startBulkThreatHunt`) to
-    trigger the scan on the Rubrik platform with the defined IOCs and filters.
-
-    5. **Output:** Captures the resulting Hunt IDs and populates a data table and
-    the raw JSON result in Google SecOps.
+    Requires valid Rubrik Security Cloud service account credentials. At least one
+    of the following is required: the 'Advanced IOC' parameter, or the combination
+    of 'IOC Type' and 'IOC Value' parameters.
+  ai_short_description: >-
+    Initiates an advanced Indicator of Compromise (IOC) scan on specified Rubrik Security
+    Cloud objects.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -97,15 +39,51 @@ Advanced IOC Scan:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Initiates a new Threat Hunt (IOC scan) on the Rubrik Security Cloud platform,
-      which creates new hunt records and starts background scanning processes on the
-      target objects.
-    fetches_data: true
+      Initiates a new advanced threat hunt scan job in Rubrik Security Cloud.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a POST request (GraphQL mutation `startBulkThreatHunt`) to
+      Rubrik Security Cloud to initiate a new threat hunt scan. This changes the state
+      of the external system by creating a new scan job. It does not mutate internal
+      SecOps data, update entities, create insights, or add case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -119,28 +97,113 @@ Advanced IOC Scan:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the `Object ID` parameter provided by the
+      user. Therefore, it does not run on entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a threat hunt scan job on Rubrik Security Cloud. It does
+      not directly enrich an IOC with threat intelligence, nor does it contain a host,
+      block an IOC, or match any of the other specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Paths To Exclude | String | No | Paths to exclude from the scan. Supports comma
+    separated values. |
+
+    | Max Matches Per Snapshot | String | No | Snapshot terminates once this number
+    of matches have been detected. |
+
+    | Paths To Exempt | String | No | Paths to exempt from exclusion. Supports comma
+    separated values. |
+
+    | Object ID | String | Yes | Object ID of the system on which to perform the scan.
+    Supports comma separated values. |
+
+    | IOC Type | String (DDL) | No | The type of the indicator to scan for. |
+
+    | IOC Value | String | No | Value of the indicator to scan for. |
+
+    | Scan Name | String | No | Name of the new advanced threat hunt scan. |
+
+    | Advanced IOC | String | No | Json encoded Indicators Of Compromise to scan.
+    Json keys signify the type of IOC and the corresponding list of values are the
+    values of the IOC's. |
+
+    | Start Date | String | No | Filter the snapshots from the provided date.\nFormat
+    supported:  yyyy-mm-dd, yyyy-mm-ddTHH:MM:SSZ |
+
+    | End Date | String | No | Filter the snapshots until the provided date.\nFormat
+    supported:  yyyy-mm-dd, yyyy-mm-ddTHH:MM:SSZ |
+
+    | Max Snapshots Per Object | String | No | Maximum number of snapshots to scan
+    per object. |
+
+    | Min File Size | String | No | Minimum size of the file in bytes that will be
+    included in the scan. |
+
+    | Max File Size | String | No | Maximum size of the file in bytes that will be
+    included in the scan. |
+
+    | Paths To Include | String | No | Paths to include in the scan. Supports comma
+    separated values. |
 Get CDM Cluster Connection State:
-  ai_description: "### General Description\nRetrieves the connection state of a specific\
-    \ Rubrik CDM (Cloud Data Management) cluster from Rubrik Security Cloud (RSC).\
-    \ This action provides visibility into the operational status of a cluster and\
-    \ its individual nodes, helping administrators verify connectivity and health.\n\
-    \n### Parameters Description\n| Parameter | Type | Mandatory | Description |\n\
-    | :--- | :--- | :--- | :--- |\n| Cluster ID | String | Yes | The unique identifier\
-    \ of the CDM cluster to check. |\n\n### Flow Description\n1. **Parameter Extraction**:\
-    \ The action retrieves the mandatory `Cluster ID` from the input parameters.\n\
-    2. **Authentication**: Initializes the Rubrik API manager using the provided service\
-    \ account credentials and establishes a secure session.\n3. **Data Retrieval**:\
-    \ Executes a GraphQL query (`CDM_CLUSTER_CONNECTION_STATE_QUERY`) against the\
-    \ Rubrik Security Cloud API to fetch the connection status for the specified cluster.\n\
-    4. **Data Processing**: Parses the API response to extract node-specific connection\
-    \ states (e.g., `connectedState`) using the `CDMClusterConnectionStateDatamodel`.\n\
-    5. **Output Generation**: \n    * Adds the raw JSON response to the action's result\
-    \ JSON.\n    * Creates a data table named 'CDM Cluster Connection State' containing\
-    \ the connection status of the cluster nodes for display in the SOAR interface.\n\
-    \    * Returns a success message and sets the result value to `true` if data is\
-    \ retrieved successfully.\n\n### Additional Notes\nThis action does not automatically\
-    \ iterate over entities in the case. It is a standalone utility that requires\
-    \ a manually provided `Cluster ID` to function."
+  ai_description: >-
+    ### General Description
+
+    Retrieves the connection state information for a specific CDM (Cloud Data Management)
+    cluster from Rubrik Security Cloud.
+
+
+    ### Flow Description
+
+    1. Extracts the `Cluster ID` parameter.
+
+    2. Initializes the Rubrik Security Cloud client.
+
+    3. Makes a GraphQL API call to retrieve the CDM cluster connection state.
+
+    4. Parses the response to extract the connection state of the nodes.
+
+    5. Returns the results as a JSON object and a CSV table.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Retrieves the connection state information for a specific CDM (Cloud Data Management)
+    cluster from Rubrik Security Cloud.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -151,10 +214,47 @@ Get CDM Cluster Connection State:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data from the Rubrik Security Cloud API using a GraphQL query.
+      It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -168,53 +268,79 @@ Get CDM Cluster Connection State:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies solely on the provided action parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves the connection state of a specific cluster using its ID.
+      It does not enrich SOAR entities, mutate external state, or match any of the
+      predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Cluster ID | String | Yes | The ID of the CDM cluster. |
 Get CDM Cluster Location:
   ai_description: >-
     ### General Description
 
-    The **Get CDM Cluster Location** action retrieves the geographical location information
-    for a specific Rubrik Cloud Data Management (CDM) cluster. It identifies the physical
-    address associated with the nodes within the cluster by querying the Rubrik Security
-    Cloud API. This action is useful for asset management and identifying the physical
-    residency of data stored in specific clusters.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Cluster ID** | String | Yes | The unique identifier of the CDM cluster for
-    which the location is being requested. |
+    Retrieves the geographical location information for a specific CDM (Cloud Data
+    Management) cluster from Rubrik Security Cloud.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves the mandatory `Cluster ID` from
-    the input parameters.
+    1. Extracts the `Cluster ID` parameter provided by the user or playbook.
 
-    2. **API Initialization**: It initializes the Rubrik Security Cloud API manager
-    using the provided service account credentials and validates the connection.
+    2. Initializes the Rubrik Security Cloud API client using the provided integration
+    credentials.
 
-    3. **Data Retrieval**: A GraphQL query is executed to fetch the `geoLocation`
-    (specifically the `address` field) for the specified cluster ID.
+    3. Executes a GraphQL query (`clusterConnection`) to fetch the CDM cluster location
+    details for the specified cluster ID.
 
-    4. **Data Processing**: The response is parsed, and the location details for the
-    cluster nodes are extracted and structured using the `CDMClusterLocationDatamodel`.
+    4. Parses the response to extract the geographical location (address) of the cluster
+    nodes.
 
-    5. **Result Output**: The action adds the raw JSON response to the execution results
-    and constructs a data table named "CDM Cluster Location" containing the Cluster
-    ID and its physical location for display in the SOAR interface.
+    5. Constructs a data table and JSON result containing the cluster ID and its location,
+    returning them to the SOAR platform.
 
 
     ### Additional Notes
 
-    - This action does not operate on entities; it requires a specific Cluster ID
-    as input.
-
-    - The results are displayed in a data table for easy viewing within the SOAR interface,
-    limited to a maximum number of records defined by the integration's constants.
+    This action does not operate on SOAR entities. It requires a valid Cluster ID
+    to successfully query the Rubrik Security Cloud API.
+  ai_short_description: >-
+    Retrieves the geographical location information for a specific CDM cluster from
+    Rubrik Security Cloud.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -225,10 +351,48 @@ Get CDM Cluster Location:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data by making a GraphQL query to Rubrik Security Cloud to
+      retrieve cluster location details. It does not mutate any external data, nor
+      does it mutate internal SOAR data (such as updating entities, creating insights,
+      modifying alerts, or adding case comments).
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -242,68 +406,83 @@ Get CDM Cluster Location:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates solely on the provided 'Cluster ID' parameter. Therefore,
+      all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves location data for a specific cluster ID from Rubrik Security
+      Cloud. It does not enrich SOAR entities (IOCs or Assets), update alerts, manage
+      tickets, modify blocklists/allowlists, control identities, contain hosts, or
+      interact with emails/files. Therefore, it does not match any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Cluster ID | String | Yes | The ID of the CDM cluster. |
 Get Sonar Sensitive Hits:
   ai_description: >-
     ### General Description
 
-    The **Get Sonar Sensitive Hits** action retrieves data classification and sensitive
-    discovery results for a specific object within Rubrik Security Cloud (RSC). It
-    identifies violations and hits detected by Rubrik Sonar (the sensitive data discovery
-    engine) based on a configurable lookback period. This action is primarily used
-    to identify if sensitive data (such as PII, PHI, or financial information) exists
-    on a specific workload, backup, or file share object.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Object Name** | String | Yes | The exact name of the Rubrik object (e.g.,
-    a Virtual Machine, physical host, or database) to check for sensitive hits. |
-
-    | **Lookback Days** | String | No | The number of days in the past to retrieve
-    scan results from. For example, a value of 7 will return results as of 7 days
-    ago. Defaults to 7 if not provided. |
+    Retrieves sensitive data hits detected by Rubrik Sonar for a specific object within
+    a configurable lookback period from Rubrik Security Cloud.
 
 
     ### Flow Description
 
-    1. **Input Validation**: The action validates that the `Object Name` is a non-empty
-    string and that `Lookback Days` is a valid non-negative integer.
+    1. Extracts the `Object Name` and `Lookback Days` parameters.
 
-    2. **Date Calculation**: It calculates a target search date by subtracting the
-    lookback days from the current system time.
+    2. Calculates the search date based on the lookback period.
 
-    3. **Object Discovery**: The action queries the Rubrik Security Cloud API to list
-    all policy objects that were scanned on the calculated target date.
+    3. Makes a GraphQL API call to Rubrik Security Cloud to retrieve the list of Sonar
+    policy objects for the calculated date.
 
-    4. **Object Matching**: It iterates through the list of policy objects to find
-    a match for the provided `Object Name`. If no match is found, or if the object
-    has no snapshots for that date, the action fails.
+    4. Filters the retrieved objects to find the one matching the provided `Object
+    Name`.
 
-    5. **Detail Retrieval**: Once the object is identified, it performs a secondary
-    GraphQL query to fetch detailed sensitive hit information, including analyzer
-    groups (e.g., 'US PII') and specific analyzer results (e.g., 'Social Security
-    Number').
+    5. Makes a second GraphQL API call to retrieve detailed sensitive hits information
+    for the matched object.
 
-    6. **Data Formatting**: The retrieved data is parsed into a structured format,
-    including hit counts and analyzer names.
-
-    7. **Output Generation**: The action returns the raw JSON response and creates
-    a data table named "Sonar Sensitive Hits" in the Google SecOps UI for analyst
-    review.
+    6. Formats the retrieved data and adds it to the action's JSON result and a data
+    table.
 
 
     ### Additional Notes
 
-    - This action does not operate on Google SecOps entities (like IP addresses or
-    Hostnames); it relies entirely on the `Object Name` parameter provided by the
-    user.
-
-    - The action is read-only and does not modify any data within Rubrik Security
-    Cloud.
+    Sonar is Rubrik's data classification and sensitive data discovery engine.
+  ai_short_description: >-
+    Retrieves sensitive data hits detected by Rubrik Sonar for a specific object within
+    a configurable lookback period from Rubrik Security Cloud.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -314,10 +493,47 @@ Get Sonar Sensitive Hits:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches data from Rubrik Security Cloud using GraphQL queries. It
+      does not mutate external data, mutate internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -331,73 +547,136 @@ Get Sonar Sensitive Hits:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It uses the 'Object Name' parameter
+      provided by the user to query Rubrik Security Cloud.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves sensitive data hits for a specific Rubrik object. This
+      does not align with any of the predefined outcome categories such as enriching
+      an IOC/Asset, updating alerts, or searching events.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Object Name | String | Yes | The name of the Rubrik object to check for sensitive
+    hits. |
+
+    | Lookback Days | String | No | Number of days in the past to retrieve scan results
+    from. For example, a value of 7 will return results as of 7 days ago. |
 IOC Scan Results:
   ai_description: >-
     ### General Description
 
-    The **IOC Scan Results** action retrieves comprehensive details and metrics for
-    a specific threat hunt (either Turbo or Advanced) from Rubrik Security Cloud.
-    It is designed to provide visibility into the progress and findings of an Indicator
-    of Compromise (IOC) scan, including object metrics and scan status.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Hunt ID** | String | Yes | The unique identifier of the threat hunt/IOC scan
-    to retrieve results for. |
-
-
-    ### Additional Notes
-
-    - This action is **asynchronous**. If the threat hunt is still in a `PENDING`
-    or `IN_PROGRESS` state in Rubrik, the action will return an 'In Progress' status
-    to Google SecOps, allowing for subsequent polling.
-
-    - The action outputs both the raw JSON response and a formatted data table named
-    'IOC Scan Results'.
+    Retrieves the results of an IOC (Indicator of Compromise) scan or threat hunt
+    from Rubrik Security Cloud using a specific Hunt ID. This action fetches detailed
+    information about the scan status, matches found, and metrics.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction**: The action extracts the mandatory `Hunt ID` from
-    the input parameters.
+    1. Extracts the `Hunt ID` parameter provided by the user or playbook.
 
-    2. **API Initialization**: It initializes the Rubrik Security Cloud API manager
-    using the provided service account credentials and handles OAuth token management.
+    2. Initializes the Rubrik Security Cloud API client.
 
-    3. **Data Retrieval**: It executes a GraphQL query to fetch the scan's status,
-    object metrics (scanned, affected, unaffected, and unscannable objects), and scan
-    metrics (matched snapshots, unique file matches).
+    3. Executes a GraphQL POST request (`THREAT_HUNT_DETAILS_V2_QUERY`) to retrieve
+    the threat hunt details and metrics from Rubrik.
 
-    4. **Data Processing**: The raw response is attached to the action results as
-    JSON.
+    4. Parses the response to extract scan status, IOC details, object metrics, and
+    scan metrics.
 
-    5. **Internal Mutation**: A formatted data table is created containing key metrics
-    such as Hunt Name, Hunt Type, Status, IOC Details, Object Metrics, and Scan Metrics.
+    5. Outputs the raw JSON results and constructs a data table with the scan details.
 
-    6. **Status Handling**: If the hunt is still running (status is `PENDING` or `IN_PROGRESS`),
-    the action sets its state to `IN_PROGRESS`. Otherwise, it marks the execution
-    as `COMPLETED`.
+    6. Evaluates the scan status and returns an `IN_PROGRESS` execution state if the
+    hunt is still running, or `COMPLETED` if finished.
+
+
+    ### Additional Notes
+
+    This action supports asynchronous execution and will return an `IN_PROGRESS` status
+    if the threat hunt is still pending or actively running in Rubrik Security Cloud.
+  ai_short_description: >-
+    Retrieves the details, status, and metrics of a specific Turbo or Advanced Threat
+    Hunt from Rubrik Security Cloud using its Hunt ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      The action creates a data table named 'IOC Scan Results' within the Google SecOps
-      case to display hunt metrics and status.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GraphQL query to Rubrik Security Cloud to
+      retrieve threat hunt details. It does not mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -411,92 +690,86 @@ IOC Scan Results:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over `siemplify.target_entities`. It
+      operates entirely based on the explicitly provided 'Hunt ID' action parameter.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves the results of a specific threat hunt/scan from Rubrik
+      Security Cloud. This does not align with enriching specific IOCs or assets,
+      nor does it update alerts, tickets, or blocklists. It is a specialized data
+      retrieval action that does not fit into the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Hunt ID | String | Yes | The ID of the threat hunt. |
 List Events:
   ai_description: >-
     ### General Description
 
-    Retrieves a list of events and activities from Rubrik Security Cloud (RSC). This
-    action allows security analysts to search through system activities, backup events,
-    and security anomalies by applying various filters such as status, severity, object
-    types, and date ranges. It is primarily used for auditing, monitoring task progress,
-    and investigating historical activities within the Rubrik environment.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Sort By | DDL | No | Specifies the field to use for sorting the response (e.g.,
-    Last Updated, Severity, Cluster Name). |
-
-    | Sort Order | DDL | No | Specifies the order to sort the data (Asc or Desc).
-    |
-
-    | Limit | String | No | The number of results to retrieve (1 to 1000). Defaults
-    to 50. |
-
-    | Next Page Token | String | No | The cursor token used to retrieve the next set
-    of results for paginated requests. |
-
-    | Activity Status | String | No | Comma-separated list of statuses to filter by
-    (e.g., "Failure", "Success", "Running"). |
-
-    | Activity Type | String | No | Comma-separated list of activity types to filter
-    by (e.g., "Backup", "Anomaly", "Recovery"). |
-
-    | Severity | String | No | Comma-separated list of severity levels to filter by
-    (e.g., "Critical", "Warning", "Info"). |
-
-    | Object Name | String | No | Filters events based on a specific object name.
-    |
-
-    | Object Type | String | No | Comma-separated list of object types to filter by
-    (e.g., "VmwareVm", "WindowsFileset"). |
-
-    | Cluster ID | String | No | Comma-separated list of Rubrik cluster IDs to filter
-    events. |
-
-    | Start Date | String | No | The start date for the event search range. Supports
-    YYYY-MM-DD or ISO 8601 formats. |
-
-    | End Date | String | No | The end date for the event search range. Supports YYYY-MM-DD
-    or ISO 8601 formats. |
-
-
-    ### Additional Notes
-
-    - **Date Formats**: Supported formats include `yyyy-mm-dd`, `yyyy-mm-ddTHH:MM:SSZ`,
-    and `yyyy-mm-ddTHH:MM:SS.fffZ`.
-
-    - **Pagination**: If more results are available than the specified limit, the
-    action provides a 'Next Page Token' in the output message which can be used in
-    subsequent runs.
-
-    - **Table Limits**: While the action can fetch up to 1000 records, the UI data
-    table is limited to displaying the first 20 records for performance.
+    Retrieves a list of events and activities from Rubrik Security Cloud. The action
+    supports extensive filtering options, including activity status, activity type,
+    severity, object details, cluster IDs, and date ranges. The retrieved events can
+    be sorted and paginated.
 
 
     ### Flow Description
 
-    1. **Parameter Initialization**: The action extracts all user-provided filters,
-    sorting preferences, and pagination tokens.
+    1. Initializes the Rubrik Security Cloud client using the provided integration
+    parameters.
 
-    2. **Validation**: It validates that the 'Limit' is a valid positive integer and
-    ensures that the 'Start Date' occurs before the 'End Date'.
+    2. Extracts and validates the action parameters, such as filters, sorting preferences,
+    and pagination details.
 
-    3. **Authentication**: Connects to Rubrik Security Cloud using the provided Service
-    Account JSON and manages OAuth token lifecycle.
+    3. Executes a GraphQL API call (`list_events`) to Rubrik Security Cloud to fetch
+    the events matching the specified criteria.
 
-    4. **API Request**: Executes a GraphQL query (`activitySeriesConnection`) against
-    the Rubrik API with the specified filters.
+    4. Parses the API response, extracting event details and pagination information.
 
-    5. **Data Processing**: Parses the GraphQL response into a structured data model,
-    extracting event IDs, object details, and status information.
+    5. Formats the retrieved events into a data table and attaches the raw JSON response
+    to the action results.
 
-    6. **Output**: Generates a JSON result containing the full response and populates
-    a data table named "Events" in the Google SecOps interface.
+
+    ### Additional Notes
+
+    - The action supports pagination. If more results are available, a `Next Page
+    Token` will be provided in the output message, which can be used in subsequent
+    runs to fetch the next set of events.
+
+    - Date parameters (`Start Date` and `End Date`) must be provided in ISO format
+    (e.g., `yyyy-mm-dd` or `yyyy-mm-ddTHH:MM:SSZ`).
+  ai_short_description: >-
+    Retrieves a list of events and activities from Rubrik Security Cloud based on
+    specified filters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -507,10 +780,47 @@ List Events:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action fetches event data from Rubrik Security Cloud via a GraphQL API call.
+      It does not mutate external data, update internal entities, create insights,
+      modify alerts, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -524,42 +834,96 @@ List Events:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process any entities. It relies entirely
+      on the provided action parameters to fetch events from the external system.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of events from Rubrik Security Cloud based on specific
+      search parameters, which directly aligns with the 'Search Events' outcome category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |\
+    \ --- | --- | --- |\n| Sort By | String | No | Specify the field to use for sorting\
+    \ the response. |\n| Sort Order | String | No | Specify the order to sort the\
+    \ data in. |\n| Limit | String | No | The number of results to retrieve in the\
+    \ response. Maximum allowed size is 1000. |\n| Next Page Token | String | No |\
+    \ The next page cursor to retrieve the next set of results. |\n| Activity Status\
+    \ | String | No | Filter the events based on the provided activity statuses. Supports\
+    \ comma separated values.<br><br>Eg.\u201CFailure\u201D, \u201CRunning\u201D,\
+    \ \u201CQueued\u201D,\u201CSuccess\u201D |\n| Activity Type | String | No | Filter\
+    \ the events based on provided activity types. Supports comma separated values.<br><br>Eg.\
+    \ \u201CSync\u201D, \u201CAnomaly\u201D, \u201CStorage\u201D, \u201CBackup\u201D\
+    \ |\n| Severity | String | No | Filter the events based on provided severities.\
+    \ Supports comma separated values.<br><br>Eg. \u201CCritical\u201D, \u201CWarning\u201D\
+    , \u201CInfo\u201D |\n| Object Name | String | No | Filter out events based on\
+    \ object name. |\n| Object Type | String | No | Filter the events based on provided\
+    \ object types. Supports comma separated values.<br>Eg. \u201CShareFileset\u201D\
+    , \u201CWindowsFileset\u201D, \u201CVmwareVm\u201D |\n| Cluster ID | String |\
+    \ No | Filter the events based on provided cluster IDs. Supports comma separated\
+    \ values. |\n| Start Date | String | No | The start date to fetch updated events\
+    \ from.<br>Format supported:  yyyy-mm-dd, yyyy-mm-ddTHH:MM:SSZ |\n| End Date |\
+    \ String | No | The end date to fetch updated events until.<br>Format supported:\
+    \ yyyy-mm-dd, yyyy-mm-ddTHH:MM:SSZ |"
 List Object Snapshots:
-  ai_description: "### General Description\nThe **List Object Snapshots** action retrieves\
-    \ metadata for snapshots associated with a specific object ID from Rubrik Security\
-    \ Cloud (RSC). This action is designed to provide visibility into the backup history\
-    \ of a specific workload, allowing analysts to identify available recovery points\
-    \ or audit snapshot frequency.\n\n### Parameters Description\n| Parameter | Type\
-    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| **Object ID**\
-    \ | String | Yes | The unique identifier of the Rubrik object (e.g., a VM, database,\
-    \ or file share) for which snapshots are being retrieved. |\n| **Limit** | String\
-    \ | No | The maximum number of snapshot records to return in the response. Default\
-    \ is 50; the maximum allowed is 1000. |\n| **Next Page Token** | String | No |\
-    \ A cursor used for pagination to retrieve the next set of results if the total\
-    \ number of snapshots exceeds the limit. |\n| **Sort Order** | DDL | No | Specifies\
-    \ the chronological order of the results. Options are **Asc** (Ascending) or **Desc**\
-    \ (Descending). Default is Asc. |\n| **Start Date** | String | No | Filters snapshots\
-    \ to include only those created on or after this date. Supports `yyyy-mm-dd` or\
-    \ `yyyy-mm-ddTHH:MM:SSZ` formats. |\n| **End Date** | String | No | Filters snapshots\
-    \ to include only those created on or before this date. Supports `yyyy-mm-dd`\
-    \ or `yyyy-mm-ddTHH:MM:SSZ` formats. |\n| **Snapshot Type** | String | No | A\
-    \ comma-separated list of snapshot types to filter the results (e.g., `OnDemand`,\
-    \ `Scheduled`). |\n\n### Flow Description\n1. **Input Validation**: The action\
-    \ validates the mandatory `Object ID`. It also checks that `Start Date` and `End\
-    \ Date` follow supported ISO formats and that the start date does not occur after\
-    \ the end date.\n2. **Authentication**: It initializes the Rubrik API manager\
-    \ using the provided Service Account JSON, handling OAuth token lifecycle management.\n\
-    3. **Data Retrieval**: The action executes a GraphQL query (`OBJECT_SNAPSHOTS_QUERY`)\
-    \ against Rubrik Security Cloud, applying the provided filters for time range,\
-    \ snapshot types, and pagination.\n4. **Result Processing**: \n    *   The raw\
-    \ API response is attached to the action results as a JSON object.\n    *   A\
-    \ data table named \"Object Snapshots\" is generated, displaying key attributes:\
-    \ Snapshot ID, Creation Date, Cluster Name, and SLA Domain Name.\n5. **Completion**:\
-    \ The action returns a success message indicating the number of snapshots found.\
-    \ If more results are available, it provides the `Next Page Token` in the output\
-    \ message.\n\n### Additional Notes\n* This action does not automatically iterate\
-    \ over Google SecOps entities; it requires a manual or mapped input for the **Object\
-    \ ID** parameter."
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of snapshots for a specific object from Rubrik Security Cloud
+    based on the provided Object ID. This action allows users to filter the snapshots
+    by date range and snapshot type, and supports pagination and sorting.
+
+
+    ### Flow Description
+
+    1. Extracts the mandatory Object ID and optional filtering parameters (Start Date,
+    End Date, Snapshot Type, Limit, Next Page Token, Sort Order).
+
+    2. Validates the provided dates and limits to ensure they meet API requirements.
+
+    3. Makes a GraphQL API call (`OBJECT_SNAPSHOTS_QUERY`) to Rubrik Security Cloud
+    to fetch the object snapshots.
+
+    4. Parses the response and formats the snapshot details (Snapshot ID, Creation
+    Date, Cluster Name, SLA Domain Name) into a data table.
+
+    5. Returns the raw results as JSON and attaches the formatted data table to the
+    action result.
+
+
+    ### Additional Notes
+
+    Supports pagination via the 'Next Page Token' parameter. If more results are available
+    than the specified limit, the output message will include the next page token
+    to be used in subsequent action runs.
+  ai_short_description: >-
+    Retrieves a list of snapshots for a specific object from Rubrik Security Cloud
+    based on the provided Object ID, with support for date range and type filtering.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -570,10 +934,47 @@ List Object Snapshots:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GraphQL POST request to fetch snapshot data from Rubrik Security
+      Cloud (fetches_data=true). It does not mutate external data, update internal
+      entities, create insights, or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -587,97 +988,150 @@ List Object Snapshots:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or interact with `siemplify.target_entities`.
+      It relies entirely on the explicitly provided 'Object ID' parameter to fetch
+      data. Therefore, all entity types and filters are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves backup snapshots for a specific object from Rubrik Security
+      Cloud. This does not align with any of the predefined outcome categories such
+      as enriching IOCs/assets, updating alerts, or containing hosts.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Limit | String | No | Number of results to retrieve in the response. Maximum
+    size allowed is 1000. |
+
+    | Next Page Token | String | No | The next page cursor to retrieve the next set
+    of results. |
+
+    | Sort Order | Dropdown | No | Specify the order to sort the data in. |
+
+    | Object ID | String | Yes | The object ID for which the snapshots are to be searched.
+    |
+
+    | Start Date | String | No | The start date to get snapshots from. Format supported:
+    yyyy-mm-dd, yyyy-mm-ddTHH:MM:SSZ |
+
+    | End Date | String | No | The end date to get snapshots until. Format supported:
+    yyyy-mm-dd, yyyy-mm-ddTHH:MM:SSZ |
+
+    | Snapshot Type | String | No | List of snapshot types to filter snapshots. Supports
+    comma separated values. |
 List Sonar File Contexts:
   ai_description: >-
     ### General Description
 
-    Retrieves the Sonar file contexts for a specific object snapshot from Rubrik Security
-    Cloud (RSC). This action allows security analysts to identify files, folders,
-    or file shares that contain sensitive data findings detected by Rubrik Sonar.
-    It provides detailed information such as file names, sizes, total sensitive hits,
-    daily hit changes, and access/modification times. The action supports extensive
-    filtering by file name, path, and user ID, as well as pagination and sorting.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Object ID** | string | Yes | The unique identifier of the Rubrik object (Snappable
-    ID) to query. |
-
-    | **Snapshot ID** | string | Yes | The unique identifier of the specific snapshot
-    for the object. |
-
-    | **File Name** | string | No | Filter results to include only files with a specific
-    name. |
-
-    | **File Path** | string | No | Filter results by a specific standard file path.
-    |
-
-    | **User ID** | string | No | Filter results by a specific user ID associated
-    with the file context. |
-
-    | **Include Whitelisted Results** | ddl | No | Boolean (True/False) indicating
-    whether to include results that have been whitelisted in Rubrik. |
-
-    | **Limit** | string | No | The maximum number of file contexts to retrieve in
-    a single request (default is 50). |
-
-    | **Next Page Token** | string | No | The cursor token used to retrieve the next
-    set of paginated results. |
-
-    | **Sort By** | ddl | No | The field used to sort the results (e.g., HITS, NAME,
-    LAST_MODIFIED). |
-
-    | **Sort Order** | ddl | No | The order of sorting, either 'Asc' (Ascending) or
-    'Desc' (Descending). |
-
-
-    ### Additional Notes
-
-    - This action does not run on entities; it requires specific IDs provided as parameters.
-
-    - The results are displayed in a data table named 'Sonar File Contexts' and also
-    provided as a raw JSON result.
+    Retrieves file contexts detected by Rubrik Sonar for a specific object snapshot
+    from Rubrik Security Cloud. This action fetches sensitive data findings in files
+    with support for filtering by file name, path, user ID, and pagination.
 
 
     ### Flow Description
 
-    1. **Parameter Validation**: The action validates that the mandatory 'Object ID'
-    and 'Snapshot ID' are provided and that the 'Limit' is a valid integer.
+    1. Extracts action parameters including Object ID, Snapshot ID, and optional filters
+    (File Name, File Path, User ID, etc.).
 
-    2. **Authentication**: Initializes the Rubrik API Manager using the provided Service
-    Account JSON and authenticates with Rubrik Security Cloud.
+    2. Validates the provided parameters.
 
-    3. **Data Retrieval**: Executes a GraphQL query (`SONAR_FILE_CONTEXTS_QUERY`)
-    against the Rubrik API to fetch file context data based on the provided IDs and
-    filters.
+    3. Initializes the Rubrik Security Cloud API client.
 
-    4. **Data Processing**: Parses the GraphQL response into a structured data model,
-    extracting file metadata and sensitive hit counts.
+    4. Executes a GraphQL query (`SONAR_FILE_CONTEXTS_QUERY`) via the Rubrik API to
+    retrieve the Sonar file contexts.
 
-    5. **Output Generation**: Creates a data table 'Sonar File Contexts' containing
-    the processed file details and attaches the full raw JSON response to the action
-    results.
+    5. Parses the response and constructs a data table with the file context details.
+
+    6. Returns the results as a JSON object and attaches the data table to the action
+    result.
+
+
+    ### Additional Notes
+
+    The action requires a valid Object ID and Snapshot ID to execute successfully.
+  ai_short_description: >-
+    Retrieves file contexts detected by Rubrik Sonar for a specific object snapshot
+    from Rubrik Security Cloud.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Adds a data table 'Sonar File Contexts' and a result JSON containing the file
-      context details to the Google SecOps action results.
-  categories:
-    enrichment: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the Rubrik Security Cloud API via a GraphQL query
+      to retrieve file contexts. It does not mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -691,47 +1145,102 @@ List Sonar File Contexts:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the provided action parameters (Object ID,
+      Snapshot ID) to fetch data.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches file contexts (sensitive data findings) for a specific object
+      snapshot from Rubrik Security Cloud. It does not enrich specific IOCs or assets
+      in the context of the expected outcomes, nor does it update alerts, tickets,
+      or mutate external state. It acts as a custom data retrieval function for specific
+      backup/snapshot file contexts, which does not align with any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Object ID | String | Yes | The Object ID or the Snappable ID. |
+
+    | Snapshot ID | String | Yes | The Snapshot ID of the object. |
+
+    | File Name | String | No | Specify the name of the file, folder, or file share
+    object. |
+
+    | File Path | String | No | Specify the standard file path to filter with. |
+
+    | User ID | String | No | Specify the user ID to filter with. |
+
+    | Include Whitelisted Results | Dropdown | No | The boolean indicates to include
+    the whitelisted results. |
+
+    | Limit | String | No | Number of results to retrieve in the response. |
+
+    | Next Page Token | String | No | The next page cursor to retrieve the next set
+    of results. |
+
+    | Sort By | Dropdown | No | Specify the field to use for sorting the response.
+    |
+
+    | Sort Order | Dropdown | No | Specify the order to sort the data. |
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a utility designed to verify the connectivity and authentication
-    between the Google SecOps SOAR platform and the **Rubrik Security Cloud** instance.
-    It ensures that the provided Service Account credentials are valid and that the
-    network path to the Rubrik GraphQL API is open and functional.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Description | Type | Mandatory | Default Value |
-
-    | :--- | :--- | :--- | :--- | :--- |
-
-    | N/A | This action does not require any input parameters. | N/A | N/A | N/A |
-
-
-    ### Additional Notes
-
-    This action relies entirely on the global integration configuration (Service Account
-    JSON and Verify SSL) to establish a connection. It does not interact with specific
-    case entities.
+    This action tests the connectivity of the Google SecOps SOAR server to the Rubrik
+    Security Cloud instance. It verifies that the integration can successfully authenticate
+    and communicate with the Rubrik Security Cloud API.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Siemplify environment and retrieves
-    the integration's global configuration parameters.
+    1. Initializes the action and retrieves the integration configuration parameters.
 
-    2. **API Manager Setup**: It instantiates the `APIManager`, which handles OAuth2
-    token management, including retrieving tokens from encrypted storage or generating
-    new ones via the Rubrik OAuth adapter if the current token is expired or missing.
+    2. Instantiates the `APIManager` to handle authentication and API communication.
 
-    3. **Connectivity Test**: It executes a lightweight GraphQL query (`deploymentVersion`)
-    against the Rubrik API to confirm reachability and authorization.
+    3. Executes a GraphQL query (`TEST_CONNECTIVITY_QUERY`) via a POST request to
+    the Rubrik Security Cloud API to test connectivity.
 
-    4. **Result Reporting**: The action concludes by returning a boolean status (`connectivity_result`)
-    and a descriptive message indicating whether the connection was successful or
-    failed.
+    4. Returns a success message if the connection is established, or a failure message
+    if an error occurs.
+
+
+    ### Additional Notes
+
+    This action is primarily used for troubleshooting and verifying that the integration
+    is configured correctly with valid credentials.
+  ai_short_description: >-
+    Tests the connectivity of the Google SecOps SOAR server to the Rubrik Security
+    Cloud instance to verify authentication and communication.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -742,10 +1251,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action executes a simple GraphQL query to test connectivity. It does not
+      fetch contextual data for entities/alerts, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -759,72 +1305,72 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over target entities or use any entity-specific
+      identifiers. It performs a general connectivity test to the external API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (ping) to verify API credentials and
+      network access. It does not enrich data, mutate external state, or interact
+      with alerts/cases, so it does not match any of the specified outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Turbo IOC Scan:
   ai_description: >-
     ### General Description
 
-    This action initiates a **Turbo IOC (Indicator of Compromise) Scan** within Rubrik
-    Security Cloud. Turbo scans are high-performance threat hunts optimized for speed,
-    allowing security teams to search for specific file hashes (MD5, SHA1, SHA256)
-    across multiple clusters and snapshots. The action returns a unique Hunt ID which
-    can be used to track the progress and results of the scan.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **IOC** | String | Yes | A comma-separated list of indicator values (hashes)
-    to scan for. |
-
-    | **Scan Name** | String | No | A custom name for the threat hunt. If not provided,
-    the system auto-generates a name using the format `Google-SecOps-YYYY-MM-DD-HH:MM:SS`.
-    |
-
-    | **Cluster ID** | String | No | A comma-separated list of specific Rubrik cluster
-    IDs to target. If left empty, the scan will run across all available clusters.
-    |
-
-    | **Start Time** | String | No | Filters the snapshots to be scanned starting
-    from this date. Supported formats: `yyyy-mm-dd`, `yyyy-mm-ddTHH:MM:SSZ`. |
-
-    | **End Time** | String | No | Filters the snapshots to be scanned until this
-    date. Supported formats: `yyyy-mm-dd`, `yyyy-mm-ddTHH:MM:SSZ`. |
-
-    | **Max Snapshots Per Object** | String | No | The maximum number of snapshots
-    to scan for each object (e.g., VM or File System). |
-
-
-    ### Additional Notes
-
-    - The `Start Time` must be chronologically before the `End Time` if both are provided.
-
-    - The action uses GraphQL mutations to interact with the Rubrik Security Cloud
-    API.
-
-    - Results include a data table containing the generated `Turbo Threat Hunt ID`.
+    Initiates a Turbo IOC (Indicator of Compromise) scan across the Rubrik Security
+    Cloud infrastructure. Turbo scans are optimized for speed and can scan multiple
+    IOCs across clusters with configurable time ranges and snapshot limits.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves and trims all input parameters,
-    including the mandatory IOC list.
+    1. Extracts and validates the provided parameters, including the list of IOCs,
+    scan name, cluster IDs, time range, and snapshot limits.
 
-    2. **Validation:** It validates date formats for `Start Time` and `End Time`,
-    ensures `Max Snapshots Per Object` is a valid integer, and generates a default
-    scan name if none was provided.
+    2. Initializes the Rubrik Security Cloud API client.
 
-    3. **Authentication:** Initializes the Rubrik API Manager, which handles OAuth
-    token generation and encrypted storage.
+    3. Executes a GraphQL mutation (`startTurboThreatHunt`) to start the Turbo Threat
+    Hunt scan with the specified configuration.
 
-    4. **Scan Initiation:** Executes a GraphQL mutation (`startTurboThreatHunt`) to
-    the Rubrik Security Cloud endpoint with the specified IOCs and filters.
+    4. Retrieves the Hunt ID from the response and outputs it as a JSON result and
+    a data table.
 
-    5. **Result Processing:** Captures the `huntId` from the API response, adds the
-    raw JSON response to the action results, and creates a data table for the SOAR
-    interface displaying the Hunt ID.
+
+    ### Additional Notes
+
+    The action returns the Hunt ID, which can be used in subsequent actions (such
+    as 'IOC Scan Results') to retrieve the actual findings of the scan.
+  ai_short_description: >-
+    Initiates a Turbo IOC threat hunt scan across the Rubrik Security Cloud infrastructure
+    and returns the Hunt ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -833,14 +1379,51 @@ Turbo IOC Scan:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Initiates a new Turbo Threat Hunt scan job in Rubrik Security Cloud, creating
-      a new resource/activity in the external system.
+      Initiates a new Turbo Threat Hunt scan on the Rubrik Security Cloud platform.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action executes a GraphQL mutation (`startTurboThreatHunt`) to create a
+      new threat hunt scan on the Rubrik Security Cloud platform, which mutates external
+      data. It does not fetch contextual data, update internal entities, create insights,
+      or modify alert data.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -854,3 +1437,61 @@ Turbo IOC Scan:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use entity-specific
+      identifiers. It relies entirely on the 'IOC' string parameter provided in the
+      action configuration. Therefore, it does not run on entities and all entity
+      type flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a threat hunt scan on the Rubrik platform and returns a
+      Hunt ID. It does not return threat intelligence, modify alerts, block IOCs,
+      or match any of the other specific expected outcomes defined in the categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | IOC | String | Yes | Value of the indicator to scan for. Supports comma separated
+    values. |
+
+    | Scan Name | String | No | Name of the new turbo threat hunt scan. |
+
+    | Cluster ID | String | No | ID of the cluster on which to perform a scan. Supports
+    comma separated values. |
+
+    | Start Time | String | No | Filter the snapshots from the provided date. Format
+    supported: yyyy-mm-dd, yyyy-mm-ddTHH:MM:SSZ |
+
+    | End Time | String | No | Filter the snapshots until the provided date. Format
+    supported: yyyy-mm-dd, yyyy-mm-ddTHH:MM:SSZ |
+
+    | Max Snapshots Per Object | String | No | Maximum number of snapshots to scan
+    per object. |

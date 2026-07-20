@@ -26,13 +26,13 @@ import mp.core.utils
 import mp.core.validators
 from mp.core import exclusions
 from mp.core.data_models.abc import ComponentMetadata
-from mp.core.data_models.integrations.action.ai.product_categories import (
-    PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY,
-    ActionProductCategory,
+from mp.core.data_models.integrations.action.ai.outcome_categories import (
+    OUTCOME_CATEGORIES_TO_DEF_OUTCOME_CATEGORIES_ENUM,
+    OutcomeCategoriesEnum,
 )
 
-from .ai.ai_categories import AI_CATEGORY_TO_DEF_AI_CATEGORY, ActionAiCategory
-from .ai.entity_types import EntityType
+from .ai.ai_categories import ActionAiCategory
+from .ai.entity_types import ENTITY_TYPE_TO_DEF_ENTITY_TYPE, EntityType
 from .ai.metadata import ActionAiMetadata
 from .dynamic_results_metadata import (
     BuiltDynamicResultsMetadata,
@@ -48,12 +48,43 @@ if TYPE_CHECKING:
 DEFAULT_SCRIPT_RESULT_NAME: str = "is_success"
 DEFAULT_SIMULATION_DATA: str = '{"Entities": []}'
 
+REMEDIATION_OUTCOME_CATEGORIES: set[OutcomeCategoriesEnum] = {
+    OutcomeCategoriesEnum.CREATE_TICKET,
+    OutcomeCategoriesEnum.UPDATE_TICKET,
+    OutcomeCategoriesEnum.ADD_IOC_TO_BLOCKLIST,
+    OutcomeCategoriesEnum.REMOVE_IOC_FROM_BLOCKLIST,
+    OutcomeCategoriesEnum.ADD_IOC_TO_ALLOWLIST,
+    OutcomeCategoriesEnum.REMOVE_IOC_FROM_ALLOWLIST,
+    OutcomeCategoriesEnum.DISABLE_IDENTITY,
+    OutcomeCategoriesEnum.ENABLE_IDENTITY,
+    OutcomeCategoriesEnum.CONTAIN_HOST,
+    OutcomeCategoriesEnum.UNCONTAIN_HOST,
+    OutcomeCategoriesEnum.RESET_IDENTITY_PASSWORD,
+    OutcomeCategoriesEnum.UPDATE_IDENTITY,
+    OutcomeCategoriesEnum.EXECUTE_COMMAND_ON_THE_HOST,
+    OutcomeCategoriesEnum.SEND_EMAIL,
+    OutcomeCategoriesEnum.DELETE_EMAIL,
+    OutcomeCategoriesEnum.UPDATE_EMAIL,
+    OutcomeCategoriesEnum.SUBMIT_FILE,
+}
+
+ENRICHMENT_OUTCOME_CATEGORIES: set[OutcomeCategoriesEnum] = {
+    OutcomeCategoriesEnum.ENRICH_IOC,
+    OutcomeCategoriesEnum.ENRICH_ASSET,
+    OutcomeCategoriesEnum.SEARCH_EVENTS,
+    OutcomeCategoriesEnum.SEARCH_EMAIL,
+    OutcomeCategoriesEnum.SEARCH_ASSET,
+    OutcomeCategoriesEnum.GET_ALERT_INFORMATION,
+}
+
 
 class AiFields(NamedTuple):
     description: str | None
-    ai_categories: list[ActionAiCategory]
+    short_description: str | None
+    parameters_description: str | None
+    categories: list[ActionAiCategory]
     entity_types: list[EntityType]
-    action_product_categories: list[ActionProductCategory]
+    outcome_categories: list[OutcomeCategoriesEnum]
 
 
 class BuiltActionMetadata(TypedDict):
@@ -71,10 +102,12 @@ class BuiltActionMetadata(TypedDict):
     SimulationDataJson: NotRequired[str]
     DefaultResultValue: NotRequired[str | None]
     Version: float
-    AIDescription: NotRequired[str | None]
-    AICategories: NotRequired[list[str] | None]
+    AiDescription: NotRequired[str | None]
+    AiShortDescription: NotRequired[str | None]
+    AiCategories: NotRequired[list[str] | None]
+    ParametersDescription: NotRequired[str | None]
     EntityTypes: NotRequired[list[str] | None]
-    ActionProductCategories: NotRequired[list[str] | None]
+    OutcomeCategories: NotRequired[list[str] | None]
 
 
 class NonBuiltActionMetadata(TypedDict):
@@ -93,9 +126,11 @@ class NonBuiltActionMetadata(TypedDict):
     default_result_value: NotRequired[str | None]
     version: NotRequired[float]
     ai_description: NotRequired[str | None]
-    ai_categories: NotRequired[list[str]]
+    ai_short_description: NotRequired[str | None]
+    parameters_description: NotRequired[str | None]
+    categories: NotRequired[list[str]]
     entity_types: NotRequired[list[str]]
-    action_product_categories: NotRequired[list[str]]
+    outcome_categories: NotRequired[list[str]]
 
 
 class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetadata]):
@@ -136,9 +171,11 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
         pydantic.Field(ge=mp.core.constants.MINIMUM_SCRIPT_VERSION),
     ]
     ai_description: str | None
-    ai_categories: list[ActionAiCategory]
+    ai_short_description: str | None
+    parameters_description: str | None
+    categories: list[ActionAiCategory]
     entity_types: list[EntityType]
-    action_product_categories: list[ActionProductCategory]
+    outcome_categories: list[OutcomeCategoriesEnum]
 
     @classmethod
     def from_built_path(cls, path: Path) -> list[Self]:
@@ -224,10 +261,12 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             simulation_data_json=(built.get("SimulationDataJson") or DEFAULT_SIMULATION_DATA),
             default_result_value=built.get("DefaultResultValue"),
             version=version,
-            ai_description=built.get("AIDescription"),
-            ai_categories=[ActionAiCategory(c) for c in (built.get("AICategories") or [])],
+            ai_description=built.get("AiDescription"),
+            ai_short_description=built.get("AiShortDescription"),
+            parameters_description=built.get("ParametersDescription"),
+            categories=[ActionAiCategory(c) for c in (built.get("AiCategories") or [])],
             entity_types=[EntityType(e) for e in (built.get("EntityTypes") or [])],
-            action_product_categories=[ActionProductCategory(c) for c in (built.get("ActionProductCategories") or [])],
+            outcome_categories=[OutcomeCategoriesEnum(c) for c in (built.get("OutcomeCategories") or [])],
         )
 
     @classmethod
@@ -267,11 +306,11 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             default_result_value=non_built.get("default_result_value"),
             version=non_built.get("version", mp.core.constants.MINIMUM_SCRIPT_VERSION),
             ai_description=non_built.get("ai_description"),
-            ai_categories=[ActionAiCategory(c) for c in (non_built.get("ai_categories") or [])],
+            ai_short_description=non_built.get("ai_short_description"),
+            parameters_description=non_built.get("parameters_description"),
+            categories=[ActionAiCategory(c) for c in (non_built.get("categories") or [])],
             entity_types=[EntityType(e) for e in (non_built.get("entity_types") or [])],
-            action_product_categories=[
-                ActionProductCategory(c) for c in (non_built.get("action_product_categories") or [])
-            ],
+            outcome_categories=[OutcomeCategoriesEnum(c) for c in (non_built.get("outcome_categories") or [])],
         )
 
     def to_built(self) -> BuiltActionMetadata:
@@ -296,9 +335,12 @@ class ActionMetadata(ComponentMetadata[BuiltActionMetadata, NonBuiltActionMetada
             SimulationDataJson=self.simulation_data_json,
             DefaultResultValue=self.default_result_value,
             Version=self.version,
-            AIDescription=self.ai_description,
-            AICategories=[c.value for c in self.ai_categories] or None,
+            AiDescription=self.ai_description,
+            AiShortDescription=self.ai_short_description,
+            ParametersDescription=self.parameters_description,
+            AiCategories=[c.value for c in self.categories] or None,
             EntityTypes=[e.value for e in self.entity_types] or None,
+            OutcomeCategories=[o.value for o in self.outcome_categories] or None,
         )
         mp.core.utils.remove_none_entries_from_mapping(built)
         return built
@@ -375,7 +417,12 @@ def _load_json_examples(
 
 def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
     empty_results: AiFields = AiFields(
-        description=None, ai_categories=[], entity_types=[], action_product_categories=[]
+        description=None,
+        short_description=None,
+        parameters_description=None,
+        categories=[],
+        entity_types=[],
+        outcome_categories=[],
     )
     if not integration_path.exists():
         return empty_results
@@ -399,32 +446,60 @@ def _get_ai_fields(action_name: str, integration_path: Path) -> AiFields:
         return empty_results
 
     ai_meta: ActionAiMetadata = ActionAiMetadata.model_validate(action_content)
+    outcome_categories = (
+        [
+            OUTCOME_CATEGORIES_TO_DEF_OUTCOME_CATEGORIES_ENUM[category]
+            for category, val in ai_meta.outcome_categories.model_dump().items()
+            if category != "reasoning" and val is True
+        ]
+        if ai_meta.outcome_categories
+        else []
+    )
+
     return AiFields(
         description=ai_meta.ai_description,
-        ai_categories=(
+        short_description=ai_meta.ai_short_description,
+        parameters_description=ai_meta.parameters_description,
+        categories=_determine_ai_categories(outcome_categories),
+        entity_types=(
             [
-                AI_CATEGORY_TO_DEF_AI_CATEGORY[category]
-                for category, val in ai_meta.categories.model_dump().items()
-                if category != "reasoning" and val is True
+                ENTITY_TYPE_TO_DEF_ENTITY_TYPE[field_name]
+                for field_name, val in ai_meta.entity_usage.entity_types.model_dump().items()
+                if val is True
             ]
-            if ai_meta.categories
+            if ai_meta.entity_usage and ai_meta.entity_usage.entity_types
             else []
         ),
-        entity_types=ai_meta.entity_usage.entity_types if ai_meta.entity_usage else [],
-        action_product_categories=(
-            [
-                PRODUCT_CATEGORY_TO_DEF_PRODUCT_CATEGORY[category]
-                for category, val in ai_meta.action_product_categories.model_dump().items()
-                if category != "reasoning" and val is True
-            ]
-            if ai_meta.action_product_categories
-            else []
-        ),
+        outcome_categories=outcome_categories,
     )
+
+
+def _determine_ai_categories(
+    outcome_categories: list[OutcomeCategoriesEnum],
+) -> list[ActionAiCategory]:
+    """Determine if the action is a remediation or enrichment action based on its outcome categories.
+
+    Args:
+        outcome_categories: The list of OutcomeCategoriesEnum objects.
+
+    Returns:
+        The updated list of ActionAiCategory objects.
+
+    """
+    result: list[ActionAiCategory] = []
+    if any(oc in REMEDIATION_OUTCOME_CATEGORIES for oc in outcome_categories):
+        result.append(ActionAiCategory.REMEDIATION)
+
+    if any(oc in ENRICHMENT_OUTCOME_CATEGORIES for oc in outcome_categories):
+        result.append(ActionAiCategory.ENRICHMENT)
+
+    return result
 
 
 def _update_non_built_with_ai_fields(non_built: NonBuiltActionMetadata, ai_fields: AiFields) -> None:
     non_built["ai_description"] = ai_fields.description
-    non_built["ai_categories"] = [c.value for c in ai_fields.ai_categories]
+    non_built["ai_short_description"] = ai_fields.short_description
+    non_built["parameters_description"] = ai_fields.parameters_description
+    non_built["categories"] = [c.value for c in ai_fields.categories]
     non_built["entity_types"] = [t.value for t in ai_fields.entity_types]
-    non_built["action_product_categories"] = [c.value for c in ai_fields.action_product_categories]
+    non_built["outcome_categories"] = [c.value for c in ai_fields.outcome_categories]
