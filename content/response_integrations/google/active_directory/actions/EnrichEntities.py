@@ -159,7 +159,7 @@ def main(is_first_run):
 
     should_json_filtered = extract_action_param(
         siemplify,
-        param_name="Should JSON result be filtered by the specified Attributes?",
+        param_name="Should JSON result be filtered by the specified Attributes",
         default_value=False,
         is_mandatory=False,
         print_value=True,
@@ -168,7 +168,7 @@ def main(is_first_run):
 
     should_case_wall_table_filtered = extract_action_param(
         siemplify,
-        param_name="Should Case Wall Table be filtered by the specified Attributes?",
+        param_name="Should Case Wall Table be filtered by the specified Attributes",
         default_value=False,
         is_mandatory=False,
         print_value=True,
