@@ -73,6 +73,8 @@ GROUP_QUERY_FIELDS = ["sAMAccountName"]  # Users / Guests / Administrators ...
 OU_QUERY_FIELDS = ["name"]  # R&D ...
 
 DEFAULT_USER_GROUP = "Domain Users"
+DEFAULT_CONNECTION_TIMEOUT = 10
+DEFAULT_RECEIVE_TIMEOUT = 60
 SEARCH_ATTRIBUTES = [
     ALL_ATTRIBUTES,
     ALL_OPERATIONAL_ATTRIBUTES,
@@ -181,14 +183,22 @@ class ActiveDirectoryManager:
 
         # Safely convert timeouts to integers, fallback to defaults to prevent hangs
         try:
-            self.connection_timeout = int(connection_timeout) if connection_timeout is not None else 10
+            self.connection_timeout = (
+                int(connection_timeout)
+                if connection_timeout is not None
+                else DEFAULT_CONNECTION_TIMEOUT
+            )
         except (ValueError, TypeError):
-            self.connection_timeout = 10
+            self.connection_timeout = DEFAULT_CONNECTION_TIMEOUT
 
         try:
-            self.receive_timeout = int(receive_timeout) if receive_timeout is not None else 60
+            self.receive_timeout = (
+                int(receive_timeout)
+                if receive_timeout is not None
+                else DEFAULT_RECEIVE_TIMEOUT
+            )
         except (ValueError, TypeError):
-            self.receive_timeout = 60
+            self.receive_timeout = DEFAULT_RECEIVE_TIMEOUT
 
         self.server = Server(
             server_ip,

@@ -1,8 +1,12 @@
 from __future__ import annotations
 import unittest
 from unittest.mock import patch, MagicMock
-from ..core import ActiveDirectoryManager as adm_module
-from ..core.ActiveDirectoryManager import ActiveDirectoryManager
+from core import ActiveDirectoryManager as adm_module
+from core.ActiveDirectoryManager import (
+    ActiveDirectoryManager,
+    DEFAULT_CONNECTION_TIMEOUT,
+    DEFAULT_RECEIVE_TIMEOUT,
+)
 
 class TestActiveDirectoryManager(unittest.TestCase):
     @patch.object(adm_module, "Server")
@@ -16,22 +20,22 @@ class TestActiveDirectoryManager(unittest.TestCase):
             password="password",
         )
         
-        # Verify Server is called with default connect_timeout = 10
+        # Verify Server is called with default connect_timeout
         mock_server.assert_called_once_with(
             "1.2.3.4",
             use_ssl=False,
             tls=None,
-            connect_timeout=10,
+            connect_timeout=DEFAULT_CONNECTION_TIMEOUT,
         )
         
-        # Verify Connection is called with default receive_timeout = 60
+        # Verify Connection is called with default receive_timeout
         mock_connection.assert_called_once_with(
             mock_server.return_value,
             "user",
             "password",
             auto_bind=True,
             auto_encode=True,
-            receive_timeout=60,
+            receive_timeout=DEFAULT_RECEIVE_TIMEOUT,
         )
 
     @patch.object(adm_module, "Server")

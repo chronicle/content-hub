@@ -3,8 +3,8 @@ import unittest
 from unittest.mock import patch, MagicMock, ANY
 
 # Import main from EnrichEntities action script
-from ..actions import EnrichEntities as enrich_action_module
-from ..actions.EnrichEntities import main
+from actions import EnrichEntities as enrich_action_module
+from actions.EnrichEntities import main
 
 class TestEnrichEntitiesAction(unittest.TestCase):
     @patch.object(enrich_action_module, "SiemplifyAction")
