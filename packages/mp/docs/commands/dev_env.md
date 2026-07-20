@@ -88,6 +88,73 @@ mp push playbook [PLAYBOOK] [OPTIONS]
 | `--include-blocks` | Push all playbook dependent blocks.                   | `bool` | `False` |
 | `--keep-zip`       | Keep the generated zip file after pushing.            | `bool` | `False` |
 
+### `push view`
+
+Build and push Case or Alert view template(s) to the dev environment.
+
+**Usage:**
+
+```bash
+mp push view [VIEW] [OPTIONS]
+```
+
+**Arguments:**
+
+* `VIEW`: The view name, folder name, or UUID identifier to push. Optional if `--all` is specified.
+
+**Options:**
+
+| Option       | Description                                                             | Type   | Default |
+|:-------------|:------------------------------------------------------------------------|:-------|:--------|
+| `--all`      | Push all views from the local repository.                               | `bool` | `False` |
+| `--custom`   | Path to custom source directory containing views.                       | `Path` | `None`  |
+| `--force`    | Force creating new views if they do not exist on the platform.          | `bool` | `False` |
+| `--validate` | Validate local view configuration on target server without pushing.    | `bool` | `False` |
+
+### `push custom-field`
+
+Push custom field(s) to the dev environment.
+
+**Usage:**
+
+```bash
+mp push custom-field [FIELD] [OPTIONS]
+```
+
+**Arguments:**
+
+* `FIELD`: The custom field name or YAML file path to push. Optional if `--all` is specified.
+
+**Options:**
+
+| Option     | Description                                                    | Type   | Default |
+|:-----------|:---------------------------------------------------------------|:-------|:--------|
+| `--all`    | Push all custom fields from the local repository.              | `bool` | `False` |
+| `--custom` | Path to custom source directory containing custom fields.      | `Path` | `None`  |
+| `--force`  | Force creating new custom fields if not present on server.     | `bool` | `False` |
+
+### `push alert-grouping-rule`
+
+Push alert grouping rule(s) to the dev environment.
+
+**Usage:**
+
+```bash
+mp push alert-grouping-rule [RULE] [OPTIONS]
+```
+
+**Arguments:**
+
+* `RULE`: The alert grouping rule category name or YAML file path to push. Optional if `--all` is specified.
+
+**Options:**
+
+| Option     | Description                                                        | Type   | Default |
+|:-----------|:-------------------------------------------------------------------|:-------|:--------|
+| `--all`    | Push all alert grouping rules from the local repository.           | `bool` | `False` |
+| `--custom` | Path to custom source directory containing alert grouping rules.   | `Path` | `None`  |
+| `--force`  | Force creating new alert grouping rules if not present on server.  | `bool` | `False` |
+
 ### `push custom-integration-repository`
 
 Build, zip, and upload the entire custom integration repository.
@@ -140,3 +207,68 @@ mp pull playbook [PLAYBOOK] [OPTIONS]
 | `--dst`            | Destination folder. Defaults to the `.downloads` directory in the repo. | `Path` | `None`  |
 | `--include-blocks` | Pull all playbook dependent blocks.                                     | `bool` | `False` |
 | `--keep-zip`       | Keep the zip file after pulling.                                        | `bool` | `False` |
+
+### `pull view`
+
+Pull and deconstruct Case or Alert view template(s) from the dev environment.
+
+**Usage:**
+
+```bash
+mp pull view [VIEW] [OPTIONS]
+```
+
+**Arguments:**
+
+* `VIEW`: The view name or UUID identifier to pull. Optional if `--all` is specified.
+
+**Options:**
+
+| Option     | Description                                                             | Type   | Default |
+|:-----------|:------------------------------------------------------------------------|:-------|:--------|
+| `--all`    | Pull all views from the dev environment.                                | `bool` | `False` |
+| `--custom` | Destination folder path. Defaults to `content/views/<identifier_uuid>`. | `Path` | `None`  |
+
+### `pull custom-field`
+
+Pull custom field(s) from the dev environment.
+
+**Usage:**
+
+```bash
+mp pull custom-field [FIELD] [OPTIONS]
+```
+
+**Arguments:**
+
+* `FIELD`: The custom field name to pull. Optional if `--all` or `--list` is specified.
+
+**Options:**
+
+| Option     | Description                                                                     | Type   | Default |
+|:-----------|:--------------------------------------------------------------------------------|:-------|:--------|
+| `--all`    | Pull all custom fields from the dev environment.                                | `bool` | `False` |
+| `--list`   | List all installed custom fields on the dev environment.                        | `bool` | `False` |
+| `--custom` | Destination directory or file path. Defaults to `content/custom_fields/<scope>`.| `Path` | `None`  |
+
+### `pull alert-grouping-rule`
+
+Pull alert grouping rule(s) from the dev environment.
+
+**Usage:**
+
+```bash
+mp pull alert-grouping-rule [RULE] [OPTIONS]
+```
+
+**Arguments:**
+
+* `RULE`: The alert grouping rule category name to pull. Optional if `--all` or `--list` is specified.
+
+**Options:**
+
+| Option     | Description                                                                     | Type   | Default |
+|:-----------|:--------------------------------------------------------------------------------|:-------|:--------|
+| `--all`    | Pull all alert grouping rules from the dev environment.                         | `bool` | `False` |
+| `--list`   | List all installed alert grouping rules on the dev environment.                 | `bool` | `False` |
+| `--custom` | Destination directory or file path. Defaults to `content/alert_grouping_rules`. | `Path` | `None`  |
