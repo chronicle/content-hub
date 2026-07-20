@@ -1,0 +1,841 @@
+Execute GNQL Query:
+  ai_description: >-
+    ### General Description
+
+    Executes custom GreyNoise Query Language (GNQL) queries to search GreyNoise threat
+    intelligence data. It supports pagination to retrieve large sets of results based
+    on the provided query criteria, returning the matching IP addresses and their
+    classifications.
+
+
+    ### Flow Description
+
+    1. Validates the provided parameters, including the maximum number of results
+    to fetch.
+
+    2. Initiates a GET request to the GreyNoise API to execute the specified GNQL
+    query.
+
+    3. Paginates through the API responses using scroll tokens until the maximum result
+    limit is reached or all available data is fetched.
+
+    4. Aggregates the fetched records and attaches them to the action's JSON result.
+
+
+    ### Additional Notes
+
+    The action can be configured to return quick results (only IP and classification)
+    or exclude raw scan data to optimize performance and response size.
+  ai_short_description: >-
+    Executes custom GNQL queries to search GreyNoise threat intelligence data and
+    returns the matching IP addresses and their classifications as a JSON result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the GreyNoise API using a GNQL query. It does not
+      mutate external data, update entities, create insights, or modify internal case
+      data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It executes a standalone
+      query against the GreyNoise API based on the provided parameters.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes a custom GNQL query to search GreyNoise threat intelligence
+      data, returning a collection of telemetry data matching the search parameters.
+      This aligns with the 'Search Events' category.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | GNQL Query | String | Yes | The GreyNoise Query Language query string to execute.
+    |
+
+    | Max Results | String | No | Number of results to return per request (max 5000).
+    |
+
+    | Quick | Boolean | No | If true, the response will only include the IP address
+    and the classification or trust level. |
+
+    | Exclude Raw | Boolean | No | Whether to exclude raw scan data from the response.
+    |
+Get CVE Details:
+  ai_description: >-
+    ### General Description
+
+    Enriches CVE entities using GreyNoise intelligence. This action retrieves detailed
+    threat intelligence for Common Vulnerabilities and Exposures (CVEs), including
+    CVSS scores, EPSS scores, and active exploitation data, to provide analysts with
+    immediate context regarding vulnerability severity and active threats.
+
+
+    ### Flow Description
+
+    1. Filters the case's target entities to identify those with the type `CVE`.
+
+    2. Iterates through the identified CVE entities and validates their identifier
+    format (e.g., `CVE-YYYY-NNNN`).
+
+    3. Makes an API call to the GreyNoise service (`cve_lookup`) for each valid CVE
+    to fetch vulnerability details, timeline, and exploitation activity.
+
+    4. Updates the entity's `additional_properties` with the retrieved enrichment
+    data and marks the entity as enriched (`is_enriched = True`).
+
+    5. Generates an HTML insight containing the threat assessment and exploitation
+    intelligence, and attaches it to the entity.
+
+    6. Saves the updated entities back to the case.
+
+
+    ### Additional Notes
+
+    This action relies on the GreyNoise API key configured at the integration level.
+    Entities with invalid CVE formats or those that encounter API request failures
+    will be skipped and logged as failed, while the action continues processing the
+    remaining entities.
+  ai_short_description: >-
+    Enriches CVE entities with GreyNoise intelligence, including CVSS scores, EPSS
+    scores, and active threat data, updating the entities and attaching the results
+    as insights.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the GreyNoise API using a GET request (`cve_lookup`).
+      It does not mutate external data. It updates internal entities with the fetched
+      data (`siemplify.update_entities`) and creates insights (`siemplify.add_entity_insight`).
+      It does not modify alert data or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: true
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      the `get_cve_entities` utility function, which checks if `entity.entity_type
+      == EntityTypes.CVE`. Therefore, it targets CVE entities and filters strictly
+      by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches vulnerability and threat intelligence data for CVE entities
+      from GreyNoise. This directly aligns with the 'Enrich IOC' expected outcome,
+      as CVEs are considered indicators/observables in this context and the action
+      returns threat intelligence (CVSS, EPSS, exploitation activity).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+IP Lookup:
+  ai_description: >-
+    ### General Description
+
+    Performs comprehensive IP enrichment using GreyNoise to retrieve classification,
+    actor, tags, CVEs, and business service intelligence.
+
+
+    ### Flow Description
+
+    1. Retrieves IP Address entities from the target entities.
+
+    2. Checks if the configured GreyNoise API key belongs to the Community or Enterprise
+    tier.
+
+    3. If using the Community tier, iterates through each IP entity and makes individual
+    API calls (`greynoise_manager.ip`) to fetch intelligence.
+
+    4. If using the Enterprise tier, extracts all IP addresses and makes a single
+    batch API call (`greynoise_manager.ip_multi`) to fetch intelligence.
+
+    5. Processes the response for each IP, updating the entity's additional properties,
+    `is_enriched` status, and `is_suspicious` flag based on the classification.
+
+    6. Generates an HTML insight for each successfully enriched IP and attaches it
+    to the entity.
+
+    7. Updates the entities in the platform.
+
+    8. Returns a summary message and JSON results containing the raw enrichment data.
+
+
+    ### Additional Notes
+
+    The action behaves differently based on the API key tier (Community vs. Enterprise).
+    The Community tier performs individual lookups, while the Enterprise tier performs
+    batch lookups.
+  ai_short_description: >-
+    Performs comprehensive IP enrichment using GreyNoise to retrieve classification,
+    actor, tags, CVEs, and business service intelligence.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the GreyNoise API to fetch IP data. It does
+      not mutate external data but updates internal entities and creates insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code filters entities using `get_ip_entities(siemplify)`, which checks `entity.entity_type
+      == EntityTypes.ADDRESS`. Therefore, it targets ADDRESS entities and filters
+      by `entity_type`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence (classification, actor, tags, CVEs) for
+      IP addresses from GreyNoise. This directly aligns with the 'Enrich IOC' expected
+      outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+IP Timeline Lookup:
+  ai_description: >-
+    ### General Description
+
+    Retrieves the activity timeline for IP address entities from GreyNoise, showing
+    changes over time with configurable granularity. This action helps analysts understand
+    the historical behavior, classification, and associated tags of an IP address
+    over a specified period.
+
+
+    ### Flow Description
+
+    1. Extracts the action parameters: `Days`, `Field`, and `Granularity`.
+
+    2. Filters the target entities to include only IP addresses (`ADDRESS`).
+
+    3. Iterates over each IP address and makes an API request to GreyNoise to fetch
+    the activity timeline.
+
+    4. If the `Field` parameter is set to `tag_ids`, the action makes additional API
+    requests to GreyNoise to fetch metadata for each tag ID found in the timeline.
+
+    5. If timeline data is found, the action enriches the entity's additional properties
+    with the timeline metadata and results.
+
+    6. Generates an HTML insight displaying the timeline overview and activity, and
+    attaches it to the entity.
+
+    7. Updates the enriched entities in the platform and returns the timeline data
+    as JSON results.
+
+
+    ### Additional Notes
+
+    - The `Days` parameter must be a positive integer.
+
+    - The `Granularity` parameter accepts hours (e.g., `1h`) or days (e.g., `1d`).
+  ai_short_description: >-
+    Retrieves the activity timeline for IP address entities from GreyNoise, showing
+    changes over time with configurable granularity, and enriches the entities with
+    the results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the GreyNoise API to fetch IP timeline data
+      (fetches_data=true). It does not mutate external data or internal case data.
+      It updates the entities with the retrieved enrichment data (can_update_entities=true)
+      and creates insights for the entities (can_create_insight=true).
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code calls `get_ip_entities(siemplify)` which iterates over `siemplify.target_entities`
+      and filters them using `entity.entity_type == EntityTypes.ADDRESS`. Therefore,
+      it targets ADDRESS entities and filters strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves historical activity timeline and threat intelligence for
+      IP addresses from GreyNoise. This matches the 'Enrich IOC' expected outcome.
+      It does not mutate data on external systems or perform containment actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Field | Drop-down | No | Field over which to show activity breakdown. |
+
+    | Granularity | String | No | Granularity of activity date ranges. This can be
+    in hours (e.g. Xh) or days (Xd). Valid hours are between 1 and 24. Valid days
+    are between 1 and 90. |
+
+    | Days | String | No | Number of days to show data for. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the GreyNoise API and validates the API key authentication.
+
+
+    ### Flow Description
+
+    1. Extracts the API key from the integration configuration.
+
+    2. Makes an API call to the GreyNoise server to test connectivity.
+
+    3. Returns a success message if the connection is established, or an error message
+    if it fails.
+
+
+    ### Additional Notes
+
+    This action is typically used to verify that the integration is configured correctly
+    and the provided credentials are valid.
+  ai_short_description: >-
+    Tests connectivity to the GreyNoise API and validates the API key authentication.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to test connectivity to the GreyNoise API. It
+      does not fetch contextual data for entities, mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It only tests connectivity
+      to the external API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (ping) to verify API credentials. It
+      does not enrich data, mutate external systems, or interact with alerts, tickets,
+      or entities.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Quick IP Lookup:
+  ai_description: >-
+    ### General Description
+
+    Performs a lightweight IP classification lookup using GreyNoise to return trust
+    level, internet scanner status, and business service status for IP address entities.
+
+
+    ### Flow Description
+
+    1. Retrieves IP address entities from the target entities list.
+
+    2. Executes a quick lookup query against the GreyNoise API for the extracted IP
+    addresses.
+
+    3. Evaluates the response to determine if the IP has noise data (business service
+    or internet scanner).
+
+    4. Enriches the matching entities with the retrieved data, updates their suspicious
+    status based on the classification, and attaches an HTML insight to the entity.
+
+    5. Updates the entities in the platform and returns the results as JSON.
+
+
+    ### Additional Notes
+
+    This action uses the GreyNoise `quick` endpoint, which is optimized for fast,
+    lightweight lookups. It does not consume as much API quota as a full IP lookup
+    but provides less detailed context.
+  ai_short_description: >-
+    Performs a lightweight IP classification lookup using GreyNoise to return trust
+    level, internet scanner status, and business service status for IP address entities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the GreyNoise API to fetch IP classification
+      data (fetches_data=true). It does not mutate external data. It updates the internal
+      entities with the retrieved data (can_update_entities=true) and creates insights
+      for them (can_create_insight=true).
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action retrieves entities using the `get_ip_entities` utility function,
+      which iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type == EntityTypes.ADDRESS`. Therefore, it targets Address
+      entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence (classification, trust level, internet
+      scanner status) for IP addresses from GreyNoise. This directly aligns with the
+      'Enrich IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
