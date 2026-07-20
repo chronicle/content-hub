@@ -225,7 +225,7 @@ class ActiveDirectoryManager:
         except LDAPSocketOpenError as e:
             if "socket ssl wrapping" in str(e):
                 raise ActiveDirectoryCertificateError("Invalid certificate")
-            raise ActiveDirectoryManagerError(f"Error: {e}")
+            raise ActiveDirectoryManagerError(str(e))
 
         # Connect
         if self.use_ssl:
