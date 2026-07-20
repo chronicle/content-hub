@@ -97,7 +97,7 @@ def test_pull_all_custom_fields(
 
     assert result.exit_code == 0
     mock_api.download_custom_field.assert_called_once_with(1)
-    
+
     saved_file = tmp_path / "shared" / "Test_Field.yaml"
     assert saved_file.exists()
     with saved_file.open("r", encoding="utf-8") as f:
@@ -293,7 +293,7 @@ def test_pull_custom_field_path_based(
 
     assert result.exit_code == 0
     mock_api.download_custom_field.assert_called_once_with(2)
-    
+
     with local_file.open("r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
         assert data["description"] == "Updated"
@@ -363,4 +363,3 @@ def test_pull_custom_field_list(
 
     assert result.exit_code == 0
     assert "DisplayName: 'Test Field' (Scopes: Alert)" in caplog.text
-

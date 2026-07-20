@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import logging
 from pathlib import Path
 from typing import Annotated
@@ -32,7 +31,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @push_app.command(name="alert-grouping-rule")
 @track_command
-def push_alert_grouping_rule(  # noqa: C901, PLR0915
+def push_alert_grouping_rule(
     rule_file_or_name: Annotated[
         str | None, typer.Argument(help="The alert grouping rule YAML file path or name to push.")
     ] = None,
@@ -69,7 +68,7 @@ def push_alert_grouping_rule(  # noqa: C901, PLR0915
         if not rules_root.exists() or not rules_root.is_dir():
             logger.error("Alert grouping rules directory not found.")
             raise typer.Exit(1)
-        
+
         yaml_files = list(rules_root.glob("*.yaml")) + list(rules_root.glob("*.yml"))
         if not yaml_files:
             logger.info("No alert grouping rule files found to push.")
@@ -77,7 +76,7 @@ def push_alert_grouping_rule(  # noqa: C901, PLR0915
 
         for f in yaml_files:
             _push_single_alert_grouping_rule(f, force)
-        
+
         logger.info("Successfully finished pushing all alert grouping rules.")
         return
 
@@ -93,7 +92,7 @@ def push_alert_grouping_rule(  # noqa: C901, PLR0915
         if not matched_files:
             logger.error("No alert grouping rule files matching '%s' found in '%s'", rule_file_or_name, rules_root)
             raise typer.Exit(1)
-        
+
         for f in matched_files:
             _push_single_alert_grouping_rule(f, force)
 
@@ -142,7 +141,7 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:
             # Update the payload with the target environment's ID and name
             rule_data["id"] = numeric_id
             rule_data["name"] = f"projects//locations//instances//alertGroupingRules/{numeric_id}"
-            
+
             backend_api.update_alert_grouping_rule(numeric_id, rule_data)
         except (ValueError, TypeError) as e:
             logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
@@ -158,7 +157,7 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:
             logger.error("Creation of new alert grouping rules is blocked by default. Use the --force flag to force creation.")
             logger.error("=" * 80)
             raise typer.Exit(1)
-            
+
         logger.info("Creating new alert grouping rule...")
         try:
             backend_api.create_alert_grouping_rule(rule_data)

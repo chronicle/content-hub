@@ -28,6 +28,8 @@ from mp.dev_env.utils import load_dev_env_config
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+
 def _normalize_scopes(val: str | list | None) -> set[str]:
     if not val:
         return set()
@@ -180,7 +182,7 @@ def _download_and_save_custom_field(
     try:
         numeric_id = int(field_id)
         field_data = backend_api.download_custom_field(numeric_id)
-    except (ValueError, TypeError) as e:
+    except (ValueError, TypeError):
         logger.error("Invalid field ID '%s': Must be a numeric value.", field_id)  # noqa: TRY400
         raise typer.Exit(1) from None
     except Exception as e:
@@ -206,7 +208,7 @@ def _download_and_save_custom_field(
 
     if dst is None:
         custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
-        
+
         scopes = _normalize_scopes(scopes_val)
         if len(scopes) > 1:
             subdir = "shared"
@@ -219,7 +221,7 @@ def _download_and_save_custom_field(
                 subdir = "shared"
         else:
             subdir = "shared"
-            
+
         actual_dst = custom_fields_root / subdir / file_name
     elif dst.is_dir() or dst.suffix not in {".yaml", ".yml"}:
         dst.mkdir(parents=True, exist_ok=True)

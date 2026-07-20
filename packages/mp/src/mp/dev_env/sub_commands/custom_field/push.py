@@ -27,6 +27,8 @@ from mp.dev_env.utils import load_dev_env_config
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+
 def _normalize_scopes(val: str | list | None) -> set[str]:
     if not val:
         return set()

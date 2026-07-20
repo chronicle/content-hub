@@ -23,7 +23,7 @@ import typer
 import mp.core.file_utils
 from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.sub_commands.utils import get_backend_api_clean as get_backend_api
-from mp.dev_env.utils import find_entity_identifier, load_dev_env_config
+from mp.dev_env.utils import load_dev_env_config
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ def pull_alert_grouping_rule(
         logger.error("rule_name_or_id is required if not pulling or listing all")
         raise typer.Exit(1)
     matched_rules = []
-    
+
     # First, try to match by ID if it's numeric
     try:
         numeric_id = int(rule_name_or_id)
@@ -100,7 +100,7 @@ def pull_alert_grouping_rule(
             matched_rules.append(rule_data)
     except (ValueError, TypeError):
         pass
-        
+
     # If not matched by ID, match by Category name (friendly display name or code)
     if not matched_rules:
         def match_category(user_input: str, rule: dict) -> bool:

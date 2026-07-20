@@ -17,6 +17,7 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import uuid
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any, cast
 
@@ -295,7 +296,11 @@ def _denormalize_pushed_view(built_view: BuiltOverview, backend_api: BackendAPI)
     except Exception as e:
         logger.warning("Failed to fetch installed custom fields during view denormalization: %s", e)
 
-    name_to_cf_id = {cf.get("displayName"): cf.get("id") for cf in installed_cf if cf.get("displayName") and cf.get("id") is not None}
+    name_to_cf_id = {
+        cf.get("displayName"): cf.get("id")
+        for cf in installed_cf
+        if cf.get("displayName") and cf.get("id") is not None
+    }
 
     template = built_view.get("OverviewTemplate") or {}
 
@@ -529,7 +534,6 @@ def _validate_push_preconditions(
         logger.error("Failed to push view '%s'.", view_name_or_id)
         raise typer.Exit(1)
     elif not flat_view_data.get("identifier"):
-        import uuid
         new_uuid = str(uuid.uuid4())
         logger.info("Generating new UUID '%s' for new view.", new_uuid)
         flat_view_data["identifier"] = new_uuid

@@ -116,7 +116,12 @@ def test_push_alert_grouping_rule_update(
     assert result.exit_code == 0
     mock_api.update_alert_grouping_rule.assert_called_once_with(
         1,
-        {"category": "All", "groupingType": "Entities", "id": 1, "name": "projects//locations//instances//alertGroupingRules/1"},
+        {
+            "category": "All",
+            "groupingType": "Entities",
+            "id": 1,
+            "name": "projects//locations//instances//alertGroupingRules/1",
+        },
     )
     mock_api.create_alert_grouping_rule.assert_not_called()
 

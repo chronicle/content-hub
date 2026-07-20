@@ -24,6 +24,8 @@ import typer
 import mp.core.file_utils
 from mp.build_project.restructure.views.deconstruct import ViewDeconstructor
 from mp.core.data_models.common.overview.metadata import Overview
+from mp.dev_env.sub_commands.alert_grouping_rule.pull import _save_alert_grouping_rule
+from mp.dev_env.sub_commands.custom_field.pull import _download_and_save_custom_field
 from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.sub_commands.utils import get_backend_api_clean as get_backend_api
 from mp.dev_env.utils import find_entity_identifier, load_dev_env_config
@@ -119,7 +121,7 @@ def pull_view(
                         except Exception:
                             pass
 
-                view_dst = existing_local_folder if existing_local_folder else views_root / view_id
+                view_dst = existing_local_folder or views_root / view_id
                 try:
                     download_and_deconstruct_view(backend_api, view_id, view_dst)
                     logger.info("View '%s' (ID: %s) pulled successfully to %s.", view_name or view_id, view_id, view_dst)
@@ -212,7 +214,7 @@ def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAP
     try:
         installed_cf = backend_api.list_custom_fields()
     except Exception as e:
-        logger.warning(f"Failed to fetch installed custom fields during view normalization: {e}")
+        logger.warning("Failed to fetch installed custom fields during view normalization: %s", e)
 
     id_to_cf_name = {cf.get("id"): cf.get("displayName") for cf in installed_cf if cf.get("id") is not None}
 
@@ -232,17 +234,14 @@ def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAP
                         cf_item["displayName"] = cf_name
                         # Auto-pull the dependent custom field
                         try:
-                            from mp.dev_env.sub_commands.custom_field.pull import _download_and_save_custom_field
-                            import typer
-                            
                             _download_and_save_custom_field(backend_api, cf_id, None)
                         except typer.Exit:
                             logger.warning("Failed to auto-pull dependent custom field '%s' (ID: %s).", cf_name, cf_id)
                         except Exception as e:
                             logger.warning("Error auto-pulling custom field '%s' (ID: %s): %s", cf_name, cf_id, e)
                     else:
-                        logger.warning(f"Could not resolve custom field ID {cf_id} to a displayName.")
-                        cf_item["id"] = cf_id # Put it back
+                        logger.warning("Could not resolve custom field ID %s to a displayName.", cf_id)
+                        cf_item["id"] = cf_id  # Put it back
 
         # Serialize the config back into DataDefinitionJson
         data_definition_json = json.dumps(config)
@@ -303,7 +302,6 @@ def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAP
     alert_rule_type = flat_view.get("alertRuleType")
     if alert_rule_type is not None:
         try:
-            from mp.dev_env.sub_commands.alert_grouping_rule.pull import _save_alert_grouping_rule
             # It's a small list, so fetching all is fine
             rules = backend_api.list_alert_grouping_rules()
             rule_data = next((r for r in rules if str(r.get("id")) == str(alert_rule_type)), None)

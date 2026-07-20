@@ -175,7 +175,7 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
 
         widget_details: list[OverviewWidgetDetails] = non_built_view.get("widgets_details") or []
         widget_details.sort(key=lambda wd: wd.get("order") or 0)
-        
+
         widget_by_title: dict[str, list[PlaybookWidgetMetadata]] = {}
         for w in all_widget:
             if w.title:
