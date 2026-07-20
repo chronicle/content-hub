@@ -45,23 +45,7 @@ class TestEnrichEntitiesAction(unittest.TestCase):
         # Call main with is_first_run = True
         main(is_first_run=True)
         
-        # Verify that extract_action_param was called for "Connection Timeout" and "Receive Timeout"
-        mock_extract_action_param.assert_any_call(
-            mock_siemplify,
-            param_name="Connection Timeout",
-            input_type=int,
-            is_mandatory=False,
-            default_value=10,
-        )
-        mock_extract_action_param.assert_any_call(
-            mock_siemplify,
-            param_name="Receive Timeout",
-            input_type=int,
-            is_mandatory=False,
-            default_value=60,
-        )
-        
-        # Verify that ActiveDirectoryManager was instantiated with the extracted timeouts
+        # Verify that ActiveDirectoryManager was instantiated
         mock_ad_manager.assert_called_once_with(
             "dummy_value",  # server
             "dummy_value",  # domain
@@ -71,8 +55,6 @@ class TestEnrichEntitiesAction(unittest.TestCase):
             "dummy_value",  # custom_query_fields
             "dummy_value",  # ca_certificate
             mock_siemplify.LOGGER,
-            connection_timeout=15,
-            receive_timeout=75,
         )
 
 if __name__ == "__main__":

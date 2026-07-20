@@ -127,20 +127,6 @@ def main(is_first_run):
         provider_name=INTEGRATION_NAME,
         param_name="CA Certificate File - parsed into Base64 String",
     )
-    connection_timeout = extract_action_param(
-        siemplify,
-        param_name="Connection Timeout",
-        input_type=int,
-        is_mandatory=False,
-        default_value=10,
-    )
-    receive_timeout = extract_action_param(
-        siemplify,
-        param_name="Receive Timeout",
-        input_type=int,
-        is_mandatory=False,
-        default_value=60,
-    )
 
     mark_entities_as_internal = extract_action_param(
         siemplify,
@@ -159,7 +145,7 @@ def main(is_first_run):
 
     should_json_filtered = extract_action_param(
         siemplify,
-        param_name="Should JSON result be filtered by the specified Attributes",
+        param_name="Should JSON result be filtered by the specified Attributes?",
         default_value=False,
         is_mandatory=False,
         print_value=True,
@@ -168,7 +154,7 @@ def main(is_first_run):
 
     should_case_wall_table_filtered = extract_action_param(
         siemplify,
-        param_name="Should Case Wall Table be filtered by the specified Attributes",
+        param_name="Should Case Wall Table be filtered by the specified Attributes?",
         default_value=False,
         is_mandatory=False,
         print_value=True,
@@ -200,8 +186,6 @@ def main(is_first_run):
             custom_query_fields,
             ca_certificate,
             siemplify.LOGGER,
-            connection_timeout=connection_timeout,
-            receive_timeout=receive_timeout,
         )
         if is_first_run:
             result_value["pending"] = [
