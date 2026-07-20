@@ -1,58 +1,88 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Enrich Entities:
-  ai_description: "### General Description\nEnriches IP Address entities using threat\
-    \ intelligence from the Internet Storm Center (SANS ISC). This action retrieves\
-    \ detailed reputation data, including attack counts, first/last seen dates, ASN\
-    \ information, and associated threat feeds to help analysts assess the risk level\
-    \ of network-based indicators.\n\n### Parameters Description\n| Parameter | Type\
-    \ | Mandatory | Description |\n| :--- | :--- | :--- | :--- |\n| Create Insight\
-    \ | Boolean | No | If enabled (default is True), the action will create a detailed\
-    \ insight on the entity's case wall containing the retrieved threat intelligence.\
-    \ |\n\n### Additional Notes\n- This action runs asynchronously to handle potential\
-    \ API rate limiting and large sets of entities. \n- The `Email Address` provided\
-    \ in the integration configuration is used as the `User-Agent` for API requests\
-    \ to the Internet Storm Center.\n- The action specifically targets `ADDRESS` (IP)\
-    \ entities.\n\n### Flow Description\n1. **Filter Entities:** The action identifies\
-    \ all `ADDRESS` entities within the current scope.\n2. **API Interaction:** For\
-    \ each identified IP, the action queries the Internet Storm Center API (`/api/ip/{address}`).\n\
-    3. **Data Parsing:** The response is parsed to extract metrics such as `count`\
-    \ (blocked packets), `attacks`, `mindate` (first seen), `maxdate` (last seen),\
-    \ and `threatfeeds`.\n4. **Internal Updates:** \n    - Sets the entity's `is_enriched`\
-    \ status to `True`.\n    - Maps retrieved data to the entity's `additional_properties`\
-    \ using the `IntStormCentr` prefix.\n5. **Insight Generation:** If the `Create\
-    \ Insight` parameter is enabled, a formatted HTML insight is added to the entity.\n\
-    6. **Result Reporting:** The action outputs a JSON result containing the raw data\
-    \ and populates a data table for each successfully enriched entity."
+  ai_description: >-
+    ### General Description
+
+    Enriches IP Address entities using information from the Internet Storm Center.
+    This action retrieves threat intelligence data such as attack counts, threat feeds,
+    and risk levels associated with the IP address.
+
+
+    ### Flow Description
+
+    1. The action filters the target entities to include only IP Addresses.
+
+    2. For each suitable entity, it makes an asynchronous GET request to the Internet
+    Storm Center API to retrieve device information.
+
+    3. If data is found, the action updates the entity's additional properties with
+    the retrieved information and marks it as enriched.
+
+    4. If the `Create Insight` parameter is enabled, it generates an insight containing
+    the retrieved information.
+
+    5. The action attaches the results as JSON and CSV tables to the case.
+
+
+    ### Additional Notes
+
+    - The action runs asynchronously. Ensure the script timeout value in the IDE is
+    adjusted accordingly.
+
+    - Due to API rate limiting, a large timeout value is recommended.
+  ai_short_description: >-
+    Enriches IP Address entities by retrieving threat intelligence data, such as attack
+    counts and risk levels, from the Internet Storm Center.
   capabilities:
     can_create_case_comments: false
     can_create_insight: true
     can_modify_alert_data: false
     can_mutate_external_data: false
-    can_mutate_internal_data: true
+    can_mutate_internal_data: false
     can_update_entities: true
     external_data_mutation_explanation: null
     fetches_data: true
-    internal_data_mutation_explanation: >-
-      Updates entity attributes (additional_properties), sets the is_enriched flag,
-      and creates entity insights based on the retrieved threat intelligence.
-  categories:
-    enrichment: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the Internet Storm Center API to fetch device
+      data for IP addresses. It does not mutate external data. It updates internal
+      entities with the retrieved data and can optionally create insights.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -66,53 +96,75 @@ Enrich Entities:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
-Ping:
-  ai_description: >-
-    Tests the connectivity to the Internet Storm Center (ISC) API using the provided
-    configuration parameters. This action ensures that the integration can successfully
-    communicate with the ISC service by performing a simple API call.
-
-
-    ### Parameters
-
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITY_TYPES`, where `SUPPORTED_ENTITY_TYPES`
+      contains `EntityTypes.ADDRESS`. Therefore, it targets ADDRESS entities and filters
+      by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence data (such as attack counts and threat
+      feeds) for IP addresses from the Internet Storm Center. This aligns with the
+      'Enrich IOC' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Email Address | String | Yes | The email address to be used in the User-Agent
-    header for API requests. This is a configuration-level parameter. |
+    | Create Insight | Boolean | No | If enabled, action will create an insight containing
+    all of the retrieved information about the entity. |
+Ping:
+  ai_description: >-
+    ### General Description
 
-    | Verify SSL | Boolean | Yes | If enabled, the action will verify the SSL certificate
-    of the ISC server. This is a configuration-level parameter. |
-
-
-    ### Additional Notes
-
-    - This action does not take any input parameters directly; it relies on the global
-    integration configuration.
-
-    - As a 'Ping' action, it is used primarily for health checks and troubleshooting
-    connectivity issues.
+    Tests connectivity to the Internet Storm Center API to ensure the integration
+    is configured correctly.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the Siemplify context and retrieves
-    the global configuration parameters: 'Email Address' and 'Verify SSL'.
+    1. Initializes the connection to the Internet Storm Center API using the provided
+    integration configuration.
 
-    2. **Manager Setup**: An instance of the `InternetStormCenterManager` is created
-    using the retrieved configuration, setting the User-Agent and SSL verification
-    preferences.
+    2. Makes a GET request to the `/api/handler?json=null` endpoint.
 
-    3. **Connectivity Test**: The action calls the `test_connectivity` method, which
-    performs a GET request to the ISC API handler endpoint (`/api/handler?json=null`).
+    3. Validates the response to confirm successful communication.
 
-    4. **Validation**: The response is validated for HTTP errors and specific content
-    types (e.g., ensuring it is not an HTML error page).
+    4. Returns a success or failure message based on the HTTP response.
 
-    5. **Completion**: If the request is successful, the action returns a success
-    message. If an error occurs (such as a connection failure or invalid response),
-    it catches the exception and reports a failure with the reason.
+
+    ### Additional Notes
+
+    This action does not require any entities or action-specific parameters to run.
+  ai_short_description: >-
+    Tests connectivity to the Internet Storm Center API to verify integration configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -121,12 +173,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a basic GET request to a ping endpoint to test connectivity.
+      It does not fetch contextual data for alerts/entities, mutate external or internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -140,3 +229,39 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script does not interact with or process any entities. It only performs
+      a basic API connectivity check.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) to the Internet Storm Center
+      API. It does not perform any enrichment, containment, ticketing, or other operations
+      that match the expected outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
