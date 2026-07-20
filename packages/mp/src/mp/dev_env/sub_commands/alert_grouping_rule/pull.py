@@ -142,7 +142,11 @@ def pull_alert_grouping_rule(
 def _list_alert_grouping_rules(installed_rules: list[dict]) -> None:
     logger.info("Available Alert Grouping Rules:")
     for rule in installed_rules:
-        logger.info("  - Name: '%s' (ID: %s)", rule.get("name", "Unknown"), rule.get("id", "Unknown"))
+        category = rule.get("category") or "Unknown"
+        details = rule.get("categoryDetails") or []
+        subs = [x.get("identifier") or x.get("displayName") for x in details if isinstance(x, dict) and (x.get("identifier") or x.get("displayName"))]
+        subs_str = ", ".join(subs) if subs else "All"
+        logger.info("  - Category: '%s' (Subcategories: %s)", category, subs_str)
 
 
 def _pull_all_alert_grouping_rules(installed_rules: list[dict], dst: Path | None) -> None:

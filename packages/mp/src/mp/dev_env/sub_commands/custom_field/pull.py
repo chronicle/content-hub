@@ -88,7 +88,15 @@ def pull_custom_field(  # noqa: C901
     if list_only:
         logger.info("Available Custom Fields:")
         for field in installed_fields:
-            logger.info("  - Name: '%s' (ID: %s)", field.get("name", "Unknown"), field.get("id", "Unknown"))
+            display_name = field.get("displayName") or field.get("name", "Unknown")
+            scopes_val = field.get("scopes")
+            if isinstance(scopes_val, list):
+                scopes_str = ", ".join(str(x) for x in scopes_val)
+            elif scopes_val:
+                scopes_str = str(scopes_val)
+            else:
+                scopes_str = "None"
+            logger.info("  - DisplayName: '%s' (Scopes: %s)", display_name, scopes_str)
         return
 
     if pull_all:

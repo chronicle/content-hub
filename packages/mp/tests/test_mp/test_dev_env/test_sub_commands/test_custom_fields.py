@@ -17,6 +17,7 @@ from __future__ import annotations
 from pathlib import Path  # noqa: TC003
 from unittest import mock
 
+import pytest
 import yaml
 from typer.testing import CliRunner
 
@@ -341,3 +342,25 @@ def test_push_custom_field_multiple_matching_files(
     mock_api.update_custom_field.assert_any_call(
         2, {"displayName": "Test Field", "scopes": "Case", "description": "Case Desc", "id": 2, "name": "projects//locations//instances//customFields/2"}
     )
+
+
+@mock.patch("mp.dev_env.sub_commands.custom_field.pull.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.custom_field.pull.get_backend_api")
+def test_pull_custom_field_list(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_custom_fields.return_value = [
+        {"name": "projects//locations//instances//customFields/1", "id": 1, "displayName": "Test Field", "scopes": "Alert"},
+    ]
+
+    with caplog.at_level("INFO"):
+        result = runner.invoke(pull_app, ["custom-field", "--list"])
+
+    assert result.exit_code == 0
+    assert "DisplayName: 'Test Field' (Scopes: Alert)" in caplog.text
+
