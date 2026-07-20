@@ -15,8 +15,10 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path  # noqa: TC003
+from pathlib import Path
+from unittest import mock
 
+import pytest
 import yaml
 
 from mp.build_project.restructure.views.build import ViewBuilder
@@ -131,3 +133,60 @@ def test_view_deconstruct_and_build_roundtrip(tmp_path: Path) -> None:
     html_widget = next(w for w in widgets if w["Title"] == "Widget One")
     html_widget_def = json.loads(html_widget["DataDefinitionJson"])
     assert html_widget_def["htmlContent"] == "<h1>Hello World</h1>"
+
+
+def test_view_deconstructor_html_widget_oserror(tmp_path: Path) -> None:
+    """Test that OSError when writing an HTML widget file raises OSError and logs exception."""
+    overview = Overview(
+        identifier="system_case_default",
+        name="Default Case View",
+        creator="system",
+        playbook_id="playbook_1",
+        type_=OverviewType.SYSTEM_CASE,
+        alert_rule_type=None,
+        roles=[1, 2],
+        role_names=["Tier 1", "Tier 2"],
+        widgets=[
+            PlaybookWidgetMetadata(
+                title="Widget One",
+                description="HTML Widget",
+                identifier="widget_one_id",
+                order=1,
+                template_identifier="temp_one",
+                type=WidgetType.HTML,
+                data_definition=HtmlWidgetDataDefinition(
+                    html_height=100,
+                    safe_rendering=True,
+                    widget_definition_scope=WidgetDefinitionScope.ALERT,
+                    type=WidgetType.HTML,
+                    html_content="<h1>Hello World</h1>",
+                ),
+                widget_size=WidgetSize.HALF_WIDTH,
+                action_widget_template_id=None,
+                step_id=None,
+                step_integration=None,
+                block_step_id=None,
+                block_step_instance_name=None,
+                present_if_empty=False,
+                conditions_group=ConditionGroup(logical_operator=LogicalOperator.OR, conditions=[]),
+                integration_name=None,
+            ),
+        ],
+    )
+
+    src_dir = tmp_path / "src"
+    deconstructor = ViewDeconstructor(overview, src_dir)
+
+    orig_write_text = Path.write_text
+    err_msg = "Disk full"
+
+    def side_effect(self: Path, *args: list, **kwargs: dict) -> int:
+        if self.suffix == ".html":
+            raise OSError(err_msg)
+        return orig_write_text(self, *args, **kwargs)
+
+    with (
+        mock.patch.object(Path, "write_text", autospec=True, side_effect=side_effect),
+        pytest.raises(OSError, match="Disk full"),
+    ):
+        deconstructor.deconstruct()

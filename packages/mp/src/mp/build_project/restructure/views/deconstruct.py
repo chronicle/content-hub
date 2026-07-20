@@ -97,6 +97,18 @@ class ViewDeconstructor:
                 )
                 raise
 
+        self._create_html_widget_files(widgets_path)
+
+    def _create_html_widget_files(self, widgets_path: Path) -> None:
+        """Create separate HTML files for HTML-type widgets in the view.
+
+        Args:
+            widgets_path: The directory where widget files are saved.
+
+        Raises:
+            OSError: If writing an HTML widget file fails.
+
+        """
         used_html_filenames: set[str] = set()
         for i, w in enumerate(self.overview.widgets):
             if w.type is WidgetType.HTML:
@@ -123,7 +135,17 @@ class ViewDeconstructor:
                         w.title,
                         type(w.data_definition),
                     )
-                widget_path.write_text(html_content, encoding="utf-8")
+                try:
+                    widget_path.write_text(html_content, encoding="utf-8")
+                except OSError:
+                    logger.exception(
+                        "Failed to create HTML file for a widget with name '%s' at path '%s'."
+                        " Please verify this type of widget title can be created as a file in your"
+                        " system",
+                        widget_path.stem,
+                        widget_path,
+                    )
+                    raise
 
 
 def sanitize_widget_filename(filename: str) -> str:
