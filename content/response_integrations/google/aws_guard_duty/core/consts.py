@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+
 INTEGRATION_NAME = "AWSGuardDuty"
 INTEGRATION_DISPLAY_NAME = "AWS GuardDuty"
 VENDOR = "AWS"
@@ -27,3 +28,8 @@ DEFAULT_HOURS_BACKWARDS = 1
 USEFUL = "USEFUL"
 NOT_USEFUL = "NOT_USEFUL"
 CONNECTOR_NAME = "AWS GuardDuty - Findings Connector"
+
+STS_AUDIENCE = "https://sts.amazonaws.com"
+DEFAULT_ROLE_SESSION_NAME = "SOAR-GuardDuty-Session"
+CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
+VALID_STATUS_CODES = (200,)

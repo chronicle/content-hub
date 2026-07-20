@@ -2,44 +2,33 @@ Lookup:
   ai_description: >-
     ### General Description
 
-    The **Lookup** action checks a specific URL against the Google Safe Browsing database
-    to determine if it is safe for browsing or potentially malicious (e.g., hosting
-    malware or phishing). It provides a direct way to verify the reputation of a URL
-    without necessarily linking it to a specific entity in the current case.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | **Url** | String | Yes | The specific URL to be checked in Google Safe Browsing.
-    Defaults to a Google malware testing URL if not provided. |
+    Checks if a specific URL is safe for browsing using the Google Safe Browsing API.
+    This action retrieves threat intelligence to determine if the provided URL is
+    flagged as malicious.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the API Key from the integration
-    configuration and the target URL from the action parameters.
+    1. Extracts the target URL from the action parameters.
 
-    2. **API Interaction**: It initializes the SafeBrowsing manager and performs a
-    lookup for the provided URL.
+    2. Makes an API call to Google Safe Browsing (via the `pysafebrowsing` library)
+    to look up the URL's reputation.
 
-    3. **Data Processing**: The raw JSON response from the API is added to the action
-    results for downstream use.
+    3. Evaluates the API response to determine if the URL is classified as malicious.
 
-    4. **Status Evaluation**: The action parses the response to determine if the URL
-    is flagged as malicious.
+    4. Attaches the raw lookup response to the action as a JSON result.
 
-    5. **Completion**: The action ends with a status message and a boolean result
-    indicating the maliciousness of the URL.
+    5. Completes the action by returning a boolean value indicating the malicious
+    status, along with a descriptive summary message.
 
 
     ### Additional Notes
 
-    This action does not automatically process entities from the case; it relies strictly
-    on the URL provided in the input parameter.
+    This action does not automatically iterate over case entities. It strictly operates
+    on the URL explicitly provided in the action parameters.
+  ai_short_description: >-
+    Checks if a specific URL is safe for browsing by querying the Google Safe Browsing
+    API and returning its malicious status.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -50,10 +39,47 @@ Lookup:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes an API call to Google Safe Browsing to fetch reputation data
+      for a URL (fetches_data=true). It does not mutate external data, mutate internal
+      data, update entities, create insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -67,40 +93,78 @@ Lookup:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The script does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the `Url` action parameter provided by the
+      user. Therefore, it does not run on entities and all entity type and filter
+      flags must be false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence (safe/malicious status) for a specific
+      URL indicator from Google Safe Browsing. This aligns with the 'Enrich IOC' expected
+      outcome, even though the IOC is provided via a parameter rather than a case
+      entity.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Url | String | Yes | The URL you would like to check in Google Safe Browsing.
+    |
 Ping:
   ai_description: >-
     ### General Description
 
-    Tests the connectivity between Google SecOps and the Google Safe Browsing service.
-    This action is primarily used to verify that the provided API Key is valid and
-    that the environment can reach the Google Safe Browsing API endpoints.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action has no input parameters. |
+    This action tests the connectivity to the Google Safe Browsing service to ensure
+    that the integration is configured correctly.
 
 
     ### Flow Description
 
-    1. **Configuration Extraction**: Retrieves the 'Api Key' from the integration's
-    global configuration.
+    1. Retrieves the API key from the integration configuration.
 
-    2. **Connectivity Test**: Initializes the Safe Browsing client and performs a
-    lookup for a hardcoded test URL (`http://malware.testing.google.test/testing/malware/`).
+    2. Initializes the Google Safe Browsing client.
 
-    3. **Result Reporting**: If the API call is successful, the action concludes with
-    a success message.
+    3. Executes a test URL lookup (`http://malware.testing.google.test/testing/malware/`)
+    via the Google Safe Browsing API to validate the connection.
+
+    4. Returns a successful result if the API call completes without errors.
 
 
     ### Additional Notes
 
-    This action does not process any entities from the case; it uses a static test
-    URL to validate the connection.
+    This action is typically used during the initial setup of the integration to verify
+    credentials and network access.
+  ai_short_description: >-
+    Tests connectivity with the Google Safe Browsing service by performing a test
+    URL lookup.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -109,12 +173,50 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action performs a test API call to Google Safe Browsing to verify connectivity.
+      It does not fetch contextual data for alerts or entities, nor does it mutate
+      any external or internal data. It does not update entities, create insights,
+      modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -128,3 +230,40 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or interact with any entities. It performs a static
+      test lookup to verify connectivity. Therefore, all entity type and filter flags
+      are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not perform any enrichment,
+      containment, ticketing, or other operations that match the defined outcome categories.
+      Therefore, all category flags are set to false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

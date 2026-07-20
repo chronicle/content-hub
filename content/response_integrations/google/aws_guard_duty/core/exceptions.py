@@ -13,33 +13,19 @@
 # limitations under the License.
 
 from __future__ import annotations
-class AWSGuardDutyStatusCodeException(Exception):
-    """
-    Status Code exception from AWS GuardDuty manager
-    """
-
-    pass
 
 
-class AWSGuardDutyValidationException(Exception):
-    """
-    Validation Exception for AWS GuardDuty manager
-    """
-
-    pass
+class AWSGuardDutyStatusCodeError(Exception):
+    """Status Code exception from AWS GuardDuty manager."""
 
 
-class AWSGuardDutyResourceAlreadyExistsException(Exception):
-    """
-    Resource already exists Exception for AWS GuardDuty manager
-    """
-
-    pass
+class AWSGuardDutyValidationError(Exception):
+    """Validation Exception for AWS GuardDuty manager."""
 
 
-class AWSGuardDutyNotFoundException(Exception):
-    """
-    Not Found Exception for AWS GuardDuty manager
-    """
+class AWSGuardDutyResourceAlreadyExistsError(Exception):
+    """Resource already exists Exception for AWS GuardDuty manager."""
 
-    pass
+
+class AWSGuardDutyNotFoundError(Exception):
+    """Not Found Exception for AWS GuardDuty manager."""
