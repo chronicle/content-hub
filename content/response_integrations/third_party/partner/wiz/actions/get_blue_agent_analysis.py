@@ -25,7 +25,7 @@ from TIPCommon.smp_time import is_approaching_action_timeout
 from ..core import action_init, api_client, constants, exceptions
 
 if TYPE_CHECKING:
-    from typing import Any, NoReturn
+    from typing import Any
 
 
 class GetBlueAgentAnalysis(Action):
@@ -103,7 +103,7 @@ class GetBlueAgentAnalysis(Action):
             self.execution_state = ExecutionState.IN_PROGRESS
 
 
-def main() -> NoReturn:
+def main() -> None:
     GetBlueAgentAnalysis().run()
 
 

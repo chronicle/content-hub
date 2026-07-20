@@ -290,7 +290,6 @@ class ThreatAIAnalysisQueryBuilder:
                             "severity",
                             "confidenceLevel",
                             "conclusion",
-                            "investigationProcess",
                         ],
                     ),
                 ],

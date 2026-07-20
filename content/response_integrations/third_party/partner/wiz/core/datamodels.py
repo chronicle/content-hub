@@ -86,7 +86,6 @@ class ThreatAIAnalysis(BaseModel):
     severity: str | None
     confidence_level: str | None
     conclusion: str | None
-    investigation_process: str | None
 
     @classmethod
     def from_json(
@@ -107,5 +106,4 @@ class ThreatAIAnalysis(BaseModel):
             severity=json_data.get("severity"),
             confidence_level=json_data.get("confidenceLevel"),
             conclusion=json_data.get("conclusion"),
-            investigation_process=json_data.get("investigationProcess"),
         )

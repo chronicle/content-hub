@@ -54,7 +54,6 @@ ANALYSIS_COMPLETED: SingleJson = {
                     "severity": "CRITICAL",
                     "confidenceLevel": "HIGH",
                     "conclusion": "Container weather-ctf ...",
-                    "investigationProcess": None
                 }
             }
         }
@@ -73,7 +72,6 @@ ANALYSIS_IN_PROGRESS: SingleJson = {
                     "severity": None,
                     "confidenceLevel": None,
                     "conclusion": None,
-                    "investigationProcess": None
                 }
             }
         }

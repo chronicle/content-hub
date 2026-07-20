@@ -43,7 +43,6 @@ class WizApiClient(Apiable):
             configuration=configuration,
         )
         self.logger: ScriptLogger = logger
-        self.parser: data_parser = data_parser
         self.api_root: str = self.configuration.api_root
 
     def test_connectivity(self) -> None:
@@ -85,7 +84,7 @@ class WizApiClient(Apiable):
         )
         api_utils.validate_response(response=response)
 
-        return self.parser.build_issue_object(response.json())
+        return data_parser.build_issue_object(response.json())
 
     def add_comment_to_issue(
         self,
@@ -116,7 +115,7 @@ class WizApiClient(Apiable):
         )
         api_utils.validate_response(response=response)
 
-        return self.parser.build_issue_comment_object(response.json())
+        return data_parser.build_issue_comment_object(response.json())
 
     def reopen_issue(self, issue_id: str) -> datamodels.Issue:
         """Reopen an issue.
@@ -144,7 +143,7 @@ class WizApiClient(Apiable):
         )
         api_utils.validate_response(response=response)
 
-        return self.parser.build_update_issue_object(response.json())
+        return data_parser.build_update_issue_object(response.json())
 
     def ignore_issue(
         self,
@@ -181,7 +180,7 @@ class WizApiClient(Apiable):
         )
         api_utils.validate_response(response=response)
 
-        return self.parser.build_update_issue_object(response.json())
+        return data_parser.build_update_issue_object(response.json())
 
     def resolve_issue(
         self,
@@ -219,7 +218,7 @@ class WizApiClient(Apiable):
         )
         api_utils.validate_response(response=response)
 
-        return self.parser.build_update_issue_object(response.json())
+        return data_parser.build_update_issue_object(response.json())
 
     def get_resource_vulnerability_findings(
         self,
@@ -267,7 +266,7 @@ class WizApiClient(Apiable):
         api_utils.validate_response(response=response)
 
         nodes = response.json().get("data", {}).get("vulnerabilityFindings", {}).get("nodes", [])
-        findings = [self.parser.build_vulnerability_finding_object(node) for node in nodes]
+        findings = [data_parser.build_vulnerability_finding_object(node) for node in nodes]
         if cve_ids:
             findings = [f for f in findings if f.name in cve_ids]
         return findings[:first]
@@ -308,5 +307,4 @@ class WizApiClient(Apiable):
                 f" in {constants.INTEGRATION_NAME}."
             )
 
-        return self.parser.build_threat_ai_analysis_object(response_json)
-
+        return data_parser.build_threat_ai_analysis_object(response_json)
