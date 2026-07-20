@@ -16,7 +16,24 @@ from __future__ import annotations
 
 import sys
 import soar_sdk
-sys.path.insert(0, soar_sdk.__path__[0])
+import pkgutil
+import importlib
+
+# Add SDK internal modules to sys.path to support flat imports within the SDK and TIPCommon
+sdk_dir = soar_sdk.__path__[0]
+if sdk_dir not in sys.path:
+    sys.path.insert(0, sdk_dir)
+
+# Save original stdout in case soar_sdk imports hijack it (Siemplify.py calls SiemplifyUtils.override_stdout)
+original_stdout = sys.stdout
+for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
+    try:
+        flat_mod = importlib.import_module(name)
+        sys.modules[f"soar_sdk.{name}"] = flat_mod
+        setattr(soar_sdk, name, flat_mod)
+    except Exception:
+        pass
+sys.stdout = original_stdout
 
 import os
 import pathlib

@@ -24,6 +24,8 @@ from ..core.datamodels import (
     Incident,
     XQLSearch,
     XQLSearchResult,
+    FileRetrievalAction,
+    FileRetrievalDetails,
 )
 
 if TYPE_CHECKING:
@@ -85,3 +87,15 @@ class PaloAltoCortexXDRTransformationLayer:
             Alert.from_json(alert_data=alert_details_data)
             for alert_details_data in alerts_details_data["reply"]["alerts"]["data"]
         ]
+
+    @staticmethod
+    def build_siemplify_file_retrieval_action_obj(
+        file_retrieval_action_data: SingleJson,
+    ) -> FileRetrievalAction:
+        return FileRetrievalAction.from_json(raw_data=file_retrieval_action_data)
+
+    @staticmethod
+    def build_siemplify_file_retrieval_details_obj(
+        file_retrieval_details_data: SingleJson,
+    ) -> FileRetrievalDetails:
+        return FileRetrievalDetails.from_json(raw_data=file_retrieval_details_data)

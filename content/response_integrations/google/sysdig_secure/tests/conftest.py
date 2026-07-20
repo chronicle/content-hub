@@ -27,13 +27,23 @@ import soar_sdk
 # Provide integration_testing fixtures
 pytest_plugins = ("integration_testing.conftest",)
 
-# Alias all top-level soar_sdk modules to themselves to unify the namespace for mocks
+import importlib
+
+# Add SDK internal modules to sys.path to support flat imports within the SDK and TIPCommon
+sdk_dir = soar_sdk.__path__[0]
+if sdk_dir not in sys.path:
+    sys.path.insert(0, sdk_dir)
+
+# Save original stdout in case soar_sdk imports hijack it (Siemplify.py calls SiemplifyUtils.override_stdout)
+original_stdout = sys.stdout
 for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    if name not in sys.modules:
-        try:
-            sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-        except Exception:
-            pass
+    try:
+        flat_mod = importlib.import_module(name)
+        sys.modules[f"soar_sdk.{name}"] = flat_mod
+        setattr(soar_sdk, name, flat_mod)
+    except Exception:
+        pass
+sys.stdout = original_stdout
 
 import sysdig_secure
 import sysdig_secure.core

@@ -37,6 +37,8 @@ if TYPE_CHECKING:
         Incident,
         XQLSearch,
         XQLSearchResult,
+        FileRetrievalAction,
+        FileRetrievalDetails,
     )
 
 
@@ -707,26 +709,57 @@ class XDRManager(Apiable):
 
         return True
 
-    def retrieve_file_from_endpoint(self, endpoint_id, os_type, file_path):
+    def retrieve_file_from_endpoint(
+        self,
+        endpoint_id: str,
+        os_type: str,
+        file_paths: list[str] | str,
+        incident_id: str | None = None,
+    ) -> FileRetrievalAction:
+        """Initiate a file retrieval action from a specific endpoint.
+
+        Args:
+            endpoint_id (str): The unique identifier of the target endpoint.
+            os_type (str): The operating system of the endpoint.
+            file_paths (list[str]): A list of absolute paths of the files
+                to retrieve from the endpoint.
+            incident_id (str | None): If provided, associates the file
+                retrieval action with an existing incident ID.
+
+        Returns:
+            FileRetrievalAction: A data model containing the action ID and
+                the number of endpoints targeted.
+        """
+        if isinstance(file_paths, str):
+            file_paths = [file_paths]
+
         request_data = {
             "filters": [
                 {"field": "endpoint_id_list", "operator": "in", "value": [endpoint_id]}
             ],
-            "files": {os_type: [file_path]},
+            "files": {os_type: file_paths},
         }
 
+        if incident_id:
+            try:
+                request_data["incident_id"] = int(incident_id)
+            except ValueError as e:
+                raise XDRException(
+                    f"Incident ID must be numeric. Got: {incident_id}"
+                ) from e
+
         res = self.session.post(
-            f"{self.api_root}/public_api/v1/audits/endpoints/file_retrieval/",
+            f"{self.api_root}/public_api/v1/endpoints/file_retrieval/",
             json={"request_data": request_data},
         )
         validate_response(res)
 
         if not res.json().get("reply"):
             raise XDRException(
-                f"Unable to retrieve file {file_path} from endpoint {endpoint_id}"
+                f"Unable to retrieve files {file_paths} from endpoint {endpoint_id}"
             )
 
-        return res.json().get("reply")
+        return self.transformation_layer.build_siemplify_file_retrieval_action_obj(res.json())
 
     def add_hash_to_block_list(self, file_hash, comment=None):
         """
@@ -903,3 +936,34 @@ class XDRManager(Apiable):
         )
         validate_response(res)
         return res.json()["reply"]
+
+    def get_file_retrieval_details(self, group_id: str) -> FileRetrievalDetails:
+        """Get the details of a file retrieval action.
+        Args:
+            group_id: The group/action ID of the file retrieval action to check.
+
+        Returns:
+            FileRetrievalDetails: File Retrieval Details.
+        """
+        res: requests.Response = self.session.post(
+            f"{self.api_root}/public_api/v1/actions/file_retrieval_details/",
+            json={"request_data": {"group_action_id": int(group_id)}},
+        )
+        validate_response(res)
+        return self.transformation_layer.build_siemplify_file_retrieval_details_obj(res.json())
+
+    def retrieve_file(self, download_url: str) -> requests.Response:
+        """Retrieve the downloaded file stream from the endpoint download URL.
+        Args:
+            download_url: The download URL for the retrieved file.
+
+        Returns:
+            requests.Response: The requests.Response object.
+        """
+        res: requests.Response = self.session.post(
+            download_url,
+            json={},
+            stream=True,
+        )
+        validate_response(res)
+        return res

@@ -23,6 +23,7 @@ from ..core.datamodels import (
     Incident,
     XQLSearch,
     XQLSearchResult,
+    FileRetrievalDetails,
 )
 from ..core.XDRManager import (
     SearchXQLParameters,
@@ -132,4 +133,36 @@ class TestApiManager:
         response: SingleJson = manager.get_xql_search_results(query_id)
 
         assert type(response).__name__ == XQLSearchResult.__name__
+        assert len(script_session.request_history) == 2
+
+    def test_get_file_retrieval_details_success(
+        self,
+        manager: XDRManager,
+        palo_alto_cortex_xdr: PaloAltoCortexXDR,
+        script_session: PaloAltoCortexXDRSession,
+    ) -> None:
+        """Test get file retrieval details success. Verify that the get_file_retrieval_details method returns correct URL mappings when a valid group ID is provided."""
+        group_id: str = '987654321'
+        urls: FileRetrievalDetails = FileRetrievalDetails(
+            raw_data={'data': {'ep1': 'https://api-root.com/public_api/v1/download/mysecrettoken'}},
+            endpoint_url_map={'ep1': 'https://api-root.com/public_api/v1/download/mysecrettoken'},
+        )
+        palo_alto_cortex_xdr.add_file_retrieval_urls(group_id, urls)
+        response: FileRetrievalDetails = manager.get_file_retrieval_details(group_id)
+        assert type(response).__name__ == FileRetrievalDetails.__name__
+        assert response.endpoint_url_map.get('ep1') == 'https://api-root.com/public_api/v1/download/mysecrettoken'
+        assert len(script_session.request_history) == 2
+
+    def test_retrieve_file_success(
+        self,
+        manager: XDRManager,
+        palo_alto_cortex_xdr: PaloAltoCortexXDR,
+        script_session: PaloAltoCortexXDRSession,
+    ) -> None:
+        """Test retrieve file success. Verify that the retrieve_file method returns the correct binary content when a valid download URL is provided."""
+        download_url: str = 'https://api-root.com/public_api/v1/download/mysecrettoken'
+        content: bytes = b'Zip content binary mock'
+        palo_alto_cortex_xdr.add_file_content_by_val('mysecrettoken', content)
+        response = manager.retrieve_file(download_url)
+        assert response.content == content
         assert len(script_session.request_history) == 2

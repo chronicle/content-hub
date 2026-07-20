@@ -417,3 +417,24 @@ def convert_string_to_base64(string="") -> str:
         return ""
 
     return base64.b64encode(string.encode("utf-8")).decode("utf-8")
+
+
+@dataclasses.dataclass(slots=True)
+class FileRetrievalAction(BaseModel):
+    raw_data: SingleJson
+    action_id: int
+    endpoints_count: int
+
+    @classmethod
+    def from_json(cls, raw_data: SingleJson) -> FileRetrievalAction:
+        return cls(raw_data=raw_data, action_id=raw_data.get('action_id'), endpoints_count=raw_data.get('endpoints_count'))
+
+
+@dataclasses.dataclass(slots=True)
+class FileRetrievalDetails(BaseModel):
+    raw_data: SingleJson
+    endpoint_url_map: dict[str, str]
+
+    @classmethod
+    def from_json(cls, raw_data: SingleJson) -> FileRetrievalDetails:
+        return cls(raw_data=raw_data, endpoint_url_map=raw_data.get('data', {}))
