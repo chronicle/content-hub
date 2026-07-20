@@ -669,16 +669,13 @@ def _upload_built_view_data(
     view_src_path: Path,
     *,
     force: bool = False,
-) -> str | None:
+) -> None:
     """Upload built view template data to the SOAR environment.
 
     Args:
         view_data: The built view template dictionary structure.
         view_src_path: Path to the view source directory.
         force: Force creating a new view if it doesn't exist.
-
-    Returns:
-        The final identifier of the view template used for upload if successful, otherwise None.
 
     Raises:
         typer.Exit: If the upload fails.
@@ -724,6 +721,11 @@ def _upload_built_view_data(
         logger.error("Upload failed for view '%s': %s", view_name, e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
+    # Verify in memory that all submitted widgets were persisted by server
+    server_uuid = flat_view_data.get("identifier")
+    if server_uuid:
+        _verify_post_push_widgets(backend_api, server_uuid, flat_view_data)
+
     if view_name != view_src_path.name:
         logger.info(
             "View '%s' (from directory '%s') pushed successfully.",
@@ -732,7 +734,50 @@ def _upload_built_view_data(
         )
     else:
         logger.info("View '%s' pushed successfully.", view_name)
-    return flat_view_data.get("identifier")
+
+
+def _verify_post_push_widgets(
+    backend_api: BackendAPI,
+    server_uuid: str,
+    flat_view_data: dict[str, Any],
+) -> None:
+    """Verify in memory that all submitted widgets were persisted by the SOAR platform."""
+    try:
+        downloaded_view = backend_api.download_view(server_uuid)
+    except Exception as ex:  # noqa: BLE001
+        logger.debug("Failed to verify post-push view widgets: %s", ex)
+        return
+
+    if not downloaded_view or not isinstance(downloaded_view, dict):
+        return
+
+    saved_widget_ids = set()
+    for w in downloaded_view.get("widgets") or []:
+        meta = w.get("metadata") or {}
+        w_id = meta.get("identifier")
+        if w_id:
+            saved_widget_ids.add(w_id.lower())
+
+    omitted_widgets: list[tuple[str, str]] = []
+    for w in flat_view_data.get("widgets") or []:
+        meta = w.get("metadata") or {}
+        w_id = meta.get("identifier")
+        title = meta.get("title") or "unnamed"
+        if w_id and w_id.lower() not in saved_widget_ids:
+            omitted_widgets.append((title, w_id))
+
+    if omitted_widgets:
+        items_str = "\n".join(f"  - Widget '{title}' (UUID: '{w_id}')" for title, w_id in omitted_widgets)
+        msg = (
+            "================================================================================\n"
+            "[VALIDATION WARNING] Widget Not Persisted by Platform\n"
+            "The following widget(s) were submitted to SOAR, but were not persisted in the view layout:\n"
+            f"{items_str}\n"
+            "The view was saved, but the platform omitted these widgets (typically occurs when a widget\n"
+            "type is unsupported or disabled on the target SOAR instance).\n"
+            "================================================================================"
+        )
+        logger.warning("%s", msg)
 
 
 def _find_view_dir_in_root(views_root: Path, view_name_or_id: str) -> Path | None:

@@ -373,8 +373,8 @@ def test_push_view_cli(
     assert widgets[0]["metadata"]["title"] == "Widget One"
     assert widgets[0]["config"]["htmlContent"] == "<h1>Hello from push</h1>"
 
-    # Verify download_view was only called once during widget verification
-    assert mock_api.download_view.call_count == 1
+    # Verify download_view was called during pre-push and post-push verification
+    assert mock_api.download_view.call_count == 2
     assert (view_folder / "view.yaml").exists()
 
 
@@ -630,9 +630,8 @@ def test_push_view_fallback_to_name_and_type_matching(
     assert called_args["id"] == 100                 # Server ID is injected
     assert called_args["type"] == 3
 
-    # Verify download_view was only called once during widget verification
-    assert mock_api.download_view.call_count == 1
-    mock_api.download_view.assert_called_once_with("server_uuid")
+    # Verify download_view was called during pre-push and post-push verification
+    assert mock_api.download_view.call_count == 2
 
     # Verify local folder was not renamed
     assert (src_dir / "local_uuid").exists()
@@ -1114,3 +1113,80 @@ def test_push_view_validates_quick_actions_integrations(
     assert result.exit_code != 0
     assert "[VALIDATION ERROR] Missing Integration on Platform" in caplog.text
     assert "Akamai" in caplog.text
+
+
+@mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.push.get_backend_api")
+def test_push_view_logs_warning_for_omitted_widgets(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Verify that mp push view logs a warning if server omits submitted widgets post-push."""
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_views.return_value = [
+        {"id": 10, "identifier": "om_uuid", "name": "Omitted View", "type": 5}
+    ]
+    # Server download_view returns empty widgets list (omitted W_Omitted)
+    mock_api.download_view.return_value = {"identifier": "om_uuid", "widgets": []}
+    mock_api.list_custom_fields.return_value = []
+    mock_api.upload_view.return_value = {"status": "success"}
+
+    src_dir = tmp_path / "views"
+    view_folder = src_dir / "om_uuid"
+    view_folder.mkdir(parents=True)
+
+    with (view_folder / "view.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(
+            {
+                "identifier": "om_uuid",
+                "name": "Omitted View",
+                "creator": "system",
+                "playbook_id": "playbook_om",
+                "type": "system_case",
+                "alert_rule_type": None,
+                "roles": [],
+                "widgets_details": [{"title": "Omitted Widget", "size": "half_width", "order": 1}],
+            },
+            f,
+        )
+
+    (view_folder / "widgets").mkdir()
+    with (view_folder / "widgets" / "Omitted.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(
+            {
+                "title": "Omitted Widget",
+                "description": "Omitted desc",
+                "identifier": "w_omitted",
+                "order": 1,
+                "template_identifier": "temp_om",
+                "type": "key_value",
+                "data_definition": {},
+                "widget_size": "half_width",
+                "action_widget_template_id": None,
+                "step_id": None,
+                "step_integration": None,
+                "block_step_id": None,
+                "block_step_instance_name": None,
+                "present_if_empty": False,
+                "conditions_group": {"logical_operator": "and", "conditions": []},
+                "integration_name": None,
+            },
+            f,
+        )
+
+    with (
+        mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"),
+        caplog.at_level("WARNING"),
+    ):
+        result = runner.invoke(
+            push_app,
+            ["view", "om_uuid", "--custom", str(src_dir), "--force"],
+        )
+
+    assert result.exit_code == 0
+    assert "[VALIDATION WARNING] Widget Not Persisted by Platform" in caplog.text
+    assert "Omitted Widget" in caplog.text
