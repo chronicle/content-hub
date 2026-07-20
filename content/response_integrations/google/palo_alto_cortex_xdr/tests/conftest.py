@@ -14,20 +14,11 @@
 
 from __future__ import annotations
 
-# Unify the soar_sdk namespace with the flat namespace for mocks
 import sys
-import pkgutil
 import soar_sdk
-for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
-    if name not in sys.modules:
-        try:
-            sys.modules[name] = __import__(f"soar_sdk.{name}", fromlist=[None])
-        except Exception:
-            pass
+sys.path.insert(0, soar_sdk.__path__[0])
 
 import os
-import sys
-import pkgutil
 import pathlib
 
 # Provide integration_testing fixtures
@@ -58,8 +49,8 @@ def soar_sdk_session_fixture(
     monkeypatch: pytest.MonkeyPatch, palo_alto_cortex_xdr: PaloAltoCortexXDR
 ) -> PaloAltoCortexXDRSOARSession:
     session = PaloAltoCortexXDRSOARSession(palo_alto_cortex_xdr)
-    monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)
-    monkeypatch.setattr(SiemplifyBase, "_create_remote_session", lambda *_: session)
+    monkeypatch.setattr(SiemplifyBase.SiemplifyBase, "create_session", lambda *_: session)
+    monkeypatch.setattr(SiemplifyBase.SiemplifyBase, "_create_remote_session", lambda *_: session)
     return session
 
 @pytest.fixture(name="manager")
