@@ -220,13 +220,14 @@ mp pull view [VIEW] [OPTIONS]
 
 **Arguments:**
 
-* `VIEW`: The view name or UUID identifier to pull. Optional if `--all` is specified.
+* `VIEW`: The view name or UUID identifier to pull. Optional if `--all` or `--list` is specified.
 
 **Options:**
 
 | Option     | Description                                                             | Type   | Default |
 |:-----------|:------------------------------------------------------------------------|:-------|:--------|
 | `--all`    | Pull all views from the dev environment.                                | `bool` | `False` |
+| `--list`   | List all installed view templates on the dev environment.              | `bool` | `False` |
 | `--custom` | Destination folder path. Defaults to `content/views/<identifier_uuid>`. | `Path` | `None`  |
 
 ### `pull custom-field`

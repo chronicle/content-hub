@@ -17,6 +17,7 @@ from __future__ import annotations
 from pathlib import Path  # noqa: TC003
 from unittest import mock
 
+import pytest
 import yaml
 from typer.testing import CliRunner
 
@@ -808,3 +809,24 @@ def test_push_view_missing_integration_fails(
 
     assert result.exit_code != 0
     mock_api.upload_view.assert_not_called()
+
+
+@mock.patch("mp.dev_env.sub_commands.view.pull.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.pull.get_backend_api")
+def test_pull_view_list(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_views.return_value = [
+        {"name": "Default Case View", "identifier": "uuid-1234", "type": 3},
+    ]
+
+    with caplog.at_level("INFO"):
+        result = runner.invoke(pull_app, ["view", "--list"])
+
+    assert result.exit_code == 0
+    assert "Name: 'Default Case View' (Identifier: uuid-1234, Type: 3)" in caplog.text

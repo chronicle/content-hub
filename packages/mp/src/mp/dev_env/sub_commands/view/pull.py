@@ -56,6 +56,13 @@ def pull_view(
             help="Pull all views from the platform.",
         ),
     ] = False,
+    list_only: Annotated[
+        bool,
+        typer.Option(
+            "--list",
+            help="List all views available in the environment without pulling.",
+        ),
+    ] = False,
 ) -> None:
     """Pull and deconstruct a view template from the SOAR environment.
 
@@ -63,8 +70,8 @@ def pull_view(
         typer.Exit: If the pull or deconstruction fails.
 
     """
-    if not all_views and not view_name_or_id:
-        logger.error("Error: You must provide a view name or ID, or specify the --all option.")
+    if not all_views and not list_only and not view_name_or_id:
+        logger.error("Error: You must specify a view name or ID, or use the --all or --list options.")
         raise typer.Exit(1)
 
     config = load_dev_env_config()
@@ -76,6 +83,15 @@ def pull_view(
     except Exception as e:
         logger.error("Failed to fetch installed views: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
+
+    if list_only:
+        logger.info("Available View Templates:")
+        for view in installed_views:
+            name = view.get("name") or view.get("Name") or "Unknown"
+            identifier = view.get("identifier") or view.get("Identifier") or "Unknown"
+            view_type = view.get("type") if view.get("type") is not None else view.get("Type")
+            logger.info("  - Name: '%s' (Identifier: %s, Type: %s)", name, identifier, view_type)
+        return
 
     views_root = mp.core.file_utils.create_or_get_views_root_dir()
 
