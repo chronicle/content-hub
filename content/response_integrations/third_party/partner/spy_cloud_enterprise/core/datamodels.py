@@ -325,6 +325,62 @@ def build_insight(identifier: str, exposures: Iterable[SpyCloudExposure]) -> str
 
 SPYCLOUD_EVENT_PREFIX = "spycloud_"
 
+# Sensitive breach values surfaced in the table when the connector's "Include
+# Plaintext Secrets" option is enabled. These flattened event keys carry the raw
+# secret; each is empty unless secret retention was on at collection time. Order
+# is (event-property key, human column label).
+SECRET_DISPLAY_FIELDS = (
+    ("spycloud_password_plaintext", "Plaintext Password"),
+    ("spycloud_password", "Password (as stored)"),
+    ("spycloud_password_value", "Password Value"),
+    ("spycloud_password_raw", "Password (raw)"),
+    ("spycloud_new_password", "New Password"),
+    ("spycloud_old_password", "Old Password"),
+    ("spycloud_account_password", "Account Password"),
+    ("spycloud_credentials", "Credentials"),
+    ("spycloud_private_key_password", "Private Key Password"),
+    ("spycloud_account_secret", "Account Secret"),
+    ("spycloud_account_secret_question", "Account Secret Question"),
+    ("spycloud_api_token", "API Token"),
+    ("spycloud_api_token_secret", "API Token Secret"),
+    ("spycloud_cookies", "Cookies"),
+    ("spycloud_cookie_data", "Cookie Data"),
+    ("spycloud_form_cookies_data", "Form Cookies Data"),
+    ("spycloud_form_post_data", "Form Post Data"),
+    ("spycloud_cc_number", "Credit Card Number"),
+    ("spycloud_cc_code", "Credit Card Code"),
+    ("spycloud_bank_number", "Bank Number"),
+    ("spycloud_bank_routing_number", "Bank Routing Number"),
+    ("spycloud_taxid", "Tax ID"),
+)
+
+# Non-secret metadata columns appended after the curated columns so the data table
+# carries the full flattened record, not just a curated subset.
+EXTRA_METADATA_FIELDS = (
+    ("spycloud_password_type", "Password Type"),
+    ("spycloud_infected_time", "Infected Time"),
+    ("spycloud_infected_path", "Infected Path"),
+    ("spycloud_record_modification_date", "Record Modification Date"),
+    ("spycloud_record_cracked_date", "Record Cracked Date"),
+    ("spycloud_target_url", "Target URL"),
+    ("spycloud_target_domain", "Target Domain"),
+    ("spycloud_target_subdomain", "Target Subdomain"),
+    ("spycloud_user_hostname", "User Hostname"),
+    ("spycloud_user_os", "User OS"),
+    ("spycloud_user_browser", "User Browser"),
+    ("spycloud_user_agent", "User Agent"),
+    ("spycloud_country_code", "Country Code"),
+    ("spycloud_timezone", "Timezone"),
+    ("spycloud_log_id", "Log ID"),
+    ("spycloud_breach_main_category", "Breach Main Category"),
+    ("spycloud_breach_category", "Breach Category"),
+    ("spycloud_confidence", "Confidence"),
+    ("spycloud_tlp", "TLP"),
+    ("spycloud_criticality", "Criticality"),
+    ("spycloud_mapped_soar_severity", "Mapped SOAR Severity"),
+    ("spycloud_merged_record_count", "Merged Record Count"),
+)
+
 
 def _truthy(value: Any) -> bool:
     """Interpret a flattened event value (often a string) as a boolean.
@@ -357,7 +413,7 @@ def event_row(alert_name: str, props: dict[str, Any]) -> dict[str, Any]:
         or _clean_str(props.get("spycloud_record_modification_date"))
         or _clean_str(props.get("spycloud_infected_time"))
     )
-    return {
+    row = {
         "Alert": _clean_str(alert_name),
         "SpyCloud Severity": _clean_str(props.get("spycloud_source_severity")),
         "Severity Label": _clean_str(props.get("spycloud_severity_label")),
@@ -376,18 +432,27 @@ def event_row(alert_name: str, props: dict[str, Any]) -> dict[str, Any]:
         "Collection Source": _clean_str(props.get("spycloud_collection_source")),
         "Document ID": _clean_str(props.get("spycloud_document_id")),
     }
+    # Append the remaining metadata columns so the table carries the full record.
+    for key, label in EXTRA_METADATA_FIELDS:
+        row[label] = _clean_str(props.get(key))
+    # Append the raw secret values. These are empty unless the connector persisted
+    # them (Include Plaintext Secrets); when present they are shown verbatim.
+    for key, label in SECRET_DISPLAY_FIELDS:
+        row[label] = _clean_str(props.get(key))
+    return row
 
 
 def event_json(props: dict[str, Any]) -> dict[str, Any]:
-    """A structured, secret-free view of one in-case SpyCloud exposure event.
+    """A structured view of one in-case SpyCloud exposure event.
 
-    The parser already omits secret values, but we re-apply the sensitive-key
-    guard here for defense in depth so no unexpected key can leak downstream.
+    Every flattened ``spycloud_`` field is included. When the connector persisted
+    plaintext secrets (Include Plaintext Secrets), those values are present here as
+    well; otherwise the secret keys are simply empty.
     """
     return {
         key: value
         for key, value in props.items()
-        if str(key).startswith(SPYCLOUD_EVENT_PREFIX) and not _is_sensitive_key(key)
+        if str(key).startswith(SPYCLOUD_EVENT_PREFIX)
     }
 
 
@@ -475,7 +540,8 @@ def build_case_insight_html(rows: list[dict[str, Any]]) -> str:
         more = (
             f"<p style='margin:6px 0 0;font-style:italic;'>"
             f"Showing {INSIGHT_MAX_ROWS} of {total} exposures &mdash; "
-            f"see the &ldquo;{html.escape('SpyCloud Watchlist Exposures')}&rdquo; "
+            f"expand &ldquo;Show all fields&rdquo; below or see the "
+            f"&ldquo;{html.escape('SpyCloud Watchlist Exposures')}&rdquo; "
             f"table for the rest.</p>"
         )
 
@@ -487,4 +553,62 @@ def build_case_insight_html(rows: list[dict[str, Any]]) -> str:
         f"<thead><tr>{header}</tr></thead>"
         f"<tbody>{''.join(body_rows)}</tbody></table>"
         f"{more}"
+        f"{build_full_detail_html(rows)}"
+    )
+
+
+def _rows_contain_secrets(rows: list[dict[str, Any]]) -> bool:
+    """True if any row carries a non-empty value in a secret column."""
+    secret_labels = [label for _key, label in SECRET_DISPLAY_FIELDS]
+    return any(
+        _clean_str(row.get(label)) for row in rows for label in secret_labels
+    )
+
+
+def build_full_detail_html(rows: list[dict[str, Any]]) -> str:
+    """A collapsible ``<details>`` block rendering every column for every row.
+
+    Rendered collapsed by default so the compact summary stays readable; clicking
+    the disclosure triangle expands the full-width table with all fields. When
+    plaintext secrets are present a warning banner is shown inside the block.
+    """
+    if not rows:
+        return ""
+
+    # event_row emits a stable key set, so the first row defines the columns.
+    columns = list(rows[0].keys())
+
+    header = "".join(
+        f"<th style='padding:4px 8px;text-align:left;border-bottom:1px solid #ccc;"
+        f"white-space:nowrap;'>{html.escape(column)}</th>"
+        for column in columns
+    )
+
+    body_rows: list[str] = []
+    for row in rows:
+        cells = "".join(
+            f"<td style='padding:2px 8px;border-bottom:1px solid #eee;"
+            f"vertical-align:top;'>{html.escape(_clean_str(row.get(column)))}</td>"
+            for column in columns
+        )
+        body_rows.append(f"<tr>{cells}</tr>")
+
+    warning = ""
+    if _rows_contain_secrets(rows):
+        warning = (
+            "<p style='margin:6px 0;padding:4px 8px;background:#fbe9e7;color:#b3261e;"
+            "border-left:3px solid #b3261e;font-weight:bold;'>"
+            "&#9888; This table contains plaintext secrets (passwords / cookies / "
+            "tokens). Handle and share accordingly.</p>"
+        )
+
+    return (
+        "<details style='margin-top:10px;'>"
+        "<summary style='cursor:pointer;font-weight:bold;'>"
+        f"Show all fields ({len(columns)} columns &times; {len(rows)} rows)</summary>"
+        f"{warning}"
+        "<div style='overflow-x:auto;'>"
+        "<table style='border-collapse:collapse;width:100%;font-size:0.85em;'>"
+        f"<thead><tr>{header}</tr></thead>"
+        f"<tbody>{''.join(body_rows)}</tbody></table></div></details>"
     )

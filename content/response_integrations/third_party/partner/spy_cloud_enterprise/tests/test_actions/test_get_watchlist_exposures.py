@@ -128,18 +128,36 @@ class TestGetWatchlistExposures:
 
         siemplify.create_case_insight.assert_not_called()
 
-    def test_never_leaks_plaintext_secret(self) -> None:
-        """No secret value can appear in the table or JSON result."""
+    def test_surfaces_persisted_plaintext_secret(self) -> None:
+        """When the connector persisted a secret, it is surfaced in the JSON result.
+
+        Secret retention is gated at collection time by the connector's "Include
+        Plaintext Secrets" option; once a raw value is on the event, this action
+        reports it verbatim rather than stripping it.
+        """
         event = _credential_event()
-        # Simulate an unexpected sensitive key sneaking onto the event.
-        event.additional_properties["spycloud_password"] = "hunter2"
+        event.additional_properties["spycloud_password_plaintext"] = "hunter2"
         siemplify, _ = _make_siemplify([_Alert("Alert", [event])])
 
         _run(siemplify)
 
         json_payload = siemplify.result.add_result_json.call_args.args[0]
         serialized = json.dumps(json_payload)
-        assert "hunter2" not in serialized
+        assert "hunter2" in serialized
+
+    def test_omits_secret_when_not_persisted(self) -> None:
+        """With secret retention off, no secret column carries a value."""
+        siemplify, _ = _make_siemplify(
+            [_Alert("Alert", [_credential_event()])]
+        )
+
+        _run(siemplify)
+
+        json_payload = siemplify.result.add_result_json.call_args.args[0]
+        exposure = json_payload["exposures"][0]
+        # The secret keys are present but empty when nothing was persisted.
+        assert not exposure.get("spycloud_password_plaintext")
+        assert not exposure.get("spycloud_password")
 
     def test_ignores_non_spycloud_events(self) -> None:
         """Alerts from other products in the case are skipped."""

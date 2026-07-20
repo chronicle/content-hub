@@ -178,15 +178,16 @@ class TestInCaseEventPresentation:
         row = datamodels.event_row("Alert", props)
         assert row["Password Present"] == "Yes"
 
-    def test_event_json_drops_sensitive_and_unprefixed_keys(self) -> None:
+    def test_event_json_drops_unprefixed_keys_but_keeps_persisted_secret(self) -> None:
         props = _event_props()
-        props["spycloud_password"] = "hunter2"
+        props["spycloud_password_plaintext"] = "hunter2"
         result = datamodels.event_json(props)
 
+        # Non-spycloud keys are still excluded.
         assert "device_vendor" not in result
-        assert "spycloud_password" not in result
         assert result["spycloud_breach_title"] == "ExampleForum Breach"
-        assert "hunter2" not in json.dumps(result)
+        # A persisted secret is surfaced verbatim (retention gated by the connector).
+        assert result["spycloud_password_plaintext"] == "hunter2"
 
 
 class TestCaseInsight:

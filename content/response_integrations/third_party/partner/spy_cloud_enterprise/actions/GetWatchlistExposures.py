@@ -11,10 +11,16 @@ fetched, normalized, and de-duplicated the exposures into alerts; those alerts
 are grouped into this case. This action simply surfaces what is in the case, so
 there is no reason to pull unrelated exposures that belong to other cases.
 
-Safety: SpyCloud records can contain plaintext passwords, cookies, and tokens.
-The parser never stores those values on the event, and this action re-applies a
-sensitive-key guard for defense in depth. Tables and JSON only report metadata
-and booleans (for example "Plaintext Password Exposed: Yes").
+Sensitive data: SpyCloud records can contain plaintext passwords, cookies, and
+tokens. Whether those raw values reach this action is controlled by the
+connector's "Include Plaintext Secrets" option:
+  - Disabled (default): the connector strips secrets before persisting the
+    alert, so this action only has metadata and booleans to show (for example
+    "Plaintext Password Exposed: Yes").
+  - Enabled: the connector persists the raw secrets onto the case event and this
+    action surfaces them verbatim in the data table, the expandable full-detail
+    view on the case wall, and the JSON result. Those values are stored in the
+    SecOps case permanently; enable the option only with explicit sign-off.
 """
 from __future__ import annotations
 
