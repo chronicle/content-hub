@@ -20,7 +20,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_configuration_param
 
 from ..core.constants import INTEGRATION_NAME, PING_ACTION
-from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
+from ..core.ServiceDeskPlusManagerV3 import ServiceDeskPlusManagerV3
 
 
 @output_handler

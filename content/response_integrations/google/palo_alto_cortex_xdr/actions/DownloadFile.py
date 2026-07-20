@@ -13,9 +13,9 @@ from TIPCommon.smp_time import is_approaching_action_timeout
 from TIPCommon.transformation import string_to_multi_value
 from TIPCommon.utils import get_entity_original_identifier
 
-from base_action import BaseAction
-import constants
-from exceptions import (
+from ..core.base_action import BaseAction
+from ..core import constants
+from ..core.exceptions import (
     XDRAlreadyExistsException,
     XDRException,
     XDRNotFoundException,

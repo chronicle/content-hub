@@ -37,7 +37,7 @@ from ..core.constants import (
     DEFAULT_HOURS_BACKWARDS,
     MIN_HOURS_BACKWARDS,
 )
-from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
+from ..core.ServiceDeskPlusManagerV3 import ServiceDeskPlusManagerV3
 from ..core.ServiceDeskPlusV3Exceptions import (
     NoteNotFoundException,
     ServiceDeskPlusV3Exception,

@@ -25,7 +25,7 @@ from TIPCommon.extraction import extract_configuration_param, extract_action_par
 from TIPCommon.transformation import dict_to_flat
 
 from ..core.constants import INTEGRATION_NAME, WAIT_FOR_FIELD_UPDATE_ACTION
-from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
+from ..core.ServiceDeskPlusManagerV3 import ServiceDeskPlusManagerV3
 
 
 def compare_request_statuses(

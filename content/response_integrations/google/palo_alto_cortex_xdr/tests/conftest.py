@@ -30,17 +30,16 @@ import sys
 import pkgutil
 import pathlib
 
-
-import soar_sdk
-
 # Provide integration_testing fixtures
 pytest_plugins = ("integration_testing.conftest",)
 
 import pytest
 import requests
-from SiemplifyBase import SiemplifyBase
+import SiemplifyBase
 from ..tests.core.product import PaloAltoCortexXDR
 from ..tests.core.session import PaloAltoCortexXDRSession, PaloAltoCortexXDRSOARSession
+from ..core.XDRManager import XDRManager, ApiParameters
+from unittest.mock import MagicMock
 
 @pytest.fixture(name="palo_alto_cortex_xdr")
 def palo_alto_cortex_xdr_fixture() -> PaloAltoCortexXDR:
@@ -62,9 +61,6 @@ def soar_sdk_session_fixture(
     monkeypatch.setattr(SiemplifyBase, "create_session", lambda *_: session)
     monkeypatch.setattr(SiemplifyBase, "_create_remote_session", lambda *_: session)
     return session
-
-from ..core.XDRManager import XDRManager, ApiParameters
-from unittest.mock import MagicMock
 
 @pytest.fixture(name="manager")
 def manager_fixture(script_session: PaloAltoCortexXDRSession) -> XDRManager:

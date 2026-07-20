@@ -43,3 +43,6 @@ class TimeoutIsApproachingError(Exception):
     """
     Custom exception to signal that the job's timeout is approaching.
     """
+
+class XDRPermissionException(Exception):
+    """Raised when request returns 403 Forbidden."""

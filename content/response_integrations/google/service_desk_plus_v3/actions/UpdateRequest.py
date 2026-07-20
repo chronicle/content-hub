@@ -20,7 +20,7 @@ from soar_sdk.SiemplifyUtils import output_handler
 from TIPCommon.extraction import extract_configuration_param, extract_action_param
 
 from ..core.constants import INTEGRATION_NAME, UPDATE_REQUEST_ACTION, UPDATE_REQUEST_TYPE
-from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
+from ..core.ServiceDeskPlusManagerV3 import ServiceDeskPlusManagerV3
 from ..core.utils import string_to_multi_value
 
 

@@ -24,7 +24,7 @@ from ..core.constants import (
     CREATE_REQUEST_DROPDOWN_ACTION,
     CREATE_REQUEST_TYPE,
 )
-from ..core.service_desk_plus_manager_v3 import ServiceDeskPlusManagerV3
+from ..core.ServiceDeskPlusManagerV3 import ServiceDeskPlusManagerV3
 
 
 @output_handler
