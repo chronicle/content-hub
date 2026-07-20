@@ -88,9 +88,8 @@ def pull_view(
         logger.info("Available View Templates:")
         for view in installed_views:
             name = view.get("name") or view.get("Name") or "Unknown"
-            identifier = view.get("identifier") or view.get("Identifier") or "Unknown"
             view_type = view.get("type") if view.get("type") is not None else view.get("Type")
-            logger.info("  - Name: '%s' (Identifier: %s, Type: %s)", name, identifier, view_type)
+            logger.info("  - Name: '%s' (Type: %s)", name, view_type)
         return
 
     views_root = mp.core.file_utils.create_or_get_views_root_dir()

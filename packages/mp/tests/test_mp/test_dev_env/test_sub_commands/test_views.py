@@ -829,4 +829,4 @@ def test_pull_view_list(
         result = runner.invoke(pull_app, ["view", "--list"])
 
     assert result.exit_code == 0
-    assert "Name: 'Default Case View' (Identifier: uuid-1234, Type: 3)" in caplog.text
+    assert "Name: 'Default Case View' (Type: 3)" in caplog.text
