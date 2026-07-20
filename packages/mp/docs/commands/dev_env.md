@@ -129,7 +129,7 @@ mp push view "Default Case View" --validate
 
 **Validation & Verification Notes:**
 
-* **Validation (`--validate`)**: Aggregates and reports all missing Custom Fields, missing platform Widgets, and missing Integration dependencies (including dependencies referenced inside Quick Actions widgets) in a single output before exiting.
+* **Validation (`--validate`)**: Aggregates and reports all missing Custom Fields, missing platform Widgets, and missing Integration dependencies required by view widget actions in a single output before exiting.
 * **Post-Push Widget Verification**: After a push completes (with `--force`), `mp` automatically performs an in-memory layout check against the server. If the target SOAR instance omits any submitted widgets (e.g., due to disabled feature flags or missing license modules like `GenerativeAI`), `mp` displays a `[VALIDATION WARNING] Widget Not Persisted by Platform` notice.
 
 ### `push custom-field`
