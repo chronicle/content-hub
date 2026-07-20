@@ -112,15 +112,24 @@ def push_view(
         else:
             logger.info("Found %d views to push. Pushing all of them...", len(local_views))
 
+        failed_views: list[str] = []
         for view_dir in local_views:
             try:
                 _push_single_view(view_dir, force=force, validate=validate)
-            except Exception as e:  # noqa: BLE001
-                if validate:
-                    logger.error("Validation failed for view directory '%s': %s", view_dir.name, e)  # noqa: TRY400
-                else:
-                    logger.error("Failed to push view directory '%s': %s", view_dir.name, e)  # noqa: TRY400
-                raise typer.Exit(1) from None
+            except Exception:  # noqa: BLE001
+                failed_views.append(view_dir.name)
+
+        if failed_views:
+            action_str = "Validation" if validate else "Push"
+            logger.error("=" * 80)
+            logger.error(
+                "[BULK %s ERROR] %d view(s) failed: %s",
+                action_str.upper(),
+                len(failed_views),
+                ", ".join(failed_views),
+            )
+            logger.error("=" * 80)
+            raise typer.Exit(1) from None
         return
 
     # Standard single push
@@ -191,13 +200,15 @@ def _validate_view(
     """
     config = load_dev_env_config()
     backend_api = get_backend_api(config)
+    errors: list[str] = []
     try:
-        flat_view_data = _denormalize_pushed_view(cast("BuiltOverview", view_data), backend_api)
+        flat_view_data = _denormalize_pushed_view(cast("BuiltOverview", view_data), backend_api, errors=errors)
         view_name = flat_view_data.get("name") or view_src_path.name
         _validate_push_preconditions(
             backend_api,
             view_name,
             flat_view_data,
+            errors=errors,
             force=True,
         )
     except typer.Exit:
@@ -205,6 +216,11 @@ def _validate_view(
     except Exception as e:
         logger.error("Validation failed with an unexpected error: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
+
+    if errors:
+        for err in errors:
+            logger.error("%s", err)
+        raise typer.Exit(1)
 
 
 def _get_local_custom_fields() -> dict[str, Path]:
@@ -231,13 +247,12 @@ def _get_local_custom_fields() -> dict[str, Path]:
     return local_fields
 
 
-def _resolve_widget_custom_fields(config_dict: dict[str, Any], name_to_cf_id: dict[str, int]) -> None:
-    """Resolve custom field displayNames to IDs, checking local workspace if missing on server.
-
-    Raises:
-        typer.Exit: If a custom field is not found on the platform.
-
-    """
+def _resolve_widget_custom_fields(
+    config_dict: dict[str, Any],
+    name_to_cf_id: dict[str, int],
+    errors: list[str],
+) -> None:
+    """Resolve custom field displayNames to IDs, checking local workspace if missing on server."""
     cfs = config_dict.get("customFields")
     if not isinstance(cfs, list):
         return
@@ -253,43 +268,46 @@ def _resolve_widget_custom_fields(config_dict: dict[str, Any], name_to_cf_id: di
                 if local_file:
                     content_root = mp.core.file_utils.create_or_get_content_dir()
                     relative_path = local_file.relative_to(content_root.parent)
-                    logger.error("=" * 80)
-                    logger.error("[VALIDATION ERROR] Custom Field Not Installed")
-                    logger.error(
-                        "Custom field '%s' referenced in the view exists locally in your workspace "
-                        "at '%s', but it is not installed on the SOAR platform.",
-                        cf_name,
-                        relative_path,
+                    msg = (
+                        "================================================================================\n"
+                        "[VALIDATION ERROR] Custom Field Not Installed\n"
+                        f"Custom field '{cf_name}' referenced in the view exists locally in your workspace "
+                        f"at '{relative_path}', but it is not installed on the SOAR platform.\n"
+                        "Please push this custom field first using:\n"
+                        f'  uv run --project packages/mp mp push custom-field "{cf_name}"\n'
+                        "================================================================================"
                     )
-                    logger.error(
-                        'Please push this custom field first using:\n'
-                        '  uv run --project packages/mp mp push custom-field "%s"',
-                        cf_name,
-                    )
-                    logger.error("=" * 80)
+                    errors.append(msg)
                 else:
-                    logger.error("=" * 80)
-                    logger.error("[VALIDATION ERROR] Custom Field Not Found")
-                    logger.error(
-                        "Custom field '%s' referenced in the view was not found on the SOAR platform, "
-                        "and no local file was found under 'content/custom_fields/' directory.",
-                        cf_name,
+                    msg = (
+                        "================================================================================\n"
+                        "[VALIDATION ERROR] Custom Field Not Found\n"
+                        f"Custom field '{cf_name}' referenced in the view was not found on the SOAR platform, "
+                        "and no local file was found under 'content/custom_fields/' directory.\n"
+                        "================================================================================"
                     )
-                    logger.error("=" * 80)
-                raise typer.Exit(1)
+                    errors.append(msg)
 
 
-def _denormalize_pushed_view(built_view: BuiltOverview, backend_api: BackendAPI) -> dict[str, Any]:
+def _denormalize_pushed_view(
+    built_view: BuiltOverview,
+    backend_api: BackendAPI,
+    errors: list[str] | None = None,
+) -> dict[str, Any]:
     """Convert wrapped PascalCase BuiltOverview back into flat camelCase payload expected by SOAR.
 
     Args:
         built_view: The BuiltOverview dictionary structure representing the view.
         backend_api: The backend API client to fetch installed entities like Custom Fields.
+        errors: List to accumulate validation error strings.
 
     Returns:
         The flat camelCase dictionary payload.
 
     """
+    if errors is None:
+        errors = []
+
     installed_cf = []
     try:
         installed_cf = backend_api.list_custom_fields()
@@ -312,9 +330,11 @@ def _denormalize_pushed_view(built_view: BuiltOverview, backend_api: BackendAPI)
         if isinstance(data_def, str):
             with contextlib.suppress(json.JSONDecodeError):
                 config_dict = json.loads(data_def)
+        elif isinstance(data_def, dict):
+            config_dict = data_def
 
         # Resolve Custom Fields
-        _resolve_widget_custom_fields(config_dict, name_to_cf_id)
+        _resolve_widget_custom_fields(config_dict, name_to_cf_id, errors)
 
         cg = w.get("ConditionsGroup")
         flat_cg = None
@@ -432,20 +452,16 @@ def _resolve_existing_view(
     return None, None
 
 
-def _verify_widgets(
+def _verify_widgets(  # noqa: PLR0913
     backend_api: BackendAPI,
     view_name_or_id: str,
     existing_identifier: str,
     flat_view_data: dict[str, Any],
+    errors: list[str],
     *,
     force: bool,
 ) -> None:
-    """Verify that pushed widgets exist on the server unless force is True.
-
-    Raises:
-        typer.Exit: If a widget doesn't exist on the server and force is False.
-
-    """
+    """Verify that pushed widgets exist on the server unless force is True."""
     existing_view = None
     try:
         existing_view = backend_api.download_view(existing_identifier)
@@ -464,35 +480,28 @@ def _verify_widgets(
             meta = w.get("metadata") or {}
             w_id = meta.get("identifier")
             if (not w_id or w_id.lower() not in existing_widget_ids) and not force:
-                logger.error("=" * 80)
-                logger.error("[VALIDATION ERROR] Missing Widget on Platform")
-                logger.error(
-                    "Widget '%s' (UUID: '%s') does not exist in the view on the platform.",
-                    meta.get("title") or "unnamed",
-                    w_id or "missing",
+                widget_title = meta.get("title") or "unnamed"
+                widget_uuid = w_id or "missing"
+                msg = (
+                    "================================================================================\n"
+                    "[VALIDATION ERROR] Missing Widget on Platform\n"
+                    f"Widget '{widget_title}' (UUID: '{widget_uuid}') does not exist in the view on the platform.\n"
+                    "Creation of new widgets is blocked by default. Use the --force flag to force creation.\n"
+                    f"Failed to push view '{view_name_or_id}'.\n"
+                    "================================================================================"
                 )
-                logger.error(
-                    "Creation of new widgets is blocked by default. "
-                    "Use the --force flag to force creation."
-                )
-                logger.error("Failed to push view '%s'.", view_name_or_id)
-                logger.error("=" * 80)
-                raise typer.Exit(1)
+                errors.append(msg)
 
 
 def _validate_push_preconditions(
     backend_api: BackendAPI,
     view_name_or_id: str,
     flat_view_data: dict[str, Any],
+    errors: list[str],
     *,
     force: bool,
 ) -> None:
-    """Validate push preconditions, resolving view ID and verifying widgets.
-
-    Raises:
-        typer.Exit: If the view doesn't exist and force is False, or if a widget check fails.
-
-    """
+    """Validate push preconditions, resolving view ID and verifying widgets."""
     local_identifier = flat_view_data.get("identifier")
     local_name = flat_view_data.get("name")
     local_type = flat_view_data.get("type")
@@ -519,20 +528,20 @@ def _validate_push_preconditions(
             view_name_or_id,
             server_uuid,
             flat_view_data,
+            errors,
             force=force,
         )
     elif not force:
-        logger.error(
-            "View '%s' (UUID: '%s') does not exist on the platform (checked by UUID and Name).",
-            view_name_or_id,
-            local_identifier,
+        msg = (
+            "================================================================================\n"
+            "[VALIDATION ERROR] View Not Installed\n"
+            f"View '{view_name_or_id}' (UUID: '{local_identifier}') does not exist on the platform "
+            "(checked by UUID and Name).\n"
+            "Creation of new views is blocked by default. Use the --force flag to force creation.\n"
+            f"Failed to push view '{view_name_or_id}'.\n"
+            "================================================================================"
         )
-        logger.error(
-            "Creation of new views is blocked by default. "
-            "Use the --force flag to force creation."
-        )
-        logger.error("Failed to push view '%s'.", view_name_or_id)
-        raise typer.Exit(1)
+        errors.append(msg)
     elif not flat_view_data.get("identifier"):
         new_uuid = str(uuid.uuid4())
         logger.info("Generating new UUID '%s' for new view.", new_uuid)
@@ -542,6 +551,7 @@ def _validate_push_preconditions(
         backend_api,
         view_name_or_id,
         flat_view_data,
+        errors,
     )
 
 
@@ -596,13 +606,9 @@ def _verify_integration_dependencies(
     backend_api: BackendAPI,
     view_name_or_id: str,
     flat_view_data: dict[str, Any],
+    errors: list[str],
 ) -> None:
-    """Verify that required integrations are installed on the platform and log warnings for unconfigured instances.
-
-    Raises:
-        typer.Exit: If a required integration is not installed on the platform.
-
-    """
+    """Verify that required integrations are installed on the platform and log warnings for unconfigured instances."""
     required_integrations = _extract_required_integrations(flat_view_data)
     if not required_integrations:
         return
@@ -629,17 +635,14 @@ def _verify_integration_dependencies(
         else:
             missing_integrations.append(integration)
 
-    if missing_integrations:
-        for missing in missing_integrations:
-            logger.error("=" * 80)
-            logger.error("[VALIDATION ERROR] Missing Integration on Platform")
-            logger.error(
-                "Integration '%s' referenced in view '%s' is not installed on the platform.",
-                missing,
-                view_name_or_id,
-            )
-            logger.error("=" * 80)
-        raise typer.Exit(1)
+    for missing in missing_integrations:
+        msg = (
+            "================================================================================\n"
+            "[VALIDATION ERROR] Missing Integration on Platform\n"
+            f"Integration '{missing}' referenced in view '{view_name_or_id}' is not installed on the platform.\n"
+            "================================================================================"
+        )
+        errors.append(msg)
 
     _check_unconfigured_instances(backend_api, installed_required, installed_map)
 
@@ -668,15 +671,22 @@ def _upload_built_view_data(
     backend_api = get_backend_api(config)
 
     logger.info("Uploading view to SOAR platform...")
-    flat_view_data = _denormalize_pushed_view(cast("BuiltOverview", view_data), backend_api)
+    errors: list[str] = []
+    flat_view_data = _denormalize_pushed_view(cast("BuiltOverview", view_data), backend_api, errors=errors)
     view_name = flat_view_data.get("name") or view_src_path.name
 
     _validate_push_preconditions(
         backend_api,
         view_name,
         flat_view_data,
+        errors=errors,
         force=force,
     )
+
+    if errors:
+        for err in errors:
+            logger.error("%s", err)
+        raise typer.Exit(1)
 
     try:
         result = backend_api.upload_view(flat_view_data)

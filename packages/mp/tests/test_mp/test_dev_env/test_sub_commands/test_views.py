@@ -17,7 +17,7 @@ from __future__ import annotations
 from pathlib import Path  # noqa: TC003
 from unittest import mock
 
-import pytest
+import pytest  # noqa: TC002
 import yaml
 from typer.testing import CliRunner
 
@@ -830,3 +830,203 @@ def test_pull_view_list(
 
     assert result.exit_code == 0
     assert "Name: 'Default Case View' (Type: 3)" in caplog.text
+
+
+@mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.push.get_backend_api")
+def test_push_view_aggregates_multiple_validation_errors(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Verify that view validation collects and logs ALL errors (e.g., missing CFs AND missing integrations)."""
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_views.return_value = [
+        {"identifier": "test_uuid", "name": "Test View", "type": 3, "widgets": []}
+    ]
+    mock_api.download_view.return_value = {
+        "identifier": "test_uuid",
+        "widgets": [],
+    }
+    # No custom fields or integrations installed on server
+    mock_api.list_custom_fields.return_value = []
+    mock_api.list_installed_integrations.return_value = []
+
+    src_dir = tmp_path / "views"
+    view_folder = src_dir / "test_uuid"
+    view_folder.mkdir(parents=True)
+
+    view_yaml_data = {
+        "identifier": "test_uuid",
+        "name": "Test View",
+        "creator": "system",
+        "playbook_id": "playbook_1",
+        "type": "system_case",
+        "alert_rule_type": None,
+        "roles": [1, 2],
+        "role_names": ["Tier 1", "Tier 2"],
+        "widgets_details": [{"title": "Quick Action Widget", "size": "half_width", "order": 1}],
+    }
+    with (view_folder / "view.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(view_yaml_data, f)
+
+    widgets_dir = view_folder / "widgets"
+    widgets_dir.mkdir()
+    # Widget with missing custom field AND missing integration
+    widget_yaml_data = {
+        "title": "Quick Action Widget",
+        "description": "Key Value Widget",
+        "identifier": "widget_qa_id",
+        "order": 1,
+        "template_identifier": "temp_one",
+        "type": "key_value",
+        "data_definition": {
+            "customFields": [{"displayName": "MissingCustomField"}],
+        },
+        "widget_size": "half_width",
+        "action_widget_template_id": None,
+        "step_id": None,
+        "step_integration": None,
+        "block_step_id": None,
+        "block_step_instance_name": None,
+        "present_if_empty": False,
+        "conditions_group": {"logical_operator": "and", "conditions": []},
+        "integration_name": "MissingIntegration",
+    }
+    with (widgets_dir / "Quick Action Widget.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(widget_yaml_data, f)
+
+    with (
+        mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"),
+        caplog.at_level("ERROR"),
+    ):
+        result = runner.invoke(
+            push_app,
+            ["view", "test_uuid", "--custom", str(src_dir), "--validate"],
+        )
+
+    assert result.exit_code != 0
+    # BOTH validation errors must be present in the output log!
+    assert "[VALIDATION ERROR] Custom Field Not Found" in caplog.text
+    assert "MissingCustomField" in caplog.text
+    assert "[VALIDATION ERROR] Missing Integration on Platform" in caplog.text
+    assert "MissingIntegration" in caplog.text
+
+
+@mock.patch("mp.dev_env.sub_commands.view.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.view.push.get_backend_api")
+def test_push_view_all_aggregates_failed_views(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Verify that mp push view --all continues validating all views and summarizes all failed views."""
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_views.return_value = []
+    mock_api.list_custom_fields.return_value = []
+    mock_api.list_installed_integrations.return_value = []
+
+    src_dir = tmp_path / "views"
+
+    # View 1 - Missing integration
+    v1_dir = src_dir / "view_1"
+    v1_dir.mkdir(parents=True)
+    with (v1_dir / "view.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(
+            {
+                "identifier": "uuid_1",
+                "name": "View One",
+                "creator": "system",
+                "playbook_id": "playbook_1",
+                "type": "system_case",
+                "alert_rule_type": None,
+                "roles": [],
+                "widgets_details": [{"title": "W1", "size": "half_width", "order": 1}],
+            },
+            f,
+        )
+    (v1_dir / "widgets").mkdir()
+    with (v1_dir / "widgets" / "W1.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(
+            {
+                "title": "W1",
+                "description": "W1 desc",
+                "identifier": "w1",
+                "order": 1,
+                "template_identifier": "temp_one",
+                "type": "key_value",
+                "data_definition": {},
+                "widget_size": "half_width",
+                "action_widget_template_id": None,
+                "step_id": None,
+                "step_integration": None,
+                "block_step_id": None,
+                "block_step_instance_name": None,
+                "present_if_empty": False,
+                "conditions_group": {"logical_operator": "and", "conditions": []},
+                "integration_name": "MissingInt1",
+            },
+            f,
+        )
+
+    # View 2 - Missing custom field
+    v2_dir = src_dir / "view_2"
+    v2_dir.mkdir(parents=True)
+    with (v2_dir / "view.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(
+            {
+                "identifier": "uuid_2",
+                "name": "View Two",
+                "creator": "system",
+                "playbook_id": "playbook_2",
+                "type": "system_case",
+                "alert_rule_type": None,
+                "roles": [],
+                "widgets_details": [{"title": "W2", "size": "half_width", "order": 1}],
+            },
+            f,
+        )
+    (v2_dir / "widgets").mkdir()
+    with (v2_dir / "widgets" / "W2.yaml").open("w", encoding="utf-8") as f:
+        yaml.dump(
+            {
+                "title": "W2",
+                "description": "W2 desc",
+                "identifier": "w2",
+                "order": 1,
+                "template_identifier": "temp_two",
+                "type": "key_value",
+                "data_definition": {"customFields": [{"displayName": "MissingCF2"}]},
+                "widget_size": "half_width",
+                "action_widget_template_id": None,
+                "step_id": None,
+                "step_integration": None,
+                "block_step_id": None,
+                "block_step_instance_name": None,
+                "present_if_empty": False,
+                "conditions_group": {"logical_operator": "and", "conditions": []},
+                "integration_name": None,
+            },
+            f,
+        )
+
+    with (
+        mock.patch("mp.core.file_utils.create_or_get_views_root_dir", return_value=src_dir),
+        mock.patch("mp.core.file_utils.get_view_out_dir", return_value=tmp_path / "out"),
+        caplog.at_level("ERROR"),
+    ):
+        result = runner.invoke(push_app, ["view", "--all", "--validate"])
+
+    assert result.exit_code != 0
+    # Output must contain validation errors from BOTH views and the bulk summary block
+    assert "MissingInt1" in caplog.text
+    assert "MissingCF2" in caplog.text
+    assert "[BULK VALIDATION ERROR] 2 view(s) failed" in caplog.text
+    assert "view_1" in caplog.text
+    assert "view_2" in caplog.text
