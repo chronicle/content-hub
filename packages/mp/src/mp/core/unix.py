@@ -83,18 +83,29 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
     try:
         result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # noqa: S603
         _log_subprocess_result(result)
+        _remove_safe_to_ignore_packages_from_requirements(requirements_path)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def _get_safe_to_ignore_packages(e: sp.CalledProcessError, /) -> list[str]:
-    full_msg: str = f"{e.stdout or ''}\n{e.stderr or ''}"
-    ignored_packages: list[str] = [pkg for pkg in constants.SAFE_TO_IGNORE_PACKAGES if pkg in full_msg]
-    ignored_messages: list[bool] = [msg in full_msg for msg in constants.SAFE_TO_IGNORE_ERROR_MESSAGES]
-    if ignored_messages and ignored_packages:
-        return ignored_packages
-    return []
+def _remove_safe_to_ignore_packages_from_requirements(requirements_path: Path) -> None:
+    if not requirements_path.is_file():
+        return
+    with requirements_path.open(encoding="utf-8") as f:
+        lines = f.readlines()
+
+    filtered_lines = [
+        line
+        for line in lines
+        if not any(
+            re.match(rf"^\s*{re.escape(pkg)}(?:==|>=|<=|~=|;|\s|$)", line, re.IGNORECASE)
+            for pkg in constants.SAFE_TO_IGNORE_PACKAGES
+        )
+    ]
+
+    with requirements_path.open("w", encoding="utf-8") as f:
+        f.writelines(filtered_lines)
 
 
 def run_pip_command(command: list[str], cwd: Path) -> None:
@@ -110,15 +121,6 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
         _log_subprocess_result(result)
     except sp.CalledProcessError as e:
         _log_subprocess_result(e)
-        # Check if this is a safe-to-ignore error / marker issue
-        if ignored_packages := _get_safe_to_ignore_packages(e):
-            message = (
-                f"[INFO] Ignored safe-to-ignore packages due to Python version "
-                f"incompatibility: {', '.join(ignored_packages)}\n"
-            )
-            logger.info(message)
-            return
-
         _handle_pip_no_matching_distribution_error(e)
         raise FatalCommandError from e
 
