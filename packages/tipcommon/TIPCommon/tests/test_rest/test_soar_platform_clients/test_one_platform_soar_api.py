@@ -321,9 +321,7 @@ def test_save_or_update_job_success(
     )
 
 
-def test_save_or_update_job_missing_name(
-    mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
-) -> None:
+def test_save_or_update_job_missing_name(mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock) -> None:
     """Test save_or_update_job raises EmptyMandatoryValues if 'name' is missing."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
     params: Any = client.params
@@ -337,9 +335,7 @@ def test_save_or_update_job_missing_name(
     assert "Job data must include a 'name' field" in str(exc_info.value)
 
 
-def test_save_or_update_job_missing_parameters(
-    mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock
-) -> None:
+def test_save_or_update_job_missing_parameters(mock_chronicle_soar: MagicMock, mock_get_sdk_api_uri: MagicMock) -> None:
     """Test save_or_update_job raises EmptyMandatoryValues if 'parameters' is missing."""
     client = OnePlatformSoarApi(mock_chronicle_soar)
     params: Any = client.params

@@ -542,15 +542,8 @@ class OnePlatformSoarApi(BaseSoarApi):
         Example ``job_data``::
 
             {
-                "name": "projects/my-proj/locations/us/"
-                        "instances/abc/integrations/MyInt/"
-                        "jobs/j1/jobInstances/ji1",
-                "parameters": [
-                    {
-                        "displayName": "API Key",
-                        "value": "new-value"
-                    }
-                ]
+                "name": "projects/my-proj/locations/us/instances/abc/integrations/MyInt/jobs/j1/jobInstances/ji1",
+                "parameters": [{"displayName": "API Key", "value": "new-value"}],
             }
 
         Raises:
@@ -574,9 +567,7 @@ class OnePlatformSoarApi(BaseSoarApi):
 
         parameters = job_data.get("parameters")
         if parameters is None:
-            raise EmptyMandatoryValues(
-                "Job data is missing 'parameters' field, Nothing to update."
-            )
+            raise EmptyMandatoryValues("Job data is missing 'parameters' field, Nothing to update.")
         # The resource path is a full GCP resource name, e.g.:
         # projects/X/locations/Y/instances/Z/integrations/.../jobInstances/{id}
         # The API base URL already includes up to instances/Z, so we need
@@ -586,10 +577,7 @@ class OnePlatformSoarApi(BaseSoarApi):
             raise ParameterValidationError(
                 param_name="name",
                 value=resource_path,
-                message=(
-                    "Cannot parse resource path. "
-                    "Expected path to contain 'integrations/'"
-                ),
+                message=("Cannot parse resource path. Expected path to contain 'integrations/'"),
             )
 
         endpoint = f"/{resource_path[segment_pos:]}"

@@ -189,41 +189,39 @@ class BaseAsyncSoarApi:
 
     async def _paginate_results(
         self,
-        initial_endpoint: str,
+        endpoint: str,
         root_response_key: str,
+        params: SingleJson | None = None,
     ) -> list[SingleJson]:
         """Handles paginated API requests, managing tokens and aggregating results.
 
-        Avoids infinite loops by using a controlled loop condition.
-
         Args:
-            initial_endpoint (str): The initial API endpoint to fetch data from.
-            root_response_key (str): The key in the response JSON where records are
+            endpoint: The API endpoint to fetch data from.
+            root_response_key: The key in the response JSON where records are
                 stored.
+            params: Optional query parameters for the request.
 
         Returns:
-            list[SingleJson]: A list of all records retrieved across paginated
-            responses.
+            A list of all records retrieved across paginated responses.
 
         """
         all_records = []
         next_token = None
-        current_endpoint = initial_endpoint
+        base_params = params.copy() if params else {}
 
-        while True if next_token is None else bool(next_token):
-            separator = "&" if "?" in current_endpoint else "?"
-            endpoint_with_token = (
-                f"{current_endpoint}{separator}pageToken={next_token}"
-                if next_token
-                else current_endpoint
-            )
+        while True:
+            request_params = base_params.copy()
+            if next_token:
+                request_params["pageToken"] = next_token
 
             try:
-                response = await self.get(endpoint_with_token)
+                response = await self.get(endpoint, params=request_params)
+                if response.status_code == 204:
+                    break
                 response_data = response.json()
             except Exception as e:
                 self.logger.error(f"Failed to fetch page: {e}")
-                break
+                raise
 
             current_records = response_data.get(root_response_key, [])
             all_records.extend(current_records)

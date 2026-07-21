@@ -976,10 +976,7 @@ class CaseDetails:
         entities_json = [entity.to_json() for entity in self.entities]
         sla_json = self.sla.to_json()
         stage_sla_json = self.stage_sla.to_json()
-        tags = [
-            tag.get("displayName", tag) if isinstance(tag, dict) else tag
-            for tag in self.tags
-        ]
+        tags = [tag.get("displayName", tag) if isinstance(tag, dict) else tag for tag in self.tags]
 
         case_data = {
             "id": self.id_,
