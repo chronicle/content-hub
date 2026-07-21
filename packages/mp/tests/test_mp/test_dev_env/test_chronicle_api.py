@@ -164,18 +164,66 @@ def test_download_integration_unknown_media_exits(monkeypatch: pytest.MonkeyPatc
         client.download_integration("x")
 
 
-def test_not_implemented_methods_raise(monkeypatch: pytest.MonkeyPatch) -> None:
-    client = _make_client(monkeypatch, mock.MagicMock())
-    with pytest.raises(NotImplementedError):
-        client.get_integration_details(mock.MagicMock())
-    with pytest.raises(NotImplementedError):
-        client.upload_integration(mock.MagicMock(), "id")
-    with pytest.raises(NotImplementedError):
-        client.upload_playbook(mock.MagicMock())
-    with pytest.raises(NotImplementedError):
-        client.list_playbooks()
-    with pytest.raises(NotImplementedError):
-        client.download_playbook("id")
+def test_list_playbooks_returns_name_and_identifier(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = mock.MagicMock()
+    session.post.return_value = _fake_response(
+        json_body={"payload": [{"name": "PB One", "identifier": "id-1"}, {"name": "PB Two", "identifier": "id-2"}]},
+    )
+    client = _make_client(monkeypatch, session)
+    assert client.list_playbooks() == [
+        {"name": "PB One", "identifier": "id-1"},
+        {"name": "PB Two", "identifier": "id-2"},
+    ]
+    assert session.post.call_args.args[0].endswith("/legacyPlaybooks:legacyGetWorkflowMenuCardsWithEnvFilter")
+
+
+def test_download_playbook_returns_base64_blob(monkeypatch: pytest.MonkeyPatch) -> None:
+    session = mock.MagicMock()
+    session.get.return_value = _fake_response(content=b"PBZIP", content_type="application/zip")
+    client = _make_client(monkeypatch, session)
+    result = client.download_playbook("id-1")
+    assert base64.b64decode(result["blob"]) == b"PBZIP"
+
+
+def test_upload_playbook_sends_file_without_form_fields(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    session = mock.MagicMock()
+    session.post.return_value = _fake_response(json_body={"workflowIdentifiers": ["id-1"]})
+    client = _make_client(monkeypatch, session)
+    zip_path = tmp_path / "pb.zip"
+    zip_path.write_bytes(b"PKZIP")
+
+    assert client.upload_playbook(zip_path) == {"workflowIdentifiers": ["id-1"]}
+    kwargs = session.post.call_args.kwargs
+    assert kwargs["files"]["file"][1] == b"PKZIP"
+    assert kwargs["params"] is None
+
+
+def test_upload_integration_sends_file_and_staging(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    session = mock.MagicMock()
+    session.post.return_value = _fake_response(json_body={"integration": "Slack", "integrationVersion": "1.0"})
+    client = _make_client(monkeypatch, session)
+    zip_path = tmp_path / "pkg.zip"
+    zip_path.write_bytes(b"PKZIP")
+
+    result = client.upload_integration(zip_path, "Slack", is_staging=True)
+    assert result["integration"] == "Slack"
+    kwargs = session.post.call_args.kwargs
+    assert kwargs["files"]["file"][1] == b"PKZIP"
+    assert kwargs["params"] == {"staging": "true"}
+
+
+def test_get_integration_details_sends_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    session = mock.MagicMock()
+    session.post.return_value = _fake_response(json_body={"integrationIdentifier": "Slack", "actions": ["Ping"]})
+    client = _make_client(monkeypatch, session)
+    zip_path = tmp_path / "pkg.zip"
+    zip_path.write_bytes(b"PKZIP")
+
+    result = client.get_integration_details(zip_path, is_staging=False)
+    assert result["integrationIdentifier"] == "Slack"
+    kwargs = session.post.call_args.kwargs
+    assert kwargs["files"]["file"][1] == b"PKZIP"
+    assert kwargs["params"] == {"staging": "false"}
 
 
 # --- get_backend_api dispatch & backward-compat ---

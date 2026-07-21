@@ -15,12 +15,14 @@
 """GCP-native Chronicle API client for the dev-env commands.
 
 Authenticates with Google Application Default Credentials (ADC) and talks to the Chronicle
-API (``{location}-chronicle.googleapis.com``). Implements integration listing and export
-(pull). Integration import (push) and playbook operations are not implemented yet.
+API (``{location}-chronicle.googleapis.com``). Covers integration listing, export, import,
+and detail extraction, and playbook listing, export, and import. The media-upload paths
+(import/extract) have not yet been validated against a live instance.
 """
 
 from __future__ import annotations
 
+import base64
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -28,7 +30,12 @@ import google.auth
 import typer
 from google.auth.transport.requests import AuthorizedSession
 
-from mp.dev_env.chronicle_models import ExportResponse, Integration, ListIntegrationsResponse
+from mp.dev_env.chronicle_models import (
+    ExportResponse,
+    Integration,
+    ListIntegrationsResponse,
+    WorkflowMenuCardsResponse,
+)
 from mp.dev_env.interfaces import DevEnvClient
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -176,24 +183,107 @@ class ChronicleClient(DevEnvClient):
         return _extract_zip_bytes(resp)
 
     def get_integration_details(self, zip_path: Path, *, is_staging: bool = False) -> dict[str, Any]:
-        """Inspect an integration package via the Chronicle API (not implemented yet)."""
-        raise NotImplementedError
+        """Parse an integration package and return its items/metadata without importing.
+
+        Args:
+            zip_path: Path to the integration package ZIP.
+            is_staging: Whether to compare against staging.
+
+        Returns:
+            The parsed integration details returned by the backend.
+
+        """
+        resource: str = f"{self.instance_name}/integrations:extractIntegrationDetails"
+        return self._media_upload(
+            f"{self.base_url}/upload/v1alpha/{resource}", zip_path, params={"staging": is_staging}
+        )
 
     def upload_integration(self, zip_path: Path, integration_id: str, *, is_staging: bool = False) -> dict[str, Any]:
-        """Push an integration via the Chronicle API (not implemented yet)."""
-        raise NotImplementedError
+        """Import an integration package into the instance.
+
+        Args:
+            zip_path: Path to the integration package ZIP.
+            integration_id: The integration identifier (the package itself is authoritative).
+            is_staging: Whether to import in staging mode.
+
+        Returns:
+            The backend response (imported integration id/version and failed dependencies).
+
+        """
+        logger.debug("Importing integration %s (staging=%s)", integration_id, is_staging)
+        resource: str = f"{self.instance_name}/integrations:import"
+        return self._media_upload(
+            f"{self.base_url}/upload/v1alpha/{resource}", zip_path, params={"staging": is_staging}
+        )
 
     def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
-        """Push a playbook via the Chronicle API (not implemented yet)."""
-        raise NotImplementedError
+        """Import playbook definitions from a ZIP into the instance.
+
+        Args:
+            zip_path: Path to the playbook definitions ZIP.
+
+        Returns:
+            The backend response (imported workflow identifiers).
+
+        """
+        resource: str = f"{self.instance_name}/legacyPlaybooks:legacyImportDefinitions"
+        return self._media_upload(f"{self.base_url}/upload/v1alpha/{resource}", zip_path)
 
     def list_playbooks(self) -> list[dict[str, Any]]:
-        """List playbooks via the Chronicle API (not implemented yet)."""
-        raise NotImplementedError
+        """List installed playbook/workflow menu cards.
+
+        Returns:
+            A list of dicts with 'name' and 'identifier' for each playbook.
+
+        """
+        resource: str = f"{self.instance_name}/legacyPlaybooks:legacyGetWorkflowMenuCardsWithEnvFilter"
+        resp = self.session.post(f"{self.base_url}/v1alpha/{resource}", json={"legacyPayload": ["REGULAR", "NESTED"]})
+        resp.raise_for_status()
+        cards: WorkflowMenuCardsResponse = WorkflowMenuCardsResponse.model_validate(resp.json())
+        return [{"name": card.name, "identifier": card.identifier} for card in cards.payload]
 
     def download_playbook(self, playbook_identifier: str) -> dict[str, Any]:
-        """Pull a playbook via the Chronicle API (not implemented yet)."""
-        raise NotImplementedError
+        """Export a playbook definition by identifier.
+
+        Args:
+            playbook_identifier: The identifier of the playbook to export.
+
+        Returns:
+            A dict with a base64-encoded 'blob' of the exported definitions ZIP.
+
+        """
+        resource: str = f"{self.instance_name}/legacyPlaybooks:legacyExportDefinitions"
+        resp = self.session.get(
+            f"{self.base_url}/v1alpha/{resource}",
+            params={"identifiers": playbook_identifier, "alt": "media"},
+        )
+        resp.raise_for_status()
+        return {"blob": base64.b64encode(_extract_zip_bytes(resp)).decode()}
+
+    def _media_upload(self, url: str, zip_path: Path, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Upload a ZIP as a multipart/form-data ``file`` part and return the JSON response.
+
+        The package is sent as the ``file`` part; non-media scalar fields (e.g.
+        ``{"staging": False}``) are sent as query parameters (booleans lowercased to
+        ``true``/``false``), per the media-upload convention.
+
+        Args:
+            url: The ``/upload/...`` endpoint URL.
+            zip_path: Path to the ZIP to upload.
+            params: Optional non-media scalar fields, sent as query parameters.
+
+        Returns:
+            The parsed JSON response body.
+
+        """
+        files = {"file": (zip_path.name, zip_path.read_bytes(), "application/zip")}
+        query: dict[str, str] = {
+            key: str(value).lower() if isinstance(value, bool) else str(value)
+            for key, value in (params or {}).items()
+        }
+        resp = self.session.post(url, params=query or None, files=files)
+        resp.raise_for_status()
+        return resp.json()
 
 
 def _extract_zip_bytes(resp: requests.Response) -> bytes:

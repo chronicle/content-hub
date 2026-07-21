@@ -76,3 +76,16 @@ class ExportResponse(_ChronicleModel):
     """Envelope returned by the integration/playbook export methods: ``{ "media": Media }``."""
 
     media: Media | None = None
+
+
+class WorkflowMenuCard(_ChronicleModel):
+    """A playbook/workflow menu card (subset used to resolve a name to an identifier)."""
+
+    name: str | None = None
+    identifier: str | None = None
+
+
+class WorkflowMenuCardsResponse(_ChronicleModel):
+    """Response body of ``legacyPlaybooks.legacyGetWorkflowMenuCardsWithEnvFilter``."""
+
+    payload: list[WorkflowMenuCard] = Field(default_factory=list)
