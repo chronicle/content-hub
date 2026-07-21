@@ -20,11 +20,14 @@ from typing import cast
 
 from hypothesis import given, settings
 
+from mp.core.data_models.integrations.action.ai.ai_categories import ActionAiCategory
+from mp.core.data_models.integrations.action.ai.outcome_categories import OutcomeCategoriesEnum
 from mp.core.data_models.integrations.action.dynamic_results_metadata import NonBuiltDynamicResultsMetadata
 from mp.core.data_models.integrations.action.metadata import (
     ActionMetadata,
     BuiltActionMetadata,
     NonBuiltActionMetadata,
+    _determine_ai_categories,  # noqa: PLC2701
     _load_json_examples,  # noqa: PLC2701
 )
 from test_mp.test_core.test_data_models.utils import FILE_NAME
@@ -121,3 +124,31 @@ class TestLoadJsonExamples:
         drms = [_drm(result_example_path=None)]
         _load_json_examples(drms, Path("/unused"))
         assert drms[0]["result_example_path"] is None
+
+
+class TestDeterministicRemediation:
+    """Tests for deterministic remediation category assignment."""
+
+    def test_remediation_outcome_category_forces_remediation(self) -> None:
+        outcome_categories = [OutcomeCategoriesEnum.CREATE_TICKET]
+        result = _determine_ai_categories(outcome_categories)
+        assert ActionAiCategory.REMEDIATION in result
+
+    def test_non_remediation_outcome_category_does_not_force_remediation(self) -> None:
+        outcome_categories = [OutcomeCategoriesEnum.ENRICH_ASSET]
+        result = _determine_ai_categories(outcome_categories)
+        assert ActionAiCategory.REMEDIATION not in result
+
+
+class TestDeterministicEnrichment:
+    """Tests for deterministic enrichment category assignment."""
+
+    def test_enrichment_outcome_category_forces_enrichment(self) -> None:
+        outcome_categories = [OutcomeCategoriesEnum.ENRICH_ASSET]
+        result = _determine_ai_categories(outcome_categories)
+        assert ActionAiCategory.ENRICHMENT in result
+
+    def test_non_enrichment_outcome_category_does_not_force_enrichment(self) -> None:
+        outcome_categories = [OutcomeCategoriesEnum.CREATE_TICKET]
+        result = _determine_ai_categories(outcome_categories)
+        assert ActionAiCategory.ENRICHMENT not in result
