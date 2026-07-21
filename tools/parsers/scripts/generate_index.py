@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 import json
 import sys
@@ -84,19 +86,23 @@ def generate_index_for_subdir(sub_dir: Path, output_json_name: str, output_md_na
         print(f"ERROR: Failed to write {md_path}: {e}", file=sys.stderr)
         sys.exit(1)
 
-# Generate Community Index
-generate_index_for_subdir(
-    sub_dir=community_dir,
-    output_json_name="COMMUNITY_INDEX.json",
-    output_md_name="COMMUNITY_INDEX.md",
-    source_type="COMMUNITY"
-)
+def main():
+    # Generate Community Index
+    generate_index_for_subdir(
+        sub_dir=community_dir,
+        output_json_name="COMMUNITY_INDEX.json",
+        output_md_name="COMMUNITY_INDEX.md",
+        source_type="COMMUNITY"
+    )
 
-# Generate Partner Index
-generate_index_for_subdir(
-    sub_dir=partner_dir,
-    output_json_name="PARTNER_INDEX.json",
-    output_md_name="PARTNER_INDEX.md",
-    source_type="PARTNER"
-)
+    # Generate Partner Index
+    generate_index_for_subdir(
+        sub_dir=partner_dir,
+        output_json_name="PARTNER_INDEX.json",
+        output_md_name="PARTNER_INDEX.md",
+        source_type="PARTNER"
+    )
+
+if __name__ == "__main__":
+    main()
 
