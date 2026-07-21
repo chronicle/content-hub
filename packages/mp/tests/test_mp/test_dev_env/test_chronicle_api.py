@@ -109,7 +109,7 @@ def test_list_integrations_paginates(monkeypatch: pytest.MonkeyPatch) -> None:
     session.get.side_effect = [page1, page2]
     client = _make_client(monkeypatch, session)
     result = client.list_integrations()
-    assert [i["name"] for i in result] == ["a", "b"]
+    assert [i.name for i in result] == ["a", "b"]
     assert session.get.call_count == 2
 
 
@@ -137,7 +137,7 @@ def test_download_integration_json_base64(monkeypatch: pytest.MonkeyPatch) -> No
     list_resp = _fake_response(
         json_body={"integrations": [{"name": ".../integrations/alexa", "displayName": "Alexa"}]},
     )
-    export_resp = _fake_response(json_body={"media": {"data": base64.b64encode(zip_bytes).decode()}})
+    export_resp = _fake_response(json_body={"media": {"inline": base64.b64encode(zip_bytes).decode()}})
     session.get.side_effect = [list_resp, export_resp]
     client = _make_client(monkeypatch, session)
 

@@ -14,53 +14,47 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+import abc
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-@runtime_checkable
-class DevEnvClient(Protocol):
-    """Backend client contract shared by the legacy SOAR and Chronicle API clients.
+class DevEnvClient(abc.ABC):
+    """Abstract backend client for the dev-env ``push``/``pull`` commands.
 
-    Both ``mp.dev_env.api.BackendAPI`` (legacy Siemplify external API) and
-    ``mp.dev_env.chronicle_api.ChronicleClient`` (GCP-native Chronicle API) implement
-    this protocol so that the ``push``/``pull`` sub-commands remain agnostic to which
-    backend is in use. Dispatch happens in ``mp.dev_env.utils.get_backend_api`` based on
-    the stored ``auth_mode``.
+    Concrete clients (the legacy SOAR ``BackendAPI`` and the Chronicle ``ChronicleClient``)
+    explicitly subclass this and implement every method, so conformance is enforced at
+    class-definition/instantiation time. Command code depends only on this type; which
+    concrete client is built is decided by ``mp.dev_env.utils.get_backend_api`` from the
+    stored ``auth_mode``.
     """
 
+    @abc.abstractmethod
     def login(self) -> None:
         """Authenticate and/or verify connectivity to the backend."""
-        ...
 
+    @abc.abstractmethod
     def get_integration_details(self, zip_path: Path, *, is_staging: bool = False) -> dict[str, Any]:
         """Inspect a zipped integration package and return its parsed items/metadata."""
-        ...
 
-    def upload_integration(
-        self,
-        zip_path: Path,
-        integration_id: str,
-        *,
-        is_staging: bool = False,
-    ) -> dict[str, Any]:
+    @abc.abstractmethod
+    def upload_integration(self, zip_path: Path, integration_id: str, *, is_staging: bool = False) -> dict[str, Any]:
         """Upload (import) a zipped integration package."""
-        ...
 
+    @abc.abstractmethod
     def download_integration(self, integration_name: str) -> bytes:
         """Download (export) an integration package and return the raw ZIP bytes."""
-        ...
 
+    @abc.abstractmethod
     def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
         """Upload (import) a zipped playbook package."""
-        ...
 
+    @abc.abstractmethod
     def list_playbooks(self) -> list[dict[str, Any]]:
         """List installed playbooks' metadata."""
-        ...
 
+    @abc.abstractmethod
     def download_playbook(self, playbook_identifier: str) -> dict[str, Any]:
         """Download (export) a playbook definition by identifier."""
-        ...

@@ -23,6 +23,8 @@ import requests
 import typer
 import urllib3
 
+from mp.dev_env.interfaces import DevEnvClient
+
 logger: logging.Logger = logging.getLogger(__name__)
 
 
@@ -30,7 +32,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class BackendAPI:
+class BackendAPI(DevEnvClient):
     """Handles backend API operations for the dev environment."""
 
     def __init__(
