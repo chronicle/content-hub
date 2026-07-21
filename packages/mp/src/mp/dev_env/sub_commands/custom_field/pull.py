@@ -35,7 +35,7 @@ def _normalize_scopes(val: str | list | None) -> set[str]:
         return set()
     if isinstance(val, list):
         return {str(x).strip().lower() for x in val}
-    return {x.strip().lower() for x in str(val).split(",") if x.strip()}
+    return {x.strip().lower() for x in val.split(",") if x.strip()}
 
 
 @pull_app.command(name="custom-field")
@@ -201,7 +201,7 @@ def _download_and_save_custom_field(  # noqa: C901, PLR0912, PLR0915
             if isinstance(val, list):
                 parts = [str(x).strip().lower() for x in val]
             else:
-                parts = [x.strip().lower() for x in str(val).split(",") if x.strip()]
+                parts = [x.strip().lower() for x in val.split(",") if x.strip()]
             return "_".join(sorted(parts))
 
         scopes_suffix = normalize_scopes_for_filename(scopes_val)

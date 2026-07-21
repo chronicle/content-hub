@@ -34,7 +34,7 @@ def _normalize_scopes(val: str | list | None) -> set[str]:
         return set()
     if isinstance(val, list):
         return {str(x).strip().lower() for x in val}
-    return {x.strip().lower() for x in str(val).split(",") if x.strip()}
+    return {x.strip().lower() for x in val.split(",") if x.strip()}
 
 
 @push_app.command(name="custom-field")
@@ -181,7 +181,7 @@ def _push_single_custom_field(field_file: Path, force: bool) -> None:  # noqa: C
                         return set()
                     if isinstance(val, list):
                         return {str(x).strip().lower() for x in val}
-                    return {x.strip().lower() for x in str(val).split(",") if x.strip()}
+                    return {x.strip().lower() for x in val.split(",") if x.strip()}
 
                 if normalize_scopes(local_scopes) != normalize_scopes(server_scopes):
                     continue
