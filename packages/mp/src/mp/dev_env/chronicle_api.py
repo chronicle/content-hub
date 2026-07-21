@@ -15,9 +15,8 @@
 """GCP-native Chronicle API client for the dev-env commands.
 
 Authenticates with Google Application Default Credentials (ADC) and talks to the Chronicle
-API (``{location}-chronicle.googleapis.com``). Covers integration listing, export, import,
-and detail extraction, and playbook listing, export, and import. The media-upload paths
-(import/extract) have not yet been validated against a live instance.
+API (``{location}-chronicle.googleapis.com``), covering integration and playbook listing,
+export, and import.
 """
 
 from __future__ import annotations
@@ -67,15 +66,12 @@ class ChronicleClient(DevEnvClient):
             project: GCP project ID that owns the Chronicle instance.
             location: Chronicle region (e.g. ``us``, ``europe``); drives the API hostname.
             instance: Chronicle instance UUID (the SecOps ``customer_id``).
-            credentials_file: Optional path to a GCP credentials JSON file (service account
-                or external account). When ``None``, Application Default Credentials are
-                resolved automatically via ``google.auth.default``.
+            credentials_file: Optional path to a GCP credentials JSON file (e.g. for CI).
+                When ``None``, ADC is resolved via ``google.auth.default``.
             scopes: OAuth2 scopes to request. Defaults to the ``cloud-platform`` scope.
 
         """
-        self.project: str = project
         self.location: str = location.lower()
-        self.instance: str = instance
         self.credentials_file: str | None = credentials_file
         self.scopes: list[str] = scopes or [CLOUD_PLATFORM_SCOPE]
         self.base_url: str = f"https://{self.location}-chronicle.googleapis.com"
@@ -86,8 +82,7 @@ class ChronicleClient(DevEnvClient):
         """Resolve GCP credentials and wrap them in an auto-refreshing session.
 
         Returns:
-            An ``AuthorizedSession`` that attaches (and refreshes) an OAuth2 Bearer token
-            on every request.
+            An ``AuthorizedSession`` that attaches and refreshes an OAuth2 Bearer token.
 
         Raises:
             typer.Exit: If credentials cannot be resolved.
@@ -107,33 +102,45 @@ class ChronicleClient(DevEnvClient):
 
         return AuthorizedSession(credentials)
 
+    def _endpoint(self, suffix: str, *, version: str = "v1", upload: bool = False) -> str:
+        """Build an instance-scoped Chronicle API URL.
+
+        Args:
+            suffix: Path after the instance name (e.g. ``integrations:import``).
+            version: API version segment (``v1`` or ``v1alpha``).
+            upload: Whether to target the media-upload path.
+
+        Returns:
+            The full request URL.
+
+        """
+        prefix: str = "/upload" if upload else ""
+        return f"{self.base_url}{prefix}/{version}/{self.instance_name}/{suffix}"
+
     def login(self) -> None:
         """Verify connectivity and credentials with a cheap authenticated request."""
-        url: str = f"{self.base_url}/v1/{self.instance_name}/integrations"
-        resp = self.session.get(url, params={"pageSize": 1})
+        resp = self.session.get(self._endpoint("integrations"), params={"pageSize": 1})
         resp.raise_for_status()
 
     def list_integrations(self) -> list[Integration]:
-        """List all integrations installed in the instance (handles pagination).
+        """List all integrations installed in the instance, following pagination.
 
         Returns:
             The list of ``Integration`` resources.
 
         """
-        url: str = f"{self.base_url}/v1/{self.instance_name}/integrations"
+        url: str = self._endpoint("integrations")
         params: dict[str, Any] = {"pageSize": 1000}
         results: list[Integration] = []
 
         while True:
             resp = self.session.get(url, params=params)
             resp.raise_for_status()
-            page: ListIntegrationsResponse = ListIntegrationsResponse.model_validate(resp.json())
+            page = ListIntegrationsResponse.model_validate(resp.json())
             results.extend(page.integrations)
             if not page.next_page_token:
-                break
+                return results
             params = {**params, "pageToken": page.next_page_token}
-
-        return results
 
     def _resolve_integration_name(self, integration: str) -> str:
         """Resolve a user-supplied integration name to its full Chronicle resource name.
@@ -153,14 +160,11 @@ class ChronicleClient(DevEnvClient):
         """
         target: str = integration.strip().lower()
         for item in self.list_integrations():
-            if not item.name:
-                continue
-            candidates: set[str] = {
+            if item.name and target in {
                 (item.display_name or "").lower(),
                 (item.identifier or "").lower(),
                 item.name.rsplit("/", 1)[-1].lower(),
-            }
-            if target in candidates:
+            }:
                 return item.name
 
         logger.error("Integration '%s' not found in instance %s.", integration, self.instance_name)
@@ -177,8 +181,7 @@ class ChronicleClient(DevEnvClient):
 
         """
         name: str = self._resolve_integration_name(integration_name)
-        url: str = f"{self.base_url}/v1/{name}:export"
-        resp = self.session.get(url, params={"alt": "media"})
+        resp = self.session.get(f"{self.base_url}/v1/{name}:export", params={"alt": "media"})
         resp.raise_for_status()
         return _extract_zip_bytes(resp)
 
@@ -193,10 +196,8 @@ class ChronicleClient(DevEnvClient):
             The parsed integration details returned by the backend.
 
         """
-        resource: str = f"{self.instance_name}/integrations:extractIntegrationDetails"
-        return self._media_upload(
-            f"{self.base_url}/upload/v1alpha/{resource}", zip_path, params={"staging": is_staging}
-        )
+        url: str = self._endpoint("integrations:extractIntegrationDetails", version="v1alpha", upload=True)
+        return self._media_upload(url, zip_path, params={"staging": is_staging})
 
     def upload_integration(self, zip_path: Path, integration_id: str, *, is_staging: bool = False) -> dict[str, Any]:
         """Import an integration package into the instance.
@@ -211,10 +212,8 @@ class ChronicleClient(DevEnvClient):
 
         """
         logger.debug("Importing integration %s (staging=%s)", integration_id, is_staging)
-        resource: str = f"{self.instance_name}/integrations:import"
-        return self._media_upload(
-            f"{self.base_url}/upload/v1alpha/{resource}", zip_path, params={"staging": is_staging}
-        )
+        url: str = self._endpoint("integrations:import", version="v1alpha", upload=True)
+        return self._media_upload(url, zip_path, params={"staging": is_staging})
 
     def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
         """Import playbook definitions from a ZIP into the instance.
@@ -226,8 +225,8 @@ class ChronicleClient(DevEnvClient):
             The backend response (imported workflow identifiers).
 
         """
-        resource: str = f"{self.instance_name}/legacyPlaybooks:legacyImportDefinitions"
-        return self._media_upload(f"{self.base_url}/upload/v1alpha/{resource}", zip_path)
+        url: str = self._endpoint("legacyPlaybooks:legacyImportDefinitions", version="v1alpha", upload=True)
+        return self._media_upload(url, zip_path)
 
     def list_playbooks(self) -> list[dict[str, Any]]:
         """List installed playbook/workflow menu cards.
@@ -236,10 +235,10 @@ class ChronicleClient(DevEnvClient):
             A list of dicts with 'name' and 'identifier' for each playbook.
 
         """
-        resource: str = f"{self.instance_name}/legacyPlaybooks:legacyGetWorkflowMenuCardsWithEnvFilter"
-        resp = self.session.post(f"{self.base_url}/v1alpha/{resource}", json={"legacyPayload": ["REGULAR", "NESTED"]})
+        url: str = self._endpoint("legacyPlaybooks:legacyGetWorkflowMenuCardsWithEnvFilter", version="v1alpha")
+        resp = self.session.post(url, json={"legacyPayload": ["REGULAR", "NESTED"]})
         resp.raise_for_status()
-        cards: WorkflowMenuCardsResponse = WorkflowMenuCardsResponse.model_validate(resp.json())
+        cards = WorkflowMenuCardsResponse.model_validate(resp.json())
         return [{"name": card.name, "identifier": card.identifier} for card in cards.payload]
 
     def download_playbook(self, playbook_identifier: str) -> dict[str, Any]:
@@ -252,23 +251,19 @@ class ChronicleClient(DevEnvClient):
             A dict with a base64-encoded 'blob' of the exported definitions ZIP.
 
         """
-        resource: str = f"{self.instance_name}/legacyPlaybooks:legacyExportDefinitions"
-        resp = self.session.get(
-            f"{self.base_url}/v1alpha/{resource}",
-            params={"identifiers": playbook_identifier, "alt": "media"},
-        )
+        url: str = self._endpoint("legacyPlaybooks:legacyExportDefinitions", version="v1alpha")
+        resp = self.session.get(url, params={"identifiers": playbook_identifier, "alt": "media"})
         resp.raise_for_status()
         return {"blob": base64.b64encode(_extract_zip_bytes(resp)).decode()}
 
     def _media_upload(self, url: str, zip_path: Path, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """Upload a ZIP as a multipart/form-data ``file`` part and return the JSON response.
 
-        The package is sent as the ``file`` part; non-media scalar fields (e.g.
-        ``{"staging": False}``) are sent as query parameters (booleans lowercased to
-        ``true``/``false``), per the media-upload convention.
+        Non-media scalar fields (e.g. ``{"staging": False}``) are sent as query parameters,
+        booleans lowercased to ``true``/``false``.
 
         Args:
-            url: The ``/upload/...`` endpoint URL.
+            url: The upload endpoint URL.
             zip_path: Path to the ZIP to upload.
             params: Optional non-media scalar fields, sent as query parameters.
 
@@ -278,8 +273,7 @@ class ChronicleClient(DevEnvClient):
         """
         files = {"file": (zip_path.name, zip_path.read_bytes(), "application/zip")}
         query: dict[str, str] = {
-            key: str(value).lower() if isinstance(value, bool) else str(value)
-            for key, value in (params or {}).items()
+            key: str(value).lower() if isinstance(value, bool) else str(value) for key, value in (params or {}).items()
         }
         resp = self.session.post(url, params=query or None, files=files)
         resp.raise_for_status()
@@ -287,11 +281,10 @@ class ChronicleClient(DevEnvClient):
 
 
 def _extract_zip_bytes(resp: requests.Response) -> bytes:
-    """Normalize an integration ``:export`` response into raw ZIP bytes.
+    """Return the ZIP bytes from an export response.
 
-    ``:export?alt=media`` normally streams the raw ZIP (possibly via a redirect to a
-    ``/download`` URL). Some deployments may instead return a JSON envelope carrying the
-    bytes inline as base64. Both are handled.
+    The export streams the raw ZIP (typically via a redirect to a ``/download`` URL); a
+    JSON ``{"media": {"inline": ...}}`` envelope with base64 content is also handled.
 
     Args:
         resp: The HTTP response from the export request.
@@ -303,8 +296,7 @@ def _extract_zip_bytes(resp: requests.Response) -> bytes:
         typer.Exit: If a JSON envelope carries no inline media content.
 
     """
-    content_type: str = resp.headers.get("Content-Type", "").lower()
-    if "application/json" not in content_type:
+    if "application/json" not in resp.headers.get("Content-Type", "").lower():
         return resp.content
 
     envelope: ExportResponse = ExportResponse.model_validate(resp.json())
