@@ -50,10 +50,15 @@ def load_dev_env_config() -> dict[str, Any]:
 
 
 def _infer_auth_mode(config: dict[str, Any]) -> str:
-    """Infer the auth mode for legacy configs written before the 'auth_mode' key existed.
+    """Determine the auth mode for a legacy config that predates the ``auth_mode`` key.
+
+    Older ``mp login`` versions wrote every credential field, using ``null`` for the ones
+    that didn't apply, so a truthy ``api_key`` reliably means api-key mode and anything else
+    means username/password. New configs always store ``auth_mode`` explicitly and never
+    reach this fallback.
 
     Args:
-        config: The raw configuration dictionary.
+        config: A raw configuration dictionary with no ``auth_mode`` key.
 
     Returns:
         'api_key' if an API key is present, otherwise 'user_pass'.

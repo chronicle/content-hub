@@ -239,7 +239,11 @@ class ChronicleClient(DevEnvClient):
         resp = self.session.post(url, json={"legacyPayload": ["REGULAR", "NESTED"]})
         resp.raise_for_status()
         cards = WorkflowMenuCardsResponse.model_validate(resp.json())
-        return [{"name": card.name, "identifier": card.identifier} for card in cards.payload]
+        return [
+            {"name": card.name, "identifier": card.identifier}
+            for card in cards.payload
+            if card.name and card.identifier
+        ]
 
     def download_playbook(self, playbook_identifier: str) -> dict[str, Any]:
         """Export a playbook definition by identifier.
@@ -300,8 +304,8 @@ def _extract_zip_bytes(resp: requests.Response) -> bytes:
         return resp.content
 
     envelope: ExportResponse = ExportResponse.model_validate(resp.json())
-    if envelope.media and envelope.media.inline:
+    if envelope.media and envelope.media.inline is not None:
         return envelope.media.inline
 
-    logger.error("Integration export returned no inline media content; cannot extract the package ZIP.")
+    logger.error("Export returned no inline media content; cannot extract the package ZIP.")
     raise typer.Exit(1)
