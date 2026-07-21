@@ -258,7 +258,15 @@ class SpyCloudExposure:
 
 
 def summarize(exposures: Iterable[SpyCloudExposure]) -> dict[str, Any]:
-    """Aggregate a list of exposures (typically for one entity) into a flat summary."""
+    """Aggregate a list of exposures (typically for one entity) into a flat summary.
+
+    Args:
+        exposures: The exposures to summarize.
+
+    Returns:
+        A flat mapping of summary metrics (counts, max severity, and risk flags)
+        suitable for rendering as an insight table.
+    """
     exposures = list(exposures)
 
     severities = [exp.severity for exp in exposures if exp.severity is not None]
@@ -293,11 +301,27 @@ def summarize(exposures: Iterable[SpyCloudExposure]) -> dict[str, Any]:
 
 
 def is_high_risk(exposures: Iterable[SpyCloudExposure]) -> bool:
+    """Report whether any of the exposures is high risk.
+
+    Args:
+        exposures: The exposures to check.
+
+    Returns:
+        ``True`` if at least one exposure is high risk.
+    """
     return any(exp.is_high_risk for exp in exposures)
 
 
 def build_insight(identifier: str, exposures: Iterable[SpyCloudExposure]) -> str:
-    """A short HTML insight summarizing exposures for a single entity."""
+    """Build a short HTML insight summarizing exposures for a single entity.
+
+    Args:
+        identifier: The entity identifier the insight is about.
+        exposures: The entity's exposures to summarize.
+
+    Returns:
+        An HTML fragment rendering the summary as a table.
+    """
     exposures = list(exposures)
     summary = summarize(exposures)
 
@@ -396,7 +420,14 @@ def _truthy(value: Any) -> bool:
 
 
 def is_spycloud_event(props: dict[str, Any] | None) -> bool:
-    """True when a security event's properties came from the SpyCloud parser."""
+    """Report whether a security event's properties came from the SpyCloud parser.
+
+    Args:
+        props: A security event's flattened ``additional_properties``.
+
+    Returns:
+        ``True`` if the properties look like a SpyCloud-parsed event.
+    """
     if not isinstance(props, dict):
         return False
     if str(props.get("device_vendor", "")).strip().lower() == "spycloud":
@@ -405,7 +436,15 @@ def is_spycloud_event(props: dict[str, Any] | None) -> bool:
 
 
 def event_row(alert_name: str, props: dict[str, Any]) -> dict[str, Any]:
-    """A curated, ordered case-wall row for one in-case SpyCloud exposure event."""
+    """Build a curated, ordered case-wall row for one in-case SpyCloud exposure event.
+
+    Args:
+        alert_name: The name of the alert the event belongs to.
+        props: The event's flattened ``spycloud_`` properties.
+
+    Returns:
+        An ordered mapping of column label to display value for the data table.
+    """
     has_plaintext = _truthy(props.get("spycloud_has_plaintext_password"))
     has_password = _truthy(props.get("spycloud_has_password")) or has_plaintext
     publish_date = (
@@ -443,11 +482,17 @@ def event_row(alert_name: str, props: dict[str, Any]) -> dict[str, Any]:
 
 
 def event_json(props: dict[str, Any]) -> dict[str, Any]:
-    """A structured view of one in-case SpyCloud exposure event.
+    """Build a structured view of one in-case SpyCloud exposure event.
 
     Every flattened ``spycloud_`` field is included. When the connector persisted
     plaintext secrets (Include Plaintext Secrets), those values are present here as
     well; otherwise the secret keys are simply empty.
+
+    Args:
+        props: The event's flattened ``additional_properties``.
+
+    Returns:
+        A mapping of every ``spycloud_``-prefixed key to its value.
     """
     return {
         key: value
@@ -483,8 +528,14 @@ def _row_is_high_risk(row: dict[str, Any]) -> bool:
 def insight_severity(rows: Iterable[dict[str, Any]]) -> int:
     """Pick an ``InsightSeverity`` value for the case insight from the rows.
 
-    Returns the raw int (ERROR=2, WARN=1) so callers need not import the enum;
+    The raw int is returned (ERROR=2, WARN=1) so callers need not import the enum;
     the values match ``soar_sdk.SiemplifyDataModel.InsightSeverity``.
+
+    Args:
+        rows: The rendered exposure rows to weigh.
+
+    Returns:
+        ``2`` when any row is high risk, otherwise ``1``.
     """
     return 2 if any(_row_is_high_risk(row) for row in rows) else 1
 
@@ -494,6 +545,12 @@ def build_case_insight_html(rows: list[dict[str, Any]]) -> str:
 
     Values are HTML-escaped and no secret values are ever included (the rows
     come from ``event_row``, which only carries metadata and Yes/No booleans).
+
+    Args:
+        rows: The rendered exposure rows to display.
+
+    Returns:
+        An HTML fragment for the case-wall insight panel.
     """
     total = len(rows)
     high_risk = sum(1 for row in rows if _row_is_high_risk(row))
@@ -518,12 +575,10 @@ def build_case_insight_html(rows: list[dict[str, Any]]) -> str:
             "vertical-align:middle;'>REVIEW</span>"
         )
 
-    header = (
-        "<th style='padding:4px 8px;text-align:left;border-bottom:1px solid #ccc;'>"
-        + "</th><th style='padding:4px 8px;text-align:left;border-bottom:1px solid #ccc;'>".join(
-            html.escape(column) for column in _INSIGHT_COLUMNS
-        )
-        + "</th>"
+    header = "".join(
+        f"<th style='padding:4px 8px;text-align:left;border-bottom:1px solid #ccc;'>"
+        f"{html.escape(column)}</th>"
+        for column in _INSIGHT_COLUMNS
     )
 
     body_rows: list[str] = []

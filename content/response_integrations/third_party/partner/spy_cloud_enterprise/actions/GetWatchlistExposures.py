@@ -45,6 +45,7 @@ EXPOSURES_TABLE_NAME = "SpyCloud Watchlist Exposures"
 
 @output_handler
 def main() -> None:
+    """Surface the SpyCloud Watchlist exposures already on the case as a table."""
     siemplify = SiemplifyAction()
     siemplify.script_name = SCRIPT_NAME
 
