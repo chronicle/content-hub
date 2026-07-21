@@ -90,7 +90,7 @@ class GetBlueAgentAnalysis(Action):
             )
             self.result_value = True
             self.execution_state = ExecutionState.COMPLETED
-        elif analysis.status == "IN_PROGRESS":
+        elif analysis.status in ("IN_PROGRESS", "QUEUED"):
             self.logger.info(
                 f"Analysis status is {analysis.status}. Execution state set to"
                 " IN_PROGRESS."

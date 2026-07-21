@@ -78,6 +78,24 @@ ANALYSIS_IN_PROGRESS: SingleJson = {
     }
 }
 
+ANALYSIS_QUEUED: SingleJson = {
+    "data": {
+        "issue": {
+            "threatDetectionDetails": {
+                "aiAnalysis": {
+                    "id": THREAT_ID,
+                    "status": "QUEUED",
+                    "verdict": None,
+                    "analyzedAt": None,
+                    "severity": None,
+                    "confidenceLevel": None,
+                    "conclusion": None,
+                }
+            }
+        }
+    }
+}
+
 ANALYSIS_FAILED: SingleJson = {
     "data": {
         "issue": {
@@ -232,6 +250,33 @@ def test_get_blue_agent_analysis_not_supported(
         output_message=NOT_SUPPORTED_OUTPUT_MESSAGE,
         result_value=False,
         execution_state=ExecutionState.COMPLETED,
+        json_output=None,
+    )
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters=DEFAULT_PARAMETERS,
+    input_context={
+        "async_total_duration_deadline": int(
+            SCRIPT_DEADLINE_TIME.timestamp() * NUM_OF_MILLI_IN_SEC
+        )
+    },
+)
+def test_get_blue_agent_analysis_queued(
+    wiz: Wiz,
+    script_session: WizSession,
+    action_output: MockActionOutput,
+) -> None:
+    wiz.cleanup_threat_ai_analyses()
+    wiz.add_threat_ai_analysis(THREAT_ID, ANALYSIS_QUEUED)
+    get_blue_agent_analysis.main()
+
+    assert len(script_session.request_history) == 2
+    assert action_output.results == ActionOutput(
+        output_message=PENDING_OUTPUT_MESSAGE,
+        result_value=json.dumps({}),
+        execution_state=ExecutionState.IN_PROGRESS,
         json_output=None,
     )
 
