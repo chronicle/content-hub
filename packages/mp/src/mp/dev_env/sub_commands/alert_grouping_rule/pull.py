@@ -145,7 +145,7 @@ def _list_alert_grouping_rules(installed_rules: list[dict]) -> None:
         category = rule.get("category") or "Unknown"
         details = rule.get("categoryDetails") or []
         subs = [
-            x.get("identifier") or x.get("displayName")
+            str(x.get("identifier") or x.get("displayName"))
             for x in details
             if isinstance(x, dict) and (x.get("identifier") or x.get("displayName"))
         ]

@@ -254,8 +254,6 @@ def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAP
                         cf_item["displayName"] = cf_name
                         # Auto-pull the dependent custom field
                         try:
-                            import typer  # noqa: PLC0415
-
                             from mp.dev_env.sub_commands.custom_field.pull import (  # noqa: PLC0415
                                 _download_and_save_custom_field,
                             )
