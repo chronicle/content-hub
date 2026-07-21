@@ -78,6 +78,24 @@ ANALYSIS_IN_PROGRESS: SingleJson = {
     }
 }
 
+ANALYSIS_FAILED: SingleJson = {
+    "data": {
+        "issue": {
+            "threatDetectionDetails": {
+                "aiAnalysis": {
+                    "id": THREAT_ID,
+                    "status": "FAILED",
+                    "verdict": None,
+                    "analyzedAt": None,
+                    "severity": None,
+                    "confidenceLevel": None,
+                    "conclusion": None,
+                }
+            }
+        }
+    }
+}
+
 ANALYSIS_NOT_SUPPORTED: SingleJson = {
     "data": {
         "issue": {
@@ -96,6 +114,9 @@ SUCCESS_OUTPUT_MESSAGE: str = (
 )
 PENDING_OUTPUT_MESSAGE: str = (
     f"Waiting for Wiz Blue Agent analysis for threat {THREAT_ID}."
+)
+FAILED_STATUS_OUTPUT_MESSAGE: str = (
+    f"Wiz Blue Agent analysis failed with status FAILED for threat {THREAT_ID}."
 )
 FAILED_OUTPUT_MESSAGE: str = (
     f'Error executing action "{constants.GET_BLUE_AGENT_ANALYSIS_SCRIPT_NAME}"\nReason:'
@@ -211,5 +232,32 @@ def test_get_blue_agent_analysis_not_supported(
         output_message=NOT_SUPPORTED_OUTPUT_MESSAGE,
         result_value=False,
         execution_state=ExecutionState.COMPLETED,
+        json_output=None,
+    )
+
+
+@set_metadata(
+    integration_config=common.CONFIG,
+    parameters=DEFAULT_PARAMETERS,
+    input_context={
+        "async_total_duration_deadline": int(
+            SCRIPT_DEADLINE_TIME.timestamp() * NUM_OF_MILLI_IN_SEC
+        )
+    },
+)
+def test_get_blue_agent_analysis_failed_status(
+    wiz: Wiz,
+    script_session: WizSession,
+    action_output: MockActionOutput,
+) -> None:
+    wiz.cleanup_threat_ai_analyses()
+    wiz.add_threat_ai_analysis(THREAT_ID, ANALYSIS_FAILED)
+    get_blue_agent_analysis.main()
+
+    assert len(script_session.request_history) == 2
+    assert action_output.results == ActionOutput(
+        output_message=FAILED_STATUS_OUTPUT_MESSAGE,
+        result_value=False,
+        execution_state=ExecutionState.FAILED,
         json_output=None,
     )

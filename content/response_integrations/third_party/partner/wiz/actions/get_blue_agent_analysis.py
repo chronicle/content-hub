@@ -90,7 +90,7 @@ class GetBlueAgentAnalysis(Action):
             )
             self.result_value = True
             self.execution_state = ExecutionState.COMPLETED
-        else:
+        elif analysis.status == "IN_PROGRESS":
             self.logger.info(
                 f"Analysis status is {analysis.status}. Execution state set to"
                 " IN_PROGRESS."
@@ -101,6 +101,17 @@ class GetBlueAgentAnalysis(Action):
             )
             self.result_value = json.dumps({})
             self.execution_state = ExecutionState.IN_PROGRESS
+        else:
+            self.logger.info(
+                f"Analysis status is {analysis.status}. Execution state set to"
+                " FAILED."
+            )
+            self.output_message = (
+                f"Wiz Blue Agent analysis failed with status {analysis.status} for"
+                f" threat {self.params.threat_id}."
+            )
+            self.result_value = False
+            self.execution_state = ExecutionState.FAILED
 
 
 def main() -> None:
