@@ -30,12 +30,119 @@ from mp.telemetry import track_command
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def _normalize_scopes(val: str | list | None) -> set[str]:
+def _normalize_scopes(val: str | list | set | None) -> set[str]:
     if not val:
         return set()
-    if isinstance(val, list):
+    if isinstance(val, (list, set)):
         return {str(x).strip().lower() for x in val}
     return {x.strip().lower() for x in val.split(",") if x.strip()}
+
+
+def matches_scope_filter(
+    scope_filter: str | set[str] | list[str] | None,
+    entity_scopes: str | list | set | None,
+) -> bool:
+    """Check if entity_scopes matches the scope_filter.
+
+    Rules:
+    - If scope_filter is None or empty, returns True.
+    - If scope_filter contains comma-separated values or a set/list of values,
+      it acts as an OR filter across specified scope items.
+    - Item 'shared' requires entity_scopes to contain BOTH 'alert' AND 'case'.
+    - Items 'alert', 'case', etc. check if that item is in entity_scopes.
+
+    Args:
+        scope_filter: The target scope filter string or set/list of scope items.
+        entity_scopes: The entity's scope(s).
+
+    Returns:
+        True if entity_scopes satisfies the scope_filter, False otherwise.
+
+    """
+    if not scope_filter:
+        return True
+
+    normalized_entity_scopes = _normalize_scopes(entity_scopes)
+
+    if isinstance(scope_filter, str):
+        scope_items = [x.strip().lower() for x in scope_filter.split(",") if x.strip()]
+    else:
+        scope_items = [str(x).strip().lower() for x in scope_filter]
+
+    for item in scope_items:
+        if item == "shared":
+            if {"alert", "case"}.issubset(normalized_entity_scopes):
+                return True
+        elif item in normalized_entity_scopes:
+            return True
+
+    return False
+
+
+def resolve_name_and_scopes(field_name_or_id: str) -> tuple[str, set[str] | None]:
+    """Resolve field name and scopes from a given field name or identifier string.
+
+    Args:
+        field_name_or_id: The custom field name or identifier.
+
+    Returns:
+        A tuple of (resolved_name, scopes_set_or_none).
+
+    """
+    scopes = None
+    name = field_name_or_id
+    if name.lower().endswith("_alert"):
+        scopes = {"alert"}
+        name = name[:-6]
+    elif name.lower().endswith("_case"):
+        scopes = {"case"}
+        name = name[:-5]
+    elif name.lower().endswith("_alert_case") or name.lower().endswith("_case_alert"):
+        scopes = {"shared"}
+        name = name[:-11]
+    elif name.lower().endswith("_shared"):
+        scopes = {"shared"}
+        name = name[:-7]
+    return name, scopes
+
+
+def normalize_name(n: str) -> str:
+    """Normalize custom field display name for comparison.
+
+    Args:
+        n: Name string.
+
+    Returns:
+        Normalized name string.
+
+    """
+    return n.lower().replace(" ", "_").replace("/", "_")
+
+
+def _find_local_custom_field_file_by_name(name_or_path: str) -> Path | None:
+    path = Path(name_or_path)
+    if path.is_file():
+        return path
+
+    try:
+        custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
+    except Exception:  # noqa: BLE001
+        return None
+    if not custom_fields_root.exists() or not custom_fields_root.is_dir():
+        return None
+
+    safe_name = name_or_path
+    if safe_name.endswith((".yaml", ".yml")):
+        safe_name = Path(safe_name).stem
+
+    for f in custom_fields_root.rglob("*.yaml"):
+        if f.stem.lower() == safe_name.lower():
+            return f
+    for f in custom_fields_root.rglob("*.yml"):
+        if f.stem.lower() == safe_name.lower():
+            return f
+
+    return None
 
 
 @pull_app.command(name="custom-field")
@@ -52,6 +159,13 @@ def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
         ),
     ] = None,
     *,
+    scope: Annotated[
+        str | None,
+        typer.Option(
+            "--scope",
+            help="Filter custom fields by scope (e.g., 'alert' or 'case').",
+        ),
+    ] = None,
     pull_all: Annotated[
         bool,
         typer.Option(
@@ -90,6 +204,8 @@ def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
     if list_only:
         logger.info("Available Custom Fields:")
         for field in installed_fields:
+            if scope and not matches_scope_filter(scope, field.get("scopes")):
+                continue
             display_name = field.get("displayName") or field.get("name", "Unknown")
             scopes_val = field.get("scopes")
             if isinstance(scopes_val, list):
@@ -102,8 +218,15 @@ def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
         return
 
     if pull_all:
-        logger.info("Pulling all %d custom fields...", len(installed_fields))
+        filtered_fields = []
         for field in installed_fields:
+            if scope and not matches_scope_filter(scope, field.get("scopes")):
+                continue
+            filtered_fields.append(field)
+
+        logger.info("Pulling %d custom fields...", len(filtered_fields))
+        pulled_count = 0
+        for field in filtered_fields:
             field_id = field.get("id")
             field_name = field.get("name") or field_id
             if not field_id:
@@ -111,10 +234,11 @@ def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
 
             try:
                 _download_and_save_custom_field(backend_api, field_id, dst)
+                pulled_count += 1
             except Exception as e:  # noqa: BLE001
                 logger.error("Skipping custom field '%s' due to an error: %s", field_name, e)  # noqa: TRY400
 
-        logger.info("Successfully finished pulling all custom fields.")
+        logger.info("Successfully finished pulling all %d custom fields.", pulled_count)
         return
 
     # Standard single pull
@@ -125,19 +249,29 @@ def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
     target_name = field_name_or_id
     target_scopes = None
 
-    # Check if the input is a local file path
-    input_path = Path(field_name_or_id)
-    if input_path.is_file():
+    # Check if the input corresponds to a local file path or filename
+    local_file_path = _find_local_custom_field_file_by_name(field_name_or_id)
+    if local_file_path:
         try:
-            local_data = mp.core.file_utils.load_yaml_file(input_path)
+            local_data = mp.core.file_utils.load_yaml_file(local_file_path)
         except Exception:  # noqa: BLE001
-            logger.warning("Failed to load local file '%s' to extract displayName.", field_name_or_id)
+            logger.warning("Failed to load local file '%s' to extract displayName.", local_file_path)
         else:
             if isinstance(local_data, dict):
                 target_name = local_data.get("displayName") or target_name
                 target_scopes = local_data.get("scopes")
                 if not dst:
-                    dst = input_path
+                    dst = local_file_path
+    else:
+        # Resolve trailing scope suffixes (e.g. Free_Text_[Serhii_2]_alert)
+        parsed_name, parsed_scopes = resolve_name_and_scopes(field_name_or_id)
+        target_name = parsed_name
+        if parsed_scopes:
+            target_scopes = parsed_scopes
+
+    # Explicitly passed scope option takes precedence
+    if scope:
+        target_scopes = scope
 
     matching_fields = []
     try:
@@ -148,11 +282,11 @@ def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
                 break
     except ValueError:
         for field in installed_fields:
-            if str(field.get("displayName")).lower() == target_name.lower():
+            server_name = field.get("displayName") or field.get("name") or ""
+            if normalize_name(server_name) == normalize_name(target_name):
                 if target_scopes is not None:
                     server_scopes = field.get("scopes")
-
-                    if _normalize_scopes(target_scopes) != _normalize_scopes(server_scopes):
+                    if not matches_scope_filter(target_scopes, server_scopes):
                         continue
                 matching_fields.append(field)
 
@@ -176,6 +310,33 @@ def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
         field_id = field.get("id")
         if field_id is not None:
             _download_and_save_custom_field(backend_api, field_id, dst)
+
+    logger.info("Successfully pulled %d custom field(s).", len(matching_fields))
+
+
+def _find_local_custom_field_file(display_name: str, scopes: set[str]) -> Path | None:
+    try:
+        custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
+    except Exception:  # noqa: BLE001
+        return None
+    if not custom_fields_root.exists() or not custom_fields_root.is_dir():
+        return None
+
+    for f in custom_fields_root.rglob("*.yaml"):
+        try:
+            data = mp.core.file_utils.load_yaml_file(f)
+        except Exception:  # noqa: BLE001, S112
+            continue
+        if isinstance(data, dict):
+            local_name = data.get("displayName")
+            local_scopes = data.get("scopes")
+            if (
+                local_name
+                and str(local_name).lower() == display_name.lower()
+                and _normalize_scopes(local_scopes) == _normalize_scopes(scopes)
+            ):
+                return f
+    return None
 
 
 def _download_and_save_custom_field(  # noqa: C901, PLR0912, PLR0915
@@ -210,22 +371,27 @@ def _download_and_save_custom_field(  # noqa: C901, PLR0912, PLR0915
         file_name = f"{safe_name}.yaml"
 
     if dst is None:
-        custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
-
         scopes = _normalize_scopes(scopes_val)
-        if len(scopes) > 1:
-            subdir = "shared"
-        elif len(scopes) == 1:
-            if "case" in scopes:
-                subdir = "case"
-            elif "alert" in scopes:
-                subdir = "alert"
+        existing_file = _find_local_custom_field_file(raw_name, scopes)
+        if existing_file:
+            logger.info("Found matching local custom field file at '%s'. Overwriting it.", existing_file)
+            actual_dst = existing_file
+        else:
+            custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
+
+            if len(scopes) > 1:
+                subdir = "shared"
+            elif len(scopes) == 1:
+                if "case" in scopes:
+                    subdir = "case"
+                elif "alert" in scopes:
+                    subdir = "alert"
+                else:
+                    subdir = "shared"
             else:
                 subdir = "shared"
-        else:
-            subdir = "shared"
 
-        actual_dst = custom_fields_root / subdir / file_name
+            actual_dst = custom_fields_root / subdir / file_name
     elif dst.is_dir() or dst.suffix not in {".yaml", ".yml"}:
         dst.mkdir(parents=True, exist_ok=True)
         actual_dst = dst / file_name

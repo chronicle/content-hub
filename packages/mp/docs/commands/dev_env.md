@@ -153,6 +153,7 @@ mp push custom-field [FIELD] [OPTIONS]
 | `--all`    | Push all custom fields from the local repository.              | `bool` | `False` |
 | `--custom` | Path to custom source directory containing custom fields.      | `Path` | `None`  |
 | `--force`  | Force creating new custom fields if not present on server.     | `bool` | `False` |
+| `--scope`  | Filter custom fields to push by scope (e.g., `alert`, `case`, `alert,case` [OR filter], or `shared` [AND filter for both alert and case]). | `str`  | `None`  |
 
 **Examples:**
 
@@ -160,8 +161,11 @@ mp push custom-field [FIELD] [OPTIONS]
 # Push a single custom field
 mp push custom-field "Is False Positive"
 
-# Push all custom fields in the repository
-mp push custom-field --all
+# Push all alert-scoped custom fields in the repository
+mp push custom-field --all --scope alert
+
+# Push a custom field using its local filename (matches exact name or scope suffix)
+mp push custom-field "Free_Text_[Serhii_2]_alert" --force
 ```
 
 ### `push alert-grouping-rule`
@@ -176,7 +180,7 @@ mp push alert-grouping-rule [RULE] [OPTIONS]
 
 **Arguments:**
 
-* `[RULE]`: *(Optional)* The alert grouping rule category name or YAML file path to push. Required unless `--all` is specified.
+* `[RULE]`: *(Optional)* The alert grouping rule category name, filename stem, or YAML file path to push. Required unless `--all` is specified.
 
 **Options:**
 
@@ -189,8 +193,14 @@ mp push alert-grouping-rule [RULE] [OPTIONS]
 **Examples:**
 
 ```bash
-# Push a single alert grouping rule
+# Push an alert grouping rule by category name
 mp push alert-grouping-rule "AlertType"
+
+# Push a specific alert grouping rule by exact local YAML file path
+mp push alert-grouping-rule "content/alert_grouping_rules/DataSource_jira_microsoft_casb_microsoftgraphmail.yaml"
+
+# Push a specific alert grouping rule by filename stem (without .yaml extension)
+mp push alert-grouping-rule "DataSource_jira_microsoft_casb_microsoftgraphmail"
 
 # Push all alert grouping rules in the repository
 mp push alert-grouping-rule --all
@@ -305,6 +315,10 @@ mp pull custom-field [FIELD] [OPTIONS]
 | `--all`    | Pull all custom fields from the dev environment.                                | `bool` | `False` |
 | `--list`   | List all installed custom fields on the dev environment.                        | `bool` | `False` |
 | `--custom` | Destination directory or file path. Defaults to `content/custom_fields/<scope>`.| `Path` | `None`  |
+| `--scope`  | Filter custom fields to pull by scope (e.g., `alert`, `case`, `alert,case` [OR filter], or `shared` [AND filter for both alert and case]).| `str`  | `None`  |
+
+> [!NOTE]
+> **Renamed Local Files Preservation:** If a local YAML configuration already matches a pulled custom field's configuration (by `displayName` and `scopes`) but has a custom filename, `mp` will automatically find and overwrite that file directly instead of creating a new default file.
 
 **Examples:**
 
@@ -312,11 +326,16 @@ mp pull custom-field [FIELD] [OPTIONS]
 # List installed custom fields
 mp pull custom-field --list
 
-# Pull a single custom field
+# Pull a single custom field by display name
+# (Downloads from server and saves it to the default path: content/custom_fields/alert/Is_False_Positive_alert.yaml)
 mp pull custom-field "Is False Positive"
 
-# Pull all custom fields
-mp pull custom-field --all
+# Pull a custom field matching a local filename (e.g., Free_Text_[Custom_Name]_random.yaml)
+# (Reads displayName/scopes from local file, fetches matching server field, and overwrites the local file)
+mp pull custom-field "Free_Text_[Custom_Name]_random"
+
+# Pull all case-scoped custom fields
+mp pull custom-field --all --scope case
 ```
 
 ### `pull alert-grouping-rule`
@@ -331,7 +350,7 @@ mp pull alert-grouping-rule [RULE] [OPTIONS]
 
 **Arguments:**
 
-* `[RULE]`: *(Optional)* The alert grouping rule category name to pull. Required unless `--all` or `--list` is specified.
+* `[RULE]`: *(Optional)* The alert grouping rule category name, filename stem, or local YAML file path to pull. Required unless `--all` or `--list` is specified.
 
 **Options:**
 
@@ -341,14 +360,24 @@ mp pull alert-grouping-rule [RULE] [OPTIONS]
 | `--list`   | List all installed alert grouping rules on the dev environment.                 | `bool` | `False` |
 | `--custom` | Destination directory or file path. Defaults to `content/alert_grouping_rules`. | `Path` | `None`  |
 
+> [!NOTE]
+> **Renamed Local Files Preservation:** If a local YAML configuration already matches a pulled grouping rule's configuration (by `category` and its subcategory list `categoryDetails`) or filename stem, `mp` will automatically find and overwrite that file directly instead of creating a new default file.
+
 **Examples:**
 
 ```bash
 # List installed alert grouping rules
 mp pull alert-grouping-rule --list
 
-# Pull a single alert grouping rule category
+# Pull all grouping rules under a category (e.g., AlertType)
 mp pull alert-grouping-rule "AlertType"
+
+# Pull a specific alert grouping rule matching a local filename (e.g., DataSource_jira_microsoft_casb_microsoftgraphmail.yaml)
+# (Reads category/categoryDetails from local file, fetches matching server rule, and overwrites the local file)
+mp pull alert-grouping-rule "DataSource_jira_microsoft_casb_microsoftgraphmail.yaml"
+
+# Pull a specific alert grouping rule by filename stem (without .yaml extension)
+mp pull alert-grouping-rule "DataSource_jira_microsoft_casb_microsoftgraphmail"
 
 # Pull all alert grouping rules
 mp pull alert-grouping-rule --all

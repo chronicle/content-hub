@@ -290,3 +290,244 @@ def test_pull_alert_grouping_rule_list(
 
     assert result.exit_code == 0
     assert "Category: 'ProductName' (Subcategories: Cortex XDR)" in caplog.text
+
+
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.pull.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.pull.get_backend_api")
+def test_pull_alert_grouping_rule_by_exact_filename(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_alert_grouping_rules.return_value = [
+        {
+            "name": "projects//locations//instances//alertGroupingRules/1",
+            "id": 1,
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}]
+        },
+        {
+            "name": "projects//locations//instances//alertGroupingRules/2",
+            "id": 2,
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}]
+        },
+    ]
+
+    with mock.patch(
+        "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
+        return_value=tmp_path,
+    ):
+        result = runner.invoke(pull_app, ["alert-grouping-rule", "AlertType_phishing"])
+
+    assert result.exit_code == 0
+    saved_file = tmp_path / "AlertType_phishing.yaml"
+    assert saved_file.exists()
+    assert not (tmp_path / "AlertType_brute_force.yaml").exists()
+
+
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.push.get_backend_api")
+def test_push_alert_grouping_rule_by_exact_filename(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_alert_grouping_rules.return_value = [
+        {
+            "name": "projects//locations//instances//alertGroupingRules/1",
+            "id": 1,
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}]
+        },
+        {
+            "name": "projects//locations//instances//alertGroupingRules/2",
+            "id": 2,
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}]
+        },
+    ]
+
+    # Create two files
+    file_1 = tmp_path / "AlertType_phishing.yaml"
+    file_1.write_text(yaml.dump({
+        "category": "AlertType",
+        "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+        "groupingType": "Entities",
+    }))
+
+    file_2 = tmp_path / "AlertType_brute_force.yaml"
+    file_2.write_text(yaml.dump({
+        "category": "AlertType",
+        "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}],
+        "groupingType": "Entities",
+    }))
+
+    with mock.patch(
+        "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
+        return_value=tmp_path,
+    ):
+        result = runner.invoke(push_app, ["alert-grouping-rule", "AlertType_phishing"])
+
+    assert result.exit_code == 0
+    mock_api.update_alert_grouping_rule.assert_called_once_with(
+        1,
+        {
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+            "groupingType": "Entities",
+            "id": 1,
+            "name": "projects//locations//instances//alertGroupingRules/1"
+        },
+    )
+
+
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.pull.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.pull.get_backend_api")
+def test_pull_alert_grouping_rule_overwrites_matching_renamed_file(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_alert_grouping_rules.return_value = [
+        {
+            "name": "projects//locations//instances//alertGroupingRules/1",
+            "id": 1,
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+            "groupingType": "Entities",
+        },
+    ]
+
+    # Create a local file with a custom name but matching category and details
+    local_file = tmp_path / "AlertType_phishing_custom.yaml"
+    local_file.write_text(yaml.dump({
+        "category": "AlertType",
+        "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+        "groupingType": "Entities",
+        "description": "Old Local Description",
+    }))
+
+    with mock.patch(
+        "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
+        return_value=tmp_path,
+    ):
+        result = runner.invoke(pull_app, ["alert-grouping-rule", "AlertType_phishing"])
+
+    assert result.exit_code == 0
+
+    # Verify that the renamed file was updated instead of generating AlertType_phishing.yaml
+    assert local_file.exists()
+    with local_file.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+        assert data["groupingType"] == "Entities"
+        assert "id" not in data
+
+    assert not (tmp_path / "AlertType_phishing.yaml").exists()
+
+
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.pull.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.pull.get_backend_api")
+def test_pull_alert_grouping_rule_by_local_filename_without_suffix(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_alert_grouping_rules.return_value = [
+        {
+            "name": "projects//locations//instances//alertGroupingRules/1",
+            "id": 1,
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+            "groupingType": "Entities",
+        },
+    ]
+
+    # Create a local file with a custom name
+    local_file = tmp_path / "AlertType_phishing_custom.yaml"
+    local_file.write_text(yaml.dump({
+        "category": "AlertType",
+        "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+        "groupingType": "Entities",
+        "description": "Old Local Description",
+    }))
+
+    with mock.patch(
+        "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
+        return_value=tmp_path,
+    ):
+        result = runner.invoke(pull_app, ["alert-grouping-rule", "AlertType_phishing_custom"])
+
+    assert result.exit_code == 0
+
+    # Verify that the custom renamed file was updated
+    assert local_file.exists()
+    with local_file.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+        assert data["groupingType"] == "Entities"
+        assert "id" not in data
+
+
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.push.load_dev_env_config")
+@mock.patch("mp.dev_env.sub_commands.alert_grouping_rule.push.get_backend_api")
+def test_push_alert_grouping_rule_modified_category_details(
+    mock_get_backend_api: mock.MagicMock,
+    mock_load_config: mock.MagicMock,
+    tmp_path: Path,
+) -> None:
+    mock_api = mock.MagicMock()
+    mock_get_backend_api.return_value = mock_api
+
+    mock_api.list_alert_grouping_rules.return_value = [
+        {
+            "name": "projects//locations//instances//alertGroupingRules/10",
+            "id": 10,
+            "category": "DataSource",
+            "categoryDetails": [{"identifier": "jira", "displayName": "jira"}],
+            "groupingType": "Entities",
+        },
+    ]
+
+    rule_file = tmp_path / "DataSource_jira.yaml"
+    rule_file.write_text(yaml.dump({
+        "category": "DataSource",
+        "categoryDetails": [
+            {"identifier": "jira", "displayName": "jira"},
+            {"identifier": "microsoft_casb", "displayName": "microsoft_casb"},
+        ],
+        "groupingType": "Entities",
+    }))
+
+    with mock.patch(
+        "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
+        return_value=tmp_path,
+    ):
+        result = runner.invoke(push_app, ["alert-grouping-rule", str(rule_file)])
+
+    assert result.exit_code == 0
+    mock_api.update_alert_grouping_rule.assert_called_once_with(
+        10,
+        {
+            "category": "DataSource",
+            "categoryDetails": [
+                {"identifier": "jira", "displayName": "jira"},
+                {"identifier": "microsoft_casb", "displayName": "microsoft_casb"},
+            ],
+            "groupingType": "Entities",
+            "id": 10,
+            "name": "projects//locations//instances//alertGroupingRules/10",
+        },
+    )
+    mock_api.create_alert_grouping_rule.assert_not_called()
