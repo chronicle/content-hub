@@ -4,8 +4,8 @@ import sys
 
 # Target directory to walk
 target_dir = "content/parsers/third_party"
-output_json_path = "COMMUNITY_INDEX.json"
-output_md_path = "COMMUNITY_INDEX.md"
+output_json_path = "content/parsers/third_party/COMMUNITY_INDEX.json"
+output_md_path = "content/parsers/third_party/COMMUNITY_INDEX.md"
 
 entries = []
 
