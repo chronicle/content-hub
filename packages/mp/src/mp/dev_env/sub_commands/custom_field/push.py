@@ -39,7 +39,7 @@ def _normalize_scopes(val: str | list | None) -> set[str]:
 
 @push_app.command(name="custom-field")
 @track_command
-def push_custom_field(  # noqa: C901
+def push_custom_field(  # noqa: C901, PLR0912, PLR0915
     field_file_or_name: Annotated[
         str | None, typer.Argument(help="The custom field YAML file path or name to push.")
     ] = None,
@@ -71,7 +71,7 @@ def push_custom_field(  # noqa: C901
 
     custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
 
-    if push_all:
+    if push_all:  # noqa: PLR1702
         logger.info("Pushing all custom fields from '%s'...", custom_fields_root)
         if not custom_fields_root.exists() or not custom_fields_root.is_dir():
             logger.error("Custom fields directory not found.")
@@ -86,24 +86,31 @@ def push_custom_field(  # noqa: C901
         for f in yaml_files:
             try:
                 field_data = mp.core.file_utils.load_yaml_file(f)
+            except Exception:  # noqa: BLE001, S110
+                pass
+            else:
                 if isinstance(field_data, dict):
                     display_name = field_data.get("displayName")
                     scopes_val = field_data.get("scopes")
                     if display_name:
-                        scopes_key = tuple(sorted(list(_normalize_scopes(scopes_val))))
+                        scopes_key = tuple(sorted(_normalize_scopes(scopes_val)))
                         key = (display_name.lower(), scopes_key)
                         if key in pushed_keys:
-                            logger.info("Custom field '%s' with scopes %s already pushed, skipping duplicate file '%s'", display_name, scopes_key, f)
+                            logger.info(
+                                "Custom field '%s' with scopes %s already pushed, skipping duplicate file '%s'",
+                                display_name,
+                                scopes_key,
+                                f,
+                            )
                             continue
                         pushed_keys.add(key)
-            except Exception:
-                pass
             _push_single_custom_field(f, force)
 
         logger.info("Successfully finished pushing all custom fields.")
         return
 
     # Standard single push
+    assert field_file_or_name is not None  # noqa: S101
     files_to_push = []
     field_file = Path(field_file_or_name)
     if field_file.is_file():
@@ -111,11 +118,9 @@ def push_custom_field(  # noqa: C901
     else:
         # Try resolving by name in the custom fields directory and subdirectories
         safe_name = field_file_or_name.replace("/", "_").replace(" ", "_")
-        candidate_files = [
-            f for f in custom_fields_root.rglob(f"{safe_name}.yaml")
-        ] + [
-            f for f in custom_fields_root.rglob(f"{safe_name}.yml")
-        ]
+        candidate_files = list(custom_fields_root.rglob(f"{safe_name}.yaml")) + list(
+            custom_fields_root.rglob(f"{safe_name}.yml")
+        )
         if candidate_files:
             files_to_push.extend(candidate_files)
         else:
@@ -137,11 +142,11 @@ def push_custom_field(  # noqa: C901
         _push_single_custom_field(f, force)
 
 
-def _push_single_custom_field(field_file: Path, force: bool) -> None:
+def _push_single_custom_field(field_file: Path, force: bool) -> None:  # noqa: C901, FBT001, PLR0912, PLR0915
     logger.info("Loading custom field YAML from '%s'...", field_file)
     try:
         field_data = mp.core.file_utils.load_yaml_file(field_file)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to parse custom field YAML: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -155,7 +160,7 @@ def _push_single_custom_field(field_file: Path, force: bool) -> None:
     logger.info("Checking if custom field exists on server...")
     try:
         installed_fields = backend_api.list_custom_fields()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to fetch installed custom fields: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -188,7 +193,11 @@ def _push_single_custom_field(field_file: Path, force: bool) -> None:
         logger.info("Updating existing custom field (ID: %s)...", existing_id)
         try:
             numeric_id = int(existing_id)
-            # Align the casing of displayName to match the server's to avoid validation errors (name change is forbidden)
+        except (ValueError, TypeError) as e:
+            logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
+            raise typer.Exit(1) from e
+        else:
+            # Align casing of displayName to match server to avoid validation errors
             server_field = next((f for f in installed_fields if f.get("id") == numeric_id), None)
             if server_field and server_field.get("displayName"):
                 field_data["displayName"] = server_field["displayName"]
@@ -197,26 +206,26 @@ def _push_single_custom_field(field_file: Path, force: bool) -> None:
             field_data["id"] = numeric_id
             field_data["name"] = f"projects//locations//instances//customFields/{numeric_id}"
 
-            backend_api.update_custom_field(numeric_id, field_data)
-        except (ValueError, TypeError) as e:
-            logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
-            raise typer.Exit(1) from e
-        except Exception as e:
-            logger.error("Failed to update custom field '%s': %s", field_name, e)  # noqa: TRY400
-            raise typer.Exit(1) from None
+            try:
+                backend_api.update_custom_field(numeric_id, field_data)
+            except Exception as e:  # noqa: BLE001
+                logger.error("Failed to update custom field '%s': %s", field_name, e)  # noqa: TRY400
+                raise typer.Exit(1) from None
     else:
         if not force:
             logger.error("=" * 80)
             logger.error("[VALIDATION ERROR] Custom Field Not Installed")
             logger.error("Custom field '%s' not found on the platform.", field_name)
-            logger.error("Creation of new custom fields is blocked by default. Use the --force flag to force creation.")
+            logger.error(
+                "Creation of new custom fields is blocked by default. Use the --force flag to force creation."
+            )
             logger.error("=" * 80)
             raise typer.Exit(1)
 
         logger.info("Creating new custom field...")
         try:
             backend_api.create_custom_field(field_data)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Failed to create custom field '%s': %s", field_name, e)  # noqa: TRY400
             raise typer.Exit(1) from None
 

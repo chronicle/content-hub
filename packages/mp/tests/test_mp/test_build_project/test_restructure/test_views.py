@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -180,7 +181,7 @@ def test_view_deconstructor_html_widget_oserror(tmp_path: Path) -> None:
     orig_write_text = Path.write_text
     err_msg = "Disk full"
 
-    def side_effect(self: Path, *args: list, **kwargs: dict) -> int:
+    def side_effect(self: Path, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
         if self.suffix == ".html":
             raise OSError(err_msg)
         return orig_write_text(self, *args, **kwargs)

@@ -21,11 +21,10 @@ from typing import TYPE_CHECKING, Annotated, Any, cast
 
 import typer
 
+import mp.core.constants
 import mp.core.file_utils
 from mp.build_project.restructure.views.deconstruct import ViewDeconstructor
 from mp.core.data_models.common.overview.metadata import Overview
-from mp.dev_env.sub_commands.alert_grouping_rule.pull import _save_alert_grouping_rule
-from mp.dev_env.sub_commands.custom_field.pull import _download_and_save_custom_field
 from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.sub_commands.utils import get_backend_api_clean as get_backend_api
 from mp.dev_env.utils import find_entity_identifier, load_dev_env_config
@@ -40,7 +39,7 @@ if TYPE_CHECKING:
 
 @pull_app.command(name="view")
 @track_command
-def pull_view(
+def pull_view(  # noqa: C901, PLR0912, PLR0914, PLR0915
     view_name_or_id: Annotated[str | None, typer.Argument(help="The view name or identifier to pull.")] = None,
     dst: Annotated[
         Path | None,
@@ -49,6 +48,7 @@ def pull_view(
             help="Destination folder. Defaults to 'content/views/<view_identifier>'.",
         ),
     ] = None,
+    *,
     all_views: Annotated[
         bool,
         typer.Option(
@@ -80,7 +80,7 @@ def pull_view(
     logger.info("Fetching installed views...")
     try:
         installed_views = backend_api.list_views()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to fetch installed views: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -94,7 +94,7 @@ def pull_view(
 
     views_root = mp.core.file_utils.create_or_get_views_root_dir()
 
-    if all_views:
+    if all_views:  # noqa: PLR1702
         if dst is not None:
             logger.error("Error: --custom destination option cannot be used when pulling all views.")
             raise typer.Exit(1)
@@ -125,6 +125,9 @@ def pull_view(
                             continue
                         try:
                             view_meta = mp.core.file_utils.load_yaml_file(view_yaml_path)
+                        except Exception:  # noqa: BLE001, S110
+                            pass
+                        else:
                             if isinstance(view_meta, dict):
                                 local_uuid = view_meta.get("identifier")
                                 local_name = view_meta.get("name")
@@ -133,25 +136,26 @@ def pull_view(
                                 ):
                                     existing_local_folder = folder
                                     break
-                        except Exception:
-                            pass
 
                 view_dst = existing_local_folder or views_root / view_id
                 try:
                     download_and_deconstruct_view(backend_api, view_id, view_dst)
-                    logger.info("View '%s' (ID: %s) pulled successfully to %s.", view_name or view_id, view_id, view_dst)
-                except Exception as e:
-                    logger.error("Failed to pull view '%s' (ID: %s): %s", view_name or view_id, view_id, e)
+                    logger.info(
+                        "View '%s' (ID: %s) pulled successfully to %s.", view_name or view_id, view_id, view_dst
+                    )
+                except Exception as e:  # noqa: BLE001
+                    logger.error("Failed to pull view '%s' (ID: %s): %s", view_name or view_id, view_id, e)  # noqa: TRY400
         return
 
     # Standard single pull
+    assert view_name_or_id is not None  # noqa: S101
     view_identifier_raw = find_entity_identifier(view_name_or_id, installed_views, "View")
     if view_identifier_raw is None:
         raise typer.Exit(1)
     view_identifier = str(view_identifier_raw)
 
     # Determine destination path
-    if dst is None:
+    if dst is None:  # noqa: PLR1702
         existing_local_folder = None
         if views_root.is_dir():
             for folder in views_root.iterdir():
@@ -162,6 +166,9 @@ def pull_view(
                     continue
                 try:
                     view_meta = mp.core.file_utils.load_yaml_file(view_yaml_path)
+                except Exception:  # noqa: BLE001, S110
+                    pass
+                else:
                     if isinstance(view_meta, dict):
                         local_uuid = view_meta.get("identifier")
                         local_name = view_meta.get("name")
@@ -170,8 +177,6 @@ def pull_view(
                         ):
                             existing_local_folder = folder
                             break
-                except Exception:
-                    pass
 
         if existing_local_folder:
             dst = existing_local_folder
@@ -195,7 +200,7 @@ def download_and_deconstruct_view(backend_api: BackendAPI, view_identifier: str,
     logger.info("Downloading view (ID: %s)...", view_identifier)
     try:
         built_view_data = backend_api.download_view(view_identifier)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to download view '%s': %s", view_identifier, e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -209,12 +214,12 @@ def download_and_deconstruct_view(backend_api: BackendAPI, view_identifier: str,
         logger.info("Deconstructing view to %s...", dst)
         deconstructor = ViewDeconstructor(overview, dst)
         deconstructor.deconstruct()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Deconstruction failed for view '%s': %s", view_identifier, e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
 
-def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAPI) -> BuiltOverview:
+def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAPI) -> BuiltOverview:  # noqa: C901, PLR0912, PLR0914, PLR0915
     """Normalize flat camelCase view payload from SOAR REST API into BuiltOverview.
 
     Args:
@@ -228,13 +233,13 @@ def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAP
     installed_cf = []
     try:
         installed_cf = backend_api.list_custom_fields()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Failed to fetch installed custom fields during view normalization: %s", e)
 
     id_to_cf_name = {cf.get("id"): cf.get("displayName") for cf in installed_cf if cf.get("id") is not None}
 
     built_widgets = []
-    for w in flat_view.get("widgets") or []:
+    for w in flat_view.get("widgets") or []:  # noqa: PLR1702
         meta = w.get("metadata") or {}
         config = w.get("config") or {}
 
@@ -249,10 +254,15 @@ def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAP
                         cf_item["displayName"] = cf_name
                         # Auto-pull the dependent custom field
                         try:
+                            import typer  # noqa: PLC0415
+
+                            from mp.dev_env.sub_commands.custom_field.pull import (  # noqa: PLC0415
+                                _download_and_save_custom_field,
+                            )
                             _download_and_save_custom_field(backend_api, cf_id, None)
                         except typer.Exit:
                             logger.warning("Failed to auto-pull dependent custom field '%s' (ID: %s).", cf_name, cf_id)
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001
                             logger.warning("Error auto-pulling custom field '%s' (ID: %s): %s", cf_name, cf_id, e)
                     else:
                         logger.warning("Could not resolve custom field ID %s to a displayName.", cf_id)
@@ -319,13 +329,16 @@ def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAP
         try:
             # It's a small list, so fetching all is fine
             rules = backend_api.list_alert_grouping_rules()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Failed to auto-pull dependent alert grouping rule (ID: %s): %s", alert_rule_type, e)
+        else:
+            from mp.dev_env.sub_commands.alert_grouping_rule.pull import _save_alert_grouping_rule  # noqa: PLC0415
+
             rule_data = next((r for r in rules if str(r.get("id")) == str(alert_rule_type)), None)
             if rule_data:
                 _save_alert_grouping_rule(rule_data, None)
             else:
                 logger.warning("Alert Grouping Rule ID %s not found on server during auto-pull.", alert_rule_type)
-        except Exception as e:
-            logger.warning("Failed to auto-pull dependent alert grouping rule (ID: %s): %s", alert_rule_type, e)
 
     overview_template: dict[str, Any] = {
         "Identifier": flat_view.get("identifier") or "",

@@ -81,6 +81,7 @@ def push_alert_grouping_rule(
         return
 
     # Standard single push
+    assert rule_file_or_name is not None  # noqa: S101
     rule_file = Path(rule_file_or_name)
     if rule_file.is_file():
         _push_single_alert_grouping_rule(rule_file, force)
@@ -97,11 +98,11 @@ def push_alert_grouping_rule(
             _push_single_alert_grouping_rule(f, force)
 
 
-def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:
+def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:  # noqa: C901, FBT001, PLR0912, PLR0915
     logger.info("Loading alert grouping rule YAML from '%s'...", rule_file)
     try:
         rule_data = mp.core.file_utils.load_yaml_file(rule_file)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to parse alert grouping rule YAML: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -115,7 +116,7 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:
     logger.info("Checking if alert grouping rule exists on server...")
     try:
         installed_rules = backend_api.list_alert_grouping_rules()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to fetch installed alert grouping rules: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -146,7 +147,7 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:
         except (ValueError, TypeError) as e:
             logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
             raise typer.Exit(1) from e
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Failed to update alert grouping rule for category '%s': %s", rule_category, e)  # noqa: TRY400
             raise typer.Exit(1) from None
     else:
@@ -154,14 +155,16 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:
             logger.error("=" * 80)
             logger.error("[VALIDATION ERROR] Alert Grouping Rule Not Installed")
             logger.error("Alert grouping rule for category '%s' not found on the platform.", rule_category)
-            logger.error("Creation of new alert grouping rules is blocked by default. Use the --force flag to force creation.")
+            logger.error(
+                "Creation of new alert grouping rules is blocked by default. Use the --force flag to force creation."
+            )
             logger.error("=" * 80)
             raise typer.Exit(1)
 
         logger.info("Creating new alert grouping rule...")
         try:
             backend_api.create_alert_grouping_rule(rule_data)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Failed to create alert grouping rule for category '%s': %s", rule_category, e)  # noqa: TRY400
             raise typer.Exit(1) from None
 

@@ -17,7 +17,6 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
-import uuid
 from pathlib import Path  # noqa: TC003
 from typing import TYPE_CHECKING, Annotated, Any, cast
 
@@ -133,6 +132,7 @@ def push_view(
         return
 
     # Standard single push
+    assert view_name_or_id is not None  # noqa: S101
     view_src_path = _get_view_path_by_name(view_name_or_id, src)
     _push_single_view(view_src_path, force=force, validate=validate)
 
@@ -151,7 +151,7 @@ def _push_single_view(view_src_path: Path, *, force: bool = False, validate: boo
     builder = ViewBuilder(view_src_path, out_dir)
     try:
         builder.build()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to build/validate view: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -170,7 +170,7 @@ def _push_single_view(view_src_path: Path, *, force: bool = False, validate: boo
     logger.info("Loading built view JSON...")
     try:
         view_data: dict[str, Any] = json.loads(built_json_path.read_text(encoding="utf-8"))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to parse built view JSON: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -215,7 +215,7 @@ def _validate_view(
         )
     except typer.Exit:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Validation failed with an unexpected error: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -313,13 +313,13 @@ def _denormalize_pushed_view(
     installed_cf = []
     try:
         installed_cf = backend_api.list_custom_fields()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.warning("Failed to fetch installed custom fields during view denormalization: %s", e)
 
-    name_to_cf_id = {
-        cf.get("displayName"): cf.get("id")
+    name_to_cf_id: dict[str, int] = {
+        str(cf["displayName"]): int(cf["id"])
         for cf in installed_cf
-        if cf.get("displayName") and cf.get("id") is not None
+        if isinstance(cf, dict) and cf.get("displayName") and cf.get("id") is not None
     }
 
     template = built_view.get("OverviewTemplate") or {}
@@ -545,6 +545,7 @@ def _validate_push_preconditions(
         )
         errors.append(msg)
     elif not flat_view_data.get("identifier"):
+        import uuid  # noqa: PLC0415
         new_uuid = str(uuid.uuid4())
         logger.info("Generating new UUID '%s' for new view.", new_uuid)
         flat_view_data["identifier"] = new_uuid
@@ -717,7 +718,7 @@ def _upload_built_view_data(
         logger.error("%s", err_msg)  # noqa: TRY400
         logger.error("=" * 80)  # noqa: TRY400
         raise typer.Exit(1) from None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Upload failed for view '%s': %s", view_name, e)  # noqa: TRY400
         raise typer.Exit(1) from None
 

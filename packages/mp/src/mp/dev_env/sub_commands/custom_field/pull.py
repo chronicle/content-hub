@@ -40,7 +40,7 @@ def _normalize_scopes(val: str | list | None) -> set[str]:
 
 @pull_app.command(name="custom-field")
 @track_command
-def pull_custom_field(  # noqa: C901
+def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
     field_name_or_id: Annotated[
         str | None, typer.Argument(help="The custom field name or identifier to pull.")
     ] = None,
@@ -83,7 +83,7 @@ def pull_custom_field(  # noqa: C901
     logger.info("Fetching installed custom fields...")
     try:
         installed_fields = backend_api.list_custom_fields()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to fetch installed custom fields: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -111,7 +111,7 @@ def pull_custom_field(  # noqa: C901
 
             try:
                 _download_and_save_custom_field(backend_api, field_id, dst)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error("Skipping custom field '%s' due to an error: %s", field_name, e)  # noqa: TRY400
 
         logger.info("Successfully finished pulling all custom fields.")
@@ -130,13 +130,14 @@ def pull_custom_field(  # noqa: C901
     if input_path.is_file():
         try:
             local_data = mp.core.file_utils.load_yaml_file(input_path)
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed to load local file '%s' to extract displayName.", field_name_or_id)
+        else:
             if isinstance(local_data, dict):
                 target_name = local_data.get("displayName") or target_name
                 target_scopes = local_data.get("scopes")
                 if not dst:
                     dst = input_path
-        except Exception:
-            logger.warning("Failed to load local file '%s' to extract displayName.", field_name_or_id)
 
     matching_fields = []
     try:
@@ -167,7 +168,9 @@ def pull_custom_field(  # noqa: C901
                 field_name_or_id,
             )
             raise typer.Exit(1)
-        logger.info("Found %d custom fields matching '%s'. Pulling all of them...", len(matching_fields), field_name_or_id)
+        logger.info(
+            "Found %d custom fields matching '%s'. Pulling all of them...", len(matching_fields), field_name_or_id
+        )
 
     for field in matching_fields:
         field_id = field.get("id")
@@ -175,7 +178,7 @@ def pull_custom_field(  # noqa: C901
             _download_and_save_custom_field(backend_api, field_id, dst)
 
 
-def _download_and_save_custom_field(
+def _download_and_save_custom_field(  # noqa: C901, PLR0912, PLR0915
     backend_api: mp.dev_env.api.BackendAPI, field_id: int | str, dst: Path | None
 ) -> None:
     logger.info("Downloading custom field (ID: %s)...", field_id)
@@ -185,7 +188,7 @@ def _download_and_save_custom_field(
     except (ValueError, TypeError):
         logger.error("Invalid field ID '%s': Must be a numeric value.", field_id)  # noqa: TRY400
         raise typer.Exit(1) from None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to download custom field '%s': %s", field_id, e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -236,6 +239,6 @@ def _download_and_save_custom_field(
     try:
         actual_dst.parent.mkdir(parents=True, exist_ok=True)
         mp.core.file_utils.save_yaml(field_data, actual_dst)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to save custom field to '%s': %s", actual_dst, e)  # noqa: TRY400
         raise typer.Exit(1) from None

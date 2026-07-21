@@ -31,7 +31,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 @pull_app.command(name="alert-grouping-rule")
 @track_command
-def pull_alert_grouping_rule(
+def pull_alert_grouping_rule(  # noqa: C901
     rule_name_or_id: Annotated[
         str | None, typer.Argument(help="The alert grouping rule name or identifier to pull.")
     ] = None,
@@ -74,7 +74,7 @@ def pull_alert_grouping_rule(
     logger.info("Fetching installed alert grouping rules...")
     try:
         installed_rules = backend_api.list_alert_grouping_rules()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to fetch installed alert grouping rules: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None
 
@@ -144,7 +144,11 @@ def _list_alert_grouping_rules(installed_rules: list[dict]) -> None:
     for rule in installed_rules:
         category = rule.get("category") or "Unknown"
         details = rule.get("categoryDetails") or []
-        subs = [x.get("identifier") or x.get("displayName") for x in details if isinstance(x, dict) and (x.get("identifier") or x.get("displayName"))]
+        subs = [
+            x.get("identifier") or x.get("displayName")
+            for x in details
+            if isinstance(x, dict) and (x.get("identifier") or x.get("displayName"))
+        ]
         subs_str = ", ".join(subs) if subs else "All"
         logger.info("  - Category: '%s' (Subcategories: %s)", category, subs_str)
 
@@ -159,7 +163,7 @@ def _pull_all_alert_grouping_rules(installed_rules: list[dict], dst: Path | None
 
         try:
             _save_alert_grouping_rule(rule, dst)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error("Skipping alert grouping rule '%s' due to an error: %s", rule_name, e)  # noqa: TRY400
 
     logger.info("Successfully finished pulling all alert grouping rules.")
@@ -192,6 +196,6 @@ def _save_alert_grouping_rule(rule_data: dict, dst: Path | None) -> None:
     try:
         actual_dst.parent.mkdir(parents=True, exist_ok=True)
         mp.core.file_utils.save_yaml(rule_data, actual_dst)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error("Failed to save alert grouping rule to '%s': %s", actual_dst, e)  # noqa: TRY400
         raise typer.Exit(1) from None

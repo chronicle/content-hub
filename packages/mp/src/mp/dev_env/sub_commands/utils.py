@@ -50,17 +50,17 @@ def get_backend_api_clean(config: dict[str, str]) -> api.BackendAPI:
         backend_api.login()
     except requests.exceptions.HTTPError as e:
         if e.response is not None and e.response.status_code in {401, 403}:
-            logger.error("=" * 80)
-            logger.error(
+            logger.error("=" * 80)  # noqa: TRY400
+            logger.error(  # noqa: TRY400
                 "[AUTHENTICATION ERROR] Invalid API Key or Unauthorized Access (Status Code %s)",
                 e.response.status_code,
             )
-            logger.error(
+            logger.error(  # noqa: TRY400
                 "The API key or credentials configured for '%s' are invalid or expired.",
                 config.get("api_root"),
             )
-            logger.error("Please update your credentials using: uv run --project packages/mp mp login")
-            logger.error("=" * 80)
+            logger.error("Please update your credentials using: uv run --project packages/mp mp login")  # noqa: TRY400
+            logger.error("=" * 80)  # noqa: TRY400
             raise typer.Exit(1) from None
         logger.error("Authentication failed: %s", e)  # noqa: TRY400
         raise typer.Exit(1) from None

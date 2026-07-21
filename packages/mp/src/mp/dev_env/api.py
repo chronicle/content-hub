@@ -188,7 +188,7 @@ class BackendAPI:
         url: str = f"{self.api_root}/api/1p/external/v1/integrations"
         resp = self.session.get(url)
         resp.raise_for_status()
-        if resp.status_code == 204:
+        if resp.status_code == 204:  # noqa: PLR2004
             return []
         data = resp.json()
         if isinstance(data, dict):
@@ -208,7 +208,7 @@ class BackendAPI:
         url: str = f"{self.api_root}/api/1p/external/v1/integrations/{integration_id}/integrationInstances"
         resp = self.session.get(url)
         resp.raise_for_status()
-        if resp.status_code == 204:
+        if resp.status_code == 204:  # noqa: PLR2004
             return []
         data = resp.json()
         if isinstance(data, dict):
@@ -304,7 +304,7 @@ class BackendAPI:
         url: str = f"{self.api_root}/api/external/v1/case-overview/SaveOverviewTemplate"
         resp = self.session.post(url, json=view_data)
         if not resp.ok:
-            logger.error(f"SaveOverviewTemplate failed with status {resp.status_code}. Response: {resp.text}")
+            logger.error("SaveOverviewTemplate failed with status %s. Response: %s", resp.status_code, resp.text)
         resp.raise_for_status()
         return resp.json()
 
@@ -318,14 +318,14 @@ class BackendAPI:
         url: str = f"{self.api_root}/api/1p/external/v1/customFields"
         resp = self.session.get(url)
         if not resp.ok:
-            logger.error(f"list_custom_fields failed: {resp.status_code} - {resp.text}")
+            logger.error("list_custom_fields failed: %s - %s", resp.status_code, resp.text)
         resp.raise_for_status()
-        if resp.status_code == 204:
+        if resp.status_code == 204:  # noqa: PLR2004
             return []
         try:
             return resp.json().get("items", [])
         except Exception:
-            logger.error(f"JSON Decode Error in list_custom_fields. Response text: {resp.text}")
+            logger.exception("JSON Decode Error in list_custom_fields. Response text: %s", resp.text)
             raise
 
     def download_custom_field(self, field_id: int) -> dict[str, Any]:
@@ -384,7 +384,7 @@ class BackendAPI:
         url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
         resp = self.session.get(url)
         resp.raise_for_status()
-        if resp.status_code == 204:
+        if resp.status_code == 204:  # noqa: PLR2004
             return []
         return resp.json().get("items", [])
 

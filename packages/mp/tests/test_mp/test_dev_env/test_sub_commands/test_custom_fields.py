@@ -17,7 +17,7 @@ from __future__ import annotations
 from pathlib import Path  # noqa: TC003
 from unittest import mock
 
-import pytest
+import pytest  # noqa: TC002
 import yaml
 from typer.testing import CliRunner
 
@@ -121,11 +121,13 @@ def test_push_custom_field_update(
     ]
 
     field_file = tmp_path / "Test_Field.yaml"
-    field_file.write_text(yaml.dump({
-        "name": "projects//locations//instances//customFields/1",
-        "displayName": "Test Field",
-        "type": "String",
-    }))
+    field_file.write_text(
+        yaml.dump({
+            "name": "projects//locations//instances//customFields/1",
+            "displayName": "Test Field",
+            "type": "String",
+        })
+    )
 
     with mock.patch(
         "mp.core.file_utils.create_or_get_custom_fields_root_dir",
@@ -136,7 +138,12 @@ def test_push_custom_field_update(
     assert result.exit_code == 0
     mock_api.update_custom_field.assert_called_once_with(
         1,
-        {"name": "projects//locations//instances//customFields/1", "displayName": "Test Field", "type": "String", "id": 1},
+        {
+            "name": "projects//locations//instances//customFields/1",
+            "displayName": "Test Field",
+            "type": "String",
+            "id": 1,
+        },
     )
     mock_api.create_custom_field.assert_not_called()
 
@@ -154,11 +161,13 @@ def test_push_custom_field_create(
     mock_api.list_custom_fields.return_value = []
 
     field_file = tmp_path / "New_Field.yaml"
-    field_file.write_text(yaml.dump({
-        "name": "projects//locations//instances//customFields/new",
-        "displayName": "New Field",
-        "type": "String",
-    }))
+    field_file.write_text(
+        yaml.dump({
+            "name": "projects//locations//instances//customFields/new",
+            "displayName": "New Field",
+            "type": "String",
+        })
+    )
 
     result = runner.invoke(push_app, ["custom-field", str(field_file), "--force"])
 
@@ -211,13 +220,33 @@ def test_pull_custom_field_multiple_matches(
     mock_get_backend_api.return_value = mock_api
 
     mock_api.list_custom_fields.return_value = [
-        {"name": "projects//locations//instances//customFields/1", "id": 1, "displayName": "Test Field", "scopes": "Alert"},
-        {"name": "projects//locations//instances//customFields/2", "id": 2, "displayName": "Test Field", "scopes": "Case"},
+        {
+            "name": "projects//locations//instances//customFields/1",
+            "id": 1,
+            "displayName": "Test Field",
+            "scopes": "Alert",
+        },
+        {
+            "name": "projects//locations//instances//customFields/2",
+            "id": 2,
+            "displayName": "Test Field",
+            "scopes": "Case",
+        },
     ]
 
     mock_api.download_custom_field.side_effect = [
-        {"name": "projects//locations//instances//customFields/1", "id": 1, "displayName": "Test Field", "scopes": "Alert"},
-        {"name": "projects//locations//instances//customFields/2", "id": 2, "displayName": "Test Field", "scopes": "Case"},
+        {
+            "name": "projects//locations//instances//customFields/1",
+            "id": 1,
+            "displayName": "Test Field",
+            "scopes": "Alert",
+        },
+        {
+            "name": "projects//locations//instances//customFields/2",
+            "id": 2,
+            "displayName": "Test Field",
+            "scopes": "Case",
+        },
     ]
 
     with mock.patch(
@@ -246,8 +275,18 @@ def test_pull_custom_field_multiple_matches_error_if_destination(
     mock_get_backend_api.return_value = mock_api
 
     mock_api.list_custom_fields.return_value = [
-        {"name": "projects//locations//instances//customFields/1", "id": 1, "displayName": "Test Field", "scopes": "Alert"},
-        {"name": "projects//locations//instances//customFields/2", "id": 2, "displayName": "Test Field", "scopes": "Case"},
+        {
+            "name": "projects//locations//instances//customFields/1",
+            "id": 1,
+            "displayName": "Test Field",
+            "scopes": "Alert",
+        },
+        {
+            "name": "projects//locations//instances//customFields/2",
+            "id": 2,
+            "displayName": "Test Field",
+            "scopes": "Case",
+        },
     ]
 
     custom_path = tmp_path / "out.yaml"
@@ -270,8 +309,18 @@ def test_pull_custom_field_path_based(
     mock_get_backend_api.return_value = mock_api
 
     mock_api.list_custom_fields.return_value = [
-        {"name": "projects//locations//instances//customFields/1", "id": 1, "displayName": "Test Field", "scopes": "Alert"},
-        {"name": "projects//locations//instances//customFields/2", "id": 2, "displayName": "Test Field", "scopes": "Case"},
+        {
+            "name": "projects//locations//instances//customFields/1",
+            "id": 1,
+            "displayName": "Test Field",
+            "scopes": "Alert",
+        },
+        {
+            "name": "projects//locations//instances//customFields/2",
+            "id": 2,
+            "displayName": "Test Field",
+            "scopes": "Case",
+        },
     ]
 
     mock_api.download_custom_field.return_value = {
@@ -283,11 +332,13 @@ def test_pull_custom_field_path_based(
     }
 
     local_file = tmp_path / "Test_Field_case.yaml"
-    local_file.write_text(yaml.dump({
-        "displayName": "Test Field",
-        "scopes": "Case",
-        "description": "Old",
-    }))
+    local_file.write_text(
+        yaml.dump({
+            "displayName": "Test Field",
+            "scopes": "Case",
+            "description": "Old",
+        })
+    )
 
     result = runner.invoke(pull_app, ["custom-field", str(local_file)])
 
@@ -310,23 +361,37 @@ def test_push_custom_field_multiple_matching_files(
     mock_get_backend_api.return_value = mock_api
 
     mock_api.list_custom_fields.return_value = [
-        {"name": "projects//locations//instances//customFields/1", "id": 1, "displayName": "Test Field", "scopes": "Alert"},
-        {"name": "projects//locations//instances//customFields/2", "id": 2, "displayName": "Test Field", "scopes": "Case"},
+        {
+            "name": "projects//locations//instances//customFields/1",
+            "id": 1,
+            "displayName": "Test Field",
+            "scopes": "Alert",
+        },
+        {
+            "name": "projects//locations//instances//customFields/2",
+            "id": 2,
+            "displayName": "Test Field",
+            "scopes": "Case",
+        },
     ]
 
     file1 = tmp_path / "Test_Field_alert.yaml"
-    file1.write_text(yaml.dump({
-        "displayName": "Test Field",
-        "scopes": "Alert",
-        "description": "Alert Desc",
-    }))
+    file1.write_text(
+        yaml.dump({
+            "displayName": "Test Field",
+            "scopes": "Alert",
+            "description": "Alert Desc",
+        })
+    )
 
     file2 = tmp_path / "Test_Field_case.yaml"
-    file2.write_text(yaml.dump({
-        "displayName": "Test Field",
-        "scopes": "Case",
-        "description": "Case Desc",
-    }))
+    file2.write_text(
+        yaml.dump({
+            "displayName": "Test Field",
+            "scopes": "Case",
+            "description": "Case Desc",
+        })
+    )
 
     with mock.patch(
         "mp.core.file_utils.create_or_get_custom_fields_root_dir",
@@ -337,10 +402,24 @@ def test_push_custom_field_multiple_matching_files(
     assert result.exit_code == 0
     assert mock_api.update_custom_field.call_count == 2
     mock_api.update_custom_field.assert_any_call(
-        1, {"displayName": "Test Field", "scopes": "Alert", "description": "Alert Desc", "id": 1, "name": "projects//locations//instances//customFields/1"}
+        1,
+        {
+            "displayName": "Test Field",
+            "scopes": "Alert",
+            "description": "Alert Desc",
+            "id": 1,
+            "name": "projects//locations//instances//customFields/1",
+        },
     )
     mock_api.update_custom_field.assert_any_call(
-        2, {"displayName": "Test Field", "scopes": "Case", "description": "Case Desc", "id": 2, "name": "projects//locations//instances//customFields/2"}
+        2,
+        {
+            "displayName": "Test Field",
+            "scopes": "Case",
+            "description": "Case Desc",
+            "id": 2,
+            "name": "projects//locations//instances//customFields/2",
+        },
     )
 
 
@@ -355,7 +434,12 @@ def test_pull_custom_field_list(
     mock_get_backend_api.return_value = mock_api
 
     mock_api.list_custom_fields.return_value = [
-        {"name": "projects//locations//instances//customFields/1", "id": 1, "displayName": "Test Field", "scopes": "Alert"},
+        {
+            "name": "projects//locations//instances//customFields/1",
+            "id": 1,
+            "displayName": "Test Field",
+            "scopes": "Alert",
+        },
     ]
 
     with caplog.at_level("INFO"):

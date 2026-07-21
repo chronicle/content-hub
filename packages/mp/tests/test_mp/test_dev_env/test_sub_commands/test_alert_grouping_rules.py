@@ -17,7 +17,7 @@ from __future__ import annotations
 from pathlib import Path  # noqa: TC003
 from unittest import mock
 
-import pytest
+import pytest  # noqa: TC002
 import yaml
 from typer.testing import CliRunner
 
@@ -208,7 +208,7 @@ def test_pull_multiple_rules_same_category(
         result = runner.invoke(pull_app, ["alert-grouping-rule", "Alert Type"])
 
     assert result.exit_code == 0
-    
+
     file_1 = tmp_path / "AlertType_phishing.yaml"
     file_2 = tmp_path / "AlertType_brute_force.yaml"
     assert file_1.exists()
@@ -290,4 +290,3 @@ def test_pull_alert_grouping_rule_list(
 
     assert result.exit_code == 0
     assert "Category: 'ProductName' (Subcategories: Cortex XDR)" in caplog.text
-
