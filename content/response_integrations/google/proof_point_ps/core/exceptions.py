@@ -23,5 +23,9 @@ class ProofPointPSHTTPError(ProofPointPSError):
     """HTTP-specific exception for ProofPointPS integration."""
 
 
+class FolderNotFoundError(ProofPointPSError):
+    """Exception raised when a quarantine folder does not exist."""
+
+
 class InvalidParameterError(ProofPointPSError):
     """Invalid parameter exception for ProofPointPS integration."""

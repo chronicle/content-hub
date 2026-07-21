@@ -25,7 +25,7 @@ from .api_client import ProofPointPSApiClient
 from .auth import AuthenticatedSession, SessionAuthenticationParameters
 import datetime
 from .constants import PROVIDER, TIME_FORMAT
-from .exceptions import ProofPointPSError
+from .exceptions import FolderNotFoundError, ProofPointPSError
 
 if TYPE_CHECKING:
     from .data_models import QuarantineRecord
@@ -96,22 +96,31 @@ class BaseProofPointPSAction(Action, ABC):
         guids: list[str],
         folder_name: str,
         fail_on_missing_guid: bool = True,
-    ) -> list[QuarantineRecord] | None:
+    ) -> list[QuarantineRecord]:
         """Pre-validate GUIDs before executing any action.
 
         Distinguishes between GUIDs that do not exist globally vs. GUIDs that exist but
         are not present in the specified folder.
 
-        Returns a list of QuarantineRecord objects if all exist.
-        Otherwise raises ProofPointPSError.
+        Args:
+            guids: List of message GUIDs to validate.
+            folder_name: Name of the folder to search within.
+            fail_on_missing_guid: Whether to fail if any of the GUIDs are missing.
+
+        Returns:
+            A list of QuarantineRecord objects if all exist.
+
+        Raises:
+            ProofPointPSError: If the folder does not exist or any of the GUIDs are missing.
+
         """
         records = []
         folder_missing = []
 
         start_date = (
-            datetime.datetime.utcnow() - datetime.timedelta(days=30)
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=30)
         ).strftime(TIME_FORMAT)
-        end_date = datetime.datetime.utcnow().strftime(TIME_FORMAT)
+        end_date = datetime.datetime.now(datetime.timezone.utc).strftime(TIME_FORMAT)
 
         try:
             folder_records = self.api_client.search(
@@ -120,7 +129,7 @@ class BaseProofPointPSAction(Action, ABC):
                 start_date=start_date,
                 end_date=end_date,
             )
-        except ProofPointPSError:
+        except FolderNotFoundError:
             raise ProofPointPSError(f"Folder '{folder_name}' does not exist.")
 
         folder_records_map = {r.guid: r for r in folder_records if r.guid}
