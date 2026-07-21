@@ -223,10 +223,12 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
 
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltOverview) -> Self:
+        if not non_built.get("identifier") or not non_built.get("name"):
+            raise ValueError("Overview metadata must contain 'identifier' and 'name'")  # noqa: TRY003, EM101
         raw_type = non_built.get("type") or "system_case"
         return cls(
-            identifier=non_built.get("identifier") or "",
-            name=non_built.get("name") or "",
+            identifier=non_built["identifier"],
+            name=non_built["name"],
             creator=non_built.get("creator"),
             playbook_id=non_built.get("playbook_id") or "",
             type_=OverviewType.from_string(raw_type),
