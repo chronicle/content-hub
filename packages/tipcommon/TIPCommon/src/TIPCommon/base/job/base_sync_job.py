@@ -683,4 +683,6 @@ class BaseSyncJob(Job, Generic[ApiClient]):
             self.current_run_latest_timestamp_ms = self.sorted_modified_ids[-1][1]
         latest_time = self.current_run_latest_timestamp_ms
         self._save_timestamp_by_unique_id(new_timestamp=latest_time)
-        self.logger.info(f"Saving timestamp: {latest_time} [{convert_unixtime_to_datetime(latest_time)}]")
+        self.logger.info(
+            f"Saving timestamp: {latest_time} [{convert_unixtime_to_datetime(latest_time)}]"
+        )

@@ -242,16 +242,18 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
             environment: The environment name to filter by.
 
         Returns:
-            The response JSON containing integration instances.
+            list[SingleJson]: A list of integration instances.
 
         Raises:
             httpx.HTTPStatusError: If the API request fails.
 
         """
+        endpoint: str = (
+            f"/integrations/{integration_identifier}/integrationInstances"
+        )
         env_literal: str = escape_odata_literal(
             "*" if environment == "Shared Instances" else environment,
         )
-        endpoint: str = f"/integrations/{integration_identifier}/integrationInstances"
         params: SingleJson = {
             "$filter": f"environment eq '{env_literal}'",
             "pageSize": DEFAULT_PAGE_SIZE,
@@ -279,7 +281,9 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
             httpx.HTTPStatusError: If the API request fails.
 
         """
-        endpoint: str = f"/integrations/{integration_name}/connectors/-/connectorInstances"
+        endpoint: str = (
+            f"/integrations/{integration_name}/connectors/-/connectorInstances"
+        )
         response: httpx.Response = await self.get(endpoint)
         if response.status_code == STATUS_CODE_NO_CONTENT:
             return {"connectorInstances": []}
@@ -422,14 +426,19 @@ class AsyncMarketplaceApi(BaseAsyncSoarApi):
 
         parameters: list[SingleJson] | None = job_data.get("parameters")
         if parameters is None:
-            raise EmptyMandatoryValues("Job data is missing 'parameters' field, Nothing to update.")
+            raise EmptyMandatoryValues(
+                "Job data is missing 'parameters' field, Nothing to update."
+            )
 
         segment_pos: int = resource_path.find("integrations/")
         if segment_pos == -1:
             raise ParameterValidationError(
                 param_name="name",
                 value=resource_path,
-                message=("Cannot parse resource path. Expected path to contain 'integrations/'"),
+                message=(
+                    "Cannot parse resource path. "
+                    "Expected path to contain 'integrations/'"
+                ),
             )
         endpoint: str = f"/{resource_path[segment_pos:]}"
 
