@@ -60,12 +60,6 @@ content/response_integrations/**"
 * **No PII in Logs:** Never log secrets, API keys, tokens, or Personally Identifiable Information (
   PII).
 
-### Command Execution & Git Safety
-
-* **User Approval Required:** Never execute state-changing or non-read-only terminal commands without prior user analysis and explicit approval.
-* **STRICT Prohibition of Destructive Git Commands:** Execution of `git reset --hard` (including `git reset --hard origin/`), `git clean -f`, or any other destructive Git command that discards local modifications or untracked workspace state is strictly forbidden.
-
-
 ---
 
 ## Modern Python Patterns
