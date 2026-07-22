@@ -166,7 +166,7 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
         return cls._from_non_built_path(definition_path)
 
     @classmethod
-    def _from_built(cls, file_name: str, built: BuiltPlaybookMetadata) -> Self:  # noqa: ARG003
+    def _from_built(cls, file_name: str, built: BuiltPlaybookMetadata) -> Self:  # ruff:ignore[unused-class-method-argument]
         access_level: int | str | None = built.get("DefaultAccessLevel")
         creation_source: int | str | None = built.get("CreationSource")
         return cls(
@@ -197,7 +197,7 @@ class PlaybookMetadata(SingularComponentMetadata[BuiltPlaybookMetadata, NonBuilt
         )
 
     @classmethod
-    def _from_non_built(cls, file_name: str, non_built: NonBuiltPlaybookMetadata) -> Self:  # noqa: ARG003
+    def _from_non_built(cls, file_name: str, non_built: NonBuiltPlaybookMetadata) -> Self:  # ruff:ignore[unused-class-method-argument]
         access_level: str | None = non_built.get("default_access_level")
         creation_source: str | None = non_built.get("creation_source")
         return cls(

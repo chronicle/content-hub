@@ -42,11 +42,11 @@ class TestOverviewDataModel:
         assert OVERVIEW.to_non_built() == NON_BUILT_OVERVIEW
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             Overview.from_built({})
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             Overview.from_non_built({})
 
     def test_from_built_with_none_values(self) -> None:

@@ -70,3 +70,28 @@ def build_vulnerability_finding_object(
         A VulnerabilityFinding object.
     """
     return datamodels.VulnerabilityFinding.from_json(finding_json)
+
+
+def build_threat_ai_analysis_object(
+    response_json: SingleJson,
+) -> datamodels.ThreatAIAnalysis | None:
+    """Build a ThreatAIAnalysis object from the provided JSON data.
+
+    Args:
+        response_json: The JSON response data containing threat detection details.
+
+    Returns:
+        A ThreatAIAnalysis object or None if aiAnalysis is not present.
+    """
+    issue_data = (response_json.get("data") or {}).get("issue")
+
+    if issue_data is None:
+        return None
+
+    threat_details = issue_data.get("threatDetectionDetails")
+
+    if not threat_details:
+        return None
+
+    ai_analysis = threat_details.get("aiAnalysis")
+    return datamodels.ThreatAIAnalysis.from_json(response_json, ai_analysis)

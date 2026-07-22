@@ -89,7 +89,7 @@ class PlaybookDisplayInfo(Buildable[BuiltPlaybookDisplayInfo, NonBuiltPlaybookDi
     allowed_debug_data: bool = False
 
     @classmethod
-    def _from_built(cls, built: BuiltPlaybookDisplayInfo) -> Self:  # noqa: ARG003
+    def _from_built(cls, built: BuiltPlaybookDisplayInfo) -> Self:  # ruff:ignore[unused-class-method-argument]
         return cls(tags=[])
 
     @classmethod

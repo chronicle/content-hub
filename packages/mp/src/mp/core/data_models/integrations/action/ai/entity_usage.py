@@ -18,7 +18,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from .entity_types import EntityTypesUsage  # noqa: TC001
+from .entity_types import EntityTypesUsage  # ruff:ignore[typing-only-first-party-import]
 
 
 class EntityUsage(BaseModel):

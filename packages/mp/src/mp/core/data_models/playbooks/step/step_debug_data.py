@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 from typing import NotRequired, Self, TypedDict
 
-from mp.core.custom_types import JsonString  # noqa: TC001
+from mp.core.custom_types import JsonString  # ruff:ignore[typing-only-first-party-import]
 from mp.core.data_models.abc import Buildable
 
 from .step_debug_enrichment_data import (
