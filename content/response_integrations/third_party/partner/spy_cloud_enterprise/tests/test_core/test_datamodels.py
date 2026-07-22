@@ -236,5 +236,7 @@ class TestCaseInsight:
         markup = datamodels.build_case_insight_html(rows)
 
         assert f"Showing {datamodels.INSIGHT_MAX_ROWS} of 30 exposures" in markup
-        # Only the capped number of body rows are rendered (+ the header row).
-        assert markup.count("<tr>") == datamodels.INSIGHT_MAX_ROWS + 1
+        # The compact summary table caps its body rows; count only its rows (the
+        # collapsible "Show all fields" block below renders every row uncapped).
+        summary = markup.split("<details", 1)[0]
+        assert summary.count("<tr>") == datamodels.INSIGHT_MAX_ROWS + 1
