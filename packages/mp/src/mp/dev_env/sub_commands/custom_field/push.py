@@ -66,7 +66,7 @@ def matches_scope_filter(
     if isinstance(scope_filter, str):
         scope_items = [x.strip().lower() for x in scope_filter.split(",") if x.strip()]
     else:
-        scope_items = [str(x).strip().lower() for x in scope_filter]
+        scope_items = [x.strip().lower() for x in scope_filter]
 
     for item in scope_items:
         if item == "shared":
