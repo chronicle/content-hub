@@ -164,7 +164,9 @@ async def test_get_installed_integrations_of_environment_multi_page(
 
 
 @pytest.mark.anyio
-async def test_get_connector_cards_success(mocker: MockerFixture, mock_async_sdk: MagicMock) -> None:
+async def test_get_connector_cards_success(
+    mocker: MockerFixture, mock_async_sdk: MagicMock
+) -> None:
     """Test get_connector_cards on success."""
     client = AsyncMarketplaceApi(mock_async_sdk)
     mock_response = mocker.MagicMock(spec=httpx.Response)
@@ -185,7 +187,9 @@ async def test_get_connector_cards_success(mocker: MockerFixture, mock_async_sdk
 
 
 @pytest.mark.anyio
-async def test_get_connector_cards_no_content(mocker: MockerFixture, mock_async_sdk: MagicMock) -> None:
+async def test_get_connector_cards_no_content(
+    mocker: MockerFixture, mock_async_sdk: MagicMock
+) -> None:
     """Test get_connector_cards when returning 204 No Content."""
     client = AsyncMarketplaceApi(mock_async_sdk)
     mock_response = mocker.MagicMock(spec=httpx.Response)
@@ -198,7 +202,9 @@ async def test_get_connector_cards_no_content(mocker: MockerFixture, mock_async_
 
 
 @pytest.mark.anyio
-async def test_get_installed_jobs_all(mocker: MockerFixture, mock_async_sdk: MagicMock) -> None:
+async def test_get_installed_jobs_all(
+    mocker: MockerFixture, mock_async_sdk: MagicMock
+) -> None:
     """Test get_installed_jobs when no job instance ID is provided."""
     client = AsyncMarketplaceApi(mock_async_sdk)
     mock_response = mocker.MagicMock(spec=httpx.Response)
@@ -219,7 +225,9 @@ async def test_get_installed_jobs_all(mocker: MockerFixture, mock_async_sdk: Mag
 
 
 @pytest.mark.anyio
-async def test_get_installed_jobs_single(mocker: MockerFixture, mock_async_sdk: MagicMock) -> None:
+async def test_get_installed_jobs_single(
+    mocker: MockerFixture, mock_async_sdk: MagicMock
+) -> None:
     """Test get_installed_jobs when a job instance ID is provided."""
     client = AsyncMarketplaceApi(mock_async_sdk)
     mock_response = mocker.MagicMock(spec=httpx.Response)
@@ -240,7 +248,9 @@ async def test_get_installed_jobs_single(mocker: MockerFixture, mock_async_sdk: 
 
 
 @pytest.mark.anyio
-async def test_get_installed_jobs_no_content_all(mocker: MockerFixture, mock_async_sdk: MagicMock) -> None:
+async def test_get_installed_jobs_no_content_all(
+    mocker: MockerFixture, mock_async_sdk: MagicMock
+) -> None:
     """Test get_installed_jobs returning 204 No Content with no ID."""
     client = AsyncMarketplaceApi(mock_async_sdk)
     mock_response = mocker.MagicMock(spec=httpx.Response)
@@ -253,7 +263,9 @@ async def test_get_installed_jobs_no_content_all(mocker: MockerFixture, mock_asy
 
 
 @pytest.mark.anyio
-async def test_get_installed_jobs_no_content_single(mocker: MockerFixture, mock_async_sdk: MagicMock) -> None:
+async def test_get_installed_jobs_no_content_single(
+    mocker: MockerFixture, mock_async_sdk: MagicMock
+) -> None:
     """Test get_installed_jobs returning 204 No Content with a specific ID."""
     client = AsyncMarketplaceApi(mock_async_sdk)
     mock_response = mocker.MagicMock(spec=httpx.Response)
@@ -266,7 +278,9 @@ async def test_get_installed_jobs_no_content_single(mocker: MockerFixture, mock_
 
 
 @pytest.mark.anyio
-async def test_set_configuration_property(mocker: MockerFixture, mock_async_sdk: MagicMock) -> None:
+async def test_set_configuration_property(
+    mocker: MockerFixture, mock_async_sdk: MagicMock
+) -> None:
     """Test set_configuration_property correctly makes a PUT request."""
     client = AsyncMarketplaceApi(mock_async_sdk)
     mock_response = mocker.MagicMock(spec=httpx.Response)
@@ -291,7 +305,9 @@ async def test_set_configuration_property(mocker: MockerFixture, mock_async_sdk:
 
 
 @pytest.mark.anyio
-async def test_set_connector_parameter(mocker: MockerFixture, mock_async_sdk: MagicMock) -> None:
+async def test_set_connector_parameter(
+    mocker: MockerFixture, mock_async_sdk: MagicMock
+) -> None:
     """Test set_connector_parameter correctly makes a PUT request."""
     client = AsyncMarketplaceApi(mock_async_sdk)
     mock_response = mocker.MagicMock(spec=httpx.Response)
@@ -316,7 +332,9 @@ async def test_set_connector_parameter(mocker: MockerFixture, mock_async_sdk: Ma
 
 
 @pytest.mark.anyio
-async def test_save_or_update_job_success(mocker: MockerFixture, mock_async_sdk: MagicMock) -> None:
+async def test_save_or_update_job_success(
+    mocker: MockerFixture, mock_async_sdk: MagicMock
+) -> None:
     """Test save_or_update_job correctly makes a PATCH request."""
     client = AsyncMarketplaceApi(mock_async_sdk)
     job_data = {
@@ -342,7 +360,9 @@ async def test_save_or_update_job_success(mocker: MockerFixture, mock_async_sdk:
 
 
 @pytest.mark.anyio
-async def test_save_or_update_job_no_content(mocker: MockerFixture, mock_async_sdk: MagicMock) -> None:
+async def test_save_or_update_job_no_content(
+    mocker: MockerFixture, mock_async_sdk: MagicMock
+) -> None:
     """Test save_or_update_job handles 204 No Content correctly."""
     client = AsyncMarketplaceApi(mock_async_sdk)
     job_data = {
