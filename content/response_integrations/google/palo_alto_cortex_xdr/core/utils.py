@@ -38,9 +38,9 @@ def get_integration_parameters(chronicle_soar: ChronicleSOAR) -> IntegrationPara
     Returns:
         IntegrationParameters: IntegrationParameters object.
     """
-    if hasattr(chronicle_soar, 'get_configuration'):
+    if isinstance(chronicle_soar, SiemplifyAction):
         input_dictionary = chronicle_soar.get_configuration(constants.INTEGRATION_NAME)
-    elif hasattr(chronicle_soar, 'parameters'):
+    elif isinstance(chronicle_soar, (SiemplifyConnectorExecution, SiemplifyJob)):
         input_dictionary = chronicle_soar.parameters
     else:
         raise ValueError("Provided SOAR instance is not supported.")

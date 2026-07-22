@@ -150,3 +150,19 @@ class PaloAltoCortexXDR(abc.ABC):
 
     def get_incident_extra_data(self) -> IncidentExtraData:
         return self._connector_incident_extra_data
+
+    def add_file_retrieval_urls(self, group_id: str, urls: Any) -> None:
+        if not hasattr(self, "_file_retrieval_urls"):
+            self._file_retrieval_urls = {}
+        self._file_retrieval_urls[group_id] = urls
+
+    def get_file_retrieval_urls(self, group_id: str) -> Any:
+        return getattr(self, "_file_retrieval_urls", {}).get(group_id)
+
+    def add_file_content_by_val(self, key: str, content: bytes) -> None:
+        if not hasattr(self, "_file_content"):
+            self._file_content = {}
+        self._file_content[key] = content
+
+    def get_file_content_by_val(self, key: str) -> bytes:
+        return getattr(self, "_file_content", {}).get(key)

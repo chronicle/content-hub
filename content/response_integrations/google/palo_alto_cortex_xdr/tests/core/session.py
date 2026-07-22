@@ -44,6 +44,8 @@ class PaloAltoCortexXDRSession(
             self.get_endpoint,
             self.scan_endpoints,
             self.get_action_status,
+            self.get_file_retrieval_details,
+            self.retrieve_file,
         ]
 
     @router.post(r".*/public_api/v1/incidents/get_incident_extra_data/?")
@@ -182,6 +184,32 @@ class PaloAltoCortexXDRSession(
         }
 
         return MockResponse(content=response_json, status_code=200)
+
+    @router.post(r".*/public_api/v1/actions/file_retrieval_details/?")
+    def get_file_retrieval_details(self, request: MockRequest) -> MockResponse:
+        """Handle POST .*/public_api/v1/actions/file_retrieval_details/ requests"""
+        request_data = request.kwargs.get("json", {}).get("request_data", {})
+        group_id = request_data.get("group_action_id")
+
+        urls = self._product.get_file_retrieval_urls(str(group_id))
+        if urls:
+            if hasattr(urls, "raw_data"):
+                return MockResponse(content={"reply": urls.raw_data}, status_code=200)
+            return MockResponse(content={"reply": urls}, status_code=200)
+
+        return MockResponse(content={"reply": {}}, status_code=200)
+
+    @router.post(r".*/public_api/v1/download/.*")
+    def retrieve_file(self, request: MockRequest) -> MockResponse:
+        """Handle POST requests for file download."""
+        token = request.url.path.split("/")[-1]
+        content = self._product.get_file_content_by_val(token)
+        if content is not None:
+            resp = MockResponse(content="", status_code=200)
+            resp._content = content
+            return resp
+
+        return MockResponse(content="", status_code=404)
 
 
 class PaloAltoCortexXDRSOARSession(

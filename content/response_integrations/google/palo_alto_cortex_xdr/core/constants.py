@@ -44,6 +44,7 @@ ADD_COMMENT_TO_INCIDENT_ACTION_SCRIPT_NAME: str = (
     f"{INTEGRATION_NAME} - Add Comment To Incident"
 )
 SCAN_ENDPOINT_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - Scan Endpoint"
+DOWNLOAD_FILE_SCRIPT_NAME: str = f"{INTEGRATION_NAME} - Download File"
 
 ALERTS_DEFAULT_LIMIT: int = 1000
 ALREADY_EXISTS_ERR_CODE: int = 500
@@ -83,6 +84,11 @@ API_DETECTION_TIMESTAMP_KEY: str = "detection_timestamp"
 API_FW_MISC_KEY: str = "fw_misc"
 API_EVENT_TIMESTAMP_KEY: str = "event_timestamp"
 API_CREATION_TIME_KEY: str = "creation_time"
+API_HOST_NAME_KEY: str = "host_name"
+API_ENDPOINT_DATA_KEY: str = "endpoint_data"
+API_ENDPOINT_KEY: str = "endpoint"
+API_ENDPOINT_NAME_KEY: str = "endpoint_name"
+API_AGENT_FQDN_KEY: str = "agent_fqdn"
 
 # Event Keys
 EVENT_TYPE_KEY: str = "event_type"
@@ -326,3 +332,19 @@ class TimeFrameDDLEnum(DDLEnum):
                 raise ValueError(
                     f"Cannot convert object {self} to Date object",
                 )
+
+WINDOWS_OS_TYPE: str = "windows"
+LINUX_OS_TYPE: str = "linux"
+MACOS_OS_TYPE: str = "macos"
+
+ENDPOINT_ID_KEY: str = "endpoint_id"
+FILE_PATH_KEY: str = "file_path"
+GROUP_ID_KEY: str = "group_id"
+STATUS_KEY: str = "status"
+IDENTIFIER_KEY: str = "identifier"
+LOCAL_PATH_KEY: str = "local_path"
+DOWNLOAD_FILE_PATH_KEY: str = "download_file_path"
+ERRORED_FILE_PATHS_KEY: str = "errored_file_paths"
+OS_TYPE_KEY: str = "os_type"
+
+PENDING_STATUS: str = "Pending"

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import requests
 from ..core.constants import ALREADY_EXISTS_ERR_CODE, ALREADY_EXISTS_ERR_MSG
-from ..core.exceptions import XDRException, XDRAlreadyExistsException
+from ..core.exceptions import XDRException, XDRAlreadyExistsException, XDRPermissionException
 
 
 def validate_response(
@@ -31,14 +31,23 @@ def validate_response(
         XDRException: If the response contains an error.
         XDRAlreadyExistsException: If the response indicates that the resource already
         exists.
+        XDRPermissionException: If the response indicates 403 Forbidden.
     """
     try:
         response.raise_for_status()
 
     except requests.HTTPError as error:
+        if response.status_code == 403:
+            try:
+                resp_json = response.json()
+                details = f"{resp_json.get('reply', {}).get('err_msg')}-{resp_json.get('reply', {}).get('err_extra', response.content)}"
+            except ValueError:
+                details = response.content.decode('utf-8') if response.content else str(error)
+            raise XDRPermissionException(f'{error_msg}:{details}') from error
+            
         try:
             response.json()
-        except Exception as e:
+        except ValueError as e:
             raise XDRException(f"{error_msg}: {error} - {response.content}") from e
 
         if (

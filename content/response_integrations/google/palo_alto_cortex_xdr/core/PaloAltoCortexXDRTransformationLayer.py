@@ -90,12 +90,12 @@ class PaloAltoCortexXDRTransformationLayer:
 
     @staticmethod
     def build_siemplify_file_retrieval_action_obj(
-        file_retrieval_action_data: SingleJson,
+        file_retrieval_data: SingleJson,
     ) -> FileRetrievalAction:
-        return FileRetrievalAction.from_json(raw_data=file_retrieval_action_data)
+        return FileRetrievalAction.from_json(raw_data=file_retrieval_data['reply'])
 
     @staticmethod
     def build_siemplify_file_retrieval_details_obj(
         file_retrieval_details_data: SingleJson,
     ) -> FileRetrievalDetails:
-        return FileRetrievalDetails.from_json(raw_data=file_retrieval_details_data)
+        return FileRetrievalDetails.from_json(raw_data=file_retrieval_details_data['reply'])
