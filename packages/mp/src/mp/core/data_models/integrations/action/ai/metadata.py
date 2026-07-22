@@ -18,10 +18,9 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from .ai_categories import AiCategories  # ruff:ignore[typing-only-first-party-import]
 from .capabilities import ActionCapabilities  # ruff:ignore[typing-only-first-party-import]
 from .entity_usage import EntityUsage  # ruff:ignore[typing-only-first-party-import]
-from .product_categories import ActionProductCategories  # ruff:ignore[typing-only-first-party-import]
+from .outcome_categories import OutcomeCategories  # ruff:ignore[typing-only-first-party-import]
 
 
 class ActionAiMetadata(BaseModel):
