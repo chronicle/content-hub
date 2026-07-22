@@ -61,7 +61,7 @@ def run_in_parallel(
             item: _T = futures[future]
             try:
                 future.result()
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:  # ruff:ignore[blind-except]
                 errors.append((item, e))
 
     if errors:
@@ -83,7 +83,7 @@ def run_in_parallel(
                     curr: BaseException | None = curr.__cause__ or curr.__context__
 
                 chain_str: str = " -> ".join(error_msgs)
-                logger.error(f"{error_message_template}:\n  %s", item_name, chain_str)  # noqa: G004
+                logger.error(f"{error_message_template}:\n  %s", item_name, chain_str)  # ruff:ignore[logging-f-string]
 
         msg: str = f"Failed to process {len(errors)} item(s)."
         raise ParallelRunError(msg, errors)

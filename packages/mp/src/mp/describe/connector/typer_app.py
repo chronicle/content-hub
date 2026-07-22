@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import pathlib  # noqa: TC003
+import pathlib  # ruff:ignore[typing-only-standard-library-import]
 from typing import Annotated
 
 import typer
@@ -37,7 +37,7 @@ app = typer.Typer(help="Describe connectors in the marketplace.")
     help="Describe connectors in an integration or across the entire marketplace using Gemini.",
     no_args_is_help=True,
 )
-def describe(  # noqa: PLR0913
+def describe(  # ruff:ignore[too-many-arguments]
     connectors: Annotated[list[str] | None, typer.Argument(help="Connector names")] = None,
     integration: Annotated[str | None, typer.Option("-i", "--integration", help="Integration name")] = None,
     *,
