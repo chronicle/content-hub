@@ -37,7 +37,7 @@ _temp_dir: tempfile.TemporaryDirectory | None = None
 
 def pytest_configure(config: pytest.Config) -> None:
     """pytest configuration hook."""
-    global _temp_dir  # noqa: PLW0603
+    global _temp_dir  # ruff:ignore[global-statement]
     _temp_dir = tempfile.TemporaryDirectory()
     temp_config_path = Path(_temp_dir.name) / ".mp_config"
 
@@ -50,7 +50,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 def pytest_unconfigure(config: pytest.Config) -> None:
     """pytest cleanup hook."""
-    global _temp_dir  # noqa: PLW0603
+    global _temp_dir  # ruff:ignore[global-statement]
     if _temp_dir:
         _temp_dir.cleanup()
         _temp_dir = None

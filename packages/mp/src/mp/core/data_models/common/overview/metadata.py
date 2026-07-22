@@ -224,7 +224,7 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltOverview) -> Self:
         if not non_built.get("identifier") or not non_built.get("name"):
-            raise ValueError("Overview metadata must contain 'identifier' and 'name'")  # noqa: TRY003, EM101
+            raise ValueError("Overview metadata must contain 'identifier' and 'name'")  # ruff:ignore[raise-vanilla-args, raw-string-in-exception]
         raw_type = non_built.get("type") or "system_case"
         return cls(
             identifier=non_built["identifier"],

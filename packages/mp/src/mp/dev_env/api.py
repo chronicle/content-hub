@@ -188,7 +188,7 @@ class BackendAPI:
         url: str = f"{self.api_root}/api/1p/external/v1/integrations"
         resp = self.session.get(url)
         resp.raise_for_status()
-        if resp.status_code == 204:  # noqa: PLR2004
+        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
             return []
         data = resp.json()
         if isinstance(data, dict):
@@ -208,7 +208,7 @@ class BackendAPI:
         url: str = f"{self.api_root}/api/1p/external/v1/integrations/{integration_id}/integrationInstances"
         resp = self.session.get(url)
         resp.raise_for_status()
-        if resp.status_code == 204:  # noqa: PLR2004
+        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
             return []
         data = resp.json()
         if isinstance(data, dict):
@@ -320,7 +320,7 @@ class BackendAPI:
         if not resp.ok:
             logger.error("list_custom_fields failed: %s - %s", resp.status_code, resp.text)
         resp.raise_for_status()
-        if resp.status_code == 204:  # noqa: PLR2004
+        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
             return []
         try:
             return resp.json().get("items", [])
@@ -384,7 +384,7 @@ class BackendAPI:
         url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
         resp = self.session.get(url)
         resp.raise_for_status()
-        if resp.status_code == 204:  # noqa: PLR2004
+        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
             return []
         return resp.json().get("items", [])
 

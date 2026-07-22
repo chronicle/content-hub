@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path  # noqa: TC003
+from pathlib import Path  # ruff:ignore[typing-only-standard-library-import]
 from typing import TYPE_CHECKING, Annotated, Any, cast
 
 import typer
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 @pull_app.command(name="view")
 @track_command
-def pull_view(  # noqa: C901, PLR0912, PLR0914, PLR0915
+def pull_view(  # ruff:ignore[complex-structure, too-many-branches, too-many-locals, too-many-statements]
     view_name_or_id: Annotated[str | None, typer.Argument(help="The view name or identifier to pull.")] = None,
     dst: Annotated[
         Path | None,
@@ -80,8 +80,8 @@ def pull_view(  # noqa: C901, PLR0912, PLR0914, PLR0915
     logger.info("Fetching installed views...")
     try:
         installed_views = backend_api.list_views()
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to fetch installed views: %s", e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to fetch installed views: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     if list_only:
@@ -94,7 +94,7 @@ def pull_view(  # noqa: C901, PLR0912, PLR0914, PLR0915
 
     views_root = mp.core.file_utils.create_or_get_views_root_dir()
 
-    if all_views:  # noqa: PLR1702
+    if all_views:  # ruff:ignore[too-many-nested-blocks]
         if dst is not None:
             logger.error("Error: --custom destination option cannot be used when pulling all views.")
             raise typer.Exit(1)
@@ -125,7 +125,7 @@ def pull_view(  # noqa: C901, PLR0912, PLR0914, PLR0915
                             continue
                         try:
                             view_meta = mp.core.file_utils.load_yaml_file(view_yaml_path)
-                        except Exception:  # noqa: BLE001, S110
+                        except Exception:  # ruff:ignore[blind-except, try-except-pass]
                             pass
                         else:
                             if isinstance(view_meta, dict):
@@ -143,19 +143,19 @@ def pull_view(  # noqa: C901, PLR0912, PLR0914, PLR0915
                     logger.info(
                         "View '%s' (ID: %s) pulled successfully to %s.", view_name or view_id, view_id, view_dst
                     )
-                except Exception as e:  # noqa: BLE001
-                    logger.error("Failed to pull view '%s' (ID: %s): %s", view_name or view_id, view_id, e)  # noqa: TRY400
+                except Exception as e:  # ruff:ignore[blind-except]
+                    logger.error("Failed to pull view '%s' (ID: %s): %s", view_name or view_id, view_id, e)  # ruff:ignore[error-instead-of-exception]
         return
 
     # Standard single pull
-    assert view_name_or_id is not None  # noqa: S101
+    assert view_name_or_id is not None  # ruff:ignore[assert]
     view_identifier_raw = find_entity_identifier(view_name_or_id, installed_views, "View")
     if view_identifier_raw is None:
         raise typer.Exit(1)
     view_identifier = str(view_identifier_raw)
 
     # Determine destination path
-    if dst is None:  # noqa: PLR1702
+    if dst is None:  # ruff:ignore[too-many-nested-blocks]
         existing_local_folder = None
         if views_root.is_dir():
             for folder in views_root.iterdir():
@@ -166,7 +166,7 @@ def pull_view(  # noqa: C901, PLR0912, PLR0914, PLR0915
                     continue
                 try:
                     view_meta = mp.core.file_utils.load_yaml_file(view_yaml_path)
-                except Exception:  # noqa: BLE001, S110
+                except Exception:  # ruff:ignore[blind-except, try-except-pass]
                     pass
                 else:
                     if isinstance(view_meta, dict):
@@ -200,8 +200,8 @@ def download_and_deconstruct_view(backend_api: BackendAPI, view_identifier: str,
     logger.info("Downloading view (ID: %s)...", view_identifier)
     try:
         built_view_data = backend_api.download_view(view_identifier)
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to download view '%s': %s", view_identifier, e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to download view '%s': %s", view_identifier, e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     if not isinstance(built_view_data, dict):
@@ -214,12 +214,12 @@ def download_and_deconstruct_view(backend_api: BackendAPI, view_identifier: str,
         logger.info("Deconstructing view to %s...", dst)
         deconstructor = ViewDeconstructor(overview, dst)
         deconstructor.deconstruct()
-    except Exception as e:  # noqa: BLE001
-        logger.error("Deconstruction failed for view '%s': %s", view_identifier, e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Deconstruction failed for view '%s': %s", view_identifier, e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
 
-def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAPI) -> BuiltOverview:  # noqa: C901, PLR0912, PLR0914, PLR0915
+def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAPI) -> BuiltOverview:  # ruff:ignore[complex-structure, too-many-branches, too-many-locals, too-many-statements]
     """Normalize flat camelCase view payload from SOAR REST API into BuiltOverview.
 
     Args:
@@ -233,13 +233,13 @@ def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAP
     installed_cf = []
     try:
         installed_cf = backend_api.list_custom_fields()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # ruff:ignore[blind-except]
         logger.warning("Failed to fetch installed custom fields during view normalization: %s", e)
 
     id_to_cf_name = {cf.get("id"): cf.get("displayName") for cf in installed_cf if cf.get("id") is not None}
 
     built_widgets = []
-    for w in flat_view.get("widgets") or []:  # noqa: PLR1702
+    for w in flat_view.get("widgets") or []:  # ruff:ignore[too-many-nested-blocks]
         meta = w.get("metadata") or {}
         config = w.get("config") or {}
 
@@ -254,13 +254,13 @@ def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAP
                         cf_item["displayName"] = cf_name
                         # Auto-pull the dependent custom field
                         try:
-                            from mp.dev_env.sub_commands.custom_field.pull import (  # noqa: PLC0415
+                            from mp.dev_env.sub_commands.custom_field.pull import (  # ruff:ignore[import-outside-top-level]
                                 _download_and_save_custom_field,
                             )
                             _download_and_save_custom_field(backend_api, cf_id, None)
                         except typer.Exit:
                             logger.warning("Failed to auto-pull dependent custom field '%s' (ID: %s).", cf_name, cf_id)
-                        except Exception as e:  # noqa: BLE001
+                        except Exception as e:  # ruff:ignore[blind-except]
                             logger.warning("Error auto-pulling custom field '%s' (ID: %s): %s", cf_name, cf_id, e)
                     else:
                         logger.warning("Could not resolve custom field ID %s to a displayName.", cf_id)
@@ -327,10 +327,12 @@ def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAP
         try:
             # It's a small list, so fetching all is fine
             rules = backend_api.list_alert_grouping_rules()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # ruff:ignore[blind-except]
             logger.warning("Failed to auto-pull dependent alert grouping rule (ID: %s): %s", alert_rule_type, e)
         else:
-            from mp.dev_env.sub_commands.alert_grouping_rule.pull import _save_alert_grouping_rule  # noqa: PLC0415
+            from mp.dev_env.sub_commands.alert_grouping_rule.pull import (  # ruff:ignore[import-outside-top-level]
+                _save_alert_grouping_rule,
+            )
 
             rule_data = next((r for r in rules if str(r.get("id")) == str(alert_rule_type)), None)
             if rule_data:

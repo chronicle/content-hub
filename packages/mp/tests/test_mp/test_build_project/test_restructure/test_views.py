@@ -181,7 +181,7 @@ def test_view_deconstructor_html_widget_oserror(tmp_path: Path) -> None:
     orig_write_text = Path.write_text
     err_msg = "Disk full"
 
-    def side_effect(self: Path, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
+    def side_effect(self: Path, *args: Any, **kwargs: Any) -> Any:  # ruff:ignore[any-type]
         if self.suffix == ".html":
             raise OSError(err_msg)
         return orig_write_text(self, *args, **kwargs)

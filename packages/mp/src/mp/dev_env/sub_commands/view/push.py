@@ -17,7 +17,7 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
-from pathlib import Path  # noqa: TC003
+from pathlib import Path  # ruff:ignore[typing-only-standard-library-import]
 from typing import TYPE_CHECKING, Annotated, Any, cast
 
 import requests
@@ -115,7 +115,7 @@ def push_view(
         for view_dir in local_views:
             try:
                 _push_single_view(view_dir, force=force, validate=validate)
-            except Exception:  # noqa: BLE001
+            except Exception:  # ruff:ignore[blind-except]
                 failed_views.append(view_dir.name)
 
         if failed_views:
@@ -132,7 +132,7 @@ def push_view(
         return
 
     # Standard single push
-    assert view_name_or_id is not None  # noqa: S101
+    assert view_name_or_id is not None  # ruff:ignore[assert]
     view_src_path = _get_view_path_by_name(view_name_or_id, src)
     _push_single_view(view_src_path, force=force, validate=validate)
 
@@ -151,8 +151,8 @@ def _push_single_view(view_src_path: Path, *, force: bool = False, validate: boo
     builder = ViewBuilder(view_src_path, out_dir)
     try:
         builder.build()
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to build/validate view: %s", e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to build/validate view: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     # The built JSON name is to_snake_case(view_src_path.stem).json
@@ -170,8 +170,8 @@ def _push_single_view(view_src_path: Path, *, force: bool = False, validate: boo
     logger.info("Loading built view JSON...")
     try:
         view_data: dict[str, Any] = json.loads(built_json_path.read_text(encoding="utf-8"))
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to parse built view JSON: %s", e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to parse built view JSON: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     overview_tpl = view_data.get("OverviewTemplate")
@@ -215,8 +215,8 @@ def _validate_view(
         )
     except typer.Exit:
         raise
-    except Exception as e:  # noqa: BLE001
-        logger.error("Validation failed with an unexpected error: %s", e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Validation failed with an unexpected error: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     if errors:
@@ -234,7 +234,7 @@ def _get_local_custom_fields() -> dict[str, Path]:
     """
     try:
         custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
-    except Exception:  # noqa: BLE001
+    except Exception:  # ruff:ignore[blind-except]
         return {}
 
     local_fields = {}
@@ -244,7 +244,7 @@ def _get_local_custom_fields() -> dict[str, Path]:
                 data = mp.core.file_utils.load_yaml_file(f)
                 if isinstance(data, dict) and "displayName" in data:
                     local_fields[data["displayName"]] = f
-            except Exception as ex:  # noqa: BLE001
+            except Exception as ex:  # ruff:ignore[blind-except]
                 logger.debug("Failed to load local custom field file %s: %s", f, ex)
     return local_fields
 
@@ -313,7 +313,7 @@ def _denormalize_pushed_view(
     installed_cf = []
     try:
         installed_cf = backend_api.list_custom_fields()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # ruff:ignore[blind-except]
         logger.warning("Failed to fetch installed custom fields during view denormalization: %s", e)
 
     name_to_cf_id: dict[str, int] = {
@@ -413,7 +413,7 @@ def _resolve_existing_view(
         return None, None
     try:
         installed_views = backend_api.list_views()
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:  # ruff:ignore[blind-except]
         logger.warning("Failed to resolve existing view on server: %s. Proceeding as new view.", ex)
         return None, None
 
@@ -454,7 +454,7 @@ def _resolve_existing_view(
     return None, None
 
 
-def _verify_widgets(  # noqa: PLR0913
+def _verify_widgets(  # ruff:ignore[too-many-arguments]
     backend_api: BackendAPI,
     view_name_or_id: str,
     existing_identifier: str,
@@ -467,7 +467,7 @@ def _verify_widgets(  # noqa: PLR0913
     existing_view = None
     try:
         existing_view = backend_api.download_view(existing_identifier)
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:  # ruff:ignore[blind-except]
         logger.warning("Failed to verify existing widgets on server: %s. Proceeding.", ex)
 
     if existing_view is not None:
@@ -545,7 +545,7 @@ def _validate_push_preconditions(
         )
         errors.append(msg)
     elif not flat_view_data.get("identifier"):
-        import uuid  # noqa: PLC0415
+        import uuid  # ruff:ignore[import-outside-top-level]
         new_uuid = str(uuid.uuid4())
         logger.info("Generating new UUID '%s' for new view.", new_uuid)
         flat_view_data["identifier"] = new_uuid
@@ -599,7 +599,7 @@ def _check_unconfigured_instances(
     """Log warnings for required integrations that have no configured instance."""
     try:
         all_instances = backend_api.list_integration_instances("$all")
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:  # ruff:ignore[blind-except]
         logger.debug("Failed to verify integration instances configuration: %s", ex)
         return
 
@@ -633,7 +633,7 @@ def _verify_integration_dependencies(
 
     try:
         installed = backend_api.list_installed_integrations()
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:  # ruff:ignore[blind-except]
         logger.warning("Failed to fetch installed integrations from server: %s. Skipping dependency check.", ex)
         return
 
@@ -710,16 +710,16 @@ def _upload_built_view_data(
         try:
             err_data = e.response.json()
             err_msg = err_data.get("errorMessage") or e.response.text
-        except Exception:  # noqa: BLE001
+        except Exception:  # ruff:ignore[blind-except]
             err_msg = e.response.text
 
-        logger.error("=" * 80)  # noqa: TRY400
-        logger.error("[SERVER VALIDATION ERROR] View Upload Failed (Status Code %s)", e.response.status_code)  # noqa: TRY400
-        logger.error("%s", err_msg)  # noqa: TRY400
-        logger.error("=" * 80)  # noqa: TRY400
+        logger.error("=" * 80)  # ruff:ignore[error-instead-of-exception]
+        logger.error("[SERVER VALIDATION ERROR] View Upload Failed (Status Code %s)", e.response.status_code)  # ruff:ignore[error-instead-of-exception]
+        logger.error("%s", err_msg)  # ruff:ignore[error-instead-of-exception]
+        logger.error("=" * 80)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
-    except Exception as e:  # noqa: BLE001
-        logger.error("Upload failed for view '%s': %s", view_name, e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Upload failed for view '%s': %s", view_name, e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     # Verify in memory that all submitted widgets were persisted by server
@@ -745,7 +745,7 @@ def _verify_post_push_widgets(
     """Verify in memory that all submitted widgets were persisted by the SOAR platform."""
     try:
         downloaded_view = backend_api.download_view(server_uuid)
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:  # ruff:ignore[blind-except]
         logger.debug("Failed to verify post-push view widgets: %s", ex)
         return
 
@@ -806,7 +806,7 @@ def _find_view_dir_in_root(views_root: Path, view_name_or_id: str) -> Path | Non
             view_meta = mp.core.file_utils.load_yaml_file(view_yaml_path)
             if isinstance(view_meta, dict) and view_meta.get("name") == view_name_or_id:
                 return folder
-        except Exception as ex:  # noqa: BLE001
+        except Exception as ex:  # ruff:ignore[blind-except]
             logger.debug("Failed to read view.yaml in %s: %s", folder, ex)
 
     return None
