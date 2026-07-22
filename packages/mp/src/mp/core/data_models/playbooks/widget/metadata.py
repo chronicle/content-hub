@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, Self, TypedDict
 
-import pydantic  # noqa: TC002
+import pydantic  # ruff:ignore[typing-only-third-party-import]
 
 import mp.core.constants
 import mp.core.utils
