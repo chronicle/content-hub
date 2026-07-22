@@ -14,18 +14,15 @@
 
 from __future__ import annotations
 
+import pathlib
+from typing import TYPE_CHECKING
 
-class ProofPointPSError(Exception):
-    """General exception for ProofPointPS integration."""
+from integration_testing.common import get_def_file_content
 
-
-class ProofPointPSHTTPError(ProofPointPSError):
-    """HTTP-specific exception for ProofPointPS integration."""
-
-
-class FolderNotFoundError(ProofPointPSError):
-    """Exception raised when a quarantine folder does not exist."""
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
-class InvalidParameterError(ProofPointPSError):
-    """Invalid parameter exception for ProofPointPS integration."""
+INTEGRATION_PATH: pathlib.Path = pathlib.Path(__file__).parent.parent
+CONFIG_PATH = pathlib.Path.joinpath(INTEGRATION_PATH, "tests", "config.json")
+CONFIG: SingleJson = get_def_file_content(CONFIG_PATH)

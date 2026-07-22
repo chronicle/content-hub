@@ -15,17 +15,13 @@
 from __future__ import annotations
 
 
-class ProofPointPSError(Exception):
-    """General exception for ProofPointPS integration."""
+class SentinelOneSingularityOperationsCenterError(Exception):
+    """Base exception for SentinelOne Singularity Operations Center Integration."""
 
 
-class ProofPointPSHTTPError(ProofPointPSError):
-    """HTTP-specific exception for ProofPointPS integration."""
+class UserNotFoundError(SentinelOneSingularityOperationsCenterError):
+    """Raised when a user cannot be found in SentinelOne."""
 
 
-class FolderNotFoundError(ProofPointPSError):
-    """Exception raised when a quarantine folder does not exist."""
-
-
-class InvalidParameterError(ProofPointPSError):
-    """Invalid parameter exception for ProofPointPS integration."""
+class AlertUpdateError(SentinelOneSingularityOperationsCenterError):
+    """Raised when an alert update fails or encounters errors."""
