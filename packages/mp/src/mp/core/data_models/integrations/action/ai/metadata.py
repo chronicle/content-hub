@@ -18,9 +18,9 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from .capabilities import ActionCapabilities  # noqa: TC001
-from .entity_usage import EntityUsage  # noqa: TC001
-from .outcome_categories import OutcomeCategories  # noqa: TC001
+from .capabilities import ActionCapabilities  # ruff:ignore[typing-only-first-party-import]
+from .entity_usage import EntityUsage  # ruff:ignore[typing-only-first-party-import]
+from .outcome_categories import OutcomeCategories  # ruff:ignore[typing-only-first-party-import]
 
 
 class ActionAiMetadata(BaseModel):

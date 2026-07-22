@@ -22,8 +22,8 @@ import pytest
 import mp.core.unix
 from mp.core.exceptions import NonFatalValidationError
 from mp.validate.validations.integrations.version_bump_validation import (
-    _create_data_for_version_bump_validation,  # noqa: PLC2701
-    _version_bump_validation_run_checks,  # noqa: PLC2701
+    _create_data_for_version_bump_validation,  # ruff:ignore[import-private-name]
+    _version_bump_validation_run_checks,  # ruff:ignore[import-private-name]
 )
 
 if TYPE_CHECKING:

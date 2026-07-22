@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, NamedTuple
 import requests
 from TIPCommon.base.interfaces import Apiable
 
-from . import api_utils, auth_manager, constants, data_parser, datamodels, query_builder
+from . import api_utils, auth_manager, constants, data_parser, datamodels, exceptions, query_builder
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -43,7 +43,6 @@ class WizApiClient(Apiable):
             configuration=configuration,
         )
         self.logger: ScriptLogger = logger
-        self.parser: data_parser = data_parser
         self.api_root: str = self.configuration.api_root
 
     def test_connectivity(self) -> None:
@@ -85,7 +84,7 @@ class WizApiClient(Apiable):
         )
         api_utils.validate_response(response=response)
 
-        return self.parser.build_issue_object(response.json())
+        return data_parser.build_issue_object(response.json())
 
     def add_comment_to_issue(
         self,
@@ -116,7 +115,7 @@ class WizApiClient(Apiable):
         )
         api_utils.validate_response(response=response)
 
-        return self.parser.build_issue_comment_object(response.json())
+        return data_parser.build_issue_comment_object(response.json())
 
     def reopen_issue(self, issue_id: str) -> datamodels.Issue:
         """Reopen an issue.
@@ -144,7 +143,7 @@ class WizApiClient(Apiable):
         )
         api_utils.validate_response(response=response)
 
-        return self.parser.build_update_issue_object(response.json())
+        return data_parser.build_update_issue_object(response.json())
 
     def ignore_issue(
         self,
@@ -181,7 +180,7 @@ class WizApiClient(Apiable):
         )
         api_utils.validate_response(response=response)
 
-        return self.parser.build_update_issue_object(response.json())
+        return data_parser.build_update_issue_object(response.json())
 
     def resolve_issue(
         self,
@@ -219,7 +218,7 @@ class WizApiClient(Apiable):
         )
         api_utils.validate_response(response=response)
 
-        return self.parser.build_update_issue_object(response.json())
+        return data_parser.build_update_issue_object(response.json())
 
     def get_resource_vulnerability_findings(
         self,
@@ -267,7 +266,45 @@ class WizApiClient(Apiable):
         api_utils.validate_response(response=response)
 
         nodes = response.json().get("data", {}).get("vulnerabilityFindings", {}).get("nodes", [])
-        findings = [self.parser.build_vulnerability_finding_object(node) for node in nodes]
+        findings = [data_parser.build_vulnerability_finding_object(node) for node in nodes]
         if cve_ids:
             findings = [f for f in findings if f.name in cve_ids]
         return findings[:first]
+
+    def get_threat_ai_analysis(
+        self,
+        issue_id: str
+    ) -> datamodels.ThreatAIAnalysis | None:
+        """Get threat AI analysis for a specific threat by its issue ID.
+
+        Args:
+            issue_id: The ID of the issue/threat to retrieve details for.
+
+        Returns:
+            A ThreatAIAnalysis object containing details, or None if analysis is not found.
+
+        Raises:
+            IssueNotFoundError: If the threat with specified ID is not found.
+        """
+        threat_analysis_query_builder: query_builder.ThreatAIAnalysisQueryBuilder = (
+            query_builder.ThreatAIAnalysisQueryBuilder(issue_id=issue_id)
+        )
+
+        url: str = api_utils.get_full_url(
+            api_root=self.api_root,
+            url_id="graphql",
+        )
+        response: requests.Response = self.session.post(
+            url=url,
+            json=threat_analysis_query_builder.build_query(),
+        )
+        api_utils.validate_response(response=response)
+
+        response_json = response.json()
+        if (response_json.get("data") or {}).get("issue") is None:
+            raise exceptions.IssueNotFoundError(
+                f"Threat with ID {issue_id} wasn't found"
+                f" in {constants.INTEGRATION_NAME}."
+            )
+
+        return data_parser.build_threat_ai_analysis_object(response_json)

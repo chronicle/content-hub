@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 NO_DIFF: dict = {}
 
 
-def test_write_playbooks_json(  # noqa: PLR0913, PLR0917
+def test_write_playbooks_json(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
     tmp_path: Path,
     built_playbook_path: Path,
     built_block_path: Path,

@@ -84,7 +84,7 @@ def track_command(mp_command_function: MpCommand[P]) -> MpCommand[P]:
             mp_command_function(*args, **kwargs)
         except typer.Exit as e:
             command_vars.exit_code = e.exit_code
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # ruff:ignore[blind-except]
             command_vars.unexpected_exit = True
             raw_stack = traceback.format_exc()
             command_vars.stack = _sanitize_traceback(raw_stack)
