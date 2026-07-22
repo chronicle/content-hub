@@ -36,7 +36,7 @@ def _find_local_alert_grouping_rule_file_by_name(name_or_path: str) -> Path | No
 
     try:
         rules_root = mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir()
-    except Exception:  # noqa: BLE001
+    except Exception:  # ruff:ignore[blind-except]
         return None
     if not rules_root.exists() or not rules_root.is_dir():
         return None
@@ -68,7 +68,7 @@ def _find_rule_in_installed_by_local_file(
 ) -> dict | None:
     try:
         local_data = mp.core.file_utils.load_yaml_file(local_file_path)
-    except Exception:  # noqa: BLE001
+    except Exception:  # ruff:ignore[blind-except]
         logger.warning("Failed to load local file '%s' to extract category.", local_file_path)
         return None
 
@@ -95,7 +95,7 @@ def _get_rule_filename(rule_data: dict) -> str:
 
 @pull_app.command(name="alert-grouping-rule")
 @track_command
-def pull_alert_grouping_rule(  # noqa: C901, PLR0912, PLR0915
+def pull_alert_grouping_rule(  # ruff:ignore[complex-structure, too-many-branches, too-many-statements]
     rule_name_or_id: Annotated[
         str | None, typer.Argument(help="The alert grouping rule name or identifier to pull.")
     ] = None,
@@ -138,8 +138,8 @@ def pull_alert_grouping_rule(  # noqa: C901, PLR0912, PLR0915
     logger.info("Fetching installed alert grouping rules...")
     try:
         installed_rules = backend_api.list_alert_grouping_rules()
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to fetch installed alert grouping rules: %s", e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to fetch installed alert grouping rules: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     if list_only:
@@ -250,8 +250,8 @@ def _pull_all_alert_grouping_rules(installed_rules: list[dict], dst: Path | None
 
         try:
             _save_alert_grouping_rule(rule, dst)
-        except Exception as e:  # noqa: BLE001
-            logger.error("Skipping alert grouping rule '%s' due to an error: %s", rule_name, e)  # noqa: TRY400
+        except Exception as e:  # ruff:ignore[blind-except]
+            logger.error("Skipping alert grouping rule '%s' due to an error: %s", rule_name, e)  # ruff:ignore[error-instead-of-exception]
 
     logger.info("Successfully finished pulling all alert grouping rules.")
 
@@ -259,7 +259,7 @@ def _pull_all_alert_grouping_rules(installed_rules: list[dict], dst: Path | None
 def _find_local_alert_grouping_rule_file(category: str, category_details: list[dict] | None) -> Path | None:
     try:
         rules_root = mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir()
-    except Exception:  # noqa: BLE001
+    except Exception:  # ruff:ignore[blind-except]
         return None
     if not rules_root.exists() or not rules_root.is_dir():
         return None
@@ -269,7 +269,7 @@ def _find_local_alert_grouping_rule_file(category: str, category_details: list[d
     for f in rules_root.glob("*.yaml"):
         try:
             data = mp.core.file_utils.load_yaml_file(f)
-        except Exception:  # noqa: BLE001, S112
+        except Exception:  # ruff:ignore[blind-except, try-except-continue]
             continue
         if isinstance(data, dict):
             local_cat = data.get("category")
@@ -311,6 +311,6 @@ def _save_alert_grouping_rule(rule_data: dict, dst: Path | None) -> None:
     try:
         actual_dst.parent.mkdir(parents=True, exist_ok=True)
         mp.core.file_utils.save_yaml(rule_data, actual_dst)
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to save alert grouping rule to '%s': %s", actual_dst, e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to save alert grouping rule to '%s': %s", actual_dst, e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None

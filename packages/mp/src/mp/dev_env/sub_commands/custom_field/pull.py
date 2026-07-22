@@ -126,7 +126,7 @@ def _find_local_custom_field_file_by_name(name_or_path: str) -> Path | None:
 
     try:
         custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
-    except Exception:  # noqa: BLE001
+    except Exception:  # ruff:ignore[blind-except]
         return None
     if not custom_fields_root.exists() or not custom_fields_root.is_dir():
         return None
@@ -147,7 +147,7 @@ def _find_local_custom_field_file_by_name(name_or_path: str) -> Path | None:
 
 @pull_app.command(name="custom-field")
 @track_command
-def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
+def pull_custom_field(  # ruff:ignore[complex-structure, too-many-branches, too-many-locals, too-many-statements]
     field_name_or_id: Annotated[
         str | None, typer.Argument(help="The custom field name or identifier to pull.")
     ] = None,
@@ -197,8 +197,8 @@ def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
     logger.info("Fetching installed custom fields...")
     try:
         installed_fields = backend_api.list_custom_fields()
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to fetch installed custom fields: %s", e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to fetch installed custom fields: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     if list_only:
@@ -235,8 +235,8 @@ def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
             try:
                 _download_and_save_custom_field(backend_api, field_id, dst)
                 pulled_count += 1
-            except Exception as e:  # noqa: BLE001
-                logger.error("Skipping custom field '%s' due to an error: %s", field_name, e)  # noqa: TRY400
+            except Exception as e:  # ruff:ignore[blind-except]
+                logger.error("Skipping custom field '%s' due to an error: %s", field_name, e)  # ruff:ignore[error-instead-of-exception]
 
         logger.info("Successfully finished pulling all %d custom fields.", pulled_count)
         return
@@ -254,7 +254,7 @@ def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
     if local_file_path:
         try:
             local_data = mp.core.file_utils.load_yaml_file(local_file_path)
-        except Exception:  # noqa: BLE001
+        except Exception:  # ruff:ignore[blind-except]
             logger.warning("Failed to load local file '%s' to extract displayName.", local_file_path)
         else:
             if isinstance(local_data, dict):
@@ -317,7 +317,7 @@ def pull_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
 def _find_local_custom_field_file(display_name: str, scopes: set[str]) -> Path | None:
     try:
         custom_fields_root = mp.core.file_utils.create_or_get_custom_fields_root_dir()
-    except Exception:  # noqa: BLE001
+    except Exception:  # ruff:ignore[blind-except]
         return None
     if not custom_fields_root.exists() or not custom_fields_root.is_dir():
         return None
@@ -325,7 +325,7 @@ def _find_local_custom_field_file(display_name: str, scopes: set[str]) -> Path |
     for f in custom_fields_root.rglob("*.yaml"):
         try:
             data = mp.core.file_utils.load_yaml_file(f)
-        except Exception:  # noqa: BLE001, S112
+        except Exception:  # ruff:ignore[blind-except, try-except-continue]
             continue
         if isinstance(data, dict):
             local_name = data.get("displayName")
@@ -339,7 +339,7 @@ def _find_local_custom_field_file(display_name: str, scopes: set[str]) -> Path |
     return None
 
 
-def _download_and_save_custom_field(  # noqa: C901, PLR0912, PLR0915
+def _download_and_save_custom_field(  # ruff:ignore[complex-structure, too-many-branches, too-many-statements]
     backend_api: mp.dev_env.api.BackendAPI, field_id: int | str, dst: Path | None
 ) -> None:
     logger.info("Downloading custom field (ID: %s)...", field_id)
@@ -347,10 +347,10 @@ def _download_and_save_custom_field(  # noqa: C901, PLR0912, PLR0915
         numeric_id = int(field_id)
         field_data = backend_api.download_custom_field(numeric_id)
     except (ValueError, TypeError):
-        logger.error("Invalid field ID '%s': Must be a numeric value.", field_id)  # noqa: TRY400
+        logger.error("Invalid field ID '%s': Must be a numeric value.", field_id)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to download custom field '%s': %s", field_id, e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to download custom field '%s': %s", field_id, e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     # Determine destination path
@@ -405,6 +405,6 @@ def _download_and_save_custom_field(  # noqa: C901, PLR0912, PLR0915
     try:
         actual_dst.parent.mkdir(parents=True, exist_ok=True)
         mp.core.file_utils.save_yaml(field_data, actual_dst)
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to save custom field to '%s': %s", actual_dst, e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to save custom field to '%s': %s", actual_dst, e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None

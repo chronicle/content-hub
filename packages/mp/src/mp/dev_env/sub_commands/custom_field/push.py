@@ -120,7 +120,7 @@ def normalize_name(n: str) -> str:
 
 @push_app.command(name="custom-field")
 @track_command
-def push_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
+def push_custom_field(  # ruff:ignore[complex-structure, too-many-branches, too-many-locals, too-many-statements]
     field_file_or_name: Annotated[
         str | None, typer.Argument(help="The custom field YAML file path or name to push.")
     ] = None,
@@ -175,7 +175,7 @@ def push_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
         for f in yaml_files:
             try:
                 field_data = mp.core.file_utils.load_yaml_file(f)
-            except Exception:  # noqa: BLE001
+            except Exception:  # ruff:ignore[blind-except]
                 field_data = None
 
             if isinstance(field_data, dict):
@@ -205,7 +205,7 @@ def push_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
         return
 
     # Standard single push
-    assert field_file_or_name is not None  # noqa: S101
+    assert field_file_or_name is not None  # ruff:ignore[assert]
 
     target_scopes = scope or None
 
@@ -243,7 +243,7 @@ def push_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
         for f in all_candidates:
             try:
                 f_data = mp.core.file_utils.load_yaml_file(f)
-            except Exception:  # noqa: BLE001, S112
+            except Exception:  # ruff:ignore[blind-except, try-except-continue]
                 continue
             if isinstance(f_data, dict) and target_scopes:
                 f_scopes = f_data.get("scopes")
@@ -264,12 +264,12 @@ def push_custom_field(  # noqa: C901, PLR0912, PLR0914, PLR0915
     logger.info("Successfully pushed %d custom field(s).", len(files_to_push))
 
 
-def _push_single_custom_field(field_file: Path, force: bool) -> None:  # noqa: C901, FBT001, PLR0912, PLR0915
+def _push_single_custom_field(field_file: Path, force: bool) -> None:  # ruff:ignore[complex-structure, boolean-type-hint-positional-argument, too-many-branches, too-many-statements]
     logger.info("Loading custom field YAML from '%s'...", field_file)
     try:
         field_data = mp.core.file_utils.load_yaml_file(field_file)
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to parse custom field YAML: %s", e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to parse custom field YAML: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     if not isinstance(field_data, dict):
@@ -282,8 +282,8 @@ def _push_single_custom_field(field_file: Path, force: bool) -> None:  # noqa: C
     logger.info("Checking if custom field exists on server...")
     try:
         installed_fields = backend_api.list_custom_fields()
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to fetch installed custom fields: %s", e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to fetch installed custom fields: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     field_name = field_data.get("displayName")
@@ -316,7 +316,7 @@ def _push_single_custom_field(field_file: Path, force: bool) -> None:  # noqa: C
         try:
             numeric_id = int(existing_id)
         except (ValueError, TypeError) as e:
-            logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
+            logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # ruff:ignore[error-instead-of-exception]
             raise typer.Exit(1) from e
         else:
             # Align casing of displayName to match server to avoid validation errors
@@ -330,8 +330,8 @@ def _push_single_custom_field(field_file: Path, force: bool) -> None:  # noqa: C
 
             try:
                 backend_api.update_custom_field(numeric_id, field_data)
-            except Exception as e:  # noqa: BLE001
-                logger.error("Failed to update custom field '%s': %s", field_name, e)  # noqa: TRY400
+            except Exception as e:  # ruff:ignore[blind-except]
+                logger.error("Failed to update custom field '%s': %s", field_name, e)  # ruff:ignore[error-instead-of-exception]
                 raise typer.Exit(1) from None
     else:
         if not force:
@@ -347,8 +347,8 @@ def _push_single_custom_field(field_file: Path, force: bool) -> None:  # noqa: C
         logger.info("Creating new custom field...")
         try:
             backend_api.create_custom_field(field_data)
-        except Exception as e:  # noqa: BLE001
-            logger.error("Failed to create custom field '%s': %s", field_name, e)  # noqa: TRY400
+        except Exception as e:  # ruff:ignore[blind-except]
+            logger.error("Failed to create custom field '%s': %s", field_name, e)  # ruff:ignore[error-instead-of-exception]
             raise typer.Exit(1) from None
 
     logger.info("Custom field '%s' pushed successfully.", field_name)

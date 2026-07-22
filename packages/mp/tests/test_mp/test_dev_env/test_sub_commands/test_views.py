@@ -14,10 +14,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path  # noqa: TC003
+from pathlib import Path  # ruff:ignore[typing-only-standard-library-import]
 from unittest import mock
 
-import pytest  # noqa: TC002
+import pytest  # ruff:ignore[typing-only-third-party-import]
 import yaml
 from typer.testing import CliRunner
 

@@ -81,7 +81,7 @@ def push_alert_grouping_rule(
         return
 
     # Standard single push
-    assert rule_file_or_name is not None  # noqa: S101
+    assert rule_file_or_name is not None  # ruff:ignore[assert]
     files_to_push = []
     rule_file = Path(rule_file_or_name)
     if rule_file.is_file():
@@ -118,12 +118,12 @@ def _get_rule_filename(rule_data: dict) -> str:
     return str(category_name)
 
 
-def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:  # noqa: C901, FBT001, PLR0912, PLR0915
+def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:  # ruff:ignore[complex-structure, boolean-type-hint-positional-argument, too-many-branches, too-many-statements]
     logger.info("Loading alert grouping rule YAML from '%s'...", rule_file)
     try:
         rule_data = mp.core.file_utils.load_yaml_file(rule_file)
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to parse alert grouping rule YAML: %s", e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to parse alert grouping rule YAML: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     if not isinstance(rule_data, dict):
@@ -136,8 +136,8 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:  # n
     logger.info("Checking if alert grouping rule exists on server...")
     try:
         installed_rules = backend_api.list_alert_grouping_rules()
-    except Exception as e:  # noqa: BLE001
-        logger.error("Failed to fetch installed alert grouping rules: %s", e)  # noqa: TRY400
+    except Exception as e:  # ruff:ignore[blind-except]
+        logger.error("Failed to fetch installed alert grouping rules: %s", e)  # ruff:ignore[error-instead-of-exception]
         raise typer.Exit(1) from None
 
     rule_category = rule_data.get("category")
@@ -208,10 +208,10 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:  # n
 
             backend_api.update_alert_grouping_rule(numeric_id, rule_data)
         except (ValueError, TypeError) as e:
-            logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # noqa: TRY400
+            logger.error("Invalid existing ID '%s': Must be a numeric value.", existing_id)  # ruff:ignore[error-instead-of-exception]
             raise typer.Exit(1) from e
-        except Exception as e:  # noqa: BLE001
-            logger.error("Failed to update alert grouping rule for category '%s': %s", rule_category, e)  # noqa: TRY400
+        except Exception as e:  # ruff:ignore[blind-except]
+            logger.error("Failed to update alert grouping rule for category '%s': %s", rule_category, e)  # ruff:ignore[error-instead-of-exception]
             raise typer.Exit(1) from None
     else:
         if not force:
@@ -227,8 +227,8 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:  # n
         logger.info("Creating new alert grouping rule...")
         try:
             backend_api.create_alert_grouping_rule(rule_data)
-        except Exception as e:  # noqa: BLE001
-            logger.error("Failed to create alert grouping rule for category '%s': %s", rule_category, e)  # noqa: TRY400
+        except Exception as e:  # ruff:ignore[blind-except]
+            logger.error("Failed to create alert grouping rule for category '%s': %s", rule_category, e)  # ruff:ignore[error-instead-of-exception]
             raise typer.Exit(1) from None
 
     logger.info("Alert grouping rule for category '%s' pushed successfully.", rule_category)
