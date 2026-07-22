@@ -58,17 +58,17 @@ class DescribeConnector(DescribeBase[ConnectorAiMetadata]):
 
     @property
     def metadata_file_name(self) -> str:
-        """Get the name of the metadata file."""
+        """The name of the metadata file."""
         return constants.CONNECTORS_AI_DESCRIPTION_FILE
 
     @property
     def resource_type_name(self) -> str:
-        """Get the resource type name."""
+        """The resource type name."""
         return "connector"
 
     @property
     def response_schema(self) -> type[ConnectorAiMetadata]:
-        """Get the response schema."""
+        """The response schema."""
         return ConnectorAiMetadata
 
     async def _get_all_resources(self, status: IntegrationStatus) -> set[str]:

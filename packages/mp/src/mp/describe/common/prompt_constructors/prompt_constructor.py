@@ -59,6 +59,6 @@ class PromptConstructor(abc.ABC):
 
     @property
     async def task_prompt(self) -> Template:
-        """Get the task prompt (compatibility property)."""
+        """The task prompt (compatibility property)."""
         # Compatibility property
         return await self.get_task_prompt()

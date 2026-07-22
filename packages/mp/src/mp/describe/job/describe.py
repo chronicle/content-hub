@@ -58,17 +58,17 @@ class DescribeJob(DescribeBase[JobAiMetadata]):
 
     @property
     def metadata_file_name(self) -> str:
-        """Get the name of the metadata file."""
+        """The name of the metadata file."""
         return constants.JOBS_AI_DESCRIPTION_FILE
 
     @property
     def resource_type_name(self) -> str:
-        """Get the resource type name."""
+        """The resource type name."""
         return "job"
 
     @property
     def response_schema(self) -> type[JobAiMetadata]:
-        """Get the response schema."""
+        """The response schema."""
         return JobAiMetadata
 
     async def _get_all_resources(self, status: IntegrationStatus) -> set[str]:

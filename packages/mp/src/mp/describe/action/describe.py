@@ -63,17 +63,17 @@ class DescribeAction(DescribeBase[ActionAiMetadata]):
 
     @property
     def metadata_file_name(self) -> str:
-        """Get the name of the metadata file."""
+        """The name of the metadata file."""
         return constants.ACTIONS_AI_DESCRIPTION_FILE
 
     @property
     def resource_type_name(self) -> str:
-        """Get the resource type name."""
+        """The resource type name."""
         return "action"
 
     @property
     def response_schema(self) -> type[ActionAiMetadata]:
-        """Get the response schema."""
+        """The response schema."""
         return ActionAiMetadata
 
     async def describe_actions(

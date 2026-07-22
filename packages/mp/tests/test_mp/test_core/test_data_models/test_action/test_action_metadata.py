@@ -25,7 +25,7 @@ from mp.core.data_models.integrations.action.metadata import (
     ActionMetadata,
     BuiltActionMetadata,
     NonBuiltActionMetadata,
-    _load_json_examples,  # noqa: PLC2701
+    _load_json_examples,  # ruff:ignore[import-private-name]
 )
 from test_mp.test_core.test_data_models.utils import FILE_NAME
 

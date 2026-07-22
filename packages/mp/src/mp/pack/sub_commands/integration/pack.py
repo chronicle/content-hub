@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path  # noqa: TC003
+from pathlib import Path  # ruff:ignore[typing-only-standard-library-import]
 from typing import Annotated
 
 import typer
@@ -30,7 +30,7 @@ app: typer.Typer = typer.Typer()
 
 @app.command(name="integration", help="Pack an integration into a SOAR supported ZIP")
 @track_command
-def pack_integration(  # noqa: PLR0913
+def pack_integration(  # ruff:ignore[too-many-arguments]
     integration: Annotated[
         str,
         typer.Argument(help="The name of the integration to pack."),

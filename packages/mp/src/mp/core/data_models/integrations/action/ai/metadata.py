@@ -18,10 +18,10 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from .ai_categories import AiCategories  # noqa: TC001
-from .capabilities import ActionCapabilities  # noqa: TC001
-from .entity_usage import EntityUsage  # noqa: TC001
-from .product_categories import ActionProductCategories  # noqa: TC001
+from .ai_categories import AiCategories  # ruff:ignore[typing-only-first-party-import]
+from .capabilities import ActionCapabilities  # ruff:ignore[typing-only-first-party-import]
+from .entity_usage import EntityUsage  # ruff:ignore[typing-only-first-party-import]
+from .product_categories import ActionProductCategories  # ruff:ignore[typing-only-first-party-import]
 
 
 class ActionAiMetadata(BaseModel):

@@ -367,7 +367,7 @@ class ActionProductCategory(enum.StrEnum):
     ENABLE_IDENTITY = "Enable Identity (User, Account)"
     CONTAIN_HOST = "Contain Host"
     UNCONTAIN_HOST = "Uncontain Host"
-    RESET_IDENTITY_PASSWORD = "Reset Identity Password (User, Account)"  # noqa: S105
+    RESET_IDENTITY_PASSWORD = "Reset Identity Password (User, Account)"  # ruff:ignore[hardcoded-password-string]
     UPDATE_IDENTITY = "Update Identity (User, Account)"
     SEARCH_EVENTS = "Search Events"
     EXECUTE_COMMAND_ON_THE_HOST = "Execute Command on the Host"

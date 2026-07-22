@@ -37,7 +37,6 @@ CONFIG_FILE_NAME: str = ".mp_config"
 CONFIG_DIR: Path = Path(user_config_dir(mp.core.constants.APP_NAME, mp.core.constants.APP_AUTHOR))
 CONFIG_PATH: Path = CONFIG_DIR / CONFIG_FILE_NAME
 
-
 MARKETPLACE_PATH_KEY: str = "marketplace_path"
 CUSTOM_SRC_KEY: str = "src"
 CUSTOM_DST_KEY: str = "dst"
@@ -278,7 +277,7 @@ def _get_config_key(section: str, key: str, val_type: type[_T], /) -> _T | None:
 
         if val_type is Path:
             val = config.get(section, key, fallback=None)
-            return typing.cast("_T | None", val_type(val) if val else None)
+            return val_type(val) if val else None
 
     except (configparser.NoOptionError, configparser.NoSectionError, KeyError):
         return None
