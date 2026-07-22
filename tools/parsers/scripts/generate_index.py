@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 import sys
 
-# Target directory to walk
+# Target directory to walk (assumes script is run from repo root)
 target_dir = Path("content/parsers/third_party")
 output_dir = Path("content/parsers/third_party")
 
@@ -12,7 +12,7 @@ output_dir = Path("content/parsers/third_party")
 community_dir = target_dir / "community"
 partner_dir = target_dir / "partner"
 
-def generate_index_for_subdir(sub_dir: Path, output_json_name: str, output_md_name: str, source_type: str):
+def generate_index_for_subdir(sub_dir: Path, output_json_name: str, source_type: str):
     entries = []
     
     # If the sub-directory doesn't exist, skip it
@@ -53,8 +53,8 @@ def generate_index_for_subdir(sub_dir: Path, output_json_name: str, output_md_na
             "source": source_type
         })
         
-    # Sort entries alphabetically by log type
-    entries.sort(key=lambda x: x["log_type"])
+    # Sort entries alphabetically by log type and config path to prevent ordering variance
+    entries.sort(key=lambda x: (x["log_type"], x["config_path"]))
     
     # Write JSON index file
     json_path = output_dir / output_json_name
@@ -65,33 +65,12 @@ def generate_index_for_subdir(sub_dir: Path, output_json_name: str, output_md_na
     except Exception as e:
         print(f"ERROR: Failed to write {json_path}: {e}", file=sys.stderr)
         sys.exit(1)
-        
-    # Write Markdown index file
-    md_path = output_dir / output_md_name
-    md_lines = [
-        f"# {source_type.title()} Parser Index",
-        "",
-        "| Log Type | Config File |",
-        "| :--- | :--- |"
-    ]
-    for entry in entries:
-        filename = Path(entry['config_path']).name
-        md_lines.append(f"| {entry['log_type']} | [{filename}]({entry['config_path']}) |")
-        
-    try:
-        with open(md_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(md_lines) + "\n")
-        print(f"Successfully generated {md_path}")
-    except Exception as e:
-        print(f"ERROR: Failed to write {md_path}: {e}", file=sys.stderr)
-        sys.exit(1)
 
 def main():
     # Generate Community Index
     generate_index_for_subdir(
         sub_dir=community_dir,
         output_json_name="COMMUNITY_INDEX.json",
-        output_md_name="COMMUNITY_INDEX.md",
         source_type="COMMUNITY"
     )
 
@@ -99,10 +78,8 @@ def main():
     generate_index_for_subdir(
         sub_dir=partner_dir,
         output_json_name="PARTNER_INDEX.json",
-        output_md_name="PARTNER_INDEX.md",
         source_type="PARTNER"
     )
 
 if __name__ == "__main__":
     main()
-
