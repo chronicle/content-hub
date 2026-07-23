@@ -51,10 +51,16 @@ NAME_MAPPER: dict[str, str] = {
     "pull_integration": "dev-env pull integration",
     "push_playbook": "dev-env push playbook",
     "pull_playbook": "dev-env pull playbook",
+    "push_view": "dev-env push view",
+    "pull_view": "dev-env pull view",
     "push_custom_integration_repository": "dev-env push custom integration repository",
     "describe_action_with_ai": "describe action",
     "update": "self update",
     "pack_integration": "pack integration",
+    "pull_custom_field": "dev-env pull custom-field",
+    "push_custom_field": "dev-env push custom-field",
+    "pull_alert_grouping_rule": "dev-env pull alert-grouping-rule",
+    "push_alert_grouping_rule": "dev-env push alert-grouping-rule",
 }
 
 ALLOWED_COMMAND_ARGUMENTS: set[str] = {

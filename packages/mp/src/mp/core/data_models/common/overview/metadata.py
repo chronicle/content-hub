@@ -15,14 +15,17 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, NotRequired, Self, TypedDict
-
-import yaml
+import logging
+from typing import TYPE_CHECKING, NotRequired, Self, TypedDict, cast
 
 import mp.core.constants
 import mp.core.utils
 from mp.core.data_models.abc import RepresentableEnum, SequentialMetadata
+from mp.core.data_models.common.widget.data import WidgetSize
 from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
+from mp.core.file_utils import load_yaml_file
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -37,6 +40,9 @@ class OverviewType(RepresentableEnum):
     SYSTEM_ALERT = 2
     SYSTEM_CASE = 3
     ALERT_TYPE = 4
+    SYSTEM_DEFAULT_CASE = 5
+    SYSTEM_DEFAULT_ALERT = 6
+    SYSTEM_DETECTION = 7
 
 
 class OverviewWidgetDetails(TypedDict):
@@ -127,7 +133,8 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
         all_widget: list[PlaybookWidgetMetadata] = PlaybookWidgetMetadata.from_non_built_path(path)
         res: list[Self] = []
 
-        for non_built_overview in yaml.safe_load(meta_path.read_text(encoding="utf-8")):
+        overviews_data = cast("list[NonBuiltOverview]", load_yaml_file(meta_path) or [])
+        for non_built_overview in overviews_data:
             widget_details: list[OverviewWidgetDetails] = non_built_overview.get("widgets_details", [])
             widget_names: frozenset[WidgetName] = frozenset([w_d["title"] for w_d in widget_details])
             widgets: list[PlaybookWidgetMetadata] = [w for w in all_widget if w.title in widget_names]
@@ -136,6 +143,63 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
             res.append(ov)
 
         return res
+
+    @classmethod
+    def from_non_built_view_path(cls, path: Path) -> Self:
+        """Create an Overview object from a non-built view directory path.
+
+        Args:
+            path: The path to the non-built view directory (e.g. content/views/some_view).
+
+        Returns:
+            An Overview object.
+
+        Raises:
+            FileNotFoundError: If the view.yaml file doesn't exist.
+            ValueError: If a widget declared in widgets_details cannot be found in the widgets directory.
+
+        """
+        view_yaml_path: Path = path / mp.core.constants.VIEW_FILE_NAME
+        if not view_yaml_path.exists():
+            msg: str = f"Missing view config at: {view_yaml_path}"
+            raise FileNotFoundError(msg)
+
+        non_built_view: NonBuiltOverview = cast(
+            "NonBuiltOverview",
+            load_yaml_file(view_yaml_path) or {},
+        )
+
+        # Load all widgets from widgets/ directory
+        all_widget: list[PlaybookWidgetMetadata] = PlaybookWidgetMetadata.from_non_built_path(path)
+        all_widget.sort(key=lambda w: w.order)
+
+        widget_details: list[OverviewWidgetDetails] = non_built_view.get("widgets_details") or []
+        widget_details.sort(key=lambda wd: wd.get("order") or 0)
+
+        widget_by_title: dict[str, list[PlaybookWidgetMetadata]] = {}
+        for w in all_widget:
+            if w.title:
+                widget_by_title.setdefault(w.title, []).append(w)
+
+        widgets: list[PlaybookWidgetMetadata] = []
+        for w_d in widget_details:
+            title = w_d.get("title")
+            if title and title in widget_by_title and widget_by_title[title]:
+                widget = widget_by_title[title].pop(0)
+                if w_d.get("order") is not None:
+                    widget.order = w_d["order"]
+                if w_d.get("size") is not None:
+                    widget.widget_size = WidgetSize.from_string(w_d["size"])
+                widgets.append(widget)
+            elif title:
+                err_msg = f"Widget '{title}' declared in widgets_details but not found in widgets directory."
+                logger.error(err_msg)
+                raise ValueError(err_msg)
+
+        ov: Self = cls._from_non_built(non_built_view)
+        ov.widgets = widgets
+
+        return ov
 
     @classmethod
     def _from_built(cls, built: BuiltOverview) -> Self:
@@ -148,23 +212,29 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
             alert_rule_type=built["OverviewTemplate"]["AlertRuleType"],
             roles=built["OverviewTemplate"]["Roles"],
             role_names=built.get("Roles", []),
-            widgets=[
-                PlaybookWidgetMetadata.from_built("", built_widget)
-                for built_widget in built["OverviewTemplate"]["Widgets"]
-            ],
+            widgets=sorted(
+                [
+                    PlaybookWidgetMetadata.from_built("", built_widget)
+                    for built_widget in built["OverviewTemplate"]["Widgets"]
+                ],
+                key=lambda w: w.order,
+            ),
         )
 
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltOverview) -> Self:
+        if not non_built.get("identifier") or not non_built.get("name"):
+            raise ValueError("Overview metadata must contain 'identifier' and 'name'")  # ruff:ignore[raise-vanilla-args, raw-string-in-exception]
+        raw_type = non_built.get("type") or "system_case"
         return cls(
             identifier=non_built["identifier"],
             name=non_built["name"],
-            creator=non_built["creator"],
-            playbook_id=non_built["playbook_id"],
-            type_=OverviewType.from_string(non_built["type"]),
-            alert_rule_type=non_built["alert_rule_type"],
-            roles=non_built["roles"],
-            role_names=non_built.get("role_names", []),
+            creator=non_built.get("creator"),
+            playbook_id=non_built.get("playbook_id") or "",
+            type_=OverviewType.from_string(raw_type),
+            alert_rule_type=non_built.get("alert_rule_type"),
+            roles=non_built.get("roles") or [],
+            role_names=non_built.get("role_names") or [],
             widgets=[],
         )
 
@@ -211,7 +281,7 @@ class Overview(SequentialMetadata[BuiltOverview, NonBuiltOverview]):
                     size=w.widget_size.to_string(),
                     order=w.order,
                 )
-                for w in self.widgets
+                for w in sorted(self.widgets, key=lambda w: w.order)
             ],
         )
         return non_built

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from pathlib import Path  # noqa: TC003
+from pathlib import Path  # ruff:ignore[typing-only-standard-library-import]
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -101,7 +101,7 @@ class BuildParams:
 
 
 @track_command
-def build(  # noqa: PLR0913, PLR0917
+def build(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
     ctx: typer.Context,
     repositories: Annotated[
         list[RepositoryType],
