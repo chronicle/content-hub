@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, TypedDict
 
 import typer
 
@@ -27,6 +27,18 @@ from mp.dev_env.utils import load_dev_env_config
 from mp.telemetry import track_command
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+
+class CategoryDetail(TypedDict, total=False):
+    identifier: str
+    displayName: str
+
+
+class AlertGroupingRule(TypedDict, total=False):
+    id: int
+    name: str
+    category: str
+    categoryDetails: list[CategoryDetail]
 
 
 def _find_local_alert_grouping_rule_file_by_name(name_or_path: str) -> Path | None:
@@ -55,13 +67,17 @@ def _find_local_alert_grouping_rule_file_by_name(name_or_path: str) -> Path | No
     return None
 
 
-def _get_category_subs(rule_data: dict) -> set[str]:
+def _get_category_subs(rule_data: AlertGroupingRule) -> set[str]:
     return {
-        x.get("identifier") for x in rule_data.get("categoryDetails", []) if isinstance(x, dict) and x.get("identifier")
+        identifier
+        for x in rule_data.get("categoryDetails", [])
+        if isinstance(x, dict) and (identifier := x.get("identifier"))
     }
 
 
-def _find_rule_in_installed_by_local_file(local_file_path: Path, installed_rules: list[dict]) -> dict | None:
+def _find_rule_in_installed_by_local_file(
+    local_file_path: Path, installed_rules: list[AlertGroupingRule]
+) -> AlertGroupingRule | None:
     try:
         local_data = mp.core.file_utils.load_yaml_file(local_file_path)
     except Exception:  # ruff:ignore[blind-except]
@@ -79,9 +95,13 @@ def _find_rule_in_installed_by_local_file(local_file_path: Path, installed_rules
     return None
 
 
-def _get_rule_filename(rule_data: dict) -> str:
+def _get_rule_filename(rule_data: AlertGroupingRule) -> str:
     category_name = rule_data.get("category") or "Unknown"
-    subs = [x.get("identifier") for x in rule_data.get("categoryDetails", []) if x.get("identifier")]
+    subs = [
+        identifier
+        for x in rule_data.get("categoryDetails", [])
+        if isinstance(x, dict) and (identifier := x.get("identifier"))
+    ]
     if subs:
         # Join sorted subcategories to create a clean suffix
         safe_subs = [str(s).replace(" ", "_").replace("/", "_").lower() for s in sorted(subs)]
@@ -150,7 +170,7 @@ def pull_alert_grouping_rule(  # ruff:ignore[complex-structure, too-many-branche
     if rule_name_or_id is None:
         logger.error("rule_name_or_id is required if not pulling or listing all")
         raise typer.Exit(1)
-    matched_rules = []
+    matched_rules: list[AlertGroupingRule] = []
 
     # Check if the input corresponds to a local file path or filename
     local_file_path = _find_local_alert_grouping_rule_file_by_name(rule_name_or_id)
@@ -176,12 +196,12 @@ def pull_alert_grouping_rule(  # ruff:ignore[complex-structure, too-many-branche
         target_fn = rule_name_or_id.lower()
         if target_fn.endswith((".yaml", ".yml")):
             target_fn = Path(target_fn).stem
-        matched_rules.extend([rule for rule in installed_rules if _get_rule_filename(rule).lower() == target_fn])
+        matched_rules.extend(rule for rule in installed_rules if _get_rule_filename(rule).lower() == target_fn)
 
     # Third, fallback to Category name (friendly display name or code)
     if not matched_rules:
 
-        def match_category(user_input: str, rule: dict) -> bool:
+        def match_category(user_input: str, rule: AlertGroupingRule) -> bool:
             category = str(rule.get("category", "")).lower()
             category_mappings = {
                 "all": "all",
@@ -221,21 +241,21 @@ def pull_alert_grouping_rule(  # ruff:ignore[complex-structure, too-many-branche
     logger.info("Successfully pulled %d alert grouping rule(s).", len(matched_rules))
 
 
-def _list_alert_grouping_rules(installed_rules: list[dict]) -> None:
+def _list_alert_grouping_rules(installed_rules: list[AlertGroupingRule]) -> None:
     logger.info("Available Alert Grouping Rules:")
     for rule in installed_rules:
         category = rule.get("category") or "Unknown"
         details = rule.get("categoryDetails") or []
         subs = [
-            str(x.get("identifier") or x.get("displayName"))
+            str(name)
             for x in details
-            if isinstance(x, dict) and (x.get("identifier") or x.get("displayName"))
+            if isinstance(x, dict) and (name := x.get("identifier") or x.get("displayName"))
         ]
         subs_str = ", ".join(subs) if subs else "All"
         logger.info("  - Category: '%s' (Subcategories: %s)", category, subs_str)
 
 
-def _pull_all_alert_grouping_rules(installed_rules: list[dict], dst: Path | None) -> None:
+def _pull_all_alert_grouping_rules(installed_rules: list[AlertGroupingRule], dst: Path | None) -> None:
     logger.info("Pulling all %d alert grouping rules...", len(installed_rules))
     for rule in installed_rules:
         rule_id = rule.get("id")
@@ -251,7 +271,9 @@ def _pull_all_alert_grouping_rules(installed_rules: list[dict], dst: Path | None
     logger.info("Successfully finished pulling all alert grouping rules.")
 
 
-def _find_local_alert_grouping_rule_file(category: str, category_details: list[dict] | None) -> Path | None:
+def _find_local_alert_grouping_rule_file(
+    category: str, category_details: list[CategoryDetail] | None
+) -> Path | None:
     try:
         rules_root = mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir()
     except Exception:  # ruff:ignore[blind-except]
@@ -259,7 +281,11 @@ def _find_local_alert_grouping_rule_file(category: str, category_details: list[d
     if not rules_root.exists() or not rules_root.is_dir():
         return None
 
-    local_subs = {x.get("identifier") for x in (category_details or []) if x.get("identifier")}
+    local_subs = {
+        identifier
+        for x in (category_details or [])
+        if isinstance(x, dict) and (identifier := x.get("identifier"))
+    }
 
     for f in rules_root.glob("*.yaml"):
         try:
@@ -269,13 +295,17 @@ def _find_local_alert_grouping_rule_file(category: str, category_details: list[d
         if isinstance(data, dict):
             local_cat = data.get("category")
             if local_cat and str(local_cat).lower() == category.lower():
-                local_details = {x.get("identifier") for x in data.get("categoryDetails", []) if x.get("identifier")}
+                local_details = {
+                    identifier
+                    for x in data.get("categoryDetails", [])
+                    if isinstance(x, dict) and (identifier := x.get("identifier"))
+                }
                 if local_details == local_subs:
                     return f
     return None
 
 
-def _save_alert_grouping_rule(rule_data: dict, dst: Path | None) -> None:
+def _save_alert_grouping_rule(rule_data: AlertGroupingRule, dst: Path | None) -> None:
     # Determine destination path using category and subcategories to keep it clean and prevent collisions
     file_name = f"{_get_rule_filename(rule_data)}.yaml"
 
