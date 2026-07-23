@@ -28,10 +28,10 @@ import mp.core.file_utils
 from mp.core.data_models.common.widget.data import WidgetType
 
 if TYPE_CHECKING:
+    from mp.core.data_models.common.overview.metadata import NonBuiltOverview
     from mp.core.data_models.common.release_notes.metadata import NonBuiltReleaseNote
     from mp.core.data_models.playbooks.meta.display_info import NonBuiltPlaybookDisplayInfo
     from mp.core.data_models.playbooks.meta.metadata import NonBuiltPlaybookMetadata
-    from mp.core.data_models.playbooks.overview.metadata import NonBuiltOverview
     from mp.core.data_models.playbooks.playbook import NonBuiltPlaybook, Playbook
     from mp.core.data_models.playbooks.step.metadata import NonBuiltStep
     from mp.core.data_models.playbooks.trigger.metadata import NonBuiltTrigger
