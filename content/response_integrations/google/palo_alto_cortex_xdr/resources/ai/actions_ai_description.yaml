@@ -1,0 +1,2117 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+Add Comment To Incident:
+  ai_description: >-
+    ### General Description
+
+    Adds a comment to a specific incident in Palo Alto Cortex XDR. This action is
+    used to document findings, provide updates, or add context to an existing incident
+    within the Cortex XDR platform.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the 'Incident ID' and 'Comment'
+    from the input parameters.
+
+    2. **API Initialization**: Initializes the connection to the Palo Alto Cortex
+    XDR API using the provided integration configuration.
+
+    3. **External Mutation**: Sends a POST request to the Cortex XDR `/public_api/v1/incidents/update_incident/`
+    endpoint with the `comment_action` set to `add`.
+
+    4. **Error Handling**: If the API returns an error indicating the incident ID
+    was not found, a specific 'Incident not found' exception is raised. Other API
+    errors are handled via standard validation.
+
+    5. **Result Reporting**: Upon success, the action provides a confirmation message
+    indicating the comment was successfully added.
+
+
+    ### Additional Notes
+
+    This action relies strictly on the provided Incident ID and does not interact
+    with or require any Google SecOps entities.
+  ai_short_description: >-
+    Adds a comment to a specific incident in Palo Alto Cortex XDR.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds a comment to a specific incident in Palo Alto Cortex XDR.
+    fetches_data: false
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action makes a POST request to the Cortex XDR API to add a comment to an
+      incident (can_mutate_external_data=true). It does not fetch context data, update
+      internal entities, or create internal insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It relies solely on
+      the provided 'Incident ID' parameter to perform its operation.
+  outcome_categories:
+    add_alert_comment: true
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action makes a POST request to add a comment to an incident in Palo Alto
+      Cortex XDR. This aligns with the 'Add Alert Comment' category as it appends
+      notes to an external alert/incident timeline.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Incident ID | String | Yes | ID of the incident that needs to be updated. |
+
+    | Comment | String | Yes | Comment for the incident. |
+Add Hashes to Block List:
+  ai_description: >-
+    ### General Description
+
+    Adds file hash entities to the Palo Alto Cortex XDR block list. This action is
+    used to prevent the execution of specific files across the environment by blacklisting
+    their SHA256 hashes in the Cortex XDR management console.
+
+
+    ### Flow Description
+
+    1. **Initialize API Client**: Establishes an authenticated session with the Palo
+    Alto Cortex XDR API.
+
+    2. **Parameter Extraction**: Retrieves the optional 'Comment' parameter to be
+    associated with the block list entries.
+
+    3. **Entity Processing**: Iterates through the target entities provided in the
+    context.
+
+    4. **Validation**: For each entity, it verifies the type is `FILEHASH` and the
+    identifier is a valid SHA256 string.
+
+    5. **External Mutation**: Calls the Cortex XDR API to add each valid hash to the
+    block list along with the provided comment.
+
+    6. **Error Handling**: Manages specific exceptions such as `XDRAlreadyExistsException`
+    for duplicates and general execution errors.
+
+    7. **Result Aggregation**: Compiles a summary of successful additions, failures,
+    duplicates, and unsupported hashes into a final output message and JSON result.
+
+
+    ### Additional Notes
+
+    - **Supported Format**: Only SHA256 format for file hashes is supported (64 characters).
+
+    - **Duplicates**: The action identifies and reports hashes that already exist
+    in the block list.
+
+    - **Validation**: Entities that are not valid SHA256 hashes are skipped and reported
+    as unsupported.
+  ai_short_description: >-
+    Adds file hash entities to the Palo Alto Cortex XDR block list to prevent the
+    execution of specific files.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Adds the specified file hashes to the block list in Palo Alto Cortex XDR.
+    fetches_data: false
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action performs a POST request to the Cortex XDR API to add a hash to a
+      block list, which mutates external data. It does not fetch contextual data,
+      update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (which contains `EntityTypes.FILEHASH`).
+      It also filters by identifier by checking if the identifier is a valid SHA256
+      hash using `xdr_manager.is_sha256(entity.identifier)`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action makes a POST request to the Palo Alto Cortex XDR API to add a file
+      hash to a block list. This directly matches the 'Add IOC To Blocklist' expected
+      outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Comment | String | No | Provide additional comment that represents additional
+    information regarding the action. |
+Download File:
+  ai_description: >-
+    ### General Description
+
+    This action downloads a file from endpoints in Palo Alto Cortex XDR. It supports
+    both IP Address and Hostname entities, as well as manually provided Agent IDs.
+    Because the file retrieval is performed asynchronously, the action will poll the
+    Cortex XDR API for the status of the action until it reaches a terminal state
+    (Success, Failure, or Timeout) and then download the file.
+
+
+    ### Flow Description
+
+    1. Extracts the action parameters: Incident ID, Agent ID, File Paths, Download
+    Folder Path, and Overwrite.
+
+    2. Validates that the specified download folder path exists and is a directory.
+
+    3. Resolves the provided IP Address and Hostname entities, as well as Agent IDs,
+    to Cortex XDR endpoints.
+
+    4. If the Overwrite parameter is false, pre-validates that the destination files
+    do not already exist to prevent conflicts.
+
+    5. Initiates a file retrieval action on the resolved endpoints via the Cortex
+    XDR API.
+
+    6. Asynchronously polls the Cortex XDR API to check the status of the file retrieval
+    action.
+
+    7. Once the retrieval is completed successfully, fetches the download URL for
+    the file.
+
+    8. Downloads the file content and saves it to the specified local folder.
+
+
+    ### Additional Notes
+
+    - This action executes asynchronously, requiring you to adjust the script timeout
+    value in the Google SecOps IDE.
+
+    - The downloaded files are saved as zip archives with a normalized filename format.
+  ai_short_description: >-
+    Downloads a file from endpoints in Palo Alto Cortex XDR based on IP Address, Hostname
+    entities, or Agent IDs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a file retrieval action on the endpoint and optionally associates
+      the activity with a specific incident timeline in Cortex XDR.
+    fetches_data: true
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action initiates a file retrieval request to Cortex XDR and downloads the
+      file content (fetches_data=true). It can also associate this retrieval activity
+      with an incident timeline in Cortex XDR, which mutates external data (can_mutate_external_data=true).
+      It does not update internal entities, create insights, or modify internal alert
+      data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is either ADDRESS or HOSTNAME. It then uses the entity's
+      original identifier to resolve the endpoint in Cortex XDR.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a specific file from a remote endpoint via Cortex XDR and
+      saves it locally. This directly aligns with the 'Download File' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Incident ID | String | No | The ID of the incident to associate the download
+    activity with, allowing the results to appear in the incident timeline. |
+
+    | Agent ID | String | No | A comma-separated list of agent IDs to download the
+    files from. This parameter works in conjunction with the provided entities. |
+
+    | File Paths | String | Yes | A comma-separated list of file paths to download.
+    |
+
+    | Download Folder Path | String | Yes | Name of the folder, where the file needs
+    to be stored. |
+
+    | Overwrite | Boolean | Yes | If selected, the action overwrites the file with
+    the same name. |
+Enrich Entities:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname and IP Address entities with detailed endpoint information retrieved
+    from Palo Alto Cortex XDR. This action helps security analysts gain context about
+    endpoints, such as their operating system, isolation status, last seen time, and
+    associated users.
+
+
+    ### Flow Description
+
+    1. **Initialization**: Authenticates with the Palo Alto Cortex XDR API using the
+    provided integration credentials.
+
+    2. **Entity Filtering**: Identifies supported entities (Hostname and IP Address)
+    from the current context.
+
+    3. **Data Retrieval**: For each supported entity, it queries the Cortex XDR API
+    to find a matching endpoint by hostname (`get_endpoint_by_hostname`) or IP address
+    (`get_endpoint_by_ip`).
+
+    4. **Enrichment**: If a match is found, the action retrieves endpoint metadata
+    (e.g., OS type, endpoint status, domain, users).
+
+    5. **Internal Updates**: Updates the entity's additional properties with the retrieved
+    data, adds a detailed CSV table to the entity, and marks the entity as 'enriched'.
+
+    6. **Completion**: Updates the entities within Google SecOps and provides a summary
+    of successful, missing, or failed enrichments.
+
+
+    ### Additional Notes
+
+    None.
+  ai_short_description: >-
+    Enriches Hostname and IP Address entities with detailed endpoint information retrieved
+    from Palo Alto Cortex XDR.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation:
+    fetches_data: true
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action makes API requests to Cortex XDR to fetch endpoint data. It does
+      not mutate external data. It updates internal entities with the fetched data
+      and adds an entity table, but does not create insights or case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      not in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`. This means it targets ADDRESS and HOSTNAME entities,
+      filtering strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches endpoint data from Cortex XDR, returning contextual metadata
+      (e.g., OS type, endpoint status, domain, users) for Hostname and IP Address
+      entities. This matches the 'Enrich Asset' expected outcome. It does not mutate
+      data on external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Execute XQL Search:
+  ai_description: >-
+    ### General Description
+
+    Executes a custom XQL (XDR Query Language) search in Palo Alto Cortex XDR to retrieve
+    event data and telemetry. This action is designed for flexible data retrieval,
+    allowing users to run complex queries across XDR datasets. It operates asynchronously,
+    initiating a search job and polling for results until the query completes.
+
+
+    ### Flow Description
+
+    1. **Parameter Validation**: The action validates the provided XQL query, time
+    frame, and result limits. If 'Custom' is selected, it ensures a valid 'Start Time'
+    is provided.
+
+    2. **Search Initiation**: On the first execution, the action sends the query to
+    the Cortex XDR API (`/public_api/v1/xql/start_xql_query`) to start a search job
+    and retrieves a unique `query_id`.
+
+    3. **Status Polling**: The action enters an asynchronous state, periodically checking
+    the status of the `query_id` in Cortex XDR via the API (`/public_api/v1/xql/get_query_results`).
+
+    4. **Result Retrieval**: Once the search job status reaches 'SUCCESS', the action
+    fetches the event data.
+
+    5. **Finalization**: The retrieved events are formatted into JSON results, and
+    the action completes with a success message and the data payload.
+
+
+    ### Additional Notes
+
+    - **Asynchronous Execution**: This action runs in an async loop. If the query
+    is complex, ensure the Google SecOps IDE timeout is configured to accommodate
+    the expected processing time.
+
+    - **Query Limits**: The action enforces a maximum limit of 1000 results to ensure
+    performance stability. Do not include a `limit` clause in the query string, as
+    the action appends this automatically based on the 'Max Results To Return' parameter.
+  ai_short_description: >-
+    Executes a custom XQL search in Palo Alto Cortex XDR to retrieve event data and
+    telemetry asynchronously.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation:
+    fetches_data: true
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action fetches data by making a POST request to the Cortex XDR API to start
+      and retrieve an XQL query. It does not mutate external data, update internal
+      entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process `siemplify.target_entities` or any entity-specific
+      identifiers. It executes a standalone XQL query based on the provided input
+      parameters. Therefore, it does not run on entities and all entity-related flags
+      are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action executes an XQL query to search for events and telemetry data in
+      Palo Alto Cortex XDR. This directly matches the 'Search Events' category. It
+      does not modify data, enrich specific IOCs/assets, or interact with tickets/emails.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: true
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: "| Parameter | Type | Mandatory | Description |\n| --- |
+    --- | --- | --- |\n| Query | String | Yes | Query that needs to be executed in
+    Palo Alto XDR. Note: don't provide \"limit\" as part of the query. Action will
+    provide it automatically based on the value provided in the “Max Results To Return”
+    parameter. |\n| Time Frame | Dropdown | No | Time frame for the results. If “Custom”
+    is selected, you also need to provide \"Start Time\". |\n| Start Time | String
+    | No | Start time for the results. This parameter is mandatory, if “Custom” is
+    selected for the \"Time Frame\" parameter. Format: ISO 8601. |\n| End Time | String
+    | No | End time for the results. Format: ISO 8601. If nothing is provided and
+    \"Custom\" is selected for the \"Time Frame\" parameter then this parameter will
+    use current time. |\n| Max Results To Return | String | No | How many results
+    to return for the query. Action will append \"limit\" to the provided query. Default:
+    50. Maximum: 1000. |"
+Get Endpoint Agent Report:
+  ai_description: >-
+    ### General Description
+
+    The **Get Endpoint Agent Report** action retrieves a detailed agent report for
+    specific endpoint entities (Hostnames or IP Addresses) from Palo Alto Cortex XDR.
+    This action provides visibility into the operational status, versioning, and configuration
+    details of the XDR agent installed on the target machine, which is essential for
+    verifying endpoint health and security coverage.
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action iterates over the target entities and filters
+    them to process only supported types: **HOSTNAME** and **ADDRESS**.
+
+    2. **Endpoint Lookup**: For each supported entity, the action queries the Cortex
+    XDR API (`get_endpoint_by_hostname` or `get_endpoint_by_ip`) to find the corresponding
+    `endpoint_id`.
+
+    3. **Report Retrieval**: Once the `endpoint_id` is identified, the action calls
+    the Cortex XDR API (`get_endpoint_agent_report`) to fetch the full agent report
+    data.
+
+    4. **Data Enrichment**: The retrieved report is converted into a flat CSV format
+    and attached as an entity table. The raw JSON data is also added to the action
+    results.
+
+    5. **Entity Update**: The action marks the successfully processed entities as
+    enriched (`is_enriched = True`) and updates them within the Google SecOps platform.
+
+
+    ### Additional Notes
+
+    - If an endpoint cannot be found in Cortex XDR for a specific entity, the action
+    logs the missing entity and continues processing others.
+
+    - The action includes built-in timeout handling to ensure it completes or fails
+    gracefully before the execution deadline.
+  ai_short_description: >-
+    Retrieves a detailed agent report for specific endpoint entities (Hostnames or
+    IP Addresses) from Palo Alto Cortex XDR to verify endpoint health and security
+    coverage.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation:
+    fetches_data: true
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action makes GET requests to the Cortex XDR API to fetch endpoint and agent
+      report data. It does not mutate external data. It updates internal entities
+      by setting `is_enriched = True` and calling `siemplify.update_entities`, but
+      does not create insights or case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `if
+      entity.entity_type not in SUPPORTED_ENTITIES:`, where `SUPPORTED_ENTITIES` includes
+      `EntityTypes.ADDRESS` and `EntityTypes.HOSTNAME`. Therefore, it targets ADDRESS
+      and HOSTNAME entities, filtering strictly by `entity_type`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches agent report data for endpoint entities (Hostnames and IP
+      Addresses) from Cortex XDR. This provides contextual metadata about the resource,
+      which aligns with the 'Enrich Asset' expected outcome. It does not mutate external
+      data or perform containment.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get Incident Details:
+  ai_description: "### General Description\nThe **Get Incident Details** action retrieves
+    comprehensive information about a specific incident from Palo Alto Cortex XDR.
+    This action is designed to provide security analysts with a deep dive into an
+    incident, including its metadata, associated network artifacts, file artifacts,
+    and a filtered list of related alerts. It is primarily used for investigative
+    purposes to gather context without modifying the external system.\n\n### Flow
+    Description\n1. **Initialization:** The action extracts the Incident ID, severity
+    threshold, and result limit from the input parameters.\n2. **Validation:** It
+    validates that the 'Lowest Alert Severity' matches allowed values and that 'Max
+    Alerts To Return' falls within the 1-1000 range.\n3. **API Request:** The action
+    connects to the Palo Alto Cortex XDR API and calls the `get_incident_extra_data`
+    endpoint using the provided Incident ID and alert limit.\n4. **Data Transformation:**
+    \n    *   The action processes the raw response, separating the core incident
+    data from artifacts and alerts.\n    *   It iterates through the alerts and filters
+    them based on the 'Lowest Alert Severity' parameter.\n    *   For each alert,
+    it encodes the `fw_misc` and `description` fields into **Base64** format to ensure
+    data integrity during transfer.\n5. **Final Output:** The action constructs a
+    consolidated JSON object containing the incident details, network/file artifacts,
+    and the filtered alerts list, which is then returned as the script result.\n\n
+    ### Additional Notes\n* This action is a read-only operation and does not change
+    the status or content of the incident in Cortex XDR.\n* The action does not run
+    on entities; it requires a specific Incident ID as input."
+  ai_short_description: >-
+    Retrieves comprehensive information about a specific incident from Palo Alto Cortex
+    XDR, including metadata, artifacts, and related alerts.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation:
+    fetches_data: true
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action makes an API request to fetch incident details (fetches_data=true).
+      It does not perform any state-changing operations on external systems (can_mutate_external_data=false)
+      or internal systems (can_mutate_internal_data=false). It does not update entities,
+      create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It relies entirely on the 'Incident ID' parameter provided by the
+      user. Therefore, it does not run on entities and all entity type and filter
+      flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches detailed information about a specific incident (alert) from
+      Palo Alto Cortex XDR. This directly aligns with the 'Get Alert Information'
+      expected outcome. It does not enrich specific IOCs or assets, nor does it mutate
+      any data or perform containment actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Incident ID | String | Yes | ID of the incident that needs to be returned. |
+
+    | Lowest Alert Severity | Dropdown | No | Lowest severity for the alert to be
+    returned. |
+
+    | Max Alerts To Return | Integer | No | How many alerts to return for the query.
+    Default: 50. Maximum: 1000. |
+Isolate Endpoint:
+  ai_description: >-
+    ### General Description
+
+    This action isolates specific endpoints within the Palo Alto Cortex XDR environment.
+    It targets endpoints based on Google SecOps entities (Hostname or IP Address)
+    or via a manually provided list of Agent IDs. Isolation effectively restricts
+    the endpoint's network connectivity to prevent the spread of threats while maintaining
+    communication with the Cortex XDR management console.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: Retrieves the optional `Agent ID` list from the action
+    configuration.
+
+    2. **Entity Resolution**: Iterates through the target entities. For `HOSTNAME`
+    entities, it queries Cortex XDR to find the matching endpoint. For `ADDRESS` (IP)
+    entities, it performs a similar lookup.
+
+    3. **Isolation (Entities)**: For every successfully resolved endpoint from the
+    entities, it sends an isolation request to the Cortex XDR API.
+
+    4. **Isolation (Agent IDs)**: Processes the manually provided `Agent ID` list.
+    It validates the format of each ID and sends isolation requests for those not
+    already processed via entities.
+
+    5. **Internal Updates**: Updates the status of successfully isolated entities
+    within Google SecOps.
+
+    6. **Reporting**: Consolidates the results, providing a detailed output message
+    regarding successful isolations, missing endpoints, invalid IDs, or failures.
+
+
+    ### Additional Notes
+
+    - The action requires either valid target entities (Hostname or IP) or at least
+    one valid Agent ID to perform any operation.
+
+    - Hostname and IP entities are first resolved to their corresponding Cortex XDR
+    Endpoint IDs before the isolation command is sent.
+  ai_short_description: >-
+    Isolates specific endpoints within the Palo Alto Cortex XDR environment using
+    Hostname/IP entities or manually provided Agent IDs to restrict network connectivity.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Sends a POST request to the Cortex XDR API to isolate the specified endpoints,
+      restricting their network connectivity.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the status of successfully isolated entities within Google SecOps.
+    reasoning: >-
+      The action fetches endpoint data to resolve entities to endpoint IDs (fetches_data=true).
+      It then mutates external data by sending a POST request to isolate the endpoint
+      (can_mutate_external_data=true). Finally, it updates the successfully processed
+      entities internally (can_update_entities=true, can_mutate_internal_data=true).
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `SUPPORTED_ENTITIES` (which includes `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`). Therefore, it filters by entity type and targets
+      Address and Hostname entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: true
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action isolates an endpoint from the network via the Cortex XDR API. This
+      directly aligns with the 'Contain Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Agent ID | String | No | A comma-separated list of agent IDs to isolate. This
+    parameter works in conjunction with the provided entities. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests the connectivity to the Palo Alto Cortex XDR instance to ensure that the
+    integration is correctly configured and the API credentials are valid. This action
+    validates the connection by attempting to authenticate with the Cortex XDR API
+    using the provided API Key and API Key ID.
+
+
+    ### Flow Description
+
+    1. **Initialize Action**: The script initializes the Siemplify action context
+    and sets the script name.
+
+    2. **Authentication**: The action retrieves the integration's configuration parameters
+    and creates an authenticated session.
+
+    3. **Connectivity Test**: The `XDRManager` makes a POST request to the `/api_keys/validate/`
+    endpoint of the Palo Alto Cortex XDR API.
+
+    4. **Response Validation**: The script validates the API response. If the credentials
+    are valid and the service is reachable, it proceeds to the final step.
+
+    5. **Completion**: The action returns a success message and sets the result value
+    to `true`.
+
+
+    ### Additional Notes
+
+    This action relies on the global integration configuration parameters: **Api Root**,
+    **Api Key**, **Api Key ID**, and **Verify SSL**. It uses a custom authentication
+    mechanism involving a SHA256 hash of the API key combined with a nonce and a timestamp.
+  ai_short_description: >-
+    Tests the connectivity to the Palo Alto Cortex XDR instance to ensure that the
+    integration is correctly configured and the API credentials are valid.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation:
+    fetches_data: false
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action makes a POST request to the `/api_keys/validate/` endpoint to test
+      connectivity. It does not fetch contextual data, mutate external data, update
+      internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on any entities. It is a simple connectivity test
+      that does not require or process any entity data.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticketing.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Query:
+  ai_description: >-
+    ### General Description
+
+
+    The **Query** action retrieves comprehensive information about a specific incident
+    from Palo Alto Cortex XDR. It is designed to provide security analysts with deep
+    visibility into a single incident by fetching associated alerts, network artifacts,
+    and file artifacts. This action is primarily used to gather detailed context for
+    investigation without modifying the state of the external system.
+
+
+    ### Flow Description
+
+
+    1. **Initialization**: The action initializes the Palo Alto Cortex XDR API client
+    using the integration's configuration parameters.
+
+    2. **Data Retrieval**: It calls the `get_incident_extra_data` API endpoint using
+    the provided **Incident ID** to fetch the incident's details, including alerts,
+    network artifacts, and file artifacts.
+
+    3. **Data Processing**: If data is successfully retrieved, the action extracts
+    the list of alerts and formats the alert data into a CSV-style data table for
+    display in the Google SecOps UI.
+
+    4. **Output Generation**: Adds a data table named "Incident [ID] Alerts" to the
+    action results, attaches the full raw JSON response from Cortex XDR to the action
+    results for further analysis, and returns a summary message indicating success
+    and the number of alerts found.
+
+
+    ### Additional Notes
+
+
+    * This action does not process entities (such as IPs or Hostnames) from the case;
+    it operates strictly on the **Incident ID** provided as a parameter.
+
+    * If the specified Incident ID is not found or contains no data, the action will
+    complete with a "Not found" message.
+  ai_short_description: >-
+    Retrieves comprehensive information about a specific incident from Palo Alto Cortex
+    XDR, including associated alerts, network artifacts, and file artifacts.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation:
+    fetches_data: true
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action makes an API request to Cortex XDR to fetch extra incident data (fetches_data=true).
+      It does not perform any state-changing operations on the external system (can_mutate_external_data=false).
+      It also does not update entities, create insights, modify alert data, or create
+      case comments within Google SecOps (can_mutate_internal_data=false).
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It operates entirely on the 'Incident ID' parameter provided in
+      the action configuration. Therefore, all entity type and filter flags are false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches detailed information about a specific incident (which includes
+      alerts and artifacts) from Palo Alto Cortex XDR using an Incident ID. This directly
+      aligns with the 'Get Alert Information' expected outcome. It does not enrich
+      specific IOCs or assets, nor does it mutate any external or internal state.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Incident ID | String | Yes | The ID of the incident for which you want to retrieve
+    data. |
+Resolve an Incident:
+  ai_description: >-
+    ### General Description
+
+    Resolves or updates the status of a specific incident in Palo Alto Cortex XDR.
+    This action allows security analysts to programmatically change the state of an
+    incident (e.g., moving it to 'Resolved' or 'Under Investigation') and provide
+    a descriptive comment for audit trails within the Cortex XDR platform.
+
+
+    ### Flow Description
+
+    1. **Authentication**: The action initializes the Cortex XDR API client using
+    the integration's configuration.
+
+    2. **Parameter Extraction**: It retrieves the 'Incident ID', 'Status', and 'Resolve
+    Comment' from the user-provided parameters.
+
+    3. **API Interaction**: It sends a POST request to the Cortex XDR `/public_api/v1/incidents/update_incident/`
+    endpoint with the specified update data.
+
+    4. **Validation**: The action validates the API response to ensure the update
+    was successful.
+
+    5. **Completion**: It reports the final execution state (Completed or Failed)
+    and an output message to the Google SecOps platform.
+
+
+    ### Additional Notes
+
+    - This action does not process entities from the Google SecOps case; it relies
+    entirely on the provided 'Incident ID' parameter.
+
+    - The action performs a state change in the external Cortex XDR system.
+  ai_short_description: >-
+    Resolves or updates the status of a specific incident in Palo Alto Cortex XDR.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the status and adds a resolution comment to a specific incident in Palo
+      Alto Cortex XDR.
+    fetches_data: false
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action executes a POST request to the Cortex XDR API to update an incident's
+      status and comment, which mutates external data. It does not fetch contextual
+      data, mutate internal SecOps data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on the explicitly provided 'Incident ID' parameter to perform
+      its operations. Therefore, all entity types and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates the status and adds a resolution comment to an incident in
+      an external system (Palo Alto Cortex XDR). This aligns with the 'Update Ticket'
+      category, as it synchronizes status changes from SecOps to an external incident/ticketing
+      system.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: true
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Incident ID | String | Yes | The ID of the incident to be updated. |
+
+    | Status | String | Yes | Updated incident status. Options include NEW, UNDER_INVESTIGATION,
+    RESOLVED_TRUE_POSITIVE, RESOLVED_KNOWN_ISSUE, RESOLVED_DUPLICATE, RESOLVED_FALSE_POSITIVE,
+    RESOLVED_OTHER. |
+
+    | Resolve Comment | String | No | Descriptive comment explaining the incident
+    change. |
+Scan Endpoint:
+  ai_description: >-
+    ### General Description
+
+    This action initiates an asynchronous security scan on endpoints within Palo Alto
+    Cortex XDR. It supports both IP Address and Hostname entities, as well as manually
+    provided Agent IDs. Because the scan is performed asynchronously, the action will
+    poll the Cortex XDR API for the status of the scan until it reaches a terminal
+    state (Success, Failure, or Timeout).
+
+
+    ### Flow Description
+
+    1. **Entity Filtering**: The action identifies all IP Address and Hostname entities
+    from the target entities list.
+
+    2. **Endpoint Resolution**: For each entity, the action queries Cortex XDR to
+    find the corresponding `endpoint_id` using the IP or Hostname.
+
+    3. **Agent ID Integration**: It merges the resolved endpoint IDs with any manually
+    provided `Agent ID` parameters, validating that Agent IDs follow the 32-character
+    hexadecimal format.
+
+    4. **Scan Initiation**: It sends a request to Cortex XDR to start the scan for
+    all identified endpoints. If an `Incident ID` is provided, the scan is linked
+    to that incident.
+
+    5. **Asynchronous Polling**: The action stores the `action_id` and enters a polling
+    loop. In each cycle, it checks the status of the scan for each endpoint.
+
+    6. **Finalization**: Once all scans reach a finished status (Completed, Failed,
+    Aborted, etc.), the action aggregates the results, updates the JSON output with
+    endpoint details, and reports the final success or failure message.
+
+
+    ### Additional Notes
+
+    - This action is **asynchronous**. It will enter an 'In Progress' state and poll
+    for results every 30 seconds (as defined by the `AsyncPollingIntervalInSeconds`).
+
+    - Ensure the script timeout in the Google SecOps IDE is sufficiently high to accommodate
+    the duration of a full endpoint scan.
+
+    - Either suitable entities (IP/Hostname) or at least one valid Agent ID must be
+    provided for the action to execute.
+  ai_short_description: >-
+    Initiates an asynchronous security scan on endpoints within Palo Alto Cortex XDR
+    using IP Address, Hostname entities, or manually provided Agent IDs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Initiates a security scan on specified endpoints in Palo Alto Cortex XDR.
+    fetches_data: true
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action fetches endpoint data to resolve entities to endpoint IDs, and then
+      makes a POST request to `/public_api/v1/endpoints/scan/` to initiate a scan
+      on the external Cortex XDR system. It does not update internal entities or create
+      insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `soar_action.target_entities` and filters them by `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` (ADDRESS, HOSTNAME). It then uses `get_entity_original_identifier(entity)`
+      to resolve the endpoint.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action initiates a security scan on an endpoint. This does not match any
+      of the available outcome categories such as Contain Host, Execute Command (which
+      expects STDOUT), or Enrich Asset. Therefore, no categories are selected.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Incident ID | String | No | The ID of the incident to associate the scan activity
+    with, allowing the results to appear in the incident timeline. |
+
+    | Agent ID | String | No | A comma-separated list of agent IDs to include in the
+    scan. This parameter works in conjunction with the provided entities. |
+Unisolate Endpoint:
+  ai_description: >-
+    ### General Description
+
+    Unisolates endpoints in Palo Alto Cortex XDR. This action allows security administrators
+    to restore network connectivity to endpoints that were previously isolated for
+    containment purposes. It supports both entity-based execution (IP and Hostname)
+    and manual input via Agent IDs.
+
+
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the optional 'Agent ID' list
+    from the input parameters.
+
+    2. **Entity Resolution**: For each provided Hostname or IP entity, the action
+    queries the Cortex XDR API to find the corresponding internal Endpoint ID.
+
+    3. **Unisolation Request**: The action sends a POST request to the Cortex XDR
+    'unisolate' endpoint for every resolved Endpoint ID.
+
+    4. **Manual Agent Processing**: Any Agent IDs provided in the parameters are also
+    sent for unisolation, provided they haven't already been processed via entities.
+
+    5. **Internal Updates**: Successfully unisolated entities are updated within Google
+    SecOps.
+
+    6. **Reporting**: A summary of successful, failed, and missing endpoints is returned
+    to the user.
+
+
+    ### Additional Notes
+
+    Either target entities or Agent IDs must be provided for the action to run successfully.
+  ai_short_description: >-
+    Unisolates endpoints in Palo Alto Cortex XDR to restore network connectivity,
+    using either Hostname/IP entities or specific Agent IDs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Unisolates the endpoint in Palo Alto Cortex XDR, restoring its network connectivity.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the entities that were successfully unisolated.
+    reasoning: >-
+      The action fetches endpoint data by hostname or IP to resolve the endpoint ID.
+      It then mutates external data by sending a POST request to unisolate the endpoint.
+      Finally, it updates the successfully processed entities internally.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them by checking
+      if `entity.entity_type` is in `SUPPORTED_ENTITIES`, which includes `EntityTypes.ADDRESS`
+      and `EntityTypes.HOSTNAME`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action sends a request to Cortex XDR to unisolate an endpoint, which restores
+      its network connectivity. This directly aligns with the 'Uncontain Host' expected
+      outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: true
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Agent ID | String | No | A comma-separated list of agent IDs to unisolate. This
+    parameter works in conjunction with the provided entities. |
+Update an Incident:
+  ai_description: >-
+    ### General Description
+
+    Updates specific fields of an incident in Palo Alto Cortex XDR. This action allows
+    users to modify the assignee, severity, and status of an existing incident by
+    providing its unique ID. It interacts with the Cortex XDR Public API to apply
+    these changes.
+
+
+    ### Flow Description
+
+    1. **Parameter Initialization**: The action retrieves the Incident ID and the
+    desired update values (Assignee, Severity, Status) from the input parameters.
+
+    2. **Validation**: It checks if at least one update field has been provided. If
+    all optional fields are empty or set to 'Select One', the action fails with a
+    descriptive error.
+
+    3. **API Interaction**: The action calls the `update_an_incident` method, which
+    sends a POST request to the Cortex XDR `/public_api/v1/incidents/update_incident/`
+    endpoint.
+
+    4. **Error Handling**: The action handles specific error cases, such as when the
+    incident ID is not found in the external system, and provides clear feedback.
+
+    5. **Completion**: Upon a successful API response, the action returns a success
+    message and sets the execution state to completed.
+
+
+    ### Additional Notes
+
+    * At least one of the optional parameters ('Assigned User Name', 'Severity', or
+    'Status') must be configured with a value other than 'Select One' for the action
+    to execute successfully.
+
+    * The 'Assigned User Name' is mapped to the 'assigned_user_mail' field in the
+    Cortex XDR API.
+  ai_short_description: >-
+    Updates specific fields (assignee, severity, status) of an incident in Palo Alto
+    Cortex XDR using its unique ID.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Updates the assignee, severity, and status of an incident in Palo Alto Cortex
+      XDR.
+    fetches_data: false
+    internal_data_mutation_explanation:
+    reasoning: >-
+      The action makes a POST request to the Cortex XDR API to update an incident's
+      details, mutating external data. It does not fetch data, mutate internal SecOps
+      data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It uses the 'Incident ID' parameter
+      provided in the action configuration to update the incident directly.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action updates an incident in an external XDR system. This does not match
+      any of the specific outcome categories such as updating internal SecOps alerts,
+      updating ITSM tickets, or modifying IOC/host states.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Incident ID | String | Yes | The ID of the incident to be updated. |
+
+    | Assigned User Name | String | No | The updated full name of the incident assignee.
+    |
+
+    | Severity | Dropdown | No | Administrator-defined severity. |
+
+    | Status | Dropdown | No | Updated incident status. |
