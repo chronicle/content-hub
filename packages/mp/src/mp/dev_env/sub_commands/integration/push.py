@@ -31,7 +31,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
-    from mp.dev_env.api import BackendAPI
+    from mp.dev_env.interfaces import DevEnvClient
 
 
 @push_app.command(name="integration")
@@ -102,7 +102,7 @@ def _zip_integration(integration: str, src: Path | None = None, *, custom: bool)
 
 def _push_zip_to_soar(zip_path: Path, *, is_staging: bool) -> dict[str, Any]:
     config = load_dev_env_config()
-    backend_api: BackendAPI = get_backend_api(config)
+    backend_api: DevEnvClient = get_backend_api(config)
     details = backend_api.get_integration_details(zip_path, is_staging=is_staging)
     return backend_api.upload_integration(zip_path, details["identifier"], is_staging=is_staging)
 

@@ -81,8 +81,8 @@ def pull_integration(
 def _pull_integration_zip_from_soar(integration: str, dst: Path) -> Path:
     config = load_dev_env_config()
     backend_api = get_backend_api(config)
-    resp = backend_api.download_integration(integration)
-    return utils.save_integration_as_zip(integration, resp, dst)
+    data = backend_api.download_integration(integration)
+    return utils.save_integration_as_zip(integration, data, dst)
 
 
 def _deconstruct_integration(zip_path: Path, dst: Path) -> Path:

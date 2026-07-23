@@ -19,7 +19,6 @@ import logging
 import shutil
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import typer
 
@@ -32,10 +31,6 @@ from mp.core.data_models.integrations.integration import Integration
 from mp.core.utils import to_snake_case
 
 logger: logging.Logger = logging.getLogger(__name__)
-
-
-if TYPE_CHECKING:
-    from requests.models import Response
 
 
 def get_integration_path(integration: str, src: Path | None = None, *, custom: bool = False) -> Path:
@@ -250,12 +245,12 @@ def _modify_def_file_to_custom(file: Path) -> None:
         logger.exception("Failed to process %s", file)
 
 
-def save_integration_as_zip(integration_name: str, resp: Response, dst: Path) -> Path:
-    """Save raw integration data into a ZIP file.
+def save_integration_as_zip(integration_name: str, data: bytes, dst: Path) -> Path:
+    """Save raw integration ZIP bytes into a file.
 
     Args:
         integration_name: The name of the integration to save.
-        resp: The raw integration data to save.
+        data: The raw integration package ZIP bytes.
         dst: The directory where the ZIP file should be saved.
 
     Returns:
@@ -263,7 +258,7 @@ def save_integration_as_zip(integration_name: str, resp: Response, dst: Path) ->
 
     """
     zip_path = dst / f"{integration_name}.zip"
-    zip_path.write_bytes(resp.content)
+    zip_path.write_bytes(data)
     return zip_path
 
 

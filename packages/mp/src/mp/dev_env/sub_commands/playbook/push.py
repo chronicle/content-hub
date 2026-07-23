@@ -32,7 +32,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from typing import Any
 
-    from mp.dev_env.api import BackendAPI
+    from mp.dev_env.interfaces import DevEnvClient
 
 
 @push_app.command(name="playbook")
@@ -106,5 +106,5 @@ def _zip_playbooks(main_playbook: str, content_names: set[str]) -> Path:
 
 def _push_playbook_zip_to_soar(zip_path: Path) -> dict[str, Any]:
     config = load_dev_env_config()
-    backend_api: BackendAPI = get_backend_api(config)
+    backend_api: DevEnvClient = get_backend_api(config)
     return backend_api.upload_playbook(zip_path)

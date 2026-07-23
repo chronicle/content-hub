@@ -17,10 +17,14 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import typer
 
-from mp.dev_env import api
+from mp.dev_env import api, chronicle_api
+
+if TYPE_CHECKING:
+    from mp.dev_env.interfaces import DevEnvClient
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -28,7 +32,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 CONFIG_PATH: Path = Path.home() / ".mp_dev_env.json"
 
 
-def load_dev_env_config() -> dict[str, str]:
+def load_dev_env_config() -> dict[str, Any]:
     """Load the dev environment configuration from the config file.
 
     Returns:
@@ -45,34 +49,86 @@ def load_dev_env_config() -> dict[str, str]:
         return json.load(f)
 
 
-def get_backend_api(config: dict[str, str]) -> api.BackendAPI:
-    """Initialize and authenticates the backend API client.
+def _infer_auth_mode(config: dict[str, Any]) -> str:
+    """Determine the auth mode for a legacy config that predates the ``auth_mode`` key.
+
+    Older ``mp login`` versions wrote every credential field, using ``null`` for the ones
+    that didn't apply, so a truthy ``api_key`` reliably means api-key mode and anything else
+    means username/password. New configs always store ``auth_mode`` explicitly and never
+    reach this fallback.
 
     Args:
-        config: Dictionary containing 'api_root' and either 'api_key'
-            or 'username' and 'password'.
+        config: A raw configuration dictionary with no ``auth_mode`` key.
 
     Returns:
-        An authenticated BackendAPI instance.
-
-    Raises:
-        typer.Exit: If authentication fails or configuration is missing.
+        'api_key' if an API key is present, otherwise 'user_pass'.
 
     """
+    if config.get("api_key"):
+        return "api_key"
+    return "user_pass"
+
+
+def _build_client(auth_mode: str, config: dict[str, Any]) -> DevEnvClient:
+    """Construct (without authenticating) the backend client for the given auth mode.
+
+    Args:
+        auth_mode: One of 'api_key', 'user_pass', or 'gcp'.
+        config: The loaded dev-env configuration.
+
+    Returns:
+        An unauthenticated client implementing the DevEnvClient protocol.
+
+    Raises:
+        typer.Exit: If the auth mode is unknown.
+
+    """
+    if auth_mode == "api_key":
+        return api.BackendAPI(api_root=config["api_root"], api_key=config["api_key"])
+    if auth_mode == "user_pass":
+        return api.BackendAPI(
+            api_root=config["api_root"],
+            username=config["username"],
+            password=config["password"],
+        )
+    if auth_mode == "gcp":
+        return chronicle_api.ChronicleClient(
+            project=config["project"],
+            location=config["location"],
+            instance=config["instance"],
+            credentials_file=config.get("credentials_file"),
+        )
+
+    logger.error("Unknown auth_mode in config: %s", auth_mode)
+    raise typer.Exit(1)
+
+
+def get_backend_api(config: dict[str, Any]) -> DevEnvClient:
+    """Initialize and authenticate the backend client for the configured auth mode.
+
+    Supports three modes: 'api_key' and 'user_pass' (legacy Siemplify SOAR API) and 'gcp'
+    (Chronicle API via Application Default Credentials). Configs lacking an 'auth_mode' key
+    are treated as legacy for backward compatibility.
+
+    Args:
+        config: The loaded dev-env configuration.
+
+    Returns:
+        An authenticated client implementing the DevEnvClient protocol.
+
+    Raises:
+        typer.Exit: If authentication fails or the configuration is invalid.
+
+    """
+    auth_mode: str = config.get("auth_mode") or _infer_auth_mode(config)
+
     try:
-        if config.get("api_key"):
-            backend_api = api.BackendAPI(api_root=config["api_root"], api_key=config["api_key"])
-        else:
-            backend_api = api.BackendAPI(
-                api_root=config["api_root"],
-                username=config["username"],
-                password=config["password"],
-            )
-
-        backend_api.login()
-
+        client: DevEnvClient = _build_client(auth_mode, config)
+        client.login()
+    except typer.Exit:
+        raise
     except Exception as e:
         logger.exception("Authentication failed")
         raise typer.Exit(1) from e
     else:
-        return backend_api
+        return client
