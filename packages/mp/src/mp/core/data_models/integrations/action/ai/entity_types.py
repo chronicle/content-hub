@@ -132,3 +132,31 @@ ENTITY_TYPE_TO_DEF_ENTITY_TYPE: dict[str, EntityType] = {
     "usb": EntityType.USB,
     "user": EntityType.USER,
 }
+
+
+def get_all_entity_param_examples_string() -> str:
+    """Generate a comma-separated string of parameter title examples.
+
+    Returns:
+        str: Comma-separated parameter title examples.
+
+    """
+    examples = [f"`{field_name.replace('_', ' ').title()}`" for field_name in ENTITY_TYPE_TO_DEF_ENTITY_TYPE]
+    return ", ".join(examples)
+
+
+def build_dynamic_entity_prompt_rules() -> str:
+    """Generate bulleted prompt rules for parameter-to-entity mapping.
+
+    Returns:
+        str: Bulleted prompt rules.
+
+    """
+    rules = []
+    for field_name, entity_type in ENTITY_TYPE_TO_DEF_ENTITY_TYPE.items():
+        param_title = field_name.replace("_", " ").title()
+        rules.append(
+            f"      - Parameters representing `{param_title}` -> set `{field_name}: true` "
+            f"(maps to `{entity_type.value}`)."
+        )
+    return "\n".join(rules)
