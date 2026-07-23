@@ -24,7 +24,6 @@ from ..core.exceptions import MissingParameterError
 from ..core.FederationSyncManager import (
     FederationSyncManager,
     ApiClientParameters,
-    AuthParameters,
     FederationSyncExecutionData,
 )
 
@@ -36,18 +35,16 @@ class CaseFederationSyncJob(Job):
     def _validate_params(self) -> None:
         """Validate job params"""
 
-        if not self.params.target_platform or not self.params.api_key:
+        if not self.params.target_platform:
             raise MissingParameterError(
-                "API Key and Target Platform must be provided"
+                "Target Platform must be provided"
             )
+
 
     def _init_api_clients(self) -> FederationSyncManager:
         """
         Create a federation synchronization manager instance, that will sync the cases.
 
-        If this platform is marked as primary, then sync will be done to localhost.
-        Otherwise, we expect a target platform to sync to, and an API key for
-        authentication as parameters.
         """
         session = self.soar_job.session
 
@@ -55,9 +52,8 @@ class CaseFederationSyncJob(Job):
             session,
             self.logger,
             ApiClientParameters(
-                sync_api_root=f"https://{self.params.target_platform}/api",
+                sync_api_root=f"https://{self.params.target_platform}",
             ),
-            AuthParameters(api_key=self.params.api_key),
             chronicle_soar=self.soar_job,
         )
 
