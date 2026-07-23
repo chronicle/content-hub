@@ -125,6 +125,8 @@ class ChronicleClient(DevEnvClient):
     def list_integrations(self) -> list[Integration]:
         """List all integrations installed in the instance, following pagination.
 
+        Reference: https://docs.cloud.google.com/chronicle/docs/reference/rest/v1/projects.locations.instances.integrations/list
+
         Returns:
             The list of ``Integration`` resources.
 
@@ -173,6 +175,8 @@ class ChronicleClient(DevEnvClient):
     def download_integration(self, integration_name: str) -> bytes:
         """Export an integration package and return the raw ZIP bytes.
 
+        Reference: https://docs.cloud.google.com/chronicle/docs/reference/rest/v1/projects.locations.instances.integrations/download
+
         Args:
             integration_name: The integration name/identifier to export.
 
@@ -188,6 +192,8 @@ class ChronicleClient(DevEnvClient):
     def get_integration_details(self, zip_path: Path, *, is_staging: bool = False) -> dict[str, Any]:
         """Parse an integration package and return its items/metadata without importing.
 
+        Reference: https://docs.cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances.integrations/upload
+
         Args:
             zip_path: Path to the integration package ZIP.
             is_staging: Whether to compare against staging.
@@ -201,6 +207,8 @@ class ChronicleClient(DevEnvClient):
 
     def upload_integration(self, zip_path: Path, integration_id: str, *, is_staging: bool = False) -> dict[str, Any]:
         """Import an integration package into the instance.
+
+        Reference: https://docs.cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances.integrations/import
 
         Args:
             zip_path: Path to the integration package ZIP.
@@ -218,6 +226,8 @@ class ChronicleClient(DevEnvClient):
     def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
         """Import playbook definitions from a ZIP into the instance.
 
+        Reference: https://docs.cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances.legacyPlaybooks/exportWorkflowWithBlocksByIdentifier
+
         Args:
             zip_path: Path to the playbook definitions ZIP.
 
@@ -230,6 +240,8 @@ class ChronicleClient(DevEnvClient):
 
     def list_playbooks(self) -> list[dict[str, Any]]:
         """List installed playbook/workflow menu cards.
+
+        Reference: https://docs.cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances.legacyPlaybooks/legacyGetWorkflowMenuCardsWithEnvFilter
 
         Returns:
             A list of dicts with 'name' and 'identifier' for each playbook.
@@ -247,6 +259,8 @@ class ChronicleClient(DevEnvClient):
 
     def download_playbook(self, playbook_identifier: str) -> dict[str, Any]:
         """Export a playbook definition by identifier.
+
+        Reference: https://docs.cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances.legacyPlaybooks/download
 
         Args:
             playbook_identifier: The identifier of the playbook to export.
