@@ -1,70 +1,38 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Block IP:
   ai_description: >-
     ### General Description
 
-    Blocks IP Address entities in McAfee Network Security Manager (NSM). This action
-    automates the process of blacklisting malicious IPs by managing firewall rule
-    objects and policies within the NSM environment. It ensures that the block is
-    enforced by deploying configuration changes to the relevant sensors.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not have any action-specific parameters.
-    It relies on the integration's configuration (API Root, Credentials, Domain ID,
-    Policy Name, and Sensor List). |
-
-
-    ### Additional Notes
-
-    - The action specifically looks for a policy defined in the integration configuration
-    ('Siemplify Policy Name').
-
-    - It manages rule objects with a prefix 'Siemplify_Block' and adheres to NSM limits
-    (10 addresses per object, 10 objects per rule).
-
-    - A 'Deploy Changes' command is issued to all sensors listed in the configuration
-    to make the block effective immediately.
+    Blocks specific IP addresses on McAfee Network Security Manager (NSM). This action
+    initiates a state change on the external firewall device to prevent network traffic
+    to or from the specified IP entities.
 
 
     ### Flow Description
 
-    1. **Authentication**: Establishes a session with the McAfee NSM API using provided
-    credentials.
+    1. Initializes a connection to the McAfee NSM API using the provided integration
+    configuration.
 
-    2. **Entity Filtering**: Identifies all IP Address (ADDRESS) entities provided
-    in the action scope.
+    2. Filters the target entities to isolate only IP addresses (`ADDRESS`).
 
-    3. **Block Verification**: For each IP, it queries NSM to check if the address
-    is already blocked within the target policy.
+    3. Iterates through the filtered IP addresses and checks if each IP is already
+    blocked in the NSM policy.
 
-    4. **Policy Modification**: If the IP is not blocked, it searches for an existing
-    Siemplify rule object with available capacity. If an available object is found,
-    it updates it with the new IP. If no object is available, it creates a new rule
-    object and adds it to the firewall policy.
+    4. If an IP is not blocked, the action either adds it to an available Siemplify
+    rule object or creates a new rule object and attaches it to the firewall policy.
 
-    5. **Deployment**: Triggers a configuration push to all sensors specified in the
-    'Sensors Names List Comma Separated' configuration.
+    5. Deploys the updated configuration changes to the configured NSM sensors.
 
-    6. **Cleanup**: Logs out of the NSM session and returns the execution status.
+    6. Logs out of the NSM session and returns a summary message listing the successfully
+    blocked IP addresses.
+
+
+    ### Additional Notes
+
+    This action requires a dedicated firewall policy for Siemplify and a configured
+    list of sensor names to deploy the changes successfully.
+  ai_short_description: >-
+    Blocks specific IP addresses on McAfee Network Security Manager (NSM) by adding
+    them to a firewall policy and deploying the changes to sensors.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -73,16 +41,52 @@ Block IP:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Creates or updates firewall rule objects in McAfee NSM and updates the firewall
-      policy to block the specified IP addresses. It also triggers a configuration
-      push (deploy changes) to the sensors.
-    fetches_data: true
+      Adds IP addresses to a blocklist rule object within a firewall policy and deploys
+      the updated configuration to McAfee NSM sensors.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action mutates external data by making POST/PUT requests to McAfee NSM to
+      create/update rule objects and deploy sensor configurations. It does not fetch
+      contextual enrichment data, nor does it mutate internal SecOps data like entities,
+      insights, or case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -96,53 +100,71 @@ Block IP:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == ADDRESS`. Therefore, it targets ADDRESS entities and filters strictly by
+      entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action performs API calls to McAfee NSM to add IP addresses to a firewall
+      policy blocklist and deploys the changes to sensors. This directly aligns with
+      the 'Add IOC To Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Get Alert Info Data:
   ai_description: >-
     ### General Description
 
-    Retrieves detailed information for a specific alert from McAfee Network Security
-    Manager (NSM). This action is used to fetch the full context of an alert, including
-    signature details, attacker/target information, and malware metadata, which can
-    be used for further investigation or automated decision-making within a playbook.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Alert ID | String | Yes | The unique identifier of the alert in McAfee NSM.
-    |
-
-    | Sensor Name | String | Yes | The name of the sensor that generated the alert.
-    This is required to locate the alert within the NSM architecture. |
-
-
-    ### Additional Notes
-
-    This action does not run on entities. It requires a specific Alert ID and Sensor
-    Name as input parameters. The retrieved data is returned as a JSON object and
-    displayed in a formatted data table within the case wall.
+    Retrieves detailed alert information from McAfee Network Security Manager (NSM)
+    based on a specific Alert ID and Sensor Name. This action is useful for gathering
+    additional context about an alert directly from the NSM platform.
 
 
     ### Flow Description
 
-    1. **Initialization**: The action initializes the McAfee NSM manager using the
-    integration's configuration (API Root, credentials, and domain information).
+    1. Retrieves the `Alert ID` and `Sensor Name` from the action parameters.
 
-    2. **Parameter Retrieval**: The action extracts the `Alert ID` and `Sensor Name`
-    provided by the user or playbook.
+    2. Initiates a GET request to the McAfee NSM API (`alerts/{alert_id}?sensorId={sensor_id}`)
+    to fetch the alert details.
 
-    3. **Sensor Resolution**: The manager resolves the provided `Sensor Name` to its
-    internal `Sensor ID` by querying the NSM API.
+    3. If successful, parses the returned JSON data.
 
-    4. **Data Retrieval**: A GET request is sent to the NSM API to fetch the detailed
-    alert information using the `Alert ID` and the resolved `Sensor ID`.
+    4. Attaches the alert data to the action's JSON result and creates a table with
+    the details.
 
-    5. **Output Generation**: If data is found, it is added to the action's results
-    as a raw JSON object and a formatted data table. The action then concludes with
-    a success message.
+
+    ### Additional Notes
+
+    Requires valid McAfee NSM credentials and network connectivity to the NSM API.
+  ai_short_description: >-
+    Retrieves detailed alert information from McAfee Network Security Manager (NSM)
+    using a specific Alert ID and Sensor Name.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -153,10 +175,47 @@ Get Alert Info Data:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to the McAfee NSM API to fetch alert data. It
+      does not mutate external data, nor does it update internal entities, create
+      insights, or modify alert data within Google SecOps.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -170,52 +229,80 @@ Get Alert Info Data:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or process `siemplify.target_entities`. It
+      relies entirely on the explicitly provided 'Alert ID' and 'Sensor Name' parameters.
+      Therefore, it does not run on entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: true
+    reasoning: >-
+      The action fetches information about a specific alert from a 3rd party product
+      (McAfee NSM) using an Alert ID. This directly aligns with the 'Get Alert Information'
+      expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert ID | String | Yes | Alert ID |
+
+    | Sensor Name | String | Yes | Sensor Name |
 Is IP Blocked:
   ai_description: >-
     ### General Description
 
-    The **Is IP Blocked** action checks whether specific IP Address entities are currently
-    blocked within the McAfee Network Security Manager (NSM). It queries the NSM to
-    see if the IP is part of a rule object associated with the configured Siemplify
-    firewall policy. This is primarily used for verifying the current enforcement
-    state of an IP before or after containment actions.
-
-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | N/A | N/A | N/A | This action does not take any input parameters. |
-
-
-    ### Additional Notes
-
-    This action relies on the integration's global configuration, specifically the
-    'Siemplify Policy Name' and 'Domain ID', to determine which firewall rules to
-    inspect. It only checks for blocks within the policy managed by the SOAR.
+    Checks if specific IP address entities are currently blocked within McAfee Network
+    Security Manager (NSM).
 
 
     ### Flow Description
 
-    1. **Initialization**: Connects to the McAfee NSM API using the integration's
-    global configuration credentials.
+    1. Filters the target entities to include only IP addresses.
 
-    2. **Entity Filtering**: Identifies all `ADDRESS` entities within the current
-    case scope.
+    2. Iterates through the filtered IP addresses.
 
-    3. **Status Check**: For each IP address, it queries the NSM to find rule objects
-    containing that IP that are also members of the designated Siemplify firewall
-    policy.
+    3. For each IP address, queries McAfee NSM via API to determine if it is part
+    of an active blocking rule object within the configured policy.
 
-    4. **Categorization**: Groups entities into 'Blocked' and 'Unblocked' lists based
-    on the API response.
+    4. Categorizes the entities into blocked and unblocked lists.
 
-    5. **Cleanup**: Logs out of the NSM session to ensure security.
+    5. Returns a summary message and a boolean result indicating if at least one IP
+    is blocked.
 
-    6. **Completion**: Returns a summary message and a boolean result (True if at
-    least one IP is blocked).
+
+    ### Additional Notes
+
+    This action only checks the block status and does not modify any firewall rules
+    or policies.
+  ai_short_description: >-
+    Checks if specific IP address entities are currently blocked within McAfee Network
+    Security Manager (NSM).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -226,11 +313,48 @@ Is IP Blocked:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action fetches rule objects from McAfee NSM via GET requests to determine
+      if an IP is blocked, so it fetches data. It does not perform any state-changing
+      operations on external systems, nor does it update internal entities, create
+      insights, modify alerts, or create case comments.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -244,32 +368,70 @@ Is IP Blocked:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      == ADDRESS`. Therefore, it operates on Address entities and filters by entity
+      type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action checks the block status of an IP address on a firewall/NSM. It does
+      not return threat intelligence (Enrich IOC), nor does it actively block or unblock
+      the IP (Add/Remove IOC from Blocklist). Therefore, it does not match any of
+      the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
   ai_description: >-
-    Tests connectivity to the McAfee Network Security Manager (NSM) instance. This
-    action validates the provided credentials and network reachability by attempting
-    to establish an API session and immediately terminating it.
+    ### General Description
 
-
-    ### Parameters
-
-    There are no parameters for this action.
+    Tests connectivity to the McAfee NSM instance.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action fetches the integration configuration,
-    including API Root, credentials, and Domain ID.
+    1. Initializes the Siemplify action and retrieves the McAfee NSM configuration.
 
-    2. **Authentication**: The `NsmManager` is initialized, which automatically attempts
-    to authenticate with the NSM API to retrieve a session token via a GET request
-    to the session endpoint.
+    2. Initializes the `NsmManager` which authenticates and establishes a session
+    with the McAfee NSM API.
 
-    3. **Session Termination**: The action explicitly calls the `logout` method to
-    close the established session using a DELETE request.
+    3. Logs out of the session to clean up.
 
-    4. **Result Reporting**: If the authentication and logout cycle completes without
-    error, the action reports a successful connection.
+    4. Returns a success message indicating the connection was established.
+
+
+    ### Additional Notes
+
+    This action is used to verify that the integration is configured correctly and
+    can communicate with the McAfee NSM API.
+  ai_short_description: >-
+    Tests connectivity to the McAfee NSM instance by establishing and then closing
+    a session.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -280,10 +442,47 @@ Ping:
     external_data_mutation_explanation: null
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action initializes a connection to the McAfee NSM API and immediately logs
+      out to test connectivity. It does not fetch contextual data, mutate external
+      or internal data, update entities, or create insights.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -297,56 +496,69 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process any entities. It only tests connectivity to the
+      McAfee NSM API.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticketing.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Quarantine IP:
   ai_description: >-
     ### General Description
 
-    Quarantines specific IP address entities on McAfee Network Security Manager (NSM)
-    sensors. This action is used for containment by isolating a potentially malicious
-    host from the network. The quarantine is applied with a duration of 'Until Explicitly
-    Released', meaning the isolation persists until a manual or automated release
-    action is triggered.
-
-
-    ### Parameters Description
-
-    | Parameter Name | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | No Action Parameters | N/A | N/A | This action does not require specific input
-    parameters. It relies on the integration's global configuration for sensor lists
-    and credentials. |
-
-
-    ### Additional Notes
-
-    * This action requires the **Sensors Names List Comma Separated** to be correctly
-    configured in the McAfee NSM integration settings. The action will attempt to
-    apply the quarantine on every sensor listed in that configuration.
-
-    * The quarantine duration is hardcoded to `UNTIL_EXPLICITLY_RELEASED`.
+    Quarantines specific IP address entities on McAfee Network Security Manager (NSM).
 
 
     ### Flow Description
 
-    1. **Initialization**: Connects to the McAfee NSM instance using credentials and
-    domain information from the integration configuration.
+    1. Iterates through the target entities provided in the case.
 
-    2. **Entity Filtering**: Identifies all `ADDRESS` (IP) entities provided in the
-    current context.
+    2. Filters the entities to process only those of type IP Address.
 
-    3. **Sensor Resolution**: For each configured sensor name, the action retrieves
-    the corresponding internal Sensor ID from NSM.
+    3. For each valid IP address, iterates through the configured list of NSM sensors.
 
-    4. **Quarantine Execution**: Sends a POST request to the NSM API for each IP entity
-    on every resolved sensor to initiate the quarantine process.
+    4. Retrieves the sensor ID and sends a POST request to the McAfee NSM API to quarantine
+    the IP address until explicitly released.
 
-    5. **Result Tracking**: Tracks which IP addresses were successfully quarantined
-    across the sensors.
+    5. Logs out of the NSM session and returns a summary of the successfully quarantined
+    IP addresses.
 
-    6. **Completion**: Logs out of the NSM session and returns a summary message of
-    the quarantined identifiers.
+
+    ### Additional Notes
+
+    The duration for the quarantine is hardcoded to 'until explicitly released'.
+  ai_short_description: >-
+    Quarantines specific IP address entities across configured sensors on McAfee Network
+    Security Manager (NSM).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -355,15 +567,50 @@ Quarantine IP:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Quarantines the specified IP address on the configured McAfee NSM sensors, which
-      changes the network access state for that host in the external system.
+      Quarantines the specified IP address on the configured McAfee NSM sensors.
     fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action calls `nsm_manager.quarantine_ip`, which makes a POST request to
+      the McAfee NSM API to quarantine an IP address. This mutates external data.
+      It does not fetch data, update internal entities, or create insights.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -377,28 +624,78 @@ Quarantine IP:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `if
+      entity.entity_type == ADDRESS:`. Therefore, it targets ADDRESS entities and
+      filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action makes a POST request to McAfee NSM to quarantine an IP address on
+      the configured sensors. This aligns with the 'Add IOC To Blocklist' category,
+      as it updates network security controls to prevent interaction with the IP.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Unblock IP:
-  ai_description: "### General Description\nUnblocks specific IP address entities\
-    \ within McAfee Network Security Manager (NSM). This action identifies the firewall\
-    \ rule objects associated with the target IP addresses, removes the IPs from those\
-    \ rules (or deletes the rule object if it contains only that IP), and then triggers\
-    \ a configuration deployment to the relevant sensors to apply the changes.\n\n\
-    ### Parameters Description\nThere are no parameters for this action.\n\n### Additional\
-    \ Notes\n* This action requires a pre-configured 'Siemplify Policy Name' and a\
-    \ list of 'Sensors' in the integration settings to know where to apply the unblocking\
-    \ logic.\n* The action performs a 'Deploy Changes' operation at the end of the\
-    \ process to ensure the firewall updates are active on the physical or virtual\
-    \ sensors.\n\n### Flow Description\n1. **Initialization**: Connects to the McAfee\
-    \ NSM API using provided credentials and configuration.\n2. **Entity Filtering**:\
-    \ Identifies all `ADDRESS` entities within the current action scope.\n3. **Rule\
-    \ Identification**: For each IP address, it searches for the corresponding rule\
-    \ object within the specified Siemplify policy in NSM.\n4. **IP Removal**: \n\
-    \    * If the rule object contains multiple IPs, it removes only the target IP.\n\
-    \    * If the rule object contains only the target IP, it removes the rule object\
-    \ from the policy and deletes the object entirely.\n5. **Deployment**: Triggers\
-    \ a configuration update (`deploy_changes`) for all sensors defined in the integration\
-    \ configuration to finalize the unblocking.\n6. **Cleanup**: Logs out of the NSM\
-    \ session and reports the list of successfully unblocked entities."
+  ai_description: >-
+    ### General Description
+
+    Unblocks specific IP address entities in McAfee Network Security Manager (NSM).
+    This action removes the specified IP addresses from active blocklist policies
+    and deploys the updated configuration to the relevant sensors.
+
+
+    ### Flow Description
+
+    1. Initializes a connection to the McAfee NSM API using the provided integration
+    configuration.
+
+    2. Filters the target entities to include only IP addresses (`ADDRESS`).
+
+    3. Iterates through the filtered entities and queries NSM to find the rule object
+    containing the IP address.
+
+    4. Makes API calls (PUT/DELETE) to remove the IP address from the rule object,
+    or deletes the rule object entirely if it only contains the target IP.
+
+    5. Makes a PUT request to deploy the configuration changes to the configured sensors.
+
+    6. Logs out of the NSM session and returns a summary message of the unblocked
+    entities.
+
+
+    ### Additional Notes
+
+    This action modifies external firewall policies and requires appropriate permissions
+    on the McAfee NSM side to update rule objects and deploy sensor configurations.
+  ai_short_description: >-
+    Unblocks specific IP address entities by removing them from blocklist policies
+    in McAfee Network Security Manager (NSM) and deploying the changes to the sensors.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -407,15 +704,52 @@ Unblock IP:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: >-
-      Removes IP addresses from firewall rule objects, deletes empty rule objects,
-      and updates sensor configurations to deploy changes in McAfee NSM.
-    fetches_data: true
+      Removes IP addresses from blocklist rule objects or deletes the rule objects
+      in McAfee NSM, then deploys the configuration changes to the sensors.
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action mutates external data by making PUT and DELETE requests to McAfee
+      NSM to remove IP addresses from rule objects and deploy sensor configurations.
+      It does not fetch data for enrichment, nor does it mutate internal SecOps data,
+      update entities, or create insights.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -429,3 +763,40 @@ Unblock IP:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using the
+      condition `entity.entity_type == ADDRESS` (where ADDRESS is EntityTypes.ADDRESS).
+      Therefore, it targets ADDRESS entities and filters strictly by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes an IP address from a blocklist rule object in McAfee NSM
+      and deploys the changes to the sensors, restoring connectivity for the indicator.
+      This directly aligns with the 'Remove IOC From Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

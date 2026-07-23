@@ -56,7 +56,7 @@ def test_pack_current_version(
 @mock.patch("mp.pack.flow.integrations.flow.IntegrationPacker._checkout_version_from_git")
 @mock.patch("mp.pack.flow.integrations.flow.IntegrationPacker._build_and_process_integration")
 @mock.patch("mp.pack.flow.integrations.flow.remove_git_worktree")
-def test_pack_different_version(  # noqa: PLR0913, PLR0917
+def test_pack_different_version(  # ruff:ignore[too-many-arguments, too-many-positional-arguments]
     mock_remove_worktree: mock.Mock,
     mock_build: mock.Mock,
     mock_checkout: mock.Mock,

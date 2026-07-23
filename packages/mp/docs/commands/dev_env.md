@@ -88,6 +88,124 @@ mp push playbook [PLAYBOOK] [OPTIONS]
 | `--include-blocks` | Push all playbook dependent blocks.                   | `bool` | `False` |
 | `--keep-zip`       | Keep the generated zip file after pushing.            | `bool` | `False` |
 
+### `push view`
+
+Build and push Case or Alert view template(s) to the dev environment.
+
+**Usage:**
+
+```bash
+mp push view [VIEW] [OPTIONS]
+```
+
+**Arguments:**
+
+* `[VIEW]`: *(Optional)* The view name, folder name, or UUID identifier to push. Required unless `--all` is specified.
+
+**Options:**
+
+| Option       | Description                                                             | Type   | Default |
+|:-------------|:------------------------------------------------------------------------|:-------|:--------|
+| `--all`      | Push all views from the local repository.                               | `bool` | `False` |
+| `--custom`   | Path to custom source directory containing views.                       | `Path` | `None`  |
+| `--force`    | Force creating new views if they do not exist on the platform.          | `bool` | `False` |
+| `--validate` | Validate local view configuration on target server without pushing.    | `bool` | `False` |
+
+**Examples:**
+
+```bash
+# Push a single view
+mp push view "Default Case View"
+
+# Push all views in the repository
+mp push view --all
+
+# Force creating a new view
+mp push view "New Case View" --force
+
+# Validate a view configuration without pushing
+mp push view "Default Case View" --validate
+```
+
+**Validation & Verification Notes:**
+
+* **Validation (`--validate`)**: Aggregates and reports all missing Custom Fields, missing platform Widgets, and missing Integration dependencies required by view widget actions in a single output before exiting.
+* **Post-Push Widget Verification**: After a push completes (with `--force`), `mp` automatically performs an in-memory layout check against the server. If the target SOAR instance omits any submitted widgets (e.g., due to disabled feature flags or missing license modules like `GenerativeAI`), `mp` displays a `[VALIDATION WARNING] Widget Not Persisted by Platform` notice.
+
+### `push custom-field`
+
+Push custom field(s) to the dev environment.
+
+**Usage:**
+
+```bash
+mp push custom-field [FIELD] [OPTIONS]
+```
+
+**Arguments:**
+
+* `[FIELD]`: *(Optional)* The custom field name or YAML file path to push. Required unless `--all` is specified.
+
+**Options:**
+
+| Option     | Description                                                    | Type   | Default |
+|:-----------|:---------------------------------------------------------------|:-------|:--------|
+| `--all`    | Push all custom fields from the local repository.              | `bool` | `False` |
+| `--custom` | Path to custom source directory containing custom fields.      | `Path` | `None`  |
+| `--force`  | Force creating new custom fields if not present on server.     | `bool` | `False` |
+| `--scope`  | Filter custom fields to push by scope (e.g., `alert`, `case`, `alert,case` [OR filter], or `shared` [AND filter for both alert and case]). | `str`  | `None`  |
+
+**Examples:**
+
+```bash
+# Push a single custom field
+mp push custom-field "Is False Positive"
+
+# Push all alert-scoped custom fields in the repository
+mp push custom-field --all --scope alert
+
+# Push a custom field using its local filename (matches exact name or scope suffix)
+mp push custom-field "Free_Text_[Serhii_2]_alert" --force
+```
+
+### `push alert-grouping-rule`
+
+Push alert grouping rule(s) to the dev environment.
+
+**Usage:**
+
+```bash
+mp push alert-grouping-rule [RULE] [OPTIONS]
+```
+
+**Arguments:**
+
+* `[RULE]`: *(Optional)* The alert grouping rule category name, filename stem, or YAML file path to push. Required unless `--all` is specified.
+
+**Options:**
+
+| Option     | Description                                                        | Type   | Default |
+|:-----------|:-------------------------------------------------------------------|:-------|:--------|
+| `--all`    | Push all alert grouping rules from the local repository.           | `bool` | `False` |
+| `--custom` | Path to custom source directory containing alert grouping rules.   | `Path` | `None`  |
+| `--force`  | Force creating new alert grouping rules if not present on server.  | `bool` | `False` |
+
+**Examples:**
+
+```bash
+# Push an alert grouping rule by category name
+mp push alert-grouping-rule "AlertType"
+
+# Push a specific alert grouping rule by exact local YAML file path
+mp push alert-grouping-rule "content/alert_grouping_rules/DataSource_jira_microsoft_casb_microsoftgraphmail.yaml"
+
+# Push a specific alert grouping rule by filename stem (without .yaml extension)
+mp push alert-grouping-rule "DataSource_jira_microsoft_casb_microsoftgraphmail"
+
+# Push all alert grouping rules in the repository
+mp push alert-grouping-rule --all
+```
+
 ### `push custom-integration-repository`
 
 Build, zip, and upload the entire custom integration repository.
@@ -140,3 +258,127 @@ mp pull playbook [PLAYBOOK] [OPTIONS]
 | `--dst`            | Destination folder. Defaults to the `.downloads` directory in the repo. | `Path` | `None`  |
 | `--include-blocks` | Pull all playbook dependent blocks.                                     | `bool` | `False` |
 | `--keep-zip`       | Keep the zip file after pulling.                                        | `bool` | `False` |
+
+### `pull view`
+
+Pull and deconstruct Case or Alert view template(s) from the dev environment.
+
+**Usage:**
+
+```bash
+mp pull view [VIEW] [OPTIONS]
+```
+
+**Arguments:**
+
+* `[VIEW]`: *(Optional)* The view name or UUID identifier to pull. Required unless `--all` or `--list` is specified.
+
+**Options:**
+
+| Option     | Description                                                             | Type   | Default |
+|:-----------|:------------------------------------------------------------------------|:-------|:--------|
+| `--all`    | Pull all views from the dev environment.                                | `bool` | `False` |
+| `--list`   | List all installed view templates on the dev environment.              | `bool` | `False` |
+| `--custom` | Destination folder path. Defaults to `content/views/<identifier_uuid>`. | `Path` | `None`  |
+
+**Examples:**
+
+```bash
+# List all view templates on the server
+mp pull view --list
+
+# Pull a single view
+mp pull view "Default Case View"
+
+# Pull all views from the server
+mp pull view --all
+```
+
+### `pull custom-field`
+
+Pull custom field(s) from the dev environment.
+
+**Usage:**
+
+```bash
+mp pull custom-field [FIELD] [OPTIONS]
+```
+
+**Arguments:**
+
+* `[FIELD]`: *(Optional)* The custom field name to pull. Required unless `--all` or `--list` is specified.
+
+**Options:**
+
+| Option     | Description                                                                     | Type   | Default |
+|:-----------|:--------------------------------------------------------------------------------|:-------|:--------|
+| `--all`    | Pull all custom fields from the dev environment.                                | `bool` | `False` |
+| `--list`   | List all installed custom fields on the dev environment.                        | `bool` | `False` |
+| `--custom` | Destination directory or file path. Defaults to `content/custom_fields/<scope>`.| `Path` | `None`  |
+| `--scope`  | Filter custom fields to pull by scope (e.g., `alert`, `case`, `alert,case` [OR filter], or `shared` [AND filter for both alert and case]).| `str`  | `None`  |
+
+> [!NOTE]
+> **Renamed Local Files Preservation:** If a local YAML configuration already matches a pulled custom field's configuration (by `displayName` and `scopes`) but has a custom filename, `mp` will automatically find and overwrite that file directly instead of creating a new default file.
+
+**Examples:**
+
+```bash
+# List installed custom fields
+mp pull custom-field --list
+
+# Pull a single custom field by display name
+# (Downloads from server and saves it to the default path: content/custom_fields/alert/Is_False_Positive_alert.yaml)
+mp pull custom-field "Is False Positive"
+
+# Pull a custom field matching a local filename (e.g., Free_Text_[Custom_Name]_random.yaml)
+# (Reads displayName/scopes from local file, fetches matching server field, and overwrites the local file)
+mp pull custom-field "Free_Text_[Custom_Name]_random"
+
+# Pull all case-scoped custom fields
+mp pull custom-field --all --scope case
+```
+
+### `pull alert-grouping-rule`
+
+Pull alert grouping rule(s) from the dev environment.
+
+**Usage:**
+
+```bash
+mp pull alert-grouping-rule [RULE] [OPTIONS]
+```
+
+**Arguments:**
+
+* `[RULE]`: *(Optional)* The alert grouping rule category name, filename stem, or local YAML file path to pull. Required unless `--all` or `--list` is specified.
+
+**Options:**
+
+| Option     | Description                                                                     | Type   | Default |
+|:-----------|:--------------------------------------------------------------------------------|:-------|:--------|
+| `--all`    | Pull all alert grouping rules from the dev environment.                         | `bool` | `False` |
+| `--list`   | List all installed alert grouping rules on the dev environment.                 | `bool` | `False` |
+| `--custom` | Destination directory or file path. Defaults to `content/alert_grouping_rules`. | `Path` | `None`  |
+
+> [!NOTE]
+> **Renamed Local Files Preservation:** If a local YAML configuration already matches a pulled grouping rule's configuration (by `category` and its subcategory list `categoryDetails`) or filename stem, `mp` will automatically find and overwrite that file directly instead of creating a new default file.
+
+**Examples:**
+
+```bash
+# List installed alert grouping rules
+mp pull alert-grouping-rule --list
+
+# Pull all grouping rules under a category (e.g., AlertType)
+mp pull alert-grouping-rule "AlertType"
+
+# Pull a specific alert grouping rule matching a local filename (e.g., DataSource_jira_microsoft_casb_microsoftgraphmail.yaml)
+# (Reads category/categoryDetails from local file, fetches matching server rule, and overwrites the local file)
+mp pull alert-grouping-rule "DataSource_jira_microsoft_casb_microsoftgraphmail.yaml"
+
+# Pull a specific alert grouping rule by filename stem (without .yaml extension)
+mp pull alert-grouping-rule "DataSource_jira_microsoft_casb_microsoftgraphmail"
+
+# Pull all alert grouping rules
+mp pull alert-grouping-rule --all
+```

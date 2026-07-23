@@ -265,3 +265,55 @@ class VulnerabilityFindingsQueryBuilder:
                 "filterBy": filter_by,
             },
         }
+
+
+@dataclasses.dataclass(slots=True)
+class ThreatAIAnalysisQueryBuilder:
+    issue_id: str
+    variable_name: str = "issueId"
+    variable_type: str = "ID!"
+    operation_name: str = "threatAIAnalysis"
+    query_name: str = "issue"
+
+    def build_fields(self) -> list[Field]:
+        return [
+            Field(
+                name="threatDetectionDetails",
+                fields=[
+                    Field(
+                        name="aiAnalysis",
+                        fields=[
+                            "id",
+                            "status",
+                            "verdict",
+                            "analyzedAt",
+                            "severity",
+                            "confidenceLevel",
+                            "conclusion",
+                        ],
+                    ),
+                ],
+            ),
+        ]
+
+    def build_query(self) -> SingleJson:
+        """Build the GraphQL query and variables payload."""
+        variable = Variable(name=self.variable_name, type=self.variable_type)
+
+        query = Query(
+            name=self.query_name,
+            arguments=[Argument(name="id", value=variable)],
+            fields=self.build_fields(),
+        )
+
+        operation = Operation(
+            type="query",
+            name=self.operation_name,
+            variables=[variable],
+            queries=[query],
+        )
+
+        return {
+            "query": operation.render(),
+            "variables": {self.variable_name: self.issue_id},
+        }

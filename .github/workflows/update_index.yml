@@ -1,0 +1,38 @@
+name: Auto-update Parser Index
+on:
+  push:
+    paths:
+      - 'content/parsers/third_party/community/**'
+      - 'content/parsers/third_party/partner/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Generate Index
+        run: python3 tools/parsers/scripts/generate_index.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add content/parsers/third_party/COMMUNITY_INDEX.json content/parsers/third_party/PARTNER_INDEX.json
+          
+          if git diff-index --quiet HEAD; then
+            echo "No index files were changed. Skipping commit."
+          else
+            git commit -m "Automated update of parser indexes [skip ci]"
+            git push origin HEAD:${{ github.ref }}
+          fi

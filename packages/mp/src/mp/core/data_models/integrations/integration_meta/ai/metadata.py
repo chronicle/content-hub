@@ -18,7 +18,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from .product_categories import IntegrationProductCategories  # noqa: TC001
+from .product_categories import IntegrationProductCategories  # ruff:ignore[typing-only-first-party-import]
 
 
 class IntegrationAiMetadata(BaseModel):
