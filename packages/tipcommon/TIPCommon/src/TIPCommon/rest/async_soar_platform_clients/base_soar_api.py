@@ -62,8 +62,6 @@ class BaseAsyncSoarApi:
             httpx.HTTPStatusError: If the request returns an unsuccessful status code.
 
         """
-        self.logger.info(f"Calling SOAR API (async): {method} {self.async_sdk.api_root}/{endpoint}")
-
         response: httpx.Response = await self.client.request(
             method,
             endpoint,
@@ -71,8 +69,6 @@ class BaseAsyncSoarApi:
             json=payload,
             headers=headers,
         )
-
-        self.logger.info(f"SOAR API response (async): {method} {endpoint} (status={response.status_code})")
 
         response.raise_for_status()
 
