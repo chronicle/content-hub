@@ -338,9 +338,7 @@ def _push_single_custom_field(field_file: Path, force: bool) -> None:  # ruff:ig
             logger.error("=" * 80)
             logger.error("[VALIDATION ERROR] Custom Field Not Installed")
             logger.error("Custom field '%s' not found on the platform.", field_name)
-            logger.error(
-                "Creation of new custom fields is blocked by default. Use the --force flag to force creation."
-            )
+            logger.error("Creation of new custom fields is blocked by default. Use the --force flag to force creation.")
             logger.error("=" * 80)
             raise typer.Exit(1)
 

@@ -108,9 +108,7 @@ def push_alert_grouping_rule(
 def _get_rule_filename(rule_data: dict) -> str:
     category_name = rule_data.get("category") or "Unknown"
     subs = [
-        x.get("identifier")
-        for x in rule_data.get("categoryDetails", [])
-        if isinstance(x, dict) and x.get("identifier")
+        x.get("identifier") for x in rule_data.get("categoryDetails", []) if isinstance(x, dict) and x.get("identifier")
     ]
     if subs:
         safe_subs = [str(s).replace(" ", "_").replace("/", "_").lower() for s in sorted(subs)]
@@ -146,9 +144,7 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:  # r
         raise typer.Exit(1)
 
     local_subs = {
-        x.get("identifier")
-        for x in rule_data.get("categoryDetails", [])
-        if isinstance(x, dict) and x.get("identifier")
+        x.get("identifier") for x in rule_data.get("categoryDetails", []) if isinstance(x, dict) and x.get("identifier")
     }
 
     existing_id = None
@@ -177,8 +173,7 @@ def _push_single_alert_grouping_rule(rule_file: Path, force: bool) -> None:  # r
     # (handles case when user edited categoryDetails in local file)
     if existing_id is None:
         category_matches = [
-            rule for rule in installed_rules
-            if str(rule.get("category")).lower() == str(rule_category).lower()
+            rule for rule in installed_rules if str(rule.get("category")).lower() == str(rule_category).lower()
         ]
         if len(category_matches) == 1:
             existing_id = category_matches[0].get("id")

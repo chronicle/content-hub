@@ -257,6 +257,7 @@ def _normalize_downloaded_view(flat_view: dict[str, Any], backend_api: BackendAP
                             from mp.dev_env.sub_commands.custom_field.pull import (  # ruff:ignore[import-outside-top-level]
                                 _download_and_save_custom_field,
                             )
+
                             _download_and_save_custom_field(backend_api, cf_id, None)
                         except typer.Exit:
                             logger.warning("Failed to auto-pull dependent custom field '%s' (ID: %s).", cf_name, cf_id)

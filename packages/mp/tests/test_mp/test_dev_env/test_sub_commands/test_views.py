@@ -39,9 +39,7 @@ def test_pull_view_cli(
     mock_get_backend_api.return_value = mock_api
 
     # Mock list_views response
-    mock_api.list_views.return_value = [
-        {"Identifier": "system_case_default", "Name": "Default Case View"}
-    ]
+    mock_api.list_views.return_value = [{"Identifier": "system_case_default", "Name": "Default Case View"}]
 
     # Mock download_view response (flat camelCase REST API structure)
     mock_api.download_view.return_value = {
@@ -118,9 +116,7 @@ def test_pull_view_matches_local_folder(
     mock_api = mock.MagicMock()
     mock_get_backend_api.return_value = mock_api
 
-    mock_api.list_views.return_value = [
-        {"Identifier": "system_case_default", "Name": "Default Case View"}
-    ]
+    mock_api.list_views.return_value = [{"Identifier": "system_case_default", "Name": "Default Case View"}]
 
     mock_api.download_view.return_value = {
         "identifier": "system_case_default",
@@ -135,13 +131,16 @@ def test_pull_view_matches_local_folder(
     # Pre-create local view folder with a custom name but matching view name
     custom_folder = tmp_path / "my_custom_folder_name"
     custom_folder.mkdir()
-    (custom_folder / "view.yaml").write_text(yaml.dump({
-        "identifier": "old_identifier",
-        "name": "Default Case View",
-        "type": "system_case",
-        "creator": "system",
-        "widgets_details": []
-    }), encoding="utf-8")
+    (custom_folder / "view.yaml").write_text(
+        yaml.dump({
+            "identifier": "old_identifier",
+            "name": "Default Case View",
+            "type": "system_case",
+            "creator": "system",
+            "widgets_details": [],
+        }),
+        encoding="utf-8",
+    )
 
     with mock.patch("mp.core.file_utils.create_or_get_views_root_dir", return_value=tmp_path):
         result = runner.invoke(pull_app, ["view", "Default Case View"])
@@ -214,31 +213,37 @@ def test_push_view_all(
     # Create dummy local view directories
     view_1_dir = tmp_path / "view_id_1"
     view_1_dir.mkdir()
-    (view_1_dir / "view.yaml").write_text(yaml.dump({
-        "identifier": "view_id_1",
-        "name": "View One",
-        "type": "system_case",
-        "creator": "system",
-        "playbook_id": "playbook_1",
-        "alert_rule_type": None,
-        "roles": [1, 2],
-        "role_names": ["Tier 1", "Tier 2"],
-        "widgets_details": []
-    }), encoding="utf-8")
+    (view_1_dir / "view.yaml").write_text(
+        yaml.dump({
+            "identifier": "view_id_1",
+            "name": "View One",
+            "type": "system_case",
+            "creator": "system",
+            "playbook_id": "playbook_1",
+            "alert_rule_type": None,
+            "roles": [1, 2],
+            "role_names": ["Tier 1", "Tier 2"],
+            "widgets_details": [],
+        }),
+        encoding="utf-8",
+    )
 
     view_2_dir = tmp_path / "view_id_2"
     view_2_dir.mkdir()
-    (view_2_dir / "view.yaml").write_text(yaml.dump({
-        "identifier": "view_id_2",
-        "name": "View Two",
-        "type": "system_case",
-        "creator": "system",
-        "playbook_id": "playbook_1",
-        "alert_rule_type": None,
-        "roles": [1, 2],
-        "role_names": ["Tier 1", "Tier 2"],
-        "widgets_details": []
-    }), encoding="utf-8")
+    (view_2_dir / "view.yaml").write_text(
+        yaml.dump({
+            "identifier": "view_id_2",
+            "name": "View Two",
+            "type": "system_case",
+            "creator": "system",
+            "playbook_id": "playbook_1",
+            "alert_rule_type": None,
+            "roles": [1, 2],
+            "role_names": ["Tier 1", "Tier 2"],
+            "widgets_details": [],
+        }),
+        encoding="utf-8",
+    )
 
     with mock.patch("mp.core.file_utils.create_or_get_views_root_dir", return_value=tmp_path):
         result = runner.invoke(push_app, ["view", "--all"])
@@ -627,7 +632,7 @@ def test_push_view_fallback_to_name_and_type_matching(
     called_args = mock_api.upload_view.call_args[0][0]
 
     assert called_args["identifier"] == "server_uuid"  # UUID aligned to server UUID
-    assert called_args["id"] == 100                 # Server ID is injected
+    assert called_args["id"] == 100  # Server ID is injected
     assert called_args["type"] == 3
 
     # Verify download_view was called during pre-push and post-push verification
@@ -844,9 +849,7 @@ def test_push_view_aggregates_multiple_validation_errors(
     mock_api = mock.MagicMock()
     mock_get_backend_api.return_value = mock_api
 
-    mock_api.list_views.return_value = [
-        {"identifier": "test_uuid", "name": "Test View", "type": 3, "widgets": []}
-    ]
+    mock_api.list_views.return_value = [{"identifier": "test_uuid", "name": "Test View", "type": 3, "widgets": []}]
     mock_api.download_view.return_value = {
         "identifier": "test_uuid",
         "widgets": [],
@@ -1044,9 +1047,7 @@ def test_push_view_validates_quick_actions_integrations(
     mock_api = mock.MagicMock()
     mock_get_backend_api.return_value = mock_api
 
-    mock_api.list_views.return_value = [
-        {"identifier": "qa_uuid", "name": "QA View", "type": 2, "widgets": []}
-    ]
+    mock_api.list_views.return_value = [{"identifier": "qa_uuid", "name": "QA View", "type": 2, "widgets": []}]
     mock_api.download_view.return_value = {"identifier": "qa_uuid", "widgets": []}
     mock_api.list_custom_fields.return_value = []
     # Akamai is NOT installed on platform
@@ -1127,9 +1128,7 @@ def test_push_view_logs_warning_for_omitted_widgets(
     mock_api = mock.MagicMock()
     mock_get_backend_api.return_value = mock_api
 
-    mock_api.list_views.return_value = [
-        {"id": 10, "identifier": "om_uuid", "name": "Omitted View", "type": 5}
-    ]
+    mock_api.list_views.return_value = [{"id": 10, "identifier": "om_uuid", "name": "Omitted View", "type": 5}]
     # Server download_view returns empty widgets list (omitted W_Omitted)
     mock_api.download_view.return_value = {"identifier": "om_uuid", "widgets": []}
     mock_api.list_custom_fields.return_value = []
