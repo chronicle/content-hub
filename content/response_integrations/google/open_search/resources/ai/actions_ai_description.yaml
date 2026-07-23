@@ -12,6 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 Advanced OS Search:
   ai_description: >-
     ### General Description
@@ -23,11 +37,10 @@ Advanced OS Search:
     and a formatted CSV data table.
 
 
-
     ### Flow Description
 
-    1. **Parameter Extraction**: The action retrieves user inputs, ensuring mandatory
-    fields like `Index` and `Query` are provided.
+    1. **Parameter Extraction**: The action retrieves user inputs, including the search
+    query, index, and time-range filters.
 
     2. **Validation**: It validates that the `Limit` parameter is a positive integer.
 
@@ -35,7 +48,7 @@ Advanced OS Search:
     Lucene string and the specified time range filters (using `gte` and `lte` logic).
 
     4. **Execution**: The query is executed against the OpenSearch cluster via the
-    API client.
+    API client (`advanced_os_search` method).
 
     5. **Data Processing**: Retrieved hits are flattened into a single-level dictionary
     structure for better readability.
@@ -107,80 +120,76 @@ Advanced OS Search:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Index** | String | Yes | The index name or wildcard pattern (e.g., `logs-*`)
-    to search within. |
+    | Index | String | No | Search pattern for a OpenSearch index. Defines in what
+    index(es) to search. It can be an exact name or a wildcard pattern. |
 
-    | **Query** | String | Yes | The search query using Lucene syntax (e.g., `status:error
-    AND user:admin`). |
+    | Query | String | No | The search query to perform in Lucene syntax. |
 
-    | **Limit** | Integer | Yes | The maximum number of documents to return (default
-    is 100). |
+    | Limit | String | No | Limits the document return count (e.g., 100). 0 = No limit.
+    |
 
-    | **Display Field** | String | Yes | Comma-separated list of fields to include
-    in the output. Use `*` for all fields. |
+    | Display Field | String | No | Limits the returned fields. Default "*" = Return
+    all fields. |
 
-    | **Search Field** | String | Yes | The default field to search if no field is
-    specified in the query string. |
+    | Search Field | String | No | Search field for free text queries (when the query
+    doesn't specify a field name). Default is "_all". |
 
-    | **Timestamp Field** | String | Yes | The field used for time-based filtering
-    (default is `@timestamp`). |
+    | Timestamp Field | String | No | The name of the field to run time-based filtering
+    against. Default is @timestamp. |
 
-    | **Oldest Date** | String | No | The start of the time range. Supports ISO 8601
-    strings or date-math (e.g., `now-1d`). |
+    | Oldest Date | String | No | Start date of the search. Search will return only
+    records equal or after this point in time. Supports exact UTC or relative date-math.
+    |
 
-    | **Earliest Date** | String | No | The end of the time range. Supports ISO 8601
-    strings or date-math (e.g., `now`). |
+    | Earliest Date | String | No | End date of the search. Search will return only
+    records equal or before this point in time. Supports exact UTC or relative date-math.
+    |
+
+
+    **Parameter Notes:**
+
+    Although the integration metadata defines all parameters as non-mandatory, the
+    underlying Python code execution strictly requires `Index`, `Query`, `Limit`,
+    `Display Field`, `Search Field`, and `Timestamp Field` to be provided.
   ai_short_description: >-
-    The **Advanced OS Search** action executes structured searches against OpenSearch
-    indexes using Lucene query syntax. It is specifically designed for scenarios requiring
-    precise time-range filtering, allowing users to retrieve documents that fall between
-    a specific start and end date. The action returns results as both a raw JSON object
-    and a formatted CSV data table.
+    Executes structured searches against OpenSearch indexes using Lucene query syntax
+    and time-range filtering, returning the results as JSON and CSV.
 DSL Search:
   ai_description: >-
+    ### General Description
+
     Executes a Domain Specific Language (DSL) query against an OpenSearch cluster
     to retrieve documents. This action is designed to fetch historical data or specific
     logs based on complex search criteria provided in JSON format. It supports wildcard
     index patterns and allows for limiting the number of returned results.
 
 
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Index | String | Yes | The index or index pattern to search. Supports wildcards
-    (e.g., 'smp_playbooks-*' or 'logs-*'). |
-
-    | Query | String | Yes | The DSL query to perform. Must be a valid JSON string
-    or '*' for a match-all query. |
-
-    | Limit | Integer | Yes | Limits the number of documents returned. A value of
-    0 typically implies no limit, though the action defaults to 100. |
-
-
     ### Flow Description
 
-    1. **Parameter Extraction:** The action retrieves the 'Index', 'Query', and 'Limit'
+    1. **Parameter Extraction:** The action retrieves the `Index`, `Query`, and `Limit`
     parameters from the input configuration.
 
-    2. **Validation:** Validates that the 'Limit' parameter is a positive integer.
+    2. **Validation:** Validates that the `Limit` parameter is a positive integer.
 
-    3. **API Interaction:** Connects to the OpenSearch cluster using the configured
-    authentication (Username/Password or JWT) and executes the DSL search.
+    3. **API Interaction:** Connects to the OpenSearch cluster and executes the DSL
+    search via the OpenSearch API (`search` method).
 
     4. **Result Processing:** If documents are found, the action flattens the JSON
     results for tabular representation.
 
     5. **Output Generation:** Creates a data table in the SOAR case containing the
     flattened results and attaches the raw JSON data as the action's result JSON.
+
+
+    ### Additional Notes
+
+    Supports wildcard index patterns and allows for limiting the number of returned
+    results. While the metadata marks the parameters as optional, the underlying code
+    enforces them as mandatory for successful execution.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -237,9 +246,22 @@ DSL Search:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    There are no parameters for this action.
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Index | String | No | Search pattern for an OpenSearch index. It can be an exact
+    name (e.g., "smp_playbooks-2019.06.13") or use a (*) wildcard to search by a pattern
+    (e.g., "smp*"). |
+
+    | Query | String | No | The DSL query to perform. The query must be a valid JSON,
+    or *. |
+
+    | Limit | Integer | No | Limits the document return count (e.g., 10). 0 = No limit.
+    |
   ai_short_description: >-
-    The DSL Search action.
+    Executes a Domain Specific Language (DSL) query against an OpenSearch cluster
+    to retrieve documents and logs based on complex search criteria.
 Ping:
   ai_description: >-
     ### General Description
@@ -250,33 +272,24 @@ Ping:
     credentials and network settings.
 
 
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | N/A | N/A | N/A | This action does not have any input parameters. |
-
-
-    ### Additional Notes
-
-    This action relies on the global integration configuration (Server Address, Username,
-    Password, JWT Token, etc.) to establish a connection.
-
-
     ### Flow Description
 
     1. **Initialize API Client**: The action initializes the `OpenSearchManager` using
     the integration's global configuration parameters, including authentication (Basic
     or JWT) and SSL settings.
 
-    2. **Test Connectivity**: It executes the `test_connectivity` method, which performs
-    a call to the OpenSearch `info()` API endpoint to verify the server is reachable
-    and responding.
+    2. **Test Connectivity**: It executes a call to the OpenSearch `info()` API endpoint
+    to verify the server is reachable and responding.
 
     3. **Output Result**: If the connection is successful, the action returns a boolean
     `True` and a success message.
+
+
+    ### Additional Notes
+
+    This action relies on the global integration configuration (Server Address, Username,
+    Password, JWT Token, etc.) to establish a connection and does not require any
+    action-specific parameters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -333,12 +346,10 @@ Ping:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    There are no parameters for this action.
+    There are no parameters for this action
   ai_short_description: >-
-    Verifies connectivity to the OpenSearch server using the provided integration
-    configuration. This action is primarily used to ensure that the SOAR platform
-    can successfully communicate with the OpenSearch instance using the configured
-    credentials and network settings.
+    Verifies connectivity to the OpenSearch server to ensure the SOAR platform can
+    successfully communicate with the instance.
 Simple OS Search:
   ai_description: >-
     ### General Description
@@ -348,7 +359,6 @@ Simple OS Search:
     tasks that do not require specific time-range filtering. The action fetches matching
     documents, flattens the data structure for readability, and outputs the results
     as both a structured data table and raw JSON.
-
 
 
     ### Flow Description
@@ -432,23 +442,18 @@ Simple OS Search:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Index** | String | Yes | Specifies the OpenSearch index or index pattern (e.g.,
-    `smp_logs-*`) to search. |
+    | Index | String | Yes | Search pattern for an OpenSearch index. This parameter
+    defines in what index(es) to search (e.g., an exact name or a wildcard pattern).
+    |
 
-    | **Query** | String | Yes | The search query using Lucene syntax (e.g., `level:error`
-    or `user.name:admin`). |
+    | Query | String | Yes | The search query to perform in Lucene syntax. |
 
-    | **Limit** | Integer | Yes | The maximum number of documents to retrieve. Must
-    be a positive integer. Default is 100. |
+    | Limit | Integer | Yes | Limits the document return count. 0 means no limit.
+    |
   ai_short_description: >-
-    The **Simple OS Search** action enables users to execute searches across OpenSearch
-    indexes using standard Lucene query syntax. It is designed for broad data retrieval
-    tasks that do not require specific time-range filtering. The action fetches matching
-    documents, flattens the data structure for readability, and outputs the results
-    as both a structured data table and raw JSON.
+    Executes a Lucene syntax search across OpenSearch indexes and returns the matching
+    documents.

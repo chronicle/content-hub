@@ -12,6 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 Add Note:
   ai_description: >-
     ### General Description
@@ -20,7 +34,6 @@ Add Note:
     to document findings or provide updates directly within a ServiceDesk Plus ticket
     from the Google SecOps platform. It supports setting the visibility of the note
     to either public (visible to the requester) or private (technicians only).
-
 
 
     ### Flow Description
@@ -34,7 +47,7 @@ Add Note:
     3. **API Interaction**: The action uses the `ServiceDeskPlusManager` to format
     the note data into an XML structure required by the ServiceDesk Plus API.
 
-    4. **Execution**: It sends a request to the ServiceDesk Plus endpoint `request/{request_id}/notes`
+    4. **Execution**: It sends a POST request to the ServiceDesk Plus endpoint `request/{request_id}/notes`
     using the `ADD_NOTE` operation.
 
     5. **Completion**: The action validates the API response and returns a success
@@ -103,24 +116,18 @@ Add Note:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
+    | Parameter | Type | Mandatory | Description |
 
-    | Parameter Name | Type | Mandatory | Description |
+    | --- | --- | --- | --- |
 
-    | :--- | :--- | :--- | :--- |
+    | Request ID | String | Yes | The requests' ID. |
 
-    | Request ID | String | Yes | The unique identifier of the ServiceDesk Plus request
-    to which the note will be added. |
+    | Note | String | Yes | The note's content. |
 
-    | Note | String | Yes | The actual text content of the note to be added. |
-
-    | Is Public | Boolean | Yes | Determines the visibility of the note. If set to
-    `true`, the note is public; if `false`, it is private. Default is `false`. |
+    | Is Public | Boolean | Yes | Whether to make the note public or not. |
   ai_short_description: >-
-    Adds a note to a specific request in ServiceDesk Plus. This action allows analysts
-    to document findings or provide updates directly within a ServiceDesk Plus ticket
-    from the Google SecOps platform. It supports setting the visibility of the note
-    to either public (visible to the requester) or private (technicians only).
+    Adds a note to a specific request in ServiceDesk Plus, allowing analysts to document
+    findings or provide updates directly within a ticket.
 Add Note And Wait For Reply:
   ai_description: >-
     ### General Description
@@ -130,23 +137,29 @@ Add Note And Wait For Reply:
     until a reply or a new note is detected on the specified request.
 
 
-
     ### Flow Description
 
     1. **Add Note**: The action begins by posting the provided note to the ServiceDesk
-    Plus request using the `Request ID`.
+    Plus request using the `Request ID` via the `add_note` API call.
 
-    2. **Capture State**: It retrieves the current list of notes for the request and
-    identifies the timestamp of the note just added.
+    2. **Capture State**: It retrieves the current list of notes for the request via
+    the `get_request_notes` API call and identifies the timestamp of the note just
+    added.
 
     3. **Enter Wait State**: The action execution state is set to 'In Progress', and
     the timestamp is saved as additional data.
 
     4. **Polling**: In the background, the action periodically checks for any notes
-    on the request that have a creation timestamp newer than the saved one.
+    on the request that have a creation timestamp newer than the saved one via the
+    `get_request_notes` API call.
 
     5. **Completion**: When a new note is found, the action captures the content of
     the new notes and completes the execution, returning the new data.
+
+
+    ### Additional Notes
+
+    This is an asynchronous action.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -204,23 +217,18 @@ Add Note And Wait For Reply:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Request ID | String | Yes | The unique identifier of the request in ServiceDesk
-    Plus. |
+    | Request ID | String | Yes | The requests' ID. |
 
-    | Note | String | Yes | The content of the note to be added to the request. |
+    | Note | String | Yes | The note's content. |
 
-    | Is Public | Boolean | Yes | Specifies whether the note should be public (visible
-    to the requester) or private. Defaults to false. |
+    | Is Public | Boolean | Yes | Whether to make the note public or not. |
   ai_short_description: >-
     Adds a note to a specific request in ServiceDesk Plus and waits for new notes
-    to be added to that request. This is an asynchronous action that remains in progress
-    until a reply or a new note is detected on the specified request.
+    to be added to that request.
 Close Request:
   ai_description: >-
     ### General Description
@@ -230,36 +238,26 @@ Close Request:
     the resolution has been acknowledged by the requester.
 
 
-    ### Parameters
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | Request ID | String | Yes | The unique identifier of the ServiceDesk Plus request
-    to be closed. |
-
-    | Comment | String | Yes | The closing comment to be recorded in the request's
-    history upon closure. |
-
-    | Resolution Acknowledged | Boolean | Yes | Specifies whether the resolution of
-    the request is acknowledged. Expects 'true' or 'false'. |
-
-
     ### Flow Description
 
     1. **Initialization**: Connects to the ServiceDesk Plus API using the configured
-    API Root and API Key.
+    credentials.
 
     2. **Parameter Processing**: Retrieves the Request ID, closure comment, and acknowledgment
     status from the action's input parameters.
 
     3. **API Interaction**: Calls the `CLOSE_REQUEST` operation via the ServiceDesk
-    Plus Manager, which sends the closure details (comment and acknowledgment status)
-    to the external system.
+    Plus Manager, which sends an HTTP request to the external system to close the
+    specified ticket.
 
     4. **Finalization**: If the API returns a success status, the action completes
     with a success message indicating the request has been closed.
+
+
+    ### Additional Notes
+
+    Ensure the provided Request ID corresponds to an existing and open request in
+    ServiceDesk Plus.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -318,28 +316,26 @@ Close Request:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    There are no parameters for this action.
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Request ID | String | Yes | The request's ID. |
+
+    | Comment | String | Yes | Closing comment. |
+
+    | Resolution Acknowledged | Boolean | Yes | Whether the resolution of the request
+    is acknowledged or not. |
   ai_short_description: >-
-    Closes a specific request in ServiceDesk Plus. This action allows users to programmatically
-    finalize tickets by providing a mandatory closing comment and specifying whether
-    the resolution has been acknowledged by the requester.
+    Closes a specific request in ServiceDesk Plus by providing a closing comment and
+    acknowledgment status.
 Create Alert Request:
   ai_description: >-
     ### General Description
 
     Creates a new request (ticket) in ServiceDesk Plus. This action can operate in
     both Alert and Case scopes. It automatically populates the request's description
-    with the Siemplify Alert ID and Alert Name to maintain traceability between the
-    two systems.
-
-
-
-    ### Additional Notes
-
-    - This action does not run on specific entities; it operates at the alert level.
-
-    - If a parameter is set to "None" (case sensitive), the integration logic treats
-    it as an empty value for dropdown-based fields.
+    with the Siemplify Alert ID to maintain traceability between the two systems.
 
 
     ### Flow Description
@@ -352,16 +348,24 @@ Create Alert Request:
 
     3. **Context Building**: For each target alert (the current alert in Alert scope,
     or all alerts in the case in Case scope), it automatically generates a description
-    string containing the `external_id` and `name` of the alert.
+    string containing the external ID of the alert.
 
-    4. **External API Call**: Communicates with ServiceDesk Plus to create the request
-    using the provided parameters for each target alert.
+    4. **External API Call**: Communicates with the ServiceDesk Plus API via a POST
+    request to create the request using the provided parameters for each target alert.
 
-    5. **Internal Updates**: Adds a 'ServiceDeskPlus' tag to the action and updates
-    the alert's metadata with the newly created Request ID.
+    5. **Internal Updates**: Adds a 'ServiceDeskPlus' tag to the case and updates
+    the alert's additional data with the newly created Request ID.
 
     6. **Completion**: Returns the Request ID or a comma-separated list of Request
     IDs as the action result.
+
+
+    ### Additional Notes
+
+    - This action does not run on specific entities; it operates at the alert level.
+
+    - If a parameter is set to "None" (case sensitive), the integration logic treats
+    it as an empty value for dropdown-based fields.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -421,53 +425,45 @@ Create Alert Request:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Subject | String | Yes | The subject line for the ServiceDesk Plus request.
+    | Subject | String | Yes | The subject of the request. |
+
+    | Requester | String | No | The requester of the request. If not specified, set
+    to the user of the API key. |
+
+    | Status | String | No | The status of the request. |
+
+    | Technician | String | No | The name of the technician assigned to the request.
     |
 
-    | Requester | String | No | The name of the person requesting the ticket. If omitted,
-    the API key user is typically used. |
+    | Priority | String | No | The priority of the request. |
 
-    | Status | String | No | The initial status of the request (e.g., Open, In Progress).
+    | Urgency | String | No | The urgency of the request. |
+
+    | Category | String | No | The category of the request. |
+
+    | Request Template | String | No | The template of the request. |
+
+    | Request Type | String | No | The type of the request. I.e: Incident, Service
+    Request, etc. |
+
+    | Due By Time (ms) | String | No | The due date of the request in milliseconds.
     |
 
-    | Technician | String | No | The name of the technician to whom the request should
-    be assigned. |
+    | Mode | String | No | The mode of the request. |
 
-    | Priority | String | No | The priority level (e.g., High, Medium, Low). |
+    | Level | String | No | The level of the request. |
 
-    | Urgency | String | No | The urgency level of the request. |
+    | Site | String | No | The site of the request. |
 
-    | Category | String | No | The category classification for the request. |
+    | Group | String | No | The group of the request. |
 
-    | Request Template | String | No | The specific ServiceDesk Plus template to apply
-    to the request. |
-
-    | Request Type | String | No | The type of request, such as 'Incident' or 'Service
-    Request'. |
-
-    | Due By Time (ms) | String | No | The deadline for the request, provided in Unix
-    epoch milliseconds. |
-
-    | Mode | String | No | The mode of the request (e.g., Web Form, Phone Call). |
-
-    | Level | String | No | The tier level for the request (e.g., Tier 1). |
-
-    | Site | String | No | The site associated with the request. |
-
-    | Group | String | No | The group associated with the request. |
-
-    | Impact | String | No | The impact level of the request. |
+    | Impact | String | No | The impact of the request. |
   ai_short_description: >-
-    Creates a new request (ticket) in ServiceDesk Plus. This action can operate in
-    both Alert and Case scopes. It automatically populates the request's description
-    with the Siemplify Alert ID and Alert Name to maintain traceability between the
-    two systems.
+    Creates a new request (ticket) in ServiceDesk Plus for the target alert(s).
 Create Request:
   ai_description: >-
     ### General Description
@@ -476,15 +472,6 @@ Create Request:
     Plus. It allows for the comprehensive definition of ticket details, including
     categorization, prioritization, and assignment. After the request is successfully
     created, the action retrieves and returns the full details of the new ticket.
-
-
-
-    ### Additional Notes
-
-    - Only the **Subject** parameter is strictly mandatory for the action to execute.
-
-    - The **Due By Time (ms)** parameter is automatically converted from a Unix timestamp
-    to the specific date format required by the ServiceDesk Plus API.
 
 
     ### Flow Description
@@ -506,6 +493,14 @@ Create Request:
 
     6. **Finalization**: The action outputs the request ID and the full JSON representation
     of the ticket to the SOAR platform.
+
+
+    ### Additional Notes
+
+    - Only the **Subject** parameter is strictly mandatory for the action to execute.
+
+    - The **Due By Time (ms)** parameter is automatically converted from a Unix timestamp
+    to the specific date format required by the ServiceDesk Plus API.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -563,73 +558,76 @@ Create Request:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
     | Subject | String | Yes | The subject of the request. |
 
-    | Requester | String | No | The requester of the request. If not specified, it
-    defaults to the user associated with the API key. |
+    | Requester | String | No | The requester of the request. If not specified, set
+    to the user of the API key. |
 
-    | Description | String | No | A detailed description of the request. |
+    | Description | String | No | The description of the request. |
 
-    | Status | String | No | The initial status of the request (e.g., Open, In Progress).
+    | Status | String | No | The status of the request. |
+
+    | Technician | String | No | The name of the technician assigned to the request.
     |
 
-    | Technician | String | No | The name of the technician to be assigned to the
-    request. |
+    | Priority | String | No | The priority of the request. |
 
-    | Priority | String | No | The priority level of the request (e.g., High, Medium,
-    Low). |
+    | Urgency | String | No | The urgency of the request. |
 
-    | Urgency | String | No | The urgency level of the request. |
+    | Category | String | No | The category of the request. |
 
-    | Category | String | No | The category under which the request falls. |
+    | Request Template | String | No | The template of the request. |
 
-    | Request Template | String | No | The specific template to apply to the request.
+    | Request Type | String | No | The type of the request. I.e: Incident, Service
+    Request, etc. |
+
+    | Due By Time (ms) | String | No | The due date of the request in milliseconds.
     |
 
-    | Request Type | String | No | The type of request, such as 'Incident' or 'Service
-    Request'. |
+    | Mode | String | No | The mode of the request. |
 
-    | Due By Time (ms) | String | No | The due date for the request, provided as a
-    Unix timestamp in milliseconds. |
+    | Level | String | No | The level of the request. |
 
-    | Mode | String | No | The mode through which the request was received (e.g.,
-    SMS, Web Form). |
+    | Site | String | No | The site of the request. |
 
-    | Level | String | No | The tier level of the request (e.g., Tier 1). |
+    | Group | String | No | The group of the request. |
 
-    | Site | String | No | The physical site or location associated with the request.
-    |
-
-    | Group | String | No | The group to which the request should be assigned. |
-
-    | Impact | String | No | The business impact of the request. |
+    | Impact | String | No | The impact of the request. |
   ai_short_description: >-
-    This action creates a new request (incident or service request) in ServiceDesk
-    Plus. It allows for the comprehensive definition of ticket details, including
-    categorization, prioritization, and assignment. After the request is successfully
-    created, the action retrieves and returns the full details of the new ticket.
+    Creates a new request (incident or service request) in ServiceDesk Plus and returns
+    the ticket details.
 Get Request:
   ai_description: >-
-    ### General Description\nRetrieves detailed information about a specific request
-    from ServiceDesk Plus using its unique Request ID. This action is used to fetch
-    ticket metadata, status, and associated details to provide context within a SOAR
-    case.\n\n### Parameters Description\n| Parameter | Type | Mandatory | Description
-    |\n| :--- | :--- | :--- | :--- |\n| Request ID | String | Yes | The unique identifier
-    of the request to be retrieved from ServiceDesk Plus. |\n\n### Flow Description\n1.
-    **Connection**: Establishes a connection to the ServiceDesk Plus instance using
-    the provided API Root and Key.\n2. **Retrieval**: Sends a GET request to the ServiceDesk
-    Plus API to fetch the details of the request specified by the 'Request ID' parameter.\n3.
-    **Processing**: Parses the XML/JSON response and flattens the data for easier
-    consumption.\n4. **Output**: Adds a data table to the case containing the request
-    information and returns the full raw JSON for use in subsequent playbook steps.\n\n###
-    Additional Notes\nThis action does not process entities from the case; it relies
-    solely on the provided Request ID parameter.
+    ### General Description
+
+    Retrieves detailed information about a specific request from ServiceDesk Plus
+    using its unique Request ID. This action is used to fetch ticket metadata, status,
+    and associated details to provide context within a SOAR case.
+
+
+    ### Flow Description
+
+    1. Establishes a connection to the ServiceDesk Plus instance.
+
+    2. Retrieves the `Request ID` parameter.
+
+    3. Sends a GET request to the ServiceDesk Plus API to fetch the details of the
+    specified request.
+
+    4. Parses the response, flattens the data, and attaches it as a data table to
+    the case.
+
+    5. Returns the raw JSON data of the request for use in subsequent playbook steps.
+
+
+    ### Additional Notes
+
+    This action does not process entities from the case; it relies solely on the provided
+    Request ID parameter.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -686,20 +684,22 @@ Get Request:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    There are no parameters for this action.
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Request ID | String | Yes | The ID of the request. |
   ai_short_description: >-
-    The Get Request action.
+    Retrieves detailed information about a specific request from ServiceDesk Plus
+    using its unique Request ID.
 Ping:
   ai_description: >-
+    ### General Description
+
     The Ping action is designed to verify the connectivity between Google SecOps and
     a ServiceDesk Plus instance. It ensures that the integration's configuration,
     specifically the API Root and API Key, is correct and that the network path to
     the service is open.
-
-
-    ### Parameters
-
-    There are no parameters for this action.
 
 
     ### Flow Description
@@ -717,6 +717,12 @@ Ping:
     4. **Result Reporting**: If the API call is successful, the action concludes with
     a success message ('Connected Successfully') and a boolean result of 'true'. If
     the call fails, an exception is raised with details about the connection error.
+
+
+    ### Additional Notes
+
+    This action is typically used during the initial setup of the integration or for
+    troubleshooting connectivity issues.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -773,16 +779,36 @@ Ping:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    There are no parameters for this action.
+    There are no parameters for this action
   ai_short_description: >-
-    The Ping action.
+    Verifies the connectivity between Google SecOps and a ServiceDesk Plus instance
+    by testing the configured API credentials.
 Update Request:
   ai_description: >-
+    ### General Description
+
     Updates an existing request (ticket) in ServiceDesk Plus. This action allows for
     the modification of a wide range of request attributes, including its status,
     assigned technician, priority, and description. It is primarily used to synchronize
     ticket states between Google SecOps and the ServiceDesk Plus ticketing system.
 
+
+    ### Flow Description
+
+    1. Retrieves the provided update parameters and the mandatory Request ID from
+    the action configuration.
+
+    2. Converts the 'Due By Time' from Unix milliseconds to the specific string format
+    expected by the ServiceDesk Plus API, if provided.
+
+    3. Sends an 'EDIT_REQUEST' operation to the ServiceDesk Plus API with the specified
+    fields to update the ticket.
+
+    4. Fetches the most recent version of the request from the API to confirm the
+    changes.
+
+    5. Attaches the updated request data to the action results as a JSON object and
+    completes with a success message.
 
 
     ### Additional Notes
@@ -791,24 +817,6 @@ Update Request:
 
     - The 'Due By Time (ms)' parameter is automatically converted from Unix milliseconds
     to the date format required by ServiceDesk Plus.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction:** The action retrieves all provided update parameters
-    and the mandatory Request ID from the input.
-
-    2. **Date Formatting:** If a 'Due By Time' is provided in milliseconds, it is
-    converted into the specific string format expected by the ServiceDesk Plus API.
-
-    3. **API Update Call:** The action sends an 'EDIT_REQUEST' operation to the ServiceDesk
-    Plus API with the specified fields.
-
-    4. **Data Retrieval:** After the update, the action fetches the most recent version
-    of the request from the API to confirm the changes.
-
-    5. **Result Processing:** The updated request data is attached to the action results
-    as a JSON object, and the action completes with a success message.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -867,54 +875,48 @@ Update Request:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Request ID | String | Yes | The unique identifier of the request to update.
-    |
+    | Request ID | String | Yes | The id of the request to update. |
 
-    | Requester | String | No | The name of the requester. If not specified, it defaults
-    to the user associated with the API key. |
+    | Requester | String | No | The requester of the request. If not specified, set
+    to the user of the API key. |
 
-    | Description | String | No | The updated description of the request. |
+    | Description | String | No | The description of the request. |
 
-    | Status | String | No | The new status of the request (e.g., Open, In Progress,
-    Closed). |
+    | Status | String | No | The status of the request. |
 
     | Technician | String | No | The name of the technician assigned to the request.
     |
 
-    | Priority | String | No | The priority level of the request (e.g., High, Medium,
-    Low). |
+    | Priority | String | No | The priority of the request. |
 
-    | Urgency | String | No | The urgency level of the request. |
+    | Urgency | String | No | The urgency of the request. |
 
-    | Category | String | No | The category the request belongs to. |
+    | Category | String | No | The category of the request. |
 
-    | Request Template | String | No | The template to be used for the request. |
+    | Request Template | String | No | The template of the request. |
 
-    | Request Type | String | No | The type of request (e.g., Incident, Service Request).
+    | Request Type | String | No | The type of the request. I.e: Incident, Service
+    Request, etc. |
+
+    | Due By Time (ms) | String | No | The due date of the request in milliseconds.
     |
 
-    | Due By Time (ms) | Numeric | No | The due date for the request, provided in
-    Unix milliseconds. |
+    | Mode | String | No | The mode of the request. |
 
-    | Mode | String | No | The mode of the request (e.g., Web Form, Phone Call). |
+    | Level | String | No | The level of the request. |
 
-    | Level | String | No | The tier level of the request (e.g., Tier 1, Tier 2).
-    |
+    | Site | String | No | The site of the request. |
 
-    | Site | String | No | The site associated with the request. |
+    | Group | String | No | The group of the request. |
 
-    | Group | String | No | The group assigned to the request. |
-
-    | Impact | String | No | The impact level of the request. |
+    | Impact | String | No | The impact of the request. |
   ai_short_description: >-
-    The Update Request action.
+    Updates an existing request (ticket) in ServiceDesk Plus with new attributes such
+    as status, priority, and assigned technician.
 Wait For Field Update:
   ai_description: >-
     ### General Description
@@ -923,15 +925,6 @@ Wait For Field Update:
     a specific field of a request in ServiceDesk Plus reaches a desired value. It
     is typically used to wait for manual interventions, such as a ticket being 'Closed'
     or 'Approved', before proceeding with automated steps.
-
-
-
-    ### Additional Notes
-
-    - This is an **asynchronous** action. It will periodically poll the ServiceDesk
-    Plus API until the condition is met or the action times out.
-
-    - The comparison between the field's current value and the target values is case-insensitive.
 
 
     ### Flow Description
@@ -949,6 +942,14 @@ Wait For Field Update:
     4. **Completion/Continuation**: If the current value matches any of the target
     values, the action transitions to 'Completed'. If no match is found, the action
     remains 'In Progress' and waits for the next polling interval.
+
+
+    ### Additional Notes
+
+    - This is an **asynchronous** action. It will periodically poll the ServiceDesk
+    Plus API until the condition is met or the action times out.
+
+    - The comparison between the field's current value and the target values is case-insensitive.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1005,25 +1006,18 @@ Wait For Field Update:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Request ID | String | Yes | The unique identifier of the ServiceDesk Plus request
-    to monitor. |
+    | Request ID | String | Yes | The ID of the request. |
 
-    | Field Name | String | Yes | The name of the field in the request to check for
-    updates (e.g., 'status', 'priority'). |
+    | Field Name | String | Yes | The name of the field to be updated. |
 
-    | Values | String | Yes | A comma-separated list of target values. The action
-    will complete when the field matches any of these values (case-insensitive). |
+    | Values | String | Yes | Desired values for the given field. |
   ai_short_description: >-
-    This action is an asynchronous utility designed to pause playbook execution until
-    a specific field of a request in ServiceDesk Plus reaches a desired value. It
-    is typically used to wait for manual interventions, such as a ticket being 'Closed'
-    or 'Approved', before proceeding with automated steps.
+    Pauses playbook execution until a specific field of a request in ServiceDesk Plus
+    reaches a desired value.
 Wait For Status Update:
   ai_description: >-
     ### General Description
@@ -1033,7 +1027,6 @@ Wait For Status Update:
     primarily used for workflow synchronization, ensuring that subsequent playbook
     steps only proceed once a ticket has been updated in the external ServiceDesk
     Plus system.
-
 
 
     ### Flow Description
@@ -1118,21 +1111,13 @@ Wait For Status Update:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Request ID | String | Yes | The unique identifier of the ServiceDesk Plus request
-    (ticket) to monitor. |
+    | Request ID | String | Yes | The ID of the request. |
 
-    | Statuses | String | Yes | A comma-separated list of target statuses (e.g., 'Closed,
-    Resolved, In Progress'). The action will complete once the request's status matches
-    any value in this list (case-insensitive). |
+    | Statuses | String | Yes | Desired request statuses, comma separated. |
   ai_short_description: >-
-    This action is an asynchronous utility designed to pause playbook execution until
-    a specific ServiceDesk Plus request reaches one or more desired statuses. It is
-    primarily used for workflow synchronization, ensuring that subsequent playbook
-    steps only proceed once a ticket has been updated in the external ServiceDesk
-    Plus system.
+    Pauses playbook execution until a specific ServiceDesk Plus request reaches one
+    or more desired statuses.

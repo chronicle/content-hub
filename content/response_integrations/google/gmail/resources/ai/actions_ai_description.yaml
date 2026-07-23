@@ -12,8 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 Add Email Label:
   ai_description: >-
+    ### General Description
+
     The **Add Email Label** action allows users to apply one or more labels to specific
     emails within a Gmail mailbox. This action is useful for organizing, categorizing,
     or marking emails for further processing during an investigation. It can target
@@ -23,38 +39,32 @@ Add Email Label:
     applying it to the messages.
 
 
+    ### Flow Description
+
+    1. Initializes a connection to the Google Gmail API using the provided mailbox
+    credentials.
+
+    2. Retrieves the list of existing labels in the mailbox via the Gmail API. If
+    any of the labels specified in the `Label` parameter are missing, the action creates
+    them.
+
+    3. Searches for emails based on the provided `Internet Message ID` or constructs
+    a Gmail search query based on the `Subject Filter`, `Sender Filter`, `Labels Filter`,
+    `Time Frame`, and `Email Status` parameters.
+
+    4. Performs a batch update via the Gmail API to apply the requested labels to
+    all matching emails.
+
+    5. Returns a success message indicating the number of emails updated.
+
 
     ### Additional Notes
 
-
-    *   **Search Logic:** Either the `Internet Message ID` must be provided, or at
-    least one of the following filters must be configured: `Subject Filter`, `Labels
-    Filter`, `Sender Filter`, or `Time Frame (minutes)`. 
-
-    *   **Entity Support:** This action does **not** run on Google SecOps entities;
-    it operates directly on the external Gmail service based on the provided parameters.
-
-
-    ### Flow Description
-
-
-    1.  **Authentication:** The action initializes a connection to the Google Gmail
-    API using the provided mailbox credentials.
-
-    2.  **Label Preparation:** It retrieves the list of existing labels in the mailbox.
-    If any of the labels specified in the `Label` parameter are missing, the action
-    creates them.
-
-    3.  **Email Discovery:** 
-        *   If `Internet Message ID` is provided, the action searches for those specific
-    messages.
-        *   Otherwise, it constructs a Gmail search query based on the `Subject Filter`,
-    `Sender Filter`, `Labels Filter`, `Time Frame`, and `Email Status` parameters.
-    4.  **Label Application:** Once the target message IDs are identified, the action
-    performs a batch update to apply the requested labels to all matching emails.
-
-    5.  **Reporting:** The action returns a success message indicating the number
-    of emails updated.
+    This action does not run on Google SecOps entities; it operates directly on the
+    external Gmail service based on the provided parameters. Either the `Internet
+    Message ID` must be provided, or at least one of the following filters must be
+    configured: `Subject Filter`, `Labels Filter`, `Sender Filter`, or `Time Frame
+    (minutes)`.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -113,39 +123,43 @@ Add Email Label:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Mailbox** | String | Yes | The email address of the mailbox to search in.
-    Defaults to the integration's configured default mailbox. |
-
-    | **Label** | String | Yes | A comma-separated list of labels to add to the emails.
-    New labels will be created if they don't exist. |
-
-    | **Internet Message ID** | String | No | A comma-separated list of specific Internet
-    Message IDs to target. If provided, other filters are ignored. |
-
-    | **Labels Filter** | String | No | A comma-separated list of labels to filter
-    the search. Use a minus sign (e.g., `-label1`) to exclude emails with that label.
+    | Mailbox | String | Yes | A mailbox to search the email in, such as user@example.com.
+    By default, the action uses the default mailbox that you configured for the integration.
     |
 
-    | **Subject Filter** | String | No | Filters emails where the subject contains
-    the specified full words. |
+    | Labels Filter | String | No | A filter condition that specifies the email labels
+    to search for. This parameter accepts multiple values as a comma-separated string.
+    You can search for emails with specific labels, such as label1, label2. To search
+    for emails that don’t possess the specific label, use the following format: -label1.
+    |
 
-    | **Sender Filter** | String | No | Filters emails sent by a specific email address
-    (exact match). |
+    | Internet Message ID | String | No | An internet message ID of the email to search
+    for. This parameter accepts multiple values as a comma-separated string. If you
+    provide the internet message ID, the action ignores the Labels Filter, Subject
+    Filter, Sender Filter, and Time Frame (minutes) parameters. |
 
-    | **Time Frame (minutes)** | String | No | Limits the search to emails received
-    within the last X minutes. Default is 60. |
+    | Subject Filter | String | No | A filter condition that specifies the email subject
+    to search for. This filter uses the “contains” logic and requires you to specify
+    search items in full words. This filter doesn’t support partial matches. |
 
-    | **Email Status** | Dropdown | No | Filters by message status: 'Only Unread Messages',
-    'Only Read Messages', or 'Both Read & Unread Messages'. |
+    | Sender Filter | String | No | A filter condition that specifies the email sender
+    to search for. This filter uses the “equals” logic. |
+
+    | Time Frame (minutes) | String | No | A filter condition that specifies the timeframe
+    in minutes to search for emails. |
+
+    | Email Status | Dropdown | No | A status of the email to search for. |
+
+    | Label | String | Yes | A label to update the email with. This parameter accepts
+    multiple values as a comma-separated list. Action will create labels, if they
+    don’t exist in the mailbox. |
   ai_short_description: >-
-    The Add Email Label action.
+    Applies one or more labels to specific emails within a Gmail mailbox based on
+    message ID or search filters.
 Delete Email:
   ai_description: >-
     ### General Description
@@ -157,17 +171,6 @@ Delete Email:
     (default) or delete them permanently. This action is asynchronous and does not
     operate on Google SecOps entities; instead, it uses provided parameters to target
     specific mailboxes and messages.
-
-
-
-    ### Additional Notes
-
-    - Either the **Internet Message ID** or at least one of the other filters (**Subject
-    Filter**, **Labels Filter**, **Sender Filter**, or **Time Frame**) must be configured
-    for the action to execute.
-
-    - This action is asynchronous; ensure the action timeout in the IDE is sufficient
-    for processing large mailboxes.
 
 
     ### Flow Description
@@ -184,6 +187,12 @@ Delete Email:
 
     4. **Reporting**: The action tracks the number of emails found and successfully
     deleted per mailbox, returning a summary and detailed JSON results.
+
+
+    ### Additional Notes
+
+    - This action is asynchronous; ensure the action timeout in the IDE is sufficient
+    for processing large mailboxes.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -242,45 +251,52 @@ Delete Email:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Mailbox** | String | Yes | A comma-separated list of mailboxes to search (e.g.,
-    `user@example.com`). If not provided, it uses the default mailbox from the integration
-    configuration. |
+    | Mailbox | String | Yes | A mailbox to search the email in, such as user@example.com.
+    By default, the action uses the default mailbox that you configured for the integration.
+    This parameter accepts multiple values as a comma-separated string. |
 
-    | **Labels Filter** | String | No | Filter emails by labels (e.g., `Inbox`, `Sent`).
-    Use a minus sign (e.g., `-label1`) to exclude labels. |
+    | Labels Filter | String | No | A filter condition that specifies the email labels
+    to search for. This parameter accepts multiple values as a comma-separated string.
+    You can search for emails with specific labels, such as label1, label2. To search
+    for emails that don’t possess the specific label, use the following format: -label1.
+    You can configure this parameter to search for emails with and without specific
+    labels in one string, such as label1, -label2, label3. |
 
-    | **Internet Message ID** | String | No | A comma-separated list of specific Internet
-    Message IDs. If provided, other filters (Subject, Sender, Labels, Time Frame)
-    are ignored. |
+    | Internet Message ID | String | No | An internet message ID of the email to search
+    for. This parameter accepts multiple values as a comma-separated string. If you
+    provide the internet message ID, the action ignores the Subject Filter, Sender
+    Filter, Labels Filter, and Time Frame (minutes) parameters. |
 
-    | **Subject Filter** | String | No | Searches for emails where the subject contains
-    the specified full words. Partial matches are not supported. |
+    | Subject Filter | String | No | A filter condition that specifies the email subject
+    to search for. This filter uses the “contains” logic and requires you to specify
+    search items in full words. This filter doesn’t support partial matches. |
 
-    | **Sender Filter** | String | No | Filters emails by the exact sender email address.
-    |
+    | Sender Filter | String | No | A filter condition that specifies the email sender
+    to search for. This filter uses the “equals” logic. |
 
-    | **Time Frame (minutes)** | String | No | Limits the search to emails received
-    within the last X minutes. Default is 60. |
+    | Time Frame (minutes) | String | No | A filter condition that specifies the timeframe
+    in minutes to search for emails. |
 
-    | **Email Status** | DDL | No | Filter by read status: `Only Unread Messages`,
-    `Only Read Messages`, or `Both Read & Unread Messages`. |
+    | Email Status | DropDown | No | A status of the email to search for. |
 
-    | **Move to Trash** | Boolean | No | If `True` (default), emails are moved to
-    the Trash folder. If `False`, emails are deleted permanently. |
+    | Move to Trash | Boolean | No | If selected, the action moves emails to Trash
+    and doesn’t search through emails with the Trash label unless you configure the
+    Labels Filter parameter to include the following label: Trash. If not selected,
+    the action executes search across the whole mailbox and deletes emails forever.
+    Selected by default. |
+
+
+    ### Parameter Notes
+
+    Either the "Internet Message ID" parameter or at least one of the "Subject Filter",
+    "Labels Filter", "Sender Filter", or "Time Frame (minutes)" parameters must be
+    configured.
   ai_short_description: >-
-    The **Delete Email** action allows for the removal of one or multiple emails from
-    specified Gmail mailboxes based on a variety of search criteria. It is designed
-    to help security teams remediate phishing or malicious email campaigns by removing
-    messages from user inboxes. The action can either move emails to the 'Trash' folder
-    (default) or delete them permanently. This action is asynchronous and does not
-    operate on Google SecOps entities; instead, it uses provided parameters to target
-    specific mailboxes and messages.
+    Deletes or trashes emails from specified Gmail mailboxes based on search criteria.
 Forward Email:
   ai_description: >-
     ### General Description
@@ -292,23 +308,10 @@ Forward Email:
     content or attachments provided by the user.
 
 
-
-    ### Additional Notes
-
-    - This action does not operate on Google SecOps entities; it relies entirely on
-    the provided parameters.
-
-    - The action automatically includes the original email's attachments in the forwarded
-    message.
-
-    - The original email's content is appended to the new mail content using a standard
-    forwarding template (From, Date, Subject, To).
-
-
     ### Flow Description
 
     1. **Search:** The action searches the specified mailbox for an email matching
-    the provided Internet Message ID.
+    the provided Internet Message ID using the Gmail API.
 
     2. **Retrieval:** If found, it retrieves the full MIME content and all attachments
     of the original email.
@@ -325,6 +328,18 @@ Forward Email:
 
     6. **Execution:** The action sends the constructed email via the Gmail API and
     returns the metadata of the newly sent message.
+
+
+    ### Additional Notes
+
+    - This action does not operate on Google SecOps entities; it relies entirely on
+    the provided parameters.
+
+    - The action automatically includes the original email's attachments in the forwarded
+    message.
+
+    - The original email's content is appended to the new mail content using a standard
+    forwarding template (From, Date, Subject, To).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -383,51 +398,59 @@ Forward Email:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Mailbox** | String | Yes | The email address of the mailbox to search in and
-    send from. If set to 'Default Mailbox', it uses the address configured in the
-    integration settings. |
-
-    | **Internet Message ID** | String | Yes | The unique Internet Message ID (RFC
-    822) of the email to be forwarded. |
-
-    | **Send To** | String | Yes | A comma-separated list of recipient email addresses.
+    | Mailbox | String | Yes | A mailbox to search the email in, such as user@example.com.
+    By default, the action uses the default mailbox that you configured for the integration.
     |
 
-    | **CC** | String | No | A comma-separated list of email addresses for carbon
-    copy recipients. |
+    | Internet Message ID | String | Yes | An internet message ID of the email to
+    search for. |
 
-    | **BCC** | String | No | A comma-separated list of email addresses for blind
-    carbon copy recipients. |
+    | Send To | String | Yes | A comma-separated list of email addresses for the email
+    recipients, such as user1@example.com, user2@example.com. |
 
-    | **Subject** | String | Yes | The subject line for the new forwarded email. |
+    | CC | String | No | A comma-separated string of email addresses for the carbon
+    copy (CC) email recipients, such as user1@example.com, user2@example.com. |
 
-    | **Attachments Paths** | String | No | A comma-separated list of local file paths
-    on the Google SecOps server to be attached to the email. |
+    | BCC | String | No | A comma-separated string of email addresses for the blind
+    carbon copy (BCC) email recipients, such as user1@example.com, user2@example.com.
+    |
 
-    | **Mail Content** | String | Yes | The body text to be included in the forwarded
-    email. |
+    | Subject | String | Yes | A new subject for the email to forward. |
+
+    | Attachments Paths | String | No | A comma-separated string of paths for file
+    attachments stored on the Google SecOps server. |
+
+    | Mail Content | String | Yes | The body of an email. |
   ai_short_description: >-
-    The **Forward Email** action allows users to forward an existing email from a
-    specified Gmail mailbox to one or more recipients. It searches for an email using
-    its unique Internet Message ID, retrieves its content and attachments, and constructs
-    a new forwarded message that includes the original thread details and any additional
-    content or attachments provided by the user.
+    Forwards an existing email from a specified Gmail mailbox to one or more recipients,
+    including the original thread details and attachments.
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic tool designed to verify the connectivity between
-    Google SecOps and the Gmail service. Its primary purpose is to ensure that the
-    integration's connection parameters—such as the Service Account JSON or Workload
-    Identity configuration—are valid and that the environment has the necessary network
-    access and permissions to communicate with the Google Gmail API.
+    The Ping action is a diagnostic tool designed to verify connectivity between Google
+    SecOps and the Gmail service. Its primary purpose is to ensure that the integration's
+    connection parameters, such as the Service Account JSON or Workload Identity configuration,
+    are valid and that the environment has the necessary network access and permissions
+    to communicate with the Google Gmail API.
 
+
+    ### Flow Description
+
+    1. **Initialization**: The action initializes the Google Gmail API client using
+    the integration's global configuration.
+
+    2. **Connectivity Test**: It invokes the `test_connectivity` method, which attempts
+    to refresh the OAuth2 access token to validate the credentials and ensure the
+    Google Cloud authentication endpoint is reachable.
+
+    3. **Cleanup**: Upon completion, the action closes the API session and returns
+    a success message if the connection was established, or an error message if the
+    validation failed.
 
 
     ### Additional Notes
@@ -436,21 +459,6 @@ Ping:
     or for troubleshooting authentication and networking issues. It does not interact
     with specific emails or user data beyond verifying the ability to refresh OAuth2
     credentials.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the Google Gmail API client using
-    the integration's global configuration (e.g., Service Account credentials and
-    SSL settings).
-
-    2. **Connectivity Test**: It invokes the `test_connectivity` method, which attempts
-    to refresh the OAuth2 access token. This step validates the credentials and ensures
-    the Google Cloud authentication endpoint is reachable.
-
-    3. **Cleanup**: Upon completion, the action closes the API session and returns
-    a success message if the connection was established, or an error message if the
-    validation failed.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -507,52 +515,25 @@ Ping:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
-    | Parameter | Type | Mandatory | Description |
-
-    | :--- | :--- | :--- | :--- |
-
-    | None | N/A | N/A | This action does not require any input parameters. |
+    There are no parameters for this action
   ai_short_description: >-
-    The **Ping** action is a diagnostic tool designed to verify the connectivity between
-    Google SecOps and the Gmail service. Its primary purpose is to ensure that the
-    integration's connection parameters—such as the Service Account JSON or Workload
-    Identity configuration—are valid and that the environment has the necessary network
-    access and permissions to communicate with the Google Gmail API.
+    A diagnostic action that verifies connectivity and authentication between Google
+    SecOps and the Gmail service by attempting to refresh the OAuth2 access token.
 Remove Email Label:
-  ai_description: "The Remove Email Label action allows users to remove specific labels
-    from emails within a Gmail mailbox. This action is useful for automated email
-    management, such as removing 'Pending' or 'Inbox' labels once a security incident
-    has been processed. It can target emails using specific Internet Message IDs or
-    by applying a set of filters including subject, sender, timeframe, and current
-    labels. \n\n### Flow Description:\n1. **Authentication**: The action authenticates
-    with the Google Gmail API using the provided Service Account or Workload Identity
-    for the specified mailbox.\n2. **Label Validation**: It retrieves the list of
-    existing labels in the mailbox to verify that the labels requested for removal
-    actually exist.\n3. **Email Discovery**: The action identifies target emails.
-    If 'Internet Message ID' is provided, it searches for those specific messages.
-    Otherwise, it uses the provided filters (Subject, Sender, Time Frame, etc.) to
-    find matching emails.\n4. **Label Removal**: It performs a batch modification
-    request to the Gmail API to remove the specified labels from all identified emails.\n
-    5. **Reporting**: The action returns a summary message indicating how many emails
-    were updated and lists any requested labels that were not found in the mailbox.\n
-    \n### Parameters Description:\n| Parameter | Type | Mandatory | Description |\n
-    | :--- | :--- | :--- | :--- |\n| Mailbox | String | Yes | The email address of
-    the mailbox to operate on. Defaults to the integration's default mailbox. |\n
-    | Labels Filter | String | No | Comma-separated list of labels to filter the search.
-    Use a minus sign (e.g., -LabelName) to exclude emails with that label. |\n| Internet
-    Message ID | String | No | Comma-separated list of Internet Message IDs. If provided,
-    other search filters are ignored. |\n| Subject Filter | String | No | Filters
-    emails where the subject contains the specified full words. |\n| Sender Filter
-    | String | No | Filters emails sent by a specific email address (exact match).
-    |\n| Time Frame (minutes) | String | No | Filters emails received within the last
-    X minutes. |\n| Email Status | Dropdown | No | Filters by 'Only Unread Messages',
-    'Only Read Messages', or 'Both'. |\n| Label | String | Yes | Comma-separated list
-    of labels to be removed from the identified emails. |\n\n### Additional Notes:\n
-    * Either the 'Internet Message ID' parameter or at least one search filter ('Subject
-    Filter', 'Labels Filter', 'Sender Filter', or 'Time Frame') must be configured
-    for the action to execute."
+  ai_description: "Removes specific labels from emails within a Gmail mailbox. This
+    action authenticates with the Google Gmail API, searches for target emails using
+    Internet Message IDs or various filters (subject, sender, timeframe, etc.), and
+    removes the specified labels from the matching emails.\n\n### Flow Description\n
+    1. Authenticates with the Google Gmail API using the provided credentials.\n2.
+    Retrieves the list of existing labels in the mailbox to validate the requested
+    labels.\n3. Searches for target emails using the provided Internet Message IDs
+    or search filters (Subject, Sender, Time Frame, etc.).\n4. Performs a batch modification
+    request (`POST /gmail/v1/users/{user_email}/messages/batchModify`) to the Gmail
+    API to remove the specified labels from the identified emails.\n5. Returns a summary
+    message indicating the number of updated emails and any invalid labels.\n\n###
+    Additional Notes\nEither the 'Internet Message ID' parameter or at least one search
+    filter ('Subject Filter', 'Labels Filter', 'Sender Filter', or 'Time Frame (minutes)')
+    must be configured for the action to execute successfully."
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -611,9 +592,43 @@ Remove Email Label:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    There are no parameters for this action.
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Mailbox | String | Yes | A mailbox to search the email in, such as user@example.com.
+    By default, the action uses the default mailbox that you configured for the integration.
+    |
+
+    | Labels Filter | String | No | A filter condition that specifies the email labels
+    to search for. This parameter accepts multiple values as a comma-separated string.
+    You can search for emails with specific labels, such as label1, label2. To search
+    for emails that don’t possess the specific label, use the following format: -label1.
+    You can configure this parameter to search for emails with and without specific
+    labels in one string, such as label1, -label2, label3. |
+
+    | Internet Message ID | String | No | An internet message ID of the email to search
+    for. This parameter accepts multiple values as a comma-separated string. If you
+    provide the internet message ID, the action ignores the Labels Filter, Subject
+    Filter, Sender Filter, and Time Frame (minutes) parameters. |
+
+    | Subject Filter | String | No | A filter condition that specifies the email subject
+    to search for. This filter uses the “contains” logic and requires you to specify
+    search items in full words. This filter doesn’t support partial matches. |
+
+    | Sender Filter | String | No | A filter condition that specifies the email sender
+    to search for. This filter uses the “equals” logic. |
+
+    | Time Frame (minutes) | String | No | A filter condition that specifies the timeframe
+    in minutes to search for emails. |
+
+    | Email Status | Dropdown | No | A status of the email to search for. |
+
+    | Label | String | Yes | A label to remove from an email. This parameter accepts
+    multiple values as a comma-separated list. |
   ai_short_description: >-
-    The Remove Email Label action.
+    Removes specific labels from emails within a Gmail mailbox based on provided message
+    IDs or search criteria.
 Save Email To The Case:
   ai_description: >-
     ### General Description
@@ -626,6 +641,20 @@ Save Email To The Case:
     `.eml` file or extract specific attachments based on filename filters.
 
 
+    ### Flow Description
+
+    1. **Search:** The action searches the specified Gmail mailbox for a message matching
+    the provided Internet Message ID via the Gmail API.
+
+    2. **Retrieval:** Once found, the action retrieves the message details and content.
+
+    3. **Processing:** Depending on the configuration, it either prepares the full
+    MIME content of the email or iterates through the message parts to find specific
+    attachments.
+
+    4. **Internal Mutation:** The action uses the Google SecOps API to upload the
+    resulting file(s) (the email `.eml` or the attachments) directly to the Case Wall.
+
 
     ### Additional Notes
 
@@ -634,22 +663,6 @@ Save Email To The Case:
 
     - The action requires the `Internet Message ID`, which is typically found in the
     email headers (e.g., `<CAAfJ0RiK... @mail.gmail.com>`).
-
-
-    ### Flow Description
-
-    1. **Search:** The action searches the specified Gmail mailbox for a message matching
-    the provided Internet Message ID.
-
-    2. **Retrieval:** Once found, the action retrieves the message details and content
-    via the Gmail API.
-
-    3. **Processing:** Depending on the configuration, it either prepares the full
-    MIME content of the email or iterates through the message parts to find specific
-    attachments.
-
-    4. **Internal Mutation:** The action uses the Google SecOps API to upload the
-    resulting file(s) (the email `.eml` or the attachments) directly to the Case Wall.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -708,36 +721,30 @@ Save Email To The Case:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Mailbox** | String | Yes | The email address of the mailbox to search. If
-    set to 'Default Mailbox', it uses the address configured in the integration settings.
+    | Mailbox | String | Yes | A mailbox to search the email in, such as user@example.com.
+    By default, the action uses the default mailbox that you configured for the integration.
     |
 
-    | **Internet Message ID** | String | Yes | The RFC822 Internet Message ID of the
-    email to be retrieved. |
+    | Internet Message ID | String | Yes | An internet message ID of the email to
+    search for. |
 
-    | **Save Only Email Attachments** | Boolean | No | If enabled, the action will
-    only save the email's attachments to the Case Wall instead of the entire email.
-    |
+    | Save Only Email Attachments | Boolean | No | If selected, the action saves only
+    attachments from the specified email. Not selected by default. |
 
-    | **Attachment To Save** | String | No | A comma-separated list of specific filenames
-    to save. This is only applicable if 'Save Only Email Attachments' is true. If
-    left empty, all attachments are saved. |
+    | Attachment To Save | String | No | If you selected the “Save Only Email Attachments”
+    parameter, the action only saves attachments that this parameter specifies. This
+    parameter accepts multiple values as a comma-separated string. |
 
-    | **Base64 Encode** | Boolean | No | If enabled, the action encodes the email
-    file into a base64 format before saving. |
+    | Base64 Encode | Boolean | No | If selected, the action encodes the email file
+    into a base64 format. |
   ai_short_description: >-
-    The **Save Email To The Case** action allows users to retrieve a specific email
-    from a Gmail mailbox and save it, or its attachments, directly to the Case Wall
-    of a Google SecOps case. This is primarily used for evidence preservation and
-    documentation within an investigation. The action identifies the email using its
-    unique Internet Message ID and can be configured to save the entire email as an
-    `.eml` file or extract specific attachments based on filename filters.
+    Retrieves a specific email from a Gmail mailbox using its Internet Message ID
+    and saves the entire email or its attachments directly to the Google SecOps Case
+    Wall.
 Search For Emails:
   ai_description: >-
     ### General Description
@@ -745,12 +752,32 @@ Search For Emails:
     The **Search For Emails** action allows users to perform complex searches across
     one or more Gmail mailboxes. It is designed to retrieve email metadata or full
     content based on specific criteria such as senders, recipients, subjects, labels,
-    and timeframes. This action is particularly useful for security investigations
-    where an analyst needs to identify phishing attempts, internal data leaks, or
-    communication patterns across the organization. The action is asynchronous, meaning
-    it can handle long-running searches across multiple mailboxes by checking for
-    results in subsequent iterations.
+    and timeframes. This action is asynchronous, meaning it can handle long-running
+    searches across multiple mailboxes by checking for results in subsequent iterations.
 
+
+    ### Flow Description
+
+    1. **Initialization:** The action extracts and validates all input parameters,
+    ensuring mailboxes and email filters are correctly formatted.
+
+    2. **Context Management:** It checks if this is a new search or a continuation
+    of a previous asynchronous task.
+
+    3. **API Interaction:** For each mailbox, the action connects to the Gmail API
+    (via `GET /gmail/v1/users/{user_email}/messages`) and executes a search query
+    constructed from the provided filters (subject, sender, labels, etc.).
+
+    4. **Data Retrieval:** It fetches the message IDs matching the query and then
+    retrieves the specific details (headers and optionally the body) for each message
+    up to the defined limit (via `GET /gmail/v1/users/{user_email}/messages/{message_id}`).
+
+    5. **Result Compilation:** Discovered emails are formatted into a JSON result
+    and a Data Table named 'Found Mails' for display in the Google SecOps interface.
+
+    6. **Completion:** The action returns a success message summarizing how many emails
+    were found in each mailbox or enters a pending state if more processing time is
+    required.
 
 
     ### Additional Notes
@@ -764,30 +791,6 @@ Search For Emails:
 
     - **Entity Usage:** This action does **not** run on Google SecOps entities; it
     relies entirely on the provided input parameters.
-
-
-    ### Flow Description
-
-    1. **Initialization:** The action extracts and validates all input parameters,
-    ensuring mailboxes and email filters are correctly formatted.
-
-    2. **Context Management:** It checks if this is a new search or a continuation
-    of a previous asynchronous task.
-
-    3. **API Interaction:** For each mailbox, the action connects to the Gmail API
-    and executes a search query constructed from the provided filters (subject, sender,
-    labels, etc.).
-
-    4. **Data Retrieval:** It fetches the message IDs matching the query and then
-    retrieves the specific details (headers and optionally the body) for each message
-    up to the defined limit.
-
-    5. **Result Compilation:** Discovered emails are formatted into a JSON result
-    and a Data Table named 'Found Mails' for display in the Google SecOps interface.
-
-    6. **Completion:** The action returns a success message summarizing how many emails
-    were found in each mailbox or enters a pending state if more processing time is
-    required.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -844,53 +847,56 @@ Search For Emails:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Mailbox** | String (CSV) | Yes | A comma-separated list of mailboxes to search.
-    Use 'Default Mailbox' to use the integration's configured default. |
+    | Mailbox | String | Yes | A mailbox to search the email in, such as user@example.com.
+    By default, the action uses the default mailbox that you configured for the integration.
+    This parameter accepts multiple values as a comma-separated string. |
 
-    | **Labels Filter** | String (CSV) | No | Filter by Gmail labels (e.g., 'Inbox').
-    Use a minus sign (e.g., '-label1') to exclude specific labels. |
+    | Labels Filter | String | No | A filter condition that specifies the email labels
+    to search for. This parameter accepts multiple values as a comma-separated string.
+    You can search for emails with specific labels, such as label1, label2. To search
+    for emails that don’t possess the specific label, use the following format: -label1.
+    You can configure this parameter to search for emails with and without specific
+    labels in one string, such as label1, -label2, label3. |
 
-    | **Internet Message ID** | String (CSV) | No | Search for specific internet message
-    IDs. If provided, other filters like Subject and Sender are ignored. |
+    | Internet Message ID | String | No | An internet message ID of the email to search
+    for. This parameter accepts multiple values as a comma-separated string. If you
+    provide the internet message ID, the action ignores the Subject Filter, Sender
+    Filter, Labels Filter, Recipient Filter, Time Frame (minutes), and Email Status
+    parameters. |
 
-    | **Subject Filter** | String | No | Filter emails by a specific subject string.
+    | Subject Filter | String | No | A filter condition that specifies the email subject
+    to search for. |
+
+    | Sender Filter | String | No | A filter condition that specifies the email sender
+    to search for. |
+
+    | Recipient Filter | String | No | A filter condition that specifies the email
+    recipient to search for. |
+
+    | Time Frame (minutes) | String | No | A filter condition that specifies the timeframe
+    in minutes to search for emails. |
+
+    | Email Status | Dropdown | No | A status of the email to search for. |
+
+    | Headers To Return | String | No | A comma-separated list of headers to return
+    in the action output. The action always returns the following headers: date, from,
+    to, cc, bcc, in-reply-to, reply-to, message-id and subject headers. If you don’t
+    provide any value, the action returns all headers.This parameter is case sensitive.
     |
 
-    | **Sender Filter** | String | No | Filter emails by the sender's email address.
-    |
+    | Return Email Body | Boolean | No | If selected, the action returns the full
+    body content of an email in the action output. If not selected, the information
+    about the attachment names in the email is unavailable |
 
-    | **Recipient Filter** | String | No | Filter emails by the recipient's email
-    address. |
-
-    | **Time Frame (minutes)** | String/Integer | No | The lookback period in minutes
-    from the current time. Default is 60. |
-
-    | **Email Status** | Dropdown | No | Filter by 'Only Unread Messages', 'Only Read
-    Messages', or 'Both Read & Unread Messages'. |
-
-    | **Headers To Return** | String (CSV) | No | Specific email headers to include
-    in the output. Default includes standard headers like date, from, to, etc. |
-
-    | **Return Email Body** | Boolean | No | If true, retrieves the full body content
-    of the emails. |
-
-    | **Max Emails To Return** | String/Integer | No | The maximum number of email
-    results to return per search. Default is 50. |
+    | Max Emails To Return | String | No | The maximum number of emails for the action
+    to return. |
   ai_short_description: >-
-    The **Search For Emails** action allows users to perform complex searches across
-    one or more Gmail mailboxes. It is designed to retrieve email metadata or full
-    content based on specific criteria such as senders, recipients, subjects, labels,
-    and timeframes. This action is particularly useful for security investigations
-    where an analyst needs to identify phishing attempts, internal data leaks, or
-    communication patterns across the organization. The action is asynchronous, meaning
-    it can handle long-running searches across multiple mailboxes by checking for
-    results in subsequent iterations.
+    Searches for emails across one or more Gmail mailboxes based on specific criteria
+    (such as sender, subject, or timeframe) and retrieves their metadata or full content.
 Send Email:
   ai_description: >-
     ### General Description
@@ -899,16 +905,6 @@ Send Email:
     on specified parameters. It supports standard email features including CC, BCC,
     attachments, and custom 'Reply-To' headers. This action is designed to be standalone
     and does not operate on Google SecOps entities.
-
-
-
-    ### Additional Notes
-
-    - The action validates all provided email addresses and CSV formats before attempting
-    to send.
-
-    - If attachments are provided, the action reads the files from the local server
-    path and encodes them for transmission.
 
 
     ### Flow Description
@@ -923,13 +919,21 @@ Send Email:
     3. **Connectivity Test:** Performs a connectivity check to ensure the service
     account has the necessary permissions to access the mailbox.
 
-    4. **Email Construction:** Builds a MIME multipart message including headers (To,
-    CC, BCC, Subject, Reply-To), the HTML body, and any specified attachments.
+    4. **Email Construction & Transmission:** Builds a MIME multipart message including
+    headers (To, CC, BCC, Subject, Reply-To), the HTML body, and any specified attachments,
+    and sends the email via the Gmail API.
 
-    5. **Transmission:** Sends the email via the Gmail `users.messages.send` endpoint.
-
-    6. **Result Retrieval:** Fetches the metadata of the successfully sent message
+    5. **Result Retrieval:** Fetches the metadata of the successfully sent message
     (ID, thread ID, labels) and returns it as the action's JSON result.
+
+
+    ### Additional Notes
+
+    - The action validates all provided email addresses and CSV formats before attempting
+    to send.
+
+    - If attachments are provided, the action reads the files from the local server
+    path and encodes them for transmission.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -988,61 +992,48 @@ Send Email:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Mailbox** | String | Yes | The email address to send the email from. If set
-    to 'Default Mailbox', it uses the address configured in the integration settings.
+    | Mailbox | String | Yes | A mailbox to send an email from, such as user@example.com.
+    By default, the action uses the default mailbox that you configured for the integration.
     |
 
-    | **Subject** | String | Yes | The subject line of the email. |
+    | Subject | String | Yes | The subject for an email to send. |
 
-    | **Send To** | String (CSV) | Yes | A comma-separated list of recipient email
-    addresses. |
+    | Send To | String | Yes | A comma-separated string of email addresses for the
+    email recipients, such as user1@example.com, user2@example.com. |
 
-    | **CC** | String (CSV) | No | A comma-separated list of carbon copy (CC) recipient
-    email addresses. |
+    | CC | String | No | A comma-separated string of email addresses for the carbon
+    copy (CC) email recipients, such as user1@example.com, user2@example.com. |
 
-    | **BCC** | String (CSV) | No | A comma-separated list of blind carbon copy (BCC)
-    recipient email addresses. |
+    | BCC | String | No | A comma-separated string of email addresses for the blind
+    carbon copy (BCC) email recipients, such as user1@example.com, user2@example.com.
+    |
 
-    | **Attachments Paths** | String (CSV) | No | A comma-separated list of file paths
-    located on the Google SecOps server to be attached to the email. |
+    | Attachments Paths | String | No | A comma-separated string of paths for file
+    attachments stored on the Google SecOps server. |
 
-    | **Mail Content** | String (HTML) | Yes | The body content of the email. Supports
-    HTML formatting. |
+    | Mail Content | String | Yes | The body of an email. |
 
-    | **Reply-To Recipients** | String (CSV) | No | A comma-separated list of email
-    addresses to be used in the 'Reply-To' header. |
+    | Reply-To Recipients | String | No | A comma-separated list of recipients to
+    use in the “Reply-To” header. Use the “Reply-To” header to redirect reply emails
+    to the specific email address instead of the sender address that is stated in
+    the “From” field. |
   ai_short_description: >-
-    The **Send Email** action allows users to send emails through the Gmail API based
-    on specified parameters. It supports standard email features including CC, BCC,
-    attachments, and custom 'Reply-To' headers. This action is designed to be standalone
-    and does not operate on Google SecOps entities.
+    Sends an email through the Gmail API using specified parameters, supporting CC,
+    BCC, attachments, and custom Reply-To headers.
 Send Thread Reply:
   ai_description: >-
+    ### General Description
+
     The **Send Thread Reply** action allows users to send an email message as a reply
     to an existing email thread in Gmail. It identifies the target thread using a
     specific Internet Message ID and can either reply to the original sender or to
     all recipients involved in the thread. The action automatically includes attachments
     from the original message in the reply and allows for additional files to be attached
     from the Google SecOps server.
-
-
-
-    ### Additional Notes
-
-    - This action **does not run on entities**. It relies entirely on the provided
-    'Internet Message ID' to locate the thread.
-
-    - If 'Reply All' is not selected and 'Reply To' is empty, the action defaults
-    to replying only to the original sender.
-
-    - The action preserves email threading by correctly setting 'In-Reply-To' and
-    'References' headers.
 
 
     ### Flow Description
@@ -1067,6 +1058,18 @@ Send Thread Reply:
 
     7. **Result Reporting**: Returns the metadata of the newly sent message as a JSON
     result.
+
+
+    ### Additional Notes
+
+    - This action **does not run on entities**. It relies entirely on the provided
+    'Internet Message ID' to locate the thread.
+
+    - If 'Reply All' is not selected and 'Reply To' is empty, the action defaults
+    to replying only to the original sender.
+
+    - The action preserves email threading by correctly setting 'In-Reply-To' and
+    'References' headers.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1126,34 +1129,33 @@ Send Thread Reply:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Mailbox** | String | Yes | The email address of the mailbox to perform the
-    action in. If set to 'Default Mailbox', it uses the address configured in the
-    integration settings. |
-
-    | **Internet Message ID** | String | Yes | The unique Internet Message ID (RFC822)
-    of the email to which you want to reply. |
-
-    | **Reply To** | String | No | A comma-separated list of email addresses to receive
-    the reply. This is ignored if 'Reply All' is selected. |
-
-    | **Reply All** | Boolean | No | If enabled, the action sends the reply to all
-    recipients of the original email plus the sender. This takes priority over the
-    'Reply To' parameter. |
-
-    | **Attachments Paths** | String | No | A comma-separated list of local file paths
-    on the Google SecOps server to be attached to the reply. |
-
-    | **Mail Content** | String | Yes | The HTML or plain text body of the email reply.
+    | Mailbox | String | Yes | A mailbox to search the email in, such as user@example.com.
+    By default, the action uses the default mailbox that you configured for the integration.
     |
+
+    | Internet Message ID | String | Yes | An internet message ID of the email to
+    search for. |
+
+    | Reply To | String | No | A comma-separated list of emails to send the reply
+    to. If you don’t provide any value and the Reply All checkbox is clear, the action
+    only sends a reply to the original email sender. If you select the Reply All parameter,
+    the action ignores this parameter. |
+
+    | Reply All | Boolean | No | If selected, the action sends a reply to all recipients
+    related to the original email. Not selected by default. This parameter has a priority
+    over the Reply To parameter. |
+
+    | Attachments Paths | String | No | A comma-separated string of paths for file
+    attachments stored on the Google SecOps server. |
+
+    | Mail Content | String | Yes | The body of an email. |
   ai_short_description: >-
-    The Send Thread Reply action.
+    Sends an email message as a reply to an existing email thread in Gmail using a
+    specific Internet Message ID.
 Wait For Thread Reply:
   ai_description: >-
     ### General Description
@@ -1163,19 +1165,6 @@ Wait For Thread Reply:
     until a user responds. The action monitors the specified thread for new messages
     from the original recipients and can optionally retrieve attachments from those
     replies.
-
-
-
-    ### Additional Notes
-
-    - This action is **asynchronous** and will run repeatedly until the condition
-    (reply received) is met or the action timeout is reached.
-
-    - It does not operate on Google SecOps entities; it uses the provided Message
-    ID to track the conversation.
-
-    - Ensure the action timeout in the IDE is set high enough to account for human
-    response times.
 
 
     ### Flow Description
@@ -1196,6 +1185,18 @@ Wait For Thread Reply:
     5. **Completion Check**: Based on the 'Wait for All Recipients to Reply' setting,
     the action either completes with the reply data or remains 'In Progress' to wait
     for further responses.
+
+
+    ### Additional Notes
+
+    - This action is **asynchronous** and will run repeatedly until the condition
+    (reply received) is met or the action timeout is reached.
+
+    - It does not operate on Google SecOps entities; it uses the provided Message
+    ID to track the conversation.
+
+    - Ensure the action timeout in the IDE is set high enough to account for human
+    response times.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1255,29 +1256,26 @@ Wait For Thread Reply:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Mailbox | String | Yes | The email address of the mailbox to monitor. Defaults
-    to the integration's configured default mailbox. |
+    | Mailbox | String | Yes | A mailbox to wait for a reply in, such as user@example.com.
+    By default, the action uses the default mailbox that you configured for the integration.
+    |
 
-    | Internet Message ID | String | Yes | The unique RFC822 Message-ID of the email
-    to wait for a reply to. This is usually provided by the output of a previous 'Send
-    Email' action. |
+    | Internet Message ID | String | Yes | The internet message ID of an email for
+    the action to wait for. If the message was sent using the Send Email action, configure
+    this parameter using the following placeholder: SendEmail.JSONResult\|message_id.
+    To retrieve an internet message ID, use the Search for Emails action. |
 
-    | Wait for All Recipients to Reply | Boolean | No | If true, the action remains
-    in progress until every recipient of the original email has replied. If false,
-    it completes after the first reply is detected. |
+    | Wait for All Recipients to Reply | Boolean | No | If selected, the action waits
+    for responses from all recipients until reaching timeout. Not selected by default.
+    |
 
-    | Fetch Response Attachments | Boolean | No | If true, any files attached to the
-    reply emails will be downloaded and added as attachments to the Google SecOps
-    Case Wall. |
+    | Fetch Response Attachments | Boolean | No | If selected and the recipient reply
+    contains attachments, the action retrieves email attachments and adds them as
+    an attachment to the Case Wall in Google SecOps. Not selected by default. |
   ai_short_description: >-
-    This asynchronous action waits for a reply to a specific email thread in a Gmail
-    mailbox. It is typically used following a 'Send Email' action to pause a playbook
-    until a user responds. The action monitors the specified thread for new messages
-    from the original recipients and can optionally retrieve attachments from those
-    replies.
+    Waits asynchronously for a reply to a specific email thread in a Gmail mailbox,
+    optionally fetching attachments from the response.

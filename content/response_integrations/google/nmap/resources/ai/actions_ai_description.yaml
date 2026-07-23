@@ -12,6 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 Ping:
   ai_description: >-
     ### General Description
@@ -22,9 +36,20 @@ Ping:
     that the integration is properly configured to run on a Remote Agent.
 
 
-    ### Parameters
+    ### Flow Description
 
-    There are no parameters for this action.
+    1. **Initialization**: The action initializes the Nmap Manager and performs a
+    mandatory check to ensure the execution environment is a Remote Agent.
+
+    2. **Command Execution**: It executes the system command `nmap --version` using
+    a subprocess call to verify the binary is accessible.
+
+    3. **Response Validation**: The action captures the return code and standard error
+    from the command execution.
+
+    4. **Outcome**: If the return code is 0 (success), the action completes with a
+    success message. If the return code is non-zero, it raises an exception containing
+    the error details from Nmap.
 
 
     ### Additional Notes
@@ -36,22 +61,6 @@ Ping:
     - **Connectivity Test**: The 'connectivity' in this context refers to the SOAR's
     ability to invoke the Nmap process on the host machine, rather than network connectivity
     to a remote server.
-
-
-    ### Flow Description
-
-    1. **Initialization**: The action initializes the Nmap Manager and performs a
-    mandatory check to ensure the execution environment is a Remote Agent.
-
-    2. **Command Execution**: It executes the system command `nmap --version` using
-    a subprocess call.
-
-    3. **Response Validation**: The action captures the return code and standard error
-    from the command execution.
-
-    4. **Outcome**: If the return code is 0 (success), the action completes with a
-    success message. If the return code is non-zero, it raises an exception containing
-    the error details from Nmap.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -110,33 +119,40 @@ Ping:
   parameters_description: >-
     There are no parameters for this action.
   ai_short_description: >-
-    The **Ping** action is a diagnostic utility designed to verify the connectivity
-    and operational status of the Nmap integration. Its primary purpose is to ensure
-    that the Nmap binary is correctly installed, accessible via the system path, and
-    that the integration is properly configured to run on a Remote Agent.
+    A diagnostic utility designed to verify the connectivity and operational status
+    of the Nmap integration by ensuring the Nmap binary is correctly installed and
+    accessible on a Remote Agent.
 Scan Entities:
   ai_description: >-
+    ### General Description
+
     The **Scan Entities** action utilizes the Nmap security scanner to perform network
     discovery and security auditing on specific entities within a Google SecOps environment.
     It is designed to identify active hosts, open ports, running services, and operating
-    system details.
+    system details, and then enriches the target entities with this contextual data.
 
 
-    ### Parameters
+    ### Flow Description
 
-    | Parameter | Type | Mandatory | Description |
+    1. **Parameter Extraction & Validation:** Extracts the provided IP addresses,
+    hostnames, and Nmap options. Validates the IP addresses and ensures no restricted
+    root-level Nmap flags (e.g., `-sS`, `-O`) are used in the options.
 
-    | :--- | :--- | :--- | :--- |
+    2. **Target Gathering:** Identifies relevant entities from the current case (IP
+    Addresses, Hostnames, and Domains) and merges them with any manually provided
+    IP addresses or hostnames from the input parameters.
 
-    | **IP Address** | String | No | A comma-separated list of manual IP addresses
-    to include in the scan alongside case entities. |
+    3. **Execution:** For each target, the action executes the Nmap command via the
+    system shell on the remote agent, capturing the output in XML format.
 
-    | **Hostname** | String | No | A comma-separated list of manual hostnames to include
-    in the scan alongside case entities. |
+    4. **Parsing:** Processes the XML output using a custom parser to extract structured
+    data such as port states, service versions, OS matches, and hardware vendors.
 
-    | **Options** | String | Yes | Command-line arguments passed to the Nmap binary
-    (e.g., `-sT -sV -p-`). Note: Options requiring root privileges (like `-sS` or
-    `-O`) are restricted for security. |
+    5. **Enrichment:** Updates the `additional_properties` of the original SecOps
+    entities with the discovered network metadata and marks them as enriched.
+
+    6. **Result Reporting:** Generates a JSON result containing the full scan details
+    for each target and provides a summary message to the action output.
 
 
     ### Additional Notes
@@ -147,31 +163,6 @@ Scan Entities:
     * **Root Restriction:** The action includes a validation step that prevents the
     use of Nmap flags requiring root/sudo privileges to ensure stable execution within
     the agent environment.
-
-    * **Targeting:** The action processes both the entities present in the SOAR case
-    (filtered by type) and any manually provided targets in the parameters.
-
-
-    ### Flow Description
-
-    1. **Target Identification:** The action identifies relevant entities from the
-    current case (IP Addresses, Hostnames, and Domains) and merges them with any manually
-    provided IP addresses or hostnames from the input parameters.
-
-    2. **Validation:** It validates the format of provided IP addresses and checks
-    the `Options` string to ensure no restricted root-level Nmap flags are used.
-
-    3. **Execution:** For each target, the action executes the Nmap command via the
-    system shell on the remote agent, capturing the output in XML format.
-
-    4. **Parsing:** The `NmapParser` processes the XML output, extracting structured
-    data such as port states, service versions, OS matches, and hardware vendors.
-
-    5. **Enrichment:** The action updates the `additional_properties` of the original
-    SecOps entities with the discovered network metadata and marks them as enriched.
-
-    6. **Result Reporting:** It generates a JSON result containing the full scan details
-    for each target and provides a summary message to the action output.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -230,6 +221,19 @@ Scan Entities:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    There are no parameters for this action.
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | IP Address | String | No | IP Addresses that need to be scanned. Note: these
+    IP addresses are going to be processed alongside entities. |
+
+    | Hostname | String | No | Hostnames that need to be scanned. Note: these hostnames
+    are going to be processed alongside entities. |
+
+    | Options | String | Yes | Options for the execution (e.g., `-sT -sV -p- -T4 -v`).
+    |
   ai_short_description: >-
-    The Scan Entities action.
+    Scans IP Address, Hostname, and Domain entities using Nmap to discover active
+    hosts, open ports, running services, and operating system details, enriching the
+    entities with the scan results.

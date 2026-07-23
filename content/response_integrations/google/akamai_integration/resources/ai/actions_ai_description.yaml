@@ -12,6 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 Activate Client List:
   ai_description: >-
     ### General Description
@@ -23,16 +37,6 @@ Activate Client List:
     either its unique ID or its display name.
 
 
-
-    ### Additional Notes
-
-    * Either **Client List Name** or **Client List ID** must be provided for the action
-    to execute successfully.
-
-    * If only the **Client List Name** is provided, the action will perform an internal
-    lookup to find the matching ID before proceeding with the activation.
-
-
     ### Flow Description
 
     1. **Parameter Extraction & Validation**: The action retrieves input parameters
@@ -40,8 +44,8 @@ Activate Client List:
     the format of the notification emails if provided.
 
     2. **ID Resolution**: If a **Client List ID** is not explicitly provided, the
-    action queries the Akamai API to fetch all available client lists and matches
-    the provided **Client List Name** to find the correct ID.
+    action queries the Akamai API (via a GET request) to fetch all available client
+    lists and matches the provided **Client List Name** to find the correct ID.
 
     3. **Activation Request**: The action sends a POST request to the Akamai API's
     activation endpoint, specifying the list ID, target environment (Production/Staging),
@@ -50,6 +54,14 @@ Activate Client List:
     4. **Result Processing**: Upon a successful API response, the action marks the
     execution as successful and attaches the raw activation metadata (including activation
     ID and status) to the action's JSON results.
+
+
+    ### Additional Notes
+
+    * Either **Client List Name** or **Client List ID** must be provided for the action
+    to execute successfully.
+
+    * If both are provided, the **Client List ID** takes precedence.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -108,65 +120,66 @@ Activate Client List:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
+    | Parameter | Type | Mandatory | Description |
 
-    | Parameter Name | Type | Mandatory | Description |
+    | --- | --- | --- | --- |
 
-    | :--- | :--- | :--- | :--- |
+    | Client List Name | String | No | The name of the client list to activate. If
+    both Client List Name and Client List ID are provided, the action prioritizes
+    Client List ID. |
 
-    | **Client List Name** | String | No | The name of the client list to activate.
-    This is used to look up the ID if the ID is not provided. |
+    | Client List ID | String | No | The unique identifier of the client list to activate.
+    If both Client List Name and Client List ID are provided, the action prioritizes
+    Client List ID. |
 
-    | **Client List ID** | String | No | The unique identifier of the client list.
-    If both Name and ID are provided, the ID takes precedence. |
+    | Environment | Dropdown | No | The target network environment for the activation
+    (e.g., Production, Staging). |
 
-    | **Environment** | Dropdown | Yes | The target network environment for activation.
-    Options are `Production` or `Staging`. Default is `Production`. |
+    | Comment | String | No | A brief description or justification associated with
+    the activation operation. |
 
-    | **Comment** | String | No | A brief description or justification for the activation
-    operation, which is recorded in Akamai's logs. |
+    | Notification Recipients | String | No | A comma-separated list of email addresses
+    that receive a notification regarding the client list activation. |
 
-    | **Notification Recipients** | String | No | A comma-separated list of email
-    addresses that will receive a notification once the activation is processed. |
+
+    **Parameter Notes:**
+
+    * Either `Client List Name` or `Client List ID` must be provided for the action
+    to execute.
   ai_short_description: >-
-    The **Activate Client List** action enables a specific client list within an Akamai
-    environment. This action is used to push configurations to either the Staging
-    or Production networks, allowing security teams to dynamically manage client-based
-    access controls or reputation lists. It supports identifying the target list by
-    either its unique ID or its display name.
+    Enables a specific client list within an Akamai environment by pushing configurations
+    to either Staging or Production networks.
 Activate Network List:
   ai_description: >-
-    The **Activate Network List** action triggers the activation of a specific network
-    list within the Akamai environment. This is a critical operation for deploying
-    changes to IP or CIDR blocks across Akamai's edge network.
+    ### General Description
 
-
-
-    ### Additional Notes
-
-    * Either **Network List Name** or **Network List ID** must be provided for the
-    action to execute successfully.
-
-    * This action does not run on entities; it operates globally based on the provided
-    parameters.
+    The Activate Network List action triggers the activation of a specific network
+    list within the Akamai environment. This operation is used to deploy changes to
+    IP or CIDR blocks across Akamai's edge network.
 
 
     ### Flow Description
 
-    1. **Parameter Extraction & Validation**: The action retrieves the input parameters
-    and ensures that at least one identifier (Name or ID) is present. It also validates
-    the email format for notification recipients.
+    1. **Parameter Extraction & Validation**: The action extracts the input parameters
+    and validates that either a Network List Name or a Network List ID is provided.
 
-    2. **ID Resolution**: If only a **Network List Name** is provided, the action
-    queries the Akamai API to fetch all available network lists and matches the name
-    to find the corresponding **Unique ID**.
+    2. **ID Resolution**: If only a Network List Name is provided, the action queries
+    the Akamai API to fetch all available network lists and matches the name to find
+    the corresponding unique ID.
 
     3. **Activation Request**: The action sends a POST request to the Akamai API's
-    activation endpoint, passing the environment, comments, and notification recipients.
+    activation endpoint (`/network-list/v2/network-lists/{network_list_id}/environments/{environment}/activate`),
+    passing the environment, comments, and notification recipients.
 
     4. **Result Processing**: Upon a successful API response, the action marks the
     execution as successful and attaches the raw activation metadata (including activation
     ID and status) to the action's JSON results.
+
+
+    ### Additional Notes
+
+    * This action does not run on entities; it operates globally based on the provided
+    parameters.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -225,31 +238,33 @@ Activate Network List:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Network List Name** | String | No | The name of the network list to activate.
-    If the **Network List ID** is not provided, the action will search for the list
-    by this name to retrieve its ID. |
+    | Network List Name | String | No | Name of the network list that needs to be
+    updated. |
 
-    | **Network List ID** | String | No | The unique identifier of the network list.
-    If provided, this takes precedence over the **Network List Name**. |
-
-    | **Environment** | Dropdown | Yes | Specifies the target environment for activation.
-    Options are `Production` or `Staging`. Defaults to `Production`. |
-
-    | **Comment** | String | No | An optional audit comment to be associated with
-    the activation task in Akamai. |
-
-    | **Notification Recipients** | String | No | A comma-separated list of email
-    addresses that will receive a notification once the activation process is complete.
+    | Network List ID | String | No | ID of the network list that needs to be updated.
     |
+
+    | Environment | Dropdown | No | Environment for which the activation status should
+    be returned. |
+
+    | Comment | String | No | A comment that will be associated with activation operation.
+    |
+
+    | Notification Recipients | String | No | Comma-separated list of emails that
+    should receive the notification about activation of network list. |
+
+
+    **Parameter Notes:**
+
+    * Either "Network List Name" or "Network List ID" must be provided. If both are
+    provided, the action will prioritize the ID.
   ai_short_description: >-
-    The Activate Network List action.
+    Activates a specific network list within the Akamai environment to deploy changes
+    across the edge network.
 Add Items To Client List:
   ai_description: >-
     ### General Description
@@ -259,6 +274,25 @@ Add Items To Client List:
     supporting metadata like descriptions, tags, and expiration dates for each item.
 
 
+    ### Flow Description
+
+    1. **Parameter Extraction**: The action retrieves the target list identifiers
+    and the details of the items to be added from the action parameters.
+
+    2. **Validation**: It verifies that at least one list identifier (Name or ID)
+    is present and validates that the expiration date follows the ISO 8601 standard.
+
+    3. **List Resolution**: The action fetches all available client lists from Akamai
+    via an HTTP GET request to resolve the provided name or ID into a valid internal
+    Akamai list ID.
+
+    4. **API Interaction**: It constructs a payload containing the items and their
+    metadata, then sends an HTTP POST request to the Akamai API (`/client-list/v1/lists/{list_id}/items`)
+    to append these items to the target list.
+
+    5. **Output**: The action returns a success status and provides the raw JSON response
+    from Akamai containing details of the appended items.
+
 
     ### Additional Notes
 
@@ -267,25 +301,6 @@ Add Items To Client List:
 
     * **Precedence**: If both 'Client List Name' and 'Client List ID' are provided,
     the action will prioritize the 'Client List ID'.
-
-
-    ### Flow Description
-
-    1. **Parameter Extraction**: The action retrieves the target list identifiers
-    and the details of the items to be added.
-
-    2. **Validation**: It verifies that at least one list identifier is present and
-    validates that the expiration date follows the ISO 8601 standard.
-
-    3. **List Resolution**: The action fetches all available client lists from Akamai
-    to resolve the provided name or ID into a valid internal Akamai list ID.
-
-    4. **API Interaction**: It constructs a payload containing the items and their
-    metadata, then sends a POST request to the Akamai API to append these items to
-    the target list.
-
-    5. **Output**: The action returns a success status and provides the raw JSON response
-    from Akamai containing details of the appended items.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -344,33 +359,33 @@ Add Items To Client List:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | Client List Name | String | No | The name of the client list to update. If both
-    Name and ID are provided, the ID takes precedence. |
+    | Client List Name | String | No | Name of the client list that needs to be updated.
+    If both "Client List Name" and "Client List ID" are provided, action will work
+    with ID. |
 
-    | Client List ID | String | No | The unique identifier of the client list to update.
-    If both Name and ID are provided, the ID takes precedence. |
+    | Client List ID | String | No | ID of the client list that needs to be updated.
+    If both "Client List Name" and "Client List ID" are provided, action will work
+    with ID. |
 
-    | Item Value | String | Yes | A comma-separated list of values (e.g., IP addresses)
-    to be added to the list. |
+    | Item Value | String | Yes | Comma-separated list of items that need to be added
+    to the client list. |
 
-    | Item Description | String | No | A descriptive note to be associated with the
-    added items. |
+    | Item Description | String | No | Description for the items that will be added
+    to the client list. |
 
-    | Item Expiration Date | String | No | The expiration date for the items in ISO
-    8601 format (e.g., YYYY-MM-DDTHH:MM:SSZ). |
+    | Item Expiration Date | String | No | Expiration date for the added items. Expected
+    format: ISO 8601. |
 
-    | Item Tags | String | No | A comma-separated list of tags to categorize the added
-    items. |
+    | Item Tags | String | No | Comma-separated list of tags for the added items.
+    |
   ai_short_description: >-
-    Adds one or more items to a specific Akamai client list. This action allows for
-    bulk addition of values (such as IPs, GEO locations, or ASNs) to existing lists,
-    supporting metadata like descriptions, tags, and expiration dates for each item.
+    Adds one or more items (such as IPs, GEO locations, or ASNs) to a specific Akamai
+    client list, including optional metadata like descriptions, tags, and expiration
+    dates.
 Add Items To Network List:
   ai_description: >-
     The **Add Items To Network List** action allows users to append a list of items
@@ -379,14 +394,11 @@ Add Items To Network List:
     dynamically from Google SecOps.
 
 
+    ### General Description
 
-    ### Additional Notes
-
-    - Either **Network List Name** or **Network List ID** must be provided for the
-    action to execute successfully.
-
-    - If only the **Network List Name** is provided, the action performs an additional
-    lookup to resolve the name to a unique ID.
+    Appends a list of items to an existing network list within the Akamai platform.
+    This action is primarily used for managing access control lists or blocklists
+    dynamically from Google SecOps.
 
 
     ### Flow Description
@@ -407,6 +419,15 @@ Add Items To Network List:
 
     5. **Result Processing**: The action captures the API response, updates the action
     status to success, and attaches the raw JSON result to the case for auditing.
+
+
+    ### Additional Notes
+
+    - Either **Network List Name** or **Network List ID** must be provided for the
+    action to execute successfully.
+
+    - If only the **Network List Name** is provided, the action performs an additional
+    lookup to resolve the name to a unique ID.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -465,24 +486,23 @@ Add Items To Network List:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Network List Name** | String | No | The name of the network list to update.
-    If the **Network List ID** is not provided, the action will search for the list
-    by this name to retrieve its ID. |
+    | Network List Name | String | No | Name of the network list that needs to be
+    updated. If both "Network List Name" and "Network List ID" are provided, action
+    will work with ID. |
 
-    | **Network List ID** | String | No | The unique identifier of the network list.
-    If both Name and ID are provided, the ID takes precedence. |
+    | Network List ID | String | No | ID of the network list that needs to be updated.
+    If both "Network List Name" and "Network List ID" are provided, action will work
+    with ID. |
 
-    | **Items** | String | Yes | A comma-separated list of items (e.g., IPs, CIDRs)
-    to be added to the specified network list. |
+    | Items | String | Yes | Comma-separated list of items that need to be added to
+    the network list. |
   ai_short_description: >-
-    The Add Items To Network List action.
+    Appends a list of items (such as IP addresses or CIDR blocks) to an existing network
+    list within the Akamai platform to manage access control lists or blocklists.
 Get Client Lists:
   ai_description: >-
     ### General Description
@@ -492,7 +512,6 @@ Get Client Lists:
     lists, their metadata, and optionally the specific items (such as IPs, Geographic
     locations, or File Hashes) contained within them. This action is primarily used
     for auditing or as a prerequisite step to identify list IDs for management tasks.
-
 
 
     ### Flow Description
@@ -581,37 +600,31 @@ Get Client Lists:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Client List Name** | String | No | A comma-separated list of specific client
-    list names to search for. |
+    | Client List Name | String | No | Comma-separated list of client list names that
+    you want to search for. |
 
-    | **Client List ID** | String | No | A comma-separated list of specific client
-    list IDs to search for. |
+    | Client List ID | String | No | Comma-separated list of client list ids that
+    you want to search for. |
 
-    | **Include Items** | Boolean | No | If enabled, the action returns the items
-    contained within the client lists. Note: this information is only returned if
-    either 'Client List Name' or 'Client List ID' is provided. |
+    | Include Items | Boolean | No | If enabled, action will return information about
+    items inside the client list. Note: this information is only returned, if either
+    “Client List Name” or “Client List ID” is provided. |
 
-    | **Type** | Dropdown | No | Filters the search by the type of client list (e.g.,
-    IP, GEO, ASN, TLS Fingerprint, File Hash). If 'Select One' is chosen, it searches
-    all types. |
+    | Type | Dropdown | No | Type of the client list that needs to be searched. If
+    Select One is provided, action will search among all client lists. |
 
-    | **Max Client Lists To Return** | Integer | Yes | The maximum number of client
-    lists to include in the final result (up to 100). |
+    | Max Client Lists To Return | Integer | Yes | How many client lists to return.
+    The maximum is 100. |
 
-    | **Max Client List Items To Return** | Integer | Yes | The maximum number of
-    items to return for each individual client list (up to 100). |
+    | Max Client List Items To Return | Integer | Yes | How many items to return per
+    client list. The maximum is 100. |
   ai_short_description: >-
-    The **Get Client Lists** action retrieves detailed information about client lists
-    configured in Akamai. It serves as a search and discovery tool to identify existing
-    lists, their metadata, and optionally the specific items (such as IPs, Geographic
-    locations, or File Hashes) contained within them. This action is primarily used
-    for auditing or as a prerequisite step to identify list IDs for management tasks.
+    Retrieves detailed information about client lists configured in Akamai, including
+    metadata and optionally the specific items contained within them.
 Get Network Lists:
   ai_description: >-
     ### General Description
@@ -624,20 +637,10 @@ Get Network Lists:
     in Akamai.
 
 
-
-    ### Additional Notes
-
-    - The `Include Activation Status` parameter requires a specific filter (Name or
-    ID) to be active; it will not fetch status for a bulk retrieval of all lists.
-
-    - The action respects a maximum limit of 100 items per list as per the integration
-    constants.
-
-
     ### Flow Description
 
     1. **Initialization**: The action initializes the Akamai API client using the
-    integration's configuration parameters (Host, Tokens, Secrets).
+    integration's configuration parameters.
 
     2. **Fetch Lists**: It performs a GET request to retrieve all available network
     lists from Akamai.
@@ -655,6 +658,15 @@ Get Network Lists:
 
     6. **Result Processing**: The action compiles the data into a JSON result and
     returns a success message if lists were found.
+
+
+    ### Additional Notes
+
+    - The `Include Activation Status` parameter requires a specific filter (Name or
+    ID) to be active; it will not fetch status for a bulk retrieval of all lists.
+
+    - The action respects a maximum limit of 100 items per list as per the integration
+    constants.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -711,40 +723,37 @@ Get Network Lists:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Network List Name** | String | No | Comma-separated list of network list names
-    to search for. |
+    | Network List Name | String | No | Comma-separated list of network list names
+    that you want to search for. |
 
-    | **Network List ID** | String | No | Comma-separated list of network list IDs
-    to search for. |
+    | Network List ID | String | No | Comma-separated list of network list ids that
+    you want to search for. |
 
-    | **Include Items** | Boolean | No | If enabled, retrieves the items (e.g., IPs,
-    CIDRs) contained within the network lists. |
+    | Include Items | Boolean | No | If enabled, action will return information about
+    items inside the network lists. |
 
-    | **Include Activation Status** | Boolean | No | If enabled, retrieves the activation
-    status (Production/Staging). Note: this information is only returned if either
-    'Network List Name' or 'Network List ID' is provided. |
+    | Include Activation Status | Boolean | No | If enabled, action will return information
+    about activation status. Note: this information is only returned, if either "Network
+    List Name" or "Network List ID" is provided. |
 
-    | **Activation Environment** | DDL | No | Specifies which environment's activation
-    status to retrieve (Both, Production, or Staging). |
+    | Activation Environment | Dropdown | No | Environment for which the activation
+    status should be returned. Only returned, if you provide a specific Network List
+    Name/Network List ID. |
 
-    | **Max Network Lists To Return** | Integer | Yes | Limits the total number of
-    network lists returned in the action result (Default: 100). |
+    | Max Network Lists To Return | Integer | Yes | How many network lists to return.
+    |
 
-    | **Max Network List Items To Return** | Integer | Yes | Limits the number of
-    items returned per network list (Default: 100, Max: 100). |
+    | Max Network List Items To Return | Integer | Yes | How many items to return
+    per network list. Maximum is 100. |
   ai_short_description: >-
-    The **Get Network Lists** action retrieves detailed information about network
-    lists configured in Akamai. It allows users to search for specific lists by name
-    or ID and can optionally include the items within those lists and their current
-    activation status in Staging or Production environments. This action is primarily
-    used for auditing, visibility, and verifying the state of network configurations
-    in Akamai.
+    The Get Network Lists action retrieves detailed information about network lists
+    configured in Akamai, allowing users to search for specific lists by name or ID
+    and optionally include the items within those lists and their current activation
+    status.
 Ping:
   ai_description: >-
     ### General Description
@@ -754,21 +763,24 @@ Ping:
     and communicate with the Akamai API.
 
 
-
     ### Flow Description
 
     1. **Initialize API Client**: The action initializes the Akamai API client using
-    the integration's configuration parameters (Host, Client Token, Client Secret,
-    Access Token, and SSL verification settings).
+    the integration's configuration parameters.
 
     2. **Test Connectivity**: It executes a GET request to the Akamai contracts endpoint
     (`/network-list/v2/network-lists?limit=1`) to verify the validity of the credentials
     and network access.
 
     3. **Validate Response**: The action validates the HTTP response. If the request
-    is successful, it returns a success message. If the request fails (e.g., due to
-    invalid credentials or network issues), it raises an exception and returns an
-    error message.
+    is successful, it returns a success message. If the request fails, it raises an
+    exception and returns an error message.
+
+
+    ### Additional Notes
+
+    This action is primarily used for diagnostic purposes during integration setup
+    or troubleshooting to ensure network reachability and credential validity.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -825,13 +837,10 @@ Ping:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     There are no parameters for this action.
   ai_short_description: >-
-    Tests the connectivity to the Akamai server using the provided connection parameters.
-    This action is used to verify that the SOAR platform can successfully authenticate
-    and communicate with the Akamai API.
+    Tests the connectivity to the Akamai server to verify that the SOAR platform can
+    successfully authenticate and communicate with the Akamai API.
 Remove Items From Client List:
   ai_description: >-
     ### General Description
@@ -842,16 +851,6 @@ Remove Items From Client List:
     reputation or access control lists within the Akamai platform.
 
 
-
-    ### Additional Notes
-
-    - Either **Client List Name** or **Client List ID** must be configured for the
-    action to run successfully.
-
-    - The action performs a pre-validation step by fetching the current list items
-    from Akamai to ensure only existing items are sent for deletion.
-
-
     ### Flow Description
 
     1. **Parameter Extraction**: The action extracts the client list identifier (Name
@@ -860,17 +859,19 @@ Remove Items From Client List:
     2. **API Initialization**: Initializes the Akamai API client using the integration
     configuration.
 
-    3. **Validation**: Fetches all client lists from Akamai to verify the existence
-    of the target list and retrieve its current members.
+    3. **Validation**: Fetches all client lists from Akamai via a GET request to verify
+    the existence of the target list and resolve its ID.
 
-    4. **Item Filtering**: Compares the user-provided items against the actual items
-    in the Akamai list. Only items that currently exist in the list are queued for
-    removal.
+    4. **Mutation**: Iterates over the provided items and sends a POST request to
+    the Akamai API with a 'delete' payload to remove each item from the client list.
 
-    5. **Mutation**: Sends a POST request to the Akamai API with a 'delete' payload
-    containing the valid items.
+    5. **Output**: Returns a success status and the JSON details of the removed items.
 
-    6. **Output**: Returns a success status and the JSON details of the removed items.
+
+    ### Additional Notes
+
+    - Either **Client List Name** or **Client List ID** must be configured for the
+    action to run successfully.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -929,41 +930,30 @@ Remove Items From Client List:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Client List Name** | String | No | The name of the Akamai client list to update.
-    If both Name and ID are provided, the ID takes precedence. |
+    | Client List Name | String | No | Name of the client list that needs to be updated.
+    If both "Client List Name" and "Client List ID" are provided, action will work
+    with ID. |
 
-    | **Client List ID** | String | No | The unique identifier of the Akamai client
-    list. If both Name and ID are provided, the ID takes precedence. |
+    | Client List ID | String | No | ID of the client list that needs to be updated.
+    If both "Client List Name" and "Client List ID" are provided, action will work
+    with ID. |
 
-    | **Item Value** | String | Yes | A comma-separated list of values to be removed
-    from the specified client list. |
+    | Item Value | String | Yes | Comma-separated list of items that need to be removed
+    from the network list. |
   ai_short_description: >-
-    The **Remove Items From Client List** action allows users to delete specific entries
-    from an existing Akamai client list. This action is primarily used for managing
-    security policies by removing specific identifiers (such as IPs or CIDRs) from
-    reputation or access control lists within the Akamai platform.
+    Removes specific entries from an existing Akamai client list.
 Remove Items From Network List:
   ai_description: >-
+    ### General Description
+
     The **Remove Items From Network List** action allows users to delete specific
     entries from an existing network list within the Akamai platform. This action
     is typically used for remediation or maintenance, such as removing IP addresses
     or CIDR blocks that no longer require blocking or special handling.
-
-
-
-    ### Additional Notes
-
-    * Either **Network List Name** or **Network List ID** must be provided for the
-    action to function.
-
-    * The action processes items individually and will report which items were successfully
-    removed and which failed (e.g., if an item was not present in the list).
 
 
     ### Flow Description
@@ -983,6 +973,15 @@ Remove Items From Network List:
 
     5. **Outcome Reporting**: The action aggregates the results, providing a summary
     of successful and failed removals in the output message and detailed JSON results.
+
+
+    ### Additional Notes
+
+    * Either **Network List Name** or **Network List ID** must be provided for the
+    action to function.
+
+    * The action processes items individually and will report which items were successfully
+    removed and which failed (e.g., if an item was not present in the list).
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -1041,21 +1040,25 @@ Remove Items From Network List:
     search_asset: false
     get_alert_information: false
   parameters_description: >-
-    ### Parameters Description
-
-
     | Parameter | Type | Mandatory | Description |
 
-    | :--- | :--- | :--- | :--- |
+    | --- | --- | --- | --- |
 
-    | **Network List Name** | String | No | The name of the Akamai network list. If
-    the **Network List ID** is not provided, the action will search for the list by
-    this name to retrieve its ID. |
+    | Network List Name | String | No | Name of the network list that needs to be
+    updated. If both "Network List Name" and "Network List ID" are provided, action
+    will work with ID. |
 
-    | **Network List ID** | String | No | The unique identifier of the network list.
-    If provided, this takes precedence over the **Network List Name**. |
+    | Network List ID | String | No | ID of the network list that needs to be updated.
+    If both "Network List Name" and "Network List ID" are provided, action will work
+    with ID. |
 
-    | **Items** | String | Yes | A comma-separated list of items (e.g., IP addresses,
-    CIDR blocks) to be removed from the specified network list. |
+    | Items | String | Yes | Comma-separated list of items that need to be removed
+    from the network list. |
+
+
+    **Parameter Notes:**
+
+    Either "Network List Name" or "Network List ID" must be provided.
   ai_short_description: >-
-    The Remove Items From Network List action.
+    Removes specific entries, such as IP addresses or CIDR blocks, from an existing
+    network list within the Akamai platform.
