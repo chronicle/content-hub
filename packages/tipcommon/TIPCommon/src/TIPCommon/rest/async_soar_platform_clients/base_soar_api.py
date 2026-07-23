@@ -62,8 +62,6 @@ class BaseAsyncSoarApi:
             httpx.HTTPStatusError: If the request returns an unsuccessful status code.
 
         """
-        self.logger.info(f"Calling SOAR API (async): {method} {self.async_sdk.api_root}/{endpoint}")
-
         response: httpx.Response = await self.client.request(
             method,
             endpoint,
@@ -71,8 +69,6 @@ class BaseAsyncSoarApi:
             json=payload,
             headers=headers,
         )
-
-        self.logger.info(f"SOAR API response (async): {method} {endpoint} (status={response.status_code})")
 
         response.raise_for_status()
 
@@ -186,3 +182,48 @@ class BaseAsyncSoarApi:
 
         """
         return await self._make_request(HttpMethod.DELETE.value, endpoint)
+
+    async def _paginate_results(
+        self,
+        endpoint: str,
+        root_response_key: str,
+        params: SingleJson | None = None,
+    ) -> list[SingleJson]:
+        """Handles paginated API requests, managing tokens and aggregating results.
+
+        Args:
+            endpoint: The API endpoint to fetch data from.
+            root_response_key: The key in the response JSON where records are
+                stored.
+            params: Optional query parameters for the request.
+
+        Returns:
+            A list of all records retrieved across paginated responses.
+
+        """
+        all_records = []
+        next_token = None
+        base_params = params.copy() if params else {}
+
+        while True:
+            request_params = base_params.copy()
+            if next_token:
+                request_params["pageToken"] = next_token
+
+            try:
+                response = await self.get(endpoint, params=request_params)
+                if response.status_code == 204:
+                    break
+                response_data = response.json()
+            except Exception as e:
+                self.logger.error(f"Failed to fetch page: {e}")
+                raise
+
+            current_records = response_data.get(root_response_key, [])
+            all_records.extend(current_records)
+
+            next_token = response_data.get("nextPageToken")
+            if not next_token:
+                break
+
+        return all_records
