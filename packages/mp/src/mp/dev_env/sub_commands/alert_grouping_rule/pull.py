@@ -57,15 +57,11 @@ def _find_local_alert_grouping_rule_file_by_name(name_or_path: str) -> Path | No
 
 def _get_category_subs(rule_data: dict) -> set[str]:
     return {
-        x.get("identifier")
-        for x in rule_data.get("categoryDetails", [])
-        if isinstance(x, dict) and x.get("identifier")
+        x.get("identifier") for x in rule_data.get("categoryDetails", []) if isinstance(x, dict) and x.get("identifier")
     }
 
 
-def _find_rule_in_installed_by_local_file(
-    local_file_path: Path, installed_rules: list[dict]
-) -> dict | None:
+def _find_rule_in_installed_by_local_file(local_file_path: Path, installed_rules: list[dict]) -> dict | None:
     try:
         local_data = mp.core.file_utils.load_yaml_file(local_file_path)
     except Exception:  # ruff:ignore[blind-except]
@@ -180,12 +176,11 @@ def pull_alert_grouping_rule(  # ruff:ignore[complex-structure, too-many-branche
         target_fn = rule_name_or_id.lower()
         if target_fn.endswith((".yaml", ".yml")):
             target_fn = Path(target_fn).stem
-        matched_rules.extend([
-            rule for rule in installed_rules if _get_rule_filename(rule).lower() == target_fn
-        ])
+        matched_rules.extend([rule for rule in installed_rules if _get_rule_filename(rule).lower() == target_fn])
 
     # Third, fallback to Category name (friendly display name or code)
     if not matched_rules:
+
         def match_category(user_input: str, rule: dict) -> bool:
             category = str(rule.get("category", "")).lower()
             category_mappings = {
@@ -199,7 +194,7 @@ def pull_alert_grouping_rule(  # ruff:ignore[complex-structure, too-many-branche
                 "product": "productname",
                 "product name": "productname",
                 "product_name": "productname",
-                "productname": "productname"
+                "productname": "productname",
             }
             normalized_input = category_mappings.get(user_input.lower(), user_input.lower())
             return normalized_input == category
@@ -274,11 +269,7 @@ def _find_local_alert_grouping_rule_file(category: str, category_details: list[d
         if isinstance(data, dict):
             local_cat = data.get("category")
             if local_cat and str(local_cat).lower() == category.lower():
-                local_details = {
-                    x.get("identifier")
-                    for x in data.get("categoryDetails", [])
-                    if x.get("identifier")
-                }
+                local_details = {x.get("identifier") for x in data.get("categoryDetails", []) if x.get("identifier")}
                 if local_details == local_subs:
                     return f
     return None
