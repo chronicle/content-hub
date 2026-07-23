@@ -497,7 +497,7 @@ def _determine_ai_categories(
 
 
 def _update_non_built_with_ai_fields(non_built: NonBuiltActionMetadata, ai_fields: AiFields) -> None:
-    non_built["ai_description"] = ai_fields.description
+    non_built["ai_description"] = f"{ai_fields.description}\n {ai_fields.parameters_description}"
     non_built["ai_short_description"] = ai_fields.short_description
     non_built["parameters_description"] = ai_fields.parameters_description
     non_built["categories"] = [c.value for c in ai_fields.categories]
