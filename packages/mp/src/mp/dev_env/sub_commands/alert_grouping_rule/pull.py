@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Annotated, TypedDict
+from typing import Annotated, Any, TypeAlias
 
 import typer
 
@@ -29,16 +29,8 @@ from mp.telemetry import track_command
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-class CategoryDetail(TypedDict, total=False):
-    identifier: str
-    displayName: str
-
-
-class AlertGroupingRule(TypedDict, total=False):
-    id: int
-    name: str
-    category: str
-    categoryDetails: list[CategoryDetail]
+CategoryDetail: TypeAlias = dict[str, Any]
+AlertGroupingRule: TypeAlias = dict[str, Any]
 
 
 def _find_local_alert_grouping_rule_file_by_name(name_or_path: str) -> Path | None:
@@ -247,9 +239,7 @@ def _list_alert_grouping_rules(installed_rules: list[AlertGroupingRule]) -> None
         category = rule.get("category") or "Unknown"
         details = rule.get("categoryDetails") or []
         subs = [
-            str(name)
-            for x in details
-            if isinstance(x, dict) and (name := x.get("identifier") or x.get("displayName"))
+            str(name) for x in details if isinstance(x, dict) and (name := x.get("identifier") or x.get("displayName"))
         ]
         subs_str = ", ".join(subs) if subs else "All"
         logger.info("  - Category: '%s' (Subcategories: %s)", category, subs_str)
@@ -271,9 +261,7 @@ def _pull_all_alert_grouping_rules(installed_rules: list[AlertGroupingRule], dst
     logger.info("Successfully finished pulling all alert grouping rules.")
 
 
-def _find_local_alert_grouping_rule_file(
-    category: str, category_details: list[CategoryDetail] | None
-) -> Path | None:
+def _find_local_alert_grouping_rule_file(category: str, category_details: list[CategoryDetail] | None) -> Path | None:
     try:
         rules_root = mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir()
     except Exception:  # ruff:ignore[blind-except]
@@ -282,9 +270,7 @@ def _find_local_alert_grouping_rule_file(
         return None
 
     local_subs = {
-        identifier
-        for x in (category_details or [])
-        if isinstance(x, dict) and (identifier := x.get("identifier"))
+        identifier for x in (category_details or []) if isinstance(x, dict) and (identifier := x.get("identifier"))
     }
 
     for f in rules_root.glob("*.yaml"):
