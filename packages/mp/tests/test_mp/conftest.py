@@ -30,7 +30,7 @@ BUILT_PLAYBOOK: str = "mock_built_playbook/mock_built_playbook.json"
 BUILT_BLOCK: str = "mock_built_block/mock_built_block.json"
 
 
-@pytest.fixture(autouse=True)  # noqa: RUF076
+@pytest.fixture(autouse=True)
 def set_runtime_params(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Use a temporary config file for tests to avoid race conditions and home dir pollution
     temp_config: Path = tmp_path / ".mp_config"

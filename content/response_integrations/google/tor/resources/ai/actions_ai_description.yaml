@@ -1,53 +1,28 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 Is Exit Node:
   ai_description: >-
     ### General Description
 
-    The **Is Exit Node** action determines if IP Address entities are currently serving
-    as Tor exit nodes. It provides a quick way to identify potential anonymized traffic
-    sources by querying the official Tor Project's real-time exit node list.
-
-
-    ### Parameters
-
-    There are no action-specific parameters for this action. It utilizes the global
-    integration configuration for SSL verification settings.
+    Checks whether IP address entities are used as Tor exit nodes.
 
 
     ### Flow Description
 
-    1. **Fetch Exit Node List**: The action retrieves the latest list of Tor exit
-    nodes from `https://check.torproject.org/exit-addresses`.
+    1. Iterates over target entities of type ADDRESS.
 
-    2. **Parse and Filter**: It parses the raw text data to extract IP addresses that
-    have been active as exit nodes on the current date.
+    2. Makes a GET request to `https://check.torproject.org/exit-addresses` to fetch
+    the list of today's Tor exit nodes.
 
-    3. **Entity Matching**: It iterates through all `ADDRESS` entities in the scope
-    and checks if their IP address is present in the retrieved list.
+    3. Checks if each IP address is present in the fetched list.
 
-    4. **Result Generation**: It returns a list of all identified exit nodes in the
-    action's output message and as a JSON result for use in downstream playbook logic.
+    4. Returns the list of identified exit node IPs as a JSON result.
 
 
     ### Additional Notes
 
-    - This action is a read-only check and does not modify entity attributes (like
-    'suspicious' status) or create insights within the case.
-
-    - The action requires outbound network connectivity to the Tor Project's domain.
+    This action relies on the official Tor project exit addresses list.
+  ai_short_description: >-
+    Checks whether IP address entities are used as Tor exit nodes by querying the
+    official Tor project exit addresses list.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -58,11 +33,47 @@ Is Exit Node:
     external_data_mutation_explanation: null
     fetches_data: true
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: true
+    reasoning: >-
+      The action makes a GET request to fetch the list of Tor exit nodes (fetches_data=true).
+      It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
   entity_usage:
     entity_types:
-    - ADDRESS
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -76,47 +87,69 @@ Is Exit Node:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.ADDRESS`. This means it targets ADDRESS entities, filtering by
+      entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence data (whether an IP is a Tor exit node)
+      for IP indicators. This matches the 'Enrich IOC' expected outcome. It does not
+      mutate external data or perform other actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
 Ping:
   ai_description: >-
     ### General Description
 
-    The **Ping** action is a diagnostic utility designed to verify the connectivity
-    between the Google SecOps environment and the Tor Project's exit node list. Its
-    primary purpose is to ensure that the integration can successfully reach the external
-    threat intelligence source required for identifying Tor exit nodes.
-
-
-    ### Parameters Description
-
-    There are no input parameters for this action.
-
-
-    ### Additional Notes
-
-    - This action relies on the global integration configuration, specifically the
-    'Use SSL' setting, to determine if SSL certificate verification should be enforced
-    during the connection test.
-
-    - As a 'Ping' type action, it is used for health checks and troubleshooting rather
-    than data enrichment or case management.
+    Tests connectivity to the Tor project's exit nodes list.
 
 
     ### Flow Description
 
-    1. **Configuration Retrieval**: The action retrieves the 'Use SSL' parameter from
-    the Tor integration's global configuration.
+    1. Retrieves the integration configuration to determine if SSL should be used.
 
-    2. **Manager Initialization**: It initializes the `TorManager` with the specified
-    SSL verification setting.
+    2. Initializes the TorManager with the appropriate SSL settings.
 
-    3. **Connectivity Test**: The action executes an HTTP GET request to the Tor exit
-    nodes list URL (`https://check.torproject.org/exit-addresses`).
+    3. Makes an HTTP GET request to the Tor exit nodes list URL (`https://check.torproject.org/exit-addresses`)
+    to verify network connectivity.
 
-    4. **Response Validation**: It checks the HTTP response status to ensure the external
-    service is reachable and responding correctly.
+    4. Returns a success message if the connection is successfully established.
 
-    5. **Execution Completion**: If the connection is successful, the action returns
-    a success status to the SOAR platform.
+
+    ### Additional Notes
+
+    This action is typically used to verify that the integration is configured correctly
+    and can reach the Tor service.
+  ai_short_description: >-
+    Tests connectivity to the Tor project's exit nodes list to verify integration
+    configuration.
   capabilities:
     can_create_case_comments: false
     can_create_insight: false
@@ -125,12 +158,49 @@ Ping:
     can_mutate_internal_data: false
     can_update_entities: false
     external_data_mutation_explanation: null
-    fetches_data: true
+    fetches_data: false
     internal_data_mutation_explanation: null
-  categories:
-    enrichment: false
+    reasoning: >-
+      The action makes a GET request to test connectivity but does not fetch contextual
+      data for entities, mutate external or internal data, update entities, create
+      insights, modify alert data, or create case comments.
   entity_usage:
-    entity_types: []
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
     filters_by_additional_properties: false
     filters_by_alert_identifier: false
     filters_by_case_identifier: false
@@ -144,3 +214,39 @@ Ping:
     filters_by_is_suspicious: false
     filters_by_is_vulnerable: false
     filters_by_modification_time: false
+    reasoning: >-
+      The action does not process any entities. It only tests connectivity to the
+      external service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enriching IOCs, updating alerts, or mutating
+      external systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
