@@ -199,12 +199,32 @@ def main(is_test_run: bool) -> None:
             environment_regex_pattern,
         )
 
+        # When enabled, plaintext passwords and other sensitive breach fields are
+        # persisted onto the case events instead of being stripped. This retains
+        # secrets permanently in SecOps case storage; it defaults to off and should
+        # only be turned on with explicit sign-off.
+        include_secrets = extract_connector_param(
+            siemplify,
+            param_name="Include Plaintext Secrets",
+            default_value=False,
+            input_type=bool,
+            print_value=True,
+        )
+        if include_secrets:
+            siemplify.LOGGER.warn(
+                "Include Plaintext Secrets is ENABLED: plaintext passwords and other "
+                "sensitive breach fields will be persisted onto case events."
+            )
+
         if is_test_run:
-            manager.main(is_test_run=True)
+            # TEMP DIAGNOSTIC (revert after the no-new-records issue is fixed):
+            # instead of the ping-only connectivity check, attempt a bounded real
+            # data pull and log why records may not be flowing. Still
+            # non-destructive: no alerts created, no checkpoints saved.
+            manager.diagnostic_pull()
             siemplify.LOGGER.info(
-                "Test run completed successfully. Connectivity to SpyCloud breach "
-                "catalog was verified. No Watchlist or Compass records were fetched, "
-                "no alerts were created, and no checkpoints were updated."
+                "Diagnostic test run completed. Review the DIAG log lines above. "
+                "No alerts were created and no checkpoints were updated."
             )
             siemplify.return_package([])
             return
@@ -221,24 +241,26 @@ def main(is_test_run: bool) -> None:
         if not raw_records:
             siemplify.LOGGER.info("No SpyCloud records returned for the requested time window")
             siemplify.return_package([])
+            # Nothing to deliver, but any drained-empty modification window /
+            # Compass daily gate is valid progress and should be committed.
+            manager.commit_pending()
             return
 
-        breach_catalog = []
-        if is_test_run:
-            siemplify.LOGGER.info("Skipping breach catalog fetch in test mode")
-        else:
-            try:
-                breach_catalog = manager.get_breach_catalog() or []
-                siemplify.LOGGER.info(f"Fetched {len(breach_catalog)} breach catalog records")
-            except Exception as e:
-                siemplify.LOGGER.error(f"Failed to fetch breach catalog. Continuing without enrichment. Error: {e}")
-                breach_catalog = []
+        # Breach catalog enrichment (integration guide 9.1.2 Option A): a cached,
+        # source_id-scoped index. This does NOT download the full global catalog
+        # every cycle; it lazily caches only the sources we actually see.
+        breach_catalog_by_id = {}
+        try:
+            breach_catalog_by_id = manager.get_breach_catalog_index(raw_records) or {}
+        except Exception as e:
+            siemplify.LOGGER.error(f"Breach catalog enrichment failed. Continuing without enrichment. Error: {e}")
+            breach_catalog_by_id = {}
 
-        converter = SpyCloudUdmConverter()
+        converter = SpyCloudUdmConverter(include_secrets=include_secrets)
 
         udm_events = converter.convert_records(
             records=raw_records,
-            breach_catalog=breach_catalog,
+            breach_catalog_by_id=breach_catalog_by_id,
             merge_endpoint_by_log_id=True,
         )
 
@@ -252,6 +274,7 @@ def main(is_test_run: bool) -> None:
         if not udm_events:
             siemplify.LOGGER.info("No UDM events were produced from the fetched SpyCloud records")
             siemplify.return_package([])
+            manager.commit_pending()
             return
 
         for index, udm_event in enumerate(udm_events, start=1):
@@ -273,7 +296,11 @@ def main(is_test_run: bool) -> None:
                 collection_source = _get_udm_event_sources(udm_event)
                 merged_record_count = extensions.get("_merged_record_count") or additional.get("_merged_record_count")
 
-                siemplify.LOGGER.info(
+                # Sample per-record logging. High-volume modification pulls can
+                # produce thousands of events per cycle; logging every one is a
+                # significant contributor to hitting the connector timeout.
+                if index <= 10 or index % 500 == 0:
+                    siemplify.LOGGER.info(
                     "Building alert #{idx}: "
                     "event_type={event_type}, "
                     "product_log_id={product_log_id}, "
@@ -332,12 +359,18 @@ def main(is_test_run: bool) -> None:
             f"{_format_source_counts(_count_sources(alerts, _get_alert_sources))}"
         )
 
+        siemplify.return_package(alerts)
+
+        # Commit progress ONLY after successful delivery (integration guide 9.2):
+        # advance the publish-date checkpoint and flush deferred modification/
+        # Compass progress. If any step above raised, we hit the except branch,
+        # return an empty package, and commit nothing, so undelivered records are
+        # re-fetched next cycle rather than skipped.
         if not is_test_run and checkpoint_until:
             checkpoint_ms = manager.checkpoint_manager.iso_to_epoch_ms(checkpoint_until)
             manager.checkpoint_manager.save_checkpoint(checkpoint_ms)
             siemplify.LOGGER.info(f"Saved checkpoint at {checkpoint_until}")
-
-        siemplify.return_package(alerts)
+        manager.commit_pending()
 
     except Exception as e:
         siemplify.LOGGER.error(f"Connector execution failed: {e}")
