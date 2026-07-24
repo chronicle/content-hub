@@ -32,7 +32,6 @@ from .constants import (
     ERROR_MSG_MISSING_ACTIVITY_ID,
     ERROR_MSG_MISSING_CASE_ID,
     ERROR_MSG_MISSING_INQUIRY_REPORTER,
-    ERROR_MSG_MISSING_TENANT_IDS,
     ERROR_MSG_MISSING_THREAT_ID,
     ERROR_MSG_NO_MESSAGES,
     ERROR_MSG_RATE_LIMIT,
@@ -40,6 +39,7 @@ from .constants import (
     ERROR_MSG_TIMEOUT,
     HEADER_AUTHORIZATION,
     HEADER_CONTENT_TYPE,
+    HEADER_SOAR_INTEGRATION_ORIGIN,
     HEADER_USER_AGENT,
     INQUIRY_ENDPOINT,
     MAX_RETRIES,
@@ -47,6 +47,7 @@ from .constants import (
     MESSAGES_SEARCH_ENDPOINT,
     RETRY_BACKOFF_FACTOR,
     RETRY_STATUS_CODES,
+    SOAR_INTEGRATION_ORIGIN,
     THREAT_ATTACHMENTS_ENDPOINT,
     THREAT_BY_ID_ENDPOINT,
     THREAT_LINKS_ENDPOINT,
@@ -190,6 +191,7 @@ class AbnormalManager:
             HEADER_AUTHORIZATION: f"Bearer {self.api_key}",
             HEADER_CONTENT_TYPE: CONTENT_TYPE_JSON,
             HEADER_USER_AGENT: USER_AGENT,
+            HEADER_SOAR_INTEGRATION_ORIGIN: SOAR_INTEGRATION_ORIGIN,
         })
         session.verify = self.verify_ssl
         return session
@@ -314,17 +316,22 @@ class AbnormalManager:
     def get_activity_status(
         self,
         activity_log_id: str,
-        tenant_ids: list[str],
+        tenant_ids: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Get status of a remediation activity. GET /v1/search/activities/{id}/status"""
+        """Get status of a remediation activity. GET /v1/search/activities/{id}/status
+
+        The status endpoint scopes to the tenants authorized by the API key (resolved
+        server-side from the bearer token) and rejects a tenant query param, so
+        ``tenant_ids`` is accepted for signature compatibility but not sent.
+
+        Raises:
+            AbnormalValidationError: If activity_log_id is not provided.
+        """
         if not activity_log_id:
             raise AbnormalValidationError(ERROR_MSG_MISSING_ACTIVITY_ID)
-        if not tenant_ids:
-            raise AbnormalValidationError(ERROR_MSG_MISSING_TENANT_IDS)
 
         endpoint = ACTIVITY_STATUS_ENDPOINT.format(activity_log_id=activity_log_id)
-        params = {"tenant_ids": ",".join(tenant_ids)}
-        return self._make_request("GET", endpoint, params=params)
+        return self._make_request("GET", endpoint)
 
     # ── Threats ───────────────────────────────────────────────────────────────
 
@@ -539,7 +546,10 @@ class AbnormalManager:
         """
         params: dict[str, Any] = {"pageSize": page_size, "pageNumber": page_number}
         if tenant_ids:
-            params["tenantIds"] = ",".join(tenant_ids)
+            # The /v1/search/activities view reads request.GET.getlist("tenant_ids")
+            # (snake_case). Pass a list so requests emits repeated query params
+            # (?tenant_ids=a&tenant_ids=b) rather than one comma-joined value.
+            params["tenant_ids"] = tenant_ids
         return self._make_request("GET", ACTIVITIES_LIST_ENDPOINT, params=params)
 
     # ── Inquiry ───────────────────────────────────────────────────────────────

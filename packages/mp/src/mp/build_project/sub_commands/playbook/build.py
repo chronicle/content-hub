@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from pathlib import Path  # noqa: TC003
+from pathlib import Path  # ruff:ignore[typing-only-standard-library-import]
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -62,7 +62,7 @@ class BuildParams:
 
 @app.command(name="playbook", help="Build content-hub playbooks")
 @track_command
-def build_playbook(  # noqa: PLR0913
+def build_playbook(  # ruff:ignore[too-many-arguments]
     playbooks: Annotated[
         list[str],
         typer.Argument(

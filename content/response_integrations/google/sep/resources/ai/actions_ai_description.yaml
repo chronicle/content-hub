@@ -1,0 +1,2394 @@
+BlockHash:
+  ai_description: >-
+    ### General Description
+
+    Blocks specific MD5 file hashes on endpoints using Symantec Endpoint Protection
+    (SEP). This action adds the target hashes to a specified fingerprint blacklist
+    within SEP to prevent their execution.
+
+
+    ### Flow Description
+
+    1. Retrieves the current list of blacklisted hashes from the specified SEP blacklist
+    using the `Black List Name` parameter.
+
+    2. Iterates through the target entities, filtering for File Hash entities that
+    are MD5 hashes (32 characters long) and are not already present in the retrieved
+    blacklist.
+
+    3. Appends the new hashes to the blacklist and sends a POST request to the SEP
+    API to update the fingerprint list.
+
+    4. Updates the processed entities in Google SecOps with an additional property
+    (`SEP_IsBlocked`: True) to indicate they were successfully blocked.
+
+
+    ### Additional Notes
+
+    Only MD5 hashes (32 characters in length) are supported by this action. Hashes
+    that are already in the specified blacklist will be skipped.
+  ai_short_description: >-
+    Blocks MD5 file hashes on endpoints by adding them to a specified fingerprint
+    blacklist in Symantec Endpoint Protection.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Adds the MD5 hash to the specified fingerprint blacklist in Symantec Endpoint
+      Protection.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action retrieves the current blacklist from SEP, but this is to facilitate
+      an update rather than fetching contextual data for enrichment, so fetches_data
+      is false. It makes a POST request to SEP to update the fingerprint blacklist,
+      mutating external data. It also updates the internal entities with a 'SEP_IsBlocked'
+      property using siemplify.update_entities. It does not create insights, modify
+      alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and applies a filter: `entity.entity_type
+      == EntityTypes.FILEHASH` and `len(entity.identifier) == 32`. This means it specifically
+      targets File Hash entities, filtering them by their entity type and the length/value
+      of their identifier (to ensure they are MD5 hashes and not already blacklisted).
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action adds MD5 file hashes to a fingerprint blacklist in Symantec Endpoint
+      Protection to prevent their execution on endpoints. This directly matches the
+      'Add IOC To Blocklist' expected outcome. It does not perform enrichment, ticket
+      management, or other containment actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Black List Name | String | Yes | The black list name to add the hash to |
+DisableDownloadInsight:
+  ai_description: >-
+    ### General Description
+
+    Disables the Download Insight feature on specific endpoints using Symantec Endpoint
+    Protection (SEP). This action initiates a state change on the external SEP client
+    to temporarily turn off the Download Insight security control.
+
+
+    ### Flow Description
+
+    1. Establishes a connection to the Symantec Endpoint Protection manager.
+
+    2. Iterates through the target entities, specifically filtering for `ADDRESS`
+    (IP) and `HOSTNAME` entity types.
+
+    3. For each valid entity, queries the SEP API to retrieve the corresponding Computer
+    ID.
+
+    4. Executes a SOAP command (`runClientCommandDisableDownloadInsight`) via the
+    SEP API to disable Download Insight on the identified endpoint for the specified
+    time period.
+
+    5. Updates the entity's additional properties within Google SecOps with the executed
+    command ID.
+
+
+    ### Additional Notes
+
+    The action requires a time period parameter to specify how long (in minutes) the
+    feature should be disabled before it automatically resets to the state defined
+    by the endpoint's policy.
+  ai_short_description: >-
+    Disables the Download Insight feature on specified endpoints via Symantec Endpoint
+    Protection for a given time period.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Disables the Download Insight feature on the specified endpoints in Symantec
+      Endpoint Protection.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request (SOAP command) to SEP to disable Download Insight
+      on an endpoint, which mutates external data. It does not fetch contextual data
+      for enrichment purposes. It updates the internal entities with the executed
+      command ID using `siemplify.update_entities`.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and uses `if entity.entity_type
+      == EntityTypes.ADDRESS` and `elif entity.entity_type == EntityTypes.HOSTNAME`
+      to filter the entities it processes. Thus, it targets ADDRESS and HOSTNAME entities
+      and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action disables a specific security feature (Download Insight) on an endpoint
+      via Symantec Endpoint Protection. This does not align with any of the predefined
+      outcome categories such as Contain Host (which isolates the host entirely),
+      Execute Command on the Host (which runs arbitrary scripts/commands returning
+      STDOUT), or Blocklist actions. Therefore, no categories match.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Time Period | String | Yes | The length of time (in minutes) after which Download
+    Insight is automatically reset to the state specified by the policy applied to
+    the client. |
+DisableNTP:
+  ai_description: >-
+    ### General Description
+
+    Disables Network Threat Protection (NTP) on Symantec Endpoint Protection (SEP)
+    endpoints. This action targets IP Address and Hostname entities, retrieves their
+    corresponding computer IDs from the SEP Manager, and issues a command to disable
+    NTP for a specified time period.
+
+
+    ### Flow Description
+
+    1. Connects to the Symantec Endpoint Protection (SEP) Manager using the provided
+    integration credentials.
+
+    2. Iterates through the target entities provided in the case.
+
+    3. For IP Address entities, queries the SEP Manager via API (`getComputersByIP`)
+    to retrieve the associated computer ID.
+
+    4. For Hostname entities, queries the SEP Manager via API (`getComputersByHostName`)
+    to retrieve the computer info and subsequently the computer ID.
+
+    5. If a valid computer ID is found, sends a SOAP POST request (`runClientCommandDisableNTP`)
+    to the SEP Manager to execute the disable NTP command for the specified time period.
+
+    6. Updates the entity's additional properties with the executed command ID.
+
+    7. Updates the entities in the Google SecOps platform with the new properties.
+
+
+    ### Additional Notes
+
+    The `Time Period` parameter specifies the length of time (in minutes) after which
+    Network Threat Protection is automatically reset to the state specified by the
+    policy applied to the client. The minimum time limit is typically 1 minute, and
+    the maximum is 720 minutes (12 hours).
+  ai_short_description: >-
+    Disables Network Threat Protection (NTP) on Symantec Endpoint Protection (SEP)
+    endpoints for a specified time period.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Sends a command to the Symantec Endpoint Protection Manager to disable Network
+      Threat Protection (NTP) on the target endpoint.
+    fetches_data: true
+    internal_data_mutation_explanation: >-
+      Updates the target entities' additional properties with the executed command
+      ID.
+    reasoning: >-
+      The action fetches data (computer IDs) from the SEP Manager to identify the
+      endpoints. It mutates external data by sending a SOAP command to disable Network
+      Threat Protection on the endpoint. It mutates internal data by updating the
+      entity's additional properties with the executed command ID and calling `siemplify.update_entities`.
+      It does not create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks the
+      entity type using `if entity.entity_type == EntityTypes.ADDRESS:` and `elif
+      entity.entity_type == EntityTypes.HOSTNAME:`. Therefore, it targets Address
+      and Hostname entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action disables a specific security feature (Network Threat Protection)
+      on an endpoint via Symantec Endpoint Protection. This does not align with 'Contain
+      Host' (which isolates the host) or 'Uncontain Host' (which removes isolation).
+      It also does not execute an arbitrary command returning STDOUT, nor does it
+      manage blocklists or allowlists. Therefore, it does not match any of the predefined
+      outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Time Period | String | Yes | The length of time (in minutes) to disable Network
+    Threat Protection before it automatically resets to the policy default. |
+EnableDownloadInsight:
+  ai_description: >-
+    ### General Description
+
+    Enables Download Insight on specific endpoints using Symantec Endpoint Protection
+    (SEP). This action initiates a state change on the external device to activate
+    the Download Insight feature for the targeted hostnames or IP addresses.
+
+
+    ### Flow Description
+
+    1. Establishes a connection to the Symantec Endpoint Protection Manager API.
+
+    2. Iterates through the target entities, specifically looking for Hostname and
+    IP Address entity types.
+
+    3. Retrieves the unique computer ID for each valid entity from the SEP Manager.
+
+    4. Executes the `runClientCommandEnableDownloadInsight` command on the identified
+    endpoints.
+
+    5. Updates the entities in the Google SecOps platform with the returned command
+    ID in their additional properties.
+
+    6. Returns a summary message detailing the entities on which the command was successfully
+    executed.
+
+
+    ### Additional Notes
+
+    This action relies on the SEP Manager's SOAP API to dispatch the client command.
+  ai_short_description: >-
+    Enables Download Insight on specific endpoints using Symantec Endpoint Protection
+    (SEP).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Executes a command via Symantec Endpoint Protection Manager to enable Download
+      Insight on the target endpoints.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action executes a command on the Symantec Endpoint Protection Manager to
+      enable Download Insight on the target endpoints, which mutates external data.
+      It also updates the entities in Google SecOps with the resulting command ID.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and checks if `entity.entity_type`
+      is `EntityTypes.ADDRESS` or `EntityTypes.HOSTNAME`. Therefore, it filters entities
+      by their entity type and specifically targets IP addresses and hostnames.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action enables a specific security feature (Download Insight) on an endpoint
+      via Symantec Endpoint Protection. This does not align with standard containment,
+      blocklisting, or general command execution (which expects STDOUT). Therefore,
+      it does not match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+EnableNTP:
+  ai_description: >-
+    ### General Description
+
+    Enables Network Threat Protection (NTP) on specific endpoints using Symantec Endpoint
+    Protection (SEP). This action initiates a state change on the external SEP Manager
+    to activate network defenses for the targeted machines.
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities, specifically filtering for IP Address
+    and Hostname entity types.
+
+    2. For each valid entity, queries the SEP Manager API to retrieve the corresponding
+    Computer ID.
+
+    3. Issues a SOAP command (`runClientCommandEnableNTP`) to the SEP Manager to enable
+    Network Threat Protection on the identified endpoint.
+
+    4. Updates the entity's additional properties with the resulting command ID.
+
+
+    ### Additional Notes
+
+    Only Address and Hostname entities are processed. Entities that cannot be resolved
+    to a Computer ID in SEP will be skipped.
+  ai_short_description: >-
+    Enables Network Threat Protection (NTP) on specified IP address and hostname endpoints
+    via Symantec Endpoint Protection Manager.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Enables Network Threat Protection (NTP) on the specified endpoints via Symantec
+      Endpoint Protection Manager.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a SOAP POST request to the SEP Manager to enable Network Threat
+      Protection on an endpoint, which mutates external data. It also updates the
+      entities in the platform with the returned command ID using `siemplify.update_entities`.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks if
+      `entity.entity_type` is `EntityTypes.ADDRESS` or `EntityTypes.HOSTNAME`. Therefore,
+      it targets Address and Hostname entities and filters by entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action enables a specific security feature (Network Threat Protection) on
+      an endpoint via SEP. This does not align with isolating a host (Contain Host),
+      blocking an IOC, or executing a generic system command. Therefore, it does not
+      match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Get Report And Enrich:
+  ai_description: >-
+    ### General Description
+
+    Retrieves the status report of previously executed commands from Symantec Endpoint
+    Protection (SEP) and enriches the associated entities with the report data.
+
+
+    ### Flow Description
+
+    1. Parses the provided `Command IDS` parameter into a list of command IDs.
+
+    2. Iterates through the target entities in the case.
+
+    3. For each entity, inspects its `additional_properties` to find a key containing
+    `_command_id` that matches one of the provided command IDs.
+
+    4. If a match is found, makes an API call to SEP (`commandStatusReport`) to retrieve
+    the status report for that specific command.
+
+    5. Flattens the retrieved report data, prefixes the keys, and adds them to the
+    entity's `additional_properties`.
+
+    6. Updates the enriched entities within Google SecOps.
+
+    7. Returns the command reports as JSON results.
+
+
+    ### Additional Notes
+
+    The action relies on the entities having a `_command_id` key in their additional
+    properties, which is typically populated by a previous action that initiated the
+    command (e.g., a scan or quarantine action).
+  ai_short_description: >-
+    Retrieves the status report of previously executed commands from Symantec Endpoint
+    Protection (SEP) and enriches the associated entities with the report data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches command status reports from the SEP API (fetches_data=true).
+      It does not mutate external data. It updates the entities with the flattened
+      report data using `siemplify.update_entities` (can_update_entities=true). It
+      does not create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: true
+      application: true
+      child_hash: true
+      child_process: true
+      cluster: true
+      container: true
+      credit_card: true
+      cve: true
+      cve_id: true
+      database: true
+      deployment: true
+      destination_domain: true
+      domain: true
+      email_message: true
+      event: true
+      file_hash: true
+      file_name: true
+      generic: true
+      host_name: true
+      ip_set: true
+      mac_address: true
+      parent_hash: true
+      parent_process: true
+      phone_number: true
+      pod: true
+      process: true
+      service: true
+      source_domain: true
+      threat_actor: true
+      threat_campaign: true
+      threat_signature: true
+      url: true
+      usb: true
+      user: true
+    filters_by_additional_properties: true
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` without filtering by specific
+      entity types, meaning it can run on any entity type. It filters the entities
+      by checking if their `additional_properties` contain a key with `_command_id`
+      that matches the provided command IDs.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves the status of a previously executed command (like a scan
+      or quarantine) from SEP and attaches it to the entity. This does not match the
+      strict definitions of Enrich IOC (threat intel) or Enrich Asset (contextual
+      metadata like OS/owner). It also does not match any other specific outcome categories
+      such as containment, ticketing, or email manipulation.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Command IDS | String | Yes | A comma-separated list of command IDs to retrieve
+    the status reports for. |
+GetReport:
+  ai_description: >-
+    ### General Description
+
+    Retrieves the status report for one or more specific command IDs from Symantec
+    Endpoint Protection (SEP). This action is typically used to check the progress
+    or result of previously initiated tasks, such as endpoint scans or quarantine
+    operations.
+
+
+    ### Flow Description
+
+    1. Parses the provided comma-separated list of Command IDs from the action parameters.
+
+    2. Iterates through each Command ID.
+
+    3. Makes a SOAP API call (`getCommandStatusDetails`) to the SEP Manager to fetch
+    the status report for the specific command.
+
+    4. Aggregates the retrieved reports and attaches them to the action's JSON results.
+
+    5. Returns a summary message indicating which command reports were successfully
+    retrieved.
+
+
+    ### Additional Notes
+
+    This action does not operate on entities and relies entirely on the explicit command
+    IDs provided as input.
+  ai_short_description: >-
+    Retrieves the status report for specific command IDs from Symantec Endpoint Protection
+    (SEP).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches command status data from Symantec Endpoint Protection via
+      a SOAP API call. It does not mutate external data, mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not operate on entities. It relies entirely on the 'Command
+      IDS' parameter provided by the user to fetch data.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves the status of previously executed commands in Symantec
+      Endpoint Protection. It does not enrich IOCs/assets, mutate alerts, manage tickets,
+      block/allow IOCs, manage identities, contain hosts, or perform any other operations
+      that match the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Command IDS | String | Yes | Comma-separated list of command IDs to retrieve
+    the status for. |
+GetSystemInfo:
+  ai_description: >-
+    ### General Description
+
+    Retrieves system information for Hostname entities from Symantec Endpoint Protection
+    (SEP). This action fetches contextual metadata about the endpoint and enriches
+    the corresponding entity within the SecOps platform.
+
+
+    ### Flow Description
+
+    1. Iterates over the provided target entities and filters for those of type `HOSTNAME`.
+
+    2. For each valid entity, makes an API call (`GET /api/v1/computers`) to the SEP
+    Manager to retrieve the computer's system information.
+
+    3. Flattens the retrieved JSON data and appends it to the entity's `additional_properties`.
+
+    4. Generates a CSV table from the flattened data and attaches it to the entity's
+    results.
+
+    5. Marks the entity as enriched and updates it within the platform using `siemplify.update_entities`.
+
+    6. Returns a JSON result containing the raw system information for all processed
+    entities.
+
+
+    ### Additional Notes
+
+    If the action fails to retrieve information for a specific hostname, it logs the
+    error and continues processing the remaining entities.
+  ai_short_description: >-
+    Retrieves system information for Hostname entities from Symantec Endpoint Protection
+    (SEP) and enriches the entities with the fetched data.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data from the SEP API using a GET request (`getComputerInfo`).
+      It does not mutate external data. It updates internal entities with the fetched
+      data using `siemplify.update_entities`. It does not create insights, modify
+      alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type == EntityTypes.HOSTNAME:`. Therefore, it targets Hostname
+      entities and filters them by their entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches system information for a hostname (asset) from SEP and enriches
+      the entity with this contextual metadata. This directly aligns with the 'Enrich
+      Asset' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+ListEndpoints:
+  ai_description: >-
+    ### General Description
+
+    Lists all the endpoints or sensors configured on a particular Symantec Endpoint
+    Protection (SEP) device. This action retrieves the full list of endpoints managed
+    by the SEP instance and attaches the results to the case.
+
+
+    ### Flow Description
+
+    1. Initializes the Symantec Endpoint Protection manager using the provided integration-level
+    configuration (e.g., API Root, Username, Password, Domain).
+
+    2. Makes an HTTP GET request to the SEP API to retrieve a list of all configured
+    endpoints.
+
+    3. Formats the retrieved endpoint data into a CSV structure and attaches it as
+    a data table named "SEP Endpoints" to the action results.
+
+    4. Returns the raw endpoint data as a JSON result for further playbook processing.
+
+
+    ### Additional Notes
+
+    This action does not require any action-specific parameters as it relies entirely
+    on the integration-level configuration to fetch the endpoints.
+  ai_short_description: >-
+    Lists all the endpoints or sensors configured on a particular Symantec Endpoint
+    Protection (SEP) device and attaches the results to the case.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches data by making a GET request to the SEP API to retrieve a
+      list of endpoints. It does not mutate external data, mutate internal data, update
+      entities, create insights, modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over `siemplify.target_entities` or use any entity-specific
+      identifiers. It simply fetches a global list of endpoints from the SEP manager.
+      Therefore, all entity type and filter flags are set to false.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of all endpoints from the Symantec Endpoint Protection
+      manager. It does not enrich a specific IOC or asset, mutate external state,
+      or match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+ListGroups:
+  ai_description: >-
+    ### General Description
+
+    Retrieves a list of all groups configured on the Symantec Endpoint Protection
+    (SEP) Manager.
+
+
+    ### Flow Description
+
+    1. Initializes the connection to the SEP Manager using the provided integration
+    configuration.
+
+    2. Makes an initial GET request to the SEP API (`/api/v1/groups`) to retrieve
+    the total number of groups available for the configured domain.
+
+    3. Makes a subsequent GET request to fetch the complete list of groups based on
+    the total count retrieved in the previous step.
+
+    4. Formats the retrieved groups into a CSV table and attaches it to the action
+    results.
+
+    5. Returns the raw JSON data of the groups to the playbook.
+
+
+    ### Additional Notes
+
+    This action does not operate on specific entities and does not require any action-specific
+    parameters.
+  ai_short_description: >-
+    Retrieves a list of all groups configured on the Symantec Endpoint Protection
+    (SEP) Manager.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes GET requests to the SEP Manager API to fetch group data (fetches_data=true).
+      It does not mutate external data, update internal entities, create insights,
+      or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or filter any entities. It simply retrieves a list
+      of groups from the SEP Manager without relying on entity data.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves a list of groups from the SEP Manager. It does not enrich
+      specific IOCs or assets, nor does it perform any containment, ticketing, or
+      other operations that match the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the Symantec Endpoint Protection (SEP) server to ensure
+    the integration is configured correctly.
+
+
+    ### Flow Description
+
+    1. Retrieves the integration configuration parameters (URL, Username, Password,
+    Domain, etc.).
+
+    2. Initializes the SEP manager, which automatically attempts to authenticate with
+    the SEP server via a POST request to the `/api/v1/identity/authenticate` endpoint.
+
+    3. If the connection and authentication are successful, the action completes and
+    returns a success message.
+
+
+    ### Additional Notes
+
+    This action is typically used as a diagnostic tool to verify that the integration
+    can successfully communicate with the SEP API.
+  ai_short_description: >-
+    Tests connectivity and authentication to the Symantec Endpoint Protection (SEP)
+    server.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action only performs an authentication request to verify connectivity. It
+      does not fetch contextual data for alerts/entities, mutate external data, mutate
+      internal data, update entities, create insights, modify alert data, or create
+      case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process any entities. It solely relies
+      on integration configuration parameters to test connectivity.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple ping/connectivity test. It does not enrich data, mutate
+      external systems, or interact with alerts, tickets, or entities. Therefore,
+      it does not match any of the specified outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+QuarantineEndpoint:
+  ai_description: >-
+    ### General Description
+
+    Quarantines specific endpoint entities (IP Addresses and Hostnames) using Symantec
+    Endpoint Protection (SEP). This action isolates the endpoint from the network
+    to prevent further communication during a security incident.
+
+
+    ### Flow Description
+
+    1. Connects to the Symantec Endpoint Protection manager using the provided integration
+    credentials.
+
+    2. Iterates through the target entities, specifically looking for IP Address and
+    Hostname entity types.
+
+    3. For each valid entity, queries the SEP manager to retrieve the corresponding
+    Computer ID based on the IP address or hostname.
+
+    4. Initiates a SOAP request to quarantine the identified endpoint in SEP.
+
+    5. Updates the entity's additional properties with the quarantine command ID returned
+    by the SEP manager.
+
+    6. Saves the updated entities back to the Google SecOps case.
+
+
+    ### Additional Notes
+
+    The action relies on the SEP manager's SOAP API to execute the quarantine command.
+    If an entity cannot be found in SEP or the quarantine command fails, the action
+    will log the error and continue processing the remaining entities.
+  ai_short_description: >-
+    Quarantines specific IP Address and Hostname entities using Symantec Endpoint
+    Protection (SEP) to isolate them from the network.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Quarantines the specified endpoint in Symantec Endpoint Protection.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action performs a state-changing operation on an external system by quarantining
+      an endpoint in SEP (can_mutate_external_data=true). It also updates the internal
+      entities with the resulting command ID (can_update_entities=true). It does not
+      fetch enrichment data for the purpose of adding insights, nor does it create
+      case comments or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks if
+      `entity.entity_type` is `EntityTypes.ADDRESS` or `EntityTypes.HOSTNAME`. Therefore,
+      it targets Address and Hostname entities and filters by the entity_type attribute.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: true
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action isolates an endpoint from the network by quarantining it via Symantec
+      Endpoint Protection. This directly matches the 'Contain Host' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+ScanEndpoint:
+  ai_description: >-
+    ### General Description
+
+    Initiates a malware or antivirus scan on specific endpoints using Symantec Endpoint
+    Protection (SEP). This action targets Hostname and IP Address entities, resolves
+    them to their corresponding SEP computer records, and triggers a remote scan command.
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities provided in the case, filtering for `HOSTNAME`
+    and `ADDRESS` (IP) entity types.
+
+    2. For each valid entity, makes a GET/POST request to the SEP API to resolve the
+    entity identifier into a SEP-specific Computer ID.
+
+    3. Makes a SOAP POST request to the SEP Command Service to trigger the specified
+    scan type (e.g., Full, Quick, Custom) on the resolved endpoint.
+
+    4. Retrieves the command ID from the SEP response and updates the entity's `additional_properties`
+    with this ID.
+
+    5. Updates the entities within the Google SecOps platform to save the new properties.
+
+
+    ### Additional Notes
+
+    Ensure that the endpoints are actively managed by Symantec Endpoint Protection.
+    The action will fail for entities that cannot be resolved to a valid Computer
+    ID in the SEP console.
+  ai_short_description: >-
+    Initiates a malware or antivirus scan on specific endpoints (Hostname or IP Address)
+    using Symantec Endpoint Protection (SEP).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Triggers an active malware/antivirus scan on the specified endpoint via the
+      Symantec Endpoint Protection API.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action mutates external data by triggering a scan command on the Symantec
+      Endpoint Protection manager (via a POST request). It updates internal entities
+      by appending the returned command ID to the entity's additional_properties and
+      calling `siemplify.update_entities`. It does not create insights or case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type == EntityTypes.ADDRESS` and `elif entity.entity_type == EntityTypes.HOSTNAME`.
+      Therefore, it filters by entity type and specifically targets ADDRESS and HOSTNAME
+      entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action triggers an antivirus scan on an endpoint. This does not strictly
+      align with 'Execute Command on the Host' (which expects STDOUT from a generic
+      script/command), nor does it isolate the host ('Contain Host'). It does not
+      enrich the asset with contextual metadata, but rather initiates an active security
+      task. Therefore, it does not perfectly match any of the predefined outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Scan Type | Dropdown | Yes | The type of the scan to perform. ScanNow_Full =
+    Full scan, ScanNow_Quick = quick scan, ScanNow_Custom = custom scan. |
+UnblockHash:
+  ai_description: >-
+    ### General Description
+
+    Unblocks specific MD5 file hashes from a Symantec Endpoint Protection (SEP) blacklist.
+    This action modifies the external blacklist configuration to remove the specified
+    indicators, restoring their execution rights.
+
+
+    ### Flow Description
+
+    1. Retrieves the current list of blacklisted hashes from SEP using the provided
+    `Black List Name` via an API call.
+
+    2. Iterates through the target entities, filtering for MD5 file hashes (length
+    of 32 characters) that are currently present in the retrieved blacklist.
+
+    3. Removes the matching hashes from the local copy of the blacklist.
+
+    4. Updates the blacklist on SEP by making a POST request (`setBlackList`) with
+    the modified list of hashes.
+
+    5. Updates the processed entities in the SecOps platform with the `SEP_IsUnBlocked`
+    property.
+
+
+    ### Additional Notes
+
+    Only MD5 hashes are supported by this action. Hashes that are not MD5 or are not
+    currently in the specified blacklist will be ignored.
+  ai_short_description: >-
+    Unblocks specific MD5 file hashes from a Symantec Endpoint Protection (SEP) blacklist.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Updates the fingerprint blacklist on Symantec Endpoint Protection to remove
+      the specified file hashes.
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches the current blacklist data from SEP (`getBlackList`), mutates
+      external data by updating the blacklist to remove the hashes (`setBlackList`),
+      and updates the internal entities with a new property (`siemplify.update_entities`).
+      It does not create insights or case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: true
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters using `entity.entity_type
+      == EntityTypes.FILEHASH` and `len(entity.identifier) == 32`. It also checks
+      if the identifier is in the retrieved blacklist. Therefore, it targets FILEHASH
+      entities and filters by entity type and identifier.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action removes a file hash from a blacklist in Symantec Endpoint Protection,
+      restoring its execution rights. This directly aligns with the 'Remove IOC From
+      Blocklist' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Black List Name | String | Yes | The name of the blacklist in Symantec Endpoint
+    Protection from which the hashes should be removed. |
+UnquarantineEndpoint:
+  ai_description: >-
+    ### General Description
+
+    Unquarantines a specific endpoint in Symantec Endpoint Protection (SEP). This
+    action initiates a state change on the external SEP Manager to remove network
+    isolation and restore the endpoint's communication capabilities.
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities provided in the case.
+
+    2. Checks if the entity type is an IP Address or Hostname.
+
+    3. Queries the SEP API to retrieve the internal Computer ID associated with the
+    entity's identifier.
+
+    4. Sends a SOAP request to the SEP Manager to unquarantine the endpoint using
+    the retrieved Computer ID.
+
+    5. Updates the entity's `additional_properties` within Google SecOps with the
+    command ID returned by the SEP Manager.
+
+
+    ### Additional Notes
+
+    - This action only supports Address and Hostname entity types.
+
+    - The action relies on the SEP Manager's SOAP API to execute the unquarantine
+    command.
+  ai_short_description: >-
+    Unquarantines a specific endpoint in Symantec Endpoint Protection (SEP) to restore
+    its network communication capabilities.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: true
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Sends a command to Symantec Endpoint Protection to unquarantine the specified
+      endpoint.
+    fetches_data: false
+    internal_data_mutation_explanation: >-
+      Updates the entity's additional properties with the unquarantine command ID.
+    reasoning: >-
+      The action mutates external data by sending a SOAP command to unquarantine an
+      endpoint in SEP. It mutates internal data by updating the entity's additional
+      properties with the command ID using `siemplify.update_entities`. It does not
+      fetch contextual enrichment data, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type == EntityTypes.ADDRESS` and `elif entity.entity_type == EntityTypes.HOSTNAME`.
+      Therefore, it targets Address and Hostname entities and filters them by their
+      entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action sends a command to Symantec Endpoint Protection to unquarantine an
+      endpoint. This directly aligns with the 'Uncontain Host' expected outcome, as
+      it removes network isolation and restores the endpoint's communication capabilities.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: true
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+UpdateAndScanEndpoint:
+  ai_description: >-
+    ### General Description
+
+    Initiates a content update and full scan on specified endpoints using Symantec
+    Endpoint Protection (SEP). This action targets IP Address and Hostname entities,
+    retrieves their corresponding computer IDs from SEP, and triggers the update and
+    scan command on the remote hosts.
+
+
+    ### Flow Description
+
+    1. Iterates through the target entities provided in the action.
+
+    2. Filters the entities to process only those of type IP Address and Hostname.
+
+    3. Queries the SEP API (`getComputersByIP` or `getComputersByHostName`) to retrieve
+    the unique Computer ID for each valid entity.
+
+    4. Sends a command to the SEP API (`runClientCommandUpdateContentAndScan`) to
+    trigger a content update and full scan on the identified computer.
+
+    5. Updates the entity's additional properties in Google SecOps with the resulting
+    command ID.
+
+
+    ### Additional Notes
+
+    The action currently hardcodes the scan type to `Update_ScanNow_Full`. It does
+    not wait for the scan to complete; it only initiates the command and records the
+    command ID.
+  ai_short_description: >-
+    Initiates a content update and full scan on specified IP address and hostname
+    entities via Symantec Endpoint Protection.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Initiates an update and scan command on the specified endpoint in Symantec Endpoint
+      Protection.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes API calls to Symantec Endpoint Protection to trigger an update
+      and scan on endpoints, which mutates external data by initiating a process on
+      the remote host. It updates the entities in Google SecOps with the returned
+      command ID, meaning it updates entities. It does not fetch contextual enrichment
+      data, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type == EntityTypes.ADDRESS` and `elif entity.entity_type == EntityTypes.HOSTNAME`.
+      Therefore, it targets Address and Hostname entities and filters them by their
+      entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action triggers an antivirus update and scan on an endpoint. This does not
+      match any of the predefined outcome categories such as Contain Host, Execute
+      Command on the Host (which expects STDOUT), or Enrich Asset. Therefore, all
+      outcome categories are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+UpdateEndpoint:
+  ai_description: >-
+    ### General Description
+
+    Triggers a content update on specific endpoint entities (IP Addresses and Hostnames)
+    via Symantec Endpoint Protection (SEP). This action initiates a state change on
+    the external SEP Manager to force the target endpoints to update their security
+    content and signatures.
+
+
+    ### Flow Description
+
+    1. Connects to the Symantec Endpoint Protection (SEP) Manager using the provided
+    integration credentials.
+
+    2. Iterates through the target entities, specifically looking for `ADDRESS` (IP)
+    and `HOSTNAME` entity types.
+
+    3. Resolves the entity identifier to a SEP `computer_id` by querying the SEP Manager
+    via `getComputerIdByIP` or `getComputerInfo`.
+
+    4. Executes the `runClientCommandUpdate` SOAP API call to trigger a content update
+    on the resolved endpoint.
+
+    5. Updates the entity's additional properties with the resulting command ID and
+    saves the updated entities to the case.
+
+
+    ### Additional Notes
+
+    - This action only operates on `ADDRESS` and `HOSTNAME` entity types. Other entity
+    types will be ignored.
+
+    - The action requires the endpoints to be actively managed by the configured SEP
+    Manager to successfully resolve their IDs and trigger the update.
+  ai_short_description: >-
+    Triggers a content update on specific endpoint entities (IP Addresses and Hostnames)
+    via Symantec Endpoint Protection (SEP).
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: >-
+      Triggers a content update command on the target endpoint within Symantec Endpoint
+      Protection.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action queries the SEP Manager to resolve the entity to a computer ID, but
+      its primary purpose is not to fetch contextual data for enrichment (fetches_data=false).
+      It mutates external data by triggering a content update command on the endpoint
+      via the SEP Manager API (can_mutate_external_data=true). It updates the internal
+      entities by appending the command ID to their additional_properties and calling
+      siemplify.update_entities (can_update_entities=true). It does not create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The script iterates over `siemplify.target_entities` and explicitly filters
+      them using `if entity.entity_type == EntityTypes.ADDRESS:` and `elif entity.entity_type
+      == EntityTypes.HOSTNAME:`. Therefore, it targets Address and Hostname entities
+      and filters by entity_type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action triggers a product-specific content update (AV signatures/policies)
+      on an endpoint via Symantec Endpoint Protection. This does not align with 'Contain
+      Host' (which isolates the host), 'Execute Command on the Host' (which runs arbitrary
+      scripts returning STDOUT), or any other predefined outcome category. Therefore,
+      all categories are false.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

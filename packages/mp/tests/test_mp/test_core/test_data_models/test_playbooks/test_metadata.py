@@ -52,11 +52,11 @@ class TestAccessPermissionDataModel:
         assert ACCESS_PERMISSION.to_non_built() == NON_BUILT_ACCESS_PERMISSION
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             AccessPermission.from_built(cast("BuiltAccessPermission", cast("object", {})))
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             AccessPermission.from_non_built(cast("NonBuiltAccessPermission", cast("object", {})))
 
     def test_from_built_to_built_is_idempotent(self) -> None:
@@ -82,11 +82,11 @@ class TestPlaybookMetadataDataModel:
         assert PLAYBOOK_METADATA.to_non_built() == NON_BUILT_PLAYBOOK_METADATA
 
     def test_from_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             PlaybookMetadata.from_built("", {})
 
     def test_from_non_built_with_invalid_data_raises_error(self) -> None:
-        with pytest.raises(ValueError):  # noqa: PT011
+        with pytest.raises(ValueError):  # ruff:ignore[pytest-raises-too-broad]
             PlaybookMetadata.from_non_built("", {})
 
     def test_from_built_with_none_values(self) -> None:

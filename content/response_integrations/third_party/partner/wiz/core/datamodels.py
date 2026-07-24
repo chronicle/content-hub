@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import dataclasses
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from TIPCommon.base.interfaces.logger import ScriptLogger
@@ -59,3 +58,52 @@ class IssueComment(BaseModel):
     def from_json(cls, json_data: SingleJson) -> IssueComment:
         """Create an IssueComment instance from JSON data."""
         return cls(raw_data=json_data, comment_id=json_data["id"])
+
+
+@dataclasses.dataclass(slots=True)
+class VulnerabilityFinding(BaseModel):
+    finding_id: str
+    name: str
+    severity: str
+
+    @classmethod
+    def from_json(cls, json_data: SingleJson) -> VulnerabilityFinding:
+        """Create a VulnerabilityFinding instance from JSON data."""
+        return cls(
+            raw_data=json_data,
+            finding_id=json_data["id"],
+            name=json_data.get("name", ""),
+            severity=json_data.get("severity", ""),
+        )
+
+
+@dataclasses.dataclass(slots=True)
+class ThreatAIAnalysis(BaseModel):
+    analysis_id: str | None
+    status: str | None
+    verdict: str | None
+    analyzed_at: str | None
+    severity: str | None
+    confidence_level: str | None
+    conclusion: str | None
+
+    @classmethod
+    def from_json(
+        cls,
+        raw_data: SingleJson,
+        json_data: SingleJson | None
+    ) -> ThreatAIAnalysis | None:
+        """Create a ThreatAIAnalysis instance from JSON data."""
+        if not json_data:
+            return None
+
+        return cls(
+            raw_data=raw_data,
+            analysis_id=json_data.get("id"),
+            status=json_data.get("status"),
+            verdict=json_data.get("verdict"),
+            analyzed_at=json_data.get("analyzedAt"),
+            severity=json_data.get("severity"),
+            confidence_level=json_data.get("confidenceLevel"),
+            conclusion=json_data.get("conclusion"),
+        )
