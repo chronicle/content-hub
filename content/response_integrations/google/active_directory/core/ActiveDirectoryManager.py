@@ -73,6 +73,8 @@ GROUP_QUERY_FIELDS = ["sAMAccountName"]  # Users / Guests / Administrators ...
 OU_QUERY_FIELDS = ["name"]  # R&D ...
 
 DEFAULT_USER_GROUP = "Domain Users"
+DEFAULT_CONNECTION_TIMEOUT = 10
+DEFAULT_RECEIVE_TIMEOUT = 60
 SEARCH_ATTRIBUTES = [
     ALL_ATTRIBUTES,
     ALL_OPERATIONAL_ATTRIBUTES,
@@ -170,13 +172,32 @@ class ActiveDirectoryManager:
         custom_query_fields=None,
         ca_certificate_file=None,
         siemplify_logger=None,
-    ):
+        connection_timeout: int = DEFAULT_CONNECTION_TIMEOUT,
+        receive_timeout: int = DEFAULT_RECEIVE_TIMEOUT,
+    ) -> None:
 
         self.siemplify_logger = siemplify_logger
         self.use_ssl = use_ssl
         self.tls = None
         self._verify_certificate_file(ca_certificate_file)
-        self.server = Server(server_ip, use_ssl=self.use_ssl, tls=self.tls)
+
+        # Safely convert timeouts to integers, fallback to defaults to prevent hangs
+        try:
+            self.connection_timeout = int(connection_timeout)
+        except (ValueError, TypeError):
+            self.connection_timeout = DEFAULT_CONNECTION_TIMEOUT
+
+        try:
+            self.receive_timeout = int(receive_timeout)
+        except (ValueError, TypeError):
+            self.receive_timeout = DEFAULT_RECEIVE_TIMEOUT
+
+        self.server = Server(
+            server_ip,
+            use_ssl=self.use_ssl,
+            tls=self.tls,
+            connect_timeout=self.connection_timeout,
+        )
         # Create base DN from domain name
         self.domain = self._domain_base_dn(domain)
         self.parser = ActiveDirectoryParser(siemplify_logger)
@@ -186,12 +207,17 @@ class ActiveDirectoryManager:
         )
         try:
             self.conn = Connection(
-                self.server, username, password, auto_bind=True, auto_encode=True
+                self.server,
+                username,
+                password,
+                auto_bind=True,
+                auto_encode=True,
+                receive_timeout=self.receive_timeout,
             )
         except LDAPSocketOpenError as e:
             if "socket ssl wrapping" in str(e):
                 raise ActiveDirectoryCertificateError("Invalid certificate")
-            raise ActiveDirectoryManagerError(f"Error: {e}")
+            raise ActiveDirectoryManagerError(str(e))
 
         # Connect
         if self.use_ssl:
