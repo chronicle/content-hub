@@ -172,8 +172,8 @@ class ActiveDirectoryManager:
         custom_query_fields=None,
         ca_certificate_file=None,
         siemplify_logger=None,
-        connection_timeout: int | None = None,
-        receive_timeout: int | None = None,
+        connection_timeout: int = DEFAULT_CONNECTION_TIMEOUT,
+        receive_timeout: int = DEFAULT_RECEIVE_TIMEOUT,
     ) -> None:
 
         self.siemplify_logger = siemplify_logger
@@ -183,20 +183,12 @@ class ActiveDirectoryManager:
 
         # Safely convert timeouts to integers, fallback to defaults to prevent hangs
         try:
-            self.connection_timeout = (
-                int(connection_timeout)
-                if connection_timeout is not None
-                else DEFAULT_CONNECTION_TIMEOUT
-            )
+            self.connection_timeout = int(connection_timeout)
         except (ValueError, TypeError):
             self.connection_timeout = DEFAULT_CONNECTION_TIMEOUT
 
         try:
-            self.receive_timeout = (
-                int(receive_timeout)
-                if receive_timeout is not None
-                else DEFAULT_RECEIVE_TIMEOUT
-            )
+            self.receive_timeout = int(receive_timeout)
         except (ValueError, TypeError):
             self.receive_timeout = DEFAULT_RECEIVE_TIMEOUT
 

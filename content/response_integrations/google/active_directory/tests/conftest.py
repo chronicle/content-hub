@@ -1,7 +1,7 @@
 from __future__ import annotations
-import sys
 import os
 import site
+import sys
 
 # Ensure soar_sdk directory is in sys.path for SiemplifyUtils imports
 site_packages = site.getsitepackages()

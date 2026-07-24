@@ -69,5 +69,35 @@ class TestActiveDirectoryManager(unittest.TestCase):
             receive_timeout=120,
         )
 
+    @patch.object(adm_module, "Server")
+    @patch.object(adm_module, "Connection")
+    def test_manager_init_none_timeouts(self, mock_connection, mock_server):
+        # Instantiate with explicit None or invalid timeouts
+        ActiveDirectoryManager(
+            server_ip="1.2.3.4",
+            domain="example.local",
+            username="user",
+            password="password",
+            connection_timeout=None,
+            receive_timeout="invalid",
+        )
+
+        mock_server.assert_called_once_with(
+            "1.2.3.4",
+            use_ssl=False,
+            tls=None,
+            connect_timeout=DEFAULT_CONNECTION_TIMEOUT,
+        )
+
+        mock_connection.assert_called_once_with(
+            mock_server.return_value,
+            "user",
+            "password",
+            auto_bind=True,
+            auto_encode=True,
+            receive_timeout=DEFAULT_RECEIVE_TIMEOUT,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

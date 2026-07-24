@@ -11,7 +11,7 @@ class TestEnrichEntitiesAction(unittest.TestCase):
     @patch.object(enrich_action_module, "extract_configuration_param")
     @patch.object(enrich_action_module, "extract_action_param")
     @patch.object(enrich_action_module, "ActiveDirectoryManager")
-    def test_enrich_entities_action_timeouts_passed(
+    def test_enrich_entities_action_init(
         self,
         mock_ad_manager,
         mock_extract_action_param,
@@ -22,14 +22,7 @@ class TestEnrichEntitiesAction(unittest.TestCase):
         mock_siemplify = mock_siemplify_action.return_value
         mock_siemplify.target_entities = []
         
-        # Configure extract_action_param side_effect
-        # to return specific values for "Connection Timeout" and "Receive Timeout"
         def extract_action_side_effect(siemplify, param_name, **kwargs):
-            if param_name == "Connection Timeout":
-                return 15
-            elif param_name == "Receive Timeout":
-                return 75
-            # For other params, return appropriate dummy values
             if kwargs.get("input_type") == bool:
                 return False
             return "dummy_value"
