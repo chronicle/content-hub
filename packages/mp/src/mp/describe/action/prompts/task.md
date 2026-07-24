@@ -82,9 +82,12 @@ Review these categories carefully. An action can belong to one or more categorie
     * `can_create_case_comments`: Set to true if the action creates new analyst/case comments (e.g., calling `siemplify.add_case_comment`).
 3. **Extract Entity Scopes:** Analyze how the action uses target entities. You MUST write out your step-by-step reasoning in the `reasoning` field of the
    `entity_usage` object before setting boolean flags:
-    * **Presence of Entities**: An action "runs on entities" if it iterates over
-      `target_entities` or uses entity-specific identifiers. If it works only on static/general data sources without referencing specific entities, all entity type flags must be false.
-    * **Specific Types**: If the code filters entities by type (e.g., `if entity.entity_type == EntityTypes.ADDRESS`), set only that specific type flag (e.g., `address`) to true.
+    * **Presence of Entities**: An action "runs on entities" if it iterates over `target_entities` OR
+      if it accepts/processes entity identifiers via input parameters (e.g. $all_entity_param_examples).
+      CRITICAL: If an action accepts an input parameter representing an entity, set the corresponding entity type flag to `true`.
+    * **Specific Types & Parameter Mapping**: Set boolean flags for specific entity types based on code filters
+      (e.g., `if entity.entity_type == EntityTypes.ADDRESS`) OR input parameters:
+$entity_type_mapping_rules
     * **Unfiltered (Global) Scope**: If it processes the `target_entities` list without type-based filtering, it runs on all supported entity types; set all flags to true.
     * **Generic Type**: `generic` (GenericEntity) is a standalone type. Do not use it as a fallback for "all types"; only set it to true if explicitly filtered for, or if all flags are true.
     * **Filter Properties**: Populate boolean flags for how target entities are filtered:
