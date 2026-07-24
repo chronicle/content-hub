@@ -1,0 +1,49 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Ping Action implementation."""
+
+from __future__ import annotations
+
+from ..core.base_action import ThreatConnectAction
+from ..core.constants import PING_SCRIPT_NAME
+
+SUCCESS_MESSAGE: str = (
+    "Successfully connected to the ThreatConnect server with the provided "
+    "connection parameters!"
+)
+ERROR_MESSAGE: str = "Failed to connect to the ThreatConnect server!"
+
+
+class Ping(ThreatConnectAction):
+    """Ping action to verify ThreatConnect v3 connection settings."""
+
+    def __init__(self) -> None:
+        super().__init__(PING_SCRIPT_NAME)
+        self.output_message = SUCCESS_MESSAGE
+        self.error_output_message = ERROR_MESSAGE
+
+    def _perform_action(self, _: None = None) -> None:
+        """Verify connectivity through the client."""
+        self.api_client.test_connectivity()
+        self.result_value = True
+
+
+def main() -> None:
+    """Ping action entry point."""
+    Ping().run()
+
+
+if __name__ == "__main__":
+    main()
