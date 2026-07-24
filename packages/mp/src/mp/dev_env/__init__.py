@@ -14,16 +14,28 @@
 
 from __future__ import annotations
 
+from .sub_commands.alert_grouping_rule.pull import pull_alert_grouping_rule
+from .sub_commands.alert_grouping_rule.push import push_alert_grouping_rule
+from .sub_commands.custom_field.pull import pull_custom_field
+from .sub_commands.custom_field.push import push_custom_field
 from .sub_commands.integration.pull import pull_integration
 from .sub_commands.integration.push import push_integration
 from .sub_commands.login import login
 from .sub_commands.playbook.pull import pull_playbook
 from .sub_commands.playbook.push import push_playbook
+from .sub_commands.view.pull import pull_view
+from .sub_commands.view.push import push_view
 
 __all__: list[str] = [
     "login",
+    "pull_alert_grouping_rule",
+    "pull_custom_field",
     "pull_integration",
     "pull_playbook",
+    "pull_view",
+    "push_alert_grouping_rule",
+    "push_custom_field",
     "push_integration",
     "push_playbook",
+    "push_view",
 ]

@@ -83,7 +83,7 @@ class CheckParams(NamedTuple):
 
 
 @check_app.command(name="check", help="Check and lint python")
-def check(  # noqa: PLR0913
+def check(  # ruff:ignore[too-many-arguments]
     file_paths: Annotated[
         list[str] | None,
         typer.Argument(

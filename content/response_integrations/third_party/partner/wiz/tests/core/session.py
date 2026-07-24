@@ -59,6 +59,9 @@ class WizSession(MockSession[MockRequest, MockResponse, Wiz]):
         if "query VulnerabilityFindingsPage" in query:
             return self._get_vulnerability_findings(request)
 
+        if "query threatAIAnalysis" in query:
+            return self._get_threat_ai_analysis(request)
+
         return MockResponse(
             content={"errors": [{"message": "Invalid query"}]},
             status_code=400,
@@ -130,6 +133,25 @@ class WizSession(MockSession[MockRequest, MockResponse, Wiz]):
         issue.status = constants.STATUS_RESOLVED
 
         return MockResponse(content=common.RESOLVE_ISSUE, status_code=200)
+
+    def _get_threat_ai_analysis(self, request: MockRequest) -> MockResponse:
+        """Handle threat AI analysis request's response."""
+        variables = request.kwargs["json"].get("variables", {})
+        issue_id = variables.get("issueId")
+        if issue_id == common.INVALID_ISSUE_ID:
+            return MockResponse(content=common.INVALID_ISSUE, status_code=200)
+
+        analysis_data = self._product.get_threat_ai_analysis(issue_id)
+        if analysis_data is None:
+            return MockResponse(
+                content={"data": {"issue": None}},
+                status_code=200,
+            )
+
+        return MockResponse(
+            content=analysis_data,
+            status_code=200,
+        )
 
 
 @router.post("/oauth/token")
