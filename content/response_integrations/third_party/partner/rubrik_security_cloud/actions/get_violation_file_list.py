@@ -279,12 +279,5 @@ def main() -> None:
         siemplify.LOGGER.info(f"Output Message: {output_message}")
         siemplify.end(output_message, result_value, status)
 
-
-# def construct_csv(table_data: list) -> list:
-#     """Return table data capped at MAX_TABLE_RECORDS rows."""
-#     from constants import MAX_TABLE_RECORDS
-#     return table_data[:MAX_TABLE_RECORDS]
-
-
 if __name__ == "__main__":
     main()

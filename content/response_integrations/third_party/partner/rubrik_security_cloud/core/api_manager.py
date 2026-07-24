@@ -454,12 +454,6 @@ query IRViolationsListQuery(
 }
 """
 
-
-# ---------------------------------------------------------------------------
-# APIManager class
-# ---------------------------------------------------------------------------
-
-
 class APIManager:
     def __init__(
         self,
@@ -716,10 +710,6 @@ class APIManager:
 
         return True
 
-    # -------------------------------------------------------------------------
-    # Connectivity
-    # -------------------------------------------------------------------------
-
     def test_connectivity(self):
         """Test connectivity to the Rubrik Security Cloud GraphQL API.
 
@@ -735,9 +725,6 @@ class APIManager:
 
         return True
 
-    # -----------
-    # OLD Actions
-    # -----------
     def start_turbo_ioc_scan(
         self,
         ioc_list: List[str],
@@ -1542,10 +1529,6 @@ class APIManager:
             data=payload,
         )
 
-    # -------------------------------------------------------------------------
-    # DSPM Actions
-    # -------------------------------------------------------------------------
-
     def search_dspm_violations(
         self,
         statuses: Optional[List[str]] = None,
@@ -1989,10 +1972,6 @@ class APIManager:
             f"snapshotFid={snapshot_fid} violationId={violation_id}"
         )
         return self._execute_graphql(_FILE_LIST_QUERY, variables)
-
-    # -------------------------------------------------------------------------
-    # IR Actions
-    # -------------------------------------------------------------------------
 
     def search_ir_violations(
         self,

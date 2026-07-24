@@ -51,7 +51,7 @@ MAX_LOOKBACK_DAYS = 100
 STATUS_OPEN = 1
 
 # Event names that are audit/configuration events, not violation lifecycle
-# events. Confirmed (2026-07-11): IdentityAlertRuleCreated/Updated fire when
+# events. IdentityAlertRuleCreated/Updated fire when
 # an Identity Alert *rule* (policy) is added/edited -- their seriesId is a
 # rule ID, not a violation ID, so they must never be folded into a
 # violation's group.
@@ -73,7 +73,6 @@ _STATUS_SUFFIX_RE = re.compile(
 TERMINAL_STATUSES = {"Remediated", "Closed", "Dismissed"}
 NON_TERMINAL_STATUSES = {"Detected", "InProgress", "ReOpen"}
 
-# Confirmed (2026-07-14) against a live case dump: these are FLAT keys
 # (the dot is part of the literal key string, not a nested path) inside
 # a security_event's `additional_properties` bag, e.g.:
 #   alert["security_events"][0]["additional_properties"]["custom_details.eventName"]
@@ -368,7 +367,6 @@ def main() -> None:
 def _iter_event_additional_properties(alert):
     """Yield each `additional_properties` dict off this alert's security_events.
 
-    Confirmed (2026-07-14) via a live case dump:
     `alert["security_events"][i]["additional_properties"]` holds FLAT keys
     with the literal dot in the name -- `"custom_details.eventName"` /
     `"custom_details.seriesId"` -- not a nested `custom_details` dict.
@@ -381,8 +379,6 @@ def _iter_event_additional_properties(alert):
 
 def _extract_event_name(alert):
     """Extraction of the RSC eventName mapped onto this alert.
-
-    Confirmed (2026-07-14): it lands at
     `security_events[i].additional_properties["custom_details.eventName"]`.
     Falls back to the alert-level additional-properties bag and a couple
     of plausible top-level keys for older/alternate ingestion paths.
@@ -408,7 +404,6 @@ def _extract_event_name(alert):
 def _extract_series_id(alert):
     """Extraction of the violation series_id for this alert.
 
-    Confirmed (2026-07-14): it lands at
     `security_events[i].additional_properties["custom_details.seriesId"]`.
     Falls back to the GenericEntity mapping (per the TDD's Ontology
     Mapping section) and the alert-level additional-properties bag for
