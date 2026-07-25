@@ -23,6 +23,15 @@ REFERENCE_LIST_PREFIX = "SOCRadar_IOC"
 
 IOC_TYPES = ["ip", "domain", "hash", "url"]
 
+# Map SOCRadar feed_type values to reference-list bucket names.
+# NOTE: the feed returns domain IOCs as "hostname" (OpenAPI docs are wrong).
+FEED_TYPE_MAP = {
+    "hostname": "domain", "domain": "domain",
+    "ip": "ip", "ipv4": "ip", "ipv6": "ip",
+    "url": "url",
+    "hash": "hash", "md5": "hash", "sha1": "hash", "sha256": "hash",
+}
+
 
 def _parse_uuids(raw: str | None) -> list[str]:
     """Parse comma/newline/semicolon separated UUIDs."""
@@ -84,9 +93,9 @@ def main() -> None:
                 for ioc in feed_data[:max_iocs]:
                     if not isinstance(ioc, dict):
                         continue
-                    ioc_type = str(ioc.get("feed_type") or "").lower()
+                    ioc_type = FEED_TYPE_MAP.get(str(ioc.get("feed_type") or "").lower().strip())
                     ioc_value = str(ioc.get("feed") or "").strip()
-                    if ioc_type in iocs_by_type and ioc_value:
+                    if ioc_type and ioc_value:
                         iocs_by_type[ioc_type].add(ioc_value)
                         count += 1
 
