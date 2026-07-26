@@ -148,9 +148,7 @@ def _find_local_custom_field_file_by_name(name_or_path: str) -> Path | None:
 @pull_app.command(name="custom-field")
 @track_command
 def pull_custom_field(  # ruff:ignore[complex-structure, too-many-branches, too-many-locals, too-many-statements]
-    field_name_or_id: Annotated[
-        str | None, typer.Argument(help="The custom field name or identifier to pull.")
-    ] = None,
+    field_name_or_id: Annotated[str | None, typer.Argument(help="The custom field name or identifier to pull.")] = None,
     dst: Annotated[
         Path | None,
         typer.Option(
@@ -358,6 +356,7 @@ def _download_and_save_custom_field(  # ruff:ignore[complex-structure, too-many-
     safe_name = raw_name.replace("/", "_").replace(" ", "_")
     scopes_val = field_data.get("scopes")
     if scopes_val:
+
         def normalize_scopes_for_filename(val: str | list) -> str:
             if isinstance(val, list):
                 parts = [str(x).strip().lower() for x in val]

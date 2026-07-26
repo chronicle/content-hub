@@ -102,10 +102,12 @@ def test_push_alert_grouping_rule_update(
     ]
 
     rule_file = tmp_path / "All.yaml"
-    rule_file.write_text(yaml.dump({
-        "category": "All",
-        "groupingType": "Entities",
-    }))
+    rule_file.write_text(
+        yaml.dump({
+            "category": "All",
+            "groupingType": "Entities",
+        })
+    )
 
     with mock.patch(
         "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
@@ -139,10 +141,12 @@ def test_push_alert_grouping_rule_create(
     mock_api.list_alert_grouping_rules.return_value = []
 
     rule_file = tmp_path / "AlertType.yaml"
-    rule_file.write_text(yaml.dump({
-        "category": "AlertType",
-        "groupingType": "Entities",
-    }))
+    rule_file.write_text(
+        yaml.dump({
+            "category": "AlertType",
+            "groupingType": "Entities",
+        })
+    )
 
     result = runner.invoke(push_app, ["alert-grouping-rule", str(rule_file), "--force"])
 
@@ -191,13 +195,13 @@ def test_pull_multiple_rules_same_category(
             "name": "projects//locations//instances//alertGroupingRules/1",
             "id": 1,
             "category": "AlertType",
-            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}]
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
         },
         {
             "name": "projects//locations//instances//alertGroupingRules/2",
             "id": 2,
             "category": "AlertType",
-            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}]
+            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}],
         },
     ]
 
@@ -230,23 +234,25 @@ def test_push_multiple_rules_same_category(
             "name": "projects//locations//instances//alertGroupingRules/1",
             "id": 1,
             "category": "AlertType",
-            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}]
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
         },
         {
             "name": "projects//locations//instances//alertGroupingRules/2",
             "id": 2,
             "category": "AlertType",
-            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}]
+            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}],
         },
     ]
 
     # Create two files
     file_1 = tmp_path / "AlertType_phishing.yaml"
-    file_1.write_text(yaml.dump({
-        "category": "AlertType",
-        "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
-        "groupingType": "Entities",
-    }))
+    file_1.write_text(
+        yaml.dump({
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+            "groupingType": "Entities",
+        })
+    )
 
     with mock.patch(
         "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
@@ -262,7 +268,7 @@ def test_push_multiple_rules_same_category(
             "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
             "groupingType": "Entities",
             "id": 1,
-            "name": "projects//locations//instances//alertGroupingRules/1"
+            "name": "projects//locations//instances//alertGroupingRules/1",
         },
     )
 
@@ -307,13 +313,13 @@ def test_pull_alert_grouping_rule_by_exact_filename(
             "name": "projects//locations//instances//alertGroupingRules/1",
             "id": 1,
             "category": "AlertType",
-            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}]
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
         },
         {
             "name": "projects//locations//instances//alertGroupingRules/2",
             "id": 2,
             "category": "AlertType",
-            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}]
+            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}],
         },
     ]
 
@@ -344,30 +350,34 @@ def test_push_alert_grouping_rule_by_exact_filename(
             "name": "projects//locations//instances//alertGroupingRules/1",
             "id": 1,
             "category": "AlertType",
-            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}]
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
         },
         {
             "name": "projects//locations//instances//alertGroupingRules/2",
             "id": 2,
             "category": "AlertType",
-            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}]
+            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}],
         },
     ]
 
     # Create two files
     file_1 = tmp_path / "AlertType_phishing.yaml"
-    file_1.write_text(yaml.dump({
-        "category": "AlertType",
-        "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
-        "groupingType": "Entities",
-    }))
+    file_1.write_text(
+        yaml.dump({
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+            "groupingType": "Entities",
+        })
+    )
 
     file_2 = tmp_path / "AlertType_brute_force.yaml"
-    file_2.write_text(yaml.dump({
-        "category": "AlertType",
-        "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}],
-        "groupingType": "Entities",
-    }))
+    file_2.write_text(
+        yaml.dump({
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Brute Force", "displayName": "Brute Force"}],
+            "groupingType": "Entities",
+        })
+    )
 
     with mock.patch(
         "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
@@ -383,7 +393,7 @@ def test_push_alert_grouping_rule_by_exact_filename(
             "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
             "groupingType": "Entities",
             "id": 1,
-            "name": "projects//locations//instances//alertGroupingRules/1"
+            "name": "projects//locations//instances//alertGroupingRules/1",
         },
     )
 
@@ -410,12 +420,14 @@ def test_pull_alert_grouping_rule_overwrites_matching_renamed_file(
 
     # Create a local file with a custom name but matching category and details
     local_file = tmp_path / "AlertType_phishing_custom.yaml"
-    local_file.write_text(yaml.dump({
-        "category": "AlertType",
-        "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
-        "groupingType": "Entities",
-        "description": "Old Local Description",
-    }))
+    local_file.write_text(
+        yaml.dump({
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+            "groupingType": "Entities",
+            "description": "Old Local Description",
+        })
+    )
 
     with mock.patch(
         "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
@@ -457,12 +469,14 @@ def test_pull_alert_grouping_rule_by_local_filename_without_suffix(
 
     # Create a local file with a custom name
     local_file = tmp_path / "AlertType_phishing_custom.yaml"
-    local_file.write_text(yaml.dump({
-        "category": "AlertType",
-        "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
-        "groupingType": "Entities",
-        "description": "Old Local Description",
-    }))
+    local_file.write_text(
+        yaml.dump({
+            "category": "AlertType",
+            "categoryDetails": [{"identifier": "Phishing", "displayName": "Phishing"}],
+            "groupingType": "Entities",
+            "description": "Old Local Description",
+        })
+    )
 
     with mock.patch(
         "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",
@@ -501,14 +515,16 @@ def test_push_alert_grouping_rule_modified_category_details(
     ]
 
     rule_file = tmp_path / "DataSource_jira.yaml"
-    rule_file.write_text(yaml.dump({
-        "category": "DataSource",
-        "categoryDetails": [
-            {"identifier": "jira", "displayName": "jira"},
-            {"identifier": "microsoft_casb", "displayName": "microsoft_casb"},
-        ],
-        "groupingType": "Entities",
-    }))
+    rule_file.write_text(
+        yaml.dump({
+            "category": "DataSource",
+            "categoryDetails": [
+                {"identifier": "jira", "displayName": "jira"},
+                {"identifier": "microsoft_casb", "displayName": "microsoft_casb"},
+            ],
+            "groupingType": "Entities",
+        })
+    )
 
     with mock.patch(
         "mp.core.file_utils.create_or_get_alert_grouping_rules_root_dir",

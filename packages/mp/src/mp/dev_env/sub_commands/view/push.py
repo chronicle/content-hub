@@ -435,11 +435,7 @@ def _resolve_existing_view(
                 with contextlib.suppress(ValueError, TypeError):
                     v_type = int(v_type_raw)
 
-            if (
-                isinstance(v_name, str)
-                and v_name.lower() == local_name.lower()
-                and v_type == local_type
-            ):
+            if isinstance(v_name, str) and v_name.lower() == local_name.lower() and v_type == local_type:
                 v_id = v.get("id") if v.get("id") is not None else v.get("Id")
                 v_uuid = v.get("identifier") or v.get("Identifier")
                 logger.info(
@@ -508,9 +504,7 @@ def _validate_push_preconditions(
     local_name = flat_view_data.get("name")
     local_type = flat_view_data.get("type")
 
-    existing_id, server_uuid = _resolve_existing_view(
-        backend_api, local_identifier, local_name, local_type
-    )
+    existing_id, server_uuid = _resolve_existing_view(backend_api, local_identifier, local_name, local_type)
 
     if existing_id is not None and server_uuid:
         logger.info("Resolved existing view ID %s on server.", existing_id)
@@ -546,6 +540,7 @@ def _validate_push_preconditions(
         errors.append(msg)
     elif not flat_view_data.get("identifier"):
         import uuid  # ruff:ignore[import-outside-top-level]
+
         new_uuid = str(uuid.uuid4())
         logger.info("Generating new UUID '%s' for new view.", new_uuid)
         flat_view_data["identifier"] = new_uuid
@@ -614,8 +609,7 @@ def _check_unconfigured_instances(
         target_ident = (matched_item.get("identifier") or integration).lower()
         if target_ident not in configured_integrations and integration.lower() not in configured_integrations:
             logger.warning(
-                "[VALIDATION WARNING] Integration '%s' is installed, "
-                "but has no configured instance in SOAR Settings.",
+                "[VALIDATION WARNING] Integration '%s' is installed, but has no configured instance in SOAR Settings.",
                 integration,
             )
 
