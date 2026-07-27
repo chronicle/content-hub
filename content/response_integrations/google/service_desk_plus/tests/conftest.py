@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
+pytest_plugins = ("integration_testing.conftest",)
 
 # Unify the soar_sdk namespace with the flat namespace for mocks
 import sys
@@ -109,18 +110,3 @@ def manager_fixture(script_session: ServiceDeskPlusSession) -> ServiceDeskPlusMa
 def mock_siemplify_methods(monkeypatch):
     monkeypatch.setattr(soar_sdk.SiemplifyAction.SiemplifyAction, "add_tag", lambda *args, **kwargs: None, raising=False)
     monkeypatch.setattr(soar_sdk.SiemplifyAction.SiemplifyAction, "update_alerts_additional_data", lambda *args, **kwargs: None, raising=False)
-
-import os
-import sys
-import pkgutil
-import pathlib
-
-
-import pytest
-import requests
-
-import soar_sdk
-
-# Provide integration_testing fixtures
-pytest_plugins = ("integration_testing.conftest",)
-

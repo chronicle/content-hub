@@ -44,7 +44,7 @@ MOCK_DATA_PATH = pathlib.Path(__file__).parent / "mock_data.json"
 MOCK_DATA = get_def_file_content(MOCK_DATA_PATH)
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_list_messages(
         google_gmail: GoogleGmail,
         google_gmail_api_manager: GoogleGmailApiManager,
@@ -78,7 +78,7 @@ async def test_list_messages(
     assert_all_get_message(gmail_script_session.request_history, start=-2)
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_search_by_message_id(
         google_gmail: GoogleGmail,
         google_gmail_api_manager: GoogleGmailApiManager,
@@ -106,7 +106,7 @@ async def test_search_by_message_id(
     assert_all_list_messages(gmail_script_session.request_history)
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_trash_message(
         google_gmail_api_manager: GoogleGmailApiManager,
         gmail_script_session: GoogleGmailAsyncSession,
@@ -135,7 +135,7 @@ async def test_trash_message(
     assert gmail_script_session.request_history[-1].request.method == HttpMethod.POST
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_delete_message(
         google_gmail_api_manager: GoogleGmailApiManager,
         gmail_script_session: GoogleGmailAsyncSession,
@@ -164,7 +164,7 @@ async def test_delete_message(
     assert gmail_script_session.request_history[-1].request.method == HttpMethod.DELETE
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_enrich_attachments(
         google_gmail: GoogleGmail,
         google_gmail_api_manager: GoogleGmailApiManager,
@@ -204,7 +204,7 @@ async def test_enrich_attachments(
     assert_all_get_attachment(gmail_script_session.request_history, start=3)
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_get_thread(
         google_gmail: GoogleGmail,
         google_gmail_api_manager: GoogleGmailApiManager,
@@ -228,7 +228,7 @@ async def test_get_thread(
     assert thread.to_json()
 
 
-@pytest.mark.anyio
+@pytest.mark.asyncio
 async def test_batch_modify(
         google_gmail_api_manager: GoogleGmailApiManager,
         gmail_script_session: GoogleGmailAsyncSession,

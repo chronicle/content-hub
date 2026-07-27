@@ -151,10 +151,10 @@ class PaloAltoCortexXDR(abc.ABC):
     def get_incident_extra_data(self) -> IncidentExtraData:
         return self._connector_incident_extra_data
 
-    def add_file_retrieval_urls(self, group_id: str, urls: Any) -> None:
+    def add_file_retrieval_urls(self, group_action_id: str, urls: Any) -> None:
         if not hasattr(self, "_file_retrieval_urls"):
             self._file_retrieval_urls = {}
-        self._file_retrieval_urls[group_id] = urls
+        self._file_retrieval_urls[group_action_id] = urls
 
     def get_file_retrieval_urls(self, group_id: str) -> Any:
         return getattr(self, "_file_retrieval_urls", {}).get(group_id)
@@ -166,3 +166,17 @@ class PaloAltoCortexXDR(abc.ABC):
 
     def get_file_content_by_val(self, key: str) -> bytes:
         return getattr(self, "_file_content", {}).get(key)
+
+    def add_file_retrieval(self, action_id: str, status_data: Any) -> None:
+        if not hasattr(self, "_file_retrieval_statuses"):
+            self._file_retrieval_statuses = {}
+        self._file_retrieval_statuses[action_id] = status_data
+
+    def get_file_retrieval_status(self, action_id: str) -> Any:
+        return getattr(self, "_file_retrieval_statuses", {}).get(action_id)
+
+    def add_file_retrieval_action(self, action: Any) -> None:
+        self._file_retrieval_action = action
+
+    def get_file_retrieval_action(self) -> Any:
+        return getattr(self, "_file_retrieval_action", None)

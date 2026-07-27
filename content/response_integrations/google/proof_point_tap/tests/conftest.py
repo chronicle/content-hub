@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
 import pathlib
 pytest_plugins = ("integration_testing.conftest",)
 import sys
@@ -129,71 +130,6 @@ def enterprise_standardization_mocks(monkeypatch, script_session, request):
     except Exception:
         pass
         
-    # 3. Dynamic YAML shim to bypass .connectordef / mock JSON requirement
-    import integration_testing.common
-    from pathlib import Path
-    orig_get_def = integration_testing.common.get_def_file_content
-    def get_yaml_def_content(def_file_path):
-        if not def_file_path:
-            return {}
-        path_str = str(def_file_path)
-        int_dir = Path(__file__).parent.parent
-        
-        # INTERCEPT OLD JOB PATHS
-        if "Integrations/" in path_str and "/Jobs/" in path_str:
-            base_name = Path(path_str).name
-            job_yaml = int_dir / "jobs" / base_name
-            if job_yaml.exists():
-                def_file_path = job_yaml
-                path_str = str(job_yaml)
-
-        # Convert legacy mock json paths into the real new yaml paths
-        if path_str.endswith(".json") or path_str.endswith(".connectordef") or path_str.endswith(".yaml"):
-            base_name = Path(path_str).stem
-            # strip 'mock_' if it starts with it
-            if base_name.startswith("mock_"):
-                base_name = base_name[5:]
-            
-            # The real yaml is in the integration's connectors or jobs directory
-            yaml_path = int_dir / "connectors" / f"{base_name}.yaml"
-            if not yaml_path.exists():
-                yaml_path = int_dir / "jobs" / f"{base_name}.yaml"
-            if yaml_path.exists():
-                import yaml
-                with open(yaml_path, "r") as f:
-                    data = yaml.safe_load(f)
-                    
-                    # Check if it has 'configuration' mapping (new mp yaml format)
-                    if "configuration" in data:
-                        parameters = []
-                        for param_dict in data.get("configuration", []):
-                            param_name = list(param_dict.keys())[0]
-                            param_data = param_dict[param_name]
-                            parameters.append({
-                                "Name": param_name,
-                                "Type": param_data.get("type", 0),
-                                "IsMandatory": param_data.get("required", False),
-                                "DefaultValue": param_data.get("default", "")
-                            })
-                        return {"Parameters": parameters}
-                    
-                    if "parameters" in data:
-                        parameters = []
-                        for param_dict in data.get("parameters", []):
-                            parameters.append({
-                                "Name": param_dict.get("name", ""),
-                                "Type": param_dict.get("type", 0),
-                                "IsMandatory": param_dict.get("is_mandatory", False),
-                                "DefaultValue": param_dict.get("default_value", "")
-                            })
-                        return {"Parameters": parameters}
-                    
-                    # If it's old JSON structure in a YAML wrapper
-                    if "Parameters" in data:
-                        return data
-        return orig_get_def(def_file_path)
-        
-    monkeypatch.setattr(integration_testing.common, "get_def_file_content", get_yaml_def_content)
 
     # 4. Patch CaseDetails.__init__ for missing arguments in integration-testing
     try:

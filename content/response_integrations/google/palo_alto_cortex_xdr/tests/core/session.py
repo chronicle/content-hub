@@ -44,6 +44,7 @@ class PaloAltoCortexXDRSession(
             self.get_endpoint,
             self.scan_endpoints,
             self.get_action_status,
+            self.retrieve_file_from_endpoint,
             self.get_file_retrieval_details,
             self.retrieve_file,
         ]
@@ -162,9 +163,11 @@ class PaloAltoCortexXDRSession(
     def get_action_status(self, request: MockRequest) -> MockResponse:
         """Handle POST .*/public_api/v1/actions/get_action_status/ requests"""
         request_data = request.kwargs.get("json", {}).get("request_data", {})
-        action_id = request_data.get("group_action_id")
+        action_id = str(request_data.get("group_action_id"))
 
-        status = self._product.get_scan_status(action_id)
+        status = self._product.get_scan_status(
+            action_id
+        ) or self._product.get_file_retrieval_status(action_id)
 
         if status:
             return MockResponse(content={"reply": status}, status_code=200)
@@ -184,6 +187,21 @@ class PaloAltoCortexXDRSession(
         }
 
         return MockResponse(content=response_json, status_code=200)
+
+    @router.post(r".*/public_api/v1/endpoints/file_retrieval/")
+    def retrieve_file_from_endpoint(self, request: MockRequest) -> MockResponse:
+        """Handle POST .*/public_api/v1/endpoints/file_retrieval/ requests"""
+        action = self._product.get_file_retrieval_action()
+        if action:
+            return MockResponse(
+                content={"reply": action.raw_data},
+                status_code=200,
+            )
+
+        return MockResponse(
+            content={"reply": {}},
+            status_code=200,
+        )
 
     @router.post(r".*/public_api/v1/actions/file_retrieval_details/?")
     def get_file_retrieval_details(self, request: MockRequest) -> MockResponse:

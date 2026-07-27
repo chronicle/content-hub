@@ -100,6 +100,13 @@ def zoho_desk_manager_fixture(script_session: ZohoDeskSession):
 def sdk_session_fixture(script_session: ZohoDeskSession) -> ZohoDeskSession:
     return script_session
 
+@pytest.fixture(scope="function")
+def agent_data():
+    from collections import namedtuple
+    Agent = namedtuple("Agent", "id name email")
+    agent = Agent(id="115142000000092001", name="Milen", email="mivanov@siemplify.co")
+    yield agent
+
 def pytest_runtest_logreport(report):
     if report.when == "call" and report.outcome == "failed":
         with open("/Users/haggit/PycharmProjects/marketplace/pytest_failures.txt", "a") as f:

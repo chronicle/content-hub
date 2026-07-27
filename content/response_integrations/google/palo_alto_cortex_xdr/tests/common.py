@@ -1,19 +1,5 @@
-# Copyright 2026 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from __future__ import annotations
-import json
+
 import pathlib
 
 from TIPCommon.data_models import AlertCard, CaseDetails
@@ -25,15 +11,21 @@ from ..core.datamodels import (
     IncidentInfo,
     XQLSearch,
     XQLSearchResult,
+    FileRetrievalAction,
+    FileRetrievalDetails,
+    Endpoint,
 )
-from integration_testing.common import get_def_file_content
+from ..core.PaloAltoCortexXDRTransformationLayer import (
+    PaloAltoCortexXDRTransformationLayer,
+)
+from integration_testing.common import get_def_file_content as get_json_file_content
 
 
 INTEGRATION_PATH = pathlib.Path(__file__).parent.parent
 CONFIG_PATH: pathlib.Path = pathlib.Path(__file__).parent / "config.json"
-CONFIG: SingleJson = get_def_file_content(CONFIG_PATH)
+CONFIG: SingleJson = get_json_file_content(CONFIG_PATH)
 MOCK_PATH: pathlib.Path = pathlib.Path(__file__).parent / "mock_data.json"
-MOCK_DATA: SingleJson = get_def_file_content(MOCK_PATH)
+MOCK_DATA: SingleJson = get_json_file_content(MOCK_PATH)
 GET_INCIDENT_DETAILS: SingleJson = MOCK_DATA["get_incident_details"]
 GET_INCIDENTS: SingleJson = MOCK_DATA["get_incidents"]
 GET_INCIDENT_EXTRA_DATA: SingleJson = MOCK_DATA["get_incident_extra_data"]
@@ -53,6 +45,11 @@ JOB_MOCK_INCIDENT: SingleJson = MOCK_DATA["job_mock_incident"]
 JOB_MOCK_INCIDENT_EXTRA_DATA: SingleJson = MOCK_DATA["job_mock_incident_extra_data"]
 JOB_MOCK_CASE_DETAILS_DATA: SingleJson = MOCK_DATA["job_mock_case_details_data"]
 
+RETRIEVE_FILE_FROM_ENDPOINT: SingleJson = MOCK_DATA["retrieve_file_from_endpoint"]
+GET_FILE_RETRIEVAL_DETAILS: SingleJson = MOCK_DATA["get_file_retrieval_details"]
+GET_FILE_RETRIEVAL_PASSWD: SingleJson = MOCK_DATA["get_file_retrieval_details_passwd"]
+ENDPOINT_DATA_IP: SingleJson = MOCK_DATA["endpoint_data_ip"]
+
 LIST_ALERTS_URL: str = "/1.0/alerts/"
 
 
@@ -65,6 +62,50 @@ EXECUTE_XQL_SEARCH: XQLSearch = XQLSearch.from_json(EXECUTE_XQL_SEARCH)
 EXECUTE_XQL_SEARCH_RESULT: XQLSearchResult = XQLSearchResult.from_json(
     EXECUTE_XQL_SEARCH_RESULT["reply"]
 )
+ENDPOINT_IP: Endpoint = PaloAltoCortexXDRTransformationLayer.build_siemplify_endpoint_obj(
+    ENDPOINT_DATA_IP
+)
+RETRIEVAL_ACTION: FileRetrievalAction = (
+    PaloAltoCortexXDRTransformationLayer.build_siemplify_file_retrieval_action_obj(
+        RETRIEVE_FILE_FROM_ENDPOINT
+    )
+)
+RETRIEVAL_DETAILS: FileRetrievalDetails = (
+    PaloAltoCortexXDRTransformationLayer.build_siemplify_file_retrieval_details_obj(
+        GET_FILE_RETRIEVAL_DETAILS
+    )
+)
+
+GROUP_ID_CALC: str = "32985"
+GROUP_ID_PASSWD: str = "32986"
+ENDPOINT_ID: str = "ep1"
+ENTITY_IDENTIFIER: str = ENDPOINT_IP.ip[0]
+
+RETRIEVAL_DETAILS_PASSWD: FileRetrievalDetails = (
+    PaloAltoCortexXDRTransformationLayer.build_siemplify_file_retrieval_details_obj(
+        GET_FILE_RETRIEVAL_PASSWD
+    )
+)
+
+STATE_IN_PROGRESS: SingleJson = {
+    "endpoints_data": {
+        f"{ENDPOINT_ID}:C:\\Windows\\System32\\calc.exe": {
+            "endpoint_id": ENDPOINT_ID,
+            "file_path": "C:\\Windows\\System32\\calc.exe",
+            "group_id": GROUP_ID_CALC,
+            "status": "Pending",
+            "identifier": ENTITY_IDENTIFIER,
+        },
+        f"{ENDPOINT_ID}:/etc/passwd": {
+            "endpoint_id": ENDPOINT_ID,
+            "file_path": "/etc/passwd",
+            "group_id": GROUP_ID_PASSWD,
+            "status": "Pending",
+            "identifier": ENTITY_IDENTIFIER,
+        },
+    },
+    "not_found": [],
+}
 
 INCIDENTS_INFO: list[IncidentInfo] = [
     IncidentInfo.from_json(incident) for incident in GET_INCIDENTS["reply"]["incidents"]

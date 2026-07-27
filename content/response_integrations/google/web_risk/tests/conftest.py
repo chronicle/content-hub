@@ -13,21 +13,17 @@
 # limitations under the License.
 
 from __future__ import annotations
+pytest_plugins = ("integration_testing.conftest",)
+
+
+import importlib
 import os
 import sys
 import pkgutil
 import pathlib
-
-
 import pytest
 import requests
-
 import soar_sdk
-
-# Provide integration_testing fixtures
-pytest_plugins = ("integration_testing.conftest",)
-
-import importlib
 
 # Add SDK internal modules to sys.path to support flat imports within the SDK and TIPCommon
 sdk_dir = soar_sdk.__path__[0]

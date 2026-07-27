@@ -153,7 +153,7 @@ def test_add_comment(
 
 
 @pytest.mark.parametrize("agent_name", ["Milen"])
-def test_find_agent(zoho_desk_manager, mocker, agent_name):
+def test_find_agent(zoho_desk_manager, mocker, agent_data, agent_name):
     result = mocker.spy(zoho_desk_manager.parser, "build_agent_object")
     mock_data = MOCK_DATA.get("find_agents")
     mock_get = mocker.Mock()

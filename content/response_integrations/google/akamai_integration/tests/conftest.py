@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+from __future__ import annotations
 from collections import namedtuple
 import json
 import os

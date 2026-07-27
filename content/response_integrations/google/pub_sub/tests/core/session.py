@@ -103,7 +103,7 @@ class ApiSession(
             }
         )
 
-    @router.get(r"/computeMetadata/v1/instance/service-accounts/default/?$")
+    @router.get('/computeMetadata/v1/instance/service-accounts/default/')
     def get_default_service_account(self, _: MockRequest) -> MockResponse:
         return MockResponse(
             content={

@@ -37,14 +37,14 @@ class ZohoDeskSession(MockSession[MockRequest, MockResponse, ZohoDesk]):
             get_oauth_token,
         ]
 
-    @router.get("/api/v1/tickets/[a-zA-Z0-9-]+")
+    @router.get('/api/v1/tickets/[a-z0-9]+')
     def get_ticket(self, request: MockRequest) -> MockResponse:
         """Get a ticket from Zoho Desk"""
         ticket_id: str = request.url.path.split("/")[-1]
         ticket: Ticket = self._product.get_ticket(ticket_id)
         return MockResponse(content=ticket.to_json())
 
-    @router.patch("/api/v1/tickets/[a-zA-Z0-9-]+")
+    @router.patch('/api/v1/tickets/[a-z0-9]+')
     def update_ticket(self, request: MockRequest) -> MockResponse:
         """Update a ticket in Zoho Desk"""
         ticket_id: str = request.url.path.split("/")[-1]

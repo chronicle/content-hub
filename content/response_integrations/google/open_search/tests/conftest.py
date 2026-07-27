@@ -1,6 +1,7 @@
 # Copyright 2026 Google LLC
 
 from __future__ import annotations
+pytest_plugins = ("integration_testing.conftest",)
 from collections import namedtuple
 import json
 import os
@@ -28,9 +29,6 @@ for _, name, _ in pkgutil.iter_modules(soar_sdk.__path__):
     except Exception:
         pass
 sys.stdout = original_stdout
-import sys
-
-pytest_plugins = ("integration_testing.conftest",)
 
 # Unify the soar_sdk namespace with the flat namespace for mocks
 
