@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from rich import box
@@ -22,6 +23,9 @@ from rich.table import Table
 
 if TYPE_CHECKING:
     from mp.run_pre_build_tests.process_test_output import IntegrationTestResults
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class CliDisplay:

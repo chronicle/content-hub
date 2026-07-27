@@ -57,9 +57,7 @@ class PyProjectToml(pydantic.BaseModel):
             a `PyProjectToml` object.
 
         """
-        pyproject_data: PyProjectTomlFile = cast(
-            "PyProjectTomlFile", cast("object", toml.loads(text))
-        )
+        pyproject_data: PyProjectTomlFile = cast("PyProjectTomlFile", cast("object", toml.loads(text)))
         return cls.model_load(pyproject_data)
 
 

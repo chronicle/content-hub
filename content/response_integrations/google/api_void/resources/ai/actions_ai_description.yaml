@@ -1,0 +1,888 @@
+Get Ip Reputation:
+  ai_description: >-
+    ### General Description
+
+    Enriches IP Address entities by retrieving reputation data from APIVoid. This
+    action detects potentially malicious IP addresses commonly used for spam, attacks,
+    or fraudulent activities, providing threat intelligence and blacklist reports.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities, filtering for external IP addresses.
+
+    2. Makes a POST request to the APIVoid API (`/iprep/v1/pay-as-you-go/`) to fetch
+    reputation data for each valid IP address.
+
+    3. Evaluates the number of blacklist detections against the provided `Threshold`
+    parameter. If the detections exceed the threshold, the entity is marked as suspicious.
+
+    4. Enriches the entity with the retrieved data, including anonymity details and
+    detection rates.
+
+    5. If the `Create Insights` parameter is enabled, generates an insight for the
+    entity containing its country code.
+
+    6. Attaches a detailed blacklist report as an entity table and updates the entity
+    within Google SecOps.
+
+
+    ### Additional Notes
+
+    - Internal IP addresses and unsupported entity types are automatically skipped
+    during execution.
+
+    - The action returns a JSON result containing the full reputation data for each
+    processed IP address.
+  ai_short_description: >-
+    Enriches IP Address entities by retrieving reputation data and blacklist reports
+    from APIVoid, marking them as suspicious if detections exceed a specified threshold.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the APIVoid API to fetch IP reputation data
+      (fetches_data=true). It does not mutate external data. It updates internal entities
+      with enrichment data and creates insights if configured.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: true
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them based
+      on `entity.entity_type not in SUPPORTED_ENTITIES` (where SUPPORTED_ENTITIES
+      contains only `EntityTypes.ADDRESS`) and `entity.is_internal`. Therefore, it
+      targets ADDRESS entities and filters by entity_type and is_internal.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches IP reputation data from APIVoid, returning threat intelligence
+      such as detection rates, country codes, and blacklist reports. This matches
+      the 'Enrich IOC' expected outcome. It does not perform any containment, blocking,
+      or external state changes.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | Yes | IP risk threshold. The threshold must be a numeric
+    value (e.g., 3). If the number of detections exceeds this threshold, the entity
+    will be marked as suspicious. |
+
+    | Create Insights | Boolean | Yes | Specify whether the action should create insights
+    or not. If enabled, an insight containing the country code will be added to the
+    entity. |
+Get Screenshot:
+  ai_description: >-
+    ### General Description
+
+    Captures a high-quality screenshot of specified URL entities using the APIVoid
+    service. This action provides visual context for potentially malicious or suspicious
+    URLs by retrieving an image of the webpage and attaching it directly to the case,
+    along with the screenshot's MD5 hash.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities provided in the case.
+
+    2. Filters the entities, continuing only with those of type `URL`.
+
+    3. Validates the URL format, automatically prepending `http://` if a scheme is
+    missing.
+
+    4. Makes a POST request to the APIVoid `screenshot/v1/pay-as-you-go/` API endpoint
+    to capture the screenshot.
+
+    5. Checks the returned screenshot file size; if it exceeds 3MB, the attachment
+    is skipped to prevent oversized payloads.
+
+    6. Attaches the base64-encoded screenshot to the case and records the file's MD5
+    hash in the JSON results.
+
+    7. Updates the successfully processed entities within the SecOps platform.
+
+
+    ### Additional Notes
+
+    - Screenshots larger than 3MB will not be attached to the case, and the action
+    will log an error for those specific entities.
+
+    - The `Threshold` parameter is extracted by the script but does not actively influence
+    the screenshot capture logic.
+  ai_short_description: >-
+    Captures a high-quality screenshot of URL entities using APIVoid and attaches
+    the image to the case for visual context.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the APIVoid API to fetch screenshot data
+      (fetches_data=true). It does not mutate external data (can_mutate_external_data=false)
+      or internal case data like priority/status (can_mutate_internal_data=false).
+      It updates the processed entities using `siemplify.update_entities` (can_update_entities=true).
+      It does not create insights or case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The script iterates over `siemplify.target_entities` and explicitly checks `if
+      entity.entity_type not in SUPPORTED_ENTITIES:` where `SUPPORTED_ENTITIES = [EntityTypes.URL]`.
+      Therefore, it targets URL entities and filters them by their entity type.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches a screenshot and its MD5 hash for a given URL. While it doesn't
+      return traditional reputation scores, it retrieves contextual threat intelligence
+      (visual context of a webpage) for an indicator (URL), aligning with the broader
+      goal of Enrich IOC. It does not mutate external state, block IPs, or interact
+      with ticketing systems.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | Integer | No | A threshold value (Note: This parameter is extracted
+    but not actively utilized in the action's core logic). |
+Get URL Reputation:
+  ai_description: >-
+    ### General Description
+
+    Retrieves the safety reputation and risk score of URL entities using APIVoid.
+    The action queries the APIVoid service to fetch threat intelligence data, enriches
+    the entities with the results, and evaluates the risk score against a specified
+    threshold. If the risk score exceeds the threshold, the entity is marked as suspicious.
+
+
+    ### Flow Description
+
+    1. Iterates through all target entities of type URL.
+
+    2. Validates the URL format, prepending `http://` if a schema is missing.
+
+    3. Makes a POST request to the APIVoid API (`/urlrep/v1/pay-as-you-go/`) to fetch
+    the URL's reputation and risk score.
+
+    4. Enriches the entity's additional properties with the retrieved threat intelligence
+    data.
+
+    5. Attaches a domain blacklist report as a data table to the action results if
+    available.
+
+    6. Compares the retrieved risk score against the provided `Threshold` parameter.
+    If the score is higher, marks the entity as suspicious.
+
+    7. Updates the entities within the Google SecOps platform.
+
+
+    ### Additional Notes
+
+    The action will skip entities that are not of type URL.
+  ai_short_description: >-
+    Retrieves the safety reputation and risk score of URL entities using APIVoid,
+    enriches the entities, and marks them as suspicious if the risk score exceeds
+    a specified threshold.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the APIVoid API to fetch URL reputation data
+      (fetches_data=true). It does not mutate external data (can_mutate_external_data=false).
+      It updates internal entities with the fetched enrichment data and potentially
+      marks them as suspicious (can_update_entities=true). It does not create insights,
+      modify alert data, or create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` is `[EntityTypes.URL]`. Therefore,
+      it targets URL entities and filters strictly by `entity_type`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches reputation and risk score data for URL entities from APIVoid.
+      This directly aligns with the 'Enrich IOC' expected outcome, as it returns threat
+      intelligence for an indicator. It does not mutate external systems, update alerts,
+      or perform any other categorized actions.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | Yes | URL risk threshold. The threshold must be a numeric
+    value. e.g. 3. If the retrieved risk score exceeds this threshold, the entity
+    will be marked as suspicious. |
+Get domain reputation:
+  ai_description: >-
+    ### General Description
+
+    Enriches Hostname and URL entities by retrieving domain reputation data from APIVoid.
+    This action checks if a domain is blacklisted by popular and trusted domain blacklist
+    services and evaluates the risk based on a provided threshold.
+
+
+    ### Flow Description
+
+    1. Iterates over the target entities, filtering for Hostname and URL entity types.
+
+    2. Extracts the domain from the entity identifier.
+
+    3. Makes a GET request to the APIVoid `domainbl/v1/pay-as-you-go/` endpoint to
+    fetch the domain reputation report.
+
+    4. Parses the response to extract enrichment data and blacklist reports.
+
+    5. If the `Create Insights` parameter is enabled and a country code is found,
+    generates an insight for the entity.
+
+    6. Updates the entity's `additional_properties` with the retrieved enrichment
+    data.
+
+    7. If the number of blacklist detections exceeds the specified `Threshold`, marks
+    the entity as suspicious.
+
+    8. Marks the entity as enriched and saves the updates to the platform.
+
+    9. Attaches the blacklist report as a CSV table and the raw data as a JSON result
+    to the action output.
+
+
+    ### Additional Notes
+
+    - The action will skip entities that are not Hostnames or URLs.
+
+    - If the API limit is exceeded, the action will fail and raise an error.
+  ai_short_description: >-
+    Enriches Hostname and URL entities by retrieving domain reputation and blacklist
+    data from APIVoid.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: true
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the APIVoid API to fetch domain reputation
+      data (fetches_data = true). It does not mutate any external data (can_mutate_external_data
+      = false). It updates the entities with enrichment data and suspicious status
+      (can_update_entities = true) and creates insights if configured (can_create_insight
+      = true).
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: true
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: true
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITIES`, where `SUPPORTED_ENTITIES` includes `EntityTypes.HOSTNAME`
+      and `EntityTypes.URL`. Therefore, it targets Hostname and URL entities, filtering
+      strictly by `entity_type`.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches domain reputation and threat intelligence data for Hostname
+      and URL entities from APIVoid. This directly aligns with the 'Enrich IOC' expected
+      outcome. It does not perform any containment, ticketing, or other state-changing
+      operations.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | Yes | Domain risk threshold. The threshold must be a numeric
+    value. e.g. 3 |
+
+    | Create Insights | Boolean | Yes | Specify whether the action should create insights
+    or not. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the APIVoid service to ensure that the integration is configured
+    correctly and the API is reachable.
+
+
+    ### Flow Description
+
+    1. Extracts the integration-level configuration parameters (API Root, API Key,
+    Verify SSL).
+
+    2. Initializes the APIVoidManager with the provided credentials.
+
+    3. Makes an HTTP GET request to the APIVoid `iprep/v1/pay-as-you-go/?stats` endpoint
+    to verify authentication and network connectivity.
+
+    4. Returns a successful execution state if the request succeeds, or a failed execution
+    state if an error occurs.
+
+
+    ### Additional Notes
+
+    This is a standard utility action primarily used during the initial setup or troubleshooting
+    of the APIVoid integration.
+  ai_short_description: >-
+    Tests connectivity to the APIVoid service to ensure valid configuration and network
+    access.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the APIVoid API to test connectivity. It does
+      not fetch contextual data for alerts, mutate external data, mutate internal
+      data, update entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or interact with any entities. It solely tests connectivity
+      to the APIVoid service.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (Ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticket management.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action
+Verify Email:
+  ai_description: >-
+    ### General Description
+
+    Verifies and enriches User entities (specifically email addresses) using APIVoid.
+    It retrieves contextual information and threat intelligence, such as whether the
+    email is disposable, has valid MX/SPF records, and its overall risk score.
+
+
+    ### Flow Description
+
+    1. Iterates through the target User entities and validates if the entity identifier
+    matches a standard email address format using a regular expression.
+
+    2. Makes a POST API call to the APIVoid `emailverify/v1/pay-as-you-go/` endpoint
+    to fetch detailed information about the email address.
+
+    3. Enriches the entity's additional properties with the retrieved data (e.g.,
+    disposable status, MX records, SPF records, and suspicious domain flags).
+
+    4. Adds a data table to the entity containing the detailed email information.
+
+    5. Evaluates the email's risk score against the provided `Threshold` parameter;
+    if the score exceeds the threshold, the entity is marked as suspicious.
+
+    6. Updates the entities in the Google SecOps platform and attaches the raw JSON
+    results to the action execution.
+
+
+    ### Additional Notes
+
+    Entities that do not match a standard email regex pattern are skipped and will
+    not be processed by the APIVoid service.
+  ai_short_description: >-
+    Verifies and enriches User entities (email addresses) using APIVoid to determine
+    if they are disposable, have valid DNS records, and assess their risk score.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: true
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the APIVoid API to fetch email information
+      (fetches_data=true). It does not mutate any external data. Internally, it updates
+      the entities with enrichment data and suspicious status (can_update_entities=true)
+      and adds a data table, but does not create insights, modify alerts, or create
+      case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: true
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: true
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action iterates over `siemplify.target_entities` and filters them using
+      `entity.entity_type in SUPPORTED_ENTITIES` where `SUPPORTED_ENTITIES` contains
+      only `EntityTypes.USER`. It further filters the entities by checking if `entity.identifier`
+      matches an email regex pattern. Therefore, it targets USER entities and filters
+      by entity_type and identifier.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: true
+    enrich_ioc: true
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action fetches threat intelligence and contextual data (such as disposable
+      status, MX records, and risk score) for an email address represented as a USER
+      entity. This matches the 'Enrich Asset' category as it provides contextual metadata
+      for a user, and 'Enrich IOC' as it provides threat intelligence and reputation
+      scoring for an indicator.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Threshold | String | Yes | Email risk threshold. The threshold must be a numeric
+    value. e.g. 3 |

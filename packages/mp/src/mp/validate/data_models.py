@@ -18,18 +18,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple, Protocol, TypeAlias
-
-if TYPE_CHECKING:
-    from typing import TypeAlias
-
-PRE_BUILD: str = "Pre-Build"
-BUILD: str = "Build"
-POST_BUILD: str = "Post-Build"
-
-
-class Configurations(NamedTuple):
-    only_pre_build: bool
+from typing import Any, Protocol, TypeAlias
 
 
 class ContentType(Enum):
@@ -37,18 +26,9 @@ class ContentType(Enum):
     PLAYBOOK = "Playbook"
 
 
-class ValidationTypes(Enum):
-    """Enum representing the various stages of a build process."""
-
-    PRE_BUILD = "Pre-Build"
-    BUILD = "Build"
-    POST_BUILD = "Post-Build"
-
-
 class ValidationResults:
-    def __init__(self, content_name: str, validation_type: ValidationTypes) -> None:
+    def __init__(self, content_name: str) -> None:
         self.integration_name: str = content_name
-        self.validation_type: ValidationTypes = validation_type
         self.validation_report: ValidationReport = ValidationReport(content_name)
         self.is_success: bool = True
 
@@ -77,9 +57,7 @@ class ValidationReport:
             info: Detailed information regarding the non-fatal issue.
 
         """
-        self.failed_non_fatal_validations.append(
-            ValidationIssue(validation_name=validation_name, info=info)
-        )
+        self.failed_non_fatal_validations.append(ValidationIssue(validation_name=validation_name, info=info))
 
     def add_fatal_validation(self, validation_name: str, info: str) -> None:
         """Add a fatal validation issue to the report.
@@ -89,9 +67,7 @@ class ValidationReport:
             info: Detailed information regarding the fatal issue.
 
         """
-        self.failed_fatal_validations.append(
-            ValidationIssue(validation_name=validation_name, info=info)
-        )
+        self.failed_fatal_validations.append(ValidationIssue(validation_name=validation_name, info=info))
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the ValidationReport object into a dictionary.
@@ -114,14 +90,16 @@ class ValidationReport:
 
 
 class Validator(Protocol):
-    name: str
+    @property
+    def name(self) -> str:
+        """The name of the validation."""
 
     @staticmethod
-    def run(validation_path: Path) -> None:
+    def run(path: Path) -> None:
         """Execute the validation process on the specified path.
 
         Args:
-            validation_path: A `Path` object pointing to the directory
+            path: A `Path` object pointing to the directory
                 or file that needs to be validated.
 
         """

@@ -70,9 +70,7 @@ class SourcePromptConstructor(PromptConstructor):
 
     async def _get_non_built_action_def_content(self) -> str:
         action_yaml: anyio.Path = (
-            self.integration
-            / constants.ACTIONS_DIR
-            / f"{self.action_file_name}{constants.YAML_SUFFIX}"
+            self.integration / constants.ACTIONS_DIR / f"{self.action_file_name}{constants.YAML_SUFFIX}"
         )
         if await action_yaml.exists():
             content: str = await action_yaml.read_text(encoding="utf-8")
@@ -86,9 +84,7 @@ class SourcePromptConstructor(PromptConstructor):
         return DEFAULT_FILE_CONTENT
 
     async def _get_non_built_action_content(self) -> str:
-        action_script: anyio.Path = (
-            self.integration / constants.ACTIONS_DIR / f"{self.action_file_name}.py"
-        )
+        action_script: anyio.Path = self.integration / constants.ACTIONS_DIR / f"{self.action_file_name}.py"
         if await action_script.exists():
             return await action_script.read_text(encoding="utf-8")
 

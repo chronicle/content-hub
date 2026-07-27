@@ -14,8 +14,12 @@
 
 from __future__ import annotations
 
-from ...types import SingleJson
+from typing import TYPE_CHECKING
+
 from .data_models import CaseAttachment, CaseComment
+
+if TYPE_CHECKING:
+    from TIPCommon.types import SingleJson
 
 
 def parse_case_attachment(attachment: SingleJson) -> CaseAttachment:
@@ -60,8 +64,6 @@ def parse_case_comment(comment: SingleJson) -> CaseComment:
         is_deleted=comment.get("is_deleted"),
         last_editor=comment.get("last_editor"),
         last_editor_full_name=comment.get("last_editor_full_name"),
-        modification_time_unix_time_in_ms_for_client=comment.get(
-            "modification_time_unix_time_in_ms_for_client"
-        ),
+        modification_time_unix_time_in_ms_for_client=comment.get("modification_time_unix_time_in_ms_for_client"),
         comment_for_client=comment.get("comment_for_client"),
     )

@@ -65,9 +65,7 @@ def temp_non_built_block(non_built_block_path: Path) -> Iterator[Path]:
 
 
 @pytest.fixture
-def temp_playbooks_repo(
-    non_built_playbook_path: Path, non_built_block_path: Path
-) -> Iterator[Path]:
+def temp_playbooks_repo(non_built_playbook_path: Path, non_built_block_path: Path) -> Iterator[Path]:
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_root = Path(temp_dir)
 

@@ -16,12 +16,15 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from typing import TYPE_CHECKING
 
 from OverflowManager import OverflowAlertDetails
 from SiemplifyConnectorsDataModel import AlertInfo, CaseInfo
 
 from TIPCommon.base.action import ExecutionState
-from TIPCommon.types import JSON, SingleJson
+
+if TYPE_CHECKING:
+    from TIPCommon.types import JSON, SingleJson
 
 
 @dataclasses.dataclass
@@ -38,9 +41,7 @@ class ActionOutput:
         json_result = result_object_json.get("JsonResult")
         return cls(
             output_message=json_["Message"],
-            json_output=(
-                ActionJsonOutput.from_json(json_result) if json_result is not None else None
-            ),
+            json_output=(ActionJsonOutput.from_json(json_result) if json_result is not None else None),
             result_value=json_["ResultValue"],
             debug_output=json_["DebugOutput"],
             execution_state=ExecutionState(json_["ExecutionState"]),
@@ -95,9 +96,7 @@ class ConnectorOutput:
         json_obj = json_["ResultObjectJson"]
         result_json = json.loads(json_obj) if json_obj is not None else None
         return cls(
-            json_output=(
-                ConnectorJsonOutput.from_json(result_json) if result_json is not None else None
-            ),
+            json_output=(ConnectorJsonOutput.from_json(result_json) if result_json is not None else None),
             debug_output=json_["DebugOutput"],
         )
 
@@ -135,7 +134,7 @@ class ConnectorJsonOutput:
 
 
 def alert_info_from_json(json_: SingleJson) -> AlertInfo:
-    """Create an AlertInfo object from a json of attributes"""
+    """Create an AlertInfo object from a json of attributes."""
     alert: AlertInfo = AlertInfo()
     alert.environment = json_["environment"]
     alert.ticket_id = json_["ticket_id"]

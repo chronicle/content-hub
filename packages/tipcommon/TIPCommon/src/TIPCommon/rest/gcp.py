@@ -15,24 +15,24 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
-import google_auth_httplib2
-import httplib2
 import requests
-from google.oauth2 import service_account
 from googleapiclient import _auth
 
-from ..exceptions import (
-    GoogleCloudException,
-    ImpersonationUnauthorizedError,
-    NotFoundError,
-)
-from ..types import SingleJson
-from ..utils import is_empty_string_or_none
+from TIPCommon.exceptions import GoogleCloudException, ImpersonationUnauthorizedError, NotFoundError
+from TIPCommon.utils import is_empty_string_or_none
+
+if TYPE_CHECKING:
+    import google_auth_httplib2
+    import httplib2
+    from google.oauth2 import service_account
+
+    from TIPCommon.types import SingleJson
 
 
 class GcpPermissions:
-    """GCP Permissions constants namespace
+    """GCP Permissions constants namespace.
 
     keep the attribute names format to PRODUCT_RESOURCE_PERMISSION
     example: IAM_SA_GET_ACCESS_TOKEN
@@ -43,7 +43,7 @@ class GcpPermissions:
 
 
 class GcpErrorReason:
-    """GCP Error Reason constants namespace"""
+    """GCP Error Reason constants namespace."""
 
     # pylint: disable=invalid-name
     IAM_PERMISSION_DENIED = "IAM_PERMISSION_DENIED"
@@ -52,7 +52,7 @@ class GcpErrorReason:
 def get_http_client(
     credentials: service_account.Credentials, verify_ssl: bool = True
 ) -> httplib2.Http | google_auth_httplib2.AuthorizedHttp:
-    """Get GCP Authorized http client
+    """Get GCP Authorized http client.
 
     Args:
         credentials (service_account.Credentials): GCP Credentials object
@@ -72,7 +72,7 @@ def retrieve_project_id(
     service_account_email: str | None,
     default_project_id: str | None = None,
 ) -> str | None:
-    """Get project id from service account or workload identity email
+    """Get project id from service account or workload identity email.
 
     Args:
         user_service_account (SingleJson | None): User service account json
@@ -120,7 +120,8 @@ def extract_project_id_from_sa_key(service_account_json: SingleJson) -> str:
     empty = object()
     project_id = service_account_json.get("project_id", empty)
     if project_id is empty:
-        raise NotFoundError("Project ID could not be found in Service Account key")
+        msg = "Project ID could not be found in Service Account key"
+        raise NotFoundError(msg)
     return project_id
 
 
@@ -141,15 +142,12 @@ def extract_project_id_from_sa_email(service_account_email: str) -> str:
         res = re.findall(r"@([\w0-9\-_]+).", service_account_email)
         return res[0]
     except (TypeError, IndexError) as e:
-        raise NotFoundError(
-            f"Project name could not be found in Service Account email: {service_account_email!s}"
-        ) from e
+        msg = f"Project name could not be found in Service Account email: {service_account_email!s}"
+        raise NotFoundError(msg) from e
 
 
-def validate_impersonation(
-    content: dict, default_error_msg: str = "Service Account Impersonation failed"
-) -> None:
-    """Validate Service Account impersonation from http authorized response
+def validate_impersonation(content: dict, default_error_msg: str = "Service Account Impersonation failed") -> None:
+    """Validate Service Account impersonation from http authorized response.
 
     Note that this function will raise ImpersonationUnauthorizedError only if
     SA impersonation is not authorized. Otherwise, it will return None.
@@ -170,15 +168,13 @@ def validate_impersonation(
     if error_details:
         reason = error_details[0].get("reason", "")
         permission = error_details[0].get("metadata", {}).get("permission", "")
-        if (
-            reason == GcpPermissions.IAM_SA_GET_ACCESS_TOKEN
-            and permission == GcpErrorReason.IAM_PERMISSION_DENIED
-        ):
-            raise ImpersonationUnauthorizedError(f"{reason} - {error_msg}")
+        if reason == GcpPermissions.IAM_SA_GET_ACCESS_TOKEN and permission == GcpErrorReason.IAM_PERMISSION_DENIED:
+            msg = f"{reason} - {error_msg}"
+            raise ImpersonationUnauthorizedError(msg)
 
 
 def get_workload_sa_email(default_sa_to_return: str | None = None) -> str:
-    """Retrieves the Workload service account email from GCP metadata server
+    """Retrieves the Workload service account email from GCP metadata server.
 
     Args:
         default_sa_to_return (str | None):
@@ -192,9 +188,7 @@ def get_workload_sa_email(default_sa_to_return: str | None = None) -> str:
         str: Workload service account email
 
     """
-    metadata_server_url = (
-        "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email"
-    )
+    metadata_server_url = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email"
     headers = {"Metadata-Flavor": "Google"}
     response = requests.get(metadata_server_url, headers=headers)
     try:
@@ -203,6 +197,5 @@ def get_workload_sa_email(default_sa_to_return: str | None = None) -> str:
     except requests.HTTPError as e:
         if default_sa_to_return is not None:
             return default_sa_to_return
-        raise GoogleCloudException(
-            f"Could not get GCP Workload service Account email. Error: {e}"
-        ) from e
+        msg = f"Could not get GCP Workload service Account email. Error: {e}"
+        raise GoogleCloudException(msg) from e

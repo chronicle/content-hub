@@ -55,6 +55,17 @@ mp format
 mp check --static-type-check
 ```
 
+## Logging
+
+The `mp` tool uses an asynchronous logging setup with `QueueHandler` and a built-in `logging` module to ensure it works smoothly as a standalone CLI. 
+
+To use the logger in your module:
+1. Import `logging`: `import logging`
+2. Create a logger using `__name__`: `logger = logging.getLogger(__name__)`
+3. Use the logger instead of `print`, `rich.print`, or `typer.echo`. For example: `logger.info("...")`, `logger.error("...")`, etc.
+
+The CLI supports global `--verbose` (`-v`) and `--quiet` (`-q`) flags to control output verbosity across all commands, similarly to `uv`. These are handled automatically by the root application callback and `RuntimeParams`.
+
 ## Testing
 
 Run the test suite using pytest:

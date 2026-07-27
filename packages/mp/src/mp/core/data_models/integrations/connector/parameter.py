@@ -35,7 +35,7 @@ class BuiltConnectorParameter(TypedDict):
     Description: str
     IsMandatory: bool
     IsAdvanced: bool
-    Type: int
+    Type: int | str
     Mode: int
     DefaultValue: str | float | bool | int | None
 
@@ -50,9 +50,7 @@ class NonBuiltConnectorParameter(TypedDict):
     default_value: NotRequired[str | float | bool | int | None]
 
 
-class ConnectorParameter(
-    Buildable[BuiltConnectorParameter, NonBuiltConnectorParameter],
-):
+class ConnectorParameter(Buildable[BuiltConnectorParameter, NonBuiltConnectorParameter]):
     name: Annotated[
         str,
         pydantic.Field(

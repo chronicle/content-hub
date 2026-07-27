@@ -161,7 +161,7 @@ def main():
                         update_json = {}
                         try:
                             update_json = entry["EntityResult"].copy()
-                        except:
+                        except Exception:
                             pass
                         if isinstance(update_json, dict):
                             update_json["entity"] = entities[entity.identifier].copy()

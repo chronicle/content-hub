@@ -92,8 +92,5 @@ def _get_marketplace_integrations(mp_json_path: Path) -> set[str]:
 def _raise_error_for_integration_duplicates(s1: set[str], s2: set[str], /) -> None:
     duplicates: set[str] = s1.intersection(s2)
     if duplicates:
-        msg: str = (
-            "The following integrations found in more than one marketplace: "
-            f"{', '.join(duplicates)}"
-        )
+        msg: str = f"The following integrations found in more than one marketplace: {', '.join(duplicates)}"
         raise IntegrationExistsError(msg)

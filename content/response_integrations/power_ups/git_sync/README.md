@@ -114,7 +114,8 @@ environments = ["Production"]
 
 **Selection Logic:**
 1. **Primary Instance**: Search for instance with similar 'display name' configured in the environment
-3. **Display Name Matching**: In the case there was not match, look for similar display name in the shared environment ("*")
+2. **Display Name Matching**: In the case there was not match, look for similar display name in the shared environment ("*")
+3. **First Available**: If display name resolution fails, use the first available instance (configured instances are preferred)
 4. **Fallback**: If no instance found, leave unassigned
 
 **Configuration Result:**
@@ -164,26 +165,36 @@ This allows for shared instances that can be used across multiple environments, 
 - **Cached Results**: Instance lists are cached per environment for performance
 
 #### Instance Validation
-- Only **configured instances** (`isConfigured: true`) are considered
-- Instances are sorted by name for consistent selection
-- Invalid or unconfigured instances are filtered out
+- Both **configured and unconfigured** instances are now considered
+- Instances are sorted with **configured instances first**, then alphabetically by name — this ensures a configured instance is always preferred when selecting the first available
+- Unconfigured instances serve as fallbacks when no configured instance is available
 
 ### Existing Step Reuse Logic
 
-When updating an existing playbook, the system attempts to preserve instance assignments:
+When updating an existing playbook, the system attempts to preserve instance assignments, but now **validates** them first:
 
 ```python
 if existing_step:
     # Copy instance configuration from existing step
     instance_id = existing_step.parameters["IntegrationInstance"].value
     fallback_id = existing_step.parameters["FallbackIntegrationInstance"].value
-    
-    # Apply to new step
-    new_step.parameters["IntegrationInstance"].value = instance_id
-    new_step.parameters["FallbackIntegrationInstance"].value = fallback_id
+
+    # Determine which instance to validate
+    # For "AutomaticEnvironment" mode, validate the fallback instance instead
+    instance_to_validate = instance_id
+    if instance_id == "AutomaticEnvironment":
+        instance_to_validate = fallback_id
+
+    # Only reuse if the instance actually exists on the target platform
+    if _is_valid_existing_instance(integration, instance_to_validate, environments):
+        new_step.parameters["IntegrationInstance"].value = instance_id
+        new_step.parameters["FallbackIntegrationInstance"].value = fallback_id
+    else:
+        # Fall through to instance-discovery logic
+        ...
 ```
 
-This ensures that manual instance assignments are preserved during playbook updates.
+This prevents broken playbooks caused by copying instance IDs from prior failed imports or from instances that no longer exist on the target platform. If the existing instance is invalid, the system falls through to the standard instance-discovery logic described above.
 
 ### Display Name Resolution
 
@@ -202,8 +213,9 @@ The system stores and attempts to resolve instance display names:
 
 #### Scenario 2: Single Environment with No Direct Instance
 - **Environment**: "Development"  
-- **Available Instances**: ["Shared_VirusTotal"] (in shared environment)
-- **Result**: Uses "Shared_VirusTotal" due to shared prefix matching
+- **Available Instances in Development**: None
+- **Available Instances in Shared ("*")**: ["Shared_VirusTotal"]
+- **Result**: Falls back to the shared environment and uses "Shared_VirusTotal"
 
 #### Scenario 3: Multi-Environment Playbook
 - **Environment**: ["*"] (All Environments)
@@ -212,7 +224,20 @@ The system stores and attempts to resolve instance display names:
   - `IntegrationInstance`: "AutomaticEnvironment"
   - `FallbackIntegrationInstance`: "Shared_VirusTotal"
 
-#### Scenario 4: Missing Environment on Target System
+#### Scenario 4: Multi-Environment Playbook with No Shared Instance
+- **Environments**: ["Env1", "Env2"]
+- **Available Shared Instances**: None
+- **Available in Env1**: ["VirusTotal_Env1"]
+- **Result**:
+  - `IntegrationInstance`: "AutomaticEnvironment"
+  - `FallbackIntegrationInstance`: "VirusTotal_Env1" (found by iterating individual environments)
+
+#### Scenario 5: Existing Step with Invalid Instance
+- **Existing Step Instance**: "old-uuid-from-source-server"
+- **Available Instances on Target**: ["VirusTotal_Prod"]
+- **Result**: Validation fails for the old instance ID → falls through to discovery logic → assigns "VirusTotal_Prod"
+
+#### Scenario 6: Missing Environment on Target System
 - **Source Environment**: "Staging" (doesn't exist on target)
 - **Available Instances**: ["VirusTotal_Prod", "Shared_VirusTotal"]
 - **Result**: May fail to find appropriate instance, requiring manual configuration
@@ -233,9 +258,9 @@ The system stores and attempts to resolve instance display names:
    - **Cause**: Environment names differ between source and target systems
    - **Solution**: Create matching environments or use shared instances
 
-4. **Playbook Step Unassigned**
-   - **Cause**: Instance exists but is not configured (`isConfigured: false`)
-   - **Solution**: Complete integration instance configuration
+4. **Playbook Step Using Unconfigured Instance**
+   - **Cause**: No configured instances available; system assigned an unconfigured instance as fallback
+   - **Solution**: Complete the integration instance configuration on the target platform
 
 #### Debugging Tips
 

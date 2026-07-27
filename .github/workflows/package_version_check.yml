@@ -1,0 +1,145 @@
+name: Package Version Check
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches:
+      - '**'
+    paths:
+      - 'packages/mp/src/**'
+      - 'packages/mp/tests/**'
+      - 'packages/tipcommon/TIPCommon/src/**'
+      - 'packages/integration_testing/src/**'
+      - 'packages/integration_testing/tests/**'
+
+jobs:
+  changes:
+    name: Detect Package Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mp: ${{ steps.filter.outputs.mp }}
+      tipcommon: ${{ steps.filter.outputs.tipcommon }}
+      integration_testing: ${{ steps.filter.outputs.integration_testing }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for source changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: ${{ github.event.pull_request.base.sha }}
+          # language=yaml
+          filters: |
+            mp:
+              - 'packages/mp/src/**'
+              - 'packages/mp/tests/**'
+            tipcommon:
+              - 'packages/tipcommon/TIPCommon/src/**'
+            integration_testing:
+              - 'packages/integration_testing/src/**'
+              - 'packages/integration_testing/tests/**'
+
+  version-and-lock:
+    name: Version Bump & Lock File
+    needs: changes
+    if: >-
+      needs.changes.outputs.mp == 'true' ||
+      needs.changes.outputs.tipcommon == 'true' ||
+      needs.changes.outputs.integration_testing == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        # language=bash
+        run: python -m pip install uv
+
+      - name: Check version bumps and lock files
+        env:
+          MP_CHANGED: ${{ needs.changes.outputs.mp }}
+          TIPCOMMON_CHANGED: ${{ needs.changes.outputs.tipcommon }}
+          INTEGRATION_TESTING_CHANGED: ${{ needs.changes.outputs.integration_testing }}
+        # language=bash
+        run: |
+          FAILED=0
+
+          check_package() {
+            local name="$1"
+            local pyproject_path="$2"
+            local package_dir
+            package_dir="$(dirname "$pyproject_path")"
+
+            echo "::group::Checking $name"
+
+            # --- Version bump check ---
+            OLD_VERSION=$(git show "origin/main:${pyproject_path}" 2>/dev/null \
+              | python3 -c "import sys, tomllib; print(tomllib.loads(sys.stdin.read())['project']['version'])" 2>/dev/null) || true
+            NEW_VERSION=$(python3 -c "
+          import tomllib
+          with open('${pyproject_path}', 'rb') as f:
+              print(tomllib.load(f)['project']['version'])
+          ")
+
+            if [ -z "$OLD_VERSION" ]; then
+              echo "New package — skipping version bump check"
+            elif [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
+              echo "::error::Source code in ${name} was modified but pyproject.toml version was not bumped (still ${OLD_VERSION}).%0ARun: cd ${package_dir} && uv version --bump patch"
+              FAILED=1
+            else
+              # Verify new > old using tuple comparison (stdlib only)
+              python3 -c "
+          old = tuple(int(x) for x in '${OLD_VERSION}'.split('.'))
+          new = tuple(int(x) for x in '${NEW_VERSION}'.split('.'))
+          if new <= old:
+              print('::error::${name} version went from ${OLD_VERSION} to ${NEW_VERSION} — new version must be greater.')
+              exit(1)
+          print('Version bump OK: ${OLD_VERSION} -> ${NEW_VERSION}')
+          " || FAILED=1
+            fi
+
+            # --- Lock file check ---
+            if [ -f "${package_dir}/uv.lock" ]; then
+              if ! uv lock --check --project "${package_dir}" 2>&1; then
+                echo "::error::uv.lock is out of sync with pyproject.toml in ${name}.%0ARun: cd ${package_dir} && uv lock"
+                FAILED=1
+              else
+                echo "Lock file OK"
+              fi
+            fi
+
+            echo "::endgroup::"
+          }
+
+          if [ "$MP_CHANGED" = "true" ]; then
+            check_package "mp" "packages/mp/pyproject.toml"
+          fi
+
+          if [ "$TIPCOMMON_CHANGED" = "true" ]; then
+            check_package "TIPCommon" "packages/tipcommon/TIPCommon/pyproject.toml"
+          fi
+
+          if [ "$INTEGRATION_TESTING_CHANGED" = "true" ]; then
+            check_package "integration_testing" "packages/integration_testing/pyproject.toml"
+          fi
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo ""
+            echo "::error::One or more package checks failed. See above for details."
+            exit 1
+          fi
+
+          echo "All package version and lock file checks passed."

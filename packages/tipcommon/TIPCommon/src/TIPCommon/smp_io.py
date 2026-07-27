@@ -21,7 +21,7 @@ from .utils import cast_keys_to_int, none_to_default_value
 
 def read_content(siemplify, file_name, db_key, default_value_to_return=None, identifier=None):
     """Read the content of a `ConnectorStream` object.
-    If the object contains no data, does not exist, return a default value
+    If the object contains no data, does not exist, return a default value.
 
     Args:
         siemplify: (obj) An instance of the SDK `SiemplifyConnectorExecution` class.
@@ -51,7 +51,7 @@ def read_ids(
     db_key=IDS_DB_KEY,
 ):
     """Read IDs from a `ConnectorStream` object.
-    If the object contains no data, does not exist, return a default value
+    If the object contains no data, does not exist, return a default value.
 
     Args:
         siemplify: (obj) An instance of the SDK `SiemplifyConnectorExecution` class.
@@ -83,7 +83,7 @@ def read_ids_by_timestamp(
     db_key=IDS_DB_KEY,
 ):
     """Read IDs from a `ConnectorStream` object.
-    If the object contains no data, does not exist, return a default value
+    If the object contains no data, does not exist, return a default value.
 
     Args:
         siemplify: (obj) An instance of the SDK `SiemplifyConnectorExecution` class.
@@ -101,9 +101,7 @@ def read_ids_by_timestamp(
         (list) List of IDs inside the `DataStream` object, the content passes through `json.loads` before returning.
 
     """
-    existing_ids = read_content(
-        siemplify, ids_file_name, db_key, default_value_to_return, identifier
-    )
+    existing_ids = read_content(siemplify, ids_file_name, db_key, default_value_to_return, identifier)
 
     try:
         filtered_ids = filter_old_ids_by_timestamp(
@@ -121,8 +119,7 @@ def read_ids_by_timestamp(
         siemplify.LOGGER.error(f"Unable to read ids file: {e}")
         siemplify.LOGGER.exception(e)
 
-        default_value_to_return = none_to_default_value(default_value_to_return, {})
-        return default_value_to_return
+        return none_to_default_value(default_value_to_return, {})
 
 
 def read_and_repair_existing_ids(
@@ -172,9 +169,7 @@ def read_and_repair_existing_ids(
 ########################################################################################
 
 
-def write_content(
-    siemplify, content_to_write, file_name, db_key, default_value_to_set=None, identifier=None
-):
+def write_content(siemplify, content_to_write, file_name, db_key, default_value_to_set=None, identifier=None) -> None:
     """Writes content into a `ConnectorStream` object.
 
     Args:
@@ -204,7 +199,7 @@ def write_ids(
     identifier=None,
     ids_file_name=IDS_FILE_NAME,
     db_key=IDS_DB_KEY,
-):
+) -> None:
     """Writes the last 1,000 IDs into a `ConnectorStream` object.
 
     Args:
@@ -233,7 +228,7 @@ def write_ids_with_timestamp(
     identifier=None,
     ids_file_name=IDS_FILE_NAME,
     db_key=IDS_DB_KEY,
-):
+) -> None:
     """Writes IDs into a `ConnectorStream` object with a timestamp.
 
     Args:

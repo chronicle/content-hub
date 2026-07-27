@@ -15,19 +15,104 @@
 from __future__ import annotations
 
 import json
+from enum import Enum
 from inspect import getmembers, isfunction
+from typing import Any
 
 from jinja2 import Environment
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED, EXECUTION_STATE_FAILED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
+from TIPCommon.types import SingleJson
 
 from ..core import JinjaFilters
 
-# Example Consts:
+
+class ExecutionScope(Enum):
+    ExecutionScopeUnspecified = 0
+    Alert = 1
+    Case = 2
+
+
 INTEGRATION_NAME = "TemplateEngine"
 
 SCRIPT_NAME = "RenderTemplate"
+
+
+def _extract_alert_data(
+    alert: Any,
+    entities_source: list[Any],
+) -> tuple[list[SingleJson], dict[str, SingleJson]]:
+    """Extract security events and entities from a single alert context.
+
+    Args:
+        alert: The target alert SDK object instance.
+        entities_source: List of entity object contexts (alert entities or target entities).
+
+    Returns:
+        A tuple containing:
+            - List of security event properties.
+            - Dictionary of entity properties mapped by identifier.
+    """
+    extracted_events = [
+        event.additional_properties
+        for event in getattr(alert, "security_events", [])
+    ]
+    extracted_entities = {
+        entity.additional_properties.get("Identifier")
+        or entity.identifier: entity.additional_properties
+        for entity in entities_source
+        if entity.additional_properties.get("Type") != "ALERT"
+    }
+    return extracted_events, extracted_entities
+
+
+def extract_context_data(
+    siemplify: SiemplifyAction,
+    execution_scope: Any,
+) -> dict[str, list[SingleJson] | dict[str, SingleJson]]:
+    """Extract security events and entities based on execution scope.
+
+    Args:
+        siemplify: The SiemplifyAction orchestration instance.
+        execution_scope: The current execution scope (Alert or Case).
+
+    Returns:
+        A single dictionary containing lists of security events and
+        dictionaries of entities.
+    """
+    events: list[SingleJson] = []
+    entities: dict[str, SingleJson] = {}
+
+    if execution_scope.value == ExecutionScope.Alert.value:
+        target_alerts = [siemplify.current_alert]
+    else:
+        siemplify.LOGGER.info(f"Executing action {SCRIPT_NAME} in Case Scope.")
+        target_alerts = getattr(siemplify.case, "open_alerts", siemplify.case.alerts)
+
+    for alert in target_alerts:
+        try:
+            entities_source = (
+                getattr(siemplify, "target_entities", []) or []
+                if execution_scope.value == ExecutionScope.Alert.value
+                else getattr(alert, "entities", [])
+            )
+            extracted_events, extracted_entities = _extract_alert_data(
+                alert,
+                entities_source,
+            )
+            events.extend(extracted_events)
+            entities.update(extracted_entities)
+        except Exception as e:
+            siemplify.LOGGER.error(
+                "Failed to process alert "
+                f"{getattr(alert, 'identifier', alert)}: {e}"
+            )
+
+    return {
+        "SiemplifyEvents": events,
+        "SiemplifyEntities": entities,
+    }
 
 
 @output_handler
@@ -36,15 +121,16 @@ def main():
     siemplify.script_name = SCRIPT_NAME
     siemplify.LOGGER.info("================= Main - Param Init =================")
 
-    events = []
-    for event in siemplify.current_alert.security_events:
-        events.append(event.additional_properties)
-    entities = {}
-    for entity in siemplify.target_entities:
-        if entity.additional_properties["Type"] != "ALERT":
-            entities[entity.additional_properties["Identifier"]] = (
-                entity.additional_properties
-            )
+    execution_scope = getattr(
+        siemplify,
+        "execution_scope",
+        ExecutionScope.Alert,
+    )
+    siemplify.LOGGER.info(f"Running in {execution_scope.name.lower()} scope")
+    case_data = extract_context_data(
+        siemplify=siemplify,
+        execution_scope=execution_scope,
+    )
 
     # INIT ACTION PARAMETERS:
     json_object = siemplify.extract_action_param(
@@ -116,6 +202,12 @@ def main():
             siemplify.LOGGER.info("Unable to load CustomFilters")
             siemplify.LOGGER.info(e)
 
+        success_message = (
+            "Successfully rendered the template."
+            if execution_scope.value == ExecutionScope.Alert.value
+            else "Successfully rendered the template for all alert(s)."
+        )
+
         if isinstance(input_json, list):
             result_value = ""
             if jinja:
@@ -124,21 +216,18 @@ def main():
                 template = jinja_env.from_string(template)
             for entry in input_json:
                 if include_case_data:
-                    entry.update({"SiemplifyEvents": events})
-                    entry.update({"SiemplifyEntities": entities})
+                    entry.update(case_data)
                 result_value += template.render(entry, input_json=entry)
-                output_message = "Successfully rendered the template."
+                output_message = success_message
         elif isinstance(input_json, dict):
             if include_case_data:
-                input_json.update({"SiemplifyEvents": events})
-                input_json.update({"SiemplifyEntities": entities})
-                print(input_json)
+                input_json.update(case_data)
             if jinja:
                 template = jinja_env.from_string(jinja)
             else:
                 template = jinja_env.from_string(template)
             result_value = template.render(input_json=input_json)
-            output_message = "Successfully rendered the template."
+            output_message = success_message
         else:
             siemplify.LOGGER.error("Incorrect type.  Needs to be a list or dict.")
 

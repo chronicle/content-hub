@@ -14,11 +14,11 @@
 
 from __future__ import annotations
 
+import logging
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
-import rich
 import typer
 
 import mp.core.file_utils
@@ -26,6 +26,9 @@ from mp.dev_env.sub_commands.playbook import utils
 from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from mp.dev_env.api import BackendAPI
@@ -74,11 +77,10 @@ def pull_playbook(
         if include_blocks:
             _deconstruct_blocks(zip_path, dst, playbook)
 
-        rich.print(f"[green]✅ Playbook {playbook} pulled successfully.[/green]")
+        logger.info("✅ Playbook %s pulled successfully.", playbook)
 
     except Exception as e:
-        error_message = f"Download failed for {playbook}: {e}"
-        rich.print(f"[red]{error_message}[/red]")
+        logger.exception("Download failed for %s", playbook)
         raise typer.Exit(1) from e
 
     finally:
@@ -98,9 +100,7 @@ def _pull_playbook_zip_from_soar(playbook: str, dst: Path) -> Path:
 def _deconstruct_playbook(zip_path: Path, dst: Path, playbook: str) -> None:
     with tempfile.TemporaryDirectory() as tmp_dir:
         temp_path = Path(tmp_dir)
-        playbook_file: list[Path] = utils.unzip_playbooks(
-            zip_path, temp_path, include_playbook=playbook
-        )
+        playbook_file: list[Path] = utils.unzip_playbooks(zip_path, temp_path, include_playbook=playbook)
         utils.deconstruct_playbook(playbook_file[0], dst)
 
 

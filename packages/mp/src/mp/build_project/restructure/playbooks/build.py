@@ -16,9 +16,8 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import logging
 from typing import TYPE_CHECKING
-
-import rich
 
 import mp.core.constants
 from mp.core.data_models.common.widget.data import WidgetType
@@ -27,9 +26,12 @@ from mp.core.utils import to_snake_case
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from mp.core.data_models.playbooks.overview.metadata import Overview
+    from mp.core.data_models.common.overview.metadata import Overview
     from mp.core.data_models.playbooks.playbook import BuiltPlaybook, Playbook
     from mp.core.data_models.playbooks.widget.metadata import PlaybookWidgetMetadata
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass(slots=True)
@@ -40,14 +42,11 @@ class PlaybookBuilder:
 
     def build(self) -> None:
         """Build a specific playbook to its "out" path."""
-        rich.print("Loading widgets from external files...")
+        logger.info("Loading widgets from external files...")
         self._load_widgets_html_content()
         self._load_widgets_html_content_to_overviews()
         built_playbook: BuiltPlaybook = self.playbook.to_built()
-        built_playbook_path = (
-            self.out_path
-            / f"{to_snake_case(self.playbook_path.stem)}{mp.core.constants.JSON_SUFFIX}"
-        )
+        built_playbook_path = self.out_path / f"{to_snake_case(self.playbook_path.stem)}{mp.core.constants.JSON_SUFFIX}"
         built_playbook_path.write_text(json.dumps(built_playbook, indent=4))
 
     def _load_widgets_html_content(self) -> None:

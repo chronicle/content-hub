@@ -15,22 +15,29 @@
 from __future__ import annotations
 
 import asyncio
+import operator
 import sys
-from collections.abc import Coroutine, Iterable
-from typing import Any
+from typing import TYPE_CHECKING
 
 import requests
 import SiemplifyVaultUtils
 from SiemplifyAction import SiemplifyAction
 from SiemplifyConnectors import SiemplifyConnectorExecution
 from SiemplifyJob import SiemplifyJob
-from SiemplifyLogger import SiemplifyLogger
 from SiemplifyUtils import my_stdout
 
-from ..data_models import Container
-from ..exceptions import ActionSetupError
-from ..types import ChronicleSOAR, Entity, GeneralFunction, SingleJson
+from TIPCommon.data_models import Container
+from TIPCommon.exceptions import ActionSetupError
+
 from .interfaces.logger import Logger, ScriptLogger
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine, Iterable
+    from typing import Any
+
+    from SiemplifyLogger import SiemplifyLogger
+
+    from TIPCommon.types import ChronicleSOAR, Entity, GeneralFunction, SingleJson
 
 
 class CreateSession:
@@ -90,12 +97,14 @@ def is_native(method: GeneralFunction) -> bool:
 
 def validate_manager(manager: Any) -> None:
     if manager is None:
-        raise ActionSetupError("Cannot run this action without a manager! (manager is None)\n")
+        msg = "Cannot run this action without a manager! (manager is None)\n"
+        raise ActionSetupError(msg)
 
 
 def validate_entity(entity: Entity) -> None:
     if entity is None:
-        raise ActionSetupError("Cannot run this action on null entity! (entity is None\n")
+        msg = "Cannot run this action on null entity! (entity is None)\n"
+        raise ActionSetupError(msg)
 
 
 class NewLineLogger(Logger):
@@ -109,7 +118,7 @@ class NewLineLogger(Logger):
         self.logger.info(f"{msg}\n", *args, **kwargs)
 
     def warn(self, warning_msg: str, *args, **kwargs) -> None:
-        self.logger.warning(f"{warning_msg}\n", *args, **kwargs)
+        self.logger.warn(f"{warning_msg}\n", *args, **kwargs)
 
     def error(self, error_msg: str, *args, **kwargs) -> None:
         self.logger.error(f"{error_msg}\n", *args, **kwargs)
@@ -167,3 +176,27 @@ def get_param_value_from_vault(vault_settings: SingleJson, param_value: str) -> 
 
     """
     return SiemplifyVaultUtils.extract_vault_param(param_value, vault_settings)
+
+
+def merge_ids_by_timestamp(
+    list_1: Iterable[tuple[str, int]],
+    list_2: Iterable[tuple[str, int]],
+) -> list[tuple[str, int]]:
+    """Merge and sort lists of (id, timestamp) pairs.
+
+    This helper is used to merge two sets of case IDs with their last modified
+    timestamps and ensure the most recent timestamp wins when duplicates exist.
+
+    Args:
+        list_1: First iterable of (id, timestamp) pairs.
+        list_2: Second iterable of (id, timestamp) pairs, which takes precedence
+            over list_1 for duplicate ids.
+
+    Returns:
+        A merged and timestamp-sorted list of (id, timestamp) pairs.
+
+    """
+    merged: dict[str, int] = dict(list_1)
+    merged.update(dict(list_2))
+
+    return sorted(merged.items(), key=operator.itemgetter(1))

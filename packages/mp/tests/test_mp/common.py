@@ -143,6 +143,5 @@ def _normalize_wheel_names(file_names: Iterable[str]) -> set[str]:
         Output: {'test_project-1.0.0.whl'}
     """
     return {
-        "-".join(filename.split("-")[:2]) + ".whl" if filename.endswith(".whl") else filename
-        for filename in file_names
+        "-".join(filename.split("-")[:2]) + ".whl" if filename.endswith(".whl") else filename for filename in file_names
     }

@@ -16,13 +16,12 @@
 
 from __future__ import annotations
 
+import logging
 import pathlib
 import re
-import subprocess as sp  # noqa: S404
+import subprocess as sp  # ruff:ignore[suspicious-subprocess-import]
 import sys
 from typing import IO, TYPE_CHECKING
-
-import rich
 
 from mp.core.exceptions import FatalValidationError, NonFatalValidationError
 from mp.core.utils import is_windows
@@ -34,6 +33,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 COMMAND_ERR_MSG: str = "Error happened while executing a command: {0}"
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class FatalCommandError(FatalValidationError):
@@ -56,9 +58,7 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
         FatalCommandError: if a project is already initialized
 
     """
-    python_version: str = (
-        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    )
+    python_version: str = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     command: list[str] = [
         sys.executable,
         "-m",
@@ -72,27 +72,40 @@ def compile_core_integration_dependencies(project_path: Path, requirements_path:
         "--no-dev",
         "--python",
         python_version,
+        "--default-index",
+        "https://pypi.org/simple",
     ]
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Compiling dependencies for project %s to %s", project_path, requirements_path)
+    logger.debug("Running command: %s", command)
 
     try:
-        sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
+        result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # ruff:ignore[subprocess-without-shell-equals-true]
+        _log_subprocess_result(result)
+        _remove_safe_to_ignore_packages_from_requirements(requirements_path)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def _get_safe_to_ignore_packages(e: sp.CalledProcessError, /) -> list[str]:
-    full_msg: str = f"{e.stdout or ''}\n{e.stderr or ''}"
-    ignored_packages: list[str] = [
-        pkg for pkg in constants.SAFE_TO_IGNORE_PACKAGES if pkg in full_msg
+def _remove_safe_to_ignore_packages_from_requirements(requirements_path: Path) -> None:
+    if not requirements_path.is_file():
+        return
+    with requirements_path.open(encoding="utf-8") as f:
+        lines = f.readlines()
+
+    filtered_lines = [
+        line
+        for line in lines
+        if not any(
+            re.match(rf"^\s*{re.escape(pkg)}(?:==|>=|<=|~=|;|\s|$)", line, re.IGNORECASE)
+            for pkg in constants.SAFE_TO_IGNORE_PACKAGES
+        )
     ]
-    ignored_messages: list[bool] = [
-        msg in full_msg for msg in constants.SAFE_TO_IGNORE_ERROR_MESSAGES
-    ]
-    if ignored_messages and ignored_packages:
-        return ignored_packages
-    return []
+
+    with requirements_path.open("w", encoding="utf-8") as f:
+        f.writelines(filtered_lines)
 
 
 def run_pip_command(command: list[str], cwd: Path) -> None:
@@ -102,18 +115,12 @@ def run_pip_command(command: list[str], cwd: Path) -> None:
         FatalCommandError: if a pip command fails.
 
     """
+    logger.debug("Running pip command: %s in %s", command, cwd)
     try:
-        sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # noqa: S603
+        result = sp.run(command, cwd=cwd, capture_output=True, text=True, check=True)  # ruff:ignore[subprocess-without-shell-equals-true]
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
-        # Check if this is a safe-to-ignore error / marker issue
-        if ignored_packages := _get_safe_to_ignore_packages(e):
-            message = (
-                f"[INFO] Ignored safe-to-ignore packages due to Python version "
-                f"incompatibility: {', '.join(ignored_packages)}\n"
-            )
-            rich.print(message)
-            return
-
+        _log_subprocess_result(e)
         _handle_pip_no_matching_distribution_error(e)
         raise FatalCommandError from e
 
@@ -175,9 +182,13 @@ def download_wheels_from_requirements(
         "cp",
         "--platform",
         "none-any",
+        "--index-url",
+        "https://pypi.org/simple",
     ]
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Downloading wheels from %s to %s", requirements_path, dst_path)
+    logger.debug("Running command: %s", command)
 
     try:
         if is_windows():
@@ -218,6 +229,8 @@ def add_dependencies_to_toml(
         "add",
         "--python",
         python_version,
+        "--default-index",
+        "https://pypi.org/simple",
     ]
     runtime_config: list[str] = _get_runtime_config()
     base_command.extend(runtime_config)
@@ -225,9 +238,7 @@ def add_dependencies_to_toml(
     _add_dev_dependencies_to_toml(dev_deps_to_add, base_command, project_path)
 
 
-def _add_regular_dependencies_to_toml(
-    deps_to_add: list[str], base_command: list[str], project_path: Path
-) -> None:
+def _add_regular_dependencies_to_toml(deps_to_add: list[str], base_command: list[str], project_path: Path) -> None:
     """Add regular dependencies to the pyproject.toml file using pypi index.
 
     Raises:
@@ -238,20 +249,15 @@ def _add_regular_dependencies_to_toml(
         return
     deps_command: list[str] = base_command.copy()
     deps_command.extend(deps_to_add)
-    deps_command.extend([
-        "--default-index",
-        "https://pypi.org/simple",
-    ])
     try:
-        sp.run(deps_command, cwd=project_path, check=True, text=True)  # noqa: S603
-
+        result = sp.run(deps_command, cwd=project_path, check=True, text=True, capture_output=True)  # ruff:ignore[subprocess-without-shell-equals-true]
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
-def _add_dev_dependencies_to_toml(
-    dev_deps_to_add: list[str], base_command: list[str], project_path: Path
-) -> None:
+def _add_dev_dependencies_to_toml(dev_deps_to_add: list[str], base_command: list[str], project_path: Path) -> None:
     """Add development dependencies to the pyproject.toml file.
 
     Raises:
@@ -264,10 +270,12 @@ def _add_dev_dependencies_to_toml(
     dev_base_command.extend(_get_base_dev_dependencies())
     dev_base_command.extend(dev_deps_to_add)
     try:
-        sp.run(  # noqa: S603
-            dev_base_command, cwd=project_path, check=True, text=True
+        result = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
+            dev_base_command, cwd=project_path, check=True, text=True, capture_output=True
         )
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
@@ -329,10 +337,14 @@ def init_python_project(project_path: Path) -> None:
 
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Initializing python project in %s", project_path)
+    logger.debug("Running command: %s", command)
 
     try:
-        sp.run(command, cwd=project_path, check=True, text=True)  # noqa: S603
+        result = sp.run(command, cwd=project_path, check=True, text=True, capture_output=True)  # ruff:ignore[subprocess-without-shell-equals-true]
+        _log_subprocess_result(result)
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
 
 
@@ -344,7 +356,7 @@ def ruff_check(paths: Iterable[Path], /, **flags: bool | str) -> int:
 
     """
     command: list[str] = [sys.executable, "-m", "ruff", "check"]
-    return execute_command_and_get_output(command, paths, **flags)
+    return execute_command_and_get_output(command, paths, check=False, **flags)
 
 
 def ruff_format(paths: Iterable[Path], /, **flags: bool | str) -> int:
@@ -355,7 +367,7 @@ def ruff_format(paths: Iterable[Path], /, **flags: bool | str) -> int:
 
     """
     command: list[str] = [sys.executable, "-m", "ruff", "format"]
-    return execute_command_and_get_output(command, paths, **flags)
+    return execute_command_and_get_output(command, paths, check=False, **flags)
 
 
 def ty_check(paths: Iterable[Path], /, **flags: bool | str) -> int:
@@ -366,7 +378,7 @@ def ty_check(paths: Iterable[Path], /, **flags: bool | str) -> int:
 
     """
     command: list[str] = [sys.executable, "-m", "ty", "check"]
-    return execute_command_and_get_output(command, paths, **flags)
+    return execute_command_and_get_output(command, paths, check=False, **flags)
 
 
 def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
@@ -380,11 +392,12 @@ def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
 
     if not sys.platform.startswith("win"):
         chmod_command: list[str] = ["chmod", "+x", script_full_path]
-        sp.run(chmod_command, check=True)  # noqa: S603
+        sp.run(chmod_command, check=True)  # ruff:ignore[subprocess-without-shell-equals-true]
 
     command: list[str] = [script_full_path] + [str(p) for p in test_paths]
+    logger.debug("Running script on paths: %s", command)
 
-    result = sp.run(  # noqa: S603
+    result = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
         command,
         capture_output=True,
         text=True,
@@ -394,36 +407,38 @@ def run_script_on_paths(script_path: Path, *test_paths: Path) -> int:
     return result.returncode
 
 
-def execute_command_and_get_output(
-    command: list[str], paths: Iterable[Path], **flags: bool | str
-) -> int:
+def execute_command_and_get_output(command: list[str], paths: Iterable[Path], **flags: bool | str) -> int:
     """Execute a command and capture its output and status code.
 
     Args:
         command: the command values to execute
         paths: path values for the command
-        **flags: any command flags as keyword arguments
+        **flags: any command flags as keyword arguments.
+            Use `check=False` to disable raising `FatalCommandError` on non-zero exit code.
 
     Returns:
         The status code of the process
 
     Raises:
-        FatalCommandError: if a project is already initialized
+        FatalCommandError: if the command fails and `check` is True.
 
     """
-    command.extend(str(path) for path in paths)
+    c: list[str] = list(command)
+    c.extend(str(path) for path in paths)
 
     flags_: list[str] = get_flags_to_command(**flags)
-    command.extend(flags_)
+    c.extend(flags_)
 
     runtime_config: list[str] = _get_runtime_config()
-    command.extend(runtime_config)
+    c.extend(runtime_config)
+    logger.debug("Executing command and capturing output: %s", c)
 
     try:
-        process: sp.Popen[bytes] = sp.Popen(command)  # noqa: S603
-        for line in _stream_process_output(process):
-            rich.print(str(line))
-        return process.wait()
+        with sp.Popen(c, stdout=sp.PIPE, stderr=sp.STDOUT) as process:  # ruff:ignore[subprocess-without-shell-equals-true]
+            for line in _stream_process_output(process):
+                logger.info("%s", line.decode(errors="replace").rstrip())
+
+            return process.wait()
 
     except sp.CalledProcessError as e:
         raise FatalCommandError(COMMAND_ERR_MSG.format(e)) from e
@@ -462,7 +477,7 @@ def get_changed_files() -> list[str]:
         "--diff-filter=ACMRTUXB",
     ]
     try:
-        result: sp.CompletedProcess[str] = sp.run(  # noqa: S603
+        result: sp.CompletedProcess[str] = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             command,
             check=True,
             text=True,
@@ -545,17 +560,22 @@ def check_lock_file(project_path: Path) -> None:
         str(project_path),
         "--python",
         python_version,
+        "--default-index",
+        "https://pypi.org/simple",
     ]
 
     runtime_config: list[str] = _get_runtime_config()
     command.extend(runtime_config)
+    logger.debug("Checking lock file consistency: %s", command)
 
     try:
-        sp.run(  # noqa: S603
+        result = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             command, cwd=project_path, check=True, text=True, capture_output=True
         )
+        _log_subprocess_result(result)
 
     except sp.CalledProcessError as e:
+        _log_subprocess_result(e)
         error_output = e.stderr.strip()
         error_output = f"{COMMAND_ERR_MSG.format('uv lock --check')}: {error_output}"
         raise NonFatalCommandError(error_output) from e
@@ -589,14 +609,10 @@ def get_files_unmerged_to_main_branch(
         str(integration_path),
     ]
     try:
-        results: sp.CompletedProcess[str] = sp.run(  # noqa: S603
+        results: sp.CompletedProcess[str] = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             command, check=True, text=True, capture_output=True
         )
-        return [
-            p
-            for path in results.stdout.strip().splitlines()
-            if path and (p := pathlib.Path(path)).exists()
-        ]
+        return [p for path in results.stdout.strip().splitlines() if path and (p := pathlib.Path(path)).exists()]
 
     except sp.CalledProcessError as error:
         error_output: str = f"{COMMAND_ERR_MSG.format('git diff')}: {error.stderr.strip()}"
@@ -616,18 +632,29 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
         NonFatalCommandError: If the git command fails (e.g., file not found on main).
 
     """
-    git_path_arg: str = f"origin/main:{file_path.as_posix()}"
+    # git show requires a repo-root-relative path; convert absolute paths.
+    try:
+        rev_parse_command: list[str] = ["git", "rev-parse", "--show-toplevel"]
+        repo_root_result = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
+            rev_parse_command,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        relative_path: pathlib.Path = file_path.relative_to(repo_root_result.stdout.strip())
+    except (sp.CalledProcessError, ValueError):
+        relative_path = file_path
+
+    git_path_arg: str = f"origin/main:{relative_path.as_posix()}"
     command: list[str] = ["git", "show", git_path_arg]
 
     try:
-        results: sp.CompletedProcess[str] = sp.run(  # noqa: S603
+        results: sp.CompletedProcess[str] = sp.run(  # ruff:ignore[subprocess-without-shell-equals-true]
             command, check=True, text=True, capture_output=True
         )
 
     except sp.CalledProcessError as error:
-        error_output: str = (
-            f"Failed to get content of '{file_path}' from main branch: {error.stderr.strip()}"
-        )
+        error_output: str = f"Failed to get content of '{file_path}' from main branch: {error.stderr.strip()}"
         raise NonFatalCommandError(error_output) from error
 
     else:
@@ -636,3 +663,16 @@ def get_file_content_from_main_branch(file_path: Path) -> str:
 
 def _get_python_version() -> str:
     return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+
+
+def _log_subprocess_result(result: sp.CompletedProcess[str] | sp.CalledProcessError) -> None:
+    """Log the output of a subprocess command.
+
+    Args:
+        result: The result of the subprocess command.
+
+    """
+    for line in (result.stdout or "").splitlines():
+        logger.debug(line)
+    for line in (result.stderr or "").splitlines():
+        logger.debug(line)

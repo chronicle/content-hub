@@ -16,22 +16,23 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING
 
 import SiemplifyUtils
-from SiemplifyConnectorsDataModel import AlertInfo
 
-from ...consts import NUM_OF_MILLI_IN_SEC, TIMEOUT_THRESHOLD
-from ...data_models import BaseAlert
-from ...exceptions import ConnectorSetupError
-from ...smp_time import save_timestamp
-from ..utils import (
-    async_output_handler,
-    coros_to_tasks_with_limit,
-    is_native,
-    nativemethod,
-)
+from TIPCommon.base.utils import async_output_handler, coros_to_tasks_with_limit, is_native, nativemethod
+from TIPCommon.consts import NUM_OF_MILLI_IN_SEC, TIMEOUT_THRESHOLD
+from TIPCommon.exceptions import ConnectorSetupError
+from TIPCommon.smp_time import save_timestamp
+
 from .base_connector import BaseConnector
+
+if TYPE_CHECKING:
+    from typing import Any
+
+    from SiemplifyConnectorsDataModel import AlertInfo
+
+    from TIPCommon.data_models import BaseAlert
 
 
 class AsyncConnector(BaseConnector, ABC):
@@ -206,9 +207,7 @@ class AsyncConnector(BaseConnector, ABC):
 
     # Native Methods ######################
     @nativemethod
-    def write_context_data(
-        self, filtered_alerts: list[BaseAlert], unprocessed_alerts: list[BaseAlert]
-    ) -> None:
+    def write_context_data(self, filtered_alerts: list[BaseAlert], unprocessed_alerts: list[BaseAlert]) -> None:
         """Save updated context data to platform data storage (DB/LFS).
 
         Args:
@@ -229,7 +228,7 @@ class AsyncConnector(BaseConnector, ABC):
         """
 
     @nativemethod
-    def write_context_wrapper(self, filtered_alerts, unprocessed_alerts):
+    def write_context_wrapper(self, filtered_alerts, unprocessed_alerts) -> None:
         """Write context wrapper.
 
         This wrapper will call set_last_success_time and then write_context_data.
@@ -244,12 +243,12 @@ class AsyncConnector(BaseConnector, ABC):
         self,
         filtered_alerts: list[BaseAlert],
         unprocessed_alerts: list[BaseAlert],
-        timestamp_key: str = None,
+        timestamp_key: str | None = None,
         incrementation_value=0,
         log_timestamp=True,
         convert_timestamp_to_micro_time=False,
         convert_a_string_timestamp_to_unix=False,
-    ):
+    ) -> None:
         """Gets the timestamp of the most recent alert from `filtered_alerts`
         using `timestamp_key` where `filtered_alerts` is a list of all alerts
         the connector has tried or completed processing, and stores this
@@ -307,7 +306,7 @@ class AsyncConnector(BaseConnector, ABC):
 
     @nativemethod
     async def process_alert(self, alert: BaseAlert) -> BaseAlert:
-        """Extensive alert processing (like events enrichment)
+        """Extensive alert processing (like events enrichment).
 
         Args:
             alert: The alert to process.
@@ -362,12 +361,8 @@ class AsyncConnector(BaseConnector, ABC):
             (self.process_alert(alert) for alert in filtered_alerts), limit=self.coros_limit
         )
 
-        processing_time = (
-            SiemplifyUtils.unix_now() - self.connector_start_time
-        ) / NUM_OF_MILLI_IN_SEC
-        concurrent_timeout = (
-            self.params.python_process_timeout - processing_time
-        ) * timeout_threshold
+        processing_time = (SiemplifyUtils.unix_now() - self.connector_start_time) / NUM_OF_MILLI_IN_SEC
+        concurrent_timeout = (self.params.python_process_timeout - processing_time) * timeout_threshold
 
         try:
             for processed_alerts_cor in asyncio.as_completed(
@@ -381,8 +376,7 @@ class AsyncConnector(BaseConnector, ABC):
 
                     if self.max_alerts_processed(processed_alerts):
                         self.logger.info(
-                            f"Maximum alert count {len(processed_alerts)} "
-                            f"for connector execution reached!."
+                            f"Maximum alert count {len(processed_alerts)} for connector execution reached!."
                         )
                         break
 
@@ -390,18 +384,14 @@ class AsyncConnector(BaseConnector, ABC):
                     unprocessed_alerts.remove(processed_alert)
 
                     if not self.pass_filters(processed_alert):
-                        self.logger.info(
-                            f"Alert {processed_alert.alert_id} did not pass filters. Skipping..."
-                        )
+                        self.logger.info(f"Alert {processed_alert.alert_id} did not pass filters. Skipping...")
                         continue
 
                     self.store_alert_in_cache(processed_alert)
                     self.logger.info(f"Alert {processed_alert.alert_id} processed successfully")
 
                     alert_info = self.create_alert_info(processed_alert)
-                    self.logger.info(
-                        f"Created AlertInfo object for alert {processed_alert.alert_id}"
-                    )
+                    self.logger.info(f"Created AlertInfo object for alert {processed_alert.alert_id}")
 
                     if self.is_overflow_alert(alert_info):
                         self.logger.info(
@@ -440,7 +430,7 @@ class AsyncConnector(BaseConnector, ABC):
     @nativemethod
     async def finalize(self) -> None:
         """Method is used to handle all post-processing logic before ending
-        connector's current iteration
+        connector's current iteration.
 
         Examples::
 
@@ -454,8 +444,8 @@ class AsyncConnector(BaseConnector, ABC):
     def return_package(
         self,
         cases: list[AlertInfo],
-        output_variables: dict[str, Any] = None,
-        log_items: list[str] = None,
+        output_variables: dict[str, Any] | None = None,
+        log_items: list[str] | None = None,
     ) -> None:
         """Build and send a return package to Python Execution Service through stdout.
 
@@ -488,13 +478,9 @@ class AsyncConnector(BaseConnector, ABC):
             ConnectorSetupError: if any of the pre-processing phases fail
 
         """
-        self.logger.info(
-            f"---------------- Starting connector {self.script_name} execution ----------------"
-        )
+        self.logger.info(f"---------------- Starting connector {self.script_name} execution ----------------")
         if self.is_test_run:
-            self.logger.info(
-                '****** This is an "IDE Play Button"\\"Run Connector once" test run ******'
-            )
+            self.logger.info('****** This is an "IDE Play Button"\\"Run Connector once" test run ******')
 
         self.logger.info("------------------- Main - Param Init -------------------")
         self.extract_params()
@@ -516,9 +502,7 @@ class AsyncConnector(BaseConnector, ABC):
 
             filtered_alerts = self.filter_alerts(fetched_alerts)
             if not is_native(self.filter_alerts):
-                self.logger.info(
-                    f"Successfully filtered alerts. Filtered alerts count: {len(filtered_alerts)}"
-                )
+                self.logger.info(f"Successfully filtered alerts. Filtered alerts count: {len(filtered_alerts)}")
 
             self.logger.info("Starting to process alerts...")
             processed_alerts, unprocessed_alerts = await self.process_alerts(filtered_alerts)
@@ -546,6 +530,4 @@ class AsyncConnector(BaseConnector, ABC):
         self.logger.info("------------------- Main - Finished -------------------")
         self.logger.info(f"Sending {len(processed_alerts)} new alerts back to SOAR platform.")
         self.return_package(processed_alerts)
-        self.logger.info(
-            f"---------------- Finished connector {self.script_name} execution ----------------"
-        )
+        self.logger.info(f"---------------- Finished connector {self.script_name} execution ----------------")

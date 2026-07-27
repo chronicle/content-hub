@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING
 
 import httpx
 
-from TIPCommon.utils import get_sdk_api_uri
 from TIPCommon.rest.async_soar_platform_clients.constants import (
     HTTP_CONNECT_TIMEOUT_SECONDS,
     HTTP_MAX_CONNECTIONS,
@@ -27,14 +26,14 @@ from TIPCommon.rest.async_soar_platform_clients.constants import (
     HTTP_READ_TIMEOUT_SECONDS,
     HTTP_WRITE_TIMEOUT_SECONDS,
 )
+from TIPCommon.utils import get_sdk_api_uri
 
 if TYPE_CHECKING:
     from TIPCommon.types import ChronicleSOAR
 
 
 class AsyncChronicleSOAR:
-    """
-    Async wrapper around existing ChronicleSOAR SDK object.
+    """Async wrapper around existing ChronicleSOAR SDK object.
     Owns transport, headers, SSL, logging.
     """
 

@@ -14,19 +14,20 @@
 
 from __future__ import annotations
 
+import logging
 import tempfile
 from pathlib import Path
 from typing import Annotated
 
-import rich
 import typer
-from rich.markup import escape
 
 import mp.core.file_utils
 from mp.dev_env.sub_commands.integration import utils
 from mp.dev_env.sub_commands.pull import pull_app
 from mp.dev_env.utils import get_backend_api, load_dev_env_config
 from mp.telemetry import track_command
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 @pull_app.command(name="integration")
@@ -66,14 +67,10 @@ def pull_integration(
     try:
         zip_path = _pull_integration_zip_from_soar(integration, dst)
         deconstruct_integration: Path = _deconstruct_integration(zip_path, dst)
-        rich.print(
-            f"[green]✅ Integration {integration} pulled successfully to "
-            f"{deconstruct_integration}.[/green]"
-        )
+        logger.info("✅ Integration %s pulled successfully to %s.", integration, deconstruct_integration)
 
     except Exception as e:
-        error_message = f"Pull failed for {integration}: {escape(str(e))}"
-        rich.print(error_message)
+        logger.exception("Pull failed for %s", integration)
         raise typer.Exit(1) from e
 
     finally:

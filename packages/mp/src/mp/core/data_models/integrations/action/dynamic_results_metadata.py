@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 from typing import Any, Self, TypedDict
 
-import pydantic  # noqa: TC002
+import pydantic  # ruff:ignore[typing-only-third-party-import]
 
 from mp.core.data_models.abc import Buildable
 
@@ -34,9 +34,7 @@ class NonBuiltDynamicResultsMetadata(TypedDict):
     show_result: bool
 
 
-class DynamicResultsMetadata(
-    Buildable[BuiltDynamicResultsMetadata, NonBuiltDynamicResultsMetadata]
-):
+class DynamicResultsMetadata(Buildable[BuiltDynamicResultsMetadata, NonBuiltDynamicResultsMetadata]):
     result_example: pydantic.Json[Any] | None
     result_name: str
     show_result: bool
@@ -53,7 +51,7 @@ class DynamicResultsMetadata(
 
         """
         result_example = built.get("ResultExample")
-        if result_example == "":  # noqa:PLC1901
+        if result_example == "":  # ruff:ignore[compare-to-empty-string]
             result_example = None
         return cls(
             result_example=result_example,

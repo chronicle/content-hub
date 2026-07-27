@@ -22,9 +22,8 @@ whether the integration is fully built or partially built.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
-
-import rich
 
 import mp.core.file_utils
 
@@ -34,6 +33,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.data_models.integrations.integration import BuiltIntegration
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def restructure_integration(
@@ -51,17 +53,17 @@ def restructure_integration(
         integration_out_path: The path to the integration's "out" folder
 
     """
-    rich.print(f"Restructuring {integration_metadata['metadata']['Identifier']}")
-    if mp.core.file_utils.is_non_built_integration(integration_path):
-        rich.print("Restructuring metadata")
-        metadata.Metadata(integration_out_path, integration_metadata).restructure()
+    logger.info("Restructuring %s", integration_metadata["metadata"]["Identifier"])
+    logger.info("Restructuring metadata")
+    metadata.Metadata(integration_out_path, integration_metadata).restructure()
 
-        rich.print("Restructuring scripts")
+    if mp.core.file_utils.is_non_built_integration(integration_path):
+        logger.info("Restructuring scripts")
         scripts.Scripts(integration_path, integration_out_path).restructure()
 
-        rich.print("Restructuring code")
+        logger.info("Restructuring code")
         code.Code(integration_out_path).restructure()
 
     if not mp.core.file_utils.is_built(integration_path):
-        rich.print("Restructuring dependencies")
+        logger.info("Restructuring dependencies")
         dependencies.Dependencies(integration_path, integration_out_path).restructure()

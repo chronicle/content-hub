@@ -1,0 +1,424 @@
+Add IPS Policy Exception:
+  ai_description: >-
+    ### General Description
+
+    Adds an IPS policy exception in FireEye NX for specific IP address entities. The
+    IP entities are treated as the "Attacker IP Address" in the policy exception configuration.
+
+
+    ### Flow Description
+
+    1. Extracts action parameters including Victim IP Subnet, Interface, Mode, and
+    Name.
+
+    2. Filters target entities to include only IP addresses.
+
+    3. Iterates through the filtered IP entities and masks the IP address (appends
+    `/32` if it is a valid IPv4 address).
+
+    4. Makes a POST request to the FireEye NX API (`wsapis/v2.0.0/ips/policy_exceptions`)
+    to create the IPS policy exception for each IP.
+
+    5. Returns a summary message indicating successful and failed policy exception
+    creations.
+
+
+    ### Additional Notes
+
+    The action treats the target entity as the attacker IP. The mode parameter determines
+    the action taken by the IPS (e.g., Block, Unblock, Suppress).
+  ai_short_description: >-
+    Adds an IPS policy exception in FireEye NX for specific IP address entities, treating
+    them as attacker IPs.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Creates a new IPS policy exception in FireEye NX for the specified attacker
+      IP and victim subnet.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to the FireEye NX API to create an IPS policy
+      exception. It mutates external data by adding a new policy rule. It does not
+      fetch enrichment data, update internal entities, or create insights.
+  entity_usage:
+    entity_types:
+      address: true
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: true
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The code iterates over `siemplify.target_entities` and filters them using `entity.entity_type
+      in SUPPORTED_ENTITY_TYPES` where `SUPPORTED_ENTITY_TYPES` is `[EntityTypes.ADDRESS]`.
+      It does not filter by any other attributes.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: true
+    add_ioc_to_blocklist: true
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action creates an IPS policy exception in FireEye NX for an IP address.
+      Depending on the selected mode (Block, Unblock, Suppress), this action can block
+      the IP (Add IOC To Blocklist), unblock the IP (Remove IOC From Blocklist), or
+      suppress alerts for the IP (Add IOC To Allowlist).
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: true
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Victim IP Subnet | String | Yes | Specify the IP subnet of the victim that should
+    be used to create a new policy exception. Format: x.x.x.x/xx Example: 10.0.0.1/24
+    |
+
+    | Interface | Dropdown | Yes | Specify what interface should be used in policy
+    exceptions. |
+
+    | Mode | Dropdown | Yes | Specify the mode that should be used in the policy exception.
+    |
+
+    | Name | String | No | Specify the name for the policy exception. If nothing is
+    specified, action will add policy exception with name Siemplify_{Interface}_{Mode}
+    |
+Download Alert Artifacts:
+  ai_description: >-
+    ### General Description
+
+    Downloads artifacts associated with a specific alert from FireEye NX and saves
+    them to a specified local directory. This action allows analysts to retrieve forensic
+    files and evidence related to an alert for further local analysis or sandboxing.
+
+
+    ### Flow Description
+
+    1. Extracts the `Alert UUID` and `Download Path` parameters provided by the user.
+
+    2. Authenticates with the FireEye NX API using the configured credentials.
+
+    3. Initiates an HTTP GET request to the FireEye NX `/artifacts/{alert_uuid}` endpoint
+    to retrieve the artifact data.
+
+    4. Saves the retrieved data as a `.zip` file in the specified local download path.
+
+    5. Returns the absolute file path of the downloaded artifacts in the action's
+    JSON result.
+
+
+    ### Additional Notes
+
+    - The action will fail to save the file if a file with the same name (e.g., `{alert_uuid}.zip`)
+    already exists at the specified download path.
+
+    - Ensure the SOAR platform has the necessary write permissions for the specified
+    download directory.
+  ai_short_description: >-
+    Downloads artifacts for a specific alert from FireEye NX and saves them as a ZIP
+    file to a specified local directory.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: true
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action fetches artifact data from FireEye NX via an HTTP GET request. It
+      does not mutate external data, nor does it mutate internal SOAR data (like entities,
+      insights, or case comments). It simply saves the downloaded file to the local
+      disk.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process any entities. It relies solely
+      on the explicitly provided 'Alert UUID' parameter to fetch data.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: true
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action retrieves an artifact file (ZIP) from the FireEye NX platform and
+      saves it locally. This directly aligns with the 'Download File' expected outcome.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Alert UUID | String | Yes | Specify the alert uuid from where we need to download
+    artifacts. |
+
+    | Download Path | String | Yes | Specify where the action should save the files.
+    |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Tests connectivity to the FireEye NX server using the provided integration configuration
+    parameters.
+
+
+    ### Flow Description
+
+    1. Extracts the integration configuration parameters (API Root, Username, Password,
+    Verify SSL).
+
+    2. Initializes the FireEye NX manager and obtains an authentication token.
+
+    3. Makes an API call to the FireEye NX `health/system` endpoint to verify connectivity.
+
+    4. Returns a success message if the connection is established, otherwise returns
+    an error.
+
+
+    ### Additional Notes
+
+    This action is typically used to verify that the integration is configured correctly
+    and can communicate with the FireEye NX instance. It does not require any action-specific
+    parameters or entities to run.
+  ai_short_description: >-
+    Tests connectivity to the FireEye NX server to verify integration configuration.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: false
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: null
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a GET request to the health/system endpoint to verify connectivity.
+      It does not fetch contextual data for alerts/entities, mutate external data,
+      mutate internal data, update entities, create insights, modify alert data, or
+      create case comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not process or iterate over any entities. It solely tests connectivity
+      to the external system.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a simple connectivity test (ping) and does not match any of the
+      specific outcome categories such as enrichment, containment, or ticket creation.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: There are no parameters for this action

@@ -94,7 +94,7 @@ def main():
             git_server_fingerprint,
         )
     except Exception as e:
-        raise Exception(f"Couldn't connect to git\nError: {e}")
+        raise Exception(f"Failed to connect to the Git server. Error: {e}")
 
     test_connectivity(gitsync, siemplify)
 
@@ -104,7 +104,8 @@ def main():
     else:
         siemplify.LOGGER.info("No git server fingerprint provided - skipping fingerprint verification test")
 
-    siemplify.end("True", True)
+    output_message = "Successfully connected to the GitSync repository."
+    siemplify.end(output_message, True)
 
 
 def test_connectivity(gitsync: GitSyncManager, siemplify: SiemplifyAction) -> None:
@@ -112,7 +113,7 @@ def test_connectivity(gitsync: GitSyncManager, siemplify: SiemplifyAction) -> No
         gitsync.api.test_connectivity()
         siemplify.LOGGER.info("Chronicle SOAR connection successful")
     except Exception as e:
-        raise ConnectionError("Couldn't connect to Chronicle SOAR") from e
+        raise ConnectionError("Failed to connect to the Chronicle SOAR server.") from e
 
 
 def connect_to_git_server_to_verify_fingerprint(siemplify: SiemplifyAction, gitsync: GitSyncManager) -> None:
@@ -122,7 +123,7 @@ def connect_to_git_server_to_verify_fingerprint(siemplify: SiemplifyAction, gits
         siemplify.LOGGER.info("Git connection and fingerprint verification successful")
     except Exception as e:
         siemplify.LOGGER.exception(e)
-        raise GitSyncException(f"Git connection failed (fingerprint verification may have failed): {e}")
+        raise GitSyncException(f"Failed to connect to the Git server. Error: {e}")
 
 
 if __name__ == "__main__":

@@ -18,12 +18,13 @@ import base64
 import datetime
 import json
 import os
+from typing import Any
 
 from soar_sdk.ScriptResult import EXECUTION_STATE_COMPLETED
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
 
-from ..core.AttachmentsManager import AttachmentsManager
+from ..core.AttachmentsManager import AttachmentsManager, ExecutionScope
 from ..core.EmailManager import EmailManager
 
 SUPPORTED_ATTACHMENTS = [".eml", ".msg"]
@@ -55,6 +56,13 @@ def main():
     siemplify.script_name = "Parse Email"
     siemplify.LOGGER.info(f"Starting {siemplify.script_name}.")
 
+    execution_scope: Any = getattr(
+        siemplify,
+        "execution_scope",
+        ExecutionScope.Alert,
+    )
+    siemplify.LOGGER.info(f"Running in {execution_scope.name.lower()} scope")
+
     save_to_case_wall = (
         siemplify.parameters["Save Attachments to Case Wall"].lower() == "true"
     )
@@ -84,7 +92,7 @@ def main():
         custom_regex=custom_regex,
     )
     attach_mgr = AttachmentsManager(siemplify=siemplify)
-    attachments = attach_mgr.get_alert_attachments()
+    attachments = attach_mgr.get_attachments_for_target_alerts()
 
     orig_email_attachment = {}
     attached_email = {}
@@ -150,6 +158,9 @@ def main():
     parsed_email["attachment_id"] = attachment[CASE_EVIDENCE_ID]
     parsed_emails.append(parsed_email)
 
+    initial_entities = email_mgr.get_alert_entity_identifiers()
+    limit_reached = False
+
     if create_observed_entity_types != "None" or create_base_entities:
         sorted_emails = sorted(
             parsed_email["attached_emails"],
@@ -157,13 +168,29 @@ def main():
             reverse=True,
         )
         for r_email in sorted_emails:
-            email_mgr.create_entities(
-                create_base_entities,
-                create_observed_entity_types,
-                exclude_regex,
-                r_email,
-                fang_entities,
-            )
+            try:
+                email_mgr.create_entities(
+                    create_base_entities,
+                    create_observed_entity_types,
+                    exclude_regex,
+                    r_email,
+                    fang_entities,
+                )
+            except Exception as e:
+                current_entities = email_mgr.get_alert_entity_identifiers()
+                created_count = len(set(current_entities) - set(initial_entities))
+                siemplify.LOGGER.error(
+                    "Maximum number of entities was reached. "
+                    f"Created {created_count} entities. Original error: {e}"
+                )
+                limit_reached = True
+                break
+
+    final_entities = email_mgr.get_alert_entity_identifiers()
+    created_entities = list(set(final_entities) - set(initial_entities))
+
+    if limit_reached:
+        output_message += "\nWarning: Maximum number of entities was reached."
 
     if save_to_case_wall:
         updated_entities = []
@@ -207,13 +234,19 @@ def main():
 
     siemplify.result.add_result_json(
         json.dumps(
-            {"parsed_emails": parsed_emails},
+            {
+                "parsed_emails": parsed_emails,
+                "created_entities": created_entities
+            },
             sort_keys=True,
             default=json_serial,
         ),
     )
 
-    output_message += "Parsed message file."
+    if execution_scope.value == ExecutionScope.Alert.value:
+        output_message += "Parsed message file."
+    else:
+        output_message += "Parsed message file for all case alerts."
     siemplify.LOGGER.info(
         f"\n  status: {status}\n  result_value: {result_value}\n  output_message: {output_message}",
     )

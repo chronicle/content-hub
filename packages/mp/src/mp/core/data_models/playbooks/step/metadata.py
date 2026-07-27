@@ -221,9 +221,7 @@ class Step(ComponentMetadata[BuiltStep, NonBuiltStep]):
             action_name=non_built["action_name"],
             parent_container_id=non_built.get("parent_container_id"),
             start_loop_step_id=non_built.get("start_loop_step_id"),
-            parallel_actions=[
-                cls.from_non_built(file_name, pa) for pa in non_built["parallel_actions"]
-            ],
+            parallel_actions=[cls.from_non_built(file_name, pa) for pa in non_built["parallel_actions"]],
             parameters=[StepParameter.from_non_built(p) for p in non_built["parameters"]],
             auto_skip_on_failure=non_built["auto_skip_on_failure"],
             is_debug_mock_data=non_built["is_debug_mock_data"],
@@ -265,9 +263,7 @@ class Step(ComponentMetadata[BuiltStep, NonBuiltStep]):
             Parameters=[p.to_built() for p in self.parameters],
             AutoSkipOnFailure=self.auto_skip_on_failure,
             IsDebugMockData=self.is_debug_mock_data,
-            StepDebugData=(
-                self.step_debug_data.to_built() if self.step_debug_data is not None else None
-            ),
+            StepDebugData=(self.step_debug_data.to_built() if self.step_debug_data is not None else None),
             ParentStepContainerId=self.parent_container_id,
             IsTouchedByAi=self.is_touched_by_ai,
             StartLoopStepIdentifier=self.start_loop_step_id,
@@ -301,9 +297,7 @@ class Step(ComponentMetadata[BuiltStep, NonBuiltStep]):
             parent_container_id=self.parent_container_id,
             is_touched_by_ai=self.is_touched_by_ai,
             is_debug_mock_data=self.is_debug_mock_data,
-            step_debug_data=(
-                self.step_debug_data.to_non_built() if self.step_debug_data is not None else None
-            ),
+            step_debug_data=(self.step_debug_data.to_non_built() if self.step_debug_data is not None else None),
             auto_skip_on_failure=self.auto_skip_on_failure,
             previous_result_condition=self.previous_result_condition,
             type=self.type_.to_string(),

@@ -15,11 +15,16 @@
 from __future__ import annotations
 
 import base64
+import logging
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 import requests
-import rich
 import typer
+import urllib3
+
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -49,21 +54,41 @@ class BackendAPI:
             typer.Exit: Validations error.
 
         """
-        self.api_root = api_root.rstrip("/")
-        self.username = username
-        self.password = password
-        self.api_key = api_key
-        self.session = requests.Session()
-        self.token = None
+        self.api_root: str = api_root.rstrip("/")
+        self.username: str | None = username
+        self.password: str | None = password
+        self.api_key: str | None = api_key
+        self.session: requests.Session = requests.Session()
+        self.token: str | None = None
+
+        if self._is_localhost():
+            logger.info("Localhost deployment detected. TLS verification disabled.")
+            self._disable_tls()
 
         if api_key is not None:
             if username is not None or password is not None:
-                rich.print("[red]Cannot use both API key and username/password[/red]")
+                logger.error("Cannot use both API key and username/password")
                 raise typer.Exit(1)
 
         elif username is None or password is None:
-            rich.print("[red]You must provide username and password or api key[/red]")
+            logger.error("You must provide username and password or api key")
             raise typer.Exit(1)
+
+    def _disable_tls(self) -> None:
+        """Disables tls verification."""
+        self.session.verify = False
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    def _is_localhost(self) -> bool:
+        """Check if the api_root is localhost.
+
+        Returns:
+            True if the api_root is localhost, False otherwise.
+
+        """
+        hostname = urlparse(self.api_root).hostname
+        local_hostnames = ["localhost", "127.0.0.1", "::1"]
+        return hostname in local_hostnames
 
     def login(self) -> None:
         """Authenticate and store the session token or API key header."""
@@ -148,12 +173,47 @@ class BackendAPI:
             Response object containing the integration package.
 
         """
-        url: str = (
-            f"{self.api_root}/api/external/v1/ide/ExportPackage/{integration_name}?format=camel"
-        )
+        url: str = f"{self.api_root}/api/external/v1/ide/ExportPackage/{integration_name}?format=camel"
         resp = self.session.get(url)
         resp.raise_for_status()
         return resp
+
+    def list_installed_integrations(self) -> list[dict[str, Any]]:
+        """List all installed integrations on the SOAR platform.
+
+        Returns:
+            The list of installed integrations.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/integrations"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
+            return []
+        data = resp.json()
+        if isinstance(data, dict):
+            return data.get("items", [])
+        return data if isinstance(data, list) else []
+
+    def list_integration_instances(self, integration_id: str = "$all") -> list[dict[str, Any]]:
+        """List integration instances for a given integration identifier or all integrations.
+
+        Args:
+            integration_id: The integration identifier, defaults to '$all'.
+
+        Returns:
+            The list of integration instances.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/integrations/{integration_id}/integrationInstances"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
+            return []
+        data = resp.json()
+        if isinstance(data, dict):
+            return data.get("items", [])
+        return data if isinstance(data, list) else []
 
     def upload_playbook(self, zip_path: Path) -> dict[str, Any]:
         """Upload a zipped playbook package to the backend.
@@ -165,9 +225,7 @@ class BackendAPI:
             dict: The backend response after uploading the playbook.
 
         """
-        upload_url: str = (
-            f"{self.api_root}/api/external/v1/playbooks/ImportDefinitions?format=camel"
-        )
+        upload_url: str = f"{self.api_root}/api/external/v1/playbooks/ImportDefinitions?format=camel"
         data = base64.b64encode(zip_path.read_bytes()).decode()
         upload_payload = {"blob": data, "fileName": zip_path.name}
         resp = self.session.post(upload_url, json=upload_payload)
@@ -181,10 +239,7 @@ class BackendAPI:
             list: Contains all playbooks meta-data.
 
         """
-        url: str = (
-            f"{self.api_root}"
-            "/api/external/v1/playbooks/GetWorkflowMenuCardsWithEnvFilter?format=camel"
-        )
+        url: str = f"{self.api_root}/api/external/v1/playbooks/GetWorkflowMenuCardsWithEnvFilter?format=camel"
         resp = self.session.post(url, json=[1, 0])
         resp.raise_for_status()
         return resp.json()
@@ -206,5 +261,160 @@ class BackendAPI:
         payload = {"identifiers": [playbook_identifier]}
 
         resp = self.session.post(url, json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    def list_views(self) -> list[dict[str, Any]]:
+        """Get all installed view templates (cards) from the SOAR platform.
+
+        Returns:
+            list: Contains all view templates.
+
+        """
+        url: str = f"{self.api_root}/api/external/v1/case-overview/GetOverviewTemplateCards"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        return resp.json()
+
+    def download_view(self, template_identifier: str) -> dict[str, Any]:
+        """Download the full details of a view template by its identifier.
+
+        Args:
+            template_identifier: The identifier of the view template to download.
+
+        Returns:
+            dict: The response JSON containing the view template data.
+
+        """
+        url: str = f"{self.api_root}/api/external/v1/case-overview/GetFullOverviewTemplateDetails/{template_identifier}"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        return resp.json()
+
+    def upload_view(self, view_data: dict[str, Any]) -> dict[str, Any]:
+        """Upload/Save a view template to the SOAR platform.
+
+        Args:
+            view_data: The built view template data (OverviewTemplate and Roles).
+
+        Returns:
+            dict: The backend response after saving the view template.
+
+        """
+        url: str = f"{self.api_root}/api/external/v1/case-overview/SaveOverviewTemplate"
+        resp = self.session.post(url, json=view_data)
+        if not resp.ok:
+            logger.error("SaveOverviewTemplate failed with status %s. Response: %s", resp.status_code, resp.text)
+        resp.raise_for_status()
+        return resp.json()
+
+    def list_custom_fields(self) -> list[dict[str, Any]]:
+        """List all custom fields from the SOAR platform.
+
+        Returns:
+            list[dict[str, Any]]: The list of custom fields.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields"
+        resp = self.session.get(url)
+        if not resp.ok:
+            logger.error("list_custom_fields failed: %s - %s", resp.status_code, resp.text)
+        resp.raise_for_status()
+        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
+            return []
+        try:
+            return resp.json().get("items", [])
+        except Exception:
+            logger.exception("JSON Decode Error in list_custom_fields. Response text: %s", resp.text)
+            raise
+
+    def download_custom_field(self, field_id: int) -> dict[str, Any]:
+        """Download a custom field by ID from the SOAR platform.
+
+        Args:
+            field_id: The ID of the custom field.
+
+        Returns:
+            The custom field details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields/{field_id}"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        return resp.json()
+
+    def create_custom_field(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Create a new custom field on the SOAR platform.
+
+        Args:
+            data: The custom field data.
+
+        Returns:
+            The created custom field details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields"
+        resp = self.session.post(url, json=data)
+        resp.raise_for_status()
+        return resp.json()
+
+    def update_custom_field(self, field_id: int, data: dict[str, Any]) -> dict[str, Any]:
+        """Update an existing custom field on the SOAR platform.
+
+        Args:
+            field_id: The ID of the custom field.
+            data: The custom field data.
+
+        Returns:
+            The updated custom field details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/customFields/{field_id}"
+        resp = self.session.patch(url, json=data)
+        resp.raise_for_status()
+        return resp.json()
+
+    def list_alert_grouping_rules(self) -> list[dict[str, Any]]:
+        """List all alert grouping rules from the SOAR platform.
+
+        Returns:
+            The list of alert grouping rules.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        if resp.status_code == 204:  # ruff:ignore[magic-value-comparison]
+            return []
+        return resp.json().get("items", [])
+
+    def create_alert_grouping_rule(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Create a new alert grouping rule on the SOAR platform.
+
+        Args:
+            data: The alert grouping rule data.
+
+        Returns:
+            The created alert grouping rule details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules"
+        resp = self.session.post(url, json=data)
+        resp.raise_for_status()
+        return resp.json()
+
+    def update_alert_grouping_rule(self, rule_id: int, data: dict[str, Any]) -> dict[str, Any]:
+        """Update an existing alert grouping rule on the SOAR platform.
+
+        Args:
+            rule_id: The ID of the alert grouping rule.
+            data: The alert grouping rule data.
+
+        Returns:
+            The updated alert grouping rule details.
+
+        """
+        url: str = f"{self.api_root}/api/1p/external/v1/system/settings/alert-grouping-rules/{rule_id}"
+        resp = self.session.patch(url, json=data)
         resp.raise_for_status()
         return resp.json()

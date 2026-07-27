@@ -42,3 +42,17 @@ class TestValidations:
     @given(valid_built=ST_VALID_BUILT_RELEASE_NOTE_DICT)
     def test_valid_built(self, valid_built: BuiltReleaseNote) -> None:
         ReleaseNote.from_built(valid_built)
+
+    def test_backward_compatibility_integration_version(self) -> None:
+        """
+        Verify that we can still load release notes that use 'integration_version' instead of 'version'.
+        """
+        legacy_data: NonBuiltReleaseNote = {
+            "description": "Legacy entry",
+            "integration_version": 1.0,
+            "item_name": "Test Integration",
+            "item_type": "Integration",
+        }
+        # This should not raise KeyError
+        rn = ReleaseNote.from_non_built(legacy_data)
+        assert rn.version == 1.0

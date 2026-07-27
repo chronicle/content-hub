@@ -40,8 +40,7 @@ class FeatureTags(Buildable[BuiltFeatureTags, NonBuiltFeatureTags]):
     def _from_built(cls, built: BuiltFeatureTags) -> Self:
         return cls(
             integration_visibility_properties=[
-                IntegrationVisibilityProperty.from_built(p)
-                for p in built["IntegrationVisibilityProperties"]
+                IntegrationVisibilityProperty.from_built(p) for p in built["IntegrationVisibilityProperties"]
             ],
         )
 
@@ -49,8 +48,7 @@ class FeatureTags(Buildable[BuiltFeatureTags, NonBuiltFeatureTags]):
     def _from_non_built(cls, non_built: NonBuiltFeatureTags) -> Self:
         return cls(
             integration_visibility_properties=[
-                IntegrationVisibilityProperty.from_non_built(p)
-                for p in non_built["integration_visibility_properties"]
+                IntegrationVisibilityProperty.from_non_built(p) for p in non_built["integration_visibility_properties"]
             ],
         )
 
@@ -62,9 +60,7 @@ class FeatureTags(Buildable[BuiltFeatureTags, NonBuiltFeatureTags]):
 
         """
         return BuiltFeatureTags(
-            IntegrationVisibilityProperties=[
-                p.to_built() for p in self.integration_visibility_properties
-            ]
+            IntegrationVisibilityProperties=[p.to_built() for p in self.integration_visibility_properties]
         )
 
     def to_non_built(self) -> NonBuiltFeatureTags:
@@ -75,7 +71,5 @@ class FeatureTags(Buildable[BuiltFeatureTags, NonBuiltFeatureTags]):
 
         """
         return NonBuiltFeatureTags(
-            integration_visibility_properties=[
-                p.to_non_built() for p in self.integration_visibility_properties
-            ]
+            integration_visibility_properties=[p.to_non_built() for p in self.integration_visibility_properties]
         )

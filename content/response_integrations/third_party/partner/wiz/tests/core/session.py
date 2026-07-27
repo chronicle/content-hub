@@ -14,21 +14,22 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from integration_testing import router
 from integration_testing.request import MockRequest
 from integration_testing.requests.response import MockResponse
 from integration_testing.requests.session import MockSession, RouteFunction
+from tests.core.product import Wiz
 
 from wiz.core import constants
+
 from .. import common
-from tests.core.product import Wiz
 
 if TYPE_CHECKING:
     from TIPCommon.types import SingleJson
+
     from wiz.core import datamodels
 
 
@@ -55,9 +56,29 @@ class WizSession(MockSession[MockRequest, MockResponse, Wiz]):
 
             return self._resolve_issue()
 
+        if "query VulnerabilityFindingsPage" in query:
+            return self._get_vulnerability_findings(request)
+
+        if "query threatAIAnalysis" in query:
+            return self._get_threat_ai_analysis(request)
+
         return MockResponse(
             content={"errors": [{"message": "Invalid query"}]},
             status_code=400,
+        )
+
+    def _get_vulnerability_findings(self, request: MockRequest) -> MockResponse:
+        """Handle get vulnerability findings request's response."""
+        variables = request.kwargs["json"].get("variables", {})
+        filter_by = variables.get("filterBy", {})
+        asset_name_filter = filter_by.get("assetName", {})
+        resource_name = asset_name_filter.get("equals")
+
+        vulns = self._product.get_vulnerabilities(resource_name)
+
+        return MockResponse(
+            content={"data": {"vulnerabilityFindings": {"nodes": vulns}}},
+            status_code=200,
         )
 
     def _get_issue_details(self) -> MockResponse:
@@ -112,6 +133,25 @@ class WizSession(MockSession[MockRequest, MockResponse, Wiz]):
         issue.status = constants.STATUS_RESOLVED
 
         return MockResponse(content=common.RESOLVE_ISSUE, status_code=200)
+
+    def _get_threat_ai_analysis(self, request: MockRequest) -> MockResponse:
+        """Handle threat AI analysis request's response."""
+        variables = request.kwargs["json"].get("variables", {})
+        issue_id = variables.get("issueId")
+        if issue_id == common.INVALID_ISSUE_ID:
+            return MockResponse(content=common.INVALID_ISSUE, status_code=200)
+
+        analysis_data = self._product.get_threat_ai_analysis(issue_id)
+        if analysis_data is None:
+            return MockResponse(
+                content={"data": {"issue": None}},
+                status_code=200,
+            )
+
+        return MockResponse(
+            content=analysis_data,
+            status_code=200,
+        )
 
 
 @router.post("/oauth/token")

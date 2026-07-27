@@ -15,25 +15,35 @@
 from __future__ import annotations
 
 import atexit
-import json
 import logging
 import logging.config
 import queue
-from logging import Handler, Logger
 from logging.handlers import QueueHandler, QueueListener
-from pathlib import Path
 from typing import Any
-
-LOG_CONFIG_FILE_NAME: str = "logger_config.json"
 
 
 def setup_logging(*, verbose: bool = False, quiet: bool = False) -> None:
-    """Set up logging for the mp CLI using a queue for async-safe logging."""
-    config_file: Path = Path(__file__).parent / LOG_CONFIG_FILE_NAME
-    config: dict[str, Any] = json.loads(config_file.read_text(encoding="UTF-8"))
-
+    """Set up logging for the mp CLI."""
     level: int = _get_logger_level(quiet=quiet, verbose=verbose)
-    config["loggers"]["root"]["level"] = level
+
+    config: dict[str, Any] = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {"rich_simple": {"format": "%(message)s", "datefmt": "[%X]"}},
+        "handlers": {
+            "console": {
+                "class": "rich.logging.RichHandler",
+                "level": level,
+                "formatter": "rich_simple",
+                "rich_tracebacks": True,
+                "markup": True,
+                "show_time": False,
+                "show_level": False,
+                "show_path": False,
+            }
+        },
+        "loggers": {"root": {"level": level, "handlers": ["console"]}},
+    }
 
     logging.config.dictConfig(config)
 
@@ -54,8 +64,8 @@ def _get_logger_level(*, quiet: bool, verbose: bool) -> int:
     return logging.INFO
 
 
-def _configure_queue_logging(root: Logger) -> None:
-    existing_handlers: list[Handler] = list(root.handlers)
+def _configure_queue_logging(root: logging.Logger) -> None:
+    existing_handlers: list[logging.Handler] = list(root.handlers)
     for handler in existing_handlers:
         root.removeHandler(handler)
 

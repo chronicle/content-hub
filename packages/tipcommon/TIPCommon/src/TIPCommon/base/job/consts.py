@@ -14,10 +14,7 @@
 
 JOB_ID_KEY = "uniqueIdentifier"
 
-PARAMETER_EXTRACTION_ERR_MSG = (
-    "Failed to all installed job instances via API!\nHTTPError stacktrace: {error}\n"
-)
+PARAMETER_EXTRACTION_ERR_MSG = "Failed to all installed job instances via API!\nHTTPError stacktrace: {error}\n"
 JOB_INSTANCES_PARSE_ERROR_MSG = (
-    'Failed to parse the "get installed job instances" response Json\n'
-    "JSONDecoder stacktrace: {error}\n"
+    'Failed to parse the "get installed job instances" response Json\nJSONDecoder stacktrace: {error}\n'
 )

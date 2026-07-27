@@ -118,6 +118,17 @@ def get_excluded_names_without_verify_ssl() -> set[str]:
     return set(data.get("excluded_names_without_verify_ssl", []))
 
 
+def get_excluded_names_without_ping_message_format() -> set[str]:
+    """Return a set of excluded names without ping message format.
+
+    Returns:
+        A set of excluded names without ping message format.
+
+    """
+    data = _load_exclusions_data()
+    return set(data.get("excluded_names_without_ping_message_format", []))
+
+
 def get_excluded_connector_names_without_documentation_link() -> set[str]:
     """Return a set of excluded connector names without documentation link.
 

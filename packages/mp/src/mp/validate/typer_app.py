@@ -20,9 +20,7 @@ from .sub_commands.integration.validate import app as validate_integrations
 from .sub_commands.playbook.validate import app as validate_playbooks
 from .sub_commands.repository.validate import app as validate_repository
 
-validate_app: typer.Typer = typer.Typer(
-    name="validate", help="Command that runs the validation on the content-hub."
-)
+validate_app: typer.Typer = typer.Typer(name="validate", help="Command that runs the validation on the content-hub.")
 
 validate_app.callback(invoke_without_command=True)(validate_deprecated)
 validate_app.add_typer(validate_repository)

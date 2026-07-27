@@ -22,9 +22,8 @@ specified destination directory.
 from __future__ import annotations
 
 import json
+import logging
 from typing import TYPE_CHECKING
-
-import rich
 
 import mp.core.constants
 
@@ -32,6 +31,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mp.core.data_models.integrations.integration import BuiltFullDetails
+
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def write_full_details(full_details: BuiltFullDetails, destination: Path) -> None:
@@ -42,7 +44,7 @@ def write_full_details(full_details: BuiltFullDetails, destination: Path) -> Non
         destination: The path to write the content to
 
     """
-    rich.print("Writing full details file to integration")
+    logger.info("Writing full details file to integration")
     details_json_name: str = mp.core.constants.INTEGRATION_FULL_DETAILS_FILE.format(
         full_details["Identifier"],
     )

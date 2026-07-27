@@ -158,7 +158,7 @@ def main() -> None:
         )
 
         siemplify.LOGGER.info("Fetching case data")
-        case_data = get_all_case_overview_details(siemplify, case_id)
+        case_data = get_all_case_overview_details(siemplify, case_id, case_expand=["tags"])
 
         case_json = case_data.to_json()
         case_json["alerts"] = case_json.pop("alertCards", [])

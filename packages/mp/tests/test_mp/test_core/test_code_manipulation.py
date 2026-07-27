@@ -148,29 +148,17 @@ def test_other_imports_are_not_modified(
         (
             "with_double_quotes_docstring",
             '"""This is a module docstring."""\nimport SiemplifyAction',
-            (
-                '"""This is a module docstring."""\n'
-                "from __future__ import annotations\n"
-                "import SiemplifyAction"
-            ),
+            ('"""This is a module docstring."""\nfrom __future__ import annotations\nimport SiemplifyAction'),
         ),
         (
             "with_single_quotes_docstring",
             "'''This is a module docstring.'''\nimport SiemplifyAction",
-            (
-                "'''This is a module docstring.'''\n"
-                "from __future__ import annotations\n"
-                "import SiemplifyAction"
-            ),
+            ("'''This is a module docstring.'''\nfrom __future__ import annotations\nimport SiemplifyAction"),
         ),
         (
             "with_single_quotes",
             "'This is a module docstring.'\nimport SiemplifyAction",
-            (
-                "'This is a module docstring.'\n"
-                "from __future__ import annotations\n"
-                "import SiemplifyAction"
-            ),
+            ("'This is a module docstring.'\nfrom __future__ import annotations\nimport SiemplifyAction"),
         ),
         (
             "with_comment",
@@ -185,9 +173,7 @@ def test_other_imports_are_not_modified(
         ("empty_file", "", ""),
     ],
 )
-def test_future_annotations_transformer(
-    test_name: str, initial_content: str, expected_content: str
-) -> None:
+def test_future_annotations_transformer(test_name: str, initial_content: str, expected_content: str) -> None:
     """Verify that `FutureAnnotationsTransformer` correctly modifies file content."""
     transformer = FutureAnnotationsTransformer()
     transformed_content = apply_transformers(initial_content, [transformer])
@@ -241,17 +227,14 @@ def test_sdk_import_transformer(sdk_module: str) -> None:
     # Test `import <sdk_module>.submodule as alias, <sdk_module>.submodule2 as alias2`
     import_content = f"import {sdk_module}.submodule as alias, {sdk_module}.submodule2 as alias2"
     expected_import_content = (
-        f"import {SDK_PREFIX}{sdk_module}.submodule as alias, "
-        f"{SDK_PREFIX}{sdk_module}.submodule2 as alias2"
+        f"import {SDK_PREFIX}{sdk_module}.submodule as alias, {SDK_PREFIX}{sdk_module}.submodule2 as alias2"
     )
     transformed_import_content = apply_transformers(import_content, [transformer])
     assert transformed_import_content == expected_import_content
 
     # Test `import <sdk_module>.submodule as alias, non-sdk_module.submodule2 as alias2`
     import_content = f"import {sdk_module}.submodule as alias, another_module.submodule2 as alias2"
-    expected_import_content = (
-        f"import {SDK_PREFIX}{sdk_module}.submodule as alias, another_module.submodule2 as alias2"
-    )
+    expected_import_content = f"import {SDK_PREFIX}{sdk_module}.submodule as alias, another_module.submodule2 as alias2"
     transformed_import_content = apply_transformers(import_content, [transformer])
     assert transformed_import_content == expected_import_content
 
@@ -296,9 +279,7 @@ def test_sdk_import_transformer_unrelated_import() -> None:
         ),
     ],
 )
-def test_core_package_import_transformer(
-    test_name: str, initial_content: str, expected_content: str
-) -> None:
+def test_core_package_import_transformer(test_name: str, initial_content: str, expected_content: str) -> None:
     """Verify that `CorePackageImportTransformer` correctly modifies file content."""
     transformer = CorePackageImportTransformer({"manager", "manager1", "manager2"})
     transformed_content = apply_transformers(initial_content, [transformer])
@@ -337,13 +318,9 @@ def test_core_package_import_transformer(
         ),
     ],
 )
-def test_core_package_internal_import_transformer(
-    test_name: str, initial_content: str, expected_content: str
-) -> None:
+def test_core_package_internal_import_transformer(test_name: str, initial_content: str, expected_content: str) -> None:
     """Verify that `CorePackageInternalImportTransformer` correctly modifies file content."""
-    transformer = CorePackageInternalImportTransformer(
-        {"constants", "api_client", "manager"}, "api_client"
-    )
+    transformer = CorePackageInternalImportTransformer({"constants", "api_client", "manager"}, "api_client")
     transformed_content = apply_transformers(initial_content, [transformer])
     assert transformed_content == expected_content
 
@@ -354,11 +331,7 @@ def test_core_package_internal_import_transformer(
         (
             "sdk_and_manager_imports",
             "import manager\nimport SiemplifyAction",
-            (
-                "from __future__ import annotations\n"
-                "from ..core import manager\n"
-                "import soar_sdk.SiemplifyAction"
-            ),
+            ("from __future__ import annotations\nfrom ..core import manager\nimport soar_sdk.SiemplifyAction"),
             [
                 FutureAnnotationsTransformer(),
                 SdkImportTransformer(),

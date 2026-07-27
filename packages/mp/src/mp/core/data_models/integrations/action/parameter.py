@@ -58,7 +58,7 @@ class BuiltActionParameter(TypedDict):
     IsMandatory: bool
     Name: str
     OptionalValues: list[str] | None
-    Type: int
+    Type: int | str
     Value: str | bool | int | float | None
     DefaultValue: str | bool | int | float | None
 
@@ -108,7 +108,7 @@ class ActionParameter(
             name=built["Name"],
             optional_values=built.get("OptionalValues"),
             type_=ActionParamType(int(built["Type"])),
-            default_value=built.get("Value", built.get("DefaultValue")),
+            default_value=v if (v := built.get("Value")) not in {"", None} else built.get("DefaultValue"),
         )
 
     @classmethod

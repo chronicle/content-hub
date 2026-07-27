@@ -7,6 +7,30 @@
 **`mp`**, short for **`marketplace`
 **, is the official command-line interface (CLI) for developing, maintaining, and deploying Google SecOps marketplace integrations. It streamlines the entire lifecycle from coding to deployment.
 
+## Quick Start
+
+### 1. Install as a persistent tool (Recommended)
+
+Install `mp` once and use it everywhere:
+
+```bash
+# Install from the main branch
+uv tool install mp --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp
+
+# Use the tool directly:
+mp --help
+```
+
+### 2. One-time usage
+
+Run directly without installing:
+
+```bash
+uvx --from git+https://github.com/chronicle/content-hub.git#subdirectory=packages/mp mp --help
+```
+
+For more detailed instructions, see the [Installation Guide](docs/installation.md).
+
 ## Workflow
 
 The `mp` tool sits at the center of your integration development workflow:
@@ -17,7 +41,7 @@ The `mp` tool sits at the center of your integration development workflow:
 
 ## Key Features
 
-- **Build & Package**: transforming source code into deployable artifacts.
+- **Build & Package**: transforming source code into deployable artifacts and SOAR-supported ZIP files (`pack`).
 - **Quality Assurance**: Automated linting (`check`), formatting (`format`), and testing (`test`).
 - **Development Loop**: Rapidly push changes to your development environment (`dev-env`).
 
@@ -32,7 +56,10 @@ The `mp` tool sits at the center of your integration development workflow:
 | `format`   | Auto-format Python files.                               | [Docs](docs/commands/format.md)   |
 | `test`     | Run pre-build integration tests.                        | [Docs](docs/commands/test.md)     |
 | `validate` | Validate integration structure and metadata.            | [Docs](docs/commands/validate.md) |
-| `dev-env`  | Interact with dev environment (login, push).            | [Docs](docs/commands/dev_env.md)  |
+| `login`    | Log in to a SecOps environment.                         | [Docs](docs/commands/dev_env.md)  |
+| `push`     | Push content to the SecOps environment.                 | [Docs](docs/commands/dev_env.md)  |
+| `pull`     | Pull content from a SecOps environment.                 | [Docs](docs/commands/dev_env.md)  |
+| `pack`     | Package integrations into SOAR-supported ZIP files.     | [Docs](docs/commands/pack.md)     |
 
 ## Documentation
 

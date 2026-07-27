@@ -1,0 +1,50 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import annotations
+
+import dataclasses
+from typing import TYPE_CHECKING
+
+from mp.core import exclusions
+from mp.core.exceptions import NonFatalValidationError
+from mp.validate.utils import load_integration_def
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from mp.core.custom_types import YamlFileContent
+
+
+@dataclasses.dataclass(slots=True, frozen=True)
+class IntegrationHasDocumentationLinkValidation:
+    name: str = "Documentation Link Validation"
+
+    @staticmethod
+    def run(path: Path) -> None:
+        """Check if the integration has a documentation link.
+
+        Args:
+            path: The path of the integration to validate.
+
+        Raises:
+            NonFatalValidationError: If the integration doesn't have a documentation link.
+
+        """
+        if path.name in exclusions.get_excluded_integrations_without_documentation_link():
+            return
+        integration_def: YamlFileContent = load_integration_def(path)
+        if not integration_def.get("documentation_link"):
+            msg: str = f"'{path.name}' is missing a documentation link"
+            raise NonFatalValidationError(msg)

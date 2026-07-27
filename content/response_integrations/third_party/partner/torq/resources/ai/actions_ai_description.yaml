@@ -1,0 +1,458 @@
+Create a Case:
+  ai_description: >-
+    ### General Description
+
+    Creates a case in Torq by invoking a specific Torq workflow via a Webhook POST
+    request. The action packages the current Google SecOps alert payload, including
+    its context and associated entities, and sends it to the Torq platform to initiate
+    the case creation process.
+
+
+    ### Flow Description
+
+    1. Reads the action parameters, including optional deduplication and correlation
+    keys.
+
+    2. Collects the current case and alert context from Google SecOps, including basic
+    alert details and a subset of entity information.
+
+    3. Constructs a JSON payload containing the alert details, context, and keys.
+
+    4. Makes a POST request to the configured Torq Webhook URL to trigger the `create_case`
+    workflow.
+
+    5. If configured, polls the Torq Public API to retrieve the final execution status
+    and output of the workflow.
+
+    6. Returns the execution results and attaches the response data to the action's
+    JSON results.
+
+
+    ### Additional Notes
+
+    This action requires a valid Torq Webhook URL and Secret configured at the integration
+    level. Polling for the final execution output requires Torq API credentials (Client
+    ID/Secret) or a Bearer token override to authenticate with the Torq Public API.
+  ai_short_description: >-
+    Creates a case in Torq by triggering a workflow via a Webhook POST request, passing
+    the current alert payload and optionally polling for the execution results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers a Torq workflow via Webhook to create a case in the Torq platform.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to a Torq webhook to trigger a workflow, which
+      mutates external data (initiates a case creation process in Torq). It does not
+      fetch contextual enrichment data (it only polls for its own execution status).
+      It does not mutate internal data, update entities, create insights, or add case
+      comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action extracts entity data from the current alert to include in the webhook
+      payload, but it does not iterate over `siemplify.target_entities` to perform
+      operations on a per-entity basis, nor does it filter entities by type or properties.
+      Therefore, it does not run on specific entities in the context of entity-based
+      execution.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action triggers a Torq workflow to create a case. While it initiates a process
+      in an external automation platform, it does not strictly match the 'Create Ticket'
+      category which expects generating a record in an ITSM (like Jira or ServiceNow)
+      and explicitly returning a Ticket ID. It also does not enrich IOCs/assets, update
+      alerts, or perform containment/remediation. Thus, no specific outcome categories
+      perfectly match.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Deduplication Key | String | No | Optional idempotency key for case creation.
+    |
+
+    | Correlation Key | String | No | Optional correlation key for grouping cases/incidents.
+    |
+
+    | Poll Max Seconds | String | No | Maximum seconds to poll the execution. |
+
+    | Poll Interval Seconds | String | No | Seconds between poll requests. |
+Ping:
+  ai_description: >-
+    ### General Description
+
+    Sends a ping request to a Torq workflow via a webhook and optionally polls the
+    Torq Public API for the execution result. This action is used to test connectivity
+    or trigger a generic workflow in Torq, returning the execution details back to
+    Google SecOps.
+
+
+    ### Flow Description
+
+    1. Retrieves the action parameters for polling configuration (max seconds and
+    interval).
+
+    2. Constructs a JSON payload containing the source, action label (`ping`), and
+    current case context (case ID, case name, environment).
+
+    3. Makes a POST request to the configured Torq webhook URL to trigger the workflow.
+
+    4. If an execution ID is returned, optionally polls the Torq Public API using
+    a GET request to retrieve the final execution status and output.
+
+    5. Attaches the execution results, status codes, and output as a JSON result to
+    the action.
+
+
+    ### Additional Notes
+
+    This action relies on the integration-level configuration for the webhook URL
+    and secret. Polling behavior can be adjusted or disabled depending on the provided
+    action parameters.
+  ai_short_description: >-
+    Sends a ping payload to trigger a Torq workflow via webhook and optionally polls
+    for the execution result.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers a workflow execution in the external Torq platform via a webhook POST
+      request.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to an external webhook to trigger a Torq workflow,
+      which is an external mutation. It does not fetch contextual enrichment data
+      for entities, nor does it mutate internal SecOps data, update entities, or create
+      insights/comments.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not interact with or process any entities. It simply constructs
+      a payload based on case context and sends it to a webhook.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action triggers a generic workflow in Torq via a webhook and polls for the
+      result. It does not specifically enrich IOCs/assets, update alerts, manage tickets,
+      modify blocklists/allowlists, manage identities, contain hosts, or perform any
+      of the other specific outcome categories.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Poll Max Seconds | String | No | Maximum seconds to poll the execution. Defaults
+    to 60 if not provided. |
+
+    | Poll Interval Seconds | String | No | Seconds between poll requests. Defaults
+    to 3 if not provided. |
+Run a Workflow:
+  ai_description: >-
+    ### General Description
+
+    Triggers a Torq workflow by sending a POST request to a specified Torq webhook.
+    The action passes a JSON 'Workflow Input' object and can optionally include the
+    current alert payload. If Torq API credentials are provided, it can also poll
+    the Torq Public API for the final execution output.
+
+
+    ### Flow Description
+
+    1. Retrieves integration configuration and action parameters.
+
+    2. Gathers minimal case and environment context, and optionally extracts the current
+    alert payload.
+
+    3. Constructs a JSON payload containing the workflow input, context, and alert
+    data.
+
+    4. Sends a POST request to the Torq webhook URL to initiate the workflow execution.
+
+    5. If an execution ID is returned and polling is configured, polls the Torq Public
+    API to retrieve the final execution status and output.
+
+    6. Attaches the execution results and output to the action's JSON result.
+
+
+    ### Additional Notes
+
+    Polling requires valid Torq API credentials or a bearer token override in the
+    integration configuration.
+  ai_short_description: >-
+    Triggers a Torq workflow via a webhook and optionally polls for the execution
+    results.
+  capabilities:
+    can_create_case_comments: false
+    can_create_insight: false
+    can_modify_alert_data: false
+    can_mutate_external_data: true
+    can_mutate_internal_data: false
+    can_update_entities: false
+    external_data_mutation_explanation: >-
+      Triggers a workflow execution in Torq by sending a POST request to a webhook.
+    fetches_data: false
+    internal_data_mutation_explanation: null
+    reasoning: >-
+      The action makes a POST request to a Torq webhook to trigger a workflow, which
+      mutates external state by initiating an execution. It does not fetch enrichment
+      data, update internal entities, create insights, or modify alert data.
+  entity_usage:
+    entity_types:
+      address: false
+      alert: false
+      application: false
+      child_hash: false
+      child_process: false
+      cluster: false
+      container: false
+      credit_card: false
+      cve: false
+      cve_id: false
+      database: false
+      deployment: false
+      destination_domain: false
+      domain: false
+      email_message: false
+      event: false
+      file_hash: false
+      file_name: false
+      generic: false
+      host_name: false
+      ip_set: false
+      mac_address: false
+      parent_hash: false
+      parent_process: false
+      phone_number: false
+      pod: false
+      process: false
+      service: false
+      source_domain: false
+      threat_actor: false
+      threat_campaign: false
+      threat_signature: false
+      url: false
+      usb: false
+      user: false
+    filters_by_additional_properties: false
+    filters_by_alert_identifier: false
+    filters_by_case_identifier: false
+    filters_by_creation_time: false
+    filters_by_entity_type: false
+    filters_by_identifier: false
+    filters_by_is_artifact: false
+    filters_by_is_enriched: false
+    filters_by_is_internal: false
+    filters_by_is_pivot: false
+    filters_by_is_suspicious: false
+    filters_by_is_vulnerable: false
+    filters_by_modification_time: false
+    reasoning: >-
+      The action does not iterate over or filter specific target entities to perform
+      operations. It only extracts the current alert and its associated entities to
+      include in the webhook payload. Therefore, it does not run on specific entities.
+  outcome_categories:
+    add_alert_comment: false
+    add_ioc_to_allowlist: false
+    add_ioc_to_blocklist: false
+    contain_host: false
+    create_ticket: false
+    delete_email: false
+    disable_identity: false
+    download_file: false
+    enable_identity: false
+    enrich_asset: false
+    enrich_ioc: false
+    execute_command_on_the_host: false
+    get_alert_information: false
+    reasoning: >-
+      The action is a generic workflow runner that triggers a Torq workflow via a
+      webhook. It does not inherently perform specific security outcomes like enriching
+      IOCs, blocking IPs, or managing tickets, as the actual outcome depends entirely
+      on the configured Torq workflow.
+    remove_ioc_from_allowlist: false
+    remove_ioc_from_blocklist: false
+    reset_identity_password: false
+    search_asset: false
+    search_email: false
+    search_events: false
+    send_email: false
+    send_message: false
+    submit_file: false
+    uncontain_host: false
+    update_alert: false
+    update_email: false
+    update_identity: false
+    update_ticket: false
+  parameters_description: >-
+    | Parameter | Type | Mandatory | Description |
+
+    | --- | --- | --- | --- |
+
+    | Workflow Input | String | Yes | JSON object to pass into the Torq workflow |
+
+    | Include Alert Payload | Boolean | No | If true, include the current alert payload
+    under 'alert' |
+
+    | Poll Max Seconds | String | No | Maximum seconds to poll the execution |
+
+    | Poll Interval Seconds | String | No | Seconds between poll requests |

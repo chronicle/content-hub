@@ -67,6 +67,15 @@ python -m pytest
 ```
 
 Additionally, you can use the pre-configured run/debug configurations. When using these, please ensure the correct Python interpreter from the project's virtual environment is selected in the specific run configuration you are using. See [ide_configuration](installation.md#ide-configuration) for the correct interpreter paths.
+
+## Error Handling
+
+To provide a clean and professional user experience, the `mp` CLI hides verbose stack traces by default. 
+
+*   **Global Exception Handling:** We wrap the main Typer application (`main.py`) with a global `try...except` block. If an unhandled exception bubbles up, we print a concise, user-friendly error message. If the user runs the command with the `--verbose` (or `-v`) flag, the full stack trace is printed.
+*   **Explicit Exceptions:** Contributors should raise explicit exception types (like `FatalCommandError`) instead of catching errors locally and calling `sys.exit()` themselves. Let the exception bubble up to the global handler.
+*   **Multithreaded Operations:** When using `ThreadPoolExecutor` or similar concurrency mechanisms (e.g., in `build_integrations`), **do not** use `pool.map()` directly if it allows errors to bubble up with confusing multiprocess stack traces. Instead, use `concurrent.futures.as_completed()`. Catch exceptions in each thread, log the specific failure (e.g., which integration failed and why), and at the end of the loop, raise a single summarized `FatalCommandError`. This prevents generic thread stack traces from cluttering the terminal.
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the project's [Apache 2.0 License](../LICENSE).

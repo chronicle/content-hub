@@ -15,22 +15,21 @@
 from __future__ import annotations
 
 import dataclasses
-from pathlib import Path
+import logging
+from pathlib import Path  # ruff:ignore[typing-only-standard-library-import]
 from typing import TYPE_CHECKING, Annotated
 
 import typer
 
 import mp.core.config
-from mp.build_project.flow.playbooks.flow import build_playbooks
-from mp.core.utils import (
-    ensure_valid_list,
-)
+from mp.build_project.flow.playbooks.flow import BuildPlaybooksParams, build_playbooks
+from mp.core.utils import ensure_valid_list
 from mp.telemetry import track_command
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from mp.core.config import RuntimeParams
+
+logger = logging.getLogger(__name__)
 
 app: typer.Typer = typer.Typer()
 
@@ -63,7 +62,7 @@ class BuildParams:
 
 @app.command(name="playbook", help="Build content-hub playbooks")
 @track_command
-def build_playbook(  # noqa: PLR0913
+def build_playbook(  # ruff:ignore[too-many-arguments]
     playbooks: Annotated[
         list[str],
         typer.Argument(
@@ -73,11 +72,23 @@ def build_playbook(  # noqa: PLR0913
     ],
     src: Annotated[
         Path | None,
-        typer.Option(help="Customize source folder to build or deconstruct from."),
+        typer.Option(
+            exists=True,
+            dir_okay=True,
+            file_okay=False,
+            resolve_path=True,
+            help="Customize source folder to build or deconstruct from.",
+        ),
     ] = None,
     dst: Annotated[
         Path | None,
-        typer.Option(help="Customize destination folder to build or deconstruct to."),
+        typer.Option(
+            exists=True,
+            dir_okay=True,
+            file_okay=False,
+            resolve_path=True,
+            help="Customize destination folder to build or deconstruct to.",
+        ),
     ] = None,
     *,
     deconstruct: Annotated[
@@ -121,6 +132,14 @@ def build_playbook(  # noqa: PLR0913
     run_params: RuntimeParams = mp.core.config.RuntimeParams(quiet, verbose)
     run_params.set_in_config()
 
+    logger.debug(
+        "Starting build_playbook command with parameters: playbooks=%s, src=%s, dst=%s, deconstruct=%s",
+        playbooks,
+        src,
+        dst,
+        deconstruct,
+    )
+
     params: BuildParams = BuildParams(
         playbooks=playbooks,
         deconstruct=deconstruct,
@@ -135,8 +154,9 @@ def build_playbook(  # noqa: PLR0913
 
     try:
         if playbooks:
+            logger.debug("Dispatching to build_playbooks flow")
             build_playbooks(
-                playbooks=playbooks, repositories=[], src=src, dst=dst, deconstruct=deconstruct
+                BuildPlaybooksParams(playbooks=playbooks, repositories=[], src=src, dst=dst, deconstruct=deconstruct)
             )
     finally:
         mp.core.config.clear_custom_src()

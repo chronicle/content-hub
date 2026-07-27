@@ -70,16 +70,16 @@ def convert_dict_to_json_result_dict(
             json_result = json.loads(json_result)
 
         except json.JSONDecodeError as e:
-            raise InternalJSONDecoderError(
-                "Could not parse the json result from str to dict"
-            ) from e
+            msg = "Could not parse the json result from str to dict"
+            raise InternalJSONDecoderError(msg) from e
 
     if not isinstance(json_result, dict):
-        raise ValueError(
+        msg = (
             f"Attempting to convert wrong type {type(json_result)} to"
             " list[dict]. The json_result param must be a dict or a string"
             " that can be parsed to a dict."
         )
+        raise ValueError(msg)
 
     return [{title_key: k, results_key: v} for k, v in json_result.items()]
 
@@ -102,7 +102,7 @@ def construct_csv(list_of_dicts: Sequence[SingleJson]) -> list[str]:
     headers: list[str] = []
     seen_headers: set[str] = set()
     for dict_item in list_of_dicts:
-        for key in dict_item.keys():
+        for key in dict_item:
             if key not in seen_headers:
                 seen_headers.add(key)
                 headers.append(key)
@@ -151,14 +151,12 @@ def dict_to_flat(target_dict: SingleJson) -> SingleJson:
 
         if isinstance(value, list):
             items: list[tuple[str, str]] = []
-            count: int = 1
-            for item in value:
+            for count, item in enumerate(value, start=1):
                 new_key: str = f"{key}_{count}"
                 if isinstance(item, (dict, list)):
                     items.extend(_expand(new_key, item))
                 else:
                     items.append((new_key, to_string(item)))
-                count += 1
 
             return items
 
@@ -233,11 +231,7 @@ def string_to_multi_value(
     if not string_value:
         return []
 
-    values: list[str] = [
-        single_value.strip()
-        for single_value in string_value.split(delimiter)
-        if single_value.strip()
-    ]
+    values: list[str] = [single_value.strip() for single_value in string_value.split(delimiter) if single_value.strip()]
     if only_unique:
         return list(dict.fromkeys(values))
 

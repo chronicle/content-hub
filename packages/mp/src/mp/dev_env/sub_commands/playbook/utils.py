@@ -15,11 +15,11 @@
 from __future__ import annotations
 
 import base64
+import logging
 import zipfile
 from pathlib import Path
 from typing import Any
 
-import rich
 import typer
 
 import mp.core.constants
@@ -28,6 +28,8 @@ from mp.build_project.sub_commands.playbook.build import build_playbook as build
 from mp.core.data_models.playbooks.meta.display_info import PlaybookType
 from mp.core.data_models.playbooks.meta.metadata import PlaybookMetadata
 from mp.core.utils.common.utils import to_snake_case
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def get_playbook_path_by_name(playbook: str, src: Path | None = None) -> Path:
@@ -61,7 +63,7 @@ def get_playbook_path_by_name(playbook: str, src: Path | None = None) -> Path:
             if candidate.exists():
                 return candidate
 
-    rich.print(f"[red]Could not find source playbook at {playbooks_root}/.../{playbook}[/red]")
+    logger.error("Could not find source playbook at %s/.../%s", playbooks_root, playbook)
     raise typer.Exit(1)
 
 
@@ -83,7 +85,7 @@ def get_block_names_by_ids(ids_to_find: set[str], src: Path | None = None) -> se
 
     if remaining_ids:
         missing_str = ", ".join(remaining_ids)
-        rich.print(f"[red]Could not find the following blocks: {missing_str}[/red]")
+        logger.error("Could not find the following blocks: %s", missing_str)
 
     return found_blocks
 
@@ -156,10 +158,10 @@ def build_playbook(playbooks_names: set[str], src: Path | None = None) -> None:
     """
     try:
         build_playbook_(list(playbooks_names), src=src, quiet=True)
-        rich.print(f"[green]Build successful for {', '.join(playbooks_names)}[/green]")
+        logger.info("Build successful for %s", ", ".join(playbooks_names))
 
     except typer.Exit as e:
-        rich.print(f"[red]Build failed: {e}[/red]")
+        logger.exception("Build failed")
         raise typer.Exit(1) from e
 
 
@@ -183,7 +185,7 @@ def get_built_playbook_path(playbook_name: str) -> Path:
     if built_playbook.exists():
         return built_playbook
 
-    rich.print(f"[red]Built playbook '{playbook_name}' not found in {root}")
+    logger.error("Built playbook '%s' not found in %s", playbook_name, root)
     raise typer.Exit(1)
 
 
@@ -232,9 +234,7 @@ def find_playbook_identifier(playbook_name: str, installed_playbook: list[dict[s
         if playbook_meta["name"] == playbook_name:
             return playbook_meta["identifier"]
 
-    rich.print(
-        f"[red]Playbook '{playbook_name}' not found in installed playbooks in SOAR platform."
-    )
+    logger.error("Playbook '%s' not found in installed playbooks in SOAR platform.", playbook_name)
     raise typer.Exit(1)
 
 
@@ -253,19 +253,15 @@ def deconstruct_playbook(built_playbook: Path, dst: Path) -> Path:
 
     """
     try:
-        build_playbook_(
-            [built_playbook.stem], src=built_playbook.parent, dst=dst, deconstruct=True, quiet=True
-        )
+        build_playbook_([built_playbook.stem], src=built_playbook.parent, dst=dst, deconstruct=True, quiet=True)
         return dst / to_snake_case(built_playbook.stem)
 
     except typer.Exit as e:
-        rich.print(f"[red]Deconstruct failed: {e}[/red]")
+        logger.exception("Deconstruct failed")
         raise typer.Exit(1) from e
 
 
-def unzip_playbooks(
-    zip_path: Path, dest: Path, include_playbook: str = "", exclude_playbook: str = ""
-) -> list[Path]:
+def unzip_playbooks(zip_path: Path, dest: Path, include_playbook: str = "", exclude_playbook: str = "") -> list[Path]:
     """Unzips JSON playbooks to a destination.
 
     Args:
@@ -287,9 +283,7 @@ def unzip_playbooks(
                 continue
 
             if include_playbook in {"", original_filename}:
-                new_filename: str = (
-                    f"{to_snake_case(original_filename)}{mp.core.constants.JSON_SUFFIX}"
-                )
+                new_filename: str = f"{to_snake_case(original_filename)}{mp.core.constants.JSON_SUFFIX}"
                 target_path = dest / new_filename
 
                 with zip_ref.open(file_info) as source:
@@ -316,6 +310,6 @@ def save_playbook_as_zip(playbook_name: str, data: dict[str, Any], dest: Path) -
     zip_path = dest / f"{to_snake_case(playbook_name)}.zip"
 
     zip_path.write_bytes(zip_bytes)
-    rich.print(f"Downloaded playbook file saved as: {zip_path}")
+    logger.info("Downloaded playbook file saved as: %s", zip_path)
 
     return zip_path

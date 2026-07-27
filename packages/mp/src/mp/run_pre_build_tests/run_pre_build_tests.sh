@@ -217,11 +217,11 @@ deactivate_venv() {
 run_tests() {
   venv_path="$1"
   if [ "${VERBOSE}" = true ]; then
-    "${venv_path}/bin/python3" -m pytest --json-report -vv ./tests
+    "${venv_path}/bin/python3" -m pytest --json-report --json-report-file=.report.json -vv ./tests
   elif [ "${QUIET}" = true ]; then
-    "${venv_path}/bin/python3" -m pytest --json-report -qq ./tests
+    "${venv_path}/bin/python3" -m pytest --json-report --json-report-file=.report.json -qq ./tests
   else
-    "${venv_path}/bin/python3" -m pytest --json-report ./tests
+    "${venv_path}/bin/python3" -m pytest --json-report --json-report-file=.report.json ./tests
   fi
 }
 

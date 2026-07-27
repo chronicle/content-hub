@@ -50,9 +50,7 @@ class MarkdownFormat:
     def _format_summary_table(self, result: IntegrationTestResults) -> None:
         self._report_lines.append("| ✅ Passed | ❌ Failed | ⏭️ Skipped |")
         self._report_lines.append("|:---------:|:--------:|:----------:|")
-        self._report_lines.append(
-            f"| {result.passed_tests} | {result.failed_tests} | {result.skipped_tests} |"
-        )
+        self._report_lines.append(f"| {result.passed_tests} | {result.failed_tests} | {result.skipped_tests} |")
         self._report_lines.append("")
 
     def _format_issues(self, title: str, issues: list[TestIssue], emoji: str) -> None:

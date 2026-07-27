@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from rich import box
@@ -25,6 +26,8 @@ from .constants import ICON_MAP
 
 if TYPE_CHECKING:
     from mp.validate.data_models import ContentType, FullReport, ValidationResults
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class CliDisplay:
@@ -38,13 +41,13 @@ class CliDisplay:
             self.console.print("[bold green]All Validations Passed\n[/bold green]")
             return
 
-        display_categories: list[str] = ["Pre-Build", "Build", "Post-Build"]
+        display_categories: list[str] = ["Validations"]
 
         for content_type, full_report in self.validation_results.items():
             if not any(full_report.values()):
                 continue
 
-            icon = ICON_MAP[content_type.value]
+            icon: str = ICON_MAP[content_type.value]
 
             self.console.print(Rule(f"[bold magenta]{icon} {content_type.value} Validations"))
 
@@ -53,16 +56,32 @@ class CliDisplay:
                 if not stage_results:
                     continue
 
+                failed_integrations = [
+                    res
+                    for res in stage_results
+                    if res.validation_report.failed_fatal_validations
+                    or res.validation_report.failed_non_fatal_validations
+                ]
+
+                if not failed_integrations:
+                    continue
+
                 self.console.print(f"[bold underline blue]\n{category} Stage[/bold underline blue]")
-                for integration_result in stage_results:
+                for integration_result in failed_integrations:
                     self.console.print(_build_table(integration_result), "\n")
 
             self.console.print("\n")
 
     def _is_all_empty(self) -> bool:
         for full_report in self.validation_results.values():
-            if any(full_report.values()):
-                return False
+            for stage_results in full_report.values():
+                if stage_results:
+                    for res in stage_results:
+                        if (
+                            res.validation_report.failed_fatal_validations
+                            or res.validation_report.failed_non_fatal_validations
+                        ):
+                            return False
         return True
 
 

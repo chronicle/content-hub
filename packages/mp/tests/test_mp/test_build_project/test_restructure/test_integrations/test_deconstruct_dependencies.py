@@ -26,7 +26,7 @@ from mp.build_project.restructure.integrations.deconstruct_dependencies import (
     Dependencies,
     DependencyDeconstructor,
     DependencyResolutionResult,
-    _should_add_integration_testing,  # noqa: PLC2701
+    _should_add_integration_testing,  # ruff:ignore[import-private-name]
 )
 
 if TYPE_CHECKING:
@@ -54,7 +54,7 @@ def test_get_dependencies_with_local_and_remote(tmp_path: Path) -> None:
 
     # Mock local package resolution
     with unittest.mock.patch(
-        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies"
+        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies",
     ) as mock_resolve:
 
         def mock_resolver(
@@ -67,9 +67,7 @@ def test_get_dependencies_with_local_and_remote(tmp_path: Path) -> None:
                     dev_dependencies=["path/to/integration-testing.whl"],
                 )
             if name == "EnvironmentCommon":
-                return Dependencies(
-                    dependencies=["path/to/EnvironmentCommon.whl"], dev_dependencies=[]
-                )
+                return Dependencies(dependencies=["path/to/EnvironmentCommon.whl"], dev_dependencies=[])
             return Dependencies(dependencies=[], dev_dependencies=[])
 
         mock_resolve.side_effect = mock_resolver
@@ -132,7 +130,7 @@ def test_get_dependencies_includes_envcommon_when_tipcommon_exists(tmp_path: Pat
     (dependencies_dir / "EnvironmentCommon-1.0.0-py3-none-any.whl").touch()
 
     with unittest.mock.patch(
-        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies"
+        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies",
     ) as mock_resolve:
 
         def mock_resolver(name: str, version: str) -> Dependencies:
@@ -142,9 +140,7 @@ def test_get_dependencies_includes_envcommon_when_tipcommon_exists(tmp_path: Pat
                     dev_dependencies=["path/to/integration-testing.whl"],
                 )
             if name == "EnvironmentCommon":
-                return Dependencies(
-                    dependencies=["path/to/EnvironmentCommon.whl"], dev_dependencies=[]
-                )
+                return Dependencies(dependencies=["path/to/EnvironmentCommon.whl"], dev_dependencies=[])
             return Dependencies(dependencies=[], dev_dependencies=[])
 
         mock_resolve.side_effect = mock_resolver
@@ -183,9 +179,7 @@ def test_get_dependencies_with_sdk_modules_config_mapping(tmp_path: Path) -> Non
     _create_dummy_python_file(tmp_path, "import dateutil")
     _create_dependencies_dir(tmp_path)  # Empty dependencies dir
 
-    with unittest.mock.patch.dict(
-        "mp.core.constants.SDK_DEPENDENCIES_INSTALL_NAMES", {"dateutil": "python-dateutil"}
-    ):
+    with unittest.mock.patch.dict("mp.core.constants.SDK_DEPENDENCIES_INSTALL_NAMES", {"dateutil": "python-dateutil"}):
         result = DependencyDeconstructor(tmp_path).get_dependencies()
 
         assert "python-dateutil" in result.dependencies.dependencies
@@ -244,7 +238,9 @@ def test_get_dependencies_bumps_sdk_dependency_to_min_version(tmp_path: Path) ->
     ],
 )
 def test_get_dependencies_handles_tipcommon_version_for_envcommon_dependency(
-    tmp_path: Path, tipcommon_version: str, envcommon_should_be_dependency: bool
+    tmp_path: Path,
+    tipcommon_version: str,
+    envcommon_should_be_dependency: bool,
 ) -> None:
     """Test that EnvironmentCommon is only a dependency for TIPCommon >= 1.0.14."""
     _create_dummy_python_file(tmp_path, "import TIPCommon")
@@ -253,7 +249,7 @@ def test_get_dependencies_handles_tipcommon_version_for_envcommon_dependency(
     (dependencies_dir / "EnvironmentCommon-1.0.0-py3-none-any.whl").touch()
 
     with unittest.mock.patch(
-        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies"
+        "mp.build_project.restructure.integrations.deconstruct_dependencies.DependencyDeconstructor._get_repo_package_dependencies",
     ) as mock_resolve:
 
         def mock_resolver(
@@ -266,18 +262,14 @@ def test_get_dependencies_handles_tipcommon_version_for_envcommon_dependency(
                     dev_dependencies=[],
                 )
             if name == "EnvironmentCommon":
-                return Dependencies(
-                    dependencies=["path/to/EnvironmentCommon.whl"], dev_dependencies=[]
-                )
+                return Dependencies(dependencies=["path/to/EnvironmentCommon.whl"], dev_dependencies=[])
             return Dependencies(dependencies=[], dev_dependencies=[])
 
         mock_resolve.side_effect = mock_resolver
 
         result = DependencyDeconstructor(tmp_path).get_dependencies()
 
-        envcommon_is_dependency = (
-            "path/to/EnvironmentCommon.whl" in result.dependencies.dependencies
-        )
+        envcommon_is_dependency = "path/to/EnvironmentCommon.whl" in result.dependencies.dependencies
         assert envcommon_is_dependency is envcommon_should_be_dependency
         assert f"path/to/TIPCommon-{tipcommon_version}.whl" in result.dependencies.dependencies
 
@@ -289,9 +281,7 @@ def test_get_dependencies_handles_tipcommon_version_for_envcommon_dependency(
         ("TIPCommon", "1.0.10", False),
     ],
 )
-def test_should_add_integration_testing(
-    tmp_path: Path, name: str, version: str, expected: bool
-) -> None:
+def test_should_add_integration_testing(tmp_path: Path, name: str, version: str, expected: bool) -> None:
     """Test the logic for when to add the integration-testing wheel."""
 
     result = _should_add_integration_testing(name, version)

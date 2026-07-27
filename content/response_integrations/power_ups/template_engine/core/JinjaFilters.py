@@ -21,7 +21,7 @@ import time
 
 import dateutil
 import six
-from json2html import *
+from json2html import json2html
 from json2table import convert
 
 
@@ -33,9 +33,9 @@ class DotAccessibleDict:
             if key in self.reserved:
                 # in our case, we have a key in dict which is "self", and it would cause problems while parsing
                 key = f"_{key}"
-            if type(val) == dict:
+            if isinstance(val, dict):
                 setattr(self, key, DotAccessibleDict(**val))
-            elif type(val) == list:
+            elif isinstance(val, list):
                 setattr(
                     self,
                     key,
@@ -95,18 +95,26 @@ class DotAccessibleDict:
 
 def json2tbl(json_object, build_direction="LEFT_TO_RIGHT", table_attributes=None):
     """JSON 2 Table
-    Converts a JSON object into an HTML table.  Chain the results of this filter to |safe to remove HTML encoding.
+
+    Converts a JSON object into an HTML table.
+    Chain the results of this filter to |safe to remove HTML encoding.
+
     :param json_object: {dict or list} JSON object to convert into HTML.
-    :param build_direction: {unicode} String denoting the build direction of the table. Only supports dict input json_objects.
-                            If "TOP_TO_BOTTOM" child objects will be appended below parents, i.e. in the subsequent row.
-                            If "LEFT_TO_RIGHT" child objects will be appended to the right of parents, i.e. in the subsequent column.
-                            Default is "LEFT_TO_RIGHT". {"TOP_TO_BOTTOM", "LEFT_TO_RIGHT"}
-    :param table_attributes: {dict} Dictionary of (key, value) pairs describing attributes to add to the table. Each
-                            attribute is added according to the template key="value". For example, the table { "border" : 1 }
-                            modifies the generated table tags to include border="1" as an attribute.
-                            The generated opening tag would look like <table border="1">.
-                            Only supports "class" attribute for input json_object of list type.
-                            Default is None.
+    :param build_direction: {unicode} String denoting the build direction of
+        the table. Only supports dict input json_objects.
+        If "TOP_TO_BOTTOM" child objects will be appended below parents,
+        i.e. in the subsequent row.
+        If "LEFT_TO_RIGHT" child objects will be appended to the right of
+        parents, i.e. in the subsequent column.
+        Default is "LEFT_TO_RIGHT". {"TOP_TO_BOTTOM", "LEFT_TO_RIGHT"}
+    :param table_attributes: {dict} Dictionary of (key, value) pairs
+        describing attributes to add to the table. Each attribute is added
+        according to the template key="value". For example, the table
+        { "border" : 1 } modifies the generated table tags to include
+        border="1" as an attribute.
+        The generated opening tag would look like <table border="1">.
+        Only supports "class" attribute for input json_object of list type.
+        Default is None.
     :return: {str} String of converted HTML.
     """
     if isinstance(json_object, dict):
@@ -187,7 +195,7 @@ def filter_datetime(date, fmt="%Y/%m/%d %H:%M:%S"):
             date = datetime.datetime.fromtimestamp(int(date))
         else:
             date = dateutil.parser.parse(date)
-    except:
+    except Exception:
         date = dateutil.parser.parse(date)
 
     return date.strftime(fmt)

@@ -26,10 +26,10 @@ def build_issue_object(issue_json: SingleJson) -> datamodels.Issue:
     """Build an Issue object from the provided JSON data.
 
     Args:
-        issue_json (SingleJson): The JSON data containing issue details.
+        issue_json: The JSON data containing issue details.
 
     Returns:
-        datamodels.Issue: An Issue object containing the details of the issue.
+        An Issue object containing the details of the issue.
     """
     return datamodels.Issue.from_json(issue_json.get("data", {}).get("issue", {}))
 
@@ -38,25 +38,60 @@ def build_update_issue_object(issue_json: SingleJson) -> datamodels.Issue:
     """Build an Update Issue object from the provided JSON data.
 
     Args:
-        issue_json (SingleJson): The JSON data containing updated issue details.
+        issue_json: The JSON data containing updated issue details.
 
     Returns:
-        datamodels.Issue: An Issue object containing the details of the updated issue.
+        An Issue object containing the details of the updated issue.
     """
-    return datamodels.Issue.from_json(
-        issue_json.get("data", {}).get("updateIssue", {}).get("issue", {})
-    )
+    return datamodels.Issue.from_json(issue_json.get("data", {}).get("updateIssue", {}).get("issue", {}))
 
 
 def build_issue_comment_object(issue_json: SingleJson) -> datamodels.IssueComment:
     """Build an Issue Comment object from the provided JSON data.
 
     Args:
-        issue_json (SingleJson): The JSON data containing commented issue details.
+        issue_json: The JSON data containing commented issue details.
 
     Returns:
-        datamodels.Issue: An Issue object containing the details of the commented issue.
+        The commented issue details.
     """
-    return datamodels.IssueComment.from_json(
-        issue_json.get("data", {}).get("createIssueNote", {}).get("issueNote", {})
-    )
+    return datamodels.IssueComment.from_json(issue_json.get("data", {}).get("createIssueNote", {}).get("issueNote", {}))
+
+
+def build_vulnerability_finding_object(
+    finding_json: SingleJson,
+) -> datamodels.VulnerabilityFinding:
+    """Build a VulnerabilityFinding object from the provided JSON data.
+
+    Args:
+        finding_json: The JSON data containing finding details.
+
+    Returns:
+        A VulnerabilityFinding object.
+    """
+    return datamodels.VulnerabilityFinding.from_json(finding_json)
+
+
+def build_threat_ai_analysis_object(
+    response_json: SingleJson,
+) -> datamodels.ThreatAIAnalysis | None:
+    """Build a ThreatAIAnalysis object from the provided JSON data.
+
+    Args:
+        response_json: The JSON response data containing threat detection details.
+
+    Returns:
+        A ThreatAIAnalysis object or None if aiAnalysis is not present.
+    """
+    issue_data = (response_json.get("data") or {}).get("issue")
+
+    if issue_data is None:
+        return None
+
+    threat_details = issue_data.get("threatDetectionDetails")
+
+    if not threat_details:
+        return None
+
+    ai_analysis = threat_details.get("aiAnalysis")
+    return datamodels.ThreatAIAnalysis.from_json(response_json, ai_analysis)

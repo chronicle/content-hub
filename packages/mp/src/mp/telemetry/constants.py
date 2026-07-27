@@ -19,11 +19,11 @@ from typing import TypedDict
 
 from platformdirs import user_config_dir
 
+from mp.core.constants import APP_AUTHOR, APP_NAME
+
 ENDPOINT: str = "https://34-36-216-242.sslip.io/v1/ingest"
 REQUEST_TIMEOUT: int = 3
 
-APP_AUTHOR: str = "Google"
-APP_NAME: str = "mp-cli-tool"
 MP_CACHE_DIR: Path = Path(user_config_dir(APP_NAME, APP_AUTHOR))
 CONFIG_FILE_PATH: Path = MP_CACHE_DIR / Path("telemetry_config.yaml")
 
@@ -51,9 +51,16 @@ NAME_MAPPER: dict[str, str] = {
     "pull_integration": "dev-env pull integration",
     "push_playbook": "dev-env push playbook",
     "pull_playbook": "dev-env pull playbook",
+    "push_view": "dev-env push view",
+    "pull_view": "dev-env pull view",
     "push_custom_integration_repository": "dev-env push custom integration repository",
     "describe_action_with_ai": "describe action",
     "update": "self update",
+    "pack_integration": "pack integration",
+    "pull_custom_field": "dev-env pull custom-field",
+    "push_custom_field": "dev-env push custom-field",
+    "pull_alert_grouping_rule": "dev-env pull alert-grouping-rule",
+    "push_alert_grouping_rule": "dev-env push alert-grouping-rule",
 }
 
 ALLOWED_COMMAND_ARGUMENTS: set[str] = {
@@ -63,7 +70,6 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "playbook",
     "custom_integration",
     "deconstruct",
-    "only_pre_build",
     "is_staging",
     "custom",
     "include_blocks",
@@ -84,4 +90,6 @@ ALLOWED_COMMAND_ARGUMENTS: set[str] = {
     "override",
     "--version",
     "-V",
+    "beta",
+    "interactive",
 }

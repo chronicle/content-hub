@@ -14,10 +14,12 @@
 
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
 
 import pytest
 
+import mp.core.config
 import mp.core.constants
 from mp.core.config import RuntimeParams
 
@@ -30,10 +32,28 @@ BUILT_PLAYBOOK: str = "mock_built_playbook/mock_built_playbook.json"
 BUILT_BLOCK: str = "mock_built_block/mock_built_block.json"
 
 
-@pytest.fixture(autouse=True)
-def set_runtime_params() -> None:
-    params: RuntimeParams = RuntimeParams(quiet=True, verbose=False)
+_temp_dir: tempfile.TemporaryDirectory | None = None
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """pytest configuration hook."""
+    global _temp_dir  # ruff:ignore[global-statement]
+    _temp_dir = tempfile.TemporaryDirectory()
+    temp_config_path = Path(_temp_dir.name) / ".mp_config"
+
+    # Overwrite CONFIG_PATH globally to avoid using autouse monkeypatch
+    mp.core.config.CONFIG_PATH = temp_config_path
+
+    params = RuntimeParams(quiet=True, verbose=False)
     params.set_in_config()
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+    """pytest cleanup hook."""
+    global _temp_dir  # ruff:ignore[global-statement]
+    if _temp_dir:
+        _temp_dir.cleanup()
+        _temp_dir = None
 
 
 @pytest.fixture
@@ -95,11 +115,7 @@ def full_details(built_integration: Path) -> Path:
 @pytest.fixture
 def marketplace_json(mock_response_integrations: Path) -> Path:
     """Path to a mock `marketplace.json` file."""
-    return (
-        mock_response_integrations
-        / BUILT_INTEGRATION_DIR_NAME
-        / mp.core.constants.MARKETPLACE_JSON_NAME
-    )
+    return mock_response_integrations / BUILT_INTEGRATION_DIR_NAME / mp.core.constants.MARKETPLACE_JSON_NAME
 
 
 @pytest.fixture

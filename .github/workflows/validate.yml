@@ -7,14 +7,12 @@ on:
     paths:
     - 'content/**'
     - 'packages/**'
-    - '.github/workflows/**'
   pull_request:
     branches:
     - '**'
     paths:
     - 'content/**'
     - 'packages/**'
-    - '.github/workflows/**'
 
 permissions:
   contents: read
@@ -23,11 +21,13 @@ jobs:
   changes:
     name: Detect Changes
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       mp: ${{ steps.filter.outputs.mp }}
-      response_integrations_google: ${{ steps.filter.outputs.response_integrations_google }}
-      response_integrations_third_party: ${{ steps.filter.outputs.response_integrations_third_party }}
-      playbooks: ${{ steps.filter.outputs.playbooks }}
+      integration_packages: ${{ steps.filter.outputs.integration_packages }}
+      changed_integrations: ${{ steps.find_changes.outputs.integrations }}
+      changed_playbooks: ${{ steps.find_changes.outputs.playbooks }}
+      test_all: ${{ steps.find_changes.outputs.test_all }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -38,24 +38,116 @@ jobs:
       uses: dorny/paths-filter@v3
       id: filter
       with:
-        base: ${{ github.event.pull_request.base.sha || github.event.before }}
+        # language=yaml
         filters: |
           mp:
-            - 'packages/mp/**'
-            - '.github/workflows/**'
-          response_integrations_google:
-            - 'content/response_integrations/google/**'
+          - 'packages/mp/**'
+          integration_packages:
+          - 'packages/envcommon/**'
+          - 'packages/tipcommon/**'
+          - 'packages/integration_testing/**'
+          - 'packages/integration_testing_whls/**'
           response_integrations_third_party:
-            - 'content/response_integrations/third_party/**'
-          playbooks:
-            - 'content/playbooks/**'
+          - 'content/response_integrations/third_party/**'
+          - 'content/response_integrations/power_ups/**'
+          response_integrations_google:
+          - 'content/response_integrations/google/**'
+          playbooks_third_party:
+          - 'content/playbooks/third_party/**'
+          playbooks_commercial:
+          - 'content/playbooks/commercial/**'
 
-  # 1) mp Packages OR (Google + Third Party + Playbooks)
-  validate_all:
-    name: Validate All Content
+    - name: Find changed content
+      id: find_changes
+      env:
+        FILTER_MP: ${{ steps.filter.outputs.mp }}
+        FILTER_PACKAGES: ${{ steps.filter.outputs.integration_packages }}
+        FILTER_THIRD_PARTY: ${{ steps.filter.outputs.response_integrations_third_party }}
+        FILTER_GOOGLE: ${{ steps.filter.outputs.response_integrations_google }}
+        FILTER_PLAYBOOKS_THIRD_PARTY: ${{ steps.filter.outputs.playbooks_third_party }}
+        FILTER_PLAYBOOKS_COMMERCIAL: ${{ steps.filter.outputs.playbooks_commercial }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      # language=bash
+      run: |
+        # If shared packages or mp changed, validate everything
+        if [[ "$FILTER_MP" == "true" ]] || \
+           [[ "$FILTER_PACKAGES" == "true" ]]; then
+          echo "test_all=true" >> $GITHUB_OUTPUT
+          echo "integrations=" >> $GITHUB_OUTPUT
+          echo "playbooks=" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        echo "test_all=false" >> $GITHUB_OUTPUT
+        
+        # Get changed files directly from git to avoid environment variable limits
+        if [[ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] || [[ -z "$BASE_SHA" ]]; then
+          # New branch or push without base, compare against parent
+          git diff --name-only --diff-filter=d HEAD~1 HEAD > changed_files.txt
+        else
+          # Use three-dot diff for PRs to get changes relative to the merge base
+          git diff --name-only --diff-filter=d "$BASE_SHA...$HEAD_SHA" > changed_files.txt || \
+          git diff --name-only --diff-filter=d "$BASE_SHA" "$HEAD_SHA" > changed_files.txt
+        fi
+
+        INTEGRATIONS=""
+        # Extract unique integration names from changed file paths (Third-Party/Power-Ups)
+        if [[ "$FILTER_THIRD_PARTY" == "true" ]]; then
+          THIRD_PARTY_INTS=$(grep "^content/response_integrations/third_party/\|^content/response_integrations/power_up[s]*/" changed_files.txt | \
+            sed 's|content/response_integrations/third_party/[^/]*/||' | \
+            sed 's|content/response_integrations/power_up[s]*/||' | \
+            cut -d'/' -f1 | \
+            sort -u | \
+            tr '\n' ' ' | xargs)
+          INTEGRATIONS="$INTEGRATIONS $THIRD_PARTY_INTS"
+        fi
+        
+        # Extract unique integration names from changed file paths (Google)
+        if [[ "$FILTER_GOOGLE" == "true" ]]; then
+          GOOGLE_INTS=$(grep "^content/response_integrations/google/" changed_files.txt | \
+            sed 's|content/response_integrations/google/||' | \
+            cut -d'/' -f1 | \
+            sort -u | \
+            tr '\n' ' ' | xargs)
+          INTEGRATIONS="$INTEGRATIONS $GOOGLE_INTS"
+        fi
+        
+        echo "integrations=$(echo $INTEGRATIONS | xargs)" >> $GITHUB_OUTPUT
+        
+        PLAYBOOKS=""
+        # Extract unique playbook names from changed file paths (Third-Party)
+        if [[ "$FILTER_PLAYBOOKS_THIRD_PARTY" == "true" ]]; then
+          THIRD_PARTY_PBS=$(grep "^content/playbooks/third_party/" changed_files.txt | \
+            sed 's|content/playbooks/third_party/[^/]*/||' | \
+            cut -d'/' -f1 | \
+            sort -u | \
+            tr '\n' ' ' | xargs)
+          PLAYBOOKS="$PLAYBOOKS $THIRD_PARTY_PBS"
+        fi
+        
+        # Extract unique playbook names from changed file paths (Commercial)
+        if [[ "$FILTER_PLAYBOOKS_COMMERCIAL" == "true" ]]; then
+          COMMERCIAL_PBS=$(grep "^content/playbooks/commercial/" changed_files.txt | \
+            sed 's|content/playbooks/commercial/||' | \
+            cut -d'/' -f1 | \
+            sed 's/\.json$//' | \
+            sort -u | \
+            tr '\n' ' ' | xargs)
+          PLAYBOOKS="$PLAYBOOKS $COMMERCIAL_PBS"
+        fi
+        
+        echo "playbooks=$(echo $PLAYBOOKS | xargs)" >> $GITHUB_OUTPUT
+
+  validate:
+    name: Validate Content
     needs: changes
-    if: ${{ needs.changes.outputs.mp == 'true' || (needs.changes.outputs.response_integrations_google == 'true' && needs.changes.outputs.response_integrations_third_party == 'true' && needs.changes.outputs.playbooks == 'true') }}
+    if: >-
+      needs.changes.outputs.test_all == 'true' ||
+      needs.changes.outputs.changed_integrations != '' ||
+      needs.changes.outputs.changed_playbooks != ''
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -65,214 +157,43 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+        cache: 'pip'
     - name: Install mp package
+      # language=bash
       run: |
         python -m pip install uv
         uv pip install --system -e ./packages/mp
     - name: Run Validation
       env:
+        TEST_ALL: ${{ needs.changes.outputs.test_all }}
+        CHANGED_INTEGRATIONS: ${{ needs.changes.outputs.changed_integrations }}
+        CHANGED_PLAYBOOKS: ${{ needs.changes.outputs.changed_playbooks }}
         GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      # language=bash
       run: |
         mp config --root-path . --processes 10 --display-config
-        mp validate repository all_content --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
+        
+        if [[ "$TEST_ALL" == "true" ]]; then
+          echo "Shared packages changed — validating everything"
+          mp validate repository google third_party playbooks
+        else
+          COMMAND=""
+          if [[ -n "$CHANGED_INTEGRATIONS" ]]; then
+            COMMAND="mp validate integration $CHANGED_INTEGRATIONS"
+          fi
+        
+          if [[ -n "$CHANGED_PLAYBOOKS" ]]; then
+            [[ -n "$COMMAND" ]] && COMMAND="$COMMAND && "
+            COMMAND="${COMMAND}mp validate playbook $CHANGED_PLAYBOOKS"
+          fi
+        
+          if [[ -n "$COMMAND" ]]; then
+            eval "$COMMAND"
+          else
+            echo "Nothing to validate"
+          fi
+        fi
 
-  # 2) Google + Third Party
-  validate_google_third_party:
-    name: Validate Google & Third Party
-    needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google == 'true' && needs.changes.outputs.response_integrations_third_party == 'true' && needs.changes.outputs.playbooks != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository google third_party --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
-
-  # 3) Google + Playbooks
-  validate_google_playbooks:
-    name: Validate Google & Playbooks
-    needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google == 'true' && needs.changes.outputs.response_integrations_third_party != 'true' && needs.changes.outputs.playbooks == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository google playbooks --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
-
-  # 4) Third Party + Playbooks
-  validate_third_party_playbooks:
-    name: Validate Third Party & Playbooks
-    needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google != 'true' && needs.changes.outputs.response_integrations_third_party == 'true' && needs.changes.outputs.playbooks == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository third_party playbooks --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
-
-  # 5) Only Google
-  validate_google:
-    name: Validate Google Integrations
-    needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google == 'true' && needs.changes.outputs.response_integrations_third_party != 'true' && needs.changes.outputs.playbooks != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository google --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
-
-  # 6) Only Third Party
-  validate_third_party:
-    name: Validate Third-Party Integrations
-    needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google != 'true' && needs.changes.outputs.response_integrations_third_party == 'true' && needs.changes.outputs.playbooks != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository third_party --only-pre-build
-    - name: Upload Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: validation-report
-        path: artifacts/validation_report.md
-        retention-days: 2
-
-  # 7) Only Playbooks
-  validate_playbooks:
-    name: Validate Playbooks
-    needs: changes
-    if: ${{ needs.changes.outputs.mp != 'true' && needs.changes.outputs.response_integrations_google != 'true' && needs.changes.outputs.response_integrations_third_party != 'true' && needs.changes.outputs.playbooks == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install mp package
-      run: |
-        python -m pip install uv
-        uv pip install --system -e ./packages/mp
-    - name: Run Validation
-      env:
-        GITHUB_PR_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      run: |
-        mp config --root-path . --processes 10 --display-config
-        mp validate repository playbooks --only-pre-build
     - name: Upload Report
       if: always()
       uses: actions/upload-artifact@v4

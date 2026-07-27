@@ -1,0 +1,32 @@
+rule abnormal_security_threat_all {
+
+  meta:
+    author = "Abnormal Security"
+    description = "Catch-all for any Abnormal Security threat event (sourcetype=threat_log). Lower priority than the critical rule. Useful for visibility into all flagged emails. Disable or scope down if volume is too high."
+    severity = "MEDIUM"
+    priority = "MEDIUM"
+    type = "alert"
+    data_source = "Abnormal Security"
+    platform = "Email"
+    mitre_attack_tactic = "Initial Access"
+    mitre_attack_technique = "T1566"
+    yara_version = "YL2.0"
+    rule_version = "1.1"
+
+  events:
+    $e.metadata.vendor_name = "ABNORMAL_SECURITY"
+    $e.metadata.log_type = "ABNORMAL_SECURITY"
+    $e.additional.fields["sourcetype"] = "threat_log"
+
+  outcome:
+    $threat_id = array_distinct($e.extracted.fields["event.abx_body.threat_id"])
+    $attack_type = array_distinct($e.extracted.fields["event.abx_body.attack_type"])
+    $attack_strategy = array_distinct($e.extracted.fields["event.abx_body.attack_strategy"])
+    $sender = array_distinct($e.extracted.fields["event.abx_body.from_address"])
+    $recipient = array_distinct($e.extracted.fields["event.abx_body.recipient_address"])
+    $subject = array_distinct($e.extracted.fields["event.abx_body.subject"])
+    $attack_score = array_distinct($e.extracted.fields["event.abx_body.attack_score"])
+
+  condition:
+    $e
+}

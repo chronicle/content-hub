@@ -122,11 +122,7 @@ class MappingRule(SequentialMetadata[BuiltMappingRule, NonBuiltMappingRule]):
             A sequence of `MappingRule` objects
 
         """
-        meta_path: Path = (
-            path
-            / mp.core.constants.OUT_MAPPING_RULES_DIR
-            / mp.core.constants.OUT_MAPPING_RULES_FILE
-        )
+        meta_path: Path = path / mp.core.constants.OUT_MAPPING_RULES_DIR / mp.core.constants.OUT_MAPPING_RULES_FILE
         if not meta_path.exists():
             return []
 
@@ -198,18 +194,14 @@ class MappingRule(SequentialMetadata[BuiltMappingRule, NonBuiltMappingRule]):
                     TransformationFunction.TO_STRING.to_string(),
                 ),
             ),
-            raw_data_primary_field_match_term=(
-                non_built.get("raw_data_primary_field_match_term", "")
-            ),
+            raw_data_primary_field_match_term=(non_built.get("raw_data_primary_field_match_term", "")),
             raw_data_primary_field_comparison_type=ComparisonType.from_string(
                 non_built.get(
                     "raw_data_primary_field_comparison_type",
                     ComparisonType.EQUAL.to_string(),
                 ),
             ),
-            raw_data_secondary_field_match_term=(
-                non_built.get("raw_data_secondary_field_match_term", "")
-            ),
+            raw_data_secondary_field_match_term=(non_built.get("raw_data_secondary_field_match_term", "")),
             raw_data_secondary_field_comparison_type=ComparisonType.from_string(
                 non_built.get(
                     "raw_data_secondary_field_comparison_type",
@@ -248,9 +240,7 @@ class MappingRule(SequentialMetadata[BuiltMappingRule, NonBuiltMappingRule]):
             RawDataPrimaryFieldMatchTerm=self.raw_data_primary_field_match_term,
             RawDataPrimaryFieldComparisonType=self.raw_data_primary_field_comparison_type.value,
             RawDataSecondaryFieldMatchTerm=self.raw_data_secondary_field_match_term,
-            RawDataSecondaryFieldComparisonType=(
-                self.raw_data_secondary_field_comparison_type.value
-            ),
+            RawDataSecondaryFieldComparisonType=(self.raw_data_secondary_field_comparison_type.value),
             RawDataThirdFieldMatchTerm=self.raw_data_third_field_match_term,
             RawDataThirdFieldComparisonType=(self.raw_data_third_field_comparison_type.value),
             IsArtifact=self.is_artifact,
@@ -273,17 +263,11 @@ class MappingRule(SequentialMetadata[BuiltMappingRule, NonBuiltMappingRule]):
             transformation_function=self.transformation_function.to_string(),
             transformation_function_param=self.transformation_function_param,
             raw_data_primary_field_match_term=self.raw_data_primary_field_match_term,
-            raw_data_primary_field_comparison_type=(
-                self.raw_data_primary_field_comparison_type.to_string()
-            ),
+            raw_data_primary_field_comparison_type=(self.raw_data_primary_field_comparison_type.to_string()),
             raw_data_secondary_field_match_term=(self.raw_data_secondary_field_match_term),
-            raw_data_secondary_field_comparison_type=(
-                self.raw_data_secondary_field_comparison_type.to_string()
-            ),
+            raw_data_secondary_field_comparison_type=(self.raw_data_secondary_field_comparison_type.to_string()),
             raw_data_third_field_match_term=self.raw_data_third_field_match_term,
-            raw_data_third_field_comparison_type=(
-                self.raw_data_third_field_comparison_type.to_string()
-            ),
+            raw_data_third_field_comparison_type=(self.raw_data_third_field_comparison_type.to_string()),
             is_artifact=self.is_artifact,
             extract_function_param=self.extract_function_param,
             extract_function=self.extract_function.to_string(),

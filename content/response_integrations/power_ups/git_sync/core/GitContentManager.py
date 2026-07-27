@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import pathlib
 import stat
 import zipfile
 from io import BytesIO
@@ -140,7 +141,7 @@ class GitContentManager:
         """
         try:
             for playbook in self.git.get_file_objects_from_path(PLAYBOOKS_PATH):
-                if playbook.path.endswith(f"/{playbook_name}.json"):
+                if pathlib.Path(playbook.path).name == f"{playbook_name}.json":
                     return Workflow(json.loads(playbook.content))
         except KeyError:
             return None
@@ -148,7 +149,7 @@ class GitContentManager:
     def get_playbooks(self) -> list[Workflow]:
         try:
             for playbook in self.git.get_file_objects_from_path(PLAYBOOKS_PATH):
-                if playbook.path.endswith(".json"):
+                if pathlib.Path(playbook.path).suffix == ".json":
                     yield Workflow(json.loads(playbook.content))
         except KeyError:
             return []
@@ -164,7 +165,7 @@ class GitContentManager:
         """
         try:
             for connector in self.git.get_file_objects_from_path(CONNECTORS_PATH):
-                if connector.path.endswith(f"{connector_name}.json"):
+                if pathlib.Path(connector.path).name == f"{connector_name}.json":
                     return Connector(json.loads(connector.content))
         except KeyError:
             return None
@@ -172,7 +173,7 @@ class GitContentManager:
     def get_connectors(self) -> list[Connector]:
         try:
             for connector in self.git.get_file_objects_from_path(CONNECTORS_PATH):
-                if connector.path.endswith(".json"):
+                if pathlib.Path(connector.path).suffix == ".json":
                     yield Connector(json.loads(connector.content))
         except KeyError:
             return []
@@ -192,7 +193,7 @@ class GitContentManager:
     def get_jobs(self) -> list[Job]:
         try:
             for job in self.git.get_file_objects_from_path(JOBS_PATH):
-                if job.path.endswith(".json"):
+                if pathlib.Path(job.path).suffix == ".json":
                     yield Job(json.loads(job.content))
         except KeyError:
             return []

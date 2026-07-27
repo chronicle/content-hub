@@ -19,15 +19,11 @@ from string import Template
 
 import anyio
 
+from mp.describe.common.prompt_constructors.prompt_constructor import PromptConstructor as BasePromptConstructor
 
-class PromptConstructor(abc.ABC):
-    __slots__: tuple[str, ...] = (
-        "action_file_name",
-        "action_name",
-        "integration",
-        "integration_name",
-        "out_path",
-    )
+
+class PromptConstructor(BasePromptConstructor, abc.ABC):
+    __slots__: tuple[str, ...] = ("action_file_name", "action_name")
 
     def __init__(
         self,
@@ -37,18 +33,16 @@ class PromptConstructor(abc.ABC):
         action_file_name: str,
         out_path: anyio.Path,
     ) -> None:
-        self.integration: anyio.Path = integration
-        self.integration_name: str = integration_name
+        super().__init__(integration, integration_name, out_path)
         self.action_name: str = action_name
         self.action_file_name: str = action_file_name
-        self.out_path: anyio.Path = out_path
 
-    @property
-    async def task_prompt(self) -> Template:
+    @staticmethod
+    async def get_task_prompt() -> Template:
         """Get the task prompt.
 
         Returns:
-            str: The task prompt.
+            Template: The task prompt.
 
         """
         prompt_file: anyio.Path = anyio.Path(__file__).parent.parent / "prompts" / "task.md"
@@ -56,7 +50,7 @@ class PromptConstructor(abc.ABC):
 
     @abc.abstractmethod
     async def construct(self) -> str:
-        """Construct a prompt for generating action descriptions.
+        """Construct a prompt for generating AI descriptions.
 
         Returns:
             str: The constructed prompt.

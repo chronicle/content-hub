@@ -50,9 +50,7 @@ class ConditionGroup(Buildable[BuiltConditionGroup, NonBuiltConditionGroup]):
     @classmethod
     def _from_non_built(cls, non_built: NonBuiltConditionGroup) -> Self:
         return cls(
-            conditions=[
-                Condition.from_non_built(condition) for condition in non_built["conditions"]
-            ],
+            conditions=[Condition.from_non_built(condition) for condition in non_built["conditions"]],
             logical_operator=LogicalOperator.from_string(non_built["logical_operator"]),
         )
 

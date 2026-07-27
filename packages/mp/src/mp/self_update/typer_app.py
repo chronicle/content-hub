@@ -37,7 +37,7 @@ def update() -> None:
         typer.Exit: If the update fails.
 
     """
-    typer.echo("Updating mp...")
+    logger.info("Updating mp...")
     command: list[str] = [
         sys.executable,
         "-m",
@@ -49,7 +49,7 @@ def update() -> None:
     ]
     try:
         unix.execute_command_and_get_output(command, [])
-        logger.info("[green]Successfully updated mp![/green]")
+        logger.info("Successfully updated mp!")
     except unix.FatalCommandError:
-        logger.exception("[red]Failed to update mp.[/red]")
+        logger.exception("Failed to update mp.")
         raise typer.Exit(1) from None

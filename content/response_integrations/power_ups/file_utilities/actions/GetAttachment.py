@@ -14,42 +14,44 @@
 
 from __future__ import annotations
 
-import base64
 import json
+from typing import Any
 
 from soar_sdk.SiemplifyAction import SiemplifyAction
 from soar_sdk.SiemplifyUtils import output_handler
-from TIPCommon.rest.soar_api import get_attachments_metadata
 
-CASE_EVIDENCE_ID: str = "evidenceId"
+from ..core.AttachmentsManager import AttachmentsManager, ExecutionScope
 
 
 @output_handler
-def main():
-    siemplify = SiemplifyAction()
-    scope = siemplify.parameters.get("Attachment Scope")
-    attachments_metadata = [
-        attachment.to_json() for attachment in
-        get_attachments_metadata(siemplify, siemplify.case.identifier)
-    ]
-    attachments = []
-    for wall_item in attachments_metadata:
-        if wall_item["type"] == 4:
-            if scope.lower() == "alert":
-                if siemplify.current_alert.identifier == wall_item["alertIdentifier"]:
-                    attachments.append(wall_item)
-            else:
-                attachments.append(wall_item)
+def main() -> None:
+    siemplify: SiemplifyAction = SiemplifyAction()
+    scope: str = siemplify.parameters.get("Attachment Scope")
 
-    for attachment in attachments:
-        attachment_record = siemplify.get_attachment(attachment[CASE_EVIDENCE_ID])
-        attachment_content = attachment_record.getvalue()
-        b64 = base64.b64encode(attachment_content)
-        attachment["base64_blob"] = b64.decode("ascii")
+    execution_scope: Any = getattr(
+        siemplify,
+        "execution_scope",
+        ExecutionScope.Alert,
+    )
+    siemplify.LOGGER.info(f"Running in {execution_scope.name.lower()} scope")
+
+    attach_mgr: AttachmentsManager = AttachmentsManager(siemplify=siemplify)
+
+    attachments: list[Any] = attach_mgr.get_attachments_by_scope(
+        execution_scope=execution_scope,
+        attachment_scope_param=scope,
+    )
+
+    attachments = attach_mgr.get_attachment_blobs(attachments)
 
     siemplify.result.add_result_json(json.dumps(attachments))
 
-    siemplify.end(f"{len(attachments)} attachment(s) found", len(attachments))
+    if execution_scope.value == ExecutionScope.Alert.value:
+        output_message = f"{len(attachments)} attachment(s) found"
+    else:
+        output_message = f"{len(attachments)} attachment(s) found for all case alerts"
+
+    siemplify.end(output_message, len(attachments))
 
 
 if __name__ == "__main__":
