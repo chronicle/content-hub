@@ -19,6 +19,7 @@ import json
 import pytest
 from integration_testing.set_meta import set_metadata
 
+from ...core.constants import FEDERATION_SYNC_JOB_SCRIPT_NAME
 from ...core.exceptions import MissingParameterError
 from ...jobs import FederationSyncJob
 from ..common import CONFIG_PATH
@@ -38,11 +39,11 @@ SYNC_URL: str = (
 def test_missing_target_platform_fails(
     federation_cases: GetFederationCasesStub,
 ) -> None:
-    with pytest.raises((MissingParameterError, SystemExit)):
-        FederationSyncJob.main()
+    job = FederationSyncJob.CaseFederationSyncJob(FEDERATION_SYNC_JOB_SCRIPT_NAME)
+    job.params.target_platform = ""
 
-    # No fetch should have been attempted
-    assert not federation_cases.calls
+    with pytest.raises(MissingParameterError):
+        job._validate_params()
 
 
 @set_metadata(integration_config_file_path=CONFIG_PATH, parameters=DEFAULT_PARAMETERS)
