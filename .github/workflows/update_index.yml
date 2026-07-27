@@ -4,6 +4,10 @@ on:
     paths:
       - 'content/parsers/third_party/community/**'
       - 'content/parsers/third_party/partner/**'
+  pull_request_target: # Triggers on PRs (including from forks) and allows access to secrets
+    paths:
+      - 'content/parsers/third_party/community/**'
+      - 'content/parsers/third_party/partner/**'
   workflow_dispatch:
 
 permissions:
@@ -16,8 +20,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_PAT }}
-          # Fetch all history so git log can find commit SHAs and timestamps for parser files
+          # Fallback to default token if GH_PAT is missing (e.g. on forks)
+          token: ${{ secrets.GH_PAT || github.token }}
+          # Checkout the fork's repository if it's a PR, otherwise default to base repository
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          # Checkout the PR branch if it's a PR, otherwise default to the pushed branch
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          # Fetch all history so git log can find commit SHAs and timestamps
           fetch-depth: 0
 
       - name: Setup Python
@@ -38,5 +47,6 @@ jobs:
             echo "No index files were changed. Skipping commit."
           else
             git commit -m "Automated update of parser indexes [skip ci]"
-            git push origin HEAD:${{ github.ref }}
+            # Push back to the correct branch on the correct remote
+            git push origin HEAD:${{ github.event.pull_request.head.ref || github.ref }}
           fi
