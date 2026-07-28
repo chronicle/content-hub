@@ -50,17 +50,17 @@ def manager(
     monkeypatch.setattr(
         FederationSyncManager,
         "_get_credentials_using_p4sa",
-        lambda self, verify_ssl: None,
+        lambda self: None,
     )
     monkeypatch.setattr(
         FederationSyncManager,
         "_prepare_http_client",
-        lambda self: setattr(self, "http_client", mock_http_client),
+        lambda self, verify_ssl: setattr(self, "http_client", mock_http_client),
     )
     return FederationSyncManager(
         session=MagicMock(),
         logger=MagicMock(),
-        api_client_parameters=ApiClientParameters(sync_api_root=SYNC_API_ROOT),
+        api_client_parameters=ApiClientParameters(sync_api_root=SYNC_API_ROOT, verify_ssl=True),
         chronicle_soar=MagicMock(),
     )
 
