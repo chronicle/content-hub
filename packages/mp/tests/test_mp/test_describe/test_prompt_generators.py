@@ -38,8 +38,7 @@ def test_build_dynamic_entity_prompt_rules() -> None:
     for field_name, entity_type in ENTITY_TYPE_TO_DEF_ENTITY_TYPE.items():
         param_title = field_name.replace("_", " ").title()
         expected_rule = (
-            f"- Parameters representing `{param_title}` -> set `{field_name}: true` "
-            f"(maps to `{entity_type.value}`)."
+            f"- Parameters representing `{param_title}` -> set `{field_name}: true` (maps to `{entity_type.value}`)."
         )
         assert expected_rule in rules_str
     assert "or similar" not in rules_str
