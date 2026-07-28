@@ -91,8 +91,8 @@ def test_sync_success_sends_cases_and_saves_execution_data(
         "continuation_token": "token-123",
         "execution_message": "Synced up to case 1"
     }
-    job_context.setdefault("CaseFederationSyncJob", {})["continuation_token"] = "token-123"
-    job_context.setdefault("CaseFederationSyncJob", {})["execution_message"] = "Synced up to case 1"
+    job_context.clear()
+    job_context["CaseFederationSyncJob"] = json.dumps({"continuation_token": "token-123", "execution_message": "Synced up to case 1"})
 
     # Act
     FederationSyncJob.main()
